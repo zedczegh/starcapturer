@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -93,19 +94,20 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Strong glassmorphism for mobile nav overlay - ENHANCED with dark background */
+/* Strong SOLID background for mobile nav overlay - for maximum visibility */
 .mobile-nav-overlay {
-  background: #050816 !important;
+  background: #0a0e1f !important; /* Solid dark background color */
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.9) !important;
 }
 
-/* Make mobile menu items more visible */
+/* Make mobile menu items more visible with solid background */
 .mobile-nav-item {
-  background-color: rgba(20, 25, 45, 0.8) !important;
+  background-color: #141c3a !important; /* Solid background color */
   margin-bottom: 0.5rem !important;
   padding: 0.75rem 1rem !important;
   border-radius: 0.5rem !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(104, 117, 255, 0.2) !important;
 }
 
 /* Sci-fi scrollbar for better UX */

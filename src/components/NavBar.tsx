@@ -122,7 +122,7 @@ const NavBar = () => {
       </div>
       
       {menuOpen && (
-        <div className="md:hidden fixed inset-0 z-10 flex flex-col pt-20 glassmorphism-strong mobile-nav-overlay animate-fade-in">
+        <div className="md:hidden fixed inset-0 z-10 flex flex-col pt-20 mobile-nav-overlay animate-fade-in">
           <div className="container mx-auto px-6 flex flex-col h-full">
             <nav className="flex flex-col space-y-8 py-8">
               <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
@@ -134,7 +134,7 @@ const NavBar = () => {
                   handleSIQSClick(e);
                   setMenuOpen(false);
                 }}
-                className="text-foreground/90 text-xl font-medium py-2 transition-colors hover:text-primary"
+                className="text-foreground/90 text-xl font-medium py-2 transition-colors hover:text-primary mobile-nav-item"
               >
                 {t("SIQS Now", "实时SIQS")}
               </a>
@@ -153,14 +153,14 @@ const NavBar = () => {
               <div className="flex flex-col space-y-4">
                 <LanguageSwitcher />
                 <MapSelector onSelectLocation={handleLocationSelect}>
-                  <Button variant="outline" size="lg" className="w-full flex items-center justify-center space-x-2">
+                  <Button variant="outline" size="lg" className="w-full flex items-center justify-center space-x-2 mobile-nav-item">
                     <Search className="h-5 w-5" />
                     <span>{t("Search Location", "搜索位置")}</span>
                   </Button>
                 </MapSelector>
               </div>
               <div className="pt-4 border-t border-white/10">
-                <Button size="lg" className="w-full">{t("Sign In", "登录")}</Button>
+                <Button size="lg" className="w-full mobile-nav-item">{t("Sign In", "登录")}</Button>
               </div>
             </div>
           </div>
@@ -207,7 +207,7 @@ const MobileNavLink = ({
   return (
     <Link
       to={to}
-      className="text-foreground/90 text-xl font-medium py-2 transition-colors hover:text-primary"
+      className="text-foreground/90 text-xl font-medium py-2 transition-colors hover:text-primary mobile-nav-item"
       onClick={onClick}
     >
       {children}
