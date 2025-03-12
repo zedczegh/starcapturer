@@ -103,19 +103,22 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             
             setShowAdvancedSettings(true);
             
-            toast.success(t("Location Retrieved", "已获取位置"), {
-              description: t(
-                `Your current location: ${name}`,
-                `您当前的位置：${name}`
-              )
+            navigate('/location/new', {
+              state: {
+                initialLocation: {
+                  name: name,
+                  latitude: lat,
+                  longitude: lng
+                }
+              }
             });
             
             setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
             const fallbackName = t(
-              `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-              `位置：${lat.toFixed(4)}, ${lng.toFixed(4)}`
+              `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
+              `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
             );
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
@@ -535,3 +538,4 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
+
