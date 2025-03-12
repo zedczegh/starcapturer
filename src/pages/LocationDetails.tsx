@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -16,7 +15,7 @@ const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [locationData, setLocationData] = useState(location.state || null);
+  const [locationData, setLocationData] = useState<any>(null);
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
@@ -25,7 +24,24 @@ const LocationDetails = () => {
   useEffect(() => {
     console.log("LocationDetails received state:", location.state);
     
-    if (!locationData) {
+    // Special handling for "new" location selection
+    if (id === "new") {
+      const initialLocation = location.state?.initialLocation;
+      if (initialLocation) {
+        setLocationData({
+          ...initialLocation,
+          weatherData: {},
+          siqsResult: { score: 0, factors: [], isViable: false },
+          bortleScale: 4,
+          seeingConditions: 3,
+          moonPhase: 0,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+    }
+    
+    if (!locationData && !location.state) {
       console.error("Location data is missing", { params: id, locationState: location.state });
       toast.error(t("Location Not Found", "位置未找到"), {
         description: t("The requested location information is not available or has expired.", 
@@ -37,11 +53,11 @@ const LocationDetails = () => {
       }, 3000);
       
       return () => clearTimeout(redirectTimer);
-    } else {
+    } else if (locationData) {
       fetchLocationForecast();
       updateLightPollutionData();
     }
-  }, [locationData, navigate, t]);
+  }, [locationData, location.state, navigate, t, id]);
 
   const updateLightPollutionData = async () => {
     if (!locationData) return;
@@ -100,7 +116,7 @@ const LocationDetails = () => {
       console.error("Error fetching forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
         description: t("Could not load weather forecast. Try refreshing.", 
-                      "无法加载��气预报。请尝试刷新。")
+                      "无法加载天气预报。请尝试刷新。")
       });
     } finally {
       setForecastLoading(false);
@@ -140,13 +156,16 @@ const LocationDetails = () => {
         moonPhase,
       });
 
-      setLocationData({
+      const updatedLocationData = {
         ...locationData,
         ...newLocation,
         weatherData,
         bortleScale,
         siqsResult,
-      });
+        timestamp: new Date().toISOString()
+      };
+
+      setLocationData(updatedLocationData);
 
       const forecast = await fetchForecastData({
         latitude: newLocation.latitude,
@@ -154,6 +173,13 @@ const LocationDetails = () => {
       });
       
       setForecastData(forecast);
+
+      const newLocationId = Date.now().toString();
+      
+      navigate(`/location/${newLocationId}`, { 
+        state: updatedLocationData,
+        replace: true 
+      });
 
       toast.success(t("Location Updated", "位置已更新"), {
         description: t("SIQS score has been recalculated for the new location.", 
@@ -245,9 +271,9 @@ const LocationDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <SIQSSummary
-              siqs={locationData.siqsResult.score}
-              factors={locationData.siqsResult.factors}
-              isViable={locationData.siqsResult.isViable}
+              siqs={locationData.siqsResult?.score || 0}
+              factors={locationData.siqsResult?.factors || []}
+              isViable={locationData.siqsResult?.isViable || false}
             />
             
             <WeatherConditions
