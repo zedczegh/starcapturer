@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -9,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
 import { getLocationNameFromCoordinates } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Fix for default marker icons in Leaflet with React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -163,10 +163,11 @@ const InteractiveMap = ({ onMapClick, position }: {
 
 interface MapSelectorProps {
   onSelectLocation: (location: { name: string; latitude: number; longitude: number }) => void;
-  children?: React.ReactNode; // Add support for children prop
+  children?: React.ReactNode;
 }
 
 const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children }) => {
+  const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -177,7 +178,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const mapRef = useRef<L.Map>(null);
   
   // Search for locations with the given query
@@ -258,7 +258,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
     
     // Show confirmation feedback
     toast({
-      title: language === 'en' ? "Location Selected" : "已选择位置",
+      title: t("Location Selected", "已选择位置"),
       description: suggestion.display_name,
     });
     
@@ -287,14 +287,15 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       
       // Provide visual feedback that location was selected
       toast({
-        title: language === 'en' ? "Location Selected" : "已选择位置",
+        title: t("Location Selected", "已选择位置"),
         description: name,
       });
     } catch (error) {
       console.error('Error fetching location name:', error);
-      const fallbackName = language === 'en' 
-        ? `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
-        : `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+      const fallbackName = t(
+        `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
+        `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
+      );
       
       const newLocation = {
         name: fallbackName,
@@ -306,10 +307,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       setSearchQuery(fallbackName);
       
       toast({
-        title: language === 'en' ? "Location Error" : "位置错误",
-        description: language === 'en'
-          ? "Could not get location name. Using coordinates instead."
-          : "无法获取位置名称。使用坐标代替。",
+        title: t("Location Error", "位置错误"),
+        description: t(
+          "Could not get location name. Using coordinates instead.",
+          "无法获取位置名称。使用坐标代替。"
+        ),
         variant: "destructive",
       });
     } finally {
@@ -340,16 +342,15 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
             setSearchQuery(name);
             
             toast({
-              title: language === 'en' ? "Location Found" : "已找到位置",
-              description: language === 'en' 
-                ? `Using your current location: ${name}` 
-                : `使用您的当前位置: ${name}`,
+              title: t("Location Found", "已找到位置"),
+              description: t(`Using your current location: ${name}`, `使用您的当前位置: ${name}`),
             });
           } catch (error) {
             console.error('Error getting location name:', error);
-            const fallbackName = language === 'en' 
-              ? `My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})` 
-              : `我的位置 (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            const fallbackName = t(
+              `My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`, 
+              `我的位置 (${lat.toFixed(4)}, ${lng.toFixed(4)})`
+            );
             
             const location = {
               name: fallbackName,
@@ -361,10 +362,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
             setSearchQuery(fallbackName);
             
             toast({
-              title: language === 'en' ? "Location Error" : "位置错误",
-              description: language === 'en'
-                ? "Could not retrieve location name. Using coordinates instead."
-                : "无法获取位置名称。使用坐标代替。",
+              title: t("Location Error", "位置错误"),
+              description: t(
+                "Could not retrieve location name. Using coordinates instead.",
+                "无法获取位置名称。使用坐标代替。"
+              ),
               variant: "destructive",
             });
           } finally {
@@ -374,10 +376,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
         (error) => {
           console.error('Geolocation error:', error);
           toast({
-            title: language === 'en' ? "Location Error" : "位置错误",
-            description: language === 'en'
-              ? "Could not retrieve your location. Please search or select a location on the map."
-              : "无法获取您的位置，请搜索或在地图上选择位置。",
+            title: t("Location Error", "位置错误"),
+            description: t(
+              "Could not retrieve your location. Please search or select a location on the map.",
+              "无法获取您的位置，请搜索或在地图上选择位置。"
+            ),
             variant: "destructive",
           });
           setLoading(false);
@@ -390,10 +393,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       );
     } else {
       toast({
-        title: language === 'en' ? "Geolocation Not Supported" : "不支持地理位置",
-        description: language === 'en'
-          ? "Your browser doesn't support geolocation. Please search or select a location on the map."
-          : "您的浏览器不支持地理位置，请搜索或在地图上选择位置。",
+        title: t("Geolocation Not Supported", "不支持地理位置"),
+        description: t(
+          "Your browser doesn't support geolocation. Please search or select a location on the map.",
+          "您的浏览器不支持地理位置，请搜索或在地图上选择位置。"
+        ),
         variant: "destructive",
       });
     }
@@ -403,7 +407,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
     if (selectedLocation) {
       setPosition([selectedLocation.latitude, selectedLocation.longitude]);
       toast({
-        title: language === 'en' ? "Map Centered" : "地图已居中",
+        title: t("Map Centered", "地图已居中"),
         description: selectedLocation.name,
       });
     }
@@ -416,45 +420,27 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
           <Button variant="outline" className="w-full flex justify-between items-center hover:bg-primary/10">
             <span className="flex items-center">
               <Search className="mr-2 h-4 w-4" /> 
-              {language === 'en' ? "Search for a Location" : "搜索位置"}
+              {t("Search for a Location", "搜索位置")}
             </span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[800px] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{language === 'en' ? "Pinpoint Location" : "定位位置"}</DialogTitle>
+          <DialogTitle>{t("Pinpoint Location", "定位位置")}</DialogTitle>
           <DialogDescription>
-            {language === 'en' 
-              ? "Search for a location or click directly on the map to set coordinates." 
-              : "搜索位置或直接点击地图设置坐标。"}
+            {t(
+              "Search for a location or click directly on the map to set coordinates.",
+              "搜索位置或直接点击地图设置坐标。"
+            )}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="flex gap-2 mb-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setLanguage('en')}
-            className={`${language === 'en' ? 'bg-primary/20' : ''}`}
-          >
-            English
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setLanguage('zh')}
-            className={`${language === 'zh' ? 'bg-primary/20' : ''}`}
-          >
-            中文
-          </Button>
-        </div>
         
         <div className="relative mb-4">
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
-            placeholder={language === 'en' ? "Search for a location..." : "搜索位置..."}
+            placeholder={t("Search for a location...", "搜索位置...")}
             className="pr-8"
             autoFocus
           />
@@ -499,7 +485,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
             className="text-xs flex items-center"
           >
             {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
-            {language === 'en' ? "Use My Location" : "使用我的位置"}
+            {t("Use My Location", "使用我的位置")}
           </Button>
           
           {selectedLocation && (
@@ -509,7 +495,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
               className="text-xs flex items-center"
             >
               <Crosshair className="h-3 w-3 mr-1" />
-              {language === 'en' ? "Center on Selection" : "居中所选位置"}
+              {t("Center on Selection", "居中所选位置")}
             </Button>
           )}
         </div>
@@ -527,9 +513,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
               </div>
             ) : (
               <span className="text-muted-foreground">
-                {language === 'en' 
-                  ? "Click on the map to select a location" 
-                  : "点击地图选择位置"}
+                {t("Click on the map to select a location", "点击地图选择位置")}
               </span>
             )}
           </div>
@@ -542,7 +526,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
                 
                 // Provide confirmation feedback
                 toast({
-                  title: language === 'en' ? "Location Confirmed" : "位置已确认",
+                  title: t("Location Confirmed", "位置已确认"),
                   description: selectedLocation.name,
                 });
               }
@@ -550,7 +534,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
             disabled={!selectedLocation && !position}
             className={selectedLocation ? "bg-primary animate-pulse" : ""}
           >
-            {language === 'en' ? "Use This Location" : "使用此位置"}
+            {t("Use This Location", "使用此位置")}
           </Button>
         </div>
       </DialogContent>

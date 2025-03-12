@@ -7,9 +7,10 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Loader2, Info, SlidersHorizontal, Globe } from "lucide-react";
+import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
 import MapSelector from "./MapSelector";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +35,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   className,
   hideRecommendedPoints = false
 }) => {
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [locationName, setLocationName] = useState("");
@@ -46,16 +48,16 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   
   useEffect(() => {
     if (!askedForLocation) {
       setAskedForLocation(true);
       
-      const userConfirmText = language === 'en' 
-        ? "Would you like to share your location to calculate your local SIQS and see nearby photo points?"
-        : "您想分享您的位置以计算当地的SIQS并查看附近的拍摄点吗？";
+      const userConfirmText = t(
+        "Would you like to share your location to calculate your local SIQS and see nearby photo points?",
+        "您想分享您的位置以计算当地的SIQS并查看附近的拍摄点吗？"
+      );
         
       if (window.confirm(userConfirmText)) {
         handleUseCurrentLocation();
@@ -92,18 +94,20 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             setShowAdvancedSettings(true);
             
             toast({
-              title: language === 'en' ? "Location Retrieved" : "已获取位置",
-              description: language === 'en' 
-                ? `Your current location: ${name}` 
-                : `���当前的位置：${name}`,
+              title: t("Location Retrieved", "已获取位置"),
+              description: t(
+                `Your current location: ${name}`,
+                `您当前的位置：${name}`
+              )
             });
             
             setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
-            const fallbackName = language === 'en'
-              ? `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-              : `位置：${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            const fallbackName = t(
+              `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+              `位置：${lat.toFixed(4)}, ${lng.toFixed(4)}`
+            );
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
             setLoading(false);
@@ -112,10 +116,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         (error) => {
           setLoading(false);
           toast({
-            title: language === 'en' ? "Location Error" : "位置错误",
-            description: language === 'en'
-              ? "Could not retrieve your location. Please enter coordinates manually."
-              : "无法获取您的位置，请手动输入坐标。",
+            title: t("Location Error", "位置错误"),
+            description: t(
+              "Could not retrieve your location. Please enter coordinates manually.",
+              "无法获取您的位置，请手动输入坐标。"
+            ),
             variant: "destructive",
           });
           console.error("Geolocation error:", error);
@@ -128,10 +133,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       );
     } else {
       toast({
-        title: language === 'en' ? "Geolocation Not Supported" : "不支持地理位置",
-        description: language === 'en'
-          ? "Your browser doesn't support geolocation. Please enter coordinates manually."
-          : "您的浏览器不支持地理位置，请手动输入坐标。",
+        title: t("Geolocation Not Supported", "不支持地理位置"),
+        description: t(
+          "Your browser doesn't support geolocation. Please enter coordinates manually.",
+          "您的浏览器不支持地理位置，请手动输入坐标。"
+        ),
         variant: "destructive",
       });
     }
@@ -146,8 +152,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setBortleScale(newBortleScale);
     
     toast({
-      title: language === 'en' ? "Location Selected" : "已选择位置",
-      description: language === 'en' ? `Selected ${location.name}` : `已选择 ${location.name}`,
+      title: t("Location Selected", "已选择位置"),
+      description: t(`Selected ${location.name}`, `已选择 ${location.name}`),
     });
     
     setShowAdvancedSettings(true);
@@ -333,57 +339,35 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   };
 
   const getBortleScaleDescription = (value: number): string => {
-    const descriptions = language === 'en' ?
-    [
-      "1: Excellent dark-sky site, no light pollution",
-      "2: Typical truly dark site, Milky Way casts shadows",
-      "3: Rural sky, some light pollution but Milky Way still visible",
-      "4: Rural/suburban transition, Milky Way visible but lacks detail",
-      "5: Suburban sky, Milky Way very dim or invisible",
-      "6: Bright suburban sky, no Milky Way, only brightest constellations visible",
-      "7: Suburban/urban transition, most stars washed out",
-      "8: Urban sky, few stars visible, planets still visible",
-      "9: Inner-city sky, only brightest stars and planets visible"
-    ] : [
-      "1: 极佳的暗空环境，无光污染",
-      "2: 真正的黑暗区域，银河可投下阴影",
-      "3: 乡村天空，有一些光污染但仍能��到银河",
-      "4: 乡村/郊区���渡区，能看到银河但缺乏细节",
-      "5: 郊区天空，银河非常暗或不可见",
-      "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座",
-      "7: 郊区/城市过渡区，大多数恒星被洗掉",
-      "8: 城市天空，可见少量恒星，行星����可见",
-      "9: 市中心天空，只有最明亮的恒星和行星可见"
+    const descriptions = [
+      t("1: Excellent dark-sky site, no light pollution", "1: 极佳的暗空环境，无光污染"),
+      t("2: Typical truly dark site, Milky Way casts shadows", "2: 真正的黑暗区域，银河可投下阴影"),
+      t("3: Rural sky, some light pollution but Milky Way still visible", "3: 乡村天空，有一些光污染但仍能看到银河"),
+      t("4: Rural/suburban transition, Milky Way visible but lacks detail", "4: 乡村/郊区过渡区，能看到银河但缺乏细节"),
+      t("5: Suburban sky, Milky Way very dim or invisible", "5: 郊区天空，银河非常暗或不可见"),
+      t("6: Bright suburban sky, no Milky Way, only brightest constellations visible", "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座"),
+      t("7: Suburban/urban transition, most stars washed out", "7: 郊区/城市过渡区，大多数恒星被洗掉"),
+      t("8: Urban sky, few stars visible, planets still visible", "8: 城市天空，可见少量恒星，行星仍然可见"),
+      t("9: Inner-city sky, only brightest stars and planets visible", "9: 市中心天空，只有最明亮的恒星和行星可见")
     ];
-    return descriptions[value - 1] || (language === 'en' ? "Unknown" : "未知");
+    return descriptions[value - 1] || t("Unknown", "未知");
   };
 
   const getSeeingDescription = (value: number): string => {
-    const descriptions = language === 'en' ?
-    [
-      "1: Perfect seeing, stars perfectly still",
-      "1.5: Excellent seeing, stars mostly still",
-      "2: Good seeing, slight twinkling",
-      "2.5: Average seeing, moderate twinkling",
-      "3: Fair seeing, noticeable twinkling",
-      "3.5: Below average seeing, significant twinkling",
-      "4: Poor seeing, constant twinkling",
-      "4.5: Very poor seeing, images blurry",
-      "5: Terrible seeing, imaging nearly impossible"
-    ] : [
-      "1: 完美视宁度，恒星完全静止",
-      "1.5: 极佳视宁度，恒星几乎静止",
-      "2: 良好视宁度，轻微闪烁",
-      "2.5: 一般视宁度，中等闪烁",
-      "3: 尚可视宁度，明显闪烁",
-      "3.5: 低于平均视宁度，明显闪烁",
-      "4: 较差视宁度，持续闪烁",
-      "4.5: 非常差的视宁度，图像模糊",
-      "5: 极差视宁度，几乎无法成像"
+    const descriptions = [
+      t("1: Perfect seeing, stars perfectly still", "1: 完美视宁度，恒星完全静止"),
+      t("1.5: Excellent seeing, stars mostly still", "1.5: 极佳视宁度，恒星几乎静止"),
+      t("2: Good seeing, slight twinkling", "2: 良好视宁度，轻微闪烁"),
+      t("2.5: Average seeing, moderate twinkling", "2.5: 一般视宁度，中等闪烁"),
+      t("3: Fair seeing, noticeable twinkling", "3: 尚可视宁度，明显闪烁"),
+      t("3.5: Below average seeing, significant twinkling", "3.5: 低于平均视宁度，明显闪烁"),
+      t("4: Poor seeing, constant twinkling", "4: 较差视宁度，持续闪烁"),
+      t("4.5: Very poor seeing, images blurry", "4.5: 非常差的视宁度，图像模糊"),
+      t("5: Terrible seeing, imaging nearly impossible", "5: 极差视宁度，几乎无法成像")
     ];
     
     const index = Math.round((value - 1) * 2);
-    return descriptions[index] || (language === 'en' ? "Unknown" : "未知");
+    return descriptions[index] || t("Unknown", "未知");
   };
   
   const toggleLanguage = () => {
@@ -391,34 +375,25 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   };
 
   const getRecommendationMessage = (score: number): string => {
-    if (score >= 80) return "Grab your rig and run!";
-    if (score >= 60) return "Yeah! Should give it a go, eh?";
-    if (score >= 40) return "Uh... let me think twice.";
-    return "Well, probably should hit the sack.";
+    if (score >= 80) return t("Grab your rig and run!", "快带上你的设备出发吧！");
+    if (score >= 60) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
+    if (score >= 40) return t("Uh... let me think twice.", "呃...再考虑一下吧。");
+    return t("Well, probably should hit the sack.", "嗯，可能该睡觉了。");
   };
 
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">
-          {language === 'en' ? "Calculate Stellar Imaging Quality Score" : "计算恒星成像质量评分"}
+          {t("Calculate Stellar Imaging Quality Score", "计算恒星成像质量评分")}
         </h2>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center" 
-          onClick={toggleLanguage}
-        >
-          <Globe className="h-4 w-4 mr-1" />
-          {language === 'en' ? "中文" : "English"}
-        </Button>
       </div>
       
       {siqsScore !== null && (
         <div className="mb-6 p-4 glass-card">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-medium">
-              {language === 'en' ? "Estimated SIQS Score" : "预估SIQS评分"}
+              {t("Estimated SIQS Score", "预估SIQS评分")}
             </h3>
             <div className="flex items-center">
               <span className={`text-2xl font-bold ${
@@ -442,9 +417,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           </div>
           
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>{language === 'en' ? "Poor" : "差"}</span>
-            <span>{language === 'en' ? "Average" : "一般"}</span>
-            <span>{language === 'en' ? "Excellent" : "优秀"}</span>
+            <span>{t("Poor", "差")}</span>
+            <span>{t("Average", "一般")}</span>
+            <span>{t("Excellent", "优秀")}</span>
           </div>
           
           <p className="text-sm mt-3 font-medium italic text-center">
@@ -478,7 +453,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
                 {locationName}
               </span>
             ) : (
-              language === 'en' ? "Use My Location" : "使用我的位置"
+              t("Use My Location", "使用我的位置")
             )}
           </Button>
           
@@ -510,7 +485,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                language === 'en' ? "See More Details" : "查看更多详情"
+                t("See More Details", "查看更多详情")
               )}
             </Button>
           </div>
@@ -521,4 +496,3 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
-
