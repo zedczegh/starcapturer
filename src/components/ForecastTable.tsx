@@ -2,16 +2,22 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Cloud, Droplets, Thermometer, Wind } from "lucide-react";
+import { Cloud, Droplets, Thermometer, Wind, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Button } from "@/components/ui/button";
 
 interface ForecastTableProps {
   forecastData: any;
   isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
-const ForecastTable: React.FC<ForecastTableProps> = ({ forecastData, isLoading = false }) => {
+const ForecastTable: React.FC<ForecastTableProps> = ({ 
+  forecastData, 
+  isLoading = false,
+  onRefresh
+}) => {
   const { t } = useLanguage();
 
   // Format time from ISO string to readable format
@@ -47,15 +53,33 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ forecastData, isLoading =
     );
   }
 
-  if (!forecastData || !forecastData.hourly || !forecastData.hourly.time) {
+  // Better validation for forecast data structure
+  const hasForecastData = forecastData && 
+                          forecastData.hourly && 
+                          Array.isArray(forecastData.hourly.time) && 
+                          forecastData.hourly.time.length > 0 &&
+                          forecastData.hourly.temperature_2m &&
+                          forecastData.hourly.cloud_cover &&
+                          forecastData.hourly.wind_speed_10m &&
+                          forecastData.hourly.relative_humidity_2m;
+
+  if (!hasForecastData) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center p-6 text-muted-foreground">
-            <p>{t("No forecast data available", "没有可用的预报数据")}</p>
+          <div className="text-center p-6">
+            <p className="text-muted-foreground mb-4">
+              {t("No forecast data available", "没有可用的预报数据")}
+            </p>
+            {onRefresh && (
+              <Button variant="outline" onClick={onRefresh} className="flex items-center space-x-2">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <span>{t("Refresh Forecast", "刷新预报")}</span>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -72,7 +96,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ forecastData, isLoading =
         humidity: forecastData.hourly.relative_humidity_2m[i],
         cloudCover: forecastData.hourly.cloud_cover[i],
         windSpeed: forecastData.hourly.wind_speed_10m[i],
-        precipitation: forecastData.hourly.precipitation[i],
+        precipitation: forecastData.hourly.precipitation ? forecastData.hourly.precipitation[i] : 0,
       });
     }
   }
@@ -80,7 +104,14 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ forecastData, isLoading =
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
+          {onRefresh && (
+            <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">

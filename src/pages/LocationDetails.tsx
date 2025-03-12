@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -49,11 +50,25 @@ const LocationDetails = () => {
       });
       
       setForecastData(forecast);
+      if (!forecast) {
+        console.error("Forecast data not available or incomplete");
+      }
     } catch (error) {
       console.error("Error fetching forecast:", error);
+      toast.error(t("Forecast Error", "预报错误"), {
+        description: t("Could not load weather forecast. Try refreshing.", 
+                      "无法加载天气预报。请尝试刷新。")
+      });
     } finally {
       setForecastLoading(false);
     }
+  };
+
+  const handleRefreshForecast = () => {
+    fetchLocationForecast();
+    toast.info(t("Refreshing Forecast", "正在刷新预报"), {
+      description: t("Updating weather forecast data...", "正在更新天气预报数据...")
+    });
   };
 
   const handleLocationUpdate = async (newLocation: { name: string; latitude: number; longitude: number }) => {
@@ -168,7 +183,7 @@ const LocationDetails = () => {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden sci-fi-scrollbar">
+    <div className="min-h-screen overflow-x-hidden sci-fi-scrollbar pb-16 md:pb-0">
       <NavBar />
       
       <main className="container mx-auto px-4 pt-28 pb-16">
@@ -210,6 +225,7 @@ const LocationDetails = () => {
             <ForecastTable 
               forecastData={forecastData}
               isLoading={forecastLoading}
+              onRefresh={handleRefreshForecast}
             />
           </div>
         </div>

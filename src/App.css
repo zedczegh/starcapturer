@@ -94,20 +94,27 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Strong SOLID background for mobile nav overlay - for maximum visibility */
-.mobile-nav-overlay {
-  background: #0a0e1f !important; /* Solid dark background color */
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.9) !important;
+/* Mobile bottom navigation styles */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 70px;
+  }
+  
+  .pb-16 {
+    padding-bottom: 5rem !important;
+  }
 }
 
-/* Make mobile menu items more visible with solid background */
-.mobile-nav-item {
-  background-color: #141c3a !important; /* Solid background color */
-  margin-bottom: 0.5rem !important;
-  padding: 0.75rem 1rem !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
-  border: 1px solid rgba(104, 117, 255, 0.2) !important;
+/* Z-index fixes for search components */
+.search-component {
+  z-index: 60;
+  position: relative;
+}
+
+/* Improved focus states for interactive elements */
+.sci-fi-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(104, 117, 255, 0.4), 0 0 10px rgba(104, 117, 255, 0.3);
 }
 
 /* Sci-fi scrollbar for better UX */
@@ -130,27 +137,23 @@
   background: rgba(104, 117, 255, 0.7);
 }
 
-/* Z-index fixes for search components */
-.search-component {
-  z-index: 60;
-  position: relative;
+/* Styling for score indicators */
+.score-excellent {
+  background: linear-gradient(90deg, #4ade80 0%, #22d3ee 100%);
 }
 
-/* Improved focus states for interactive elements */
-.sci-fi-focus:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(104, 117, 255, 0.4), 0 0 10px rgba(104, 117, 255, 0.3);
+.score-good {
+  background: linear-gradient(90deg, #a3e635 0%, #4ade80 100%);
 }
 
-/* Fix for overlapping text in mobile nav */
-@media (max-width: 768px) {
-  .mobile-nav-item {
-    margin-bottom: 0.5rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(104, 117, 255, 0.1);
-  }
-  
-  .mobile-nav-item:last-child {
-    border-bottom: none;
-  }
+.score-average {
+  background: linear-gradient(90deg, #facc15 0%, #a3e635 100%);
+}
+
+.score-poor {
+  background: linear-gradient(90deg, #f97316 0%, #facc15 100%);
+}
+
+.score-bad {
+  background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
 }
