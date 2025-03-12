@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 
 type Coordinates = {
@@ -182,6 +183,32 @@ export async function getLocationNameFromCoordinates(
     const validLat = Math.max(-90, Math.min(90, latitude));
     const validLng = normalizeLongitude(longitude);
     
+    // First try with Nominatim reverse geocoding for better results
+    try {
+      const nominatimResponse = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&accept-language=${language}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'AstroSIQS-App'
+          }
+        }
+      );
+      
+      if (nominatimResponse.ok) {
+        const nominatimData = await nominatimResponse.json();
+        
+        if (nominatimData && nominatimData.display_name) {
+          console.log("Got location name from Nominatim:", nominatimData.display_name);
+          return nominatimData.display_name;
+        }
+      }
+    } catch (nominatimError) {
+      console.error('Error with Nominatim reverse geocoding:', nominatimError);
+      // Continue to next geocoder
+    }
+    
+    // Fallback to BigDataCloud
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${validLat}&longitude=${validLng}&localityLanguage=${language}`
     );
@@ -218,10 +245,27 @@ export async function getLocationNameFromCoordinates(
         : `位置：${validLat.toFixed(4)}, ${validLng.toFixed(4)}`;
     }
 
-    console.log("Got location name:", locationName);
+    console.log("Got location name from BigDataCloud:", locationName);
     return locationName;
   } catch (error) {
-    console.error('Error fetching location name from primary source:', error);
+    console.error('Error fetching location name from all sources:', error);
+    
+    // Last fallback to position-stack
+    try {
+      const geocodeResponse = await fetch(
+        `https://geocode.maps.co/reverse?lat=${latitude}&lon=${longitude}&format=json`
+      );
+      
+      if (geocodeResponse.ok) {
+        const data = await geocodeResponse.json();
+        if (data && data.display_name) {
+          console.log("Got location name from maps.co:", data.display_name);
+          return data.display_name;
+        }
+      }
+    } catch (fallbackError) {
+      console.error('Error with fallback geocoder:', fallbackError);
+    }
     
     return language === 'en'
       ? `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
