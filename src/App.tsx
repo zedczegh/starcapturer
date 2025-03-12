@@ -10,7 +10,16 @@ import NotFound from "./pages/NotFound";
 import ShareLocation from "./pages/ShareLocation";
 import PhotoPointsNearby from "./pages/PhotoPointsNearby";
 
-const queryClient = new QueryClient();
+// Create a new QueryClient instance with custom error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

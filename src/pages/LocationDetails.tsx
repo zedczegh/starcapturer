@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Map, Share2 } from "lucide-react";
@@ -7,6 +7,7 @@ import NavBar from "@/components/NavBar";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import LocationMap from "@/components/LocationMap";
+import { toast } from "@/components/ui/use-toast";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -14,7 +15,26 @@ const LocationDetails = () => {
   const navigate = useNavigate();
   const locationData = location.state;
 
-  // If there's no state data, we need to handle that
+  useEffect(() => {
+    // If there's no location data and we're not coming from another page,
+    // redirect to the home page after showing a toast
+    if (!locationData) {
+      toast({
+        title: "Location Not Found",
+        description: "The requested location information is not available or has expired.",
+        variant: "destructive",
+      });
+      
+      // Use a small timeout to ensure the toast appears before redirecting
+      const redirectTimer = setTimeout(() => {
+        navigate("/");
+      }, 100);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [locationData, navigate]);
+
+  // If there's no state data, render a loading state while we're redirecting
   if (!locationData) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -24,25 +44,28 @@ const LocationDetails = () => {
             <h1 className="text-2xl font-bold mb-4">Location Not Found</h1>
             <p className="text-muted-foreground mb-6">
               The location information you're looking for doesn't exist or has expired.
-              This can happen when you refresh the page or navigate directly to this URL.
+              Redirecting you to the home page...
             </p>
-            <Button onClick={() => navigate("/")}>
-              Return to Home
-            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Ensure all required properties exist to prevent runtime errors
-  const siqsResult = locationData.siqsResult || { siqs: 0, factors: [], isViable: false };
+  // Create default values to prevent runtime errors
+  const siqsResult = locationData.siqsResult || { 
+    siqs: 0, 
+    factors: [], 
+    isViable: false 
+  };
+  
   const weatherData = locationData.weatherData || { 
     cloudCover: 0, 
     windSpeed: 0, 
     humidity: 0, 
     temperature: 0, 
-    time: new Date().toISOString() 
+    time: new Date().toISOString(),
+    condition: "clear" // Add default condition to prevent undefined errors
   };
 
   return (
@@ -92,7 +115,7 @@ const LocationDetails = () => {
             </div>
             <div>•</div>
             <div>
-              Analysis Date: {new Date(locationData.timestamp).toLocaleDateString()}
+              Analysis Date: {new Date(locationData.timestamp || Date.now()).toLocaleDateString()}
             </div>
           </div>
         </div>
