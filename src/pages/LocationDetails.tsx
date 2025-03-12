@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -109,6 +110,9 @@ const LocationDetails = () => {
     isViable: false 
   };
   
+  // Ensure the SIQS score is within the correct 0-10 range
+  const normalizedSiqsScore = Math.min(Math.max(siqsResult.score, 0), 1) * 10;
+  
   const weatherData = {
     temperature: locationData?.weatherData?.temperature || 0,
     humidity: locationData?.weatherData?.humidity || 0,
@@ -176,7 +180,7 @@ const LocationDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <SIQSSummary
-              siqs={siqsResult.score * 10}
+              siqs={normalizedSiqsScore}
               factors={siqsResult.factors}
               isViable={siqsResult.isViable}
             />
