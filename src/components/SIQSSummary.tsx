@@ -45,10 +45,13 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Overall SIQS</span>
-            <span className="text-sm font-bold">{formatSiqsScore(siqs)}/10</span>
+        <div className="mb-6">
+          <div className="flex flex-col items-center justify-center mb-4">
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-bold">{formatSiqsScore(siqs)}</span>
+              <span className="text-lg text-muted-foreground">/10</span>
+            </div>
+            <span className="text-sm text-muted-foreground mt-1">Overall Quality Score</span>
           </div>
           <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
             <div 
