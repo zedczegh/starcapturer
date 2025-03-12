@@ -5,6 +5,7 @@ import { Camera, Loader2, Star, MapPin, NavigationIcon, Share2 } from "lucide-re
 import { toast } from "@/components/ui/use-toast";
 import { getRecommendedPhotoPoints, generateBaiduMapsUrl, SharedAstroSpot } from "@/lib/api";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Link } from "react-router-dom";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -64,11 +65,18 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <Camera className="h-5 w-5 text-primary" />
-        Recommended Photo Points
-        {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Camera className="h-5 w-5 text-primary" />
+          Recommended Photo Points
+          {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+        </h3>
+        <Link to="/photo-points">
+          <Button variant="link" size="sm" className="text-primary">
+            View All Points
+          </Button>
+        </Link>
+      </div>
       
       <div className="grid grid-cols-1 gap-3">
         {recommendedPoints.length === 0 ? (

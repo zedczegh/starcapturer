@@ -48,11 +48,11 @@ const NavBar = () => {
           <NavLink to="/about" active={location.pathname === "/about"}>
             About SIQS
           </NavLink>
-          <NavLink to="/map" active={location.pathname === "/map"}>
-            Explore Map
+          <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
+            Photo Points Nearby
           </NavLink>
-          <NavLink to="/community" active={location.pathname === "/community"}>
-            Community
+          <NavLink to="/share" active={location.pathname === "/share"}>
+            Share Location
           </NavLink>
         </nav>
         
@@ -89,11 +89,11 @@ const NavBar = () => {
             <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
               About SIQS
             </MobileNavLink>
-            <MobileNavLink to="/map" onClick={() => setMenuOpen(false)}>
-              Explore Map
+            <MobileNavLink to="/photo-points" onClick={() => setMenuOpen(false)}>
+              Photo Points Nearby
             </MobileNavLink>
-            <MobileNavLink to="/community" onClick={() => setMenuOpen(false)}>
-              Community
+            <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
+              Share Location
             </MobileNavLink>
             <div className="pt-2 border-t border-cosmic-700">
               <Button className="w-full">Sign In</Button>

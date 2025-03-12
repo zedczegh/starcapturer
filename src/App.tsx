@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import LocationDetails from "./pages/LocationDetails";
 import NotFound from "./pages/NotFound";
 import ShareLocation from "./pages/ShareLocation";
+import PhotoPointsNearby from "./pages/PhotoPointsNearby";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/location/:id" element={<LocationDetails />} />
           <Route path="/share" element={<ShareLocation />} />
+          <Route path="/photo-points" element={<PhotoPointsNearby />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
