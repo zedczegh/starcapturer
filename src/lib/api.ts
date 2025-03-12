@@ -26,19 +26,15 @@ type ForecastItem = {
   seeingCondition: string;
 };
 
-// Function to normalize longitude to -180 to 180 range
 function normalizeLongitude(longitude: number): number {
   return ((longitude + 180) % 360 + 360) % 360 - 180;
 }
 
-// Function to validate coordinates before API calls
 function validateCoordinates(coordinates: Coordinates): Coordinates {
   const { latitude, longitude } = coordinates;
   
-  // Ensure latitude is in valid range (-90 to 90)
   const validLatitude = Math.max(-90, Math.min(90, latitude));
   
-  // Ensure longitude is in valid range (-180 to 180)
   const validLongitude = normalizeLongitude(longitude);
   
   return {
@@ -47,10 +43,8 @@ function validateCoordinates(coordinates: Coordinates): Coordinates {
   };
 }
 
-// Function to fetch current weather data from Open-Meteo API
 export async function fetchWeatherData(coordinates: Coordinates): Promise<WeatherData | null> {
   try {
-    // Validate coordinates before making API call
     const { latitude, longitude } = validateCoordinates(coordinates);
     
     const response = await fetch(
@@ -63,7 +57,6 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     
     const data = await response.json();
     
-    // Determine weather condition based on cloud cover
     const cloudCover = data.current.cloud_cover;
     let condition = "clear";
     
@@ -72,15 +65,13 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     else if (cloudCover < 70) condition = "cloudy";
     else condition = "overcast";
     
-    // Check if there's precipitation to override condition
     if (data.current.precipitation > 0.5) condition = "rain";
     
-    // Extract relevant data
     return {
       cloudCover: cloudCover,
-      windSpeed: Math.round(data.current.wind_speed_10m * 0.621371), // convert km/h to mph
-      humidity: data.current.relative_humidity_2m, // percentage
-      temperature: data.current.temperature_2m, // Celsius
+      windSpeed: Math.round(data.current.wind_speed_10m * 0.621371),
+      humidity: data.current.relative_humidity_2m,
+      temperature: data.current.temperature_2m,
       time: data.current.time,
       condition: condition,
       precipitation: data.current.precipitation
@@ -94,10 +85,8 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
   }
 }
 
-// Function to fetch 24-hour forecast data
 export async function fetchForecastData(coordinates: Coordinates): Promise<ForecastItem[] | null> {
   try {
-    // Validate coordinates before making API call
     const { latitude, longitude } = validateCoordinates(coordinates);
     
     const response = await fetch(
@@ -110,17 +99,14 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
     
     const data = await response.json();
     
-    // Process the hourly data into our format
     const forecast: ForecastItem[] = [];
     
     for (let i = 0; i < data.hourly.time.length && i < 24; i++) {
       const cloudCover = data.hourly.cloud_cover[i];
       let condition = determineWeatherCondition(cloudCover);
       
-      // Override with precipitation if present
       if (data.hourly.precipitation[i] > 0.5) condition = "rain";
       
-      // Calculate seeing conditions based on cloud cover, humidity, and wind
       const seeingCondition = calculateSeeingCondition(
         cloudCover,
         data.hourly.relative_humidity_2m[i],
@@ -132,7 +118,7 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
         temperature: data.hourly.temperature_2m[i],
         cloudCover: cloudCover,
         humidity: data.hourly.relative_humidity_2m[i],
-        windSpeed: Math.round(data.hourly.wind_speed_10m[i] * 0.621371), // convert to mph
+        windSpeed: Math.round(data.hourly.wind_speed_10m[i] * 0.621371),
         precipitation: data.hourly.precipitation[i],
         condition: condition,
         seeingCondition: seeingCondition
@@ -149,7 +135,6 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
   }
 }
 
-// Helper to determine weather condition based on cloud cover
 export function determineWeatherCondition(cloudCover: number): string {
   if (cloudCover < 10) return "clear";
   if (cloudCover < 30) return "partly cloudy";
@@ -157,24 +142,17 @@ export function determineWeatherCondition(cloudCover: number): string {
   return "overcast";
 }
 
-// Helper to calculate seeing conditions for astronomy
 function calculateSeeingCondition(cloudCover: number, humidity: number, windSpeed: number): string {
-  // Poor seeing if completely overcast
   if (cloudCover > 80) return "Poor";
   
-  // Calculate a seeing score (0-10, higher is better)
   let seeingScore = 10;
   
-  // Cloud cover reduces seeing (0-4 points reduction)
   seeingScore -= (cloudCover / 20);
   
-  // High humidity reduces seeing (0-3 points reduction)
   seeingScore -= (humidity > 70 ? (humidity - 70) / 10 : 0);
   
-  // High winds reduce seeing (0-3 points reduction)
   seeingScore -= (windSpeed > 10 ? Math.min(3, (windSpeed - 10) / 5) : 0);
   
-  // Convert score to category
   if (seeingScore >= 8) return "Excellent";
   if (seeingScore >= 6) return "Good";
   if (seeingScore >= 4) return "Average";
@@ -182,23 +160,19 @@ function calculateSeeingCondition(cloudCover: number, humidity: number, windSpee
   return "Very Poor";
 }
 
-// Convert WGS-84 coordinates to Baidu Maps URL
 export function generateBaiduMapsUrl(latitude: number, longitude: number): string {
   return `https://api.map.baidu.com/marker?location=${latitude},${longitude}&title=Astrophotography+Location&output=html`;
 }
 
-// Improved reverse geocoding to get location name from coordinates with language support
 export async function getLocationNameFromCoordinates(
   latitude: number, 
   longitude: number,
   language: 'en' | 'zh' = 'en'
 ): Promise<string> {
   try {
-    // Validate coordinates before making API call
     const validLat = Math.max(-90, Math.min(90, latitude));
     const validLng = normalizeLongitude(longitude);
     
-    // First attempt with BigDataCloud API which is more reliable
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${validLat}&longitude=${validLng}&localityLanguage=${language}`
     );
@@ -209,7 +183,6 @@ export async function getLocationNameFromCoordinates(
 
     const data = await response.json();
     
-    // Create a meaningful location name from the response
     let locationName = "";
     
     if (data.locality) {
@@ -221,7 +194,6 @@ export async function getLocationNameFromCoordinates(
     }
     
     if (data.countryName && !locationName) {
-      // If we don't have city/locality info, use the broader area
       if (data.principalSubdivision) {
         locationName = `${data.principalSubdivision}, ${data.countryName}`;
       } else {
@@ -231,7 +203,6 @@ export async function getLocationNameFromCoordinates(
       }
     }
     
-    // If we still don't have a name, create a generic one with coordinates
     if (!locationName) {
       locationName = language === 'en'
         ? `Location at ${validLat.toFixed(4)}, ${validLng.toFixed(4)}`
@@ -243,14 +214,12 @@ export async function getLocationNameFromCoordinates(
   } catch (error) {
     console.error('Error fetching location name from primary source:', error);
     
-    // Fallback to a generic name format if the API call fails
     return language === 'en'
       ? `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
       : `位置：${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
   }
 }
 
-// Interface for user-shared astrophotography spots
 export interface SharedAstroSpot {
   id: string;
   name: string;
@@ -263,14 +232,12 @@ export interface SharedAstroSpot {
   photographer: string;
   targets?: string[];
   photoUrl?: string;
-  distance?: number; // Added optional distance property
+  distance?: number;
 }
 
-// Local storage keys
 const SHARED_SPOTS_KEY = "astrospot_shared_locations";
 const RECENT_LOCATIONS_KEY = "astrospot_recent_locations";
 
-// Get all user-shared astrophotography spots
 export function getSharedAstroSpots(): SharedAstroSpot[] {
   try {
     const spotsJson = localStorage.getItem(SHARED_SPOTS_KEY);
@@ -282,7 +249,6 @@ export function getSharedAstroSpots(): SharedAstroSpot[] {
   }
 }
 
-// Share a new astrophotography spot
 export function shareAstroSpot(spot: Omit<SharedAstroSpot, "id">): SharedAstroSpot {
   try {
     const spots = getSharedAstroSpots();
@@ -294,33 +260,27 @@ export function shareAstroSpot(spot: Omit<SharedAstroSpot, "id">): SharedAstroSp
     const updatedSpots = [newSpot, ...spots];
     localStorage.setItem(SHARED_SPOTS_KEY, JSON.stringify(updatedSpots));
     
-    toast({
-      title: "Spot Shared",
+    toast.success("Spot Shared", {
       description: "Your astrophotography spot has been shared successfully!",
     });
     
     return newSpot;
   } catch (error) {
     console.error("Error sharing spot:", error);
-    toast({
-      title: "Sharing Failed",
+    toast.error("Sharing Failed", {
       description: "Could not share your spot. Please try again.",
-      variant: "destructive",
     });
     throw error;
   }
 }
 
-// Get recommended photo points near user location
 export function getRecommendedPhotoPoints(userLocation?: { latitude: number; longitude: number } | null): Array<SharedAstroSpot> {
   const allSpots = getSharedAstroSpots();
   
   if (!userLocation) {
-    // If no user location, return the first 4 spots
     return allSpots.slice(0, 4);
   }
   
-  // Calculate distance for each spot and sort by proximity
   const spotsWithDistance = allSpots.map(spot => ({
     ...spot,
     distance: calculateDistance(
@@ -331,15 +291,13 @@ export function getRecommendedPhotoPoints(userLocation?: { latitude: number; lon
     )
   }));
   
-  // Sort by distance (closest first)
   return spotsWithDistance
     .sort((a, b) => (a.distance || 0) - (b.distance || 0))
     .slice(0, 4);
 }
 
-// Calculate distance between two coordinates in km (haversine formula)
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radius of the earth in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -347,11 +305,10 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const distance = R * c; // Distance in km
+  const distance = R * c;
   return distance;
 }
 
-// Mock function for recent locations (in a real app, this would use local storage or a backend)
 export function getRecentLocations(): Array<{
   id: string;
   name: string;
@@ -371,7 +328,6 @@ export function getRecentLocations(): Array<{
   }
 }
 
-// Default shared spots if none exist
 function getDefaultSharedSpots(): SharedAstroSpot[] {
   return [
     {
@@ -476,7 +432,6 @@ function getDefaultSharedSpots(): SharedAstroSpot[] {
   ];
 }
 
-// Default recent locations if none exist
 function getDefaultRecentLocations() {
   return [
     {
@@ -509,7 +464,6 @@ function getDefaultRecentLocations() {
   ];
 }
 
-// Mock function to get reviews
 export function getLocationReviews(locationId: string): Array<{
   id: string;
   author: string;
@@ -544,6 +498,5 @@ export function getLocationReviews(locationId: string): Array<{
     }
   ];
   
-  // In a real app, we would filter by locationId
   return reviews;
 }
