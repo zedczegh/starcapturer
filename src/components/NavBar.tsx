@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Search, MoonStar, User } from "lucide-react";
+import MapSelector from "./MapSelector";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -10,7 +11,6 @@ const NavBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get the current locationId from the URL if we're on a location page
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
     : null;
@@ -43,6 +43,11 @@ const NavBar = () => {
     }
   };
   
+  const handleLocationSelect = (location: { name: string; latitude: number; longitude: number }) => {
+    const locationId = Date.now().toString();
+    navigate(`/location/${locationId}`);
+  };
+
   return (
     <header
       className={cn(
@@ -87,9 +92,11 @@ const NavBar = () => {
         </nav>
         
         <div className="hidden md:flex items-center space-x-2">
-          <Button variant="ghost" size="icon">
-            <Search className="h-5 w-5" />
-          </Button>
+          <MapSelector onSelectLocation={handleLocationSelect}>
+            <Button variant="ghost" size="icon">
+              <Search className="h-5 w-5" />
+            </Button>
+          </MapSelector>
           <Button variant="outline" className="flex items-center space-x-2">
             <User className="h-4 w-4" />
             <span>Sign In</span>
@@ -134,6 +141,12 @@ const NavBar = () => {
             <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
               Share Location
             </MobileNavLink>
+            <MapSelector onSelectLocation={handleLocationSelect}>
+              <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
+                <Search className="h-4 w-4" />
+                <span>Search Location</span>
+              </Button>
+            </MapSelector>
             <div className="pt-2 border-t border-cosmic-700">
               <Button className="w-full">Sign In</Button>
             </div>
