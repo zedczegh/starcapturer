@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -123,41 +122,45 @@ const NavBar = () => {
       </div>
       
       {menuOpen && (
-        <div className="md:hidden fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pt-20 pb-6 glassmorphism-strong mobile-nav-overlay animate-fade-in overflow-y-auto">
-          <div className="container mx-auto px-4 flex flex-col space-y-6 flex-1">
-            <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
-              {t("Home", "首页")}
-            </MobileNavLink>
-            <a
-              href={locationId ? `/location/${locationId}` : "/#calculator-section"}
-              onClick={(e) => {
-                handleSIQSClick(e);
-                setMenuOpen(false);
-              }}
-              className="text-foreground text-lg font-medium py-2 transition-colors hover:text-primary"
-            >
-              {t("SIQS Now", "实时SIQS")}
-            </a>
-            <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
-              {t("About SIQS", "关于SIQS")}
-            </MobileNavLink>
-            <MobileNavLink to="/photo-points" onClick={() => setMenuOpen(false)}>
-              {t("Photo Points Nearby", "周边拍摄点")}
-            </MobileNavLink>
-            <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
-              {t("Share Location", "分享位置")}
-            </MobileNavLink>
+        <div className="md:hidden fixed inset-0 z-10 flex flex-col pt-20 glassmorphism-strong mobile-nav-overlay animate-fade-in">
+          <div className="container mx-auto px-6 flex flex-col h-full">
+            <nav className="flex flex-col space-y-8 py-8">
+              <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
+                {t("Home", "首页")}
+              </MobileNavLink>
+              <a
+                href={locationId ? `/location/${locationId}` : "/#calculator-section"}
+                onClick={(e) => {
+                  handleSIQSClick(e);
+                  setMenuOpen(false);
+                }}
+                className="text-foreground/90 text-xl font-medium py-2 transition-colors hover:text-primary"
+              >
+                {t("SIQS Now", "实时SIQS")}
+              </a>
+              <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
+                {t("About SIQS", "关于SIQS")}
+              </MobileNavLink>
+              <MobileNavLink to="/photo-points" onClick={() => setMenuOpen(false)}>
+                {t("Photo Points Nearby", "周边拍摄点")}
+              </MobileNavLink>
+              <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
+                {t("Share Location", "分享位置")}
+              </MobileNavLink>
+            </nav>
             
-            <div className="mt-auto space-y-4">
-              <LanguageSwitcher />
-              <MapSelector onSelectLocation={handleLocationSelect}>
-                <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
-                  <Search className="h-4 w-4" />
-                  <span>{t("Search Location", "搜索位置")}</span>
-                </Button>
-              </MapSelector>
-              <div className="pt-4 border-t border-cosmic-700">
-                <Button className="w-full">{t("Sign In", "登录")}</Button>
+            <div className="mt-auto space-y-6 pb-8">
+              <div className="flex flex-col space-y-4">
+                <LanguageSwitcher />
+                <MapSelector onSelectLocation={handleLocationSelect}>
+                  <Button variant="outline" size="lg" className="w-full flex items-center justify-center space-x-2">
+                    <Search className="h-5 w-5" />
+                    <span>{t("Search Location", "搜索位置")}</span>
+                  </Button>
+                </MapSelector>
+              </div>
+              <div className="pt-4 border-t border-white/10">
+                <Button size="lg" className="w-full">{t("Sign In", "登录")}</Button>
               </div>
             </div>
           </div>
@@ -204,7 +207,7 @@ const MobileNavLink = ({
   return (
     <Link
       to={to}
-      className="text-foreground text-lg font-medium py-2 transition-colors hover:text-primary"
+      className="text-foreground/90 text-xl font-medium py-2 transition-colors hover:text-primary"
       onClick={onClick}
     >
       {children}
