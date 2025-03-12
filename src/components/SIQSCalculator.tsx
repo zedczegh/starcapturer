@@ -35,7 +35,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   className,
   hideRecommendedPoints = false
 }) => {
-  const { language, t } = useLanguage();
+  const { language, t, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [locationName, setLocationName] = useState("");
