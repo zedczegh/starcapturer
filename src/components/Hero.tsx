@@ -1,8 +1,6 @@
-
 import React, { useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Star, Telescope } from "lucide-react";
+import { Star, Telescope } from "lucide-react";
 import { motion } from "framer-motion";
 
 const Hero = () => {
@@ -91,13 +89,6 @@ const Hero = () => {
             Discover optimal shooting locations with data-driven Stellar Imaging Quality Scores.
             Find the best spots for breathtaking night sky images anywhere on Earth.
           </p>
-          
-          <Button size="lg" className="rounded-full animate-bounce-slow mt-2" onClick={() => {
-            document.getElementById('calculator-section')?.scrollIntoView({ behavior: 'smooth' });
-          }}>
-            <span>Calculate Your SIQS</span>
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
         </div>
       </div>
       
