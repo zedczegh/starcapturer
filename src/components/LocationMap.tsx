@@ -15,6 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+// Create a custom marker with animation effects
 const createCustomMarker = (): L.DivIcon => {
   return L.divIcon({
     className: 'custom-marker-icon',
@@ -74,7 +75,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
           
           toast({
             title: "Location Updated",
-            description: newName,
+            description: `New location: ${newName}`,
           });
         } catch (error) {
           console.error('Error getting location name:', error);
@@ -99,6 +100,73 @@ const LocationMap: React.FC<LocationMapProps> = ({
     
     return null;
   };
+
+  // Effect to add custom CSS for marker animation if not already present
+  React.useEffect(() => {
+    if (!document.getElementById('custom-marker-styles')) {
+      const style = document.createElement('style');
+      style.id = 'custom-marker-styles';
+      style.innerHTML = `
+        .custom-marker-icon {
+          background: transparent;
+          border: none;
+        }
+        .marker-pin-container {
+          position: relative;
+          width: 30px;
+          height: 42px;
+        }
+        .marker-pin {
+          width: 24px;
+          height: 24px;
+          border-radius: 50% 50% 50% 0;
+          background: #9b87f5;
+          position: absolute;
+          transform: rotate(-45deg);
+          left: 50%;
+          top: 50%;
+          margin: -20px 0 0 -12px;
+          box-shadow: 0 0 6px rgba(0,0,0,0.3);
+        }
+        .marker-pin::after {
+          content: '';
+          width: 14px;
+          height: 14px;
+          margin: 5px 0 0 5px;
+          background: white;
+          position: absolute;
+          border-radius: 50%;
+        }
+        .marker-shadow {
+          width: 24px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.15);
+          position: absolute;
+          left: 50%;
+          top: 100%;
+          margin: -6px 0 0 -12px;
+          transform: rotateX(55deg);
+          z-index: -1;
+        }
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
+          }
+          70% {
+            box-shadow: 0 0 0 10px rgba(155, 135, 245, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0);
+          }
+        }
+        .animate-bounce {
+          animation: pulse 2s infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   return (
     <Card>
@@ -128,7 +196,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
             {validName} is located at coordinates {validLatitude.toFixed(6)}, {validLongitude.toFixed(6)}
           </p>
           {editable && (
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#9b87f5] animate-pulse"></span>
               Click anywhere on the map to update the location
             </p>
           )}

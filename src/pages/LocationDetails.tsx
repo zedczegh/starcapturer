@@ -10,6 +10,13 @@ import { toast } from "@/components/ui/use-toast";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData } from "@/lib/api";
 
+const determineWeatherCondition = (cloudCover: number) => {
+  if (cloudCover < 10) return "clear";
+  if (cloudCover < 30) return "partly cloudy";
+  if (cloudCover < 70) return "cloudy";
+  return "overcast";
+};
+
 const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -107,13 +114,6 @@ const LocationDetails = () => {
     time: locationData.weatherData?.time || new Date().toISOString(),
     condition: locationData.weatherData?.condition || 
       determineWeatherCondition(locationData.weatherData?.cloudCover || 0)
-  };
-  
-  const determineWeatherCondition = (cloudCover: number) => {
-    if (cloudCover < 10) return "clear";
-    if (cloudCover < 30) return "partly cloudy";
-    if (cloudCover < 70) return "cloudy";
-    return "overcast";
   };
   
   const formatMoonPhase = (phase: number) => {
