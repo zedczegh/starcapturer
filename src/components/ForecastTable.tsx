@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Cloud, Droplets, Thermometer, Wind, RefreshCw } from "lucide-react";
+import { Cloud, Droplets, Thermometer, Wind, RefreshCw, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -22,17 +22,31 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
 
   // Format time from ISO string to readable format
   const formatTime = (isoTime: string) => {
-    const date = new Date(isoTime);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      const date = new Date(isoTime);
+      if (isNaN(date.getTime())) return "--:--";
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      console.error("Error formatting time:", error);
+      return "--:--";
+    }
   };
   
   // Format date from ISO string
   const formatDate = (isoTime: string) => {
-    const date = new Date(isoTime);
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    try {
+      const date = new Date(isoTime);
+      if (isNaN(date.getTime())) return "--/--";
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "--/--";
+    }
   };
 
   const formatCondition = (cloudCover: number) => {
+    if (typeof cloudCover !== 'number') return t("Unknown", "未知");
+    
     if (cloudCover < 10) return t("Clear", "晴朗");
     if (cloudCover < 30) return t("Mostly Clear", "大部分晴朗");
     if (cloudCover < 70) return t("Partly Cloudy", "部分多云");
@@ -42,7 +56,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
         </CardHeader>
@@ -53,25 +67,33 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
     );
   }
 
-  // Better validation for forecast data structure
+  // Enhanced validation for forecast data structure
   const hasForecastData = forecastData && 
                           forecastData.hourly && 
                           Array.isArray(forecastData.hourly.time) && 
                           forecastData.hourly.time.length > 0 &&
-                          forecastData.hourly.temperature_2m &&
-                          forecastData.hourly.cloud_cover &&
-                          forecastData.hourly.wind_speed_10m &&
-                          forecastData.hourly.relative_humidity_2m;
+                          Array.isArray(forecastData.hourly.temperature_2m) &&
+                          Array.isArray(forecastData.hourly.cloud_cover) &&
+                          Array.isArray(forecastData.hourly.wind_speed_10m) &&
+                          Array.isArray(forecastData.hourly.relative_humidity_2m);
 
   if (!hasForecastData) {
     return (
-      <Card>
+      <Card className="shadow-md border-cosmic-700/30">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
+            {onRefresh && (
+              <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="text-center p-6">
-            <p className="text-muted-foreground mb-4">
+          <div className="text-center p-6 space-y-4">
+            <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto" />
+            <p className="text-muted-foreground">
               {t("No forecast data available", "没有可用的预报数据")}
             </p>
             {onRefresh && (
@@ -86,28 +108,70 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
     );
   }
 
-  // Create a subset of forecasts (next 12 hours, every 3 hours)
+  // Create a subset of forecasts (next 24 hours, every 3 hours) with fallbacks for missing data
   const forecasts = [];
-  for (let i = 0; i < Math.min(forecastData.hourly.time.length, 24); i += 3) {
-    if (i < forecastData.hourly.time.length) {
-      forecasts.push({
-        time: forecastData.hourly.time[i],
-        temperature: forecastData.hourly.temperature_2m[i],
-        humidity: forecastData.hourly.relative_humidity_2m[i],
-        cloudCover: forecastData.hourly.cloud_cover[i],
-        windSpeed: forecastData.hourly.wind_speed_10m[i],
-        precipitation: forecastData.hourly.precipitation ? forecastData.hourly.precipitation[i] : 0,
-      });
+  try {
+    for (let i = 0; i < Math.min(forecastData.hourly.time.length, 24); i += 3) {
+      if (i < forecastData.hourly.time.length) {
+        forecasts.push({
+          time: forecastData.hourly.time[i] || new Date().toISOString(),
+          temperature: forecastData.hourly.temperature_2m?.[i] ?? 0,
+          humidity: forecastData.hourly.relative_humidity_2m?.[i] ?? 0,
+          cloudCover: forecastData.hourly.cloud_cover?.[i] ?? 0,
+          windSpeed: forecastData.hourly.wind_speed_10m?.[i] ?? 0,
+          precipitation: forecastData.hourly.precipitation?.[i] ?? 0,
+        });
+      }
     }
+  } catch (error) {
+    console.error("Error processing forecast data:", error);
+  }
+
+  // Safety check - if we couldn't process any forecasts, show error
+  if (forecasts.length === 0) {
+    return (
+      <Card className="shadow-md border-cosmic-700/30">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
+            {onRefresh && (
+              <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center p-6 space-y-4">
+            <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto" />
+            <p className="text-muted-foreground">
+              {t("Could not process forecast data", "无法处理预报数据")}
+            </p>
+            {onRefresh && (
+              <Button variant="outline" onClick={onRefresh} className="flex items-center space-x-2">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <span>{t("Refresh Forecast", "刷新预报")}</span>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <Card>
+    <Card className="shadow-md border-cosmic-700/30">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
           {onRefresh && (
-            <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onRefresh} 
+              className="h-8 w-8 p-0 hover:bg-primary/10"
+              title={t("Refresh Forecast", "刷新预报")}
+            >
               <RefreshCw className="h-4 w-4" />
             </Button>
           )}
@@ -133,10 +197,10 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
                     <div>{formatTime(forecast.time)}</div>
                     <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
                   </TableCell>
-                  <TableCell className="text-center">{forecast.temperature.toFixed(1)}°C</TableCell>
-                  <TableCell className="text-center">{forecast.cloudCover}%</TableCell>
-                  <TableCell className="text-center">{forecast.windSpeed} km/h</TableCell>
-                  <TableCell className="text-center">{forecast.humidity}%</TableCell>
+                  <TableCell className="text-center">{isNaN(forecast.temperature) ? "--" : forecast.temperature.toFixed(1)}°C</TableCell>
+                  <TableCell className="text-center">{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</TableCell>
+                  <TableCell className="text-center">{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} km/h</TableCell>
+                  <TableCell className="text-center">{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</TableCell>
                   <TableCell>{formatCondition(forecast.cloudCover)}</TableCell>
                 </TableRow>
               ))}
