@@ -50,7 +50,7 @@ const InteractiveMap = ({ onMapClick, position }: {
         mapRef.current.off('click', handleClick);
       }
     };
-  }, [onMapClick, mapRef.current]);
+  }, [onMapClick]);
   
   return (
     <MapContainer 
@@ -164,53 +164,35 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   
   const handleMapClick = async (lat: number, lng: number) => {
     setPosition([lat, lng]);
-    await fetchLocationName(lat, lng);
-  };
-  
-  const fetchLocationName = async (lat: number, lng: number) => {
     setLoading(true);
+    
     try {
       const name = await getLocationNameFromCoordinates(lat, lng, language);
       
-      setSelectedLocation({
+      const newLocation = {
         name,
         latitude: lat,
         longitude: lng
-      });
+      };
+      
+      setSelectedLocation(newLocation);
       setSearchQuery(name);
-      setLoading(false);
       
       if (isOpen) {
         setTimeout(() => {
-          handleSelectLocation();
-        }, 1000);
+          onSelectLocation(newLocation);
+          setIsOpen(false);
+        }, 500);
       }
     } catch (error) {
       console.error('Error fetching location name:', error);
-      const fallbackName = `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      setSelectedLocation({
-        name: fallbackName,
-        latitude: lat,
-        longitude: lng
+      toast({
+        title: language === 'en' ? "Location Error" : "位置错误",
+        description: language === 'en' ? "Could not get location name" : "无法获取位置名称",
+        variant: "destructive",
       });
-      setSearchQuery(fallbackName);
+    } finally {
       setLoading(false);
-    }
-  };
-  
-  const handleSelectLocation = () => {
-    if (selectedLocation) {
-      onSelectLocation(selectedLocation);
-      setIsOpen(false);
-    } else if (position) {
-      const locationName = searchQuery || `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`;
-      const location = {
-        name: locationName,
-        latitude: position[0],
-        longitude: position[1]
-      };
-      onSelectLocation(location);
-      setIsOpen(false);
     }
   };
   
