@@ -53,20 +53,22 @@ const InteractiveMap = ({ onMapClick, position }: {
   
   return (
     <>
-      <div 
-        className="leaflet-container"
-        ref={(el) => {
-          if (el && !mapRef.current) {
-            setTimeout(() => {
-              const mapInstance = L.DomUtil.get(el)?.['_leaflet_map'];
-              if (mapInstance) {
-                mapRef.current = mapInstance;
-              }
-            }, 100);
-          }
+      <MapContainer 
+        center={position} 
+        zoom={3} 
+        style={{ height: "100%", width: "100%" }}
+        scrollWheelZoom={true}
+        whenCreated={(map) => {
+          mapRef.current = map;
         }}
-      />
-      <Marker position={position} />
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={position} />
+        <ChangeMapCenter coordinates={position} mapRef={mapRef} />
+      </MapContainer>
     </>
   );
 };
@@ -395,20 +397,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
         </div>
         
         <div className="flex-1 rounded-md border border-input bg-background min-h-[300px] mb-4 overflow-hidden glassmorphism">
-          <MapContainer 
-            center={position} 
-            zoom={3} 
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={true}
-            whenCreated={onMapCreated}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <InteractiveMap onMapClick={handleMapClick} position={position} />
-            <ChangeMapCenter coordinates={position} mapRef={mapRef} />
-          </MapContainer>
+          <InteractiveMap onMapClick={handleMapClick} position={position} />
         </div>
         
         <div className="flex justify-between items-center">
