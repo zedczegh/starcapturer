@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { MapPin, Calculator, Loader2 } from "lucide-react";
+import MapSelector from "./MapSelector";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -35,7 +35,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           setLongitude(lng.toFixed(6));
           
           try {
-            // Get location name from coordinates
             const name = await getLocationNameFromCoordinates(lat, lng);
             setLocationName(name);
             
@@ -71,6 +70,17 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         variant: "destructive",
       });
     }
+  };
+  
+  const handleMapLocationSelect = (location: { name: string; latitude: number; longitude: number }) => {
+    setLocationName(location.name);
+    setLatitude(location.latitude.toFixed(6));
+    setLongitude(location.longitude.toFixed(6));
+    
+    toast({
+      title: "Location Selected",
+      description: `Selected ${location.name}`,
+    });
   };
   
   const validateInputs = (): boolean => {
@@ -113,7 +123,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setLoading(true);
     
     try {
-      // Fetch weather data
       const weatherData = await fetchWeatherData({
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
@@ -124,7 +133,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         return;
       }
       
-      // Calculate SIQS
       const siqsResult = calculateSIQS({
         cloudCover: weatherData.cloudCover,
         bortleScale,
@@ -133,10 +141,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         humidity: weatherData.humidity,
       });
       
-      // Generate a unique ID for this location
       const locationId = Date.now().toString();
       
-      // In a real app, we would store this in a database or local storage
       const locationData = {
         id: locationId,
         name: locationName,
@@ -149,7 +155,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         timestamp: new Date().toISOString(),
       };
       
-      // For now, we'll just navigate to the details page with this data as state
       navigate(`/location/${locationId}`, { state: locationData });
     } catch (error) {
       console.error("Error calculating SIQS:", error);
@@ -177,6 +182,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
             onChange={(e) => setLocationName(e.target.value)}
             className="mt-1.5"
           />
+          <MapSelector onSelectLocation={handleMapLocationSelect} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
