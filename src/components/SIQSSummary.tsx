@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,11 +32,28 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     return score.toFixed(1);
   };
 
+  const getViabilityStatus = (score: number) => {
+    if (score >= 8) return {
+      isViable: true,
+      label: t("Exceptional", "理想"),
+      icon: <CheckCircle2 className="mr-1 h-3 w-3" />
+    };
+    if (score >= 5) return {
+      isViable: true,
+      label: t("Partly Ideal", "部分理想"),
+      icon: <CheckCircle2 className="mr-1 h-3 w-3" />
+    };
+    return {
+      isViable: false,
+      label: t("Not Ideal", "不理想"),
+      icon: <XCircle className="mr-1 h-3 w-3" />
+    };
+  };
+
   const getRecommendationMessage = (score: number) => {
     if (score >= 8) return t("Grab your rig and run!", "带上你的设备立刻出发！");
-    if (score >= 6) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
-    if (score >= 4) return t("Uh... let me think twice.", "呃...再考虑一下吧。");
-    return t("Well, probably should hit the sack.", "嗯，可能该睡觉了。");
+    if (score >= 5) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
+    return t("Uh... let me think twice.", "呃...再考虑一下吧。");
   };
 
   const getScoreTextColor = (score: number) => {
@@ -64,21 +80,19 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     });
   }, [normalizedSiqs]);
 
+  const viabilityStatus = getViabilityStatus(normalizedSiqs);
+
   return (
     <Card className="glassmorphism border-cosmic-700/30 transition-all duration-300 hover:border-cosmic-600/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl text-gradient-blue">{t("Sky Image Quality Score", "天空图像质量评分")}</CardTitle>
           <Badge 
-            variant={isViable ? "default" : "destructive"} 
-            className={`ml-2 ${isViable ? "pulse-glow" : ""}`}
+            variant={viabilityStatus.isViable ? "default" : "destructive"} 
+            className={`ml-2 ${viabilityStatus.isViable ? "pulse-glow" : ""}`}
           >
-            {isViable ? (
-              <CheckCircle2 className="mr-1 h-3 w-3" />
-            ) : (
-              <XCircle className="mr-1 h-3 w-3" />
-            )}
-            {isViable ? t("Viable", "适合") : t("Not Viable", "不适合")}
+            {viabilityStatus.icon}
+            {viabilityStatus.label}
           </Badge>
         </div>
       </CardHeader>
@@ -166,7 +180,14 @@ function getFactorDescriptionInChinese(description: string): string {
     "High humidity can cause condensation": "高湿度可能导致设备结露",
     "Moon brightness affects deep sky visibility": "月亮亮度影响深空目标的可见性",
     "Urban light pollution reduces contrast": "城市光污染降低对比度",
-    "Temperature changes can affect equipment": "温度变化可能影响设备性能"
+    "Light pollution affects deep sky visibility": "光污染影响深空目标的可见性",
+    "Temperature changes can affect equipment": "温度变化可能影响设备性能",
+    "Cloud cover severely impacts image quality": "云层严重影响图像质量",
+    "Seeing conditions determine image sharpness": "视宁度决定图像清晰度",
+    "Wind affects mount stability and tracking": "风影响支架稳定性和追踪",
+    "Humidity can damage sensitive equipment": "湿度可能损坏敏感设备",
+    "Moon phase affects background sky brightness": "月相影响背景天空亮度",
+    "Light pollution masks faint deep sky objects": "光污染遮蔽暗弱的深空天体"
   };
   return translations[description] || description;
 }
