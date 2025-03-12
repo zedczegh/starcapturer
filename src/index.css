@@ -128,3 +128,52 @@
   opacity: 0;
   transition: opacity 300ms;
 }
+
+/* Custom animations */
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+/* Enhanced glass effect */
+.glass-card {
+  @apply backdrop-blur-2xl bg-white/10 border border-white/20 rounded-xl shadow-xl;
+}
+
+/* Score indicator styles */
+.score-indicator {
+  @apply h-3 rounded-full transition-all duration-300 ease-out;
+}
+
+.score-excellent {
+  @apply bg-gradient-to-r from-green-400 to-green-500;
+}
+
+.score-good {
+  @apply bg-gradient-to-r from-green-300 to-green-400;
+}
+
+.score-average {
+  @apply bg-gradient-to-r from-yellow-300 to-yellow-400;
+}
+
+.score-poor {
+  @apply bg-gradient-to-r from-orange-300 to-orange-400;
+}
+
+.score-bad {
+  @apply bg-gradient-to-r from-red-400 to-red-500;
+}
+
+/* Card hover effects */
+.hover-card {
+  @apply transition-all duration-300 hover:translate-y-[-5px] hover:shadow-lg;
+}

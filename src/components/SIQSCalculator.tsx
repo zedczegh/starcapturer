@@ -36,19 +36,16 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   
-  // Ask for user location on initial load
   useEffect(() => {
     if (!askedForLocation) {
       setAskedForLocation(true);
       
-      // Ask the user if they want to share their location
       if (window.confirm("Would you like to share your location to calculate your local SIQS and see nearby photo points?")) {
         handleUseCurrentLocation();
       }
     }
   }, []);
 
-  // Calculate SIQS when location and parameters are available
   useEffect(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
@@ -114,7 +111,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
     
-    // Update the Bortle scale based on location (rough estimate)
     const newBortleScale = estimateBortleScale(location.name);
     setBortleScale(newBortleScale);
     
@@ -123,44 +119,37 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       description: `Selected ${location.name}`,
     });
     
-    // Automatically expand advanced settings when a location is selected
     setShowAdvancedSettings(true);
   };
   
-  // Simple estimation of Bortle scale based on location name
-  // This is a very rough heuristic, real apps would use light pollution databases
   const estimateBortleScale = (locationName: string): number => {
     const lowercaseName = locationName.toLowerCase();
     
-    // Check for urban areas (likely high light pollution)
     if (
       lowercaseName.includes('city') || 
       lowercaseName.includes('downtown') || 
       lowercaseName.includes('urban') ||
       lowercaseName.includes('metro')
     ) {
-      return 8; // Urban/city center
+      return 8;
     }
     
-    // Check for suburban areas
     if (
       lowercaseName.includes('suburb') || 
       lowercaseName.includes('residential') || 
       lowercaseName.includes('town')
     ) {
-      return 6; // Suburban skies
+      return 6;
     }
     
-    // Check for rural areas
     if (
       lowercaseName.includes('rural') || 
       lowercaseName.includes('village') || 
       lowercaseName.includes('countryside')
     ) {
-      return 4; // Rural transition
+      return 4;
     }
     
-    // Check for remote/wilderness areas
     if (
       lowercaseName.includes('park') || 
       lowercaseName.includes('forest') || 
@@ -170,10 +159,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       lowercaseName.includes('remote') ||
       lowercaseName.includes('wilderness')
     ) {
-      return 3; // Rural sky
+      return 3;
     }
     
-    // Default to suburban-urban transition
     return 5;
   };
   
@@ -182,7 +170,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setLatitude(point.latitude.toFixed(6));
     setLongitude(point.longitude.toFixed(6));
     
-    // Automatically expand advanced settings when a point is selected
     setShowAdvancedSettings(true);
     
     toast({
@@ -225,18 +212,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     return true;
   };
   
-  // Calculate current moon phase (simplified approximation)
   const getCurrentMoonPhase = (): number => {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     const day = now.getDate();
     
-    // Simple algorithm to approximate moon phase
-    // 0 = new, 0.5 = full, 1 = new (next cycle)
     const c = 365.25 * year;
     const e = 30.6 * month;
-    const jd = c + e + day - 694039.09; // Julian date
+    const jd = c + e + day - 694039.09;
     const moonPhase = (jd % 29.53) / 29.53;
     
     return moonPhase;
@@ -260,7 +244,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         return;
       }
       
-      // Get current moon phase
       const moonPhase = getCurrentMoonPhase();
       
       const siqsResult = calculateSIQS({
@@ -272,14 +255,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         moonPhase,
       });
       
-      // If we're only showing the score on the calculator, update state
       if (displayOnly) {
-        setSiqsScore(siqsResult.score * 10); // Convert to 0-100 scale
+        setSiqsScore(siqsResult.score * 10);
         setIsCalculating(false);
         return;
       }
       
-      // Otherwise, navigate to the details page
       const locationId = Date.now().toString();
       
       const locationData = {
@@ -314,7 +295,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     calculateSIQSForLocation(parseFloat(latitude), parseFloat(longitude), locationName);
   };
 
-  // Bortle scale descriptions for tooltips
   const getBortleScaleDescription = (value: number): string => {
     const descriptions = [
       "1: Excellent dark-sky site, no light pollution",
@@ -330,7 +310,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     return descriptions[value - 1] || "Unknown";
   };
 
-  // Seeing conditions descriptions for tooltips
   const getSeeingDescription = (value: number): string => {
     const descriptions = [
       "1: Perfect seeing, stars perfectly still",
@@ -344,7 +323,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       "5: Terrible seeing, imaging nearly impossible"
     ];
     
-    // Map the value (1-5, steps of 0.5) to index (0-8)
     const index = Math.round((value - 1) * 2);
     return descriptions[index] || "Unknown";
   };
@@ -354,22 +332,38 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       <h2 className="text-xl font-bold mb-6">Calculate Stellar Imaging Quality Score</h2>
       
       {siqsScore !== null && (
-        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+        <div className="mb-6 p-4 glass-card">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-medium">Estimated SIQS Score</h3>
-            <span className="text-xl font-bold">{(siqsScore / 10).toFixed(1)}/10</span>
+            <div className="flex items-center">
+              <span className={`text-2xl font-bold ${
+                siqsScore >= 80 ? 'text-green-400' : 
+                siqsScore >= 60 ? 'text-green-300' : 
+                siqsScore >= 40 ? 'text-yellow-300' : 
+                siqsScore >= 20 ? 'text-orange-300' : 'text-red-400'
+              }`}>{(siqsScore / 10).toFixed(1)}</span>
+              <span className="text-lg text-muted-foreground">/10</span>
+            </div>
           </div>
-          <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
+          <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
             <div 
-              className={`h-full ${siqsScore >= 80 ? 'bg-green-500' : 
-                siqsScore >= 60 ? 'bg-green-400' : 
-                siqsScore >= 40 ? 'bg-yellow-400' : 
-                siqsScore >= 20 ? 'bg-orange-400' : 'bg-red-500'}`} 
+              className={`h-full ${
+                siqsScore >= 80 ? 'score-excellent' : 
+                siqsScore >= 60 ? 'score-good' : 
+                siqsScore >= 40 ? 'score-average' : 
+                siqsScore >= 20 ? 'score-poor' : 'score-bad'}`} 
               style={{ width: `${siqsScore}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            This is an estimated score. For detailed analysis, click "Calculate SIQS Score" below.
+          
+          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+            <span>Poor</span>
+            <span>Average</span>
+            <span>Excellent</span>
+          </div>
+          
+          <p className="text-xs text-muted-foreground mt-3">
+            This is an estimated score based on current data. For detailed analysis with forecast data, click "Calculate SIQS Score" below.
           </p>
         </div>
       )}
@@ -377,11 +371,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       <div className="space-y-4">
         <div className="flex flex-col space-y-3">
           <Button 
-            variant="default" 
+            variant="outline" 
             type="button" 
             onClick={handleUseCurrentLocation}
             disabled={loading}
-            className="w-full"
+            className="w-full hover-card transition-colors hover:bg-primary/10"
           >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -406,7 +400,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         />
         
         {locationName && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <Label htmlFor="locationName">Selected Location</Label>
             <div className="flex gap-2 mt-1.5 items-center">
               <Input
@@ -414,19 +408,22 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                 value={locationName}
                 onChange={(e) => setLocationName(e.target.value)}
                 disabled={loading}
-                className="flex-1"
+                className="flex-1 bg-cosmic-800/30"
               />
             </div>
             
             <Collapsible
               open={showAdvancedSettings}
               onOpenChange={setShowAdvancedSettings}
-              className="mt-4 border border-border rounded-lg p-4"
+              className="mt-4 border border-cosmic-600/30 rounded-lg p-4 transition-all duration-300"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Observation Settings</h3>
+                <h3 className="text-sm font-medium flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
+                  Observation Settings
+                </h3>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-9 p-0">
+                  <Button variant="ghost" size="sm" className="w-9 p-0 hover:bg-primary/10">
                     <SlidersHorizontal className="h-4 w-4" />
                     <span className="sr-only">Toggle</span>
                   </Button>
@@ -447,7 +444,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                             <span className="sr-only">Info</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent className="w-80">
+                        <TooltipContent className="w-80 p-4 glass-card">
                           <p>The Bortle scale measures the night sky's brightness, with 1 being darkest and 9 brightest. Urban areas typically range from 7-9.</p>
                         </TooltipContent>
                       </Tooltip>
@@ -463,7 +460,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                       onValueChange={(value) => setBortleScale(value[0])}
                       className="flex-1"
                     />
-                    <span className="bg-background w-8 text-center">
+                    <span className="bg-cosmic-800/50 w-8 text-center rounded py-1 text-sm">
                       {bortleScale}
                     </span>
                   </div>
@@ -485,7 +482,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                             <span className="sr-only">Info</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent className="w-80">
+                        <TooltipContent className="w-80 p-4 glass-card">
                           <p>Seeing conditions rate atmospheric turbulence from 1 (perfectly stable) to 5 (highly unstable). Affects image sharpness and detail.</p>
                         </TooltipContent>
                       </Tooltip>
@@ -501,7 +498,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                       onValueChange={(value) => setSeeingConditions(value[0])}
                       className="flex-1"
                     />
-                    <span className="bg-background w-8 text-center">
+                    <span className="bg-cosmic-800/50 w-8 text-center rounded py-1 text-sm">
                       {seeingConditions}
                     </span>
                   </div>
@@ -516,7 +513,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
               type="button"
               onClick={handleCalculate}
               disabled={loading}
-              className="w-full mt-4"
+              className="w-full mt-4 bg-gradient-to-r from-primary/80 to-primary hover:opacity-90"
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

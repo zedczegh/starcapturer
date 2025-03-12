@@ -5,7 +5,7 @@ import NavBar from "@/components/NavBar";
 import Hero from "@/components/Hero";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Sparkles, Star } from "lucide-react";
+import { ChevronRight, Sparkles, Star, Camera, Map } from "lucide-react";
 
 const Index = () => {
   return (
@@ -14,8 +14,17 @@ const Index = () => {
       
       <Hero />
       
-      <section className="relative py-12 overflow-hidden">
-        <div className="absolute top-0 right-0 w-full h-full bg-nebula-gradient -z-10" />
+      <section id="calculator-section" className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-nebula-gradient -z-10" />
+        
+        {/* Background image for calculator section */}
+        <div className="absolute inset-0 opacity-20 -z-10">
+          <img 
+            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb" 
+            alt="Starry lake" 
+            className="w-full h-full object-cover"
+          />
+        </div>
         
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center max-w-3xl mx-auto">
@@ -25,38 +34,72 @@ const Index = () => {
                 <h2 className="text-lg font-medium text-primary">Calculate Your SIQS</h2>
               </div>
               
-              <h3 className="text-2xl font-bold mb-4">
+              <h3 className="text-3xl font-bold mb-6">
                 Find Your Perfect <span className="text-gradient-blue">Astrophotography Spot</span>
               </h3>
               
-              <p className="text-muted-foreground mb-6">
+              <p className="text-muted-foreground mb-8">
                 Enter your location details to calculate the Stellar Imaging Quality Score. 
                 AstroSIQS combines real-time weather data to provide a precise assessment for astrophotography.
               </p>
               
-              <SIQSCalculator className="max-w-xl mx-auto" />
+              <SIQSCalculator className="max-w-xl mx-auto shadow-lg" />
             </div>
           </div>
         </div>
       </section>
       
-      <section className="py-16 relative">
+      <section className="py-24 relative">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-cosmic-900/80 z-10" />
+          <img 
+            src="https://images.unsplash.com/photo-1492321936769-b49830bc1d1e" 
+            alt="Astronomy landscape" 
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
         <div className="absolute inset-0 bg-cosmic-glow -z-10" />
         
-        <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-6">
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-6">
             <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" />
             <span className="text-xs font-medium text-primary">The Science Behind SIQS</span>
           </div>
           
-          <h2 className="text-3xl font-bold mb-4 max-w-3xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-8 max-w-3xl mx-auto text-white">
             Data-Driven <span className="text-gradient-blue">Astrophotography Planning</span>
           </h2>
           
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-8">
+          <p className="text-lg text-white/80 max-w-3xl mx-auto mb-10">
             The Stellar Imaging Quality Score (SIQS) is a comprehensive metric that evaluates a location's
             suitability for astrophotography based on five critical factors.
           </p>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-12 max-w-4xl mx-auto">
+            <div className="glassmorphism p-6 rounded-xl text-left">
+              <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Star className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Light Pollution</h3>
+              <p className="text-sm text-muted-foreground">Measures ambient light using the Bortle scale, which affects visibility of celestial objects.</p>
+            </div>
+            
+            <div className="glassmorphism p-6 rounded-xl text-left">
+              <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Camera className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Seeing Conditions</h3>
+              <p className="text-sm text-muted-foreground">Evaluates atmospheric stability which impacts image sharpness and clarity.</p>
+            </div>
+            
+            <div className="glassmorphism p-6 rounded-xl text-left">
+              <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Map className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Weather Data</h3>
+              <p className="text-sm text-muted-foreground">Incorporates cloud cover, humidity, and wind speed from real-time meteorological sources.</p>
+            </div>
+          </div>
           
           <Button size="lg" className="mt-6" asChild>
             <Link to="/about">

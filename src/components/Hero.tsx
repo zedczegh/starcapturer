@@ -2,7 +2,8 @@
 import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Telescope } from "lucide-react";
+import { ChevronDown, Star, Telescope } from "lucide-react";
+import { motion } from "framer-motion";
 
 const Hero = () => {
   const starFieldRef = useRef<HTMLDivElement>(null);
@@ -53,8 +54,18 @@ const Hero = () => {
   
   return (
     <div className="relative overflow-hidden pt-20">
+      {/* Astrophotography Background */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-cosmic-900/50 z-10" /> {/* Overlay for better text readability */}
+        <img 
+          src="https://images.unsplash.com/photo-1470813740244-df37b8c1edcb" 
+          alt="Night sky" 
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+      
       {/* Star field background */}
-      <div ref={starFieldRef} className="absolute inset-0 z-0 star-field"></div>
+      <div ref={starFieldRef} className="absolute inset-0 z-10 star-field"></div>
       
       {/* Orbital decoration elements */}
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] z-0">
@@ -64,27 +75,34 @@ const Hero = () => {
       </div>
       
       {/* Content */}
-      <div className="container mx-auto px-4 pt-10 pb-12 relative z-10">
+      <div className="container mx-auto px-4 pt-10 pb-32 relative z-10">
         <div className="max-w-2xl mx-auto text-center">
-          <Badge variant="outline" className="mb-4 py-1.5 px-6 border-primary/20 bg-primary/5 text-primary">
+          <Badge variant="outline" className="mb-6 py-1.5 px-6 border-primary/20 bg-primary/5 text-primary">
             <Star className="h-3.5 w-3.5 mr-1" />
             <span>Stellar Imaging Quality Scores</span>
           </Badge>
           
-          <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight animate-slide-up">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight animate-slide-up text-white drop-shadow-lg">
             <span className="text-gradient-blue">Perfect Astrophotography</span><br />
             <span>Starts with the Perfect Location</span>
           </h1>
           
-          <p className="text-base md:text-lg text-foreground/80 mb-4 animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <p className="text-base md:text-lg text-white text-opacity-90 mb-8 animate-slide-up drop-shadow-md" style={{ animationDelay: '100ms' }}>
             Discover optimal shooting locations with data-driven Stellar Imaging Quality Scores.
             Find the best spots for breathtaking night sky images anywhere on Earth.
           </p>
+          
+          <Button size="lg" className="rounded-full animate-bounce-slow mt-2" onClick={() => {
+            document.getElementById('calculator-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}>
+            <span>Calculate Your SIQS</span>
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
       
       {/* Bottom gradient */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-cosmic-900 to-transparent"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-cosmic-900 to-transparent z-10"></div>
     </div>
   );
 };
