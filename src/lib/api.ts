@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 
 type Coordinates = {
@@ -53,6 +52,55 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number): strin
   // Simple implementation without true coordinate transformation
   // In a production app, we'd use the coordtransform library for accurate conversion
   return `https://api.map.baidu.com/marker?location=${latitude},${longitude}&title=Astrophotography+Location&output=html`;
+}
+
+// Reverse geocoding to get location name from coordinates
+export async function getLocationNameFromCoordinates(
+  latitude: number,
+  longitude: number
+): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch location name');
+    }
+
+    const data = await response.json();
+    
+    // Create a meaningful location name from the response
+    let locationName = "";
+    
+    if (data.locality) {
+      locationName += data.locality;
+    }
+    
+    if (data.city && data.city !== data.locality) {
+      locationName += locationName ? `, ${data.city}` : data.city;
+    }
+    
+    if (data.countryName && !locationName) {
+      // If we don't have city/locality info, use the broader area
+      if (data.principalSubdivision) {
+        locationName = `${data.principalSubdivision}, ${data.countryName}`;
+      } else {
+        locationName = `Location in ${data.countryName}`;
+      }
+    }
+    
+    // If we still don't have a name, create a generic one with coordinates
+    if (!locationName) {
+      locationName = `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    }
+
+    return locationName;
+  } catch (error) {
+    console.error('Error fetching location name:', error);
+    // Return a generic name with coordinates if reverse geocoding fails
+    return `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  }
 }
 
 // Mock function for recent locations (in a real app, this would use local storage or a backend)

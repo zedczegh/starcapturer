@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
-import { fetchWeatherData } from "@/lib/api";
+import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { MapPin, Calculator, Loader2 } from "lucide-react";
 
@@ -27,14 +27,27 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     if (navigator.geolocation) {
       setLoading(true);
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLatitude(position.coords.latitude.toFixed(6));
-          setLongitude(position.coords.longitude.toFixed(6));
-          setLoading(false);
-          toast({
-            title: "Location Retrieved",
-            description: "Your current coordinates have been added.",
-          });
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          setLatitude(lat.toFixed(6));
+          setLongitude(lng.toFixed(6));
+          
+          try {
+            // Get location name from coordinates
+            const name = await getLocationNameFromCoordinates(lat, lng);
+            setLocationName(name);
+            
+            toast({
+              title: "Location Retrieved",
+              description: "Your current location has been added.",
+            });
+          } catch (error) {
+            console.error("Error getting location name:", error);
+          } finally {
+            setLoading(false);
+          }
         },
         (error) => {
           setLoading(false);
@@ -44,6 +57,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
             variant: "destructive",
           });
           console.error("Geolocation error:", error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     } else {
