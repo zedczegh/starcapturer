@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Search, MoonStar, User } from "lucide-react";
 import MapSelector from "./MapSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
@@ -66,7 +68,7 @@ const NavBar = () => {
         
         <nav className="hidden md:flex items-center space-x-6">
           <NavLink to="/" active={location.pathname === "/"}>
-            Home
+            {t("Home", "首页")}
           </NavLink>
           <a
             href={locationId ? `/location/${locationId}` : "/#calculator-section"}
@@ -76,34 +78,31 @@ const NavBar = () => {
               location.pathname.startsWith('/location/') ? "text-primary" : "text-foreground/70"
             )}
           >
-            SIQS Now
-            {location.pathname.startsWith('/location/') && (
-              <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-            )}
+            {t("SIQS Now", "实时SIQS")}
           </a>
           <NavLink to="/about" active={location.pathname === "/about"}>
-            About SIQS
+            {t("About SIQS", "关于SIQS")}
           </NavLink>
           <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
-            Photo Points Nearby
+            {t("Photo Points Nearby", "周边拍摄点")}
           </NavLink>
           <NavLink to="/share" active={location.pathname === "/share"}>
-            Share Location
+            {t("Share Location", "分享位置")}
           </NavLink>
         </nav>
         
         <div className="hidden md:flex items-center space-x-2">
           <LanguageSwitcher />
           <MapSelector onSelectLocation={handleLocationSelect}>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" title={t("Search Location", "搜索位置")}>
               <Search className="h-5 w-5" />
             </Button>
           </MapSelector>
           <Button variant="outline" className="flex items-center space-x-2">
             <User className="h-4 w-4" />
-            <span>Sign In</span>
+            <span>{t("Sign In", "登录")}</span>
           </Button>
-          <Button>Get Started</Button>
+          <Button>{t("Get Started", "开始使用")}</Button>
         </div>
         
         <button 
@@ -122,7 +121,7 @@ const NavBar = () => {
         <div className="md:hidden absolute top-full left-0 right-0 glassmorphism py-4 animate-fade-in">
           <div className="container mx-auto px-4 flex flex-col space-y-4">
             <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
-              Home
+              {t("Home", "首页")}
             </MobileNavLink>
             <a
               href={locationId ? `/location/${locationId}` : "/#calculator-section"}
@@ -132,26 +131,26 @@ const NavBar = () => {
               }}
               className="text-foreground/80 hover:text-primary text-lg font-medium py-2 transition-colors"
             >
-              SIQS Now
+              {t("SIQS Now", "实时SIQS")}
             </a>
             <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
-              About SIQS
+              {t("About SIQS", "关于SIQS")}
             </MobileNavLink>
             <MobileNavLink to="/photo-points" onClick={() => setMenuOpen(false)}>
-              Photo Points Nearby
+              {t("Photo Points Nearby", "周边拍摄点")}
             </MobileNavLink>
             <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
-              Share Location
+              {t("Share Location", "分享位置")}
             </MobileNavLink>
             <LanguageSwitcher />
             <MapSelector onSelectLocation={handleLocationSelect}>
               <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
                 <Search className="h-4 w-4" />
-                <span>Search Location</span>
+                <span>{t("Search Location", "搜索位置")}</span>
               </Button>
             </MapSelector>
             <div className="pt-2 border-t border-cosmic-700">
-              <Button className="w-full">Sign In</Button>
+              <Button className="w-full">{t("Sign In", "登录")}</Button>
             </div>
           </div>
         </div>
