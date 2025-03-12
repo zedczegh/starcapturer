@@ -4,14 +4,10 @@ import { Link } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import Hero from "@/components/Hero";
 import SIQSCalculator from "@/components/SIQSCalculator";
-import LocationCard from "@/components/LocationCard";
-import { getRecentLocations } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Sparkles, Star } from "lucide-react";
 
 const Index = () => {
-  const recentLocations = getRecentLocations();
-  
   return (
     <div className="min-h-screen">
       <NavBar />
@@ -22,63 +18,23 @@ const Index = () => {
         <div className="absolute top-0 right-0 w-full h-full bg-nebula-gradient -z-10" />
         
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row lg:items-start gap-8">
-            <div className="lg:w-1/2 animate-slide-up">
-              <div className="lg:sticky lg:top-32">
-                <div className="flex items-center mb-4">
-                  <div className="h-0.5 w-10 bg-primary mr-4" />
-                  <h2 className="text-lg font-medium text-primary">Calculate Your SIQS</h2>
-                </div>
-                
-                <h3 className="text-2xl font-bold mb-4">
-                  Find Your Perfect <span className="text-gradient-blue">Astrophotography Spot</span>
-                </h3>
-                
-                <p className="text-muted-foreground mb-6">
-                  Enter your location details to calculate the Stellar Imaging Quality Score. 
-                  AstroSIQS combines real-time weather data to provide a precise assessment for astrophotography.
-                </p>
-                
-                <SIQSCalculator className="max-w-xl" />
-              </div>
-            </div>
-            
-            <div className="lg:w-1/2 animate-slide-up" style={{ animationDelay: '200ms' }}>
+          <div className="flex flex-col items-center max-w-3xl mx-auto">
+            <div className="w-full animate-slide-up">
               <div className="flex items-center mb-4">
                 <div className="h-0.5 w-10 bg-primary mr-4" />
-                <h2 className="text-lg font-medium text-primary">Recent Locations</h2>
+                <h2 className="text-lg font-medium text-primary">Calculate Your SIQS</h2>
               </div>
               
               <h3 className="text-2xl font-bold mb-4">
-                Explore <span className="text-gradient-blue">Community Spots</span>
+                Find Your Perfect <span className="text-gradient-blue">Astrophotography Spot</span>
               </h3>
               
               <p className="text-muted-foreground mb-6">
-                Discover locations recently analyzed by other astrophotographers. 
-                Browse through their SIQS scores and find new potential imaging spots.
+                Enter your location details to calculate the Stellar Imaging Quality Score. 
+                AstroSIQS combines real-time weather data to provide a precise assessment for astrophotography.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {recentLocations.map((location) => (
-                  <LocationCard
-                    key={location.id}
-                    id={location.id}
-                    name={location.name}
-                    latitude={location.latitude}
-                    longitude={location.longitude}
-                    siqs={location.siqs}
-                    isViable={location.isViable}
-                    timestamp={location.timestamp}
-                  />
-                ))}
-              </div>
-              
-              <Button variant="outline" className="w-full" asChild>
-                <Link to="/photo-points">
-                  View All Locations
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              <SIQSCalculator className="max-w-xl mx-auto" />
             </div>
           </div>
         </div>

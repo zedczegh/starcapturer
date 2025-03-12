@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { X, Map as MapIcon, Loader2, Search } from 'lucide-react';
+import { X, Loader2, Search } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -170,7 +169,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     }
   };
   
-  // Use user's current location to initialize the map
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
       setLoading(true);
@@ -214,7 +212,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     }
   };
   
-  // Initialize the map when the component loads
   const onMapCreated = (map: L.Map) => {
     // Store the map instance in the ref
     if (mapRef.current !== map) {
@@ -242,9 +239,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[800px] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Select Location</DialogTitle>
+          <DialogTitle>Pinpoint Location</DialogTitle>
           <DialogDescription>
-            Search for a location or click directly on the map to select coordinates.
+            Search for a location or click directly on the map to pinpoint coordinates.
           </DialogDescription>
         </DialogHeader>
         
@@ -320,7 +317,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
         
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button onClick={handleSelectLocation} disabled={!selectedLocation}>Select Location</Button>
+          <Button onClick={handleSelectLocation} disabled={!selectedLocation}>Use This Location</Button>
         </div>
       </DialogContent>
     </Dialog>
