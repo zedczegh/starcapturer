@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { X, Loader2, Search, MapPin } from 'lucide-react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { X, Loader2, Search, MapPin, Crosshair } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
@@ -28,29 +29,115 @@ const ChangeMapCenter = ({ coordinates, mapRef }: { coordinates: [number, number
   return null;
 };
 
+// Create a custom marker icon with animation
+const createCustomMarker = () => {
+  return L.divIcon({
+    className: 'custom-marker-icon',
+    html: `
+      <div class="marker-pin-container">
+        <div class="marker-pin animate-bounce"></div>
+        <div class="marker-shadow"></div>
+      </div>
+    `,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42]
+  });
+};
+
 // Interactive map component that handles clicks
 const InteractiveMap = ({ onMapClick, position }: { 
   onMapClick: (lat: number, lng: number) => void,
   position: [number, number]
 }) => {
   const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const [markerPosition, setMarkerPosition] = useState<[number, number]>(position);
   
+  // Map events component to handle clicks
+  const MapEvents = () => {
+    useMapEvents({
+      click: (e) => {
+        const { lat, lng } = e.latlng;
+        setMarkerPosition([lat, lng]);
+        onMapClick(lat, lng);
+      },
+    });
+    
+    return null;
+  };
+  
+  // Update marker position when position prop changes
   useEffect(() => {
-    if (!mapRef.current) return;
-    
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-      onMapClick(lat, lng);
-    };
-    
-    mapRef.current.on('click', handleClick);
-    
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.off('click', handleClick);
-      }
-    };
-  }, [onMapClick]);
+    setMarkerPosition(position);
+  }, [position]);
+  
+  // Define custom marker style with pulse effect
+  useEffect(() => {
+    // Add custom CSS for marker animation
+    if (!document.getElementById('custom-marker-styles')) {
+      const style = document.createElement('style');
+      style.id = 'custom-marker-styles';
+      style.innerHTML = `
+        .custom-marker-icon {
+          background: transparent;
+          border: none;
+        }
+        .marker-pin-container {
+          position: relative;
+          width: 30px;
+          height: 42px;
+        }
+        .marker-pin {
+          width: 24px;
+          height: 24px;
+          border-radius: 50% 50% 50% 0;
+          background: #9b87f5;
+          position: absolute;
+          transform: rotate(-45deg);
+          left: 50%;
+          top: 50%;
+          margin: -20px 0 0 -12px;
+          box-shadow: 0 0 6px rgba(0,0,0,0.3);
+        }
+        .marker-pin::after {
+          content: '';
+          width: 14px;
+          height: 14px;
+          margin: 5px 0 0 5px;
+          background: white;
+          position: absolute;
+          border-radius: 50%;
+        }
+        .marker-shadow {
+          width: 24px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.15);
+          position: absolute;
+          left: 50%;
+          top: 100%;
+          margin: -6px 0 0 -12px;
+          transform: rotateX(55deg);
+          z-index: -1;
+        }
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
+          }
+          70% {
+            box-shadow: 0 0 0 10px rgba(155, 135, 245, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0);
+          }
+        }
+        .animate-bounce {
+          animation: pulse 2s infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
   
   return (
     <MapContainer 
@@ -64,8 +151,9 @@ const InteractiveMap = ({ onMapClick, position }: {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={position} />
+      <Marker position={markerPosition} icon={createCustomMarker()} />
       <ChangeMapCenter coordinates={position} mapRef={mapRef} />
+      <MapEvents />
     </MapContainer>
   );
 };
@@ -88,6 +176,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const mapRef = useRef<L.Map>(null);
   
+  // Search for locations with the given query
   const searchLocations = async (query: string) => {
     if (!query.trim()) {
       setSuggestions([]);
@@ -150,6 +239,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   };
   
   const handleSuggestionClick = (suggestion: any) => {
+    setLoading(true);
+    
     const location = {
       name: suggestion.display_name,
       latitude: parseFloat(suggestion.lat),
@@ -160,6 +251,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     setSearchQuery(suggestion.display_name);
     setSuggestions([]);
     setPosition([location.latitude, location.longitude]);
+    
+    // Show confirmation feedback
+    toast({
+      title: language === 'en' ? "Location Selected" : "已选择位置",
+      description: suggestion.display_name,
+    });
+    
+    setLoading(false);
   };
   
   const handleMapClick = async (lat: number, lng: number) => {
@@ -182,12 +281,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       setSelectedLocation(newLocation);
       setSearchQuery(name);
       
-      if (isOpen) {
-        setTimeout(() => {
-          onSelectLocation(newLocation);
-          setIsOpen(false);
-        }, 500);
-      }
+      // Provide visual feedback that location was selected
+      toast({
+        title: language === 'en' ? "Location Selected" : "已选择位置",
+        description: name,
+      });
     } catch (error) {
       console.error('Error fetching location name:', error);
       const fallbackName = language === 'en' 
@@ -237,17 +335,12 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             setSelectedLocation(location);
             setSearchQuery(name);
             
-            onSelectLocation(location);
-            
             toast({
               title: language === 'en' ? "Location Found" : "已找到位置",
               description: language === 'en' 
                 ? `Using your current location: ${name}` 
                 : `使用您的当前位置: ${name}`,
             });
-            
-            setLoading(false);
-            setIsOpen(false);
           } catch (error) {
             console.error('Error getting location name:', error);
             const fallbackName = language === 'en' 
@@ -263,10 +356,15 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             setSelectedLocation(location);
             setSearchQuery(fallbackName);
             
-            onSelectLocation(location);
-            
+            toast({
+              title: language === 'en' ? "Location Error" : "位置错误",
+              description: language === 'en'
+                ? "Could not retrieve location name. Using coordinates instead."
+                : "无法获取位置名称。使用坐标代替。",
+              variant: "destructive",
+            });
+          } finally {
             setLoading(false);
-            setIsOpen(false);
           }
         },
         (error) => {
@@ -297,8 +395,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     }
   };
   
-  const onMapCreated = (map: L.Map) => {
-    mapRef.current = map;
+  const handleCenterOnSelection = () => {
+    if (selectedLocation) {
+      setPosition([selectedLocation.latitude, selectedLocation.longitude]);
+      toast({
+        title: language === 'en' ? "Map Centered" : "地图已居中",
+        description: selectedLocation.name,
+      });
+    }
   };
   
   return (
@@ -344,7 +448,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
-            placeholder={language === 'en' ? "Search for a location..." : "搜索��置..."}
+            placeholder={language === 'en' ? "Search for a location..." : "搜索位置..."}
             className="pr-8"
             autoFocus
           />
@@ -381,7 +485,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
           )}
         </div>
         
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           <Button 
             variant="outline" 
             onClick={handleUseCurrentLocation} 
@@ -391,6 +495,17 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
             {language === 'en' ? "Use My Location" : "使用我的位置"}
           </Button>
+          
+          {selectedLocation && (
+            <Button 
+              variant="outline" 
+              onClick={handleCenterOnSelection} 
+              className="text-xs flex items-center"
+            >
+              <Crosshair className="h-3 w-3 mr-1" />
+              {language === 'en' ? "Center on Selection" : "居中所选位置"}
+            </Button>
+          )}
         </div>
         
         <div className="flex-1 rounded-md border border-input bg-background min-h-[300px] mb-4 overflow-hidden glassmorphism">
@@ -408,7 +523,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
               <span className="text-muted-foreground">
                 {language === 'en' 
                   ? "Click on the map to select a location" 
-                  : "点击地��选择位置"}
+                  : "点击地图选择位置"}
               </span>
             )}
           </div>
@@ -418,9 +533,16 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
               if (selectedLocation) {
                 onSelectLocation(selectedLocation);
                 setIsOpen(false);
+                
+                // Provide confirmation feedback
+                toast({
+                  title: language === 'en' ? "Location Confirmed" : "位置已确认",
+                  description: selectedLocation.name,
+                });
               }
             }} 
             disabled={!selectedLocation && !position}
+            className={selectedLocation ? "bg-primary animate-pulse" : ""}
           >
             {language === 'en' ? "Use This Location" : "使用此位置"}
           </Button>
@@ -431,4 +553,3 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
 };
 
 export default MapSelector;
-
