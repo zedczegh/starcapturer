@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -62,7 +61,6 @@ const LocationDetails = () => {
         longitude: newLocation.longitude,
       });
 
-      // Check if weatherData is null
       if (!weatherData) {
         throw new Error("Failed to retrieve weather data for this location");
       }
@@ -85,7 +83,6 @@ const LocationDetails = () => {
         siqsResult,
       });
 
-      // Fetch new forecast data for the updated location
       const forecast = await fetchForecastData({
         latitude: newLocation.latitude,
         longitude: newLocation.longitude,

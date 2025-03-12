@@ -169,7 +169,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [position, setPosition] = useState<[number, number]>([20, 0]); // Default position
+  const [position, setPosition] = useState<[number, number]>([39.9042, 116.4074]);
   const [selectedLocation, setSelectedLocation] = useState<{
     name: string;
     latitude: number;
