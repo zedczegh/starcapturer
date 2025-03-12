@@ -14,7 +14,7 @@ interface SIQSSummaryProps {
   isViable: boolean;
 }
 
-const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors, isViable }) => {
+const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable }) => {
   // Calculate a color based on SIQS score
   const getSiqsColor = (score: number) => {
     if (score >= 80) return "bg-green-500";
@@ -54,7 +54,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors, isViable }) =>
         </div>
         
         <div className="space-y-3">
-          {factors.map((factor, index) => (
+          {Array.isArray(factors) && factors.map((factor, index) => (
             <div key={index}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium">{factor.name}</span>
@@ -69,6 +69,12 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors, isViable }) =>
               <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
             </div>
           ))}
+          
+          {(!Array.isArray(factors) || factors.length === 0) && (
+            <div className="p-4 text-center text-muted-foreground">
+              <p>No factor data available for this location.</p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

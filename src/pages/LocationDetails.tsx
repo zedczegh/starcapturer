@@ -24,6 +24,7 @@ const LocationDetails = () => {
             <h1 className="text-2xl font-bold mb-4">Location Not Found</h1>
             <p className="text-muted-foreground mb-6">
               The location information you're looking for doesn't exist or has expired.
+              This can happen when you refresh the page or navigate directly to this URL.
             </p>
             <Button onClick={() => navigate("/")}>
               Return to Home
@@ -33,6 +34,16 @@ const LocationDetails = () => {
       </div>
     );
   }
+
+  // Ensure all required properties exist to prevent runtime errors
+  const siqsResult = locationData.siqsResult || { siqs: 0, factors: [], isViable: false };
+  const weatherData = locationData.weatherData || { 
+    cloudCover: 0, 
+    windSpeed: 0, 
+    humidity: 0, 
+    temperature: 0, 
+    time: new Date().toISOString() 
+  };
 
   return (
     <div className="min-h-screen">
@@ -50,7 +61,7 @@ const LocationDetails = () => {
           </Button>
           
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <h1 className="text-3xl font-bold">{locationData.name}</h1>
+            <h1 className="text-3xl font-bold">{locationData.name || "Unnamed Location"}</h1>
             
             <div className="flex space-x-3">
               <Button variant="outline" asChild>
@@ -89,16 +100,16 @@ const LocationDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <SIQSSummary
-              siqs={locationData.siqsResult.siqs}
-              factors={locationData.siqsResult.factors}
-              isViable={locationData.siqsResult.isViable}
+              siqs={siqsResult.siqs}
+              factors={siqsResult.factors}
+              isViable={siqsResult.isViable}
             />
             
             <WeatherConditions
-              weatherData={locationData.weatherData}
-              moonPhase={locationData.moonPhase}
-              bortleScale={locationData.bortleScale}
-              seeingConditions={locationData.seeingConditions}
+              weatherData={weatherData}
+              moonPhase={locationData.moonPhase || 0}
+              bortleScale={locationData.bortleScale || 4}
+              seeingConditions={locationData.seeingConditions || 3}
             />
           </div>
           
@@ -106,7 +117,7 @@ const LocationDetails = () => {
             <LocationMap
               latitude={locationData.latitude}
               longitude={locationData.longitude}
-              name={locationData.name}
+              name={locationData.name || "Unnamed Location"}
             />
           </div>
         </div>
