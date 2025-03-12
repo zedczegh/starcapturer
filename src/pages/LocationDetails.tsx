@@ -59,12 +59,13 @@ const LocationDetails = () => {
     isViable: false 
   };
   
-  // Ensure weatherData always has a condition property to prevent the error
+  // Ensure weatherData always has all required properties to prevent errors
   const weatherData = {
     cloudCover: locationData.weatherData?.cloudCover || 0, 
     windSpeed: locationData.weatherData?.windSpeed || 0, 
     humidity: locationData.weatherData?.humidity || 0, 
     temperature: locationData.weatherData?.temperature || 0, 
+    precipitation: locationData.weatherData?.precipitation || 0, // Add missing precipitation property
     time: locationData.weatherData?.time || new Date().toISOString(),
     // Make sure condition is never undefined
     condition: locationData.weatherData?.condition || "clear"
@@ -89,15 +90,9 @@ const LocationDetails = () => {
             <h1 className="text-3xl font-bold">{locationData.name || "Unnamed Location"}</h1>
             
             <div className="flex space-x-3">
-              <Button variant="outline" asChild>
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${locationData.latitude},${locationData.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Map className="mr-2 h-4 w-4" />
-                  View on Map
-                </a>
+              <Button variant="outline">
+                <Map className="mr-2 h-4 w-4" />
+                View on OSM
               </Button>
               
               <Button onClick={() => navigate("/share", { state: locationData })}>

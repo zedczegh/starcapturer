@@ -1,6 +1,18 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix for default marker icons in Leaflet with React
+// This is needed because the default marker icons are not properly loaded in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 interface LocationMapProps {
   latitude: number;
@@ -17,16 +29,23 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
   return (
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
-        <div className="aspect-video w-full">
-          <iframe
-            width="100%"
-            height="100%"
-            frameBorder="0"
-            style={{ border: 0 }}
-            src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg&q=${validLatitude},${validLongitude}&zoom=12`}
-            allowFullScreen
-            title={`Map of ${validName}`}
-          ></iframe>
+        <div className="aspect-video w-full h-[300px]">
+          <MapContainer 
+            center={[validLatitude, validLongitude]} 
+            zoom={12} 
+            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={[validLatitude, validLongitude]}>
+              <Popup>
+                {validName}
+              </Popup>
+            </Marker>
+          </MapContainer>
         </div>
         <div className="p-4">
           <h3 className="font-medium text-sm mb-1">Location</h3>
