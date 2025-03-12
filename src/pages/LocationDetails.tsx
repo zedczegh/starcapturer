@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -79,6 +80,8 @@ const LocationDetails = () => {
       }
     } catch (error) {
       console.error("Error updating light pollution data:", error);
+      // Silent failure for light pollution updates - use existing data
+      // This prevents disrupting the user experience due to API issues
     }
   };
 
@@ -126,8 +129,16 @@ const LocationDetails = () => {
         throw new Error("Failed to retrieve weather data for this location");
       }
 
-      const bortleData = await fetchLightPollutionData(newLocation.latitude, newLocation.longitude);
-      const bortleScale = bortleData?.bortleScale || locationData?.bortleScale || 4;
+      let bortleScale = locationData?.bortleScale || 4;
+      try {
+        const bortleData = await fetchLightPollutionData(newLocation.latitude, newLocation.longitude);
+        if (bortleData?.bortleScale) {
+          bortleScale = bortleData.bortleScale;
+        }
+      } catch (lightError) {
+        console.error("Error fetching light pollution data during location update:", lightError);
+        // Continue with existing or default bortle scale
+      }
       
       const moonPhase = locationData?.moonPhase || 0;
       
@@ -151,12 +162,17 @@ const LocationDetails = () => {
 
       setLocationData(updatedLocationData);
 
-      const forecast = await fetchForecastData({
-        latitude: newLocation.latitude,
-        longitude: newLocation.longitude,
-      });
-      
-      setForecastData(forecast);
+      try {
+        const forecast = await fetchForecastData({
+          latitude: newLocation.latitude,
+          longitude: newLocation.longitude,
+        });
+        
+        setForecastData(forecast);
+      } catch (forecastError) {
+        console.error("Error fetching forecast during location update:", forecastError);
+        // Continue without setting forecast data
+      }
 
       const newLocationId = Date.now().toString();
       

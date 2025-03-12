@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               }
             } catch (lightError) {
               console.error("Error fetching light pollution data:", lightError);
+              // Continue with default Bortle scale
             }
             
             setShowAdvancedSettings(true);
@@ -93,7 +95,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             console.error("Error getting location name:", error);
             const fallbackName = t(
               `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
-              `���置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
+              `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
             );
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
@@ -289,6 +291,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           }
         } catch (lightError) {
           console.error("Error fetching light pollution data in SIQS calculation:", lightError);
+          // Continue with current Bortle scale value
         }
       }
       
@@ -513,4 +516,3 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
-
