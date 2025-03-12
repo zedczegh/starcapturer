@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Search, MoonStar, User } from "lucide-react";
 import MapSelector from "./MapSelector";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -92,6 +93,7 @@ const NavBar = () => {
         </nav>
         
         <div className="hidden md:flex items-center space-x-2">
+          <LanguageSwitcher />
           <MapSelector onSelectLocation={handleLocationSelect}>
             <Button variant="ghost" size="icon">
               <Search className="h-5 w-5" />
@@ -141,6 +143,7 @@ const NavBar = () => {
             <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
               Share Location
             </MobileNavLink>
+            <LanguageSwitcher />
             <MapSelector onSelectLocation={handleLocationSelect}>
               <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
                 <Search className="h-4 w-4" />

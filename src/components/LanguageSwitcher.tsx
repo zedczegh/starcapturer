@@ -1,20 +1,10 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Globe } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import { Globe } from 'lucide-react';
 
-interface LanguageSwitcherProps {
-  variant?: "default" | "outline" | "ghost" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-  className?: string;
-}
-
-const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ 
-  variant = "ghost", 
-  size = "sm",
-  className = ""
-}) => {
+const LanguageSwitcher: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
 
   const toggleLanguage = () => {
@@ -23,13 +13,17 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 
   return (
     <Button 
-      variant={variant} 
-      size={size} 
-      className={`flex items-center ${className}`} 
-      onClick={toggleLanguage}
+      variant="ghost" 
+      size="icon" 
+      onClick={toggleLanguage} 
+      className="relative"
+      title={t("Switch to " + (language === 'en' ? "Chinese" : "English"), 
+             "切换到" + (language === 'en' ? "中文" : "英文"))}
     >
-      <Globe className="h-4 w-4 mr-1" />
-      {language === 'en' ? "中文" : "English"}
+      <Globe className="h-5 w-5" />
+      <span className="absolute -top-1 -right-1 text-[10px] font-bold bg-primary text-white rounded-full w-4 h-4 flex items-center justify-center">
+        {language === 'en' ? 'EN' : 'CN'}
+      </span>
     </Button>
   );
 };
