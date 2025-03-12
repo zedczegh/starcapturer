@@ -9,6 +9,7 @@ import LocationDetails from "./pages/LocationDetails";
 import NotFound from "./pages/NotFound";
 import ShareLocation from "./pages/ShareLocation";
 import PhotoPointsNearby from "./pages/PhotoPointsNearby";
+import AboutSIQS from "./pages/AboutSIQS";
 
 // Create a new QueryClient instance with custom error handling
 const queryClient = new QueryClient({
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/location/:id" element={<LocationDetails />} />
           <Route path="/share" element={<ShareLocation />} />
           <Route path="/photo-points" element={<PhotoPointsNearby />} />
+          <Route path="/about" element={<AboutSIQS />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
