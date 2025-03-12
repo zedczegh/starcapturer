@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +18,8 @@ interface SIQSSummaryProps {
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable }) => {
   const { t } = useLanguage();
   
-  // Ensure the SIQS score is properly capped between 0 and 10
   const normalizedSiqs = Math.min(Math.max(siqs, 0), 10);
   
-  // Calculate a color based on SIQS score (0-10 scale)
   const getSiqsColor = (score: number) => {
     if (score >= 8) return "bg-green-500";
     if (score >= 6) return "bg-green-400";
@@ -31,12 +28,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     return "bg-red-500";
   };
 
-  // Format the SIQS score with one decimal place
   const formatSiqsScore = (score: number) => {
     return score.toFixed(1);
   };
 
-  // Get a recommendation message based on score
   const getRecommendationMessage = (score: number) => {
     if (score >= 8) return t("Grab your rig and run!", "带上你的设备立刻出发！");
     if (score >= 6) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
@@ -44,13 +39,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     return t("Well, probably should hit the sack.", "嗯，可能该睡觉了。");
   };
 
-  // Get text color for score
   const getScoreTextColor = (score: number) => {
     if (score < 6) return "text-orange-500";
     return "";
   };
 
-  // Show toast message on component mount
   React.useEffect(() => {
     const message = getRecommendationMessage(normalizedSiqs);
     const scoreFormatted = formatSiqsScore(normalizedSiqs);
@@ -101,13 +94,16 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
         <div className="space-y-3">
           {factors && factors.length > 0 ? (
             factors.map((factor, index) => {
-              // Normalize factor scores to be between 0-10
               const normalizedFactorScore = Math.min(Math.max(factor.score / 10, 0), 10);
+              const translatedFactor = {
+                name: t(factor.name, getFactorNameInChinese(factor.name)),
+                description: t(factor.description, getFactorDescriptionInChinese(factor.description))
+              };
               
               return (
                 <div key={index}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{factor.name}</span>
+                    <span className="text-sm font-medium">{translatedFactor.name}</span>
                     <span className={`text-sm ${normalizedFactorScore < 6 ? "text-orange-500" : ""}`}>
                       {normalizedFactorScore.toFixed(1)}/10
                     </span>
@@ -118,7 +114,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
                       style={{ width: `${normalizedFactorScore * 10}%` }}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{translatedFactor.description}</p>
                 </div>
               );
             })
@@ -132,5 +128,31 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     </Card>
   );
 };
+
+function getFactorNameInChinese(name: string): string {
+  const translations: { [key: string]: string } = {
+    "Cloud Cover": "云层覆盖",
+    "Seeing Conditions": "视宁度",
+    "Wind Speed": "风速",
+    "Humidity": "湿度",
+    "Moon Phase": "月相",
+    "Light Pollution": "光污染",
+    "Temperature": "温度"
+  };
+  return translations[name] || name;
+}
+
+function getFactorDescriptionInChinese(description: string): string {
+  const translations: { [key: string]: string } = {
+    "Clear skies provide optimal viewing conditions": "晴朗的天空提供最佳观测条件",
+    "Atmospheric stability affects image quality": "大气稳定性影响图像质量",
+    "Strong winds can affect equipment stability": "强风可能影响设备稳定性",
+    "High humidity can cause condensation": "高湿度可能导致设备结露",
+    "Moon brightness affects deep sky visibility": "月亮亮度影响深空目标的可见性",
+    "Urban light pollution reduces contrast": "城市光污染降低对比度",
+    "Temperature changes can affect equipment": "温度变化可能影响设备性能"
+  };
+  return translations[description] || description;
+}
 
 export default SIQSSummary;

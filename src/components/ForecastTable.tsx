@@ -92,7 +92,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ forecastData, isLoading =
                 <TableHead className="text-center"><Cloud className="inline h-4 w-4 mr-1" />{t("Clouds", "云层")}</TableHead>
                 <TableHead className="text-center"><Wind className="inline h-4 w-4 mr-1" />{t("Wind", "风速")}</TableHead>
                 <TableHead className="text-center"><Droplets className="inline h-4 w-4 mr-1" />{t("Humid", "湿度")}</TableHead>
-                <TableHead>{t("Conditions", "状况")}</TableHead>
+                <TableHead>{t("Conditions", "天气状况")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
