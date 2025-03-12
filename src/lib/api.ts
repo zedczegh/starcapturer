@@ -15,6 +15,17 @@ type WeatherData = {
   precipitation?: number;
 };
 
+type ForecastItem = {
+  time: string;
+  temperature: number;
+  cloudCover: number;
+  humidity: number;
+  windSpeed: number;
+  precipitation: number;
+  condition: string;
+  seeingCondition: string;
+};
+
 // Function to fetch current weather data from Open-Meteo API
 export async function fetchWeatherData(coordinates: Coordinates): Promise<WeatherData | null> {
   const { latitude, longitude } = coordinates;
@@ -61,6 +72,95 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     });
     return null;
   }
+}
+
+// Function to fetch 24-hour forecast data
+export async function fetchForecastData(coordinates: Coordinates): Promise<ForecastItem[] | null> {
+  const { latitude, longitude } = coordinates;
+  
+  try {
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m&forecast_hours=24&timezone=auto`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch forecast data');
+    }
+    
+    const data = await response.json();
+    
+    // Process the hourly data into our format
+    const forecast: ForecastItem[] = [];
+    
+    for (let i = 0; i < data.hourly.time.length && i < 24; i++) {
+      const cloudCover = data.hourly.cloud_cover[i];
+      let condition = determineWeatherCondition(cloudCover);
+      
+      // Override with precipitation if present
+      if (data.hourly.precipitation[i] > 0.5) condition = "rain";
+      
+      // Calculate seeing conditions based on cloud cover, humidity, and wind
+      const seeingCondition = calculateSeeingCondition(
+        cloudCover,
+        data.hourly.relative_humidity_2m[i],
+        data.hourly.wind_speed_10m[i]
+      );
+      
+      forecast.push({
+        time: data.hourly.time[i],
+        temperature: data.hourly.temperature_2m[i],
+        cloudCover: cloudCover,
+        humidity: data.hourly.relative_humidity_2m[i],
+        windSpeed: Math.round(data.hourly.wind_speed_10m[i] * 0.621371), // convert to mph
+        precipitation: data.hourly.precipitation[i],
+        condition: condition,
+        seeingCondition: seeingCondition
+      });
+    }
+    
+    return forecast;
+  } catch (error) {
+    console.error('Error fetching forecast data:', error);
+    toast({
+      title: "Forecast Data Error",
+      description: "Could not retrieve weather forecast. Please try again later.",
+      variant: "destructive",
+    });
+    return null;
+  }
+}
+
+// Helper to determine weather condition based on cloud cover
+export function determineWeatherCondition(cloudCover: number): string {
+  if (cloudCover < 10) return "clear";
+  if (cloudCover < 30) return "partly cloudy";
+  if (cloudCover < 70) return "cloudy";
+  return "overcast";
+}
+
+// Helper to calculate seeing conditions for astronomy
+function calculateSeeingCondition(cloudCover: number, humidity: number, windSpeed: number): string {
+  // Poor seeing if completely overcast
+  if (cloudCover > 80) return "Poor";
+  
+  // Calculate a seeing score (0-10, higher is better)
+  let seeingScore = 10;
+  
+  // Cloud cover reduces seeing (0-4 points reduction)
+  seeingScore -= (cloudCover / 20);
+  
+  // High humidity reduces seeing (0-3 points reduction)
+  seeingScore -= (humidity > 70 ? (humidity - 70) / 10 : 0);
+  
+  // High winds reduce seeing (0-3 points reduction)
+  seeingScore -= (windSpeed > 10 ? Math.min(3, (windSpeed - 10) / 5) : 0);
+  
+  // Convert score to category
+  if (seeingScore >= 8) return "Excellent";
+  if (seeingScore >= 6) return "Good";
+  if (seeingScore >= 4) return "Average";
+  if (seeingScore >= 2) return "Poor";
+  return "Very Poor";
 }
 
 // Convert WGS-84 coordinates to Baidu Maps URL

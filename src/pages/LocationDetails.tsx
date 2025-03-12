@@ -6,23 +6,19 @@ import NavBar from "@/components/NavBar";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import LocationMap from "@/components/LocationMap";
+import ForecastTable from "@/components/ForecastTable";
 import { toast } from "@/components/ui/use-toast";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { fetchWeatherData } from "@/lib/api";
-
-const determineWeatherCondition = (cloudCover: number) => {
-  if (cloudCover < 10) return "clear";
-  if (cloudCover < 30) return "partly cloudy";
-  if (cloudCover < 70) return "cloudy";
-  return "overcast";
-};
+import { fetchWeatherData, fetchForecastData, determineWeatherCondition } from "@/lib/api";
 
 const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [locationData, setLocationData] = useState(location.state);
+  const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [forecastLoading, setForecastLoading] = useState(false);
 
   useEffect(() => {
     if (!locationData) {
@@ -37,25 +33,28 @@ const LocationDetails = () => {
       }, 100);
       
       return () => clearTimeout(redirectTimer);
+    } else {
+      fetchLocationForecast();
     }
   }, [locationData, navigate]);
 
-  if (!locationData) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <NavBar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Location Not Found</h1>
-            <p className="text-muted-foreground mb-6">
-              The location information you're looking for doesn't exist or has expired.
-              Redirecting you to the home page...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const fetchLocationForecast = async () => {
+    if (!locationData) return;
+    
+    setForecastLoading(true);
+    try {
+      const forecast = await fetchForecastData({
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+      });
+      
+      setForecastData(forecast);
+    } catch (error) {
+      console.error("Error fetching forecast:", error);
+    } finally {
+      setForecastLoading(false);
+    }
+  };
 
   const handleLocationUpdate = async (newLocation: { name: string; latitude: number; longitude: number }) => {
     setLoading(true);
@@ -82,6 +81,12 @@ const LocationDetails = () => {
         weatherData,
         siqsResult,
       });
+
+      const forecast = await fetchForecastData({
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+      });
+      setForecastData(forecast);
 
       toast({
         title: "Location Updated",
@@ -138,6 +143,23 @@ const LocationDetails = () => {
     if (value <= 4) return "Poor";
     return "Very Poor";
   };
+
+  if (!locationData) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <NavBar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Location Not Found</h1>
+            <p className="text-muted-foreground mb-6">
+              The location information you're looking for doesn't exist or has expired.
+              Redirecting you to the home page...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -204,13 +226,18 @@ const LocationDetails = () => {
             />
           </div>
           
-          <div>
+          <div className="space-y-8">
             <LocationMap
               latitude={locationData.latitude}
               longitude={locationData.longitude}
               name={locationData.name || "Unnamed Location"}
               onLocationUpdate={handleLocationUpdate}
               editable={true}
+            />
+            
+            <ForecastTable 
+              forecastData={forecastData}
+              isLoading={forecastLoading}
             />
           </div>
         </div>
