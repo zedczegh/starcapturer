@@ -123,7 +123,7 @@ const NavBar = () => {
       </div>
       
       {menuOpen && (
-        <div className="md:hidden fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pt-20 pb-6 glassmorphism animate-fade-in overflow-y-auto">
+        <div className="md:hidden fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pt-20 pb-6 glassmorphism-strong mobile-nav-overlay animate-fade-in overflow-y-auto">
           <div className="container mx-auto px-4 flex flex-col space-y-6 flex-1">
             <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
               {t("Home", "首页")}
@@ -134,7 +134,7 @@ const NavBar = () => {
                 handleSIQSClick(e);
                 setMenuOpen(false);
               }}
-              className="text-foreground/80 hover:text-primary text-lg font-medium py-2 transition-colors"
+              className="text-foreground text-lg font-medium py-2 transition-colors hover:text-primary"
             >
               {t("SIQS Now", "实时SIQS")}
             </a>
@@ -204,7 +204,7 @@ const MobileNavLink = ({
   return (
     <Link
       to={to}
-      className="text-foreground/80 hover:text-primary text-lg font-medium py-2 transition-colors"
+      className="text-foreground text-lg font-medium py-2 transition-colors hover:text-primary"
       onClick={onClick}
     >
       {children}

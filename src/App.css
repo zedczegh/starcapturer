@@ -94,6 +94,15 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
+/* Strong glassmorphism for mobile nav overlay */
+.mobile-nav-overlay {
+  background: rgba(6, 8, 24, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(104, 117, 255, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
 /* Sci-fi scrollbar for better UX */
 .sci-fi-scrollbar::-webkit-scrollbar {
   width: 6px;
