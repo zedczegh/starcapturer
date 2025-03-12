@@ -15,7 +15,7 @@ const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [locationData, setLocationData] = useState(location.state);
+  const [locationData, setLocationData] = useState(location.state || null);
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
@@ -30,7 +30,7 @@ const LocationDetails = () => {
       
       const redirectTimer = setTimeout(() => {
         navigate("/");
-      }, 100);
+      }, 3000);
       
       return () => clearTimeout(redirectTimer);
     } else {
@@ -104,23 +104,23 @@ const LocationDetails = () => {
     }
   };
 
-  const siqsResult = locationData.siqsResult || { 
+  const siqsResult = locationData?.siqsResult || { 
     score: 0, 
     factors: [], 
     isViable: false 
   };
   
   const weatherData = {
-    temperature: locationData.weatherData?.temperature || 0, 
-    humidity: locationData.weatherData?.humidity || 0, 
-    cloudCover: locationData.weatherData?.cloudCover || 0, 
-    windSpeed: locationData.weatherData?.windSpeed || 0, 
-    precipitation: locationData.weatherData?.precipitation || 0,
-    time: locationData.weatherData?.time || new Date().toISOString(),
-    condition: locationData.weatherData?.condition || 
-      determineWeatherCondition(locationData.weatherData?.cloudCover || 0)
+    temperature: locationData?.weatherData?.temperature || 0,
+    humidity: locationData?.weatherData?.humidity || 0,
+    cloudCover: locationData?.weatherData?.cloudCover || 0,
+    windSpeed: locationData?.weatherData?.windSpeed || 0,
+    precipitation: locationData?.weatherData?.precipitation || 0,
+    time: locationData?.weatherData?.time || new Date().toISOString(),
+    condition: locationData?.weatherData?.condition || 
+      determineWeatherCondition(locationData?.weatherData?.cloudCover || 0)
   };
-  
+
   const formatMoonPhase = (phase: number) => {
     if (typeof phase !== 'number') return "Unknown";
     
