@@ -59,13 +59,15 @@ const LocationDetails = () => {
     isViable: false 
   };
   
-  const weatherData = locationData.weatherData || { 
-    cloudCover: 0, 
-    windSpeed: 0, 
-    humidity: 0, 
-    temperature: 0, 
-    time: new Date().toISOString(),
-    condition: "clear" // Add default condition to prevent undefined errors
+  // Ensure weatherData always has a condition property to prevent the error
+  const weatherData = {
+    cloudCover: locationData.weatherData?.cloudCover || 0, 
+    windSpeed: locationData.weatherData?.windSpeed || 0, 
+    humidity: locationData.weatherData?.humidity || 0, 
+    temperature: locationData.weatherData?.temperature || 0, 
+    time: locationData.weatherData?.time || new Date().toISOString(),
+    // Make sure condition is never undefined
+    condition: locationData.weatherData?.condition || "clear"
   };
 
   return (
