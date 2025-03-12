@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { getLocationReviews } from "@/lib/api";
 import { MessageSquare, Star, Image as ImageIcon, Loader2 } from "lucide-react";
 
