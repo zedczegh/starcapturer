@@ -9,9 +9,9 @@ interface LocationMapProps {
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) => {
-  // Handle potential invalid coordinates
-  const validLatitude = isFinite(latitude) ? latitude : 0;
-  const validLongitude = isFinite(longitude) ? longitude : 0;
+  // Handle potential invalid coordinates with safer defaults
+  const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
+  const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
   const validName = name || "Unknown Location";
 
   return (
