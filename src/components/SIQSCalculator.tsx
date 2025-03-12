@@ -102,17 +102,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             }
             
             setShowAdvancedSettings(true);
-            
-            navigate('/location/new', {
-              state: {
-                initialLocation: {
-                  name: name,
-                  latitude: lat,
-                  longitude: lng
-                }
-              }
-            });
-            
             setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
@@ -538,4 +527,3 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
-

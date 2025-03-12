@@ -22,24 +22,14 @@ const LocationDetails = () => {
   const { language, t } = useLanguage();
 
   useEffect(() => {
-    console.log("LocationDetails received state:", location.state);
-    
-    // Special handling for "new" location selection
-    if (id === "new" && location.state?.initialLocation && !locationData) {
-      setLocationData({
-        ...location.state.initialLocation,
-        weatherData: {},
-        siqsResult: { score: 0, factors: [], isViable: false },
-        bortleScale: 4,
-        seeingConditions: 3,
-        moonPhase: 0,
-        timestamp: new Date().toISOString()
-      });
+    if (!locationData && location.state) {
+      console.log("Setting location data from state:", location.state);
+      setLocationData(location.state);
     } else if (!locationData && !location.state) {
       console.error("Location data is missing", { params: id, locationState: location.state });
       toast.error(t("Location Not Found", "位置未找到"), {
         description: t("The requested location information is not available or has expired.", 
-                     "请求的位置信息不可用或已过期。"),
+                       "请求的位置信息不可用或已过期。"),
       });
       
       const redirectTimer = setTimeout(() => {
@@ -47,15 +37,11 @@ const LocationDetails = () => {
       }, 3000);
       
       return () => clearTimeout(redirectTimer);
-    }
-  }, [id, location.state, locationData, navigate, t]);
-
-  useEffect(() => {
-    if (locationData) {
+    } else if (locationData) {
       fetchLocationForecast();
       updateLightPollutionData();
     }
-  }, [locationData?.latitude, locationData?.longitude]);
+  }, [locationData, location.state, navigate, t, id]);
 
   const updateLightPollutionData = async () => {
     if (!locationData) return;
