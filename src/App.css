@@ -1,4 +1,3 @@
-
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -94,13 +93,13 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* Strong glassmorphism for mobile nav overlay */
+/* Strong glassmorphism for mobile nav overlay - ENHANCED with better opacity */
 .mobile-nav-overlay {
-  background: rgba(6, 8, 24, 0.95) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  background: rgba(6, 8, 24, 0.98) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
   border-top: 1px solid rgba(104, 117, 255, 0.2) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
 }
 
 /* Sci-fi scrollbar for better UX */
@@ -133,4 +132,17 @@
 .sci-fi-focus:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(104, 117, 255, 0.4), 0 0 10px rgba(104, 117, 255, 0.3);
+}
+
+/* Fix for overlapping text in mobile nav */
+@media (max-width: 768px) {
+  .mobile-nav-item {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(104, 117, 255, 0.1);
+  }
+  
+  .mobile-nav-item:last-child {
+    border-bottom: none;
+  }
 }
