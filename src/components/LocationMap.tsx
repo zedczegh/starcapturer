@@ -27,7 +27,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
   const validName = name || "Unknown Location";
 
   // Create a position array that matches Leaflet's expected [lat, lng] format
-  const position: L.LatLngExpression = [validLatitude, validLongitude];
+  const position: [number, number] = [validLatitude, validLongitude];
 
   return (
     <Card>
