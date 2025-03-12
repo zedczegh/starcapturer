@@ -26,12 +26,15 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
   const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
   const validName = name || "Unknown Location";
 
+  // Create a position array that matches Leaflet's expected [lat, lng] format
+  const position: [number, number] = [validLatitude, validLongitude];
+
   return (
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
         <div className="aspect-video w-full h-[300px]">
           <MapContainer 
-            center={[validLatitude, validLongitude]} 
+            center={position}
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={false}
@@ -40,7 +43,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <Marker position={[validLatitude, validLongitude]}>
+            <Marker position={position}>
               <Popup>
                 {validName}
               </Popup>
