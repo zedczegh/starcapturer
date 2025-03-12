@@ -12,9 +12,9 @@ interface WeatherConditionsProps {
     precipitation: number;
     condition: string;
   };
-  moonPhase: string;
+  moonPhase: string | number;
   bortleScale: number;
-  seeingConditions: string;
+  seeingConditions: string | number;
 }
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
@@ -31,6 +31,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         return <Cloud className="h-5 w-5 text-gray-400" />;
       case "cloudy":
         return <Cloud className="h-5 w-5 text-gray-500" />;
+      case "overcast":
+        return <Cloud className="h-5 w-5 text-gray-600" />;
       case "fog":
         return <CloudFog className="h-5 w-5 text-gray-300" />;
       case "rain":
@@ -46,6 +48,17 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   };
 
+  // Format the condition to be displayed
+  const formatCondition = (condition: string) => {
+    if (!condition) return "Clear";
+    
+    // Capitalize first letter of each word
+    return condition
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -57,7 +70,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center">
               {getWeatherIcon(weatherData.condition)}
-              <span className="ml-2 text-sm">{weatherData.condition}</span>
+              <span className="ml-2 text-sm">{formatCondition(weatherData.condition)}</span>
             </div>
             <div className="flex items-center">
               <Thermometer className="h-5 w-5 text-red-400" />

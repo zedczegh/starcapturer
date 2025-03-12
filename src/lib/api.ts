@@ -1,3 +1,4 @@
+
 import { toast } from "@/components/ui/use-toast";
 
 type Coordinates = {
@@ -11,6 +12,8 @@ type WeatherData = {
   humidity: number;
   temperature: number;
   time: string;
+  condition?: string;
+  precipitation?: number;
 };
 
 // Function to fetch current weather data from Open-Meteo API
@@ -28,13 +31,27 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     
     const data = await response.json();
     
+    // Determine weather condition based on cloud cover
+    const cloudCover = data.current.cloud_cover;
+    let condition = "clear";
+    
+    if (cloudCover < 10) condition = "clear";
+    else if (cloudCover < 30) condition = "partly cloudy";
+    else if (cloudCover < 70) condition = "cloudy";
+    else condition = "overcast";
+    
+    // Check if there's precipitation to override condition
+    if (data.current.precipitation > 0.5) condition = "rain";
+    
     // Extract relevant data
     return {
-      cloudCover: data.current.cloud_cover, // percentage
+      cloudCover: cloudCover,
       windSpeed: Math.round(data.current.wind_speed_10m * 0.621371), // convert km/h to mph
       humidity: data.current.relative_humidity_2m, // percentage
       temperature: data.current.temperature_2m, // Celsius
       time: data.current.time,
+      condition: condition,
+      precipitation: data.current.precipitation
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);

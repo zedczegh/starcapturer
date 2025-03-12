@@ -59,16 +59,50 @@ const LocationDetails = () => {
     isViable: false 
   };
   
+  // Determine weather condition based on cloud cover if not provided
+  const determineWeatherCondition = (cloudCover: number) => {
+    if (cloudCover < 10) return "clear";
+    if (cloudCover < 30) return "partly cloudy";
+    if (cloudCover < 70) return "cloudy";
+    return "overcast";
+  };
+  
   // Ensure weatherData always has all required properties to prevent errors
   const weatherData = {
+    temperature: locationData.weatherData?.temperature || 0, 
+    humidity: locationData.weatherData?.humidity || 0, 
     cloudCover: locationData.weatherData?.cloudCover || 0, 
     windSpeed: locationData.weatherData?.windSpeed || 0, 
-    humidity: locationData.weatherData?.humidity || 0, 
-    temperature: locationData.weatherData?.temperature || 0, 
-    precipitation: locationData.weatherData?.precipitation || 0, // Add missing precipitation property
+    precipitation: locationData.weatherData?.precipitation || 0,
     time: locationData.weatherData?.time || new Date().toISOString(),
-    // Make sure condition is never undefined
-    condition: locationData.weatherData?.condition || "clear"
+    // Determine condition based on cloud cover if not provided
+    condition: locationData.weatherData?.condition || 
+      determineWeatherCondition(locationData.weatherData?.cloudCover || 0)
+  };
+
+  // Format moon phase for display
+  const formatMoonPhase = (phase: number) => {
+    if (typeof phase !== 'number') return "Unknown";
+    
+    if (phase <= 0.05 || phase >= 0.95) return "New Moon";
+    if (phase < 0.25) return "Waxing Crescent";
+    if (phase < 0.30) return "First Quarter";
+    if (phase < 0.45) return "Waxing Gibbous";
+    if (phase < 0.55) return "Full Moon";
+    if (phase < 0.70) return "Waning Gibbous";
+    if (phase < 0.80) return "Last Quarter";
+    return "Waning Crescent";
+  };
+
+  // Format seeing conditions for display
+  const formatSeeingConditions = (value: number) => {
+    if (typeof value !== 'number') return "Average";
+    
+    if (value <= 1) return "Excellent";
+    if (value <= 2) return "Good";
+    if (value <= 3) return "Average";
+    if (value <= 4) return "Poor";
+    return "Very Poor";
   };
 
   return (
@@ -127,9 +161,9 @@ const LocationDetails = () => {
             
             <WeatherConditions
               weatherData={weatherData}
-              moonPhase={locationData.moonPhase || 0}
+              moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
               bortleScale={locationData.bortleScale || 4}
-              seeingConditions={locationData.seeingConditions || 3}
+              seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
             />
           </div>
           
