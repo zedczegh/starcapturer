@@ -9,7 +9,7 @@ import LocationMap from "@/components/LocationMap";
 import ForecastTable from "@/components/ForecastTable";
 import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { fetchWeatherData, fetchForecastData, determineWeatherCondition } from "@/lib/api";
+import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const LocationDetails = () => {
@@ -39,8 +39,49 @@ const LocationDetails = () => {
       return () => clearTimeout(redirectTimer);
     } else {
       fetchLocationForecast();
+      updateLightPollutionData();
     }
   }, [locationData, navigate, t]);
+
+  const updateLightPollutionData = async () => {
+    if (!locationData) return;
+    
+    try {
+      const bortleData = await fetchLightPollutionData(locationData.latitude, locationData.longitude);
+      
+      if (bortleData && bortleData.bortleScale !== locationData.bortleScale) {
+        const updatedLocationData = {
+          ...locationData,
+          bortleScale: bortleData.bortleScale
+        };
+        
+        // Recalculate SIQS with the new Bortle scale
+        const moonPhase = locationData.moonPhase || 0;
+        const siqsResult = calculateSIQS({
+          cloudCover: locationData.weatherData.cloudCover,
+          bortleScale: bortleData.bortleScale,
+          seeingConditions: locationData.seeingConditions || 3,
+          windSpeed: locationData.weatherData.windSpeed,
+          humidity: locationData.weatherData.humidity,
+          moonPhase,
+        });
+        
+        setLocationData({
+          ...updatedLocationData,
+          siqsResult
+        });
+        
+        toast.success(t("Light Pollution Data Updated", "光污染数据已更新"), {
+          description: t(
+            "Light pollution level has been updated based on location coordinates.",
+            "基于位置坐标已更新光污染级别。"
+          )
+        });
+      }
+    } catch (error) {
+      console.error("Error updating light pollution data:", error);
+    }
+  };
 
   const fetchLocationForecast = async () => {
     if (!locationData) return;
@@ -86,11 +127,14 @@ const LocationDetails = () => {
         throw new Error("Failed to retrieve weather data for this location");
       }
 
+      const bortleData = await fetchLightPollutionData(newLocation.latitude, newLocation.longitude);
+      const bortleScale = bortleData?.bortleScale || locationData?.bortleScale || 4;
+      
       const moonPhase = locationData?.moonPhase || 0;
       
       const siqsResult = calculateSIQS({
         cloudCover: weatherData.cloudCover,
-        bortleScale: locationData?.bortleScale || 4,
+        bortleScale: bortleScale,
         seeingConditions: locationData?.seeingConditions || 3,
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
@@ -101,6 +145,7 @@ const LocationDetails = () => {
         ...locationData,
         ...newLocation,
         weatherData,
+        bortleScale,
         siqsResult,
       });
 

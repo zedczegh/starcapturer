@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
+import { fetchWeatherData, getLocationNameFromCoordinates, fetchLightPollutionData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
 import MapSelector from "./MapSelector";
@@ -91,6 +91,16 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             console.log("Got location name:", name);
             setLocationName(name);
             
+            try {
+              const lightPollutionData = await fetchLightPollutionData(lat, lng);
+              if (lightPollutionData && lightPollutionData.bortleScale) {
+                setBortleScale(lightPollutionData.bortleScale);
+                console.log("Got Bortle scale:", lightPollutionData.bortleScale);
+              }
+            } catch (lightError) {
+              console.error("Error fetching light pollution data:", lightError);
+            }
+            
             setShowAdvancedSettings(true);
             
             toast.success(t("Location Retrieved", "已获取位置"), {
@@ -138,13 +148,22 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   };
   
-  const handleLocationSelect = (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
+  const handleLocationSelect = async (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
     setLocationName(location.name);
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
     
-    const newBortleScale = estimateBortleScale(location.name);
-    setBortleScale(newBortleScale);
+    try {
+      const lightPollutionData = await fetchLightPollutionData(location.latitude, location.longitude);
+      if (lightPollutionData && lightPollutionData.bortleScale) {
+        setBortleScale(lightPollutionData.bortleScale);
+        console.log("Got Bortle scale for selected location:", lightPollutionData.bortleScale);
+      }
+    } catch (error) {
+      console.error("Error fetching light pollution data for selected location:", error);
+      const estimatedBortleScale = estimateBortleScale(location.name);
+      setBortleScale(estimatedBortleScale);
+    }
     
     toast.success(t("Location Selected", "已选择位置"), {
       description: t(`Selected ${location.name}`, `已选择 ${location.name}`)
@@ -280,11 +299,26 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       
       setWeatherData(data);
       
+      let actualBortleScale = bortleScale;
+      if (!displayOnly || actualBortleScale === 4) {
+        try {
+          const lightPollutionData = await fetchLightPollutionData(lat, lng);
+          if (lightPollutionData && lightPollutionData.bortleScale) {
+            actualBortleScale = lightPollutionData.bortleScale;
+            if (!displayOnly) {
+              setBortleScale(actualBortleScale);
+            }
+          }
+        } catch (lightError) {
+          console.error("Error fetching light pollution data in SIQS calculation:", lightError);
+        }
+      }
+      
       const moonPhase = getCurrentMoonPhase();
       
       const siqsResult = calculateSIQS({
         cloudCover: data.cloudCover,
-        bortleScale,
+        bortleScale: actualBortleScale,
         seeingConditions,
         windSpeed: data.windSpeed,
         humidity: data.humidity,
@@ -304,7 +338,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         name: name,
         latitude: lat,
         longitude: lng,
-        bortleScale,
+        bortleScale: actualBortleScale,
         seeingConditions,
         weatherData: data,
         siqsResult,
@@ -351,7 +385,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     if (siqsScore >= 80) return t("Perfect conditions for astrophotography!", "天文摄影的完美条件！");
     if (siqsScore >= 60) return t("Good conditions for imaging!", "适合拍摄的良好条件！");
     if (siqsScore >= 40) return t("Average conditions, might be challenging.", "一般条件，可能有挑战性。");
-    if (siqsScore >= 20) return t("Poor conditions, consider rescheduling.", "条件较差，考虑改期。");
+    if (siqsScore >= 20) return t("Poor conditions, consider rescheduling.", "条件较差，考虑��期。");
     return t("Very poor conditions, not recommended.", "条件非常差，不推荐。");
   };
 

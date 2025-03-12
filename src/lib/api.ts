@@ -526,7 +526,7 @@ function generateRealisticPhotoPoints(): SharedAstroSpot[] {
         const hasPhoto = Math.random() > 0.6;
         const photoUrls = [
           "https://images.unsplash.com/photo-1536293283170-b4add58c3057?q=80&w=2071&auto=format&fit=crop",
-          "https://images.unsplash.com/photo-1527285581495-1bf959d2600e?q=80&w=1974&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop",
           "https://images.unsplash.com/photo-1444080748397-f442aa95c3e5?q=80&w=1932&auto=format&fit=crop",
           "https://images.unsplash.com/photo-1504805572947-34fad45aed93?q=80&w=2070&auto=format&fit=crop",
           "https://images.unsplash.com/photo-1533294455009-a771f7861812?q=80&w=2070&auto=format&fit=crop"
@@ -588,4 +588,186 @@ export function getLocationReviews(locationId: string): Array<{
   ];
   
   return reviews;
+}
+
+export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null> {
+  try {
+    const response = await fetch(`https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&qt=point&qd=${latitude},${longitude}`);
+    
+    if (!response.ok) {
+      console.warn("Could not fetch light pollution data from primary source, using estimated data");
+      return estimateBortleScaleFromLocation(latitude, longitude);
+    }
+    
+    const data = await response.json();
+    
+    if (data && data.hasOwnProperty('value')) {
+      const artificialBrightness = parseFloat(data.value);
+      const bortleScale = convertToBortleScale(artificialBrightness);
+      
+      return { bortleScale };
+    } else {
+      return estimateBortleScaleFromLocation(latitude, longitude);
+    }
+  } catch (error) {
+    console.error("Error fetching light pollution data:", error);
+    return estimateBortleScaleFromLocation(latitude, longitude);
+  }
+}
+
+function convertToBortleScale(artificialBrightness: number): number {
+  if (artificialBrightness < 0.01) return 1;
+  if (artificialBrightness < 0.08) return 2;
+  if (artificialBrightness < 0.26) return 3;
+  if (artificialBrightness < 0.8) return 4;
+  if (artificialBrightness < 2.5) return 5;
+  if (artificialBrightness < 8) return 6;
+  if (artificialBrightness < 25) return 7;
+  if (artificialBrightness < 80) return 8;
+  return 9;
+}
+
+async function estimateBortleScaleFromLocation(latitude: number, longitude: number): Promise<{ bortleScale: number }> {
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+    
+    if (!response.ok) {
+      return estimateBortleScaleFromPopulationDensity(latitude, longitude);
+    }
+    
+    const data = await response.json();
+    
+    if (data && data.address) {
+      return estimateBortleScaleFromAddressData(data.address);
+    } else {
+      return estimateBortleScaleFromPopulationDensity(latitude, longitude);
+    }
+  } catch (error) {
+    console.error("Error in estimating Bortle scale from location:", error);
+    return { bortleScale: 4 };
+  }
+}
+
+function estimateBortleScaleFromAddressData(address: any): { bortleScale: number } {
+  let bortleEstimate = 4;
+  
+  if (address.city || address.town || address.borough) {
+    bortleEstimate = 7;
+    
+    if (address.city) {
+      const population = getPopulationEstimate(address.city, address.country);
+      if (population > 1000000) {
+        bortleEstimate = 8.5;
+      } else if (population > 100000) {
+        bortleEstimate = 7.5;
+      }
+    }
+  } else if (address.village || address.hamlet) {
+    bortleEstimate = 3.5;
+  } else if (address.national_park || address.natural || address.leisure === 'nature_reserve') {
+    bortleEstimate = 2.5;
+  }
+  
+  if (address.country) {
+    if (['New Zealand', 'Chile', 'Namibia', 'Mongolia'].includes(address.country)) {
+      bortleEstimate = Math.max(1, bortleEstimate - 1.5);
+    } else if (['United States', 'Canada', 'Australia'].includes(address.country)) {
+      bortleEstimate = Math.max(1, bortleEstimate - 0.5);
+    } else if (['Japan', 'South Korea', 'Netherlands', 'Belgium'].includes(address.country)) {
+      bortleEstimate = Math.min(9, bortleEstimate + 1);
+    }
+  }
+  
+  return { bortleScale: Math.max(1, Math.min(9, bortleEstimate)) };
+}
+
+function getPopulationEstimate(city: string, country: string): number {
+  const majorCities: Record<string, number> = {
+    'Tokyo': 37400000,
+    'Delhi': 31200000,
+    'Shanghai': 27100000,
+    'Beijing': 22000000, 
+    'Mumbai': 20700000,
+    'New York': 18800000,
+    'London': 9500000,
+    'Paris': 11000000,
+    'Los Angeles': 12500000,
+    'Berlin': 3700000,
+    'Madrid': 6600000,
+    'Rome': 4300000,
+    'Moscow': 12500000,
+    'Hong Kong': 7500000,
+    'Singapore': 5700000,
+    'Bangkok': 10500000,
+    'Sydney': 5300000,
+    'Toronto': 6300000,
+    'Seoul': 9800000,
+    'Mexico City': 21800000,
+    'Cairo': 20900000,
+    'Buenos Aires': 15100000,
+    'Istanbul': 15500000,
+    'Lahore': 13000000,
+    'Lima': 10700000
+  };
+  
+  if (majorCities[city]) {
+    return majorCities[city];
+  }
+  
+  for (const knownCity in majorCities) {
+    if (city.includes(knownCity) || knownCity.includes(city)) {
+      return majorCities[knownCity];
+    }
+  }
+  
+  if (country) {
+    const highPopulationCountries = ['China', 'India', 'Indonesia', 'Pakistan', 'Brazil', 'Nigeria'];
+    if (highPopulationCountries.includes(country)) {
+      return 500000;
+    }
+  }
+  
+  return 100000;
+}
+
+async function estimateBortleScaleFromPopulationDensity(latitude: number, longitude: number): Promise<{ bortleScale: number }> {
+  const majorCityCoordinates = [
+    {name: "New York", lat: 40.7128, lon: -74.0060, bortle: 8.5},
+    {name: "London", lat: 51.5074, lon: -0.1278, bortle: 8.5},
+    {name: "Tokyo", lat: 35.6762, lon: 139.6503, bortle: 9},
+    {name: "Paris", lat: 48.8566, lon: 2.3522, bortle: 8},
+    {name: "Los Angeles", lat: 34.0522, lon: -118.2437, bortle: 8},
+    {name: "Hong Kong", lat: 22.3193, lon: 114.1694, bortle: 9},
+    {name: "Shanghai", lat: 31.2304, lon: 121.4737, bortle: 9},
+    {name: "Moscow", lat: 55.7558, lon: 37.6173, bortle: 8},
+    {name: "Delhi", lat: 28.6139, lon: 77.2090, bortle: 8.5},
+    {name: "Sydney", lat: -33.8688, lon: 151.2093, bortle: 7.5},
+    {name: "Beijing", lat: 39.9042, lon: 116.4074, bortle: 9},
+    {name: "Cairo", lat: 30.0444, lon: 31.2357, bortle: 8},
+    {name: "Mexico City", lat: 19.4326, lon: -99.1332, bortle: 8},
+    {name: "Mumbai", lat: 19.0760, lon: 72.8777, bortle: 8.5},
+    {name: "Berlin", lat: 52.5200, lon: 13.4050, bortle: 7.5}
+  ];
+  
+  for (const city of majorCityCoordinates) {
+    const distance = calculateDistance(latitude, longitude, city.lat, city.lon);
+    
+    if (distance < 50) {
+      const distanceAdjustment = distance / 10;
+      return { bortleScale: Math.max(4, city.bortle - distanceAdjustment) };
+    }
+    
+    if (distance < 100) {
+      return { bortleScale: Math.max(3, city.bortle - 2) };
+    }
+  }
+  
+  const latAbs = Math.abs(latitude);
+  if (latAbs > 66) {
+    return { bortleScale: 1 };
+  } else if (latAbs > 60) {
+    return { bortleScale: 2 };
+  }
+  
+  return { bortleScale: 4 };
 }

@@ -25,14 +25,14 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   bortleScale,
   seeingConditions,
 }) => {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   
   const formatBortleScale = (value: number) => {
     if (value <= 1) return `1 (${t("Excellent Dark", "极暗")})`;
-    if (value <= 3) return `${value} (${t("Very Dark", "很暗")})`;
-    if (value <= 5) return `${value} (${t("Suburban", "郊区")})`;
-    if (value <= 7) return `${value} (${t("Bright Suburban", "明亮郊区")})`;
-    return `${value} (${t("City", "城市")})`;
+    if (value <= 3) return `${value.toFixed(1)} (${t("Very Dark", "很暗")})`;
+    if (value <= 5) return `${value.toFixed(1)} (${t("Suburban", "郊区")})`;
+    if (value <= 7) return `${value.toFixed(1)} (${t("Bright Suburban", "明亮郊区")})`;
+    return `${value.toFixed(1)} (${t("City", "城市")})`;
   };
 
   return (
