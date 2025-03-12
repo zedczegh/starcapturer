@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Star, Telescope } from "lucide-react";
+import { Star, Telescope } from "lucide-react";
 
 const Hero = () => {
   const starFieldRef = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ const Hero = () => {
   }, []);
   
   return (
-    <div className="min-h-screen relative overflow-hidden pt-20">
+    <div className="relative overflow-hidden pt-20">
       {/* Star field background */}
       <div ref={starFieldRef} className="absolute inset-0 z-0 star-field"></div>
       
@@ -64,50 +64,22 @@ const Hero = () => {
       </div>
       
       {/* Content */}
-      <div className="container mx-auto px-4 pt-20 pb-24 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          <Badge variant="outline" className="mb-6 py-1.5 px-6 border-primary/20 bg-primary/5 text-primary">
+      <div className="container mx-auto px-4 pt-10 pb-12 relative z-10">
+        <div className="max-w-2xl mx-auto text-center">
+          <Badge variant="outline" className="mb-4 py-1.5 px-6 border-primary/20 bg-primary/5 text-primary">
             <Star className="h-3.5 w-3.5 mr-1" />
             <span>Stellar Imaging Quality Scores</span>
           </Badge>
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight animate-slide-up">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight animate-slide-up">
             <span className="text-gradient-blue">Perfect Astrophotography</span><br />
             <span>Starts with the Perfect Location</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-foreground/80 mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <p className="text-base md:text-lg text-foreground/80 mb-4 animate-slide-up" style={{ animationDelay: '100ms' }}>
             Discover optimal shooting locations with data-driven Stellar Imaging Quality Scores.
-            AstroSIQS combines real-time weather data and community insights to help you capture
-            breathtaking night sky images, anywhere on Earth.
+            Find the best spots for breathtaking night sky images anywhere on Earth.
           </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 animate-slide-up" style={{ animationDelay: '200ms' }}>
-            <Button size="lg" className="w-full sm:w-auto px-8">
-              <Telescope className="mr-2 h-5 w-5" />
-              Calculate SIQS Now
-            </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto px-8">
-              Explore Community Locations
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-20 animate-slide-up" style={{ animationDelay: '300ms' }}>
-          <div className="glassmorphism rounded-xl p-6 text-center">
-            <h3 className="text-3xl font-bold text-gradient-blue">25,000+</h3>
-            <p className="text-foreground/70 mt-2">Locations Analyzed</p>
-          </div>
-          <div className="glassmorphism rounded-xl p-6 text-center">
-            <h3 className="text-3xl font-bold text-gradient-blue">98%</h3>
-            <p className="text-foreground/70 mt-2">Prediction Accuracy</p>
-          </div>
-          <div className="glassmorphism rounded-xl p-6 text-center">
-            <h3 className="text-3xl font-bold text-gradient-blue">12,000+</h3>
-            <p className="text-foreground/70 mt-2">Astrophotographers</p>
-          </div>
         </div>
       </div>
       

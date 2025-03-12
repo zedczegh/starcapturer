@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,20 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const [longitude, setLongitude] = useState("");
   const [bortleScale, setBortleScale] = useState(4);
   const [seeingConditions, setSeeingConditions] = useState(2);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [askedForLocation, setAskedForLocation] = useState(false);
+  
+  // Ask for user location on initial load
+  useEffect(() => {
+    if (!askedForLocation) {
+      setAskedForLocation(true);
+      
+      // Ask the user if they want to share their location
+      if (window.confirm("Would you like to share your location to calculate your local SIQS and see nearby photo points?")) {
+        handleUseCurrentLocation();
+      }
+    }
+  }, []);
   
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -35,6 +49,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           
           setLatitude(lat.toFixed(6));
           setLongitude(lng.toFixed(6));
+          setUserLocation({ latitude: lat, longitude: lng });
           
           try {
             const name = await getLocationNameFromCoordinates(lat, lng);
@@ -86,6 +101,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       title: "Location Selected",
       description: `Selected ${location.name}`,
     });
+    
+    // Automatically calculate SIQS after selecting location
+    calculateSIQSForLocation(location.latitude, location.longitude, location.name);
   };
   
   const handleRecommendedPointSelect = (point: { name: string; latitude: number; longitude: number }) => {
@@ -227,11 +245,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           <hr className="border-cosmic-800/30" />
         </div>
         
-        <RecommendedPhotoPoints onSelectPoint={handleRecommendedPointSelect} />
-        
-        <div className="pt-2 pb-2">
-          <hr className="border-cosmic-800/30" />
-        </div>
+        <RecommendedPhotoPoints 
+          onSelectPoint={handleRecommendedPointSelect}
+          userLocation={userLocation}
+        />
         
         {locationName && (
           <div>
