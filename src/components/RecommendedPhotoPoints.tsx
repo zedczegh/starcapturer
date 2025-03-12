@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Loader2, Star, MapPin, NavigationIcon, Share2 } from "lucide-react";
+import { Telescope, Loader2, Star, MapPin, NavigationIcon, Share2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { getRecommendedPhotoPoints, generateBaiduMapsUrl, SharedAstroSpot } from "@/lib/api";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -72,7 +72,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Camera className="h-5 w-5 text-primary" />
+          <Telescope className="h-5 w-5 text-primary" />
           {t("Recommended Photo Points", "推荐拍摄点")}
           {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
         </h3>

@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, Info, MapPin, Camera, Share, Search, User, MoonStar } from "lucide-react";
+import { Home, Info, MapPin, Share, Search, User, MoonStar, Telescope } from "lucide-react";
 import MapSelector from "./MapSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -113,9 +112,8 @@ const NavBar = () => {
         </div>
       </header>
       
-      {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e1f] border-t border-primary/20 shadow-lg">
-        <div className="flex justify-around items-center py-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
+        <div className="flex justify-around items-center py-3">
           <MobileNavButton 
             to="/"
             icon={<Home className="h-5 w-5" />}
@@ -133,7 +131,7 @@ const NavBar = () => {
           
           <MobileNavButton
             to="/photo-points"
-            icon={<Camera className="h-5 w-5" />}
+            icon={<Telescope className="h-5 w-5" />}
             label={t("Photo", "拍摄")}
             active={location.pathname === "/photo-points"}
           />
@@ -200,17 +198,17 @@ const MobileNavButton = ({
       to={to}
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center px-2 py-1",
-        active ? "text-primary" : "text-foreground/70"
+        "flex flex-col items-center px-3 py-1 mobile-nav-item",
+        active ? "active text-primary" : "text-foreground/70"
       )}
     >
       <div className={cn(
-        "p-1.5 rounded-full transition-colors",
+        "icon-container p-1.5 rounded-full transition-all",
         active ? "bg-primary/20" : "bg-transparent"
       )}>
         {icon}
       </div>
-      <span className="text-xs mt-1">{label}</span>
+      <span className="text-xs mt-1 mobile-nav-text">{label}</span>
     </Link>
   );
 };

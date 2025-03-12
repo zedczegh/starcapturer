@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Camera, MapPin, NavigationIcon, Share2, Loader2, Star } from "lucide-react";
+import { Telescope, MapPin, NavigationIcon, Share2, Loader2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -104,7 +104,7 @@ const PhotoPointsNearby: React.FC = () => {
       <div className="container mx-auto px-4 pt-24 pb-12">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold flex items-center">
-            <Camera className="h-8 w-8 text-primary mr-3" />
+            <Telescope className="h-8 w-8 text-primary mr-3" />
             Photo Points Nearby
           </h1>
           <Link to="/share">
@@ -121,7 +121,7 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         ) : photoPointsWithDistance.length === 0 ? (
           <div className="text-center py-16 glassmorphism rounded-lg">
-            <Camera className="h-16 w-16 text-primary/50 mx-auto mb-4" />
+            <Telescope className="h-16 w-16 text-primary/50 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold mb-2">No Photo Points Found</h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-6">
               Be the first to share an astrophotography location in this area!
