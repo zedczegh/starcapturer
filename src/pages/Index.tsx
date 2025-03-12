@@ -74,7 +74,7 @@ const Index = () => {
               </div>
               
               <Button variant="outline" className="w-full" asChild>
-                <Link to="/locations">
+                <Link to="/photo-points">
                   View All Locations
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -128,7 +128,7 @@ const Index = () => {
               <Link to="/about" className="text-sm text-foreground/70 hover:text-primary transition-colors">
                 About SIQS
               </Link>
-              <Link to="/locations" className="text-sm text-foreground/70 hover:text-primary transition-colors">
+              <Link to="/photo-points" className="text-sm text-foreground/70 hover:text-primary transition-colors">
                 Explore Locations
               </Link>
               <Link to="/community" className="text-sm text-foreground/70 hover:text-primary transition-colors">
