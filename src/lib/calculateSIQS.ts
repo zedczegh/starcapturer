@@ -1,3 +1,4 @@
+
 // SIQS = Stellar Imaging Quality Score
 
 export interface SIQSFactors {
@@ -7,6 +8,13 @@ export interface SIQSFactors {
   windSpeed: number;  // mph
   humidity: number;  // percentage 0-100
   moonPhase?: number;  // 0-1 (0=new moon, 0.5=full moon, 1=new moon)
+  // New field for night forecast data
+  nightForecast?: Array<{
+    time: string;
+    cloudCover: number;
+    windSpeed: number;
+    humidity: number;
+  }>;
 }
 
 export interface SIQSFactor {
@@ -43,6 +51,7 @@ export function siqsToColor(score: number, isViable: boolean): string {
 
 /**
  * Calculate the Stellar Imaging Quality Score based on various factors
+ * Takes into account the average conditions throughout the night (until 6am)
  * @param factors Environmental and geographical factors
  * @returns SIQS score from 0-10 (higher is better)
  */
@@ -53,74 +62,151 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     seeingConditions, 
     windSpeed, 
     humidity, 
-    moonPhase = 0 
+    moonPhase = 0,
+    nightForecast = []
   } = factors;
   
-  // Calculate individual factor scores (0-100 scale)
-  const cloudScore = calculateCloudScore(cloudCover);
-  const lightPollutionScore = calculateLightPollutionScore(bortleScale);
-  const seeingScore = calculateSeeingScore(seeingConditions);
-  const windScore = calculateWindScore(windSpeed);
-  const humidityScore = calculateHumidityScore(humidity);
-  const moonScore = calculateMoonScore(moonPhase);
-  
-  // Define weights for each factor
-  const weights = {
-    cloud: 0.35,
-    lightPollution: 0.25,
-    seeing: 0.15,
-    wind: 0.1,
-    humidity: 0.1,
-    moon: 0.05
-  };
-  
-  // Calculate weighted score
-  const weightedScore = (
-    cloudScore * weights.cloud +
-    lightPollutionScore * weights.lightPollution +
-    seeingScore * weights.seeing +
-    windScore * weights.wind +
-    humidityScore * weights.humidity +
-    moonScore * weights.moon
-  );
-  
-  // Convert to 0-10 scale
-  const finalScore = weightedScore / 10;
-  
-  // Determine if conditions are viable (SIQS >= 4.0)
-  const isViable = finalScore >= 4.0;
-  
-  return {
-    score: finalScore,
-    isViable,
-    factors: [
-      {
-        name: "Cloud Cover",
-        score: cloudScore,
-        description: getCloudDescription(cloudCover)
-      },
-      {
-        name: "Light Pollution",
-        score: lightPollutionScore,
-        description: getLightPollutionDescription(bortleScale)
-      },
-      {
-        name: "Seeing Conditions",
-        score: seeingScore,
-        description: getSeeingDescription(seeingConditions)
-      },
-      {
-        name: "Wind",
-        score: windScore,
-        description: getWindDescription(windSpeed)
-      },
-      {
-        name: "Humidity",
-        score: humidityScore,
-        description: getHumidityDescription(humidity)
-      }
-    ]
-  };
+  // If we have night forecast data, use it to calculate average conditions
+  if (nightForecast.length > 0) {
+    // Calculate average values for the night forecast
+    const avgCloudCover = nightForecast.reduce((sum, item) => sum + item.cloudCover, 0) / nightForecast.length;
+    const avgWindSpeed = nightForecast.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecast.length;
+    const avgHumidity = nightForecast.reduce((sum, item) => sum + item.humidity, 0) / nightForecast.length;
+    
+    // Calculate individual factor scores (0-100 scale) using the night average values
+    const cloudScore = calculateCloudScore(avgCloudCover);
+    const lightPollutionScore = calculateLightPollutionScore(bortleScale);
+    const seeingScore = calculateSeeingScore(seeingConditions);
+    const windScore = calculateWindScore(avgWindSpeed);
+    const humidityScore = calculateHumidityScore(avgHumidity);
+    const moonScore = calculateMoonScore(moonPhase);
+    
+    // Define weights for each factor
+    const weights = {
+      cloud: 0.35,
+      lightPollution: 0.25,
+      seeing: 0.15,
+      wind: 0.1,
+      humidity: 0.1,
+      moon: 0.05
+    };
+    
+    // Calculate weighted score
+    const weightedScore = (
+      cloudScore * weights.cloud +
+      lightPollutionScore * weights.lightPollution +
+      seeingScore * weights.seeing +
+      windScore * weights.wind +
+      humidityScore * weights.humidity +
+      moonScore * weights.moon
+    );
+    
+    // Convert to 0-10 scale
+    const finalScore = weightedScore / 10;
+    
+    // Determine if conditions are viable (SIQS >= 4.0)
+    const isViable = finalScore >= 4.0;
+    
+    return {
+      score: finalScore,
+      isViable,
+      factors: [
+        {
+          name: "Cloud Cover",
+          score: cloudScore,
+          description: getCloudDescription(avgCloudCover)
+        },
+        {
+          name: "Light Pollution",
+          score: lightPollutionScore,
+          description: getLightPollutionDescription(bortleScale)
+        },
+        {
+          name: "Seeing Conditions",
+          score: seeingScore,
+          description: getSeeingDescription(seeingConditions)
+        },
+        {
+          name: "Wind",
+          score: windScore,
+          description: getWindDescription(avgWindSpeed)
+        },
+        {
+          name: "Humidity",
+          score: humidityScore,
+          description: getHumidityDescription(avgHumidity)
+        }
+      ]
+    };
+  } 
+  // If no night forecast data, use the current values as before
+  else {
+    // Calculate individual factor scores (0-100 scale)
+    const cloudScore = calculateCloudScore(cloudCover);
+    const lightPollutionScore = calculateLightPollutionScore(bortleScale);
+    const seeingScore = calculateSeeingScore(seeingConditions);
+    const windScore = calculateWindScore(windSpeed);
+    const humidityScore = calculateHumidityScore(humidity);
+    const moonScore = calculateMoonScore(moonPhase);
+    
+    // Define weights for each factor
+    const weights = {
+      cloud: 0.35,
+      lightPollution: 0.25,
+      seeing: 0.15,
+      wind: 0.1,
+      humidity: 0.1,
+      moon: 0.05
+    };
+    
+    // Calculate weighted score
+    const weightedScore = (
+      cloudScore * weights.cloud +
+      lightPollutionScore * weights.lightPollution +
+      seeingScore * weights.seeing +
+      windScore * weights.wind +
+      humidityScore * weights.humidity +
+      moonScore * weights.moon
+    );
+    
+    // Convert to 0-10 scale
+    const finalScore = weightedScore / 10;
+    
+    // Determine if conditions are viable (SIQS >= 4.0)
+    const isViable = finalScore >= 4.0;
+    
+    return {
+      score: finalScore,
+      isViable,
+      factors: [
+        {
+          name: "Cloud Cover",
+          score: cloudScore,
+          description: getCloudDescription(cloudCover)
+        },
+        {
+          name: "Light Pollution",
+          score: lightPollutionScore,
+          description: getLightPollutionDescription(bortleScale)
+        },
+        {
+          name: "Seeing Conditions",
+          score: seeingScore,
+          description: getSeeingDescription(seeingConditions)
+        },
+        {
+          name: "Wind",
+          score: windScore,
+          description: getWindDescription(windSpeed)
+        },
+        {
+          name: "Humidity",
+          score: humidityScore,
+          description: getHumidityDescription(humidity)
+        }
+      ]
+    };
+  }
 }
 
 // Individual score calculation functions (0-100 scale)
