@@ -52,7 +52,7 @@ const Index = () => {
                 )}
               </p>
               
-              <SIQSCalculator className="max-w-xl mx-auto shadow-lg" hideRecommendedPoints={true} />
+              <SIQSCalculator className="max-w-xl mx-auto shadow-lg" hideRecommendedPoints={true} noAutoLocationRequest={true} />
             </div>
           </div>
         </div>

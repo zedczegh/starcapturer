@@ -29,11 +29,13 @@ interface WeatherData {
 interface SIQSCalculatorProps {
   className?: string;
   hideRecommendedPoints?: boolean;
+  noAutoLocationRequest?: boolean;
 }
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
   className,
-  hideRecommendedPoints = false
+  hideRecommendedPoints = false,
+  noAutoLocationRequest = false
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
@@ -91,7 +93,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             console.error("Error getting location name:", error);
             const fallbackName = t(
               `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
-              `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
+              `���置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
             );
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
@@ -511,3 +513,4 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
+
