@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,11 @@ const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  
+  // Get the current locationId from the URL if we're on a location page
+  const locationId = location.pathname.startsWith('/location/') 
+    ? location.pathname.split('/location/')[1] 
+    : null;
   
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +30,9 @@ const NavBar = () => {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+  
+  // Determine where SIQS Now should link to
+  const siqsNowLink = locationId ? `/location/${locationId}` : "/#calculator-section";
   
   return (
     <header
@@ -44,7 +53,7 @@ const NavBar = () => {
           <NavLink to="/" active={location.pathname === "/"}>
             Home
           </NavLink>
-          <NavLink to="/#calculator-section" active={false}>
+          <NavLink to={siqsNowLink} active={location.pathname.startsWith('/location/')}>
             SIQS Now
           </NavLink>
           <NavLink to="/about" active={location.pathname === "/about"}>
@@ -88,7 +97,7 @@ const NavBar = () => {
             <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
               Home
             </MobileNavLink>
-            <MobileNavLink to="/#calculator-section" onClick={() => setMenuOpen(false)}>
+            <MobileNavLink to={siqsNowLink} onClick={() => setMenuOpen(false)}>
               SIQS Now
             </MobileNavLink>
             <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
