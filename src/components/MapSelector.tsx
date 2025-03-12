@@ -169,6 +169,10 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     try {
       const name = await getLocationNameFromCoordinates(lat, lng, language);
       
+      if (!name || name.trim() === '') {
+        throw new Error('Empty location name received');
+      }
+      
       const newLocation = {
         name,
         latitude: lat,
@@ -186,9 +190,24 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       }
     } catch (error) {
       console.error('Error fetching location name:', error);
+      const fallbackName = language === 'en' 
+        ? `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
+        : `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+      
+      const newLocation = {
+        name: fallbackName,
+        latitude: lat,
+        longitude: lng
+      };
+      
+      setSelectedLocation(newLocation);
+      setSearchQuery(fallbackName);
+      
       toast({
         title: language === 'en' ? "Location Error" : "位置错误",
-        description: language === 'en' ? "Could not get location name" : "无法获取位置名称",
+        description: language === 'en' 
+          ? "Could not get location name. Using coordinates instead." 
+          : "无法获取位置名称。使用坐标代替。",
         variant: "destructive",
       });
     } finally {
@@ -412,3 +431,4 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
 };
 
 export default MapSelector;
+
