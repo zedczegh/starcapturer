@@ -1,30 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { toast } from "sonner";
-import { fetchWeatherData, getLocationNameFromCoordinates, fetchLightPollutionData } from "@/lib/api";
-import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
-import MapSelector from "./MapSelector";
-import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
-interface WeatherData {
-  cloudCover: number;
-  windSpeed: number;
-  humidity: number;
-  temperature?: number;
-}
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
+import { Search, Loader2, MapPin, CheckCircle2, XCircle, AlertTriangle, Award } from "lucide-react";
+import LocationMap from "@/components/LocationMap";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -32,485 +18,376 @@ interface SIQSCalculatorProps {
   noAutoLocationRequest?: boolean;
 }
 
-const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
-  className,
-  hideRecommendedPoints = false,
-  noAutoLocationRequest = false
-}) => {
-  const { language, t } = useLanguage();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className, hideRecommendedPoints, noAutoLocationRequest }) => {
   const [locationName, setLocationName] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [cloudCover, setCloudCover] = useState(0);
   const [bortleScale, setBortleScale] = useState(4);
-  const [seeingConditions, setSeeingConditions] = useState(2);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [siqsScore, setSiqsScore] = useState<number | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  
+  const [seeingConditions, setSeeingConditions] = useState(3);
+  const [windSpeed, setWindSpeed] = useState(10);
+  const [humidity, setHumidity] = useState(50);
+  const [moonPhase, setMoonPhase] = useState(0);
+  const [autoUpdate, setAutoUpdate] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [siqsResult, setSiqsResult] = useState<any>(null);
+  const { toast } = useToast();
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (locationName && !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-      calculateSIQSForLocation(lat, lng, locationName, true);
+    if (!noAutoLocationRequest) {
+      handleGetLocation();
     }
-  }, [latitude, longitude, locationName, bortleScale, seeingConditions]);
-  
-  const handleUseCurrentLocation = () => {
+  }, []);
+
+  useEffect(() => {
+    if (autoUpdate && latitude !== null && longitude !== null) {
+      handleCalculateSIQS();
+    }
+  }, [latitude, longitude, cloudCover, bortleScale, seeingConditions, windSpeed, humidity, moonPhase, autoUpdate]);
+
+  const handleGetLocation = () => {
     if (navigator.geolocation) {
-      setLoading(true);
+      setLocationLoading(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          setLatitude(lat.toFixed(6));
-          setLongitude(lng.toFixed(6));
-          setUserLocation({ latitude: lat, longitude: lng });
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
+          setLocationName(t("My Location", "我的位置"));
           
           try {
-            const name = await getLocationNameFromCoordinates(lat, lng, language);
-            console.log("Got location name:", name);
-            setLocationName(name);
+            const weatherData = await fetchWeatherData({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
             
-            try {
-              const lightPollutionData = await fetchLightPollutionData(lat, lng);
-              if (lightPollutionData && lightPollutionData.bortleScale) {
-                setBortleScale(lightPollutionData.bortleScale);
-                console.log("Got Bortle scale:", lightPollutionData.bortleScale);
-              }
-            } catch (lightError) {
-              console.error("Error fetching light pollution data:", lightError);
+            if (weatherData) {
+              setCloudCover(weatherData.cloudCover);
+              setWindSpeed(weatherData.windSpeed);
+              setHumidity(weatherData.humidity);
             }
             
-            setShowAdvancedSettings(true);
-            setLoading(false);
+            const lightPollutionData = await fetchLightPollutionData(position.coords.latitude, position.coords.longitude);
+            if (lightPollutionData) {
+              setBortleScale(lightPollutionData.bortleScale);
+            }
           } catch (error) {
-            console.error("Error getting location name:", error);
-            const fallbackName = t(
-              `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
-              `���置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
-            );
-            setLocationName(fallbackName);
-            setShowAdvancedSettings(true);
-            setLoading(false);
+            console.error("Error fetching initial data:", error);
+            toast({
+              variant: "destructive",
+              title: t("Error Fetching Data", "获取数据出错"),
+              description: t("Could not retrieve weather or light pollution data for your location.", "无法检索您所在位置的天气或光污染数据。"),
+            });
+          } finally {
+            setLocationLoading(false);
           }
         },
         (error) => {
-          setLoading(false);
-          toast.error(t("Location Error", "位置错误"), {
-            description: t(
-              "Could not retrieve your location. Please enter coordinates manually.",
-              "无法获取您的位置，请手动输入坐标。"
-            )
+          console.error("Error getting location:", error);
+          setLocationLoading(false);
+          toast({
+            variant: "destructive",
+            title: t("Location Error", "定位错误"),
+            description: t("Could not retrieve your location. Please enter it manually.", "无法检索您的位置。请手动输入。"),
           });
-          console.error("Geolocation error:", error);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
         }
       );
     } else {
-      toast.error(t("Geolocation Not Supported", "不支持地理位置"), {
-        description: t(
-          "Your browser doesn't support geolocation. Please enter coordinates manually.",
-          "您的浏览器不支持地理位置，请手动输入坐标。"
-        )
+      toast({
+        variant: "destructive",
+        title: t("Geolocation Not Supported", "不支持地理定位"),
+        description: t("Your browser does not support geolocation. Please enter your location manually.", "您的浏览器不支持地理定位。请手动输入您的位置。"),
       });
     }
   };
-  
-  const handleLocationSelect = async (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
-    setLocationName(location.name);
-    setLatitude(location.latitude.toFixed(6));
-    setLongitude(location.longitude.toFixed(6));
-    
+
+  const handleCalculateSIQS = async () => {
+    if (latitude === null || longitude === null) {
+      toast({
+        variant: "destructive",
+        title: t("Location Required", "需要位置"),
+        description: t("Please enter a valid latitude and longitude.", "请输入有效的纬度和经度。"),
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      const lightPollutionData = await fetchLightPollutionData(location.latitude, location.longitude);
-      if (lightPollutionData && lightPollutionData.bortleScale) {
-        setBortleScale(lightPollutionData.bortleScale);
-        console.log("Got Bortle scale for selected location:", lightPollutionData.bortleScale);
-      }
-    } catch (error) {
-      console.error("Error fetching light pollution data for selected location:", error);
-      const estimatedBortleScale = estimateBortleScale(location.name);
-      setBortleScale(estimatedBortleScale);
-    }
-    
-    toast.success(t("Location Selected", "已选择位置"), {
-      description: t(`Selected ${location.name}`, `已选择 ${location.name}`)
-    });
-    
-    setShowAdvancedSettings(true);
-  };
-  
-  const estimateBortleScale = (locationName: string): number => {
-    const lowercaseName = locationName.toLowerCase();
-    
-    if (
-      lowercaseName.includes('city') || 
-      lowercaseName.includes('downtown') || 
-      lowercaseName.includes('urban') ||
-      lowercaseName.includes('metro')
-    ) {
-      return 8;
-    }
-    
-    if (
-      lowercaseName.includes('suburb') || 
-      lowercaseName.includes('residential') || 
-      lowercaseName.includes('town')
-    ) {
-      return 6;
-    }
-    
-    if (
-      lowercaseName.includes('rural') || 
-      lowercaseName.includes('village') || 
-      lowercaseName.includes('countryside')
-    ) {
-      return 4;
-    }
-    
-    if (
-      lowercaseName.includes('park') || 
-      lowercaseName.includes('forest') || 
-      lowercaseName.includes('national') ||
-      lowercaseName.includes('desert') ||
-      lowercaseName.includes('mountain') ||
-      lowercaseName.includes('remote') ||
-      lowercaseName.includes('wilderness')
-    ) {
-      return 3;
-    }
-    
-    return 5;
-  };
-  
-  const handleRecommendedPointSelect = (point: { name: string; latitude: number; longitude: number }) => {
-    setLocationName(point.name);
-    setLatitude(point.latitude.toFixed(6));
-    setLongitude(point.longitude.toFixed(6));
-    
-    setShowAdvancedSettings(true);
-    
-    toast.success(t("Location Selected", "位置已选择"), {
-      description: t(`Selected ${point.name}`, `已选择 ${point.name}`)
-    });
-  };
-  
-  const validateInputs = (): boolean => {
-    if (!locationName.trim()) {
-      toast.error(language === 'en' ? "Input Error" : "输入错误", {
-        description: language === 'en' ? "Please enter a location name." : "请输入位置名称。"
-      });
-      return false;
-    }
-    
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      toast.error(language === 'en' ? "Input Error" : "输入错误", {
-        description: language === 'en' 
-          ? "Please enter a valid latitude (-90 to 90)." 
-          : "请输入有效的纬度（-90至90）。"
-      });
-      return false;
-    }
-    
-    if (isNaN(lng) || lng < -180 || lng > 180) {
-      toast.error(language === 'en' ? "Input Error" : "输入错误", {
-        description: language === 'en' 
-          ? "Please enter a valid longitude (-180 to 180)." 
-          : "请输入有效的经度（-180至180）。"
-      });
-      return false;
-    }
-    
-    return true;
-  };
-  
-  const getCurrentMoonPhase = (): number => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    
-    const c = 365.25 * year;
-    const e = 30.6 * month;
-    const jd = c + e + day - 694039.09;
-    const moonPhase = (jd % 29.53) / 29.53;
-    
-    return moonPhase;
-  };
-  
-  const calculateSIQSForLocation = async (lat: number, lng: number, name: string, displayOnly: boolean = false) => {
-    if (isCalculating) return;
-    
-    setIsCalculating(true);
-    displayOnly ? null : setLoading(true);
-    
-    try {
-      const data = await fetchWeatherData({
-        latitude: lat,
-        longitude: lng,
-      });
-      
-      if (!data) {
-        toast.error(t("Weather Data Error", "天气数据错误"), {
-          description: t(
-            "Could not retrieve weather data. Please try again.",
-            "无法获取天气数据，请重试。"
-          )
-        });
-        setIsCalculating(false);
-        displayOnly ? null : setLoading(false);
-        return;
-      }
-      
-      setWeatherData(data);
-      
-      let actualBortleScale = bortleScale;
-      if (!displayOnly || actualBortleScale === 4) {
-        try {
-          const lightPollutionData = await fetchLightPollutionData(lat, lng);
-          if (lightPollutionData && lightPollutionData.bortleScale) {
-            actualBortleScale = lightPollutionData.bortleScale;
-            if (!displayOnly) {
-              setBortleScale(actualBortleScale);
-            }
-          }
-        } catch (lightError) {
-          console.error("Error fetching light pollution data in SIQS calculation:", lightError);
-        }
-      }
-      
-      const moonPhase = getCurrentMoonPhase();
-      
-      const siqsResult = calculateSIQS({
-        cloudCover: data.cloudCover,
-        bortleScale: actualBortleScale,
+      const siqs = calculateSIQS({
+        cloudCover,
+        bortleScale,
         seeingConditions,
-        windSpeed: data.windSpeed,
-        humidity: data.humidity,
+        windSpeed,
+        humidity,
         moonPhase,
       });
-      
-      if (displayOnly) {
-        setSiqsScore(siqsResult.score * 10);
-        setIsCalculating(false);
-        return;
-      }
-      
-      const locationId = Date.now().toString();
-      
-      const locationData = {
-        id: locationId,
-        name: name,
-        latitude: lat,
-        longitude: lng,
-        bortleScale: actualBortleScale,
-        seeingConditions,
-        weatherData: data,
-        siqsResult,
-        moonPhase,
-        timestamp: new Date().toISOString(),
-      };
-      
-      console.log("Navigating to location details with data:", locationData);
-      
-      navigate(`/location/${locationId}`, { state: locationData });
+      setSiqsResult(siqs);
     } catch (error) {
       console.error("Error calculating SIQS:", error);
-      toast.error(t("Calculation Error", "计算错误"), {
-        description: t(
-          "An error occurred while calculating SIQS. Please try again.",
-          "计算SIQS时发生错误，请重试。"
-        )
+      toast({
+        variant: "destructive",
+        title: t("Calculation Error", "计算错误"),
+        description: t("Failed to calculate SIQS. Please check your inputs and try again.", "无法计算SIQS。请检查您的输入并重试。"),
       });
-      setIsCalculating(false);
-      displayOnly ? null : setLoading(false);
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handleCalculate = () => {
-    if (!validateInputs()) return;
+
+  const handleLocationUpdate = async (newLocation: { name: string; latitude: number; longitude: number }) => {
+    setLatitude(newLocation.latitude);
+    setLongitude(newLocation.longitude);
+    setLocationName(newLocation.name);
     
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (isNaN(lat) || isNaN(lng) || !locationName) {
-      toast.error(t("Invalid Location", "无效位置"), {
-        description: t(
-          "Please enter a valid location with coordinates.",
-          "请输入有效的位置和坐标。"
-        )
+    try {
+      const weatherData = await fetchWeatherData({
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+      });
+      
+      if (weatherData) {
+        setCloudCover(weatherData.cloudCover);
+        setWindSpeed(weatherData.windSpeed);
+        setHumidity(weatherData.humidity);
+      }
+      
+      const lightPollutionData = await fetchLightPollutionData(newLocation.latitude, newLocation.longitude);
+      if (lightPollutionData) {
+        setBortleScale(lightPollutionData.bortleScale);
+      }
+      
+      toast({
+        title: t("Location Updated", "位置已更新"),
+        description: t("Weather and light pollution data updated for the new location.", "已更新新位置的天气和光污染数据。"),
+      });
+    } catch (error) {
+      console.error("Error fetching data for new location:", error);
+      toast({
+        variant: "destructive",
+        title: t("Error Fetching Data", "获取数据出错"),
+        description: t("Could not retrieve weather or light pollution data for the new location.", "无法检索新位置的天气或光污染数据。"),
+      });
+    }
+  };
+
+  const handleViewDetails = () => {
+    if (latitude === null || longitude === null) {
+      toast({
+        variant: "destructive",
+        title: t("Location Required", "需要位置"),
+        description: t("Please enter a valid latitude and longitude.", "请输入有效的纬度和经度。"),
       });
       return;
     }
     
-    calculateSIQSForLocation(lat, lng, locationName);
-  };
-
-  const getRecommendationMessage = (siqsScore: number): string => {
-    if (siqsScore >= 80) return t("Perfect conditions for astrophotography!", "天文摄影的完美条件！");
-    if (siqsScore >= 60) return t("Good conditions for imaging!", "适合拍摄的良好条件！");
-    if (siqsScore >= 40) return t("Average conditions, might be challenging.", "一般条件，可能有挑战性。");
-    if (siqsScore >= 20) return t("Poor conditions, consider rescheduling.", "条件较差，考虑��期。");
-    return t("Very poor conditions, not recommended.", "条件非常差，不推荐。");
-  };
-
-  const getBortleScaleDescription = (value: number): string => {
-    const descriptions = [
-      t("1: Excellent dark-sky site, no light pollution", "1: 极佳的暗空环境，无光污染"),
-      t("2: Typical truly dark site, Milky Way casts shadows", "2: 真正的黑暗区域，银河可投下阴影"),
-      t("3: Rural sky, some light pollution but Milky Way still visible", "3: 乡村天空，有一些光污染但仍能看到银河"),
-      t("4: Rural/suburban transition, Milky Way visible but lacks detail", "4: 乡村/郊区过渡区，能看到银河但缺乏细节"),
-      t("5: Suburban sky, Milky Way very dim or invisible", "5: 郊区天空，银河非常暗或不可见"),
-      t("6: Bright suburban sky, no Milky Way, only brightest constellations visible", "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座"),
-      t("7: Suburban/urban transition, most stars washed out", "7: 郊区/城市过渡区，大多数恒星被洗掉"),
-      t("8: Urban sky, few stars visible, planets still visible", "8: 城市天空，可见少量恒星，行星仍然可见"),
-      t("9: Inner-city sky, only brightest stars and planets visible", "9: 市中心天空，只有最明亮的恒星和行星可见")
-    ];
-    return descriptions[value - 1] || t("Unknown", "未知");
-  };
-
-  const getSeeingDescription = (value: number): string => {
-    const descriptions = [
-      t("1: Perfect seeing, stars perfectly still", "1: 完美视宁度，恒星完全静止"),
-      t("1.5: Excellent seeing, stars mostly still", "1.5: 极佳视宁度，恒星几乎静止"),
-      t("2: Good seeing, slight twinkling", "2: 良好视宁度，轻微闪烁"),
-      t("2.5: Average seeing, moderate twinkling", "2.5: 一般视宁度，中等闪烁"),
-      t("3: Fair seeing, noticeable twinkling", "3: 尚可视宁度，明显闪烁"),
-      t("3.5: Below average seeing, significant twinkling", "3.5: 低于平均视宁度，明显闪烁"),
-      t("4: Poor seeing, constant twinkling", "4: 较差视宁度，持续闪烁"),
-      t("4.5: Very poor seeing, images blurry", "4.5: 非常差的视宁度，图像模糊"),
-      t("5: Terrible seeing, imaging nearly impossible", "5: 极差视宁度，几乎无法成像")
-    ];
+    const locationId = Date.now().toString();
     
-    const index = Math.round((value - 1) * 2);
-    return descriptions[index] || t("Unknown", "未知");
+    navigate(`/location/${locationId}`, { 
+      state: {
+        name: locationName,
+        latitude,
+        longitude,
+        cloudCover,
+        bortleScale,
+        seeingConditions,
+        windSpeed,
+        humidity,
+        moonPhase,
+        siqsResult,
+        timestamp: new Date().toISOString()
+      }
+    });
   };
-  
+
+  const getRecommendationMessage = (score: number) => {
+    if (score >= 8) return t("Grab your rig and run!", "带上你的设备立刻出发！");
+    if (score >= 6) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
+    if (score >= 5) return t("Meh... be realistic.", "嗯...还是现实点吧。");
+    return t("Uh... let me think twice.", "呃...再考虑一下吧。");
+  };
+
+  const getScoreIcon = (score: number) => {
+    if (score >= 7) return <Award className="h-6 w-6 text-green-400" />;
+    if (score >= 4) return <CheckCircle2 className="h-6 w-6 text-yellow-300" />;
+    return <AlertTriangle className="h-6 w-6 text-red-400" />;
+  };
+
   return (
-    <div className={`glassmorphism rounded-xl p-6 ${className}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">
-          {t("Calculate Stellar Imaging Quality Score", "计算恒星成像质量评分")}
-        </h2>
+    <div className={`glassmorphism p-6 rounded-lg ${className}`}>
+      <h2 className="text-xl font-semibold mb-4">{t("SIQS Calculator", "SIQS计算器")}</h2>
+      
+      <div className="mb-4">
+        <Label htmlFor="locationName" className="text-sm">{t("Location Name", "位置名称")}</Label>
+        <div className="relative">
+          <Input
+            type="text"
+            id="locationName"
+            placeholder={t("Enter location name", "输入位置名称")}
+            value={locationName}
+            onChange={(e) => setLocationName(e.target.value)}
+            className="mb-2"
+          />
+          {locationLoading && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
       </div>
       
-      {siqsScore !== null && (
-        <div className="mb-6 p-4 glass-card">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">
-              {t("Estimated SIQS Score", "预估SIQS评分")}
-            </h3>
-            <div className="flex items-center">
-              <span className={`text-2xl font-bold ${
-                siqsScore >= 80 ? 'text-green-400' : 
-                siqsScore >= 60 ? 'text-green-300' : 
-                siqsScore >= 40 ? 'text-yellow-300' : 
-                siqsScore >= 20 ? 'text-orange-300' : 'text-red-400'
-              }`}>{(siqsScore / 10).toFixed(1)}</span>
-              <span className="text-lg text-muted-foreground">/10</span>
-            </div>
+      <div className="mb-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="latitude" className="text-sm">{t("Latitude", "纬度")}</Label>
+          <Label htmlFor="longitude" className="text-sm">{t("Longitude", "经度")}</Label>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            id="latitude"
+            placeholder={t("Latitude", "纬度")}
+            value={latitude !== null ? latitude.toString() : ""}
+            onChange={(e) => setLatitude(e.target.value ? parseFloat(e.target.value) : null)}
+            className="w-1/2"
+          />
+          <Input
+            type="number"
+            id="longitude"
+            placeholder={t("Longitude", "经度")}
+            value={longitude !== null ? longitude.toString() : ""}
+            onChange={(e) => setLongitude(e.target.value ? parseFloat(e.target.value) : null)}
+            className="w-1/2"
+          />
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <LocationMap
+          latitude={latitude || 0}
+          longitude={longitude || 0}
+          name={locationName || t("Unnamed Location", "未命名位置")}
+          onLocationUpdate={handleLocationUpdate}
+          editable={true}
+        />
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="cloudCover" className="block text-sm font-medium text-gray-700">{t("Cloud Cover (%)", "云量(%)")}</Label>
+        <Slider
+          id="cloudCover"
+          defaultValue={[cloudCover]}
+          max={100}
+          step={1}
+          onValueChange={(value) => setCloudCover(value[0])}
+          className="mb-2"
+        />
+        <p className="text-sm text-gray-500">{cloudCover}%</p>
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="bortleScale" className="block text-sm font-medium text-gray-700">{t("Bortle Scale (1-9)", "Bortle等级 (1-9)")}</Label>
+        <Slider
+          id="bortleScale"
+          defaultValue={[bortleScale]}
+          max={9}
+          min={1}
+          step={1}
+          onValueChange={(value) => setBortleScale(value[0])}
+          className="mb-2"
+        />
+        <p className="text-sm text-gray-500">{bortleScale}</p>
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="seeingConditions" className="block text-sm font-medium text-gray-700">{t("Seeing Conditions (1-5)", "视宁度 (1-5)")}</Label>
+        <Slider
+          id="seeingConditions"
+          defaultValue={[seeingConditions]}
+          max={5}
+          min={1}
+          step={1}
+          onValueChange={(value) => setSeeingConditions(value[0])}
+          className="mb-2"
+        />
+        <p className="text-sm text-gray-500">{seeingConditions}</p>
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="windSpeed" className="block text-sm font-medium text-gray-700">{t("Wind Speed (mph)", "风速 (mph)")}</Label>
+        <Slider
+          id="windSpeed"
+          defaultValue={[windSpeed]}
+          max={50}
+          step={1}
+          onValueChange={(value) => setWindSpeed(value[0])}
+          className="mb-2"
+        />
+        <p className="text-sm text-gray-500">{windSpeed} mph</p>
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="humidity" className="block text-sm font-medium text-gray-700">{t("Humidity (%)", "湿度 (%)")}</Label>
+        <Slider
+          id="humidity"
+          defaultValue={[humidity]}
+          max={100}
+          step={1}
+          onValueChange={(value) => setHumidity(value[0])}
+          className="mb-2"
+        />
+        <p className="text-sm text-gray-500">{humidity}%</p>
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="moonPhase" className="block text-sm font-medium text-gray-700">{t("Moon Phase (0-1)", "月相 (0-1)")}</Label>
+        <Slider
+          id="moonPhase"
+          defaultValue={[moonPhase]}
+          max={1}
+          step={0.01}
+          onValueChange={(value) => setMoonPhase(value[0])}
+          className="mb-2"
+        />
+        <p className="text-sm text-gray-500">{moonPhase.toFixed(2)}</p>
+      </div>
+
+      <div className="flex items-center space-x-2 mb-4">
+        <Switch id="auto-update" checked={autoUpdate} onCheckedChange={setAutoUpdate} />
+        <Label htmlFor="auto-update">{t("Auto-Update", "自动更新")}</Label>
+      </div>
+
+      <div className="flex justify-between">
+        <Button onClick={handleCalculateSIQS} disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("Calculating...", "计算中...")}
+            </>
+          ) : (
+            t("Calculate SIQS", "计算SIQS")
+          )}
+        </Button>
+        
+        <Button variant="secondary" onClick={handleViewDetails}>
+          {t("View Details", "查看详情")}
+        </Button>
+      </div>
+
+      {siqsResult && (
+        <div className="mt-6 p-4 border rounded-md">
+          <h3 className="text-lg font-semibold mb-2">{t("SIQS Result", "SIQS结果")}</h3>
+          <div className="flex items-center gap-2 mb-2">
+            {getScoreIcon(siqsResult.score)}
+            <p className="text-xl font-bold">
+              {siqsResult.score.toFixed(1)}/10
+            </p>
           </div>
-          <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${
-                siqsScore >= 80 ? 'score-excellent' : 
-                siqsScore >= 60 ? 'score-good' : 
-                siqsScore >= 40 ? 'score-average' : 
-                siqsScore >= 20 ? 'score-poor' : 'score-bad'}`} 
-              style={{ width: `${siqsScore}%` }}
-            />
-          </div>
-          
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>{t("Poor", "差")}</span>
-            <span>{t("Average", "一般")}</span>
-            <span>{t("Excellent", "优秀")}</span>
-          </div>
-          
-          <p className="text-sm mt-3 font-medium italic text-center">
-            "{getRecommendationMessage(siqsScore)}"
-          </p>
-          
-          <p className="text-xs text-muted-foreground mt-3">
-            {language === 'en' 
-              ? "This is an estimated score based on current data. For detailed analysis with forecast data, click \"See More Details\" below." 
-              : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的\"查看更多详情\"。"}
-          </p>
+          <p className="text-sm text-gray-500">{getRecommendationMessage(siqsResult.score)}</p>
         </div>
       )}
-      
-      <div className="space-y-4">
-        <div className="flex flex-col space-y-3">
-          <Button 
-            variant="outline" 
-            type="button" 
-            onClick={handleUseCurrentLocation}
-            disabled={loading}
-            className="w-full hover-card transition-colors hover:bg-primary/10"
-          >
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <MapPin className="mr-2 h-4 w-4" />
-            )}
-            {locationName ? (
-              <span className="truncate max-w-[90%]">
-                {locationName}
-              </span>
-            ) : (
-              t("Use My Location", "使用我的位置")
-            )}
-          </Button>
-          
-          <div className="relative">
-            <MapSelector onSelectLocation={handleLocationSelect} />
-          </div>
-        </div>
-        
-        <div className="pt-2 pb-2">
-          <hr className="border-cosmic-800/30" />
-        </div>
-        
-        {!hideRecommendedPoints && (
-          <RecommendedPhotoPoints 
-            onSelectPoint={handleRecommendedPointSelect}
-            userLocation={userLocation}
-          />
-        )}
-        
-        {locationName && (
-          <div className="space-y-4 animate-fade-in">
-            <Button
-              type="button"
-              onClick={handleCalculate}
-              disabled={loading}
-              className="w-full mt-4 bg-gradient-to-r from-primary/80 to-primary hover:opacity-90"
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                t("See More Details", "查看更多详情")
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
 
 export default SIQSCalculator;
-
