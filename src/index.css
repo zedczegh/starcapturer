@@ -100,6 +100,55 @@
     @apply absolute border border-cosmic-600/20 rounded-full;
     animation: spin-slow 20s linear infinite;
   }
+
+  /* Enhanced sci-fi button effect */
+  .sci-fi-btn {
+    @apply relative overflow-hidden border border-primary/20 px-4 py-2 rounded-md transition-all duration-300;
+  }
+
+  .sci-fi-btn::before {
+    content: '';
+    @apply absolute inset-0 bg-primary/10 -translate-x-full skew-x-12 transition-transform duration-300;
+  }
+
+  .sci-fi-btn:hover::before {
+    @apply translate-x-0;
+  }
+
+  /* Cosmic glow effect */
+  .cosmic-glow {
+    @apply relative;
+  }
+  
+  .cosmic-glow::after {
+    content: '';
+    @apply absolute -inset-[1px] bg-gradient-to-r from-primary/20 via-transparent to-primary/20 rounded-lg opacity-0 transition-opacity duration-300;
+    z-index: -1;
+  }
+  
+  .cosmic-glow:hover::after {
+    @apply opacity-100;
+  }
+
+  /* Terminal text effect */
+  .terminal-text {
+    @apply font-mono text-cosmic-100 relative;
+    text-shadow: 0 0 5px rgba(104, 117, 255, 0.5);
+  }
+  
+  /* Floating element animation */
+  .floating {
+    animation: floating 4s ease-in-out infinite;
+  }
+  
+  @keyframes floating {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
 }
 
 /* Star field animation */
@@ -176,4 +225,54 @@
 /* Card hover effects */
 .hover-card {
   @apply transition-all duration-300 hover:translate-y-[-5px] hover:shadow-lg;
+}
+
+/* Neon glow effect for important elements */
+.neon-glow {
+  box-shadow: 0 0 5px theme('colors.primary.DEFAULT'),
+              0 0 10px theme('colors.primary.DEFAULT'),
+              0 0 15px theme('colors.primary.DEFAULT');
+}
+
+/* Pulsating animation for attention elements */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 5px theme('colors.primary.DEFAULT');
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 15px theme('colors.primary.DEFAULT');
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Sci-fi grid background */
+.sci-fi-grid {
+  background-image: 
+    linear-gradient(rgba(104, 117, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(104, 117, 255, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Terminal inspired scrollbar */
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-track {
+  @apply bg-cosmic-900;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full;
+  border: 2px solid transparent;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
 }

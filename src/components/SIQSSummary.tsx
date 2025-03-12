@@ -1,7 +1,8 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Award, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -21,11 +22,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
   const normalizedSiqs = Math.min(Math.max(siqs, 0), 10);
   
   const getSiqsColor = (score: number) => {
-    if (score >= 8) return "bg-green-500";
-    if (score >= 6) return "bg-green-400";
-    if (score >= 4) return "bg-yellow-400";
-    if (score >= 2) return "bg-orange-400";
-    return "bg-red-500";
+    if (score >= 8) return "bg-gradient-to-r from-green-400 to-green-500";
+    if (score >= 6) return "bg-gradient-to-r from-green-300 to-green-400";
+    if (score >= 4) return "bg-gradient-to-r from-yellow-300 to-yellow-400";
+    if (score >= 2) return "bg-gradient-to-r from-orange-300 to-orange-400";
+    return "bg-gradient-to-r from-red-400 to-red-500";
   };
 
   const formatSiqsScore = (score: number) => {
@@ -40,8 +41,17 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
   };
 
   const getScoreTextColor = (score: number) => {
-    if (score < 6) return "text-orange-500";
-    return "";
+    if (score >= 8) return "text-green-400";
+    if (score >= 6) return "text-green-300";
+    if (score >= 4) return "text-yellow-300";
+    if (score >= 2) return "text-orange-400";
+    return "text-red-500";
+  };
+
+  const getScoreIcon = (score: number) => {
+    if (score >= 7) return <Award className="h-6 w-6 text-green-400" />;
+    if (score >= 4) return <CheckCircle2 className="h-6 w-6 text-yellow-300" />;
+    return <AlertTriangle className="h-6 w-6 text-red-400" />;
   };
 
   React.useEffect(() => {
@@ -55,11 +65,14 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
   }, [normalizedSiqs]);
 
   return (
-    <Card>
+    <Card className="glassmorphism border-cosmic-700/30 transition-all duration-300 hover:border-cosmic-600/50">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">{t("Sky Image Quality Score", "天空图像质量评分")}</CardTitle>
-          <Badge variant={isViable ? "default" : "destructive"} className="ml-2">
+          <CardTitle className="text-xl text-gradient-blue">{t("Sky Image Quality Score", "天空图像质量评分")}</CardTitle>
+          <Badge 
+            variant={isViable ? "default" : "destructive"} 
+            className={`ml-2 ${isViable ? "pulse-glow" : ""}`}
+          >
             {isViable ? (
               <CheckCircle2 className="mr-1 h-3 w-3" />
             ) : (
@@ -72,20 +85,23 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
       <CardContent>
         <div className="mb-6">
           <div className="flex flex-col items-center justify-center mb-4">
-            <div className="flex items-baseline gap-1">
-              <span className={`text-5xl font-bold ${getScoreTextColor(normalizedSiqs)}`}>
-                {formatSiqsScore(normalizedSiqs)}
-              </span>
-              <span className="text-lg text-muted-foreground">/10</span>
+            <div className="flex items-center gap-2 mb-1">
+              {getScoreIcon(normalizedSiqs)}
+              <div className="flex items-baseline gap-1">
+                <span className={`text-5xl font-bold ${getScoreTextColor(normalizedSiqs)}`}>
+                  {formatSiqsScore(normalizedSiqs)}
+                </span>
+                <span className="text-lg text-muted-foreground">/10</span>
+              </div>
             </div>
             <span className="text-sm text-muted-foreground mt-1">{t("Overall Quality Score", "总体质量评分")}</span>
-            <p className="text-sm mt-2 font-medium italic">
+            <p className="text-sm mt-2 font-medium italic terminal-text">
               "{getRecommendationMessage(normalizedSiqs)}"
             </p>
           </div>
-          <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
+          <div className="w-full h-3 bg-cosmic-800 rounded-full overflow-hidden">
             <div 
-              className={`h-full ${getSiqsColor(normalizedSiqs)}`} 
+              className={`h-full ${getSiqsColor(normalizedSiqs)} transition-all duration-500 ease-out`} 
               style={{ width: `${normalizedSiqs * 10}%` }}
             />
           </div>
@@ -101,16 +117,16 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
               };
               
               return (
-                <div key={index}>
+                <div key={index} className="p-2 hover:bg-cosmic-800/30 rounded-lg transition-colors duration-200">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{translatedFactor.name}</span>
-                    <span className={`text-sm ${normalizedFactorScore < 6 ? "text-orange-500" : ""}`}>
+                    <span className="text-sm font-medium text-cosmic-200">{translatedFactor.name}</span>
+                    <span className={`text-sm ${getScoreTextColor(normalizedFactorScore)}`}>
                       {normalizedFactorScore.toFixed(1)}/10
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full ${getSiqsColor(normalizedFactorScore)}`} 
+                      className={`h-full ${getSiqsColor(normalizedFactorScore)} transition-all duration-300`} 
                       style={{ width: `${normalizedFactorScore * 10}%` }}
                     />
                   </div>

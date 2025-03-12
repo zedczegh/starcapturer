@@ -36,84 +36,84 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   };
 
   return (
-    <Card>
+    <Card className="glassmorphism border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl">{t("Current Conditions", "当前状况")}</CardTitle>
+        <CardTitle className="text-xl text-gradient-blue">{t("Current Conditions", "当前状况")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-6">
-            <div className="flex items-start">
-              <div className="mr-2 rounded-full bg-primary/10 p-1">
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                 <Thermometer className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">{t("Temperature", "温度")}</p>
+                <p className="text-sm font-medium text-cosmic-200">{t("Temperature", "温度")}</p>
                 <p className="text-lg font-bold">
                   {weatherData.temperature.toFixed(1)}°C
                 </p>
               </div>
             </div>
             
-            <div className="flex items-start">
-              <div className="mr-2 rounded-full bg-primary/10 p-1">
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                 <Droplets className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">{t("Humidity", "湿度")}</p>
+                <p className="text-sm font-medium text-cosmic-200">{t("Humidity", "湿度")}</p>
                 <p className="text-lg font-bold">{weatherData.humidity}%</p>
               </div>
             </div>
             
-            <div className="flex items-start">
-              <div className="mr-2 rounded-full bg-primary/10 p-1">
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                 <Wind className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">{t("Wind Speed", "风速")}</p>
+                <p className="text-sm font-medium text-cosmic-200">{t("Wind Speed", "风速")}</p>
                 <p className="text-lg font-bold">{weatherData.windSpeed} km/h</p>
               </div>
             </div>
           </div>
           
           <div className="space-y-6">
-            <div className="flex items-start">
-              <div className="mr-2 rounded-full bg-primary/10 p-1">
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                 <Cloud className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">{t("Cloud Cover", "云层覆盖")}</p>
+                <p className="text-sm font-medium text-cosmic-200">{t("Cloud Cover", "云层覆盖")}</p>
                 <p className="text-lg font-bold">{weatherData.cloudCover}%</p>
               </div>
             </div>
             
-            <div className="flex items-start">
-              <div className="mr-2 rounded-full bg-primary/10 p-1">
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                 <MoonPhaseIcon />
               </div>
               <div>
-                <p className="text-sm font-medium">{t("Moon Phase", "月相")}</p>
+                <p className="text-sm font-medium text-cosmic-200">{t("Moon Phase", "月相")}</p>
                 <p className="text-lg font-bold">{moonPhase}</p>
               </div>
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-start">
-                <div className="mr-2 rounded-full bg-primary/10 p-1">
+              <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+                <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                   <Lightbulb className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{t("Bortle Scale", "光污染等级")}</p>
+                  <p className="text-sm font-medium text-cosmic-200">{t("Bortle Scale", "光污染等级")}</p>
                   <p className="text-lg font-bold">{formatBortleScale(bortleScale)}</p>
                 </div>
               </div>
               
-              <div className="flex items-start">
-                <div className="mr-2 rounded-full bg-primary/10 p-1">
+              <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+                <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
                   <Eye className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{t("Seeing Conditions", "视宁度")}</p>
+                  <p className="text-sm font-medium text-cosmic-200">{t("Seeing Conditions", "视宁度")}</p>
                   <p className="text-lg font-bold">{seeingConditions}</p>
                 </div>
               </div>
