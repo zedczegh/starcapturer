@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { X, Map as MapIcon, Loader2, Search } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
@@ -17,13 +17,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Component to move the map center when coordinates change
-const ChangeMapCenter = ({ coordinates }: { coordinates: [number, number] }) => {
-  const map = useMap();
-  
+// Create a component to update map center
+const ChangeMapCenter = ({ coordinates, mapRef }: { coordinates: [number, number], mapRef: React.RefObject<L.Map> }) => {
   useEffect(() => {
-    map.setView(coordinates, map.getZoom());
-  }, [coordinates, map]);
+    if (mapRef.current) {
+      mapRef.current.setView(coordinates, mapRef.current.getZoom());
+    }
+  }, [coordinates, mapRef]);
   
   return null;
 };
@@ -43,6 +43,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const mapRef = useRef<L.Map>(null);
   
   const searchLocations = async (query: string) => {
     if (!query.trim()) {
@@ -213,22 +214,20 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     }
   };
   
-  const MapEvents = () => {
-    const map = useMap();
+  // Initialize the map when the component loads
+  const onMapCreated = (map: L.Map) => {
+    // Store the map instance in the ref
+    if (mapRef.current !== map) {
+      mapRef.current = map;
+    }
     
-    useEffect(() => {
-      const handleClick = (e: L.LeafletMouseEvent) => {
-        handleMapClick(e);
-      };
-      
-      map.on('click', handleClick);
-      
-      return () => {
-        map.off('click', handleClick);
-      };
-    }, [map]);
+    // Set up the click event handler for the map
+    map.on('click', handleMapClick);
     
-    return null;
+    // Clean up function to remove event listeners when component unmounts
+    return () => {
+      map.off('click', handleMapClick);
+    };
   };
   
   return (
@@ -308,14 +307,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             zoom={3} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
+            whenCreated={onMapCreated}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <Marker position={position} />
-            <ChangeMapCenter coordinates={position} />
-            <MapEvents />
+            <ChangeMapCenter coordinates={position} mapRef={mapRef} />
           </MapContainer>
         </div>
         
