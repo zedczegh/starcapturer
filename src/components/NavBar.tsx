@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, Info, MapPin, Share, Search, User, MoonStar, Telescope } from "lucide-react";
-import MapSelector from "./MapSelector";
+import { Home, Info, MapPin, Share, User, MoonStar, Telescope } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -40,11 +38,6 @@ const NavBar = () => {
         document.getElementById('calculator-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
-  };
-  
-  const handleLocationSelect = (location: { name: string; latitude: number; longitude: number }) => {
-    const locationId = Date.now().toString();
-    navigate(`/location/${locationId}`);
   };
 
   return (
@@ -90,11 +83,6 @@ const NavBar = () => {
           
           <div className="hidden md:flex items-center space-x-2">
             <LanguageSwitcher />
-            <MapSelector onSelectLocation={handleLocationSelect}>
-              <Button variant="ghost" size="icon" title={t("Search Location", "搜索位置")}>
-                <Search className="h-5 w-5" />
-              </Button>
-            </MapSelector>
             <Button variant="outline" className="flex items-center space-x-2">
               <User className="h-4 w-4" />
               <span>{t("Sign In", "登录")}</span>
@@ -104,11 +92,6 @@ const NavBar = () => {
           
           <div className="flex md:hidden items-center space-x-2">
             <LanguageSwitcher />
-            <MapSelector onSelectLocation={handleLocationSelect}>
-              <Button variant="outline" size="icon">
-                <Search className="h-5 w-5" />
-              </Button>
-            </MapSelector>
           </div>
         </div>
       </header>
