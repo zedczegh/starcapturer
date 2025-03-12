@@ -1,4 +1,4 @@
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 type Coordinates = {
   latitude: number;
@@ -26,11 +26,33 @@ type ForecastItem = {
   seeingCondition: string;
 };
 
-// Function to fetch current weather data from Open-Meteo API
-export async function fetchWeatherData(coordinates: Coordinates): Promise<WeatherData | null> {
+// Function to normalize longitude to -180 to 180 range
+function normalizeLongitude(longitude: number): number {
+  return ((longitude + 180) % 360 + 360) % 360 - 180;
+}
+
+// Function to validate coordinates before API calls
+function validateCoordinates(coordinates: Coordinates): Coordinates {
   const { latitude, longitude } = coordinates;
   
+  // Ensure latitude is in valid range (-90 to 90)
+  const validLatitude = Math.max(-90, Math.min(90, latitude));
+  
+  // Ensure longitude is in valid range (-180 to 180)
+  const validLongitude = normalizeLongitude(longitude);
+  
+  return {
+    latitude: validLatitude,
+    longitude: validLongitude
+  };
+}
+
+// Function to fetch current weather data from Open-Meteo API
+export async function fetchWeatherData(coordinates: Coordinates): Promise<WeatherData | null> {
   try {
+    // Validate coordinates before making API call
+    const { latitude, longitude } = validateCoordinates(coordinates);
+    
     const response = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m&timezone=auto`
     );
@@ -65,10 +87,8 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);
-    toast({
-      title: "Weather Data Error",
+    toast.error("Weather Data Error", {
       description: "Could not retrieve current weather conditions. Please try again later.",
-      variant: "destructive",
     });
     return null;
   }
@@ -76,9 +96,10 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
 
 // Function to fetch 24-hour forecast data
 export async function fetchForecastData(coordinates: Coordinates): Promise<ForecastItem[] | null> {
-  const { latitude, longitude } = coordinates;
-  
   try {
+    // Validate coordinates before making API call
+    const { latitude, longitude } = validateCoordinates(coordinates);
+    
     const response = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m&forecast_hours=24&timezone=auto`
     );
@@ -121,10 +142,8 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
     return forecast;
   } catch (error) {
     console.error('Error fetching forecast data:', error);
-    toast({
-      title: "Forecast Data Error",
+    toast.error("Forecast Data Error", {
       description: "Could not retrieve weather forecast. Please try again later.",
-      variant: "destructive",
     });
     return null;
   }
@@ -175,9 +194,13 @@ export async function getLocationNameFromCoordinates(
   language: 'en' | 'zh' = 'en'
 ): Promise<string> {
   try {
+    // Validate coordinates before making API call
+    const validLat = Math.max(-90, Math.min(90, latitude));
+    const validLng = normalizeLongitude(longitude);
+    
     // First attempt with BigDataCloud API which is more reliable
     const response = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${language}`
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${validLat}&longitude=${validLng}&localityLanguage=${language}`
     );
 
     if (!response.ok) {
@@ -211,8 +234,8 @@ export async function getLocationNameFromCoordinates(
     // If we still don't have a name, create a generic one with coordinates
     if (!locationName) {
       locationName = language === 'en'
-        ? `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-        : `位置：${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        ? `Location at ${validLat.toFixed(4)}, ${validLng.toFixed(4)}`
+        : `位置：${validLat.toFixed(4)}, ${validLng.toFixed(4)}`;
     }
 
     console.log("Got location name:", locationName);

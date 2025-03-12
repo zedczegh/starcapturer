@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getLocationNameFromCoordinates } from "@/lib/api";
@@ -53,6 +53,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
   const validName = name || "Unknown Location";
 
+  // Function to normalize longitude to -180 to 180 range
+  const normalizeLongitude = (lng: number): number => {
+    // Handle cases where longitude is outside -180 to 180 range
+    return ((lng + 180) % 360 + 360) % 360 - 180;
+  };
+
   // Interactive map component that handles clicks
   const MapEvents = () => {
     useMapEvents({
@@ -60,39 +66,42 @@ const LocationMap: React.FC<LocationMapProps> = ({
         if (!editable) return;
         
         const { lat, lng } = e.latlng;
-        setPosition([lat, lng]);
+        
+        // Ensure latitude is in valid range (-90 to 90)
+        const validLat = Math.max(-90, Math.min(90, lat));
+        // Ensure longitude is in valid range (-180 to 180)
+        const validLng = normalizeLongitude(lng);
+        
+        setPosition([validLat, validLng]);
         
         try {
-          const newName = await getLocationNameFromCoordinates(lat, lng, 'en');
+          const newName = await getLocationNameFromCoordinates(validLat, validLng, 'en');
           
           if (onLocationUpdate) {
             onLocationUpdate({
               name: newName,
-              latitude: lat,
-              longitude: lng
+              latitude: validLat,
+              longitude: validLng
             });
           }
           
-          toast({
-            title: "Location Updated",
+          toast.success("Location Updated", {
             description: `New location: ${newName}`,
           });
         } catch (error) {
           console.error('Error getting location name:', error);
-          const fallbackName = `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+          const fallbackName = `Location at ${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`;
           
           if (onLocationUpdate) {
             onLocationUpdate({
               name: fallbackName,
-              latitude: lat,
-              longitude: lng
+              latitude: validLat,
+              longitude: validLng
             });
           }
           
-          toast({
-            title: "Location Error",
+          toast.error("Location Error", {
             description: "Could not get location name. Using coordinates instead.",
-            variant: "destructive",
           });
         }
       },
