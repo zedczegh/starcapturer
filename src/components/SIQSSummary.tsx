@@ -22,7 +22,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
   
   const getSiqsColor = (score: number) => {
     if (score >= 8) return "bg-gradient-to-r from-green-400 to-green-500";
-    if (score >= 6) return "bg-gradient-to-r from-green-300 to-green-400";
+    if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
     if (score >= 4) return "bg-gradient-to-r from-yellow-300 to-yellow-400";
     if (score >= 2) return "bg-gradient-to-r from-orange-300 to-orange-400";
     return "bg-gradient-to-r from-red-400 to-red-500";

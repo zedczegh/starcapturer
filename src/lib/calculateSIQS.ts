@@ -1,4 +1,3 @@
-
 // SIQS = Stellar Imaging Quality Score
 
 export interface SIQSFactors {
@@ -43,7 +42,7 @@ export interface SIQSResult {
 export function siqsToColor(score: number, isViable: boolean): string {
   if (!isViable) return 'rgb(239, 68, 68)'; // red-500
   if (score >= 8) return 'rgb(34, 197, 94)'; // green-500
-  if (score >= 6) return 'rgb(132, 204, 22)'; // lime-500
+  if (score >= 6) return 'rgb(138, 154, 91)'; // brownish green
   if (score >= 4) return 'rgb(250, 204, 21)'; // yellow-500
   if (score >= 2) return 'rgb(249, 115, 22)'; // orange-500
   return 'rgb(239, 68, 68)'; // red-500
