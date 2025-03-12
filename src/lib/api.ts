@@ -68,15 +68,16 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number): strin
   return `https://api.map.baidu.com/marker?location=${latitude},${longitude}&title=Astrophotography+Location&output=html`;
 }
 
-// Improved reverse geocoding to get location name from coordinates
+// Improved reverse geocoding to get location name from coordinates with language support
 export async function getLocationNameFromCoordinates(
-  latitude: number,
-  longitude: number
+  latitude: number, 
+  longitude: number,
+  language: 'en' | 'zh' = 'en'
 ): Promise<string> {
   try {
     // First attempt with BigDataCloud API which is more reliable
     const response = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${language}`
     );
 
     if (!response.ok) {
@@ -101,21 +102,28 @@ export async function getLocationNameFromCoordinates(
       if (data.principalSubdivision) {
         locationName = `${data.principalSubdivision}, ${data.countryName}`;
       } else {
-        locationName = `Location in ${data.countryName}`;
+        locationName = language === 'en' 
+          ? `Location in ${data.countryName}` 
+          : `${data.countryName}的位置`;
       }
     }
     
     // If we still don't have a name, create a generic one with coordinates
     if (!locationName) {
-      locationName = `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      locationName = language === 'en'
+        ? `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+        : `位置：${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     }
 
+    console.log("Got location name:", locationName);
     return locationName;
   } catch (error) {
     console.error('Error fetching location name from primary source:', error);
     
     // Fallback to a generic name format if the API call fails
-    return `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    return language === 'en'
+      ? `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+      : `位置：${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
   }
 }
 

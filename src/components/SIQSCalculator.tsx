@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
+import { MapPin, Loader2, Info, SlidersHorizontal, Globe } from "lucide-react";
 import MapSelector from "./MapSelector";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import {
@@ -35,12 +36,17 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [language, setLanguage] = useState<'en' | 'zh'>('en');
   
   useEffect(() => {
     if (!askedForLocation) {
       setAskedForLocation(true);
       
-      if (window.confirm("Would you like to share your location to calculate your local SIQS and see nearby photo points?")) {
+      const userConfirmText = language === 'en' 
+        ? "Would you like to share your location to calculate your local SIQS and see nearby photo points?"
+        : "您想分享您的位置以计算当地的SIQS并查看附近的拍摄点吗？";
+        
+      if (window.confirm(userConfirmText)) {
         handleUseCurrentLocation();
       }
     }
@@ -68,21 +74,25 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           setUserLocation({ latitude: lat, longitude: lng });
           
           try {
-            const name = await getLocationNameFromCoordinates(lat, lng);
+            const name = await getLocationNameFromCoordinates(lat, lng, language);
             console.log("Got location name:", name);
             setLocationName(name);
             
             setShowAdvancedSettings(true);
             
             toast({
-              title: "Location Retrieved",
-              description: `Your current location: ${name}`,
+              title: language === 'en' ? "Location Retrieved" : "已获取位置",
+              description: language === 'en' 
+                ? `Your current location: ${name}` 
+                : `您当前的位置：${name}`,
             });
             
             setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
-            const fallbackName = `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            const fallbackName = language === 'en'
+              ? `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+              : `位置：${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
             setLoading(false);
@@ -91,8 +101,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         (error) => {
           setLoading(false);
           toast({
-            title: "Location Error",
-            description: "Could not retrieve your location. Please enter coordinates manually.",
+            title: language === 'en' ? "Location Error" : "位置错误",
+            description: language === 'en'
+              ? "Could not retrieve your location. Please enter coordinates manually."
+              : "无法获取您的位置，请手动输入坐标。",
             variant: "destructive",
           });
           console.error("Geolocation error:", error);
@@ -105,8 +117,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       );
     } else {
       toast({
-        title: "Geolocation Not Supported",
-        description: "Your browser doesn't support geolocation. Please enter coordinates manually.",
+        title: language === 'en' ? "Geolocation Not Supported" : "不支持地理位置",
+        description: language === 'en'
+          ? "Your browser doesn't support geolocation. Please enter coordinates manually."
+          : "您的浏览器不支持地理位置，请手动输入坐标。",
         variant: "destructive",
       });
     }
@@ -121,8 +135,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setBortleScale(newBortleScale);
     
     toast({
-      title: "Location Selected",
-      description: `Selected ${location.name}`,
+      title: language === 'en' ? "Location Selected" : "已选择位置",
+      description: language === 'en' ? `Selected ${location.name}` : `已选择 ${location.name}`,
     });
     
     setShowAdvancedSettings(true);
@@ -187,8 +201,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const validateInputs = (): boolean => {
     if (!locationName.trim()) {
       toast({
-        title: "Input Error",
-        description: "Please enter a location name.",
+        title: language === 'en' ? "Input Error" : "输入错误",
+        description: language === 'en' ? "Please enter a location name." : "请输入位置名称。",
         variant: "destructive",
       });
       return false;
@@ -199,8 +213,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     
     if (isNaN(lat) || lat < -90 || lat > 90) {
       toast({
-        title: "Input Error",
-        description: "Please enter a valid latitude (-90 to 90).",
+        title: language === 'en' ? "Input Error" : "输入错误",
+        description: language === 'en' 
+          ? "Please enter a valid latitude (-90 to 90)." 
+          : "请输入有效的纬度（-90至90）。",
         variant: "destructive",
       });
       return false;
@@ -208,8 +224,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     
     if (isNaN(lng) || lng < -180 || lng > 180) {
       toast({
-        title: "Input Error",
-        description: "Please enter a valid longitude (-180 to 180).",
+        title: language === 'en' ? "Input Error" : "输入错误",
+        description: language === 'en' 
+          ? "Please enter a valid longitude (-180 to 180)." 
+          : "请输入有效的经度（-180至180）。",
         variant: "destructive",
       });
       return false;
@@ -302,7 +320,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   };
 
   const getBortleScaleDescription = (value: number): string => {
-    const descriptions = [
+    const descriptions = language === 'en' ?
+    [
       "1: Excellent dark-sky site, no light pollution",
       "2: Typical truly dark site, Milky Way casts shadows",
       "3: Rural sky, some light pollution but Milky Way still visible",
@@ -312,12 +331,23 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       "7: Suburban/urban transition, most stars washed out",
       "8: Urban sky, few stars visible, planets still visible",
       "9: Inner-city sky, only brightest stars and planets visible"
+    ] : [
+      "1: 极佳的暗空环境，无光污染",
+      "2: 真正的黑暗区域，银河可投下阴影",
+      "3: 乡村天空，有一些光污染但仍能看到银河",
+      "4: 乡村/郊区过渡区，能看到银河但缺乏细节",
+      "5: 郊区天空，银河非常暗或不可见",
+      "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座",
+      "7: 郊区/城市过渡区，大多数恒星被洗掉",
+      "8: 城市天空，可见少量恒星，行星仍可见",
+      "9: 市中心天空，只有最明亮的恒星和行星可见"
     ];
-    return descriptions[value - 1] || "Unknown";
+    return descriptions[value - 1] || (language === 'en' ? "Unknown" : "未知");
   };
 
   const getSeeingDescription = (value: number): string => {
-    const descriptions = [
+    const descriptions = language === 'en' ?
+    [
       "1: Perfect seeing, stars perfectly still",
       "1.5: Excellent seeing, stars mostly still",
       "2: Good seeing, slight twinkling",
@@ -327,20 +357,49 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       "4: Poor seeing, constant twinkling",
       "4.5: Very poor seeing, images blurry",
       "5: Terrible seeing, imaging nearly impossible"
+    ] : [
+      "1: 完美视宁度，恒星完全静止",
+      "1.5: 极佳视宁度，恒星几乎静止",
+      "2: 良好视宁度，轻微闪烁",
+      "2.5: 一般视宁度，中等闪烁",
+      "3: 尚可视宁度，明显闪烁",
+      "3.5: 低于平均视宁度，明显闪烁",
+      "4: 较差视宁度，持续闪烁",
+      "4.5: 非常差的视宁度，图像模糊",
+      "5: 极差视宁度，几乎无法成像"
     ];
     
     const index = Math.round((value - 1) * 2);
-    return descriptions[index] || "Unknown";
+    return descriptions[index] || (language === 'en' ? "Unknown" : "未知");
+  };
+  
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'zh' : 'en');
   };
   
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
-      <h2 className="text-xl font-bold mb-6">Calculate Stellar Imaging Quality Score</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">
+          {language === 'en' ? "Calculate Stellar Imaging Quality Score" : "计算恒星成像质量评分"}
+        </h2>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex items-center" 
+          onClick={toggleLanguage}
+        >
+          <Globe className="h-4 w-4 mr-1" />
+          {language === 'en' ? "中文" : "English"}
+        </Button>
+      </div>
       
       {siqsScore !== null && (
         <div className="mb-6 p-4 glass-card">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">Estimated SIQS Score</h3>
+            <h3 className="font-medium">
+              {language === 'en' ? "Estimated SIQS Score" : "预估SIQS评分"}
+            </h3>
             <div className="flex items-center">
               <span className={`text-2xl font-bold ${
                 siqsScore >= 80 ? 'text-green-400' : 
@@ -363,13 +422,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           </div>
           
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>Poor</span>
-            <span>Average</span>
-            <span>Excellent</span>
+            <span>{language === 'en' ? "Poor" : "差"}</span>
+            <span>{language === 'en' ? "Average" : "一般"}</span>
+            <span>{language === 'en' ? "Excellent" : "优秀"}</span>
           </div>
           
           <p className="text-xs text-muted-foreground mt-3">
-            This is an estimated score based on current data. For detailed analysis with forecast data, click "Calculate SIQS Score" below.
+            {language === 'en' 
+              ? "This is an estimated score based on current data. For detailed analysis with forecast data, click \"Calculate SIQS Score\" below." 
+              : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的"计算SIQS评分"。"}
           </p>
         </div>
       )}
@@ -388,7 +449,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
             ) : (
               <MapPin className="mr-2 h-4 w-4" />
             )}
-            Use My Location
+            {language === 'en' ? "Use My Location" : "使用我的位置"}
           </Button>
           
           <div className="relative">
@@ -403,11 +464,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         <RecommendedPhotoPoints 
           onSelectPoint={handleRecommendedPointSelect}
           userLocation={userLocation}
+          language={language}
         />
         
         {locationName && (
           <div className="space-y-4 animate-fade-in">
-            <Label htmlFor="locationName">Selected Location</Label>
+            <Label htmlFor="locationName">
+              {language === 'en' ? "Selected Location" : "已选位置"}
+            </Label>
             <div className="flex gap-2 mt-1.5 items-center">
               <Input
                 id="locationName"
@@ -426,7 +490,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium flex items-center">
                   <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
-                  Observation Settings
+                  {language === 'en' ? "Observation Settings" : "观测设置"}
                 </h3>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="w-9 p-0 hover:bg-primary/10">
@@ -440,7 +504,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <Label htmlFor="bortleScale" className="text-sm">
-                      Bortle Scale (Light Pollution)
+                      {language === 'en' ? "Bortle Scale (Light Pollution)" : "波特尔指数（光污染）"}
                     </Label>
                     <TooltipProvider>
                       <Tooltip>
@@ -451,7 +515,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent className="w-80 p-4 glass-card">
-                          <p>The Bortle scale measures the night sky's brightness, with 1 being darkest and 9 brightest. Urban areas typically range from 7-9.</p>
+                          <p>
+                            {language === 'en' 
+                              ? "The Bortle scale measures the night sky's brightness, with 1 being darkest and 9 brightest. Urban areas typically range from 7-9."
+                              : "波特尔指数衡量夜空的亮度，1级最暗，9级最亮。城市区域通常在7-9级。"}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -478,7 +546,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <Label htmlFor="seeingConditions" className="text-sm">
-                      Seeing Conditions (Atmospheric Stability)
+                      {language === 'en' 
+                        ? "Seeing Conditions (Atmospheric Stability)" 
+                        : "视宁度（大气稳定性）"}
                     </Label>
                     <TooltipProvider>
                       <Tooltip>
@@ -489,7 +559,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent className="w-80 p-4 glass-card">
-                          <p>Seeing conditions rate atmospheric turbulence from 1 (perfectly stable) to 5 (highly unstable). Affects image sharpness and detail.</p>
+                          <p>
+                            {language === 'en'
+                              ? "Seeing conditions rate atmospheric turbulence from 1 (perfectly stable) to 5 (highly unstable). Affects image sharpness and detail."
+                              : "视宁度衡量大气湍流程度，从1（完全稳定）到5（高度不稳定）。影响图像清晰度和细节。"}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -524,7 +598,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                "Calculate SIQS Score"
+                language === 'en' ? "Calculate SIQS Score" : "计算SIQS评分"
               )}
             </Button>
           </div>

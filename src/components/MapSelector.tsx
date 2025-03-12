@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { X, Loader2, Search, MapPin } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
@@ -34,22 +34,13 @@ const InteractiveMap = ({ onMapClick, position }: {
   onMapClick: (lat: number, lng: number) => void,
   position: [number, number]
 }) => {
-  const map = useMap();
-  
-  // Add click event listener to the map
-  useEffect(() => {
-    const handleMapClick = (e: L.LeafletMouseEvent) => {
+  const map = useMapEvents({
+    click: (e) => {
       const { lat, lng } = e.latlng;
       onMapClick(lat, lng);
-    };
-    
-    map.on('click', handleMapClick);
-    
-    return () => {
-      map.off('click', handleMapClick);
-    };
-  }, [map, onMapClick]);
-
+    }
+  });
+  
   return <Marker position={position} />;
 };
 
@@ -68,6 +59,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const mapRef = useRef<L.Map>(null);
   
   const searchLocations = async (query: string) => {
@@ -81,7 +73,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       // Using the BigDataCloud API as a more reliable alternative to Nominatim
       // This is a geocoding approximation - not as accurate, but more reliable
       const response = await fetch(
-        `https://api.bigdatacloud.net/data/geocoding?q=${encodeURIComponent(query)}&localityLanguage=en&key=bdc_1270be2373614930a0f67fddec17c11d`,
+        `https://api.bigdatacloud.net/data/geocoding?q=${encodeURIComponent(query)}&localityLanguage=${language}&key=bdc_1270be2373614930a0f67fddec17c11d`,
         {
           headers: {
             'Accept': 'application/json',
@@ -160,7 +152,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     setLoading(true);
     try {
       // Using the imported function from the API library
-      const name = await getLocationNameFromCoordinates(lat, lng);
+      const name = await getLocationNameFromCoordinates(lat, lng, language);
       
       setSelectedLocation({
         name,
@@ -217,8 +209,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
           setPosition([lat, lng]);
           
           try {
-            // Using the imported function from the API library
-            const name = await getLocationNameFromCoordinates(lat, lng);
+            // Using the imported function from the API library with language parameter
+            const name = await getLocationNameFromCoordinates(lat, lng, language);
             
             const location = {
               name,
@@ -233,15 +225,19 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             onSelectLocation(location);
             
             toast({
-              title: "Location Found",
-              description: `Using your current location: ${name}`,
+              title: language === 'en' ? "Location Found" : "已找到位置",
+              description: language === 'en' 
+                ? `Using your current location: ${name}` 
+                : `使用您的当前位置: ${name}`,
             });
             
             setLoading(false);
             setIsOpen(false);
           } catch (error) {
             console.error('Error getting location name:', error);
-            const fallbackName = `My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            const fallbackName = language === 'en' 
+              ? `My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})` 
+              : `我的位置 (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
             
             const location = {
               name: fallbackName,
@@ -262,8 +258,10 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
         (error) => {
           console.error('Geolocation error:', error);
           toast({
-            title: "Location Error",
-            description: "Could not retrieve your location. Please search or select a location on the map.",
+            title: language === 'en' ? "Location Error" : "位置错误",
+            description: language === 'en'
+              ? "Could not retrieve your location. Please search or select a location on the map."
+              : "无法获取您的位置，请搜索或在地图上选择位置。",
             variant: "destructive",
           });
           setLoading(false);
@@ -276,8 +274,10 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       );
     } else {
       toast({
-        title: "Geolocation Not Supported",
-        description: "Your browser doesn't support geolocation. Please search or select a location on the map.",
+        title: language === 'en' ? "Geolocation Not Supported" : "不支持地理位置",
+        description: language === 'en'
+          ? "Your browser doesn't support geolocation. Please search or select a location on the map."
+          : "您的浏览器不支持地理位置，请搜索或在地图上选择位置。",
         variant: "destructive",
       });
     }
@@ -294,23 +294,44 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
         <Button variant="outline" className="w-full flex justify-between items-center hover:bg-primary/10">
           <span className="flex items-center">
             <Search className="mr-2 h-4 w-4" /> 
-            Search for a Location
+            {language === 'en' ? "Search for a Location" : "搜索位置"}
           </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[800px] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Pinpoint Location</DialogTitle>
+          <DialogTitle>{language === 'en' ? "Pinpoint Location" : "定位位置"}</DialogTitle>
           <DialogDescription>
-            Search for a location or click directly on the map to set coordinates.
+            {language === 'en' 
+              ? "Search for a location or click directly on the map to set coordinates." 
+              : "搜索位置或直接点击地图设置坐标。"}
           </DialogDescription>
         </DialogHeader>
+        
+        <div className="flex gap-2 mb-4">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setLanguage('en')}
+            className={`${language === 'en' ? 'bg-primary/20' : ''}`}
+          >
+            English
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setLanguage('zh')}
+            className={`${language === 'zh' ? 'bg-primary/20' : ''}`}
+          >
+            中文
+          </Button>
+        </div>
         
         <div className="relative mb-4">
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
-            placeholder="Search for a location..."
+            placeholder={language === 'en' ? "Search for a location..." : "搜索位置..."}
             className="pr-8"
             autoFocus
           />
@@ -355,7 +376,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             className="text-xs flex items-center"
           >
             {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
-            Use My Location
+            {language === 'en' ? "Use My Location" : "使用我的位置"}
           </Button>
         </div>
         
@@ -384,12 +405,16 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
                 <span className="font-medium truncate max-w-[300px]">{selectedLocation.name}</span>
               </div>
             ) : (
-              <span className="text-muted-foreground">Click on the map to select a location</span>
+              <span className="text-muted-foreground">
+                {language === 'en' 
+                  ? "Click on the map to select a location" 
+                  : "点击地图选择位置"}
+              </span>
             )}
           </div>
           
           <Button onClick={handleSelectLocation} disabled={!selectedLocation && !position}>
-            Use This Location
+            {language === 'en' ? "Use This Location" : "使用此位置"}
           </Button>
         </div>
       </DialogContent>
