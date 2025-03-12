@@ -371,7 +371,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   };
   
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'zh' : 'en');
+    setLanguage(language === 'en' ? 'zh' : 'en');
   };
 
   const getRecommendationMessage = (score: number): string => {
