@@ -338,6 +338,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation(parseFloat(latitude), parseFloat(longitude), locationName);
   };
 
+  const getRecommendationMessage = (siqsScore: number): string => {
+    if (siqsScore >= 80) return t("Perfect conditions for astrophotography!", "天文摄影的完美条件！");
+    if (siqsScore >= 60) return t("Good conditions for imaging!", "适合拍摄的良好条件！");
+    if (siqsScore >= 40) return t("Average conditions, might be challenging.", "一般条件，可能有挑战性。");
+    if (siqsScore >= 20) return t("Poor conditions, consider rescheduling.", "条件较差，考虑改期。");
+    return t("Very poor conditions, not recommended.", "条件非常差，不推荐。");
+  };
+
   const getBortleScaleDescription = (value: number): string => {
     const descriptions = [
       t("1: Excellent dark-sky site, no light pollution", "1: 极佳的暗空环境，无光污染"),
