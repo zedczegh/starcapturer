@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [askedForLocation, setAskedForLocation] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [siqsScore, setSiqsScore] = useState<number | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
   
   // Ask for user location on initial load
   useEffect(() => {
@@ -46,6 +47,16 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       }
     }
   }, []);
+
+  // Calculate SIQS when location and parameters are available
+  useEffect(() => {
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    if (locationName && !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      calculateSIQSForLocation(lat, lng, locationName, true);
+    }
+  }, [latitude, longitude, locationName, bortleScale, seeingConditions]);
   
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -68,8 +79,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
               description: "Your current location has been added.",
             });
             
-            // Don't automatically calculate SIQS after getting location
-            // Let user adjust settings first
             setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
@@ -218,8 +227,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   
   // Calculate current moon phase (simplified approximation)
   const getCurrentMoonPhase = (): number => {
-    // Simple approximation based on current date
-    // In a real app, this would use astronomical calculations
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
@@ -235,8 +242,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     return moonPhase;
   };
   
-  const calculateSIQSForLocation = async (lat: number, lng: number, name: string) => {
-    setLoading(true);
+  const calculateSIQSForLocation = async (lat: number, lng: number, name: string, displayOnly: boolean = false) => {
+    if (isCalculating) return;
+    
+    setIsCalculating(true);
+    displayOnly ? null : setLoading(true);
     
     try {
       const weatherData = await fetchWeatherData({
@@ -245,7 +255,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       });
       
       if (!weatherData) {
-        setLoading(false);
+        setIsCalculating(false);
+        displayOnly ? null : setLoading(false);
         return;
       }
       
@@ -261,6 +272,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         moonPhase,
       });
       
+      // If we're only showing the score on the calculator, update state
+      if (displayOnly) {
+        setSiqsScore(siqsResult.score * 10); // Convert to 0-100 scale
+        setIsCalculating(false);
+        return;
+      }
+      
+      // Otherwise, navigate to the details page
       const locationId = Date.now().toString();
       
       const locationData = {
@@ -285,7 +304,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsCalculating(false);
+      displayOnly ? null : setLoading(false);
     }
   };
   
@@ -332,6 +352,27 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
       <h2 className="text-xl font-bold mb-6">Calculate Stellar Imaging Quality Score</h2>
+      
+      {siqsScore !== null && (
+        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-medium">Estimated SIQS Score</h3>
+            <span className="text-xl font-bold">{(siqsScore / 10).toFixed(1)}/10</span>
+          </div>
+          <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${siqsScore >= 80 ? 'bg-green-500' : 
+                siqsScore >= 60 ? 'bg-green-400' : 
+                siqsScore >= 40 ? 'bg-yellow-400' : 
+                siqsScore >= 20 ? 'bg-orange-400' : 'bg-red-500'}`} 
+              style={{ width: `${siqsScore}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            This is an estimated score. For detailed analysis, click "Calculate SIQS Score" below.
+          </p>
+        </div>
+      )}
       
       <div className="space-y-4">
         <div className="flex flex-col space-y-3">
