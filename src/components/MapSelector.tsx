@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -30,7 +29,7 @@ const ChangeMapCenter = ({ coordinates, mapRef }: { coordinates: [number, number
 };
 
 // Create a custom marker icon with animation
-const createCustomMarker = () => {
+const createCustomMarker = (): L.DivIcon => {
   return L.divIcon({
     className: 'custom-marker-icon',
     html: `
@@ -56,7 +55,7 @@ const InteractiveMap = ({ onMapClick, position }: {
   // Map events component to handle clicks
   const MapEvents = () => {
     useMapEvents({
-      click: (e) => {
+      click: (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         setMarkerPosition([lat, lng]);
         onMapClick(lat, lng);
@@ -151,7 +150,10 @@ const InteractiveMap = ({ onMapClick, position }: {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={markerPosition} icon={createCustomMarker()} />
+      <Marker 
+        position={markerPosition} 
+        icon={createCustomMarker()}
+      />
       <ChangeMapCenter coordinates={position} mapRef={mapRef} />
       <MapEvents />
     </MapContainer>
@@ -303,8 +305,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       
       toast({
         title: language === 'en' ? "Location Error" : "位置错误",
-        description: language === 'en' 
-          ? "Could not get location name. Using coordinates instead." 
+        description: language === 'en'
+          ? "Could not get location name. Using coordinates instead."
           : "无法获取位置名称。使用坐标代替。",
         variant: "destructive",
       });

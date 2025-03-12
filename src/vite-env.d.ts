@@ -1,4 +1,3 @@
-
 /// <reference types="vite/client" />
 
 // Add type declarations for react-leaflet
@@ -23,6 +22,7 @@ declare module 'react-leaflet' {
 
   export interface MarkerProps extends L.MarkerOptions {
     position: L.LatLngExpression;
+    icon?: L.Icon | L.DivIcon;
     children?: React.ReactNode;
   }
 
@@ -34,6 +34,11 @@ declare module 'react-leaflet' {
   export class TileLayer extends React.Component<TileLayerProps> {}
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
+  
+  // Add useMapEvents hook type
+  export function useMapEvents(handlers: {
+    [key: string]: (e: L.LeafletEvent) => void;
+  }): L.Map | null;
 }
 
 // Define WeatherData interface globally
