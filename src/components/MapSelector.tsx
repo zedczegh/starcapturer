@@ -7,7 +7,7 @@ import { getLocationNameFromCoordinates } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
-interface Location {
+export interface Location {
   name: string;
   latitude: number;
   longitude: number;

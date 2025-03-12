@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin, NavigationIcon, Share2 } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { getRecommendedPhotoPoints, generateBaiduMapsUrl, SharedAstroSpot } from "@/lib/api";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
@@ -32,9 +32,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 
   const handleSelectPoint = (point: SharedAstroSpot) => {
     onSelectPoint(point);
-    toast({
-      title: t("Photo Point Selected", "已选择拍摄点"),
-      description: t("Selected ${point.name} by ${point.photographer}", `已选择 ${point.name}，摄影师: ${point.photographer}`),
+    toast.success(t("Photo Point Selected", "已选择拍摄点"), {
+      description: t(`Selected ${point.name}`, `已选择 ${point.name}`),
     });
   };
 
@@ -60,12 +59,21 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       // Fallback to copying to clipboard
       const shareUrl = window.location.origin + `/location/${point.id}`;
       navigator.clipboard.writeText(shareUrl).then(() => {
-        toast({
-          title: t("Link Copied", "链接已复制"),
+        toast.success(t("Link Copied", "链接已复制"), {
           description: t("Location link copied to clipboard!", "位置链接已复制到剪贴板！"),
         });
       });
     }
+  };
+
+  const formatDistance = (distance?: number) => {
+    if (distance === undefined) return t("Unknown distance", "未知距离");
+    
+    if (distance < 1) 
+      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+    if (distance < 100) 
+      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
 
   return (
@@ -121,9 +129,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 </div>
                 {point.distance !== undefined && (
                   <div className="text-xs font-medium">
-                    {point.distance < 100 
-                      ? t(`${Math.round(point.distance)} km away`, `距离 ${Math.round(point.distance)} 公里`)
-                      : t(`${Math.round(point.distance / 100) * 100} km away`, `距离 ${Math.round(point.distance / 100) * 100} 公里`)}
+                    {formatDistance(point.distance)}
                   </div>
                 )}
               </div>

@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 
 type Coordinates = {
@@ -101,13 +100,11 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<any> 
     
     const data = await response.json();
     
-    // Validate that we have the expected data structure
     if (!data || !data.hourly || !Array.isArray(data.hourly.time) || data.hourly.time.length === 0) {
       console.error('Invalid forecast data structure', data);
       return createFallbackForecastData();
     }
     
-    // Return the raw data for processing in the component
     return data;
   } catch (error) {
     console.error('Error fetching forecast data:', error);
@@ -183,7 +180,6 @@ export async function getLocationNameFromCoordinates(
     const validLat = Math.max(-90, Math.min(90, latitude));
     const validLng = normalizeLongitude(longitude);
     
-    // First try with Nominatim reverse geocoding for better results
     try {
       const nominatimResponse = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&accept-language=${language}`,
@@ -205,10 +201,8 @@ export async function getLocationNameFromCoordinates(
       }
     } catch (nominatimError) {
       console.error('Error with Nominatim reverse geocoding:', nominatimError);
-      // Continue to next geocoder
     }
     
-    // Fallback to BigDataCloud
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${validLat}&longitude=${validLng}&localityLanguage=${language}`
     );
@@ -250,7 +244,6 @@ export async function getLocationNameFromCoordinates(
   } catch (error) {
     console.error('Error fetching location name from all sources:', error);
     
-    // Last fallback to position-stack
     try {
       const geocodeResponse = await fetch(
         `https://geocode.maps.co/reverse?lat=${latitude}&lon=${longitude}&format=json`
@@ -291,20 +284,22 @@ export interface SharedAstroSpot {
 const SHARED_SPOTS_KEY = "astrospot_shared_locations";
 const RECENT_LOCATIONS_KEY = "astrospot_recent_locations";
 
-export function getSharedAstroSpots(): SharedAstroSpot[] {
+export function getSharedAstroSpots(generateIfEmpty: boolean = true): SharedAstroSpot[] {
   try {
     const spotsJson = localStorage.getItem(SHARED_SPOTS_KEY);
-    if (!spotsJson) return getDefaultSharedSpots();
-    return JSON.parse(spotsJson);
+    if (!spotsJson && generateIfEmpty) return generateRealisticPhotoPoints();
+    if (!spotsJson) return [];
+    const spots = JSON.parse(spotsJson);
+    return spots.length === 0 && generateIfEmpty ? generateRealisticPhotoPoints() : spots;
   } catch (error) {
     console.error("Error retrieving shared spots:", error);
-    return getDefaultSharedSpots();
+    return generateIfEmpty ? generateRealisticPhotoPoints() : [];
   }
 }
 
 export function shareAstroSpot(spot: Omit<SharedAstroSpot, "id">): SharedAstroSpot {
   try {
-    const spots = getSharedAstroSpots();
+    const spots = getSharedAstroSpots(false);
     const newSpot: SharedAstroSpot = {
       ...spot,
       id: Date.now().toString(),
@@ -345,6 +340,7 @@ export function getRecommendedPhotoPoints(userLocation?: { latitude: number; lon
   }));
   
   return spotsWithDistance
+    .filter(spot => spot.distance && spot.distance <= 1000)
     .sort((a, b) => (a.distance || 0) - (b.distance || 0))
     .slice(0, 4);
 }
@@ -373,148 +369,188 @@ export function getRecentLocations(): Array<{
 }> {
   try {
     const locationsJson = localStorage.getItem(RECENT_LOCATIONS_KEY);
-    if (!locationsJson) return getDefaultRecentLocations();
+    if (!locationsJson) return [];
     return JSON.parse(locationsJson);
   } catch (error) {
     console.error("Error retrieving recent locations:", error);
-    return getDefaultRecentLocations();
+    return [];
   }
 }
 
-function getDefaultSharedSpots(): SharedAstroSpot[] {
-  return [
+export function saveRecentLocation(location: {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  siqs: number;
+  isViable: boolean;
+}): void {
+  try {
+    const existingLocations = getRecentLocations();
+    const newLocation = {
+      ...location,
+      timestamp: new Date().toISOString()
+    };
+    
+    const updatedLocations = [newLocation, ...existingLocations]
+      .slice(0, 10);
+      
+    localStorage.setItem(RECENT_LOCATIONS_KEY, JSON.stringify(updatedLocations));
+  } catch (error) {
+    console.error("Error saving recent location:", error);
+  }
+}
+
+function generateRealisticPhotoPoints(): SharedAstroSpot[] {
+  const spots: SharedAstroSpot[] = [];
+  
+  const worldClassLocations = [
     {
-      id: "sp1",
-      name: "Atacama Desert Observatory Point",
+      name: "Atacama Desert",
       latitude: -23.4592,
       longitude: -69.2520,
       siqs: 9.7,
-      isViable: true,
-      timestamp: "2023-12-15T20:34:00Z",
-      description: "Perfect dark skies for deep-sky photography. No light pollution and exceptional seeing conditions.",
-      photographer: "Michael Thompson",
-      targets: ["Carina Nebula", "Southern Cross", "Omega Centauri"],
-      photoUrl: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop"
+      description: "One of the driest places on Earth with exceptionally clear skies. Perfect for deep-sky astrophotography.",
+      photographer: "Michael Chen",
+      photoUrl: "https://images.unsplash.com/photo-1465101162946-4377e57745c3?q=80&w=2078&auto=format&fit=crop"
     },
     {
-      id: "sp2",
       name: "Mauna Kea Summit",
       latitude: 19.8207,
       longitude: -155.4681,
       siqs: 9.5,
-      isViable: true,
-      timestamp: "2023-12-10T19:22:00Z",
-      description: "High altitude (14,000ft) provides extremely stable air and minimal atmospheric interference.",
-      photographer: "Sarah Chen",
-      targets: ["Andromeda Galaxy", "Pleiades", "Orion Nebula"],
-      photoUrl: "https://images.unsplash.com/photo-1465101162946-4377e57745c3?q=80&w=2078&auto=format&fit=crop"
+      description: "High altitude (14,000ft) provides extremely stable air and minimal atmospheric interference for planetary imaging.",
+      photographer: "Sarah Johnson",
+      photoUrl: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop"
     },
     {
-      id: "sp3",
-      name: "Namibia Desert Viewpoint",
-      latitude: -24.7275,
-      longitude: 15.4061,
-      siqs: 9.3,
-      isViable: true,
-      timestamp: "2023-12-05T21:15:00Z",
-      description: "One of the darkest skies in Africa, ideal for Milky Way core photography.",
-      photographer: "David Astrophoto",
-      targets: ["Milky Way Core", "Lagoon Nebula", "Rho Ophiuchi"]
-    },
-    {
-      id: "sp4",
-      name: "La Palma Observatory",
-      latitude: 28.7636,
-      longitude: -17.8916,
-      siqs: 9.0,
-      isViable: true,
-      timestamp: "2023-11-28T18:45:00Z",
-      description: "Protected dark sky site with excellent conditions for planetary imaging.",
-      photographer: "Elena Rodriguez",
-      targets: ["Jupiter", "Saturn", "Mars"],
-      photoUrl: "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=2071&auto=format&fit=crop"
-    },
-    {
-      id: "sp5",
-      name: "Bryce Canyon National Park",
-      latitude: 37.6283,
-      longitude: -112.1684,
-      siqs: 8.8,
-      isViable: true,
-      timestamp: "2023-11-20T22:10:00Z",
-      description: "Clear, dry air and minimal light pollution make this a perfect spot for wide-field Milky Way shots.",
-      photographer: "Jonathan Kim",
-      targets: ["Milky Way", "Andromeda Galaxy", "North America Nebula"]
-    },
-    {
-      id: "sp6",
-      name: "Teide Observatory",
-      latitude: 28.3,
-      longitude: -16.5097,
-      siqs: 8.7,
-      isViable: true,
-      timestamp: "2023-11-15T20:30:00Z",
-      description: "Located above the cloud layer on Mount Teide, excellent for both deep sky and planetary imaging.",
-      photographer: "Maria Gonzalez",
-      targets: ["Saturn", "Orion Nebula", "Pleiades"]
-    },
-    {
-      id: "sp7",
-      name: "Death Valley National Park",
-      latitude: 36.5323,
-      longitude: -116.9325,
-      siqs: 8.5,
-      isViable: true,
-      timestamp: "2023-11-10T23:15:00Z",
-      description: "Gold-tier Dark Sky Park with extremely low humidity, perfect for galaxy photography.",
-      photographer: "Alex Nightscape",
-      targets: ["Triangulum Galaxy", "Andromeda Galaxy", "California Nebula"]
-    },
-    {
-      id: "sp8",
       name: "NamibRand Nature Reserve",
       latitude: -25.0459,
       longitude: 15.9419,
-      siqs: 8.9,
-      isViable: true,
-      timestamp: "2023-11-05T21:40:00Z",
-      description: "Africa's first International Dark Sky Reserve, offering pristine views of the southern sky.",
-      photographer: "Thomas Wright",
-      targets: ["Large Magellanic Cloud", "Small Magellanic Cloud", "Southern Cross"]
+      siqs: 9.4,
+      description: "Africa's first International Dark Sky Reserve, offering pristine views of the southern sky with no light pollution.",
+      photographer: "David Williams",
+      photoUrl: "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=2071&auto=format&fit=crop"
     }
   ];
-}
-
-function getDefaultRecentLocations() {
-  return [
-    {
-      id: "1",
-      name: "Atacama Desert",
-      latitude: -23.4567,
-      longitude: -69.2344,
-      siqs: 9.2,
+  
+  worldClassLocations.forEach((loc, index) => {
+    spots.push({
+      id: `wc${index}`,
+      name: loc.name,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      siqs: loc.siqs,
       isViable: true,
-      timestamp: "2023-12-15T20:34:00Z"
-    },
-    {
-      id: "2",
-      name: "Haleakala Summit",
-      latitude: 20.7097,
-      longitude: -156.2533,
-      siqs: 8.7,
-      isViable: true,
-      timestamp: "2023-12-10T19:22:00Z"
-    },
-    {
-      id: "3",
-      name: "Cherry Springs State Park",
-      latitude: 41.6661,
-      longitude: -77.8256,
-      siqs: 7.5,
-      isViable: true,
-      timestamp: "2023-12-05T21:15:00Z"
-    }
+      timestamp: new Date().toISOString(),
+      description: loc.description,
+      photographer: loc.photographer,
+      photoUrl: loc.photoUrl,
+      targets: ["Milky Way", "Deep Sky Objects", "Planetary Imaging"]
+    });
+  });
+  
+  const regions = [
+    { name: "Western North America", latBase: 35, lonBase: -115, siqsBase: 7.5 },
+    { name: "Eastern North America", latBase: 40, lonBase: -75, siqsBase: 6.0 },
+    { name: "Western Europe", latBase: 45, lonBase: 5, siqsBase: 5.5 },
+    { name: "Eastern Europe", latBase: 48, lonBase: 25, siqsBase: 6.0 },
+    { name: "Northern Africa", latBase: 25, lonBase: 15, siqsBase: 8.0 },
+    { name: "Southern Africa", latBase: -30, lonBase: 25, siqsBase: 8.5 },
+    { name: "Western Asia", latBase: 30, lonBase: 60, siqsBase: 7.0 },
+    { name: "Eastern Asia", latBase: 35, lonBase: 105, siqsBase: 5.0 },
+    { name: "Australia", latBase: -25, lonBase: 135, siqsBase: 8.0 },
+    { name: "South America", latBase: -15, lonBase: -60, siqsBase: 7.5 }
   ];
+  
+  const locationTypes = [
+    { suffix: "National Park", siqsBonus: 1.2 },
+    { suffix: "Observatory", siqsBonus: 1.5 },
+    { suffix: "Mountain Peak", siqsBonus: 1.0 },
+    { suffix: "Desert Viewpoint", siqsBonus: 1.3 },
+    { suffix: "Lake", siqsBonus: 0.7 },
+    { suffix: "Plateau", siqsBonus: 0.9 },
+    { suffix: "Valley", siqsBonus: 0.6 },
+    { suffix: "Island", siqsBonus: 0.8 }
+  ];
+  
+  const photographers = [
+    "James Wilson", "Maria Garcia", "Li Wei", "Sophia Ahmed", 
+    "Carlos Rodriguez", "Anika Patel", "John Smith", "Emma Chen", 
+    "Hiroshi Tanaka", "Olivia Kim", "Xavier Thomas", "Zara Khan"
+  ];
+  
+  regions.forEach((region, regionIndex) => {
+    locationTypes.forEach((locType, locIndex) => {
+      for (let i = 0; i < 2; i++) {
+        const latOffset = (Math.random() - 0.5) * 15;
+        const lonOffset = (Math.random() - 0.5) * 15;
+        const latitude = region.latBase + latOffset;
+        const longitude = region.lonBase + lonOffset;
+        
+        if (latitude < -90 || latitude > 90) continue;
+        
+        const randomFactor = 0.5 + Math.random();
+        let siqs = (region.siqsBase * locType.siqsBonus * randomFactor);
+        siqs = Math.min(9.8, Math.max(3.0, siqs));
+        siqs = parseFloat(siqs.toFixed(1));
+        
+        const id = `r${regionIndex}_l${locIndex}_${i}`;
+        
+        const photographer = photographers[Math.floor(Math.random() * photographers.length)];
+        
+        const name = `${region.name} ${locType.suffix}`;
+        
+        const descriptionParts = [
+          "Perfect dark skies for astrophotography.",
+          "Limited light pollution from nearby cities.",
+          "Excellent seeing conditions throughout the year.",
+          "Best during winter months when humidity is low.",
+          "Easy access with parking nearby.",
+          "Requires a short hike to reach the best viewing spot.",
+          "Popular among local astronomers.",
+          "Site of several award-winning night sky photos."
+        ];
+        
+        const numParts = 2 + Math.floor(Math.random() * 2);
+        const selectedParts = [];
+        for (let j = 0; j < numParts; j++) {
+          const randomIndex = Math.floor(Math.random() * descriptionParts.length);
+          selectedParts.push(descriptionParts[randomIndex]);
+          descriptionParts.splice(randomIndex, 1);
+          if (descriptionParts.length === 0) break;
+        }
+        
+        const description = selectedParts.join(" ");
+        
+        const hasPhoto = Math.random() > 0.6;
+        const photoUrls = [
+          "https://images.unsplash.com/photo-1536293283170-b4add58c3057?q=80&w=2071&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1527285581495-1bf959d2600e?q=80&w=1974&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1444080748397-f442aa95c3e5?q=80&w=1932&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1504805572947-34fad45aed93?q=80&w=2070&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1533294455009-a771f7861812?q=80&w=2070&auto=format&fit=crop"
+        ];
+        const photoUrl = hasPhoto ? photoUrls[Math.floor(Math.random() * photoUrls.length)] : undefined;
+        
+        spots.push({
+          id,
+          name,
+          latitude,
+          longitude,
+          siqs,
+          isViable: siqs >= 5.0,
+          timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+          description,
+          photographer,
+          photoUrl,
+          targets: ["Milky Way", "Star Trails", "Deep Sky Objects"]
+        });
+      }
+    });
+  });
+  
+  return spots;
 }
 
 export function getLocationReviews(locationId: string): Array<{
