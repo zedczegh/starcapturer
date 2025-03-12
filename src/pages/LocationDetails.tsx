@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -6,7 +7,7 @@ import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import LocationMap from "@/components/LocationMap";
 import ForecastTable from "@/components/ForecastTable";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData, fetchForecastData, determineWeatherCondition } from "@/lib/api";
 
@@ -21,10 +22,8 @@ const LocationDetails = () => {
 
   useEffect(() => {
     if (!locationData) {
-      toast({
-        title: "Location Not Found",
+      toast.error("Location Not Found", {
         description: "The requested location information is not available or has expired.",
-        variant: "destructive",
       });
       
       const redirectTimer = setTimeout(() => {
@@ -63,12 +62,17 @@ const LocationDetails = () => {
         longitude: newLocation.longitude,
       });
 
-      const moonPhase = locationData.moonPhase || 0;
+      // Check if weatherData is null
+      if (!weatherData) {
+        throw new Error("Failed to retrieve weather data for this location");
+      }
+
+      const moonPhase = locationData?.moonPhase || 0;
       
       const siqsResult = calculateSIQS({
         cloudCover: weatherData.cloudCover,
-        bortleScale: locationData.bortleScale,
-        seeingConditions: locationData.seeingConditions,
+        bortleScale: locationData?.bortleScale || 4,
+        seeingConditions: locationData?.seeingConditions || 3,
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
         moonPhase,
@@ -81,22 +85,21 @@ const LocationDetails = () => {
         siqsResult,
       });
 
+      // Fetch new forecast data for the updated location
       const forecast = await fetchForecastData({
         latitude: newLocation.latitude,
         longitude: newLocation.longitude,
       });
+      
       setForecastData(forecast);
 
-      toast({
-        title: "Location Updated",
+      toast.success("Location Updated", {
         description: "SIQS score has been recalculated for the new location.",
       });
     } catch (error) {
       console.error("Error updating location:", error);
-      toast({
-        title: "Update Error",
-        description: "Failed to update location and recalculate SIQS score.",
-        variant: "destructive",
+      toast.error("Update Error", {
+        description: "Failed to update location and recalculate SIQS score. Please try again.",
       });
     } finally {
       setLoading(false);
