@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Cloud, Droplets, Thermometer, Wind } from "lucide-react";
+import { Cloud, Droplets, Eye, Lightbulb, Thermometer, Wind } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WeatherConditionsProps {
@@ -98,14 +98,24 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             </div>
             
             <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium">{t("Bortle Scale", "波尔特尔暗度等级")}</p>
-                <p className="text-lg font-bold">{formatBortleScale(bortleScale)}</p>
+              <div className="flex items-start">
+                <div className="mr-2 rounded-full bg-primary/10 p-1">
+                  <Lightbulb className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{t("Bortle Scale", "光污染等级")}</p>
+                  <p className="text-lg font-bold">{formatBortleScale(bortleScale)}</p>
+                </div>
               </div>
               
-              <div>
-                <p className="text-sm font-medium">{t("Seeing Conditions", "视宁度")}</p>
-                <p className="text-lg font-bold">{seeingConditions}</p>
+              <div className="flex items-start">
+                <div className="mr-2 rounded-full bg-primary/10 p-1">
+                  <Eye className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{t("Seeing Conditions", "视宁度")}</p>
+                  <p className="text-lg font-bold">{seeingConditions}</p>
+                </div>
               </div>
             </div>
           </div>
