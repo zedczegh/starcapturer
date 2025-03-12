@@ -1,5 +1,4 @@
-
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Map, Share2 } from "lucide-react";
@@ -8,16 +7,17 @@ import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import LocationMap from "@/components/LocationMap";
 import { toast } from "@/components/ui/use-toast";
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { fetchWeatherData } from "@/lib/api";
 
 const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const locationData = location.state;
+  const [locationData, setLocationData] = useState(location.state);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If there's no location data and we're not coming from another page,
-    // redirect to the home page after showing a toast
     if (!locationData) {
       toast({
         title: "Location Not Found",
@@ -25,7 +25,6 @@ const LocationDetails = () => {
         variant: "destructive",
       });
       
-      // Use a small timeout to ensure the toast appears before redirecting
       const redirectTimer = setTimeout(() => {
         navigate("/");
       }, 100);
@@ -34,7 +33,6 @@ const LocationDetails = () => {
     }
   }, [locationData, navigate]);
 
-  // If there's no state data, render a loading state while we're redirecting
   if (!locationData) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -52,22 +50,54 @@ const LocationDetails = () => {
     );
   }
 
-  // Create default values to prevent runtime errors
+  const handleLocationUpdate = async (newLocation: { name: string; latitude: number; longitude: number }) => {
+    setLoading(true);
+    try {
+      const weatherData = await fetchWeatherData({
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+      });
+
+      const moonPhase = locationData.moonPhase || 0;
+      
+      const siqsResult = calculateSIQS({
+        cloudCover: weatherData.cloudCover,
+        bortleScale: locationData.bortleScale,
+        seeingConditions: locationData.seeingConditions,
+        windSpeed: weatherData.windSpeed,
+        humidity: weatherData.humidity,
+        moonPhase,
+      });
+
+      setLocationData({
+        ...locationData,
+        ...newLocation,
+        weatherData,
+        siqsResult,
+      });
+
+      toast({
+        title: "Location Updated",
+        description: "SIQS score has been recalculated for the new location.",
+      });
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast({
+        title: "Update Error",
+        description: "Failed to update location and recalculate SIQS score.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const siqsResult = locationData.siqsResult || { 
-    siqs: 0, 
+    score: 0, 
     factors: [], 
     isViable: false 
   };
   
-  // Determine weather condition based on cloud cover if not provided
-  const determineWeatherCondition = (cloudCover: number) => {
-    if (cloudCover < 10) return "clear";
-    if (cloudCover < 30) return "partly cloudy";
-    if (cloudCover < 70) return "cloudy";
-    return "overcast";
-  };
-  
-  // Ensure weatherData always has all required properties to prevent errors
   const weatherData = {
     temperature: locationData.weatherData?.temperature || 0, 
     humidity: locationData.weatherData?.humidity || 0, 
@@ -75,12 +105,17 @@ const LocationDetails = () => {
     windSpeed: locationData.weatherData?.windSpeed || 0, 
     precipitation: locationData.weatherData?.precipitation || 0,
     time: locationData.weatherData?.time || new Date().toISOString(),
-    // Determine condition based on cloud cover if not provided
     condition: locationData.weatherData?.condition || 
       determineWeatherCondition(locationData.weatherData?.cloudCover || 0)
   };
-
-  // Format moon phase for display
+  
+  const determineWeatherCondition = (cloudCover: number) => {
+    if (cloudCover < 10) return "clear";
+    if (cloudCover < 30) return "partly cloudy";
+    if (cloudCover < 70) return "cloudy";
+    return "overcast";
+  };
+  
   const formatMoonPhase = (phase: number) => {
     if (typeof phase !== 'number') return "Unknown";
     
@@ -94,7 +129,6 @@ const LocationDetails = () => {
     return "Waning Crescent";
   };
 
-  // Format seeing conditions for display
   const formatSeeingConditions = (value: number) => {
     if (typeof value !== 'number') return "Average";
     
@@ -129,7 +163,10 @@ const LocationDetails = () => {
                 View on OSM
               </Button>
               
-              <Button onClick={() => navigate("/share", { state: locationData })}>
+              <Button 
+                onClick={() => navigate("/share", { state: locationData })}
+                disabled={loading}
+              >
                 <Share2 className="mr-2 h-4 w-4" />
                 Share This Location
               </Button>
@@ -154,7 +191,7 @@ const LocationDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <SIQSSummary
-              siqs={siqsResult.siqs}
+              siqs={siqsResult.score * 10}
               factors={siqsResult.factors}
               isViable={siqsResult.isViable}
             />
@@ -172,6 +209,8 @@ const LocationDetails = () => {
               latitude={locationData.latitude}
               longitude={locationData.longitude}
               name={locationData.name || "Unnamed Location"}
+              onLocationUpdate={handleLocationUpdate}
+              editable={true}
             />
           </div>
         </div>
