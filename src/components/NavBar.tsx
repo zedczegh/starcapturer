@@ -34,9 +34,10 @@ const NavBar = () => {
       navigate(`/location/${locationId}`);
     } else {
       navigate('/');
-      setTimeout(() => {
-        document.getElementById('calculator-section')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      const calculatorSection = document.getElementById('calculator-section');
+      if (calculatorSection) {
+        calculatorSection.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
