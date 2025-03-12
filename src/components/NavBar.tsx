@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -114,7 +113,7 @@ const NavBar = () => {
       </header>
       
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
-        <div className="flex justify-around items-center py-3">
+        <div className="flex justify-around items-center py-2">
           <MobileNavButton 
             to="/"
             icon={<Home className="h-5 w-5" />}
