@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { X, Loader2, Search, MapPin } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
@@ -34,10 +33,10 @@ const InteractiveMap = ({ onMapClick, position }: {
   onMapClick: (lat: number, lng: number) => void,
   position: [number, number]
 }) => {
-  const map = useMap(); // Changed from useMapEvents to useMap
+  const mapRef = useRef<L.Map | null>(null);
   
-  // Add click event listener with useEffect
   useEffect(() => {
+    const map = mapRef.current;
     if (!map) return;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
@@ -50,9 +49,20 @@ const InteractiveMap = ({ onMapClick, position }: {
     return () => {
       map.off('click', handleClick);
     };
-  }, [map, onMapClick]);
+  }, [onMapClick]);
   
-  return <Marker position={position} />;
+  return (
+    <>
+      <div 
+        ref={(el) => {
+          if (el && !mapRef.current) {
+            mapRef.current = el._leafletContainer;
+          }
+        }}
+      />
+      <Marker position={position} />
+    </>
+  );
 };
 
 interface MapSelectorProps {
@@ -81,8 +91,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     
     setLoading(true);
     try {
-      // Using the BigDataCloud API as a more reliable alternative to Nominatim
-      // This is a geocoding approximation - not as accurate, but more reliable
       const response = await fetch(
         `https://api.bigdatacloud.net/data/geocoding?q=${encodeURIComponent(query)}&localityLanguage=${language}&key=bdc_1270be2373614930a0f67fddec17c11d`,
         {
@@ -99,7 +107,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       
       const data = await response.json();
       
-      // Format the results to match our expected structure
       const formattedResults = data.results?.slice(0, 5).map((item: any) => ({
         display_name: item.locality 
           ? `${item.locality}, ${item.city || ''} ${item.countryName}`.trim() 
@@ -111,8 +118,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       setSuggestions(formattedResults);
     } catch (error) {
       console.error('Error fetching location suggestions:', error);
-      // Fallback to a simpler approach - create a dummy suggestion based on the query
-      // This ensures users can still proceed even if the API fails
       const dummySuggestion = {
         display_name: `Search for: ${query}`,
         lat: position[0],
@@ -155,14 +160,12 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   const handleMapClick = (lat: number, lng: number) => {
     setPosition([lat, lng]);
     
-    // When a location is clicked on the map, fetch the location name
     fetchLocationName(lat, lng);
   };
   
   const fetchLocationName = async (lat: number, lng: number) => {
     setLoading(true);
     try {
-      // Using the imported function from the API library
       const name = await getLocationNameFromCoordinates(lat, lng, language);
       
       setSelectedLocation({
@@ -173,7 +176,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       setSearchQuery(name);
       setLoading(false);
       
-      // Automatically select location after pinpointing
       if (isOpen) {
         setTimeout(() => {
           handleSelectLocation();
@@ -197,7 +199,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       onSelectLocation(selectedLocation);
       setIsOpen(false);
     } else if (position) {
-      // If no selected location but we have a position, create one
       const locationName = searchQuery || `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`;
       const location = {
         name: locationName,
@@ -220,7 +221,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
           setPosition([lat, lng]);
           
           try {
-            // Using the imported function from the API library with language parameter
             const name = await getLocationNameFromCoordinates(lat, lng, language);
             
             const location = {
@@ -232,7 +232,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             setSelectedLocation(location);
             setSearchQuery(name);
             
-            // Automatically use the current location
             onSelectLocation(location);
             
             toast({
@@ -259,7 +258,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             setSelectedLocation(location);
             setSearchQuery(fallbackName);
             
-            // Still use the location even without a proper name
             onSelectLocation(location);
             
             setLoading(false);
@@ -294,7 +292,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     }
   };
   
-  // Store map reference when map is created
   const onMapCreated = (map: L.Map) => {
     mapRef.current = map;
   };

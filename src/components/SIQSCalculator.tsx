@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -448,7 +449,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
             ) : (
               <MapPin className="mr-2 h-4 w-4" />
             )}
-            {language === 'en' ? "Use My Location" : "使用我的位置"}
+            {locationName ? (
+              <span className="truncate max-w-[90%]">
+                {locationName}
+              </span>
+            ) : (
+              language === 'en' ? "Use My Location" : "使用我的位置"
+            )}
           </Button>
           
           <div className="relative">
@@ -608,4 +615,3 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
 };
 
 export default SIQSCalculator;
-
