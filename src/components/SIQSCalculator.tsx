@@ -69,16 +69,22 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           
           try {
             const name = await getLocationNameFromCoordinates(lat, lng);
+            console.log("Got location name:", name);
             setLocationName(name);
+            
+            setShowAdvancedSettings(true);
             
             toast({
               title: "Location Retrieved",
-              description: "Your current location has been added.",
+              description: `Your current location: ${name}`,
             });
             
             setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
+            const fallbackName = `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            setLocationName(fallbackName);
+            setShowAdvancedSettings(true);
             setLoading(false);
           }
         },
