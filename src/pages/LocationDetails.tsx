@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -9,6 +10,7 @@ import ForecastTable from "@/components/ForecastTable";
 import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData, fetchForecastData, determineWeatherCondition } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -18,11 +20,13 @@ const LocationDetails = () => {
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!locationData) {
-      toast.error("Location Not Found", {
-        description: "The requested location information is not available or has expired.",
+      toast.error(t("Location Not Found", "位置未找到"), {
+        description: t("The requested location information is not available or has expired.", 
+                       "请求的位置信息不可用或已过期。"),
       });
       
       const redirectTimer = setTimeout(() => {
@@ -33,7 +37,7 @@ const LocationDetails = () => {
     } else {
       fetchLocationForecast();
     }
-  }, [locationData, navigate]);
+  }, [locationData, navigate, t]);
 
   const fetchLocationForecast = async () => {
     if (!locationData) return;
@@ -90,13 +94,15 @@ const LocationDetails = () => {
       
       setForecastData(forecast);
 
-      toast.success("Location Updated", {
-        description: "SIQS score has been recalculated for the new location.",
+      toast.success(t("Location Updated", "位置已更新"), {
+        description: t("SIQS score has been recalculated for the new location.", 
+                       "已为新位置重新计算SIQS评分。"),
       });
     } catch (error) {
       console.error("Error updating location:", error);
-      toast.error("Update Error", {
-        description: "Failed to update location and recalculate SIQS score. Please try again.",
+      toast.error(t("Update Error", "更新错误"), {
+        description: t("Failed to update location and recalculate SIQS score. Please try again.", 
+                      "无法更新位置并重新计算SIQS评分。请重试。"),
       });
     } finally {
       setLoading(false);
@@ -123,26 +129,26 @@ const LocationDetails = () => {
   };
 
   const formatMoonPhase = (phase: number) => {
-    if (typeof phase !== 'number') return "Unknown";
+    if (typeof phase !== 'number') return t("Unknown", "未知");
     
-    if (phase <= 0.05 || phase >= 0.95) return "New Moon";
-    if (phase < 0.25) return "Waxing Crescent";
-    if (phase < 0.30) return "First Quarter";
-    if (phase < 0.45) return "Waxing Gibbous";
-    if (phase < 0.55) return "Full Moon";
-    if (phase < 0.70) return "Waning Gibbous";
-    if (phase < 0.80) return "Last Quarter";
-    return "Waning Crescent";
+    if (phase <= 0.05 || phase >= 0.95) return t("New Moon", "新月");
+    if (phase < 0.25) return t("Waxing Crescent", "眉月");
+    if (phase < 0.30) return t("First Quarter", "上弦月");
+    if (phase < 0.45) return t("Waxing Gibbous", "盈凸月");
+    if (phase < 0.55) return t("Full Moon", "满月");
+    if (phase < 0.70) return t("Waning Gibbous", "亏凸月");
+    if (phase < 0.80) return t("Last Quarter", "下弦月");
+    return t("Waning Crescent", "残月");
   };
 
   const formatSeeingConditions = (value: number) => {
-    if (typeof value !== 'number') return "Average";
+    if (typeof value !== 'number') return t("Average", "一般");
     
-    if (value <= 1) return "Excellent";
-    if (value <= 2) return "Good";
-    if (value <= 3) return "Average";
-    if (value <= 4) return "Poor";
-    return "Very Poor";
+    if (value <= 1) return t("Excellent", "极佳");
+    if (value <= 2) return t("Good", "良好");
+    if (value <= 3) return t("Average", "一般");
+    if (value <= 4) return t("Poor", "较差");
+    return t("Very Poor", "非常差");
   };
 
   if (!locationData) {
@@ -151,10 +157,10 @@ const LocationDetails = () => {
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Location Not Found</h1>
+            <h1 className="text-2xl font-bold mb-4">{t("Location Not Found", "位置未找到")}</h1>
             <p className="text-muted-foreground mb-6">
-              The location information you're looking for doesn't exist or has expired.
-              Redirecting you to the home page...
+              {t("The location information you're looking for doesn't exist or has expired. Redirecting you to the home page...", 
+                 "您正在查找的位置信息不存在或已过期。正在将您重定向到首页...")}
             </p>
           </div>
         </div>
@@ -195,7 +201,7 @@ const LocationDetails = () => {
             <LocationMap
               latitude={locationData.latitude}
               longitude={locationData.longitude}
-              name={locationData.name || "Unnamed Location"}
+              name={locationData.name || t("Unnamed Location", "未命名位置")}
               onLocationUpdate={handleLocationUpdate}
               editable={true}
             />

@@ -2,237 +2,115 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
-import { 
-  Cloud, 
-  CloudDrizzle, 
-  CloudFog, 
-  CloudRain, 
-  CloudLightning, 
-  CloudSnow,
-  Moon, 
-  MoonStar, 
-  Star, 
-  Sun, 
-  Umbrella,
-  Thermometer 
-} from "lucide-react";
-
-interface ForecastItem {
-  time: string;
-  temperature: number;
-  cloudCover: number;
-  humidity: number;
-  windSpeed: number;
-  precipitation: number;
-  condition: string;
-  seeingCondition: string;
-}
+import { Cloud, Droplets, Thermometer, Wind } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ForecastTableProps {
-  forecastData: ForecastItem[] | null;
+  forecastData: any;
   isLoading?: boolean;
 }
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ forecastData, isLoading = false }) => {
-  const getWeatherIcon = (condition: string, time: string) => {
-    const hour = new Date(time).getHours();
-    const isNight = hour < 6 || hour > 18;
-    
-    switch (condition.toLowerCase()) {
-      case "clear":
-        return isNight ? <MoonStar className="h-5 w-5 text-indigo-300" /> : <Sun className="h-5 w-5 text-yellow-400" />;
-      case "partly cloudy":
-        return isNight ? <Moon className="h-5 w-5 text-gray-300" /> : <Cloud className="h-5 w-5 text-gray-400" />;
-      case "cloudy":
-        return <Cloud className="h-5 w-5 text-gray-500" />;
-      case "overcast":
-        return <Cloud className="h-5 w-5 text-gray-600" />;
-      case "rain":
-        return <CloudRain className="h-5 w-5 text-blue-400" />;
-      case "drizzle":
-        return <CloudDrizzle className="h-5 w-5 text-blue-300" />;
-      case "thunderstorm":
-        return <CloudLightning className="h-5 w-5 text-purple-400" />;
-      case "snow":
-        return <CloudSnow className="h-5 w-5 text-blue-200" />;
-      case "fog":
-        return <CloudFog className="h-5 w-5 text-gray-400" />;
-      default:
-        return <Sun className="h-5 w-5 text-yellow-400" />;
-    }
-  };
+  const { t } = useLanguage();
 
-  const getSeeingConditionIcon = (condition: string) => {
-    switch (condition) {
-      case "Excellent":
-        return <Star className="h-4 w-4 text-green-500" />;
-      case "Good":
-        return <Star className="h-4 w-4 text-emerald-400" />;
-      case "Average":
-        return <Star className="h-4 w-4 text-yellow-500" />;
-      case "Poor":
-        return <Star className="h-4 w-4 text-orange-500" />;
-      case "Very Poor":
-        return <Star className="h-4 w-4 text-red-500" />;
-      default:
-        return <Star className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const getSeeingConditionColor = (condition: string) => {
-    switch (condition) {
-      case "Excellent": return "text-green-500 font-medium";
-      case "Good": return "text-emerald-400 font-medium";
-      case "Average": return "text-yellow-500 font-medium";
-      case "Poor": return "text-orange-500 font-medium";
-      case "Very Poor": return "text-red-500 font-medium";
-      default: return "text-gray-400";
-    }
+  // Format time from ISO string to readable format
+  const formatTime = (isoTime: string) => {
+    const date = new Date(isoTime);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  const getCloudCoverClass = (cloudCover: number) => {
-    if (cloudCover < 10) return "text-green-500";
-    if (cloudCover < 30) return "text-emerald-400";
-    if (cloudCover < 60) return "text-yellow-500";
-    if (cloudCover < 80) return "text-orange-500";
-    return "text-red-500";
+  // Format date from ISO string
+  const formatDate = (isoTime: string) => {
+    const date = new Date(isoTime);
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const getTimeClass = (time: string) => {
-    const hour = new Date(time).getHours();
-    const isNight = hour < 6 || hour > 18;
-    return isNight ? "bg-indigo-950/30" : "";
+  const formatCondition = (cloudCover: number) => {
+    if (cloudCover < 10) return t("Clear", "晴朗");
+    if (cloudCover < 30) return t("Mostly Clear", "大部分晴朗");
+    if (cloudCover < 70) return t("Partly Cloudy", "部分多云");
+    if (cloudCover < 90) return t("Mostly Cloudy", "大部分多云");
+    return t("Overcast", "阴天");
   };
 
   if (isLoading) {
     return (
-      <Card className="border-cosmic-600/20 bg-cosmic-800/50 backdrop-blur-sm">
+      <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Cloud className="h-5 w-5 text-cosmic-100" />
-            24-Hour Forecast
-          </CardTitle>
+          <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!forecastData || !forecastData.hourly || !forecastData.hourly.time) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center p-6 text-muted-foreground">
+            <p>{t("No forecast data available", "没有可用的预报数据")}</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!forecastData || forecastData.length === 0) {
-    return (
-      <Card className="border-cosmic-600/20 bg-cosmic-800/50 backdrop-blur-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Cloud className="h-5 w-5 text-cosmic-100" />
-            24-Hour Forecast
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">No forecast data available</p>
-        </CardContent>
-      </Card>
-    );
+  // Create a subset of forecasts (next 12 hours, every 3 hours)
+  const forecasts = [];
+  for (let i = 0; i < Math.min(forecastData.hourly.time.length, 24); i += 3) {
+    if (i < forecastData.hourly.time.length) {
+      forecasts.push({
+        time: forecastData.hourly.time[i],
+        temperature: forecastData.hourly.temperature_2m[i],
+        humidity: forecastData.hourly.relative_humidity_2m[i],
+        cloudCover: forecastData.hourly.cloud_cover[i],
+        windSpeed: forecastData.hourly.wind_speed_10m[i],
+        precipitation: forecastData.hourly.precipitation[i],
+      });
+    }
   }
 
   return (
-    <Card className="border-cosmic-600/20 bg-cosmic-800/50 backdrop-blur-sm">
+    <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl flex items-center gap-2">
-          <Cloud className="h-5 w-5 text-cosmic-100" />
-          24-Hour Forecast
-        </CardTitle>
+        <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto scrollbar-thin">
+      <CardContent>
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[100px]">Time</TableHead>
-                <TableHead>Conditions</TableHead>
-                <TableHead className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Cloud className="h-4 w-4 text-cosmic-100" />
-                    <span>Cloud Cover</span>
-                  </div>
-                </TableHead>
-                <TableHead className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Star className="h-4 w-4 text-cosmic-100" />
-                    <span>Seeing</span>
-                  </div>
-                </TableHead>
-                <TableHead className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Thermometer className="h-4 w-4 text-cosmic-100" />
-                    <span>Temp</span>
-                  </div>
-                </TableHead>
+              <TableRow>
+                <TableHead>{t("Time", "时间")}</TableHead>
+                <TableHead className="text-center"><Thermometer className="inline h-4 w-4 mr-1" />{t("Temp", "温度")}</TableHead>
+                <TableHead className="text-center"><Cloud className="inline h-4 w-4 mr-1" />{t("Clouds", "云层")}</TableHead>
+                <TableHead className="text-center"><Wind className="inline h-4 w-4 mr-1" />{t("Wind", "风速")}</TableHead>
+                <TableHead className="text-center"><Droplets className="inline h-4 w-4 mr-1" />{t("Humid", "湿度")}</TableHead>
+                <TableHead>{t("Conditions", "状况")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {forecastData.map((item, index) => (
-                <TableRow 
-                  key={index} 
-                  className={`${index % 2 === 0 ? "bg-muted/20" : ""} ${getTimeClass(item.time)} transition-colors`}
-                >
+              {forecasts.map((forecast, index) => (
+                <TableRow key={index}>
                   <TableCell className="font-medium">
-                    {format(parseISO(item.time), "h:mm a")}
+                    <div>{formatTime(forecast.time)}</div>
+                    <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getWeatherIcon(item.condition, item.time)}
-                      <span className="capitalize">{item.condition}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className={`text-right ${getCloudCoverClass(item.cloudCover)}`}>
-                    {item.cloudCover}%
-                  </TableCell>
-                  <TableCell className={`text-right ${getSeeingConditionColor(item.seeingCondition)}`}>
-                    <div className="flex items-center justify-end gap-1">
-                      {getSeeingConditionIcon(item.seeingCondition)}
-                      <span>{item.seeingCondition}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {item.temperature}°C
-                  </TableCell>
+                  <TableCell className="text-center">{forecast.temperature.toFixed(1)}°C</TableCell>
+                  <TableCell className="text-center">{forecast.cloudCover}%</TableCell>
+                  <TableCell className="text-center">{forecast.windSpeed} km/h</TableCell>
+                  <TableCell className="text-center">{forecast.humidity}%</TableCell>
+                  <TableCell>{formatCondition(forecast.cloudCover)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
-        <div className="p-4 border-t border-cosmic-600/20 bg-muted/10">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-green-500" />
-              <span>Excellent</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-emerald-400" />
-              <span>Good</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-yellow-500" />
-              <span>Average</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-orange-500" />
-              <span>Poor</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-red-500" />
-              <span>Very Poor</span>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            <Star className="h-3 w-3 inline-block mr-1 text-yellow-400" />
-            Seeing conditions affect image stability and detail visibility when stargazing
-          </p>
         </div>
       </CardContent>
     </Card>
