@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -203,8 +204,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className, hideRecommen
 
   const getRecommendationMessage = (score: number) => {
     if (score >= 8) return t("Grab your rig and run!", "带上你的设备立刻出发！");
-    if (score >= 6) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
-    if (score >= 5) return t("Meh... be realistic.", "嗯...还是现实点吧。");
+    if (score >= 6) return t("Meh... be realistic.", "嗯...还是现实点吧。");
+    if (score >= 5) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
     return t("Uh... let me think twice.", "呃...再考虑一下吧。");
   };
 
