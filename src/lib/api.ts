@@ -49,8 +49,6 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
 
 // Convert WGS-84 coordinates to Baidu Maps URL
 export function generateBaiduMapsUrl(latitude: number, longitude: number): string {
-  // Simple implementation without true coordinate transformation
-  // In a production app, we'd use the coordtransform library for accurate conversion
   return `https://api.map.baidu.com/marker?location=${latitude},${longitude}&title=Astrophotography+Location&output=html`;
 }
 
@@ -98,9 +96,108 @@ export async function getLocationNameFromCoordinates(
     return locationName;
   } catch (error) {
     console.error('Error fetching location name:', error);
-    // Return a generic name with coordinates if reverse geocoding fails
     return `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
   }
+}
+
+// Interface for user-shared astrophotography spots
+export interface SharedAstroSpot {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  siqs: number;
+  isViable: boolean;
+  timestamp: string;
+  description: string;
+  photographer: string;
+  targets?: string[];
+  photoUrl?: string;
+}
+
+// Local storage keys
+const SHARED_SPOTS_KEY = "astrospot_shared_locations";
+const RECENT_LOCATIONS_KEY = "astrospot_recent_locations";
+
+// Get all user-shared astrophotography spots
+export function getSharedAstroSpots(): SharedAstroSpot[] {
+  try {
+    const spotsJson = localStorage.getItem(SHARED_SPOTS_KEY);
+    if (!spotsJson) return getDefaultSharedSpots();
+    return JSON.parse(spotsJson);
+  } catch (error) {
+    console.error("Error retrieving shared spots:", error);
+    return getDefaultSharedSpots();
+  }
+}
+
+// Share a new astrophotography spot
+export function shareAstroSpot(spot: Omit<SharedAstroSpot, "id">): SharedAstroSpot {
+  try {
+    const spots = getSharedAstroSpots();
+    const newSpot: SharedAstroSpot = {
+      ...spot,
+      id: Date.now().toString(),
+    };
+    
+    const updatedSpots = [newSpot, ...spots];
+    localStorage.setItem(SHARED_SPOTS_KEY, JSON.stringify(updatedSpots));
+    
+    toast({
+      title: "Spot Shared",
+      description: "Your astrophotography spot has been shared successfully!",
+    });
+    
+    return newSpot;
+  } catch (error) {
+    console.error("Error sharing spot:", error);
+    toast({
+      title: "Sharing Failed",
+      description: "Could not share your spot. Please try again.",
+      variant: "destructive",
+    });
+    throw error;
+  }
+}
+
+// Get recommended photo points near user location
+export function getRecommendedPhotoPoints(userLocation?: { latitude: number; longitude: number } | null): Array<SharedAstroSpot> {
+  const allSpots = getSharedAstroSpots();
+  
+  if (!userLocation) {
+    // If no user location, return the first 4 spots
+    return allSpots.slice(0, 4);
+  }
+  
+  // Calculate distance for each spot and sort by proximity
+  const spotsWithDistance = allSpots.map(spot => ({
+    ...spot,
+    distance: calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      spot.latitude,
+      spot.longitude
+    )
+  }));
+  
+  // Sort by distance (closest first)
+  return spotsWithDistance
+    .sort((a, b) => (a.distance || 0) - (b.distance || 0))
+    .slice(0, 4);
+}
+
+// Calculate distance between two coordinates in km (haversine formula)
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const distance = R * c; // Distance in km
+  return distance;
 }
 
 // Mock function for recent locations (in a real app, this would use local storage or a backend)
@@ -113,6 +210,123 @@ export function getRecentLocations(): Array<{
   isViable: boolean;
   timestamp: string;
 }> {
+  try {
+    const locationsJson = localStorage.getItem(RECENT_LOCATIONS_KEY);
+    if (!locationsJson) return getDefaultRecentLocations();
+    return JSON.parse(locationsJson);
+  } catch (error) {
+    console.error("Error retrieving recent locations:", error);
+    return getDefaultRecentLocations();
+  }
+}
+
+// Default shared spots if none exist
+function getDefaultSharedSpots(): SharedAstroSpot[] {
+  return [
+    {
+      id: "sp1",
+      name: "Atacama Desert Observatory Point",
+      latitude: -23.4592,
+      longitude: -69.2520,
+      siqs: 9.7,
+      isViable: true,
+      timestamp: "2023-12-15T20:34:00Z",
+      description: "Perfect dark skies for deep-sky photography. No light pollution and exceptional seeing conditions.",
+      photographer: "Michael Thompson",
+      targets: ["Carina Nebula", "Southern Cross", "Omega Centauri"],
+      photoUrl: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2013&auto=format&fit=crop"
+    },
+    {
+      id: "sp2",
+      name: "Mauna Kea Summit",
+      latitude: 19.8207,
+      longitude: -155.4681,
+      siqs: 9.5,
+      isViable: true,
+      timestamp: "2023-12-10T19:22:00Z",
+      description: "High altitude (14,000ft) provides extremely stable air and minimal atmospheric interference.",
+      photographer: "Sarah Chen",
+      targets: ["Andromeda Galaxy", "Pleiades", "Orion Nebula"],
+      photoUrl: "https://images.unsplash.com/photo-1465101162946-4377e57745c3?q=80&w=2078&auto=format&fit=crop"
+    },
+    {
+      id: "sp3",
+      name: "Namibia Desert Viewpoint",
+      latitude: -24.7275,
+      longitude: 15.4061,
+      siqs: 9.3,
+      isViable: true,
+      timestamp: "2023-12-05T21:15:00Z",
+      description: "One of the darkest skies in Africa, ideal for Milky Way core photography.",
+      photographer: "David Astrophoto",
+      targets: ["Milky Way Core", "Lagoon Nebula", "Rho Ophiuchi"]
+    },
+    {
+      id: "sp4",
+      name: "La Palma Observatory",
+      latitude: 28.7636,
+      longitude: -17.8916,
+      siqs: 9.0,
+      isViable: true,
+      timestamp: "2023-11-28T18:45:00Z",
+      description: "Protected dark sky site with excellent conditions for planetary imaging.",
+      photographer: "Elena Rodriguez",
+      targets: ["Jupiter", "Saturn", "Mars"],
+      photoUrl: "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=2071&auto=format&fit=crop"
+    },
+    {
+      id: "sp5",
+      name: "Bryce Canyon National Park",
+      latitude: 37.6283,
+      longitude: -112.1684,
+      siqs: 8.8,
+      isViable: true,
+      timestamp: "2023-11-20T22:10:00Z",
+      description: "Clear, dry air and minimal light pollution make this a perfect spot for wide-field Milky Way shots.",
+      photographer: "Jonathan Kim",
+      targets: ["Milky Way", "Andromeda Galaxy", "North America Nebula"]
+    },
+    {
+      id: "sp6",
+      name: "Teide Observatory",
+      latitude: 28.3,
+      longitude: -16.5097,
+      siqs: 8.7,
+      isViable: true,
+      timestamp: "2023-11-15T20:30:00Z",
+      description: "Located above the cloud layer on Mount Teide, excellent for both deep sky and planetary imaging.",
+      photographer: "Maria Gonzalez",
+      targets: ["Saturn", "Orion Nebula", "Pleiades"]
+    },
+    {
+      id: "sp7",
+      name: "Death Valley National Park",
+      latitude: 36.5323,
+      longitude: -116.9325,
+      siqs: 8.5,
+      isViable: true,
+      timestamp: "2023-11-10T23:15:00Z",
+      description: "Gold-tier Dark Sky Park with extremely low humidity, perfect for galaxy photography.",
+      photographer: "Alex Nightscape",
+      targets: ["Triangulum Galaxy", "Andromeda Galaxy", "California Nebula"]
+    },
+    {
+      id: "sp8",
+      name: "NamibRand Nature Reserve",
+      latitude: -25.0459,
+      longitude: 15.9419,
+      siqs: 8.9,
+      isViable: true,
+      timestamp: "2023-11-05T21:40:00Z",
+      description: "Africa's first International Dark Sky Reserve, offering pristine views of the southern sky.",
+      photographer: "Thomas Wright",
+      targets: ["Large Magellanic Cloud", "Small Magellanic Cloud", "Southern Cross"]
+    }
+  ];
+}
+
+// Default recent locations if none exist
+function getDefaultRecentLocations() {
   return [
     {
       id: "1",

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import NavBar from "@/components/NavBar";
 import ReviewSection from "@/components/ReviewSection";
+import ShareLocationForm from "@/components/ShareLocationForm";
 import { siqsToColor } from "@/lib/calculateSIQS";
 import { generateBaiduMapsUrl } from "@/lib/api";
 import {
@@ -33,13 +34,21 @@ import {
   MapPin,
   Moon,
   Telescope,
+  Share2,
+  NavigationIcon,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const LocationDetails = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const locationData = location.state;
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   
   useEffect(() => {
     // If we don't have location data in the state, we should redirect back to home
@@ -254,30 +263,37 @@ const LocationDetails = () => {
                 </Card>
               )}
               
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MapPin className="h-5 w-5 mr-2" />
-                    Navigation
-                  </CardTitle>
-                  <CardDescription>
-                    Get directions to this location for your astrophotography session
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <a
-                    href={baiduMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full"
-                  >
-                    <Button className="w-full">
-                      Open in Baidu Maps
-                      <ExternalLink className="ml-2 h-4 w-4" />
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                <Button 
+                  className="flex-1" 
+                  onClick={() => window.open(baiduMapsUrl, '_blank')}
+                >
+                  <NavigationIcon className="mr-2 h-4 w-4" />
+                  Navigate to Location
+                </Button>
+                
+                <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex-1">
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share This Spot
                     </Button>
-                  </a>
-                </CardContent>
-              </Card>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[700px]">
+                    <ShareLocationForm 
+                      userLocation={{
+                        latitude,
+                        longitude,
+                        name
+                      }}
+                      siqs={siqsResult.score}
+                      isViable={siqsResult.isViable}
+                      onClose={() => setShareDialogOpen(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
             
             <ReviewSection locationId={id || "1"} />
