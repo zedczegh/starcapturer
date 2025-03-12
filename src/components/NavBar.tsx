@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Search, MoonStar, User } from "lucide-react";
@@ -9,6 +8,7 @@ const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Get the current locationId from the URL if we're on a location page
   const locationId = location.pathname.startsWith('/location/') 
@@ -31,8 +31,17 @@ const NavBar = () => {
     setMenuOpen(false);
   }, [location.pathname]);
   
-  // Determine where SIQS Now should link to
-  const siqsNowLink = locationId ? `/location/${locationId}` : "/#calculator-section";
+  const handleSIQSClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (locationId) {
+      navigate(`/location/${locationId}`);
+    } else {
+      navigate('/');
+      setTimeout(() => {
+        document.getElementById('calculator-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
   
   return (
     <header
@@ -53,9 +62,19 @@ const NavBar = () => {
           <NavLink to="/" active={location.pathname === "/"}>
             Home
           </NavLink>
-          <NavLink to={siqsNowLink} active={location.pathname.startsWith('/location/')}>
+          <a
+            href={locationId ? `/location/${locationId}` : "/#calculator-section"}
+            onClick={handleSIQSClick}
+            className={cn(
+              "relative text-sm font-medium transition-colors hover:text-primary",
+              location.pathname.startsWith('/location/') ? "text-primary" : "text-foreground/70"
+            )}
+          >
             SIQS Now
-          </NavLink>
+            {location.pathname.startsWith('/location/') && (
+              <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+            )}
+          </a>
           <NavLink to="/about" active={location.pathname === "/about"}>
             About SIQS
           </NavLink>
@@ -90,16 +109,22 @@ const NavBar = () => {
         </button>
       </div>
       
-      {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 glassmorphism py-4 animate-fade-in">
           <div className="container mx-auto px-4 flex flex-col space-y-4">
             <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
               Home
             </MobileNavLink>
-            <MobileNavLink to={siqsNowLink} onClick={() => setMenuOpen(false)}>
+            <a
+              href={locationId ? `/location/${locationId}` : "/#calculator-section"}
+              onClick={(e) => {
+                handleSIQSClick(e);
+                setMenuOpen(false);
+              }}
+              className="text-foreground/80 hover:text-primary text-lg font-medium py-2 transition-colors"
+            >
               SIQS Now
-            </MobileNavLink>
+            </a>
             <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
               About SIQS
             </MobileNavLink>
