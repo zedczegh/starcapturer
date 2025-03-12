@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, MapContainerProps } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -34,7 +34,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
       <CardContent className="p-0 overflow-hidden rounded-md">
         <div className="aspect-video w-full h-[300px]">
           <MapContainer 
-            center={position}
+            center={position as L.LatLngExpression}
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={false}
@@ -43,7 +43,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <Marker position={position}>
+            <Marker position={position as L.LatLngExpression}>
               <Popup>
                 {validName}
               </Popup>
