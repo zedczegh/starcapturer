@@ -93,8 +93,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             
             setShowAdvancedSettings(true);
             
-            toast({
-              title: t("Location Retrieved", "已获取位置"),
+            toast.success(t("Location Retrieved", "已获取位置"), {
               description: t(
                 `Your current location: ${name}`,
                 `您当前的位置：${name}`
@@ -115,13 +114,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         },
         (error) => {
           setLoading(false);
-          toast({
-            title: t("Location Error", "位置错误"),
+          toast.error(t("Location Error", "位置错误"), {
             description: t(
               "Could not retrieve your location. Please enter coordinates manually.",
               "无法获取您的位置，请手动输入坐标。"
-            ),
-            variant: "destructive",
+            )
           });
           console.error("Geolocation error:", error);
         },
@@ -132,13 +129,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         }
       );
     } else {
-      toast({
-        title: t("Geolocation Not Supported", "不支持地理位置"),
+      toast.error(t("Geolocation Not Supported", "不支持地理位置"), {
         description: t(
           "Your browser doesn't support geolocation. Please enter coordinates manually.",
           "您的浏览器不支持地理位置，请手动输入坐标。"
-        ),
-        variant: "destructive",
+        )
       });
     }
   };
@@ -152,7 +147,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setBortleScale(newBortleScale);
     
     toast.success(t("Location Selected", "已选择位置"), {
-      description: t(`Selected ${location.name}`, `已选择 ${location.name}`),
+      description: t(`Selected ${location.name}`, `已选择 ${location.name}`)
     });
     
     setShowAdvancedSettings(true);
@@ -208,18 +203,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     
     setShowAdvancedSettings(true);
     
-    toast({
-      title: "Location Selected",
-      description: `Selected ${point.name}`,
+    toast.success(t("Location Selected", "位置已选择"), {
+      description: t(`Selected ${point.name}`, `已选择 ${point.name}`)
     });
   };
   
   const validateInputs = (): boolean => {
     if (!locationName.trim()) {
-      toast({
-        title: language === 'en' ? "Input Error" : "输入错误",
-        description: language === 'en' ? "Please enter a location name." : "请输入位置名称。",
-        variant: "destructive",
+      toast.error(language === 'en' ? "Input Error" : "输入错误", {
+        description: language === 'en' ? "Please enter a location name." : "请输入位置名称。"
       });
       return false;
     }
@@ -228,23 +220,19 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     const lng = parseFloat(longitude);
     
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      toast({
-        title: language === 'en' ? "Input Error" : "输入错误",
+      toast.error(language === 'en' ? "Input Error" : "输入错误", {
         description: language === 'en' 
           ? "Please enter a valid latitude (-90 to 90)." 
-          : "请输入有效的纬度（-90至90）。",
-        variant: "destructive",
+          : "请输入有效的纬度（-90至90）。"
       });
       return false;
     }
     
     if (isNaN(lng) || lng < -180 || lng > 180) {
-      toast({
-        title: language === 'en' ? "Input Error" : "输入错误",
+      toast.error(language === 'en' ? "Input Error" : "输入错误", {
         description: language === 'en' 
           ? "Please enter a valid longitude (-180 to 180)." 
-          : "请输入有效的经度（-180至180）。",
-        variant: "destructive",
+          : "请输入有效的经度（-180至180）。"
       });
       return false;
     }
@@ -283,7 +271,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           description: t(
             "Could not retrieve weather data. Please try again.",
             "无法获取天气数据，请重试。"
-          ),
+          )
         });
         setIsCalculating(false);
         displayOnly ? null : setLoading(false);
@@ -324,10 +312,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         timestamp: new Date().toISOString(),
       };
       
-      // Log the location data before navigation to help with debugging
       console.log("Navigating to location details with data:", locationData);
       
-      // Navigate with state data
       navigate(`/location/${locationId}`, { state: locationData });
     } catch (error) {
       console.error("Error calculating SIQS:", error);
@@ -335,7 +321,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         description: t(
           "An error occurred while calculating SIQS. Please try again.",
           "计算SIQS时发生错误，请重试。"
-        ),
+        )
       });
       setIsCalculating(false);
       displayOnly ? null : setLoading(false);
@@ -348,13 +334,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
     
-    // Explicitly validate coordinates again right before calculation
     if (isNaN(lat) || isNaN(lng) || !locationName) {
       toast.error(t("Invalid Location", "无效位置"), {
         description: t(
           "Please enter a valid location with coordinates.",
           "请输入有效的位置和坐标。"
-        ),
+        )
       });
       return;
     }

@@ -16,9 +16,10 @@ export interface Location {
 
 interface MapSelectorProps {
   onSelectLocation: (location: Location) => void;
+  children?: React.ReactNode; // Add support for children prop
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children }) => {
   const { language, t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Location[]>([]);
@@ -117,6 +118,66 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     };
   }, []);
 
+  // If children are provided, render them with click handler to show search
+  if (children) {
+    return (
+      <div className="relative" ref={containerRef}>
+        <div onClick={() => setShowResults(true)}>
+          {children}
+        </div>
+        
+        {showResults && (
+          <div className="absolute z-50 mt-1 w-64 right-0 rounded-md bg-cosmic-800/80 backdrop-blur-md border border-cosmic-700 shadow-lg overflow-hidden">
+            <div className="p-2">
+              <Input
+                type="text"
+                placeholder={t("Search for a location...", "搜索位置...")}
+                value={searchTerm}
+                onChange={handleSearchInputChange}
+                className="w-full pr-10"
+                autoFocus
+              />
+              {isLoading && (
+                <div className="absolute right-3 top-5 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            
+            {searchResults.length > 0 && (
+              <ul className="py-1 max-h-60 overflow-y-auto">
+                {searchResults.map((result, index) => (
+                  <li
+                    key={index}
+                    className="cursor-pointer hover:bg-cosmic-700/50 transition-colors px-3 py-2"
+                    onClick={() => handleSelectLocation(result)}
+                  >
+                    <div className="flex items-start">
+                      <MapPin className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0 text-primary/80" />
+                      <div>
+                        <div className="font-medium">{result.name}</div>
+                        <div className="text-xs text-muted-foreground truncate max-w-xs">
+                          {result.placeDetails}
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            
+            {searchResults.length === 0 && searchTerm.length > 2 && !isLoading && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">
+                {t("No locations found", "未找到位置")}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default rendering for full search component
   return (
     <div className="relative w-full" ref={containerRef}>
       <div className="relative">
