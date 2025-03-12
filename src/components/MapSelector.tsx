@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { X, Loader2, Search, MapPin } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
@@ -34,12 +34,23 @@ const InteractiveMap = ({ onMapClick, position }: {
   onMapClick: (lat: number, lng: number) => void,
   position: [number, number]
 }) => {
-  const map = useMapEvents({
-    click: (e) => {
+  const map = useMap(); // Changed from useMapEvents to useMap
+  
+  // Add click event listener with useEffect
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleClick = (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       onMapClick(lat, lng);
-    }
-  });
+    };
+    
+    map.on('click', handleClick);
+    
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onMapClick]);
   
   return <Marker position={position} />;
 };
