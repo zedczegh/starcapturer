@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -339,7 +338,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       "5: 郊区天空，银河非常暗或不可见",
       "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座",
       "7: 郊区/城市过渡区，大多数恒星被洗掉",
-      "8: 城市天空，可见少量恒星，行星仍可见",
+      "8: 城市天空，可见少量恒星，行星���可见",
       "9: 市中心天空，只有最明亮的恒星和行星可见"
     ];
     return descriptions[value - 1] || (language === 'en' ? "Unknown" : "未知");
@@ -430,7 +429,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           <p className="text-xs text-muted-foreground mt-3">
             {language === 'en' 
               ? "This is an estimated score based on current data. For detailed analysis with forecast data, click \"Calculate SIQS Score\" below." 
-              : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的"计算SIQS评分"。"}
+              : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的\"计算SIQS评分\"。"}
           </p>
         </div>
       )}
@@ -609,3 +608,4 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
 };
 
 export default SIQSCalculator;
+
