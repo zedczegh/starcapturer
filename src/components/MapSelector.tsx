@@ -36,40 +36,37 @@ const InteractiveMap = ({ onMapClick, position }: {
   const mapRef = useRef<L.Map | null>(null);
   
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    if (!mapRef.current) return;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       onMapClick(lat, lng);
     };
     
-    map.on('click', handleClick);
+    mapRef.current.on('click', handleClick);
     
     return () => {
-      map.off('click', handleClick);
+      if (mapRef.current) {
+        mapRef.current.off('click', handleClick);
+      }
     };
-  }, [onMapClick]);
+  }, [onMapClick, mapRef.current]);
   
   return (
-    <>
-      <MapContainer 
-        center={position} 
-        zoom={3} 
-        style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
-        whenCreated={(map) => {
-          mapRef.current = map;
-        }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={position} />
-        <ChangeMapCenter coordinates={position} mapRef={mapRef} />
-      </MapContainer>
-    </>
+    <MapContainer 
+      center={position} 
+      zoom={3} 
+      style={{ height: "100%", width: "100%" }}
+      scrollWheelZoom={true}
+      ref={mapRef}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <Marker position={position} />
+      <ChangeMapCenter coordinates={position} mapRef={mapRef} />
+    </MapContainer>
   );
 };
 
@@ -165,10 +162,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     setPosition([location.latitude, location.longitude]);
   };
   
-  const handleMapClick = (lat: number, lng: number) => {
+  const handleMapClick = async (lat: number, lng: number) => {
     setPosition([lat, lng]);
-    
-    fetchLocationName(lat, lng);
+    await fetchLocationName(lat, lng);
   };
   
   const fetchLocationName = async (lat: number, lng: number) => {
@@ -347,7 +343,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
-            placeholder={language === 'en' ? "Search for a location..." : "搜索位置..."}
+            placeholder={language === 'en' ? "Search for a location..." : "搜索��置..."}
             className="pr-8"
             autoFocus
           />
