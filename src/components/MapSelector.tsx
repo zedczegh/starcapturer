@@ -54,9 +54,15 @@ const InteractiveMap = ({ onMapClick, position }: {
   return (
     <>
       <div 
+        className="leaflet-container"
         ref={(el) => {
           if (el && !mapRef.current) {
-            mapRef.current = el._leafletContainer;
+            setTimeout(() => {
+              const mapInstance = L.DomUtil.get(el)?.['_leaflet_map'];
+              if (mapInstance) {
+                mapRef.current = mapInstance;
+              }
+            }, 100);
           }
         }}
       />

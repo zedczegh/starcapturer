@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Add the WeatherData type import here
+interface WeatherData {
+  cloudCover: number;
+  windSpeed: number;
+  humidity: number;
+  temperature?: number;
+}
 
 interface SIQSCalculatorProps {
   className?: string;

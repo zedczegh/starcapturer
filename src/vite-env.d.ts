@@ -35,3 +35,11 @@ declare module 'react-leaflet' {
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
 }
+
+// Define WeatherData interface globally
+interface WeatherData {
+  cloudCover: number;
+  windSpeed: number;
+  humidity: number;
+  temperature?: number;
+}
