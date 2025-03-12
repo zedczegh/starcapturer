@@ -167,7 +167,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
                   </TableCell>
                   <TableCell className="text-center">{isNaN(forecast.temperature) ? "--" : forecast.temperature.toFixed(1)}°C</TableCell>
                   <TableCell className="text-center">{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</TableCell>
-                  <TableCell className="text-center">{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} km/h</TableCell>
+                  <TableCell className="text-center">{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</TableCell>
                   <TableCell className="text-center">{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</TableCell>
                   <TableCell>{formatCondition(forecast.cloudCover)}</TableCell>
                 </TableRow>

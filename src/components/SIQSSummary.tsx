@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ interface SIQSSummaryProps {
 }
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   const normalizedSiqs = Math.min(Math.max(siqs, 0), 10);
   
@@ -164,6 +165,7 @@ function getFactorNameInChinese(name: string): string {
     "Cloud Cover": "云层覆盖",
     "Seeing Conditions": "视宁度",
     "Wind Speed": "风速",
+    "Wind": "风速",
     "Humidity": "湿度",
     "Moon Phase": "月相",
     "Light Pollution": "光污染",
@@ -187,7 +189,33 @@ function getFactorDescriptionInChinese(description: string): string {
     "Wind affects mount stability and tracking": "风影响支架稳定性和追踪",
     "Humidity can damage sensitive equipment": "湿度可能损坏敏感设备",
     "Moon phase affects background sky brightness": "月相影响背景天空亮度",
-    "Light pollution masks faint deep sky objects": "光污染遮蔽暗弱的深空天体"
+    "Light pollution masks faint deep sky objects": "光污染遮蔽暗弱的深空天体",
+    "Excellent clear skies, ideal for all types of astrophotography": "极佳的晴朗天空，适合所有类型的天文摄影",
+    "Very good conditions with minimal cloud interference": "非常好的条件，云层干扰最小",
+    "Moderate cloud cover, suitable for bright targets": "中等云层覆盖，适合明亮目标",
+    "Significant cloud cover, limiting for many targets": "显著的云层覆盖，限制许多目标",
+    "Heavy cloud cover, poor conditions for most imaging": "厚重的云层，大多数成像条件较差",
+    "Very heavy cloud cover, unsuitable for imaging": "非常厚重的云层，不适合成像",
+    "Excellent dark sky, Milky Way casts shadows": "极佳的暗夜天空，银河投下阴影",
+    "Good sky darkness, Milky Way visible with detail": "良好的天空黑暗度，银河细节可见",
+    "Moderate light pollution, limited deep-sky visibility": "中等光污染，有限的深空可见度",
+    "Significant light pollution, only brighter DSOs visible": "显著的光污染，只有更亮的深空天体可见",
+    "Severe light pollution, limiting to planets and bright stars": "严重的光污染，仅限于行星和亮星",
+    "Excellent atmospheric stability for high-resolution imaging": "极佳的大气稳定性，适合高分辨率成像",
+    "Good seeing conditions, suitable for planetary detail": "良好的视宁度，适合行星细节",
+    "Average seeing, acceptable for most targets": "一般的视宁度，可接受大多数目标",
+    "Poor seeing conditions, challenging for detailed work": "较差的视宁度，详细工作具有挑战性",
+    "Very poor seeing, significant image degradation": "非常差的视宁度，图像质量严重下降",
+    "Calm conditions, ideal for all imaging setups": "平静的条件，适合所有成像设置",
+    "Light breeze, good for most equipment": "微风，适合大多数设备",
+    "Moderate wind, may impact long exposures": "中等风速，可能影响长时间曝光",
+    "Strong wind, challenging for many setups": "强风，对许多设置具有挑战性",
+    "Very strong wind, unsuitable for most equipment": "非常强的风，不适合大多数设备",
+    "Very dry conditions, excellent for optics": "非常干燥的条件，光学效果极佳",
+    "Low humidity, good optical performance": "低湿度，良好的光学性能",
+    "Moderate humidity, acceptable conditions": "中等湿度，可接受的条件",
+    "High humidity, potential for dew formation": "高湿度，可能形成露水",
+    "Very high humidity, significant dew issues likely": "非常高的湿度，可能有明显的露水问题"
   };
   return translations[description] || description;
 }

@@ -71,7 +71,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </div>
               <div>
                 <p className="text-sm font-medium text-cosmic-200">{t("Wind Speed", "风速")}</p>
-                <p className="text-lg font-bold">{weatherData.windSpeed} {t("mph", "公里/小时")}</p>
+                <p className="text-lg font-bold">{weatherData.windSpeed} {t("km/h", "公里/小时")}</p>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </div>
               <div>
                 <p className="text-sm font-medium text-cosmic-200">{t("Moon Phase", "月相")}</p>
-                <p className="text-lg font-bold">{moonPhase}</p>
+                <p className="text-lg font-bold">{t(moonPhase, getMoonPhaseInChinese(moonPhase))}</p>
               </div>
             </div>
             
@@ -114,7 +114,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-cosmic-200">{t("Seeing Conditions", "视宁度")}</p>
-                  <p className="text-lg font-bold">{seeingConditions}</p>
+                  <p className="text-lg font-bold">{t(seeingConditions, getSeeingConditionInChinese(seeingConditions))}</p>
                 </div>
               </div>
             </div>
@@ -141,5 +141,32 @@ const MoonPhaseIcon = () => (
     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
   </svg>
 );
+
+// Helper functions for Chinese translations
+function getMoonPhaseInChinese(phase: string): string {
+  const translations: { [key: string]: string } = {
+    "New Moon": "新月",
+    "Waxing Crescent": "眉月",
+    "First Quarter": "上弦月",
+    "Waxing Gibbous": "盈凸月",
+    "Full Moon": "满月",
+    "Waning Gibbous": "亏凸月",
+    "Last Quarter": "下弦月",
+    "Waning Crescent": "残月",
+    "Unknown": "未知"
+  };
+  return translations[phase] || phase;
+}
+
+function getSeeingConditionInChinese(condition: string): string {
+  const translations: { [key: string]: string } = {
+    "Excellent": "极佳",
+    "Good": "良好",
+    "Average": "一般",
+    "Poor": "较差",
+    "Very Poor": "非常差"
+  };
+  return translations[condition] || condition;
+}
 
 export default WeatherConditions;
