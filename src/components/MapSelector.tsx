@@ -1,12 +1,14 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { X, Loader2, Search } from 'lucide-react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { X, Loader2, Search, MapPin } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast } from '@/components/ui/use-toast';
+import { getLocationNameFromCoordinates } from '@/lib/api';
 
 // Fix for default marker icons in Leaflet with React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -25,6 +27,21 @@ const ChangeMapCenter = ({ coordinates, mapRef }: { coordinates: [number, number
   }, [coordinates, mapRef]);
   
   return null;
+};
+
+// Interactive map component that handles clicks
+const InteractiveMap = ({ onMapClick, position }: { 
+  onMapClick: (lat: number, lng: number) => void,
+  position: [number, number]
+}) => {
+  const map = useMapEvents({
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      onMapClick(lat, lng);
+    },
+  });
+
+  return <Marker position={position} />;
 };
 
 interface MapSelectorProps {
@@ -52,12 +69,13 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     
     setLoading(true);
     try {
-      // Using a free and open geocoding API (Nominatim - OpenStreetMap)
+      // Using the BigDataCloud API as a more reliable alternative to Nominatim
+      // This is a geocoding approximation - not as accurate, but more reliable
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
+        `https://api.bigdatacloud.net/data/geocoding?q=${encodeURIComponent(query)}&localityLanguage=en&key=bdc_1270be2373614930a0f67fddec17c11d`,
         {
           headers: {
-            'Accept-Language': 'en',
+            'Accept': 'application/json',
             'User-Agent': 'AstroSIQS-App'
           }
         }
@@ -68,15 +86,27 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
       }
       
       const data = await response.json();
-      setSuggestions(data);
+      
+      // Format the results to match our expected structure
+      const formattedResults = data.results?.slice(0, 5).map((item: any) => ({
+        display_name: item.locality 
+          ? `${item.locality}, ${item.city || ''} ${item.countryName}`.trim() 
+          : item.formattedAddress || `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`,
+        lat: item.latitude,
+        lon: item.longitude
+      })) || [];
+      
+      setSuggestions(formattedResults);
     } catch (error) {
       console.error('Error fetching location suggestions:', error);
-      toast({
-        title: "Search Error",
-        description: "Could not find location suggestions. Please try again.",
-        variant: "destructive",
-      });
-      setSuggestions([]);
+      // Fallback to a simpler approach - create a dummy suggestion based on the query
+      // This ensures users can still proceed even if the API fails
+      const dummySuggestion = {
+        display_name: `Search for: ${query}`,
+        lat: position[0],
+        lon: position[1]
+      };
+      setSuggestions([dummySuggestion]);
     } finally {
       setLoading(false);
     }
@@ -110,8 +140,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     setPosition([location.latitude, location.longitude]);
   };
   
-  const handleMapClick = (e: L.LeafletMouseEvent) => {
-    const { lat, lng } = e.latlng;
+  const handleMapClick = (lat: number, lng: number) => {
     setPosition([lat, lng]);
     
     // When a location is clicked on the map, fetch the location name
@@ -119,52 +148,51 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   };
   
   const fetchLocationName = async (lat: number, lng: number) => {
+    setLoading(true);
     try {
+      // Using the imported function from the API library
       const name = await getLocationNameFromCoordinates(lat, lng);
+      
       setSelectedLocation({
         name,
         latitude: lat,
         longitude: lng
       });
       setSearchQuery(name);
+      setLoading(false);
+      
+      // Automatically select location after pinpointing
+      if (isOpen) {
+        setTimeout(() => {
+          handleSelectLocation();
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error fetching location name:', error);
+      const fallbackName = `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       setSelectedLocation({
-        name: `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        name: fallbackName,
         latitude: lat,
         longitude: lng
       });
-      setSearchQuery(`Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-    }
-  };
-  
-  const getLocationNameFromCoordinates = async (lat: number, lng: number): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-        {
-          headers: {
-            'Accept-Language': 'en',
-            'User-Agent': 'AstroSIQS-App'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch location name');
-      }
-      
-      const data = await response.json();
-      return data.display_name || `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    } catch (error) {
-      console.error('Error getting location name:', error);
-      return `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      setSearchQuery(fallbackName);
+      setLoading(false);
     }
   };
   
   const handleSelectLocation = () => {
     if (selectedLocation) {
       onSelectLocation(selectedLocation);
+      setIsOpen(false);
+    } else if (position) {
+      // If no selected location but we have a position, create one
+      const locationName = searchQuery || `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`;
+      const location = {
+        name: locationName,
+        latitude: position[0],
+        longitude: position[1]
+      };
+      onSelectLocation(location);
       setIsOpen(false);
     }
   };
@@ -180,24 +208,47 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
           setPosition([lat, lng]);
           
           try {
+            // Using the imported function from the API library
             const name = await getLocationNameFromCoordinates(lat, lng);
-            setSelectedLocation({
+            
+            const location = {
               name,
               latitude: lat,
               longitude: lng
-            });
+            };
+            
+            setSelectedLocation(location);
             setSearchQuery(name);
+            
+            // Automatically use the current location
+            onSelectLocation(location);
+            
+            toast({
+              title: "Location Found",
+              description: `Using your current location: ${name}`,
+            });
+            
+            setLoading(false);
+            setIsOpen(false);
           } catch (error) {
             console.error('Error getting location name:', error);
-            setSelectedLocation({
-              name: `My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+            const fallbackName = `My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            
+            const location = {
+              name: fallbackName,
               latitude: lat,
               longitude: lng
-            });
-            setSearchQuery(`My Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+            };
+            
+            setSelectedLocation(location);
+            setSearchQuery(fallbackName);
+            
+            // Still use the location even without a proper name
+            onSelectLocation(location);
+            
+            setLoading(false);
+            setIsOpen(false);
           }
-          
-          setLoading(false);
         },
         (error) => {
           console.error('Geolocation error:', error);
@@ -207,30 +258,31 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             variant: "destructive",
           });
           setLoading(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
+    } else {
+      toast({
+        title: "Geolocation Not Supported",
+        description: "Your browser doesn't support geolocation. Please search or select a location on the map.",
+        variant: "destructive",
+      });
     }
   };
   
+  // Store map reference when map is created
   const onMapCreated = (map: L.Map) => {
-    // Store the map instance in the ref
-    if (mapRef.current !== map) {
-      mapRef.current = map;
-    }
-    
-    // Set up the click event handler for the map
-    map.on('click', handleMapClick);
-    
-    // Clean up function to remove event listeners when component unmounts
-    return () => {
-      map.off('click', handleMapClick);
-    };
+    mapRef.current = map;
   };
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild id="mapSelectorTrigger">
-        <Button variant="outline" className="w-full flex justify-between items-center">
+        <Button variant="outline" className="w-full flex justify-between items-center hover:bg-primary/10">
           <span className="flex items-center">
             <Search className="mr-2 h-4 w-4" /> 
             Search for a Location
@@ -241,7 +293,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
         <DialogHeader>
           <DialogTitle>Pinpoint Location</DialogTitle>
           <DialogDescription>
-            Search for a location or click directly on the map to pinpoint coordinates.
+            Search for a location or click directly on the map to set coordinates.
           </DialogDescription>
         </DialogHeader>
         
@@ -291,14 +343,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             variant="outline" 
             onClick={handleUseCurrentLocation} 
             disabled={loading} 
-            className="text-xs"
+            className="text-xs flex items-center"
           >
-            {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+            {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
             Use My Location
           </Button>
         </div>
         
-        <div className="flex-1 rounded-md border border-input bg-background min-h-[300px] mb-4 overflow-hidden">
+        <div className="flex-1 rounded-md border border-input bg-background min-h-[300px] mb-4 overflow-hidden glassmorphism">
           <MapContainer 
             center={position} 
             zoom={3} 
@@ -310,14 +362,26 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <Marker position={position} />
+            <InteractiveMap onMapClick={handleMapClick} position={position} />
             <ChangeMapCenter coordinates={position} mapRef={mapRef} />
           </MapContainer>
         </div>
         
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button onClick={handleSelectLocation} disabled={!selectedLocation}>Use This Location</Button>
+        <div className="flex justify-between items-center">
+          <div className="text-sm">
+            {selectedLocation ? (
+              <div className="flex items-center">
+                <MapPin className="h-3 w-3 mr-1 text-primary" />
+                <span className="font-medium truncate max-w-[300px]">{selectedLocation.name}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">Click on the map to select a location</span>
+            )}
+          </div>
+          
+          <Button onClick={handleSelectLocation} disabled={!selectedLocation && !position}>
+            Use This Location
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

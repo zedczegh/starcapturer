@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 
 type Coordinates = {
@@ -69,18 +68,19 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number): strin
   return `https://api.map.baidu.com/marker?location=${latitude},${longitude}&title=Astrophotography+Location&output=html`;
 }
 
-// Reverse geocoding to get location name from coordinates
+// Improved reverse geocoding to get location name from coordinates
 export async function getLocationNameFromCoordinates(
   latitude: number,
   longitude: number
 ): Promise<string> {
   try {
+    // First attempt with BigDataCloud API which is more reliable
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
     );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch location name');
+      throw new Error('Failed to fetch location name from primary source');
     }
 
     const data = await response.json();
@@ -112,7 +112,9 @@ export async function getLocationNameFromCoordinates(
 
     return locationName;
   } catch (error) {
-    console.error('Error fetching location name:', error);
+    console.error('Error fetching location name from primary source:', error);
+    
+    // Fallback to a generic name format if the API call fails
     return `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
   }
 }
