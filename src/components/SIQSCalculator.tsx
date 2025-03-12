@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Search, Loader2, Info, SlidersHorizontal } from "lucide-react";
+import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
 import MapSelector from "./MapSelector";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import {
@@ -105,13 +105,67 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
     
+    // Update the Bortle scale based on location (rough estimate)
+    const newBortleScale = estimateBortleScale(location.name);
+    setBortleScale(newBortleScale);
+    
     toast({
       title: "Location Selected",
       description: `Selected ${location.name}`,
     });
     
-    // Don't automatically calculate SIQS after selecting location
-    // Let user adjust settings first
+    // Automatically expand advanced settings when a location is selected
+    setShowAdvancedSettings(true);
+  };
+  
+  // Simple estimation of Bortle scale based on location name
+  // This is a very rough heuristic, real apps would use light pollution databases
+  const estimateBortleScale = (locationName: string): number => {
+    const lowercaseName = locationName.toLowerCase();
+    
+    // Check for urban areas (likely high light pollution)
+    if (
+      lowercaseName.includes('city') || 
+      lowercaseName.includes('downtown') || 
+      lowercaseName.includes('urban') ||
+      lowercaseName.includes('metro')
+    ) {
+      return 8; // Urban/city center
+    }
+    
+    // Check for suburban areas
+    if (
+      lowercaseName.includes('suburb') || 
+      lowercaseName.includes('residential') || 
+      lowercaseName.includes('town')
+    ) {
+      return 6; // Suburban skies
+    }
+    
+    // Check for rural areas
+    if (
+      lowercaseName.includes('rural') || 
+      lowercaseName.includes('village') || 
+      lowercaseName.includes('countryside')
+    ) {
+      return 4; // Rural transition
+    }
+    
+    // Check for remote/wilderness areas
+    if (
+      lowercaseName.includes('park') || 
+      lowercaseName.includes('forest') || 
+      lowercaseName.includes('national') ||
+      lowercaseName.includes('desert') ||
+      lowercaseName.includes('mountain') ||
+      lowercaseName.includes('remote') ||
+      lowercaseName.includes('wilderness')
+    ) {
+      return 3; // Rural sky
+    }
+    
+    // Default to suburban-urban transition
+    return 5;
   };
   
   const handleRecommendedPointSelect = (point: { name: string; latitude: number; longitude: number }) => {
@@ -119,8 +173,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setLatitude(point.latitude.toFixed(6));
     setLongitude(point.longitude.toFixed(6));
     
-    // Don't automatically calculate for recommended points
-    // Let user adjust settings first
+    // Automatically expand advanced settings when a point is selected
+    setShowAdvancedSettings(true);
+    
     toast({
       title: "Location Selected",
       description: `Selected ${point.name}`,
@@ -296,19 +351,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           </Button>
           
           <div className="relative">
-            <Button
-              variant="outline"
-              className="w-full flex justify-between items-center"
-              onClick={() => document.getElementById('mapSelectorTrigger')?.click()}
-            >
-              <span className="flex items-center">
-                <Search className="mr-2 h-4 w-4" /> 
-                Search for a Location
-              </span>
-            </Button>
-            <div className="hidden">
-              <MapSelector onSelectLocation={handleLocationSelect} />
-            </div>
+            <MapSelector onSelectLocation={handleLocationSelect} />
           </div>
         </div>
         
