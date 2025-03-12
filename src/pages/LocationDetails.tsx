@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -10,7 +11,6 @@ import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import GaodeLocationMap from "@/components/GaodeLocationMap";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -269,7 +269,7 @@ const LocationDetails = () => {
           
           <div className="space-y-8">
             <div className="search-component relative z-60">
-              <GaodeLocationMap
+              <LocationMap
                 latitude={locationData.latitude}
                 longitude={locationData.longitude}
                 name={locationData.name || t("Unnamed Location", "未命名位置")}
