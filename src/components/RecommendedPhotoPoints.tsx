@@ -106,7 +106,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 <div className="text-xs text-primary-foreground/70">
                   By {point.photographer}
                 </div>
-                {point.distance && (
+                {point.distance !== undefined && (
                   <div className="text-xs font-medium">
                     {point.distance < 100 
                       ? `${Math.round(point.distance)} km away` 

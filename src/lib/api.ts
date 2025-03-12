@@ -113,6 +113,7 @@ export interface SharedAstroSpot {
   photographer: string;
   targets?: string[];
   photoUrl?: string;
+  distance?: number; // Added optional distance property
 }
 
 // Local storage keys
