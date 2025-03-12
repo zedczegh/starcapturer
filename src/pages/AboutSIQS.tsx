@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
@@ -184,7 +183,7 @@ const AboutSIQS = () => {
                       <span className="text-sm font-medium">{t("Excellent (6.0-7.9)", "优秀 (6.0-7.9)")}</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-green-400" style={{ width: "75%" }} />
+                      <div className="h-full bg-gradient-to-r from-[#8A9A5B] to-[#606C38]" style={{ width: "75%" }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{t("Very good conditions for most imaging targets", "对大多数成像目标而言非常好的条件")}</p>
                   </div>
