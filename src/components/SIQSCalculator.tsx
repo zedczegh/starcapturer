@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   
   useEffect(() => {
     if (!askedForLocation) {
@@ -257,25 +257,27 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     displayOnly ? null : setLoading(true);
     
     try {
-      const weatherData = await fetchWeatherData({
+      const data = await fetchWeatherData({
         latitude: lat,
         longitude: lng,
       });
       
-      if (!weatherData) {
+      if (!data) {
         setIsCalculating(false);
         displayOnly ? null : setLoading(false);
         return;
       }
       
+      setWeatherData(data);
+      
       const moonPhase = getCurrentMoonPhase();
       
       const siqsResult = calculateSIQS({
-        cloudCover: weatherData.cloudCover,
+        cloudCover: data.cloudCover,
         bortleScale,
         seeingConditions,
-        windSpeed: weatherData.windSpeed,
-        humidity: weatherData.humidity,
+        windSpeed: data.windSpeed,
+        humidity: data.humidity,
         moonPhase,
       });
       
@@ -339,7 +341,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       "5: 郊区天空，银河非常暗或不可见",
       "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座",
       "7: 郊区/城市过渡区，大多数恒星被洗掉",
-      "8: 城市天空，可见少量恒星，行星���可见",
+      "8: 城市天空，可见少量恒星，行星����可见",
       "9: 市中心天空，只有最明亮的恒星和行星可见"
     ];
     return descriptions[value - 1] || (language === 'en' ? "Unknown" : "未知");
