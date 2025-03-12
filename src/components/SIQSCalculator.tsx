@@ -95,7 +95,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               title: language === 'en' ? "Location Retrieved" : "已获取位置",
               description: language === 'en' 
                 ? `Your current location: ${name}` 
-                : `您当前的位置：${name}`,
+                : `���当前的位置：${name}`,
             });
             
             setLoading(false);
@@ -348,7 +348,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       "1: 极佳的暗空环境，无光污染",
       "2: 真正的黑暗区域，银河可投下阴影",
       "3: 乡村天空，有一些光污染但仍能��到银河",
-      "4: 乡村/郊区过渡区，能看到银河但缺乏细节",
+      "4: 乡村/郊区���渡区，能看到银河但缺乏细节",
       "5: 郊区天空，银河非常暗或不可见",
       "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座",
       "7: 郊区/城市过渡区，大多数恒星被洗掉",
@@ -389,7 +389,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'zh' : 'en');
   };
-  
+
+  const getRecommendationMessage = (score: number): string => {
+    if (score >= 80) return "Grab your rig and run!";
+    if (score >= 60) return "Yeah! Should give it a go, eh?";
+    if (score >= 40) return "Uh... let me think twice.";
+    return "Well, probably should hit the sack.";
+  };
+
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
       <div className="flex justify-between items-center mb-6">
@@ -439,6 +446,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             <span>{language === 'en' ? "Average" : "一般"}</span>
             <span>{language === 'en' ? "Excellent" : "优秀"}</span>
           </div>
+          
+          <p className="text-sm mt-3 font-medium italic text-center">
+            "{getRecommendationMessage(siqsScore)}"
+          </p>
           
           <p className="text-xs text-muted-foreground mt-3">
             {language === 'en' 
