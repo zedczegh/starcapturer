@@ -31,6 +31,8 @@ import {
   ArrowLeft,
   Info,
   MapPin,
+  Moon,
+  Telescope,
 } from "lucide-react";
 
 const LocationDetails = () => {
@@ -63,6 +65,7 @@ const LocationDetails = () => {
     weatherData,
     siqsResult,
     timestamp,
+    moonPhase = 0.3, // Default moon phase if not provided
   } = locationData;
   
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
@@ -79,6 +82,21 @@ const LocationDetails = () => {
   
   const baiduMapsUrl = generateBaiduMapsUrl(latitude, longitude);
   const scoreColor = siqsToColor(siqsResult.score, siqsResult.isViable);
+  
+  // Format moon phase for display
+  const getMoonPhaseText = (phase = moonPhase) => {
+    if (phase < 0.05) return "New Moon";
+    if (phase < 0.25) return "Waxing Crescent";
+    if (phase < 0.3) return "First Quarter";
+    if (phase < 0.45) return "Waxing Gibbous";
+    if (phase < 0.55) return "Full Moon";
+    if (phase < 0.7) return "Waning Gibbous";
+    if (phase < 0.8) return "Last Quarter";
+    return "Waning Crescent";
+  };
+
+  // Format moon percentage
+  const moonPercentage = Math.round(moonPhase * 100);
   
   return (
     <div className="min-h-screen">
@@ -156,6 +174,12 @@ const LocationDetails = () => {
                         )}
                       </h3>
                       <p>{siqsResult.qualitativeFeedback}</p>
+                      {siqsResult.idealFor && (
+                        <p className="mt-2 text-sm font-medium flex items-center">
+                          <Telescope className="h-4 w-4 mr-1.5 text-primary" />
+                          {siqsResult.idealFor}
+                        </p>
+                      )}
                     </div>
                     
                     <div className="space-y-3">
@@ -164,7 +188,7 @@ const LocationDetails = () => {
                         score={siqsResult.cloudCoverScore} 
                         value={`${weatherData.cloudCover}%`}
                         icon={<Cloud className="h-4 w-4" />}
-                        weight={40}
+                        weight={35}
                       />
                       <ScoreItem 
                         label="Light Pollution (Bortle)" 
@@ -178,7 +202,7 @@ const LocationDetails = () => {
                         score={siqsResult.seeingScore} 
                         value={`${seeingConditions} arcsec`}
                         icon={<ThermometerSun className="h-4 w-4" />}
-                        weight={20}
+                        weight={15}
                       />
                       <ScoreItem 
                         label="Wind Speed" 
@@ -194,10 +218,41 @@ const LocationDetails = () => {
                         icon={<Droplets className="h-4 w-4" />}
                         weight={5}
                       />
+                      <ScoreItem 
+                        label="Moon Phase" 
+                        score={siqsResult.moonPhaseScore || 5} 
+                        value={getMoonPhaseText()}
+                        icon={<Moon className="h-4 w-4" />}
+                        weight={10}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
+              
+              {/* Recommended Targets Card */}
+              {siqsResult.recommendedTargets && siqsResult.recommendedTargets.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Telescope className="h-5 w-5 mr-2" />
+                      Recommended Targets
+                    </CardTitle>
+                    <CardDescription>
+                      Astronomical objects well-positioned for imaging tonight
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {siqsResult.recommendedTargets.map((target, index) => (
+                        <Badge key={index} variant="secondary" className="px-3 py-1">
+                          {target}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               
               <Card>
                 <CardHeader>
@@ -268,6 +323,14 @@ const LocationDetails = () => {
                   </div>
                   <span className="font-medium">{weatherData.temperature}°C</span>
                 </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Moon className="h-5 w-5 mr-3 text-muted-foreground" />
+                    <span>Moon Phase</span>
+                  </div>
+                  <span className="font-medium">{getMoonPhaseText()} ({moonPercentage}%)</span>
+                </div>
               </CardContent>
             </Card>
             
@@ -324,13 +387,13 @@ const LocationDetails = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  The SIQS is calculated based on five key factors with the following weights:
+                  The SIQS is calculated based on six key factors with the following weights:
                 </p>
                 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Cloud Cover</span>
-                    <span className="font-medium">40%</span>
+                    <span className="font-medium">35%</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Light Pollution (Bortle)</span>
@@ -338,10 +401,14 @@ const LocationDetails = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Seeing Conditions</span>
-                    <span className="font-medium">20%</span>
+                    <span className="font-medium">15%</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Wind Speed</span>
+                    <span className="font-medium">10%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Moon Phase</span>
                     <span className="font-medium">10%</span>
                   </div>
                   <div className="flex justify-between">

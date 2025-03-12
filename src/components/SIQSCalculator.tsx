@@ -149,6 +149,25 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     return true;
   };
   
+  // Calculate current moon phase (simplified approximation)
+  const getCurrentMoonPhase = (): number => {
+    // Simple approximation based on current date
+    // In a real app, this would use astronomical calculations
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    
+    // Simple algorithm to approximate moon phase
+    // 0 = new, 0.5 = full, 1 = new (next cycle)
+    const c = 365.25 * year;
+    const e = 30.6 * month;
+    const jd = c + e + day - 694039.09; // Julian date
+    const moonPhase = (jd % 29.53) / 29.53;
+    
+    return moonPhase;
+  };
+  
   const calculateSIQSForLocation = async (lat: number, lng: number, name: string) => {
     setLoading(true);
     
@@ -163,12 +182,16 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         return;
       }
       
+      // Get current moon phase
+      const moonPhase = getCurrentMoonPhase();
+      
       const siqsResult = calculateSIQS({
         cloudCover: weatherData.cloudCover,
         bortleScale,
         seeingConditions,
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
+        moonPhase,
       });
       
       const locationId = Date.now().toString();
@@ -182,6 +205,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         seeingConditions,
         weatherData,
         siqsResult,
+        moonPhase,
         timestamp: new Date().toISOString(),
       };
       

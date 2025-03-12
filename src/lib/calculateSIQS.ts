@@ -1,5 +1,5 @@
 
-// SIQS = (0.4 × CC) + (0.25 × B) + (0.2 × S) + (0.1 × W) + (0.05 × H)
+// SIQS = (0.35 × CC) + (0.25 × B) + (0.15 × S) + (0.1 × W) + (0.05 × H) + (0.1 × M)
 
 type SIQSInput = {
   cloudCover: number; // percentage 0-100
@@ -7,6 +7,7 @@ type SIQSInput = {
   seeingConditions: number; // arcseconds, typically 1-5
   windSpeed: number; // mph
   humidity: number; // percentage 0-100
+  moonPhase?: number; // 0-1 (0 = new moon, 0.5 = half moon, 1 = full moon)
 };
 
 type SIQSResult = {
@@ -16,15 +17,18 @@ type SIQSResult = {
   seeingScore: number;
   windScore: number;
   humidityScore: number;
+  moonPhaseScore: number;
   isViable: boolean;
   qualitativeFeedback: string;
+  idealFor: string;
+  recommendedTargets?: string[];
 };
 
 export function calculateSIQS(input: SIQSInput): SIQSResult {
-  const { cloudCover, bortleScale, seeingConditions, windSpeed, humidity } = input;
+  const { cloudCover, bortleScale, seeingConditions, windSpeed, humidity, moonPhase = 0.5 } = input;
   
-  // Check cloud cover threshold first (≤ 20% is viable)
-  const isViable = cloudCover <= 20;
+  // Check cloud cover threshold first (≤ 40% is viable)
+  const isViable = cloudCover <= 40;
   
   // If not viable, return early with score of 0
   if (!isViable) {
@@ -35,14 +39,16 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
       seeingScore: 0,
       windScore: 0,
       humidityScore: 0,
+      moonPhaseScore: 0,
       isViable: false,
-      qualitativeFeedback: "Cloud cover exceeds 20%. Not recommended for astrophotography."
+      idealFor: "Not suitable for imaging",
+      qualitativeFeedback: "Cloud cover exceeds 40%. Not recommended for astrophotography."
     };
   }
   
   // Calculate individual factor scores
-  // Cloud Cover: 10 (0% clouds) to 0 (>50% clouds)
-  const cloudCoverScore = Math.max(0, 10 - (cloudCover / 50) * 10);
+  // Cloud Cover: 10 (0% clouds) to 0 (>50% clouds) - More lenient now
+  const cloudCoverScore = Math.max(0, 10 - (cloudCover / 60) * 10);
   
   // Bortle Scale: 10 (Bortle 1) to 0 (Bortle 9)
   const bortleScore = Math.max(0, 10 - ((bortleScale - 1) * (10 / 8)));
@@ -56,17 +62,39 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
   // Humidity/Dew Risk: 10 (low risk) to 0 (high risk)
   const humidityScore = Math.max(0, 10 - (humidity / 10));
   
+  // Moon Phase: 10 (new moon) to 0 (full moon)
+  const moonPhaseScore = Math.max(0, 10 - (moonPhase * 10));
+  
   // Calculate final SIQS with weights
   const siqs = (
-    (0.4 * cloudCoverScore) +
+    (0.35 * cloudCoverScore) +
     (0.25 * bortleScore) +
-    (0.2 * seeingScore) +
+    (0.15 * seeingScore) +
     (0.1 * windScore) +
-    (0.05 * humidityScore)
+    (0.05 * humidityScore) +
+    (0.1 * moonPhaseScore)
   );
   
   // Round to 1 decimal place
   const score = Math.round(siqs * 10) / 10;
+  
+  // Determine ideal imaging type
+  let idealFor = "";
+  let recommendedTargets: string[] = [];
+  
+  if (moonPhase > 0.7) {
+    // High moon phase - better for planetary
+    idealFor = "Ideal for planetary imaging; limited for deep sky objects";
+    recommendedTargets = getCurrentVisiblePlanets();
+  } else if (moonPhase < 0.3 && bortleScale <= 5) {
+    // Low moon phase, decent dark skies - good for deep sky
+    idealFor = "Excellent for deep sky imaging";
+    recommendedTargets = getSeasonalDeepSkyObjects();
+  } else {
+    // Mixed conditions
+    idealFor = "Suitable for both planetary and brighter deep sky objects";
+    recommendedTargets = [...getCurrentVisiblePlanets(), ...getBrightDeepSkyObjects()];
+  }
   
   // Generate qualitative feedback
   let qualitativeFeedback = "";
@@ -89,8 +117,11 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
     seeingScore,
     windScore,
     humidityScore,
+    moonPhaseScore,
     isViable: true,
-    qualitativeFeedback
+    qualitativeFeedback,
+    idealFor,
+    recommendedTargets
   };
 }
 
@@ -103,4 +134,39 @@ export function siqsToColor(score: number, isViable: boolean): string {
   if (score >= 5.5) return "rgb(234, 179, 8)"; // Yellow
   if (score >= 4) return "rgb(249, 115, 22)"; // Orange
   return "rgb(239, 68, 68)"; // Red
+}
+
+// Helper function to get currently visible planets based on date
+function getCurrentVisiblePlanets(): string[] {
+  const month = new Date().getMonth(); // 0-11
+  
+  // Simplified visible planets by month - this would be more accurate with real astronomy calculations
+  if (month >= 0 && month <= 3) { // Jan-Apr
+    return ["Mars", "Jupiter", "Saturn"];
+  } else if (month >= 4 && month <= 7) { // May-Aug
+    return ["Jupiter", "Saturn", "Venus"];
+  } else { // Sep-Dec
+    return ["Venus", "Mars", "Jupiter"];
+  }
+}
+
+// Helper function to get seasonal deep sky objects
+function getSeasonalDeepSkyObjects(): string[] {
+  const month = new Date().getMonth(); // 0-11
+  
+  // Simplified visible deep sky objects by season
+  if (month >= 0 && month <= 2) { // Winter
+    return ["Orion Nebula", "Pleiades", "Andromeda Galaxy"];
+  } else if (month >= 3 && month <= 5) { // Spring
+    return ["Whirlpool Galaxy", "Leo Triplet", "Beehive Cluster"];
+  } else if (month >= 6 && month <= 8) { // Summer
+    return ["Lagoon Nebula", "Eagle Nebula", "Milky Way Core"];
+  } else { // Fall
+    return ["Andromeda Galaxy", "Triangulum Galaxy", "Double Cluster"];
+  }
+}
+
+// Helper function to get bright deep sky objects that work in less than ideal conditions
+function getBrightDeepSkyObjects(): string[] {
+  return ["Pleiades", "Orion Nebula", "Andromeda Galaxy", "Double Cluster", "Beehive Cluster"];
 }
