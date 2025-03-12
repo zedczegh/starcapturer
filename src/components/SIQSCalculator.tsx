@@ -44,27 +44,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [bortleScale, setBortleScale] = useState(4);
   const [seeingConditions, setSeeingConditions] = useState(2);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [askedForLocation, setAskedForLocation] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   
-  useEffect(() => {
-    if (!askedForLocation) {
-      setAskedForLocation(true);
-      
-      const userConfirmText = t(
-        "Would you like to share your location to calculate your local SIQS and see nearby photo points?",
-        "您想分享您的位置以计算当地的SIQS并查看附近的拍摄点吗？"
-      );
-        
-      if (window.confirm(userConfirmText)) {
-        handleUseCurrentLocation();
-      }
-    }
-  }, []);
-
   useEffect(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
