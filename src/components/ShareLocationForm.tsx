@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { toast } from "@/components/ui/use-toast";
 import { shareAstroSpot } from "@/lib/api";
 import { Share, Camera, X, Upload, Loader2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ShareLocationFormProps {
   userLocation?: { latitude: number; longitude: number; name?: string } | null;
@@ -22,6 +22,7 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
   isViable = false,
   onClose
 }) => {
+  const { t } = useLanguage();
   const [name, setName] = useState(userLocation?.name || "");
   const [latitude, setLatitude] = useState(userLocation?.latitude?.toString() || "");
   const [longitude, setLongitude] = useState(userLocation?.longitude?.toString() || "");
@@ -36,8 +37,8 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
     
     if (!name.trim() || !latitude || !longitude || !description.trim() || !photographer.trim()) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
+        title: t("Missing Information", "缺少信息"),
+        description: t("Please fill in all required fields.", "请填写所有必填字段。"),
         variant: "destructive",
       });
       return;
@@ -49,8 +50,8 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
     
     if (isNaN(latValue) || isNaN(longValue)) {
       toast({
-        title: "Invalid Coordinates",
-        description: "Please enter valid latitude and longitude values.",
+        title: t("Invalid Coordinates", "无效坐标"),
+        description: t("Please enter valid latitude and longitude values.", "请输入有效的纬度和经度值。"),
         variant: "destructive",
       });
       return;
@@ -79,6 +80,11 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
         timestamp: new Date().toISOString(),
       });
       
+      toast({
+        title: t("Location Shared", "位置已分享"),
+        description: t("Thank you for sharing your astrophotography spot!", "感谢您分享您的天文摄影点！"),
+      });
+      
       // Reset form
       setName("");
       setDescription("");
@@ -93,6 +99,11 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
       
     } catch (error) {
       console.error("Error sharing location:", error);
+      toast({
+        title: t("Error", "错误"),
+        description: t("Failed to share location. Please try again.", "分享位置失败。请重试。"),
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -104,7 +115,7 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Share className="h-5 w-5 mr-2 text-primary" />
-            <CardTitle>Share Your Astrophotography Spot</CardTitle>
+            <CardTitle>{t("Share Your Astrophotography Spot", "分享您的天文摄影点")}</CardTitle>
           </div>
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose}>
@@ -113,26 +124,26 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
           )}
         </div>
         <CardDescription>
-          Share your favorite stargazing location with the community
+          {t("Share your favorite stargazing location with the community", "与社区分享您最喜欢的观星地点")}
         </CardDescription>
       </CardHeader>
       
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Location Name *</Label>
+            <Label htmlFor="name">{t("Location Name *", "位置名称 *")}</Label>
             <Input 
               id="name" 
               value={name} 
               onChange={(e) => setName(e.target.value)} 
-              placeholder="e.g., Mount Wilson Observatory"
+              placeholder={t("e.g., Mount Wilson Observatory", "例如，威尔逊山天文台")}
               required
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude *</Label>
+              <Label htmlFor="latitude">{t("Latitude *", "纬度 *")}</Label>
               <Input 
                 id="latitude" 
                 value={latitude} 
@@ -145,7 +156,7 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="longitude">Longitude *</Label>
+              <Label htmlFor="longitude">{t("Longitude *", "经度 *")}</Label>
               <Input 
                 id="longitude" 
                 value={longitude} 
@@ -159,19 +170,19 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description">{t("Description *", "描述 *")}</Label>
             <Textarea 
               id="description" 
               value={description} 
               onChange={(e) => setDescription(e.target.value)} 
-              placeholder="Describe the location and what makes it good for astrophotography..."
+              placeholder={t("Describe the location and what makes it good for astrophotography...", "描述此位置及其适合天文摄影的原因...")}
               required
               rows={3}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="photographer">Your Name/Username *</Label>
+            <Label htmlFor="photographer">{t("Your Name/Username *", "您的姓名/用户名 *")}</Label>
             <Input 
               id="photographer" 
               value={photographer} 
@@ -182,7 +193,7 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="targets">Recommended Targets (comma-separated)</Label>
+            <Label htmlFor="targets">{t("Recommended Targets (comma-separated)", "推荐目标（逗号分隔）")}</Label>
             <Input 
               id="targets" 
               value={targets} 
@@ -190,12 +201,12 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
               placeholder="e.g., Andromeda Galaxy, Pleiades, Jupiter"
             />
             <p className="text-xs text-muted-foreground">
-              List astronomical objects that are good to photograph from this location
+              {t("List astronomical objects that are good to photograph from this location", "列出适合从该位置拍摄的天文对象")}
             </p>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="photoUrl">Photo URL</Label>
+            <Label htmlFor="photoUrl">{t("Photo URL", "照片URL")}</Label>
             <Input 
               id="photoUrl" 
               value={photoUrl} 
@@ -203,14 +214,14 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
               placeholder="https://example.com/your-astrophoto.jpg"
             />
             <p className="text-xs text-muted-foreground">
-              Share a URL to a photo you've taken at this location
+              {t("Share a URL to a photo you've taken at this location", "分享您在该位置拍摄的照片的URL")}
             </p>
           </div>
           
           <div className="flex justify-end gap-3 pt-2">
             {onClose && (
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t("Cancel", "取消")}
               </Button>
             )}
             
@@ -218,12 +229,12 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sharing...
+                  {t("Sharing...", "分享中...")}
                 </>
               ) : (
                 <>
                   <Share className="h-4 w-4 mr-2" />
-                  Share Location
+                  {t("Share Location", "分享位置")}
                 </>
               )}
             </Button>

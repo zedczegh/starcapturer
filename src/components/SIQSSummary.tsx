@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SIQSSummaryProps {
   siqs: number;
@@ -16,6 +17,8 @@ interface SIQSSummaryProps {
 }
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable }) => {
+  const { t } = useLanguage();
+  
   // Ensure the SIQS score is properly capped between 0 and 10
   const normalizedSiqs = Math.min(Math.max(siqs, 0), 10);
   
@@ -35,10 +38,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
 
   // Get a recommendation message based on score
   const getRecommendationMessage = (score: number) => {
-    if (score >= 8) return "Grab your rig and run!";
-    if (score >= 6) return "Yeah! Should give it a go, eh?";
-    if (score >= 4) return "Uh... let me think twice.";
-    return "Well, probably should hit the sack.";
+    if (score >= 8) return t("Grab your rig and run!", "带上你的设备立刻出发！");
+    if (score >= 6) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
+    if (score >= 4) return t("Uh... let me think twice.", "呃...再考虑一下吧。");
+    return t("Well, probably should hit the sack.", "嗯，可能该睡觉了。");
   };
 
   // Get text color for score
@@ -62,14 +65,14 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">Sky Image Quality Score</CardTitle>
+          <CardTitle className="text-xl">{t("Sky Image Quality Score", "天空图像质量评分")}</CardTitle>
           <Badge variant={isViable ? "default" : "destructive"} className="ml-2">
             {isViable ? (
               <CheckCircle2 className="mr-1 h-3 w-3" />
             ) : (
               <XCircle className="mr-1 h-3 w-3" />
             )}
-            {isViable ? "Viable" : "Not Viable"}
+            {isViable ? t("Viable", "适合") : t("Not Viable", "不适合")}
           </Badge>
         </div>
       </CardHeader>
@@ -82,7 +85,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
               </span>
               <span className="text-lg text-muted-foreground">/10</span>
             </div>
-            <span className="text-sm text-muted-foreground mt-1">Overall Quality Score</span>
+            <span className="text-sm text-muted-foreground mt-1">{t("Overall Quality Score", "总体质量评分")}</span>
             <p className="text-sm mt-2 font-medium italic">
               "{getRecommendationMessage(normalizedSiqs)}"
             </p>
@@ -121,7 +124,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
             })
           ) : (
             <div className="p-4 text-center text-muted-foreground">
-              <p>No factor data available for this location.</p>
+              <p>{t("No factor data available for this location.", "此位置没有可用的因素数据。")}</p>
             </div>
           )}
         </div>

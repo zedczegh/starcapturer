@@ -4,8 +4,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
 import { AlertTriangle, Home } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const NotFound = () => {
+  const { t } = useLanguage();
+  
   return (
     <div className="min-h-screen">
       <NavBar />
@@ -17,16 +20,17 @@ const NotFound = () => {
           </div>
           
           <h1 className="text-4xl font-bold mb-2">404</h1>
-          <h2 className="text-xl mb-4">Page Not Found</h2>
+          <h2 className="text-xl mb-4">{t("Page Not Found", "页面未找到")}</h2>
           
           <p className="text-muted-foreground mb-8">
-            The page you're looking for doesn't exist or has been moved.
+            {t("The page you're looking for doesn't exist or has been moved.", 
+               "您寻找的页面不存在或已被移动。")}
           </p>
           
           <Button size="lg" asChild>
             <Link to="/">
               <Home className="mr-2 h-4 w-4" />
-              Back to Home
+              {t("Back to Home", "返回首页")}
             </Link>
           </Button>
         </div>

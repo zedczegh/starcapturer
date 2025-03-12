@@ -6,20 +6,20 @@ import { toast } from "@/components/ui/use-toast";
 import { getRecommendedPhotoPoints, generateBaiduMapsUrl, SharedAstroSpot } from "@/lib/api";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
   className?: string;
   userLocation?: { latitude: number; longitude: number } | null;
-  language?: 'en' | 'zh';
 }
 
 const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({ 
   onSelectPoint,
   className,
-  userLocation,
-  language = 'en'
+  userLocation
 }) => {
+  const { language, t } = useLanguage();
   const [recommendedPoints, setRecommendedPoints] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -33,10 +33,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const handleSelectPoint = (point: SharedAstroSpot) => {
     onSelectPoint(point);
     toast({
-      title: language === 'en' ? "Photo Point Selected" : "已选择拍摄点",
-      description: language === 'en' 
-        ? `Selected ${point.name} by ${point.photographer}` 
-        : `已选择 ${point.name}，摄影师: ${point.photographer}`,
+      title: t("Photo Point Selected", "已选择拍摄点"),
+      description: t("Selected ${point.name} by ${point.photographer}", `已选择 ${point.name}，摄影师: ${point.photographer}`),
     });
   };
 
@@ -51,12 +49,11 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     // Use Web Share API if available
     if (navigator.share) {
       navigator.share({
-        title: language === 'en' 
-          ? `Astrophotography Spot: ${point.name}` 
-          : `天文摄影点：${point.name}`,
-        text: language === 'en'
-          ? `Check out this amazing astrophotography location: ${point.name}. SIQS: ${point.siqs.toFixed(1)}`
-          : `看看这个绝佳的天文摄影地点: ${point.name}. SIQS评分: ${point.siqs.toFixed(1)}`,
+        title: t(`Astrophotography Spot: ${point.name}`, `天文摄影点：${point.name}`),
+        text: t(
+          `Check out this amazing astrophotography location: ${point.name}. SIQS: ${point.siqs.toFixed(1)}`,
+          `看看这个绝佳的天文摄影地点: ${point.name}. SIQS评分: ${point.siqs.toFixed(1)}`
+        ),
         url: window.location.origin + `/location/${point.id}`,
       }).catch((error) => console.log('Error sharing', error));
     } else {
@@ -64,10 +61,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       const shareUrl = window.location.origin + `/location/${point.id}`;
       navigator.clipboard.writeText(shareUrl).then(() => {
         toast({
-          title: language === 'en' ? "Link Copied" : "链接已复制",
-          description: language === 'en' 
-            ? "Location link copied to clipboard!" 
-            : "位置链接已复制到剪贴板！",
+          title: t("Link Copied", "链接已复制"),
+          description: t("Location link copied to clipboard!", "位置链接已复制到剪贴板！"),
         });
       });
     }
@@ -78,12 +73,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Camera className="h-5 w-5 text-primary" />
-          {language === 'en' ? "Recommended Photo Points" : "推荐拍摄点"}
+          {t("Recommended Photo Points", "推荐拍摄点")}
           {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
         </h3>
         <Link to="/photo-points">
           <Button variant="link" size="sm" className="text-primary">
-            {language === 'en' ? "View All Points" : "查看所有拍摄点"}
+            {t("View All Points", "查看所有拍摄点")}
           </Button>
         </Link>
       </div>
@@ -91,9 +86,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       <div className="grid grid-cols-1 gap-3">
         {recommendedPoints.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
-            {language === 'en' 
-              ? "No photo points found near your location." 
-              : "在您附近未找到拍摄点。"}
+            {t("No photo points found near your location.", "在您附近未找到拍摄点。")}
           </div>
         ) : (
           recommendedPoints.map((point) => (
@@ -124,17 +117,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               
               <div className="flex justify-between items-center mb-2">
                 <div className="text-xs text-primary-foreground/70">
-                  {language === 'en' ? "By " : "拍摄者："}{point.photographer}
+                  {t("By ", "拍摄者：")} {point.photographer}
                 </div>
                 {point.distance !== undefined && (
                   <div className="text-xs font-medium">
                     {point.distance < 100 
-                      ? language === 'en' 
-                        ? `${Math.round(point.distance)} km away`
-                        : `距离 ${Math.round(point.distance)} 公里`
-                      : language === 'en'
-                        ? `${Math.round(point.distance / 100) * 100} km away`
-                        : `距离 ${Math.round(point.distance / 100) * 100} 公里`}
+                      ? t(`${Math.round(point.distance)} km away`, `距离 ${Math.round(point.distance)} 公里`)
+                      : t(`${Math.round(point.distance / 100) * 100} km away`, `距离 ${Math.round(point.distance / 100) * 100} 公里`)}
                   </div>
                 )}
               </div>
@@ -150,11 +139,11 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                         onClick={(e) => handleNavigate(e, point)}
                       >
                         <NavigationIcon className="h-3.5 w-3.5 mr-1.5" />
-                        {language === 'en' ? "Navigate" : "导航"}
+                        {t("Navigate", "导航")}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{language === 'en' ? "Get directions to this location" : "获取到此位置的导航"}</p>
+                      <p>{t("Get directions to this location", "获取到此位置的导航")}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -169,11 +158,11 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                         onClick={(e) => handleShare(e, point)}
                       >
                         <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                        {language === 'en' ? "Share" : "分享"}
+                        {t("Share", "分享")}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{language === 'en' ? "Share this location with others" : "与他人分享此位置"}</p>
+                      <p>{t("Share this location with others", "与他人分享此位置")}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

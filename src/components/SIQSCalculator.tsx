@@ -35,7 +35,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   className,
   hideRecommendedPoints = false
 }) => {
-  const { language, t, setLanguage } = useLanguage();
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [locationName, setLocationName] = useState("");
@@ -370,17 +370,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return descriptions[index] || t("Unknown", "未知");
   };
   
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'zh' : 'en');
-  };
-
-  const getRecommendationMessage = (score: number): string => {
-    if (score >= 80) return t("Grab your rig and run!", "快带上你的设备出发吧！");
-    if (score >= 60) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
-    if (score >= 40) return t("Uh... let me think twice.", "呃...再考虑一下吧。");
-    return t("Well, probably should hit the sack.", "嗯，可能该睡觉了。");
-  };
-
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
       <div className="flex justify-between items-center mb-6">
@@ -470,7 +459,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           <RecommendedPhotoPoints 
             onSelectPoint={handleRecommendedPointSelect}
             userLocation={userLocation}
-            language={language}
           />
         )}
         
