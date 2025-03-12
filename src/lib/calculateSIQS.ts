@@ -1,4 +1,3 @@
-
 // SIQS = (0.35 × CC) + (0.25 × B) + (0.15 × S) + (0.1 × W) + (0.05 × H) + (0.1 × M)
 
 type SIQSInput = {
@@ -19,7 +18,11 @@ type SIQSResult = {
   humidityScore: number;
   moonPhaseScore: number;
   isViable: boolean;
-  qualitativeFeedback: string;
+  factors: {
+    name: string;
+    score: number;
+    description: string;
+  }[];
   idealFor: string;
   recommendedTargets?: string[];
 };
@@ -33,7 +36,7 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
   // Check cloud cover threshold first (≤ 40% is viable)
   const isViable = cloudCover <= 40;
   
-  // If not viable, return early with score of 0
+  // If not viable, return early with score of 0 and factors
   if (!isViable) {
     return {
       score: 0,
@@ -44,30 +47,36 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
       humidityScore: 0,
       moonPhaseScore: 0,
       isViable: false,
+      factors: [
+        {
+          name: "Cloud Cover",
+          score: 0,
+          description: "Cloud cover exceeds 40%. Not suitable for imaging."
+        }
+      ],
       idealFor: "Not suitable for imaging",
       qualitativeFeedback: "Cloud cover exceeds 40%. Not recommended for astrophotography."
     };
   }
   
   // Calculate individual factor scores
-  // Cloud Cover: 10 (0% clouds) to 0 (>50% clouds) - More lenient now
-  const cloudCoverScore = Math.max(0, 10 - (cloudCover / 60) * 10);
+  // Cloud Cover: 10 (0% clouds) to 0 (>50% clouds)
+  const cloudCoverScore = Math.max(0, 10 - (cloudCover / 60) * 10) * 10;
   
   // Bortle Scale: 10 (Bortle 1) to 0 (Bortle 9)
-  // Revised for better urban representation - higher Bortle values are more common in urban areas
-  const bortleScore = Math.max(0, 10 - ((validBortleScale - 1) * (10 / 8)));
+  const bortleScore = Math.max(0, 10 - ((validBortleScale - 1) * (10 / 8))) * 10;
   
   // Seeing Conditions: 10 (<1 arcsecond) to 0 (>3 arcseconds)
-  const seeingScore = Math.max(0, 10 - ((seeingConditions - 1) * 5));
+  const seeingScore = Math.max(0, 10 - ((seeingConditions - 1) * 5)) * 10;
   
   // Wind Gusts: 10 (<5 mph) to 0 (>20 mph)
-  const windScore = Math.max(0, 10 - ((Math.max(5, windSpeed) - 5) * (10 / 15)));
+  const windScore = Math.max(0, 10 - ((Math.max(5, windSpeed) - 5) * (10 / 15))) * 10;
   
   // Humidity/Dew Risk: 10 (low risk) to 0 (high risk)
-  const humidityScore = Math.max(0, 10 - (humidity / 10));
+  const humidityScore = Math.max(0, 10 - (humidity / 10)) * 10;
   
   // Moon Phase: 10 (new moon) to 0 (full moon)
-  const moonPhaseScore = Math.max(0, 10 - (moonPhase * 10));
+  const moonPhaseScore = Math.max(0, 10 - (moonPhase * 10)) * 10;
   
   // Calculate final SIQS with weights
   const siqs = (
@@ -77,11 +86,45 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
     (0.1 * windScore) +
     (0.05 * humidityScore) +
     (0.1 * moonPhaseScore)
-  );
+  ) / 10;
   
   // Round to 1 decimal place
   const score = Math.round(siqs * 10) / 10;
   
+  // Create factors array with descriptions
+  const factors = [
+    {
+      name: "Cloud Cover",
+      score: cloudCoverScore,
+      description: `${cloudCover}% cloud coverage. ${cloudCover < 20 ? "Excellent" : cloudCover < 40 ? "Acceptable" : "Poor"} conditions.`
+    },
+    {
+      name: "Light Pollution",
+      score: bortleScore,
+      description: `Bortle scale ${validBortleScale}/9. ${validBortleScale <= 4 ? "Dark sky" : validBortleScale <= 6 ? "Moderate light pollution" : "Significant light pollution"}.`
+    },
+    {
+      name: "Seeing Conditions",
+      score: seeingScore,
+      description: `${seeingConditions} arcseconds. ${seeingConditions <= 2 ? "Good" : "Poor"} atmospheric stability.`
+    },
+    {
+      name: "Wind Speed",
+      score: windScore,
+      description: `${windSpeed} mph winds. ${windSpeed < 10 ? "Stable" : windSpeed < 15 ? "Moderate" : "Unstable"} conditions.`
+    },
+    {
+      name: "Humidity",
+      score: humidityScore,
+      description: `${humidity}% humidity. ${humidity < 60 ? "Low" : humidity < 80 ? "Moderate" : "High"} dew risk.`
+    },
+    {
+      name: "Moon Phase",
+      score: moonPhaseScore,
+      description: `${Math.round(moonPhase * 100)}% illumination. ${moonPhase < 0.3 ? "Dark sky" : moonPhase < 0.7 ? "Moderate moonlight" : "Bright moonlight"}.`
+    }
+  ];
+
   // Determine ideal imaging type based on Bortle scale and moon phase
   let idealFor = "";
   let recommendedTargets: string[] = [];
@@ -131,6 +174,7 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
     humidityScore,
     moonPhaseScore,
     isViable: true,
+    factors,
     qualitativeFeedback,
     idealFor,
     recommendedTargets

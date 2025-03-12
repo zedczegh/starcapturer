@@ -59,23 +59,23 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
         </div>
         
         <div className="space-y-3">
-          {Array.isArray(factors) && factors.map((factor, index) => (
-            <div key={index}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium">{factor.name}</span>
-                <span className="text-sm">{formatSiqsScore(factor.score)}/10</span>
+          {factors && factors.length > 0 ? (
+            factors.map((factor, index) => (
+              <div key={index}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium">{factor.name}</span>
+                  <span className="text-sm">{formatSiqsScore(factor.score)}/10</span>
+                </div>
+                <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${getSiqsColor(factor.score)}`} 
+                    style={{ width: `${factor.score}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
               </div>
-              <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${getSiqsColor(factor.score)}`} 
-                  style={{ width: `${factor.score}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
-            </div>
-          ))}
-          
-          {(!Array.isArray(factors) || factors.length === 0) && (
+            ))
+          ) : (
             <div className="p-4 text-center text-muted-foreground">
               <p>No factor data available for this location.</p>
             </div>
