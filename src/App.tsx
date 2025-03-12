@@ -27,8 +27,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
-        {/* Adjusted z-index for toasters to ensure they're above all content */}
-        <Toaster className="z-tooltip" />
+        {/* Using regular Toaster without className */}
+        <Toaster />
         <Sonner className="z-tooltip" position="top-right" expand={false} closeButton />
         <BrowserRouter>
           <div className="sci-fi-scrollbar min-h-screen">
