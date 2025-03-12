@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -11,6 +10,7 @@ import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import GaodeLocationMap from "@/components/GaodeLocationMap";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -55,7 +55,6 @@ const LocationDetails = () => {
           bortleScale: bortleData.bortleScale
         };
         
-        // Recalculate SIQS with the new Bortle scale
         const moonPhase = locationData.moonPhase || 0;
         const siqsResult = calculateSIQS({
           cloudCover: locationData.weatherData.cloudCover,
@@ -101,7 +100,7 @@ const LocationDetails = () => {
       console.error("Error fetching forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
         description: t("Could not load weather forecast. Try refreshing.", 
-                      "无法加载天气预报。请尝试刷新。")
+                      "无法加载��气预报。请尝试刷新。")
       });
     } finally {
       setForecastLoading(false);
@@ -270,7 +269,7 @@ const LocationDetails = () => {
           
           <div className="space-y-8">
             <div className="search-component relative z-60">
-              <LocationMap
+              <GaodeLocationMap
                 latitude={locationData.latitude}
                 longitude={locationData.longitude}
                 name={locationData.name || t("Unnamed Location", "未命名位置")}
