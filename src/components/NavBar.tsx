@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Search, Star, MapPin, User, MoonStar } from "lucide-react";
+import { Menu, X, Search, MoonStar, User } from "lucide-react";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -45,6 +44,9 @@ const NavBar = () => {
           <NavLink to="/" active={location.pathname === "/"}>
             Home
           </NavLink>
+          <NavLink to="/#calculator-section" active={false}>
+            SIQS Now
+          </NavLink>
           <NavLink to="/about" active={location.pathname === "/about"}>
             About SIQS
           </NavLink>
@@ -85,6 +87,9 @@ const NavBar = () => {
           <div className="container mx-auto px-4 flex flex-col space-y-4">
             <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
               Home
+            </MobileNavLink>
+            <MobileNavLink to="/#calculator-section" onClick={() => setMenuOpen(false)}>
+              SIQS Now
             </MobileNavLink>
             <MobileNavLink to="/about" onClick={() => setMenuOpen(false)}>
               About SIQS
