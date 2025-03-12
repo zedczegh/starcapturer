@@ -29,9 +29,13 @@ interface WeatherData {
 
 interface SIQSCalculatorProps {
   className?: string;
+  hideRecommendedPoints?: boolean;
 }
 
-const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
+const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
+  className,
+  hideRecommendedPoints = false
+}) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [locationName, setLocationName] = useState("");
@@ -478,11 +482,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
           <hr className="border-cosmic-800/30" />
         </div>
         
-        <RecommendedPhotoPoints 
-          onSelectPoint={handleRecommendedPointSelect}
-          userLocation={userLocation}
-          language={language}
-        />
+        {!hideRecommendedPoints && (
+          <RecommendedPhotoPoints 
+            onSelectPoint={handleRecommendedPointSelect}
+            userLocation={userLocation}
+            language={language}
+          />
+        )}
         
         {locationName && (
           <div className="space-y-4 animate-fade-in">

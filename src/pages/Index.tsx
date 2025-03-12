@@ -5,7 +5,7 @@ import NavBar from "@/components/NavBar";
 import Hero from "@/components/Hero";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Sparkles, Star, Camera, Map } from "lucide-react";
+import { ChevronRight, Sparkles, Star, Camera, Map, LocateFixed, CloudLightning } from "lucide-react";
 
 const Index = () => {
   return (
@@ -43,7 +43,7 @@ const Index = () => {
                 AstroSIQS combines real-time weather data to provide a precise assessment for astrophotography.
               </p>
               
-              <SIQSCalculator className="max-w-xl mx-auto shadow-lg" />
+              <SIQSCalculator className="max-w-xl mx-auto shadow-lg" hideRecommendedPoints={true} />
             </div>
           </div>
         </div>
@@ -76,7 +76,7 @@ const Index = () => {
           </p>
           
           <div className="grid md:grid-cols-3 gap-8 mb-12 max-w-4xl mx-auto">
-            <div className="glassmorphism p-6 rounded-xl text-left">
+            <div className="glassmorphism p-6 rounded-xl text-left hover-card">
               <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                 <Star className="h-6 w-6 text-primary" />
               </div>
@@ -84,29 +84,58 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Measures ambient light using the Bortle scale, which affects visibility of celestial objects.</p>
             </div>
             
-            <div className="glassmorphism p-6 rounded-xl text-left">
+            <div className="glassmorphism p-6 rounded-xl text-left hover-card">
               <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                <Camera className="h-6 w-6 text-primary" />
+                <LocateFixed className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Seeing Conditions</h3>
               <p className="text-sm text-muted-foreground">Evaluates atmospheric stability which impacts image sharpness and clarity.</p>
             </div>
             
-            <div className="glassmorphism p-6 rounded-xl text-left">
+            <div className="glassmorphism p-6 rounded-xl text-left hover-card">
               <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                <Map className="h-6 w-6 text-primary" />
+                <CloudLightning className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Weather Data</h3>
               <p className="text-sm text-muted-foreground">Incorporates cloud cover, humidity, and wind speed from real-time meteorological sources.</p>
             </div>
           </div>
           
-          <Button size="lg" className="mt-6" asChild>
+          <Button size="lg" className="mt-6 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90" asChild>
             <Link to="/about">
               Learn More About SIQS
               <ChevronRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
+        </div>
+      </section>
+      
+      <section className="py-16 bg-cosmic-800">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center text-center mb-12">
+            <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-6">
+              <Map className="h-3.5 w-3.5 mr-2 text-primary" />
+              <span className="text-xs font-medium text-primary">Discover Photo Spots</span>
+            </div>
+            
+            <h2 className="text-3xl font-bold mb-4">
+              Explore <span className="text-gradient-blue">Community Locations</span>
+            </h2>
+            
+            <p className="text-muted-foreground max-w-2xl">
+              Browse through our curated collection of astrophotography locations shared by the community.
+              Find hidden gems with perfect conditions for your next shoot.
+            </p>
+          </div>
+          
+          <div className="flex justify-center">
+            <Button size="lg" className="bg-gradient-to-r from-primary/90 to-primary/70 hover:opacity-90" asChild>
+              <Link to="/photo-points">
+                <Camera className="mr-2 h-4 w-4" />
+                View All Photo Points
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
       
