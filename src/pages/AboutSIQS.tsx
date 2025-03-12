@@ -120,7 +120,7 @@ const AboutSIQS = () => {
               <CardContent className="space-y-4">
                 <p>
                   SIQS analyzes multiple environmental factors and combines them using our proprietary 
-                  algorithm to generate a single score from 0-100 that represents the overall quality 
+                  algorithm to generate a single score from 0-10 that represents the overall quality 
                   of a location for astrophotography.
                 </p>
                 <p>
@@ -142,7 +142,7 @@ const AboutSIQS = () => {
                 <div className="space-y-3">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Exceptional (80-100)</span>
+                      <span className="text-sm font-medium">Exceptional (8.0-10.0)</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-green-500" style={{ width: "100%" }} />
@@ -152,7 +152,7 @@ const AboutSIQS = () => {
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Excellent (60-79)</span>
+                      <span className="text-sm font-medium">Excellent (6.0-7.9)</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-green-400" style={{ width: "75%" }} />
@@ -162,7 +162,7 @@ const AboutSIQS = () => {
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Good (40-59)</span>
+                      <span className="text-sm font-medium">Good (4.0-5.9)</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-yellow-400" style={{ width: "50%" }} />
@@ -172,7 +172,7 @@ const AboutSIQS = () => {
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Fair (20-39)</span>
+                      <span className="text-sm font-medium">Fair (2.0-3.9)</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-orange-400" style={{ width: "30%" }} />
@@ -182,7 +182,7 @@ const AboutSIQS = () => {
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Poor (0-19)</span>
+                      <span className="text-sm font-medium">Poor (0.0-1.9)</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-red-500" style={{ width: "15%" }} />

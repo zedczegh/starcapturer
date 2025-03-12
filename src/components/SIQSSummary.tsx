@@ -16,31 +16,31 @@ interface SIQSSummaryProps {
 }
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable }) => {
-  // Calculate a color based on SIQS score (still using 0-100 internally)
+  // Calculate a color based on SIQS score
   const getSiqsColor = (score: number) => {
-    if (score >= 80) return "bg-green-500";
-    if (score >= 60) return "bg-green-400";
-    if (score >= 40) return "bg-yellow-400";
-    if (score >= 20) return "bg-orange-400";
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-green-400";
+    if (score >= 4) return "bg-yellow-400";
+    if (score >= 2) return "bg-orange-400";
     return "bg-red-500";
   };
 
-  // Convert 0-100 scale to 0-10 scale for display
+  // Format the SIQS score with one decimal place
   const formatSiqsScore = (score: number) => {
-    return (score / 10).toFixed(1);
+    return score.toFixed(1);
   };
 
   // Get a recommendation message based on score
   const getRecommendationMessage = (score: number) => {
-    if (score >= 80) return "Grab your rig and run!";
-    if (score >= 60) return "Yeah! Should give it a go, eh?";
-    if (score >= 40) return "Uh... let me think twice.";
+    if (score >= 8) return "Grab your rig and run!";
+    if (score >= 6) return "Yeah! Should give it a go, eh?";
+    if (score >= 4) return "Uh... let me think twice.";
     return "Well, probably should hit the sack.";
   };
 
   // Get text color for score
   const getScoreTextColor = (score: number) => {
-    if (score < 60) return "text-orange-500";
+    if (score < 6) return "text-orange-500";
     return "";
   };
 
@@ -87,7 +87,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
           <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
             <div 
               className={`h-full ${getSiqsColor(siqs)}`} 
-              style={{ width: `${siqs}%` }}
+              style={{ width: `${siqs * 10}%` }}
             />
           </div>
         </div>
@@ -98,13 +98,13 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
               <div key={index}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium">{factor.name}</span>
-                  <span className={`text-sm ${factor.score < 60 ? "text-orange-500" : ""}`}>
-                    {formatSiqsScore(factor.score)}/10
+                  <span className={`text-sm ${factor.score < 6 ? "text-orange-500" : ""}`}>
+                    {(factor.score / 10).toFixed(1)}/10
                   </span>
                 </div>
                 <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                   <div 
-                    className={`h-full ${getSiqsColor(factor.score)}`} 
+                    className={`h-full ${getSiqsColor(factor.score / 10)}`} 
                     style={{ width: `${factor.score}%` }}
                   />
                 </div>
