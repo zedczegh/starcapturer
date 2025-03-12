@@ -8,9 +8,16 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Search, Loader2 } from "lucide-react";
+import { MapPin, Search, Loader2, Info, SlidersHorizontal } from "lucide-react";
 import MapSelector from "./MapSelector";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -26,6 +33,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
   const [seeingConditions, setSeeingConditions] = useState(2);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [askedForLocation, setAskedForLocation] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   
   // Ask for user location on initial load
   useEffect(() => {
@@ -60,11 +68,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
               description: "Your current location has been added.",
             });
             
-            // Automatically calculate SIQS after getting location
-            await calculateSIQSForLocation(lat, lng, name);
+            // Don't automatically calculate SIQS after getting location
+            // Let user adjust settings first
+            setLoading(false);
           } catch (error) {
             console.error("Error getting location name:", error);
-          } finally {
             setLoading(false);
           }
         },
@@ -102,8 +110,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       description: `Selected ${location.name}`,
     });
     
-    // Automatically calculate SIQS after selecting location
-    calculateSIQSForLocation(location.latitude, location.longitude, location.name);
+    // Don't automatically calculate SIQS after selecting location
+    // Let user adjust settings first
   };
   
   const handleRecommendedPointSelect = (point: { name: string; latitude: number; longitude: number }) => {
@@ -111,8 +119,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     setLatitude(point.latitude.toFixed(6));
     setLongitude(point.longitude.toFixed(6));
     
-    // Automatically calculate for recommended points
-    calculateSIQSForLocation(point.latitude, point.longitude, point.name);
+    // Don't automatically calculate for recommended points
+    // Let user adjust settings first
+    toast({
+      title: "Location Selected",
+      description: `Selected ${point.name}`,
+    });
   };
   
   const validateInputs = (): boolean => {
@@ -226,6 +238,41 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     if (!validateInputs()) return;
     calculateSIQSForLocation(parseFloat(latitude), parseFloat(longitude), locationName);
   };
+
+  // Bortle scale descriptions for tooltips
+  const getBortleScaleDescription = (value: number): string => {
+    const descriptions = [
+      "1: Excellent dark-sky site, no light pollution",
+      "2: Typical truly dark site, Milky Way casts shadows",
+      "3: Rural sky, some light pollution but Milky Way still visible",
+      "4: Rural/suburban transition, Milky Way visible but lacks detail",
+      "5: Suburban sky, Milky Way very dim or invisible",
+      "6: Bright suburban sky, no Milky Way, only brightest constellations visible",
+      "7: Suburban/urban transition, most stars washed out",
+      "8: Urban sky, few stars visible, planets still visible",
+      "9: Inner-city sky, only brightest stars and planets visible"
+    ];
+    return descriptions[value - 1] || "Unknown";
+  };
+
+  // Seeing conditions descriptions for tooltips
+  const getSeeingDescription = (value: number): string => {
+    const descriptions = [
+      "1: Perfect seeing, stars perfectly still",
+      "1.5: Excellent seeing, stars mostly still",
+      "2: Good seeing, slight twinkling",
+      "2.5: Average seeing, moderate twinkling",
+      "3: Fair seeing, noticeable twinkling",
+      "3.5: Below average seeing, significant twinkling",
+      "4: Poor seeing, constant twinkling",
+      "4.5: Very poor seeing, images blurry",
+      "5: Terrible seeing, imaging nearly impossible"
+    ];
+    
+    // Map the value (1-5, steps of 0.5) to index (0-8)
+    const index = Math.round((value - 1) * 2);
+    return descriptions[index] || "Unknown";
+  };
   
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
@@ -275,7 +322,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
         />
         
         {locationName && (
-          <div>
+          <div className="space-y-4">
             <Label htmlFor="locationName">Selected Location</Label>
             <div className="flex gap-2 mt-1.5 items-center">
               <Input
@@ -285,46 +332,114 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
                 disabled={loading}
                 className="flex-1"
               />
-              <Button
-                type="button"
-                onClick={handleCalculate}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Go"
-                )}
-              </Button>
             </div>
             
-            <div className="hidden">
-              <div>
-                <Label htmlFor="bortleScale">Bortle Scale</Label>
-                <Slider
-                  id="bortleScale"
-                  min={1}
-                  max={9}
-                  step={1}
-                  value={[bortleScale]}
-                  onValueChange={(value) => setBortleScale(value[0])}
-                  className="mt-1.5"
-                />
+            <Collapsible
+              open={showAdvancedSettings}
+              onOpenChange={setShowAdvancedSettings}
+              className="mt-4 border border-border rounded-lg p-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Observation Settings</h3>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-9 p-0">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                </CollapsibleTrigger>
               </div>
               
-              <div>
-                <Label htmlFor="seeingConditions">Seeing Conditions</Label>
-                <Slider
-                  id="seeingConditions"
-                  min={1}
-                  max={5}
-                  step={0.5}
-                  value={[seeingConditions]}
-                  onValueChange={(value) => setSeeingConditions(value[0])}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
+              <CollapsibleContent className="mt-4 space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <Label htmlFor="bortleScale" className="text-sm">
+                      Bortle Scale (Light Pollution)
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <Info className="h-4 w-4" />
+                            <span className="sr-only">Info</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-80">
+                          <p>The Bortle scale measures the night sky's brightness, with 1 being darkest and 9 brightest. Urban areas typically range from 7-9.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      id="bortleScale"
+                      min={1}
+                      max={9}
+                      step={1}
+                      value={[bortleScale]}
+                      onValueChange={(value) => setBortleScale(value[0])}
+                      className="flex-1"
+                    />
+                    <span className="bg-background w-8 text-center">
+                      {bortleScale}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {getBortleScaleDescription(bortleScale)}
+                  </p>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <Label htmlFor="seeingConditions" className="text-sm">
+                      Seeing Conditions (Atmospheric Stability)
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <Info className="h-4 w-4" />
+                            <span className="sr-only">Info</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-80">
+                          <p>Seeing conditions rate atmospheric turbulence from 1 (perfectly stable) to 5 (highly unstable). Affects image sharpness and detail.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      id="seeingConditions"
+                      min={1}
+                      max={5}
+                      step={0.5}
+                      value={[seeingConditions]}
+                      onValueChange={(value) => setSeeingConditions(value[0])}
+                      className="flex-1"
+                    />
+                    <span className="bg-background w-8 text-center">
+                      {seeingConditions}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {getSeeingDescription(seeingConditions)}
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+            
+            <Button
+              type="button"
+              onClick={handleCalculate}
+              disabled={loading}
+              className="w-full mt-4"
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Calculate SIQS Score"
+              )}
+            </Button>
           </div>
         )}
       </div>
