@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -23,7 +22,10 @@ const LocationDetails = () => {
   const { t } = useLanguage();
 
   useEffect(() => {
+    console.log("LocationDetails received state:", location.state);
+    
     if (!locationData) {
+      console.error("Location data is missing", { params: id, locationState: location.state });
       toast.error(t("Location Not Found", "位置未找到"), {
         description: t("The requested location information is not available or has expired.", 
                        "请求的位置信息不可用或已过期。"),
@@ -198,13 +200,22 @@ const LocationDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <SIQSSummary
-              siqs={siqsScore}
-              factors={siqsResult.factors}
-              isViable={siqsResult.isViable}
+              siqs={locationData.siqsResult.score}
+              factors={locationData.siqsResult.factors}
+              isViable={locationData.siqsResult.isViable}
             />
             
             <WeatherConditions
-              weatherData={weatherData}
+              weatherData={{
+                temperature: locationData.weatherData?.temperature || 0,
+                humidity: locationData.weatherData?.humidity || 0,
+                cloudCover: locationData.weatherData?.cloudCover || 0,
+                windSpeed: locationData.weatherData?.windSpeed || 0,
+                precipitation: locationData.weatherData?.precipitation || 0,
+                time: locationData.weatherData?.time || new Date().toISOString(),
+                condition: locationData.weatherData?.condition || 
+                  determineWeatherCondition(locationData.weatherData?.cloudCover || 0)
+              }}
               moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
               bortleScale={locationData.bortleScale || 4}
               seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
@@ -235,3 +246,4 @@ const LocationDetails = () => {
 };
 
 export default LocationDetails;
+

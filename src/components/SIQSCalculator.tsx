@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
@@ -143,7 +143,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   };
   
-  const handleLocationSelect = (location: { name: string; latitude: number; longitude: number }) => {
+  const handleLocationSelect = (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
     setLocationName(location.name);
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
@@ -151,8 +151,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     const newBortleScale = estimateBortleScale(location.name);
     setBortleScale(newBortleScale);
     
-    toast({
-      title: t("Location Selected", "已选择位置"),
+    toast.success(t("Location Selected", "已选择位置"), {
       description: t(`Selected ${location.name}`, `已选择 ${location.name}`),
     });
     
@@ -280,6 +279,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       });
       
       if (!data) {
+        toast.error(t("Weather Data Error", "天气数据错误"), {
+          description: t(
+            "Could not retrieve weather data. Please try again.",
+            "无法获取天气数据，请重试。"
+          ),
+        });
         setIsCalculating(false);
         displayOnly ? null : setLoading(false);
         return;
@@ -313,21 +318,25 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         longitude: lng,
         bortleScale,
         seeingConditions,
-        weatherData,
+        weatherData: data,
         siqsResult,
         moonPhase,
         timestamp: new Date().toISOString(),
       };
       
+      // Log the location data before navigation to help with debugging
+      console.log("Navigating to location details with data:", locationData);
+      
+      // Navigate with state data
       navigate(`/location/${locationId}`, { state: locationData });
     } catch (error) {
       console.error("Error calculating SIQS:", error);
-      toast({
-        title: "Calculation Error",
-        description: "An error occurred while calculating SIQS. Please try again.",
-        variant: "destructive",
+      toast.error(t("Calculation Error", "计算错误"), {
+        description: t(
+          "An error occurred while calculating SIQS. Please try again.",
+          "计算SIQS时发生错误，请重试。"
+        ),
       });
-    } finally {
       setIsCalculating(false);
       displayOnly ? null : setLoading(false);
     }
@@ -335,7 +344,22 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const handleCalculate = () => {
     if (!validateInputs()) return;
-    calculateSIQSForLocation(parseFloat(latitude), parseFloat(longitude), locationName);
+    
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    // Explicitly validate coordinates again right before calculation
+    if (isNaN(lat) || isNaN(lng) || !locationName) {
+      toast.error(t("Invalid Location", "无效位置"), {
+        description: t(
+          "Please enter a valid location with coordinates.",
+          "请输入有效的位置和坐标。"
+        ),
+      });
+      return;
+    }
+    
+    calculateSIQSForLocation(lat, lng, locationName);
   };
 
   const getRecommendationMessage = (siqsScore: number): string => {
