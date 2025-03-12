@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -208,7 +209,7 @@ const MobileNavButton = ({
       )}>
         {icon}
       </div>
-      <span className="text-xs mt-1 mobile-nav-text">{label}</span>
+      <span className="text-xs mt-1">{label}</span>
     </Link>
   );
 };
