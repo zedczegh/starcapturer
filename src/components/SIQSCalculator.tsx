@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ import {
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// Add the WeatherData type import here
 interface WeatherData {
   cloudCover: number;
   windSpeed: number;
@@ -349,7 +347,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     ] : [
       "1: 极佳的暗空环境，无光污染",
       "2: 真正的黑暗区域，银河可投下阴影",
-      "3: 乡村天空，有一些光污染但仍能看到银河",
+      "3: 乡村天空，有一些光污染但仍能��到银河",
       "4: 乡村/郊区过渡区，能看到银河但缺乏细节",
       "5: 郊区天空，银河非常暗或不可见",
       "6: 明亮的郊区天空，看不到银河，只能看到最明亮的星座",
@@ -444,8 +442,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           
           <p className="text-xs text-muted-foreground mt-3">
             {language === 'en' 
-              ? "This is an estimated score based on current data. For detailed analysis with forecast data, click \"Calculate SIQS Score\" below." 
-              : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的\"计算SIQS评分\"。"}
+              ? "This is an estimated score based on current data. For detailed analysis with forecast data, click \"See More Details\" below." 
+              : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的\"查看更多详情\"。"}
           </p>
         </div>
       )}
@@ -492,126 +490,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         
         {locationName && (
           <div className="space-y-4 animate-fade-in">
-            <Label htmlFor="locationName">
-              {language === 'en' ? "Selected Location" : "已选位置"}
-            </Label>
-            <div className="flex gap-2 mt-1.5 items-center">
-              <Input
-                id="locationName"
-                value={locationName}
-                onChange={(e) => setLocationName(e.target.value)}
-                disabled={loading}
-                className="flex-1 bg-cosmic-800/30"
-              />
-            </div>
-            
-            <Collapsible
-              open={showAdvancedSettings}
-              onOpenChange={setShowAdvancedSettings}
-              className="mt-4 border border-cosmic-600/30 rounded-lg p-4 transition-all duration-300"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
-                  {language === 'en' ? "Observation Settings" : "观测设置"}
-                </h3>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-9 p-0 hover:bg-primary/10">
-                    <SlidersHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-              
-              <CollapsibleContent className="mt-4 space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label htmlFor="bortleScale" className="text-sm">
-                      {language === 'en' ? "Bortle Scale (Light Pollution)" : "波特尔指数（光污染）"}
-                    </Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                            <Info className="h-4 w-4" />
-                            <span className="sr-only">Info</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="w-80 p-4 glass-card">
-                          <p>
-                            {language === 'en' 
-                              ? "The Bortle scale measures the night sky's brightness, with 1 being darkest and 9 brightest. Urban areas typically range from 7-9."
-                              : "波特尔指数衡量夜空的亮度，1级最暗，9级最亮。城市区域通常在7-9级。"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Slider
-                      id="bortleScale"
-                      min={1}
-                      max={9}
-                      step={1}
-                      value={[bortleScale]}
-                      onValueChange={(value) => setBortleScale(value[0])}
-                      className="flex-1"
-                    />
-                    <span className="bg-cosmic-800/50 w-8 text-center rounded py-1 text-sm">
-                      {bortleScale}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getBortleScaleDescription(bortleScale)}
-                  </p>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label htmlFor="seeingConditions" className="text-sm">
-                      {language === 'en' 
-                        ? "Seeing Conditions (Atmospheric Stability)" 
-                        : "视宁度（大气稳定性）"}
-                    </Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                            <Info className="h-4 w-4" />
-                            <span className="sr-only">Info</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="w-80 p-4 glass-card">
-                          <p>
-                            {language === 'en'
-                              ? "Seeing conditions rate atmospheric turbulence from 1 (perfectly stable) to 5 (highly unstable). Affects image sharpness and detail."
-                              : "视宁度衡量大气湍流程度，从1（完全稳定）到5（高度不稳定）。影响图像清晰度和细节。"}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Slider
-                      id="seeingConditions"
-                      min={1}
-                      max={5}
-                      step={0.5}
-                      value={[seeingConditions]}
-                      onValueChange={(value) => setSeeingConditions(value[0])}
-                      className="flex-1"
-                    />
-                    <span className="bg-cosmic-800/50 w-8 text-center rounded py-1 text-sm">
-                      {seeingConditions}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getSeeingDescription(seeingConditions)}
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-            
             <Button
               type="button"
               onClick={handleCalculate}
@@ -621,7 +499,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                language === 'en' ? "Calculate SIQS Score" : "计算SIQS评分"
+                language === 'en' ? "See More Details" : "查看更多详情"
               )}
             </Button>
           </div>
@@ -632,3 +510,4 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
+
