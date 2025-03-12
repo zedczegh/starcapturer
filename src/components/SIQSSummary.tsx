@@ -90,7 +90,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
           <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
             <div 
               className={`h-full ${getSiqsColor(normalizedSiqs)}`} 
-              style={{ width: `${Math.min(normalizedSiqs * 10, 100)}%` }}
+              style={{ width: `${normalizedSiqs * 10}%` }}
             />
           </div>
         </div>
@@ -98,22 +98,21 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
         <div className="space-y-3">
           {factors && factors.length > 0 ? (
             factors.map((factor, index) => {
-              // Normalize factor scores to be between 0-100
-              const normalizedFactorScore = Math.min(Math.max(factor.score, 0), 100);
-              const factorScoreForDisplay = normalizedFactorScore / 10; // Convert to 0-10 scale for display
+              // Normalize factor scores to be between 0-10
+              const normalizedFactorScore = Math.min(Math.max(factor.score / 10, 0), 10);
               
               return (
                 <div key={index}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">{factor.name}</span>
-                    <span className={`text-sm ${factorScoreForDisplay < 6 ? "text-orange-500" : ""}`}>
-                      {factorScoreForDisplay.toFixed(1)}/10
+                    <span className={`text-sm ${normalizedFactorScore < 6 ? "text-orange-500" : ""}`}>
+                      {normalizedFactorScore.toFixed(1)}/10
                     </span>
                   </div>
                   <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                     <div 
-                      className={`h-full ${getSiqsColor(factorScoreForDisplay)}`} 
-                      style={{ width: `${normalizedFactorScore}%` }}
+                      className={`h-full ${getSiqsColor(normalizedFactorScore)}`} 
+                      style={{ width: `${normalizedFactorScore * 10}%` }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{factor.description}</p>
