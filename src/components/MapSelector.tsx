@@ -389,12 +389,20 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
               <span className="text-muted-foreground">
                 {language === 'en' 
                   ? "Click on the map to select a location" 
-                  : "点击地图选择位置"}
+                  : "点击地��选择位置"}
               </span>
             )}
           </div>
           
-          <Button onClick={handleSelectLocation} disabled={!selectedLocation && !position}>
+          <Button 
+            onClick={() => {
+              if (selectedLocation) {
+                onSelectLocation(selectedLocation);
+                setIsOpen(false);
+              }
+            }} 
+            disabled={!selectedLocation && !position}
+          >
             {language === 'en' ? "Use This Location" : "使用此位置"}
           </Button>
         </div>
