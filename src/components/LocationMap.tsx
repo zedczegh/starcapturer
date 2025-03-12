@@ -20,6 +20,22 @@ interface LocationMapProps {
   name: string;
 }
 
+// Add proper type declaration for the react-leaflet MapContainer
+declare module 'react-leaflet' {
+  export interface MapContainerProps extends L.MapOptions {
+    center: L.LatLngExpression;
+    zoom?: number;
+    scrollWheelZoom?: boolean;
+    style?: React.CSSProperties;
+    whenCreated?: (map: L.Map) => void;
+  }
+
+  export interface TileLayerProps extends L.TileLayerOptions {
+    url: string;
+    attribution?: string;
+  }
+}
+
 const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) => {
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
@@ -34,7 +50,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
       <CardContent className="p-0 overflow-hidden rounded-md">
         <div className="aspect-video w-full h-[300px]">
           <MapContainer 
-            center={position as L.LatLngExpression}
+            center={position}
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={false}
@@ -42,9 +58,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ latitude, longitude, name }) 
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              
             />
-            <Marker position={position as L.LatLngExpression}>
+            <Marker position={position}>
               <Popup>
                 {validName}
               </Popup>
