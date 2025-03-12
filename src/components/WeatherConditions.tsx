@@ -71,7 +71,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </div>
               <div>
                 <p className="text-sm font-medium text-cosmic-200">{t("Wind Speed", "风速")}</p>
-                <p className="text-lg font-bold">{weatherData.windSpeed} km/h</p>
+                <p className="text-lg font-bold">{weatherData.windSpeed} {t("mph", "公里/小时")}</p>
               </div>
             </div>
           </div>

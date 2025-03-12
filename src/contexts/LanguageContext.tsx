@@ -41,6 +41,23 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     window.dispatchEvent(new CustomEvent('language-changed', { detail: { language: lang } }));
   };
 
+  // Listen for language change events
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      // Force re-render of all components using the language context
+      setLanguageState(prevLang => prevLang === 'en' ? 'en' : 'zh');
+      setTimeout(() => {
+        const currentLang = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
+        setLanguageState(currentLang);
+      }, 50);
+    };
+
+    window.addEventListener('language-changed', handleLanguageChange);
+    return () => {
+      window.removeEventListener('language-changed', handleLanguageChange);
+    };
+  }, []);
+
   // Simple translation function
   const t = (en: string, zh: string): string => {
     return language === 'en' ? en : zh;

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -19,7 +20,7 @@ const LocationDetails = () => {
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     console.log("LocationDetails received state:", location.state);
@@ -246,4 +247,3 @@ const LocationDetails = () => {
 };
 
 export default LocationDetails;
-

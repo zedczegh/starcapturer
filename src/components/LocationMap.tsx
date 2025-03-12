@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getLocationNameFromCoordinates } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Fix for default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -45,13 +46,14 @@ const LocationMap: React.FC<LocationMapProps> = ({
   onLocationUpdate,
   editable = false 
 }) => {
+  const { language, t } = useLanguage();
   const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
   const mapRef = useRef<L.Map>(null);
 
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
   const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
-  const validName = name || "Unknown Location";
+  const validName = name || t("Unknown Location", "未知位置");
 
   // Function to normalize longitude to -180 to 180 range
   const normalizeLongitude = (lng: number): number => {
@@ -75,7 +77,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
         setPosition([validLat, validLng]);
         
         try {
-          const newName = await getLocationNameFromCoordinates(validLat, validLng, 'en');
+          const newName = await getLocationNameFromCoordinates(validLat, validLng, language as 'en' | 'zh');
           
           if (onLocationUpdate) {
             onLocationUpdate({
@@ -85,12 +87,15 @@ const LocationMap: React.FC<LocationMapProps> = ({
             });
           }
           
-          toast.success("Location Updated", {
-            description: `New location: ${newName}`,
+          toast.success(t("Location Updated", "位置已更新"), {
+            description: t(`New location: ${newName}`, `新位置：${newName}`),
           });
         } catch (error) {
           console.error('Error getting location name:', error);
-          const fallbackName = `Location at ${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`;
+          const fallbackName = t(
+            `Location at ${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`,
+            `位置：${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`
+          );
           
           if (onLocationUpdate) {
             onLocationUpdate({
@@ -100,8 +105,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
             });
           }
           
-          toast.error("Location Error", {
-            description: "Could not get location name. Using coordinates instead.",
+          toast.error(t("Location Error", "位置错误"), {
+            description: t("Could not get location name. Using coordinates instead.", 
+                          "无法获取位置名称。使用坐标代替。"),
           });
         }
       },
@@ -200,14 +206,15 @@ const LocationMap: React.FC<LocationMapProps> = ({
           </MapContainer>
         </div>
         <div className="p-4">
-          <h3 className="font-medium text-sm mb-1">Location</h3>
+          <h3 className="font-medium text-sm mb-1">{t("Location", "位置")}</h3>
           <p className="text-sm text-muted-foreground">
-            {validName} is located at coordinates {validLatitude.toFixed(6)}, {validLongitude.toFixed(6)}
+            {t(`${validName} is located at coordinates ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`, 
+               `${validName}位于坐标 ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`)}
           </p>
           {editable && (
             <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
               <span className="inline-block w-2 h-2 rounded-full bg-[#9b87f5] animate-pulse"></span>
-              Click anywhere on the map to update the location
+              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
             </p>
           )}
         </div>
