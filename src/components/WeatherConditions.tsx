@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, Moon, Sun, Thermometer } from "lucide-react";
@@ -48,15 +47,28 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   };
 
-  // Format the condition to be displayed
   const formatCondition = (condition: string) => {
     if (!condition) return "Clear";
     
-    // Capitalize first letter of each word
     return condition
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+  };
+
+  const getBortleDescription = (scale: number) => {
+    switch(scale) {
+      case 1: return "Excellent dark sky (rural)";
+      case 2: return "Truly dark sky";
+      case 3: return "Rural sky";
+      case 4: return "Rural/suburban transition";
+      case 5: return "Suburban sky";
+      case 6: return "Bright suburban sky";
+      case 7: return "Suburban/urban transition";
+      case 8: return "City sky";
+      case 9: return "Inner city sky";
+      default: return "Unknown";
+    }
   };
 
   return (
@@ -66,7 +78,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Weather conditions */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center">
               {getWeatherIcon(weatherData.condition)}
@@ -90,7 +101,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             </div>
           </div>
 
-          {/* Astronomy conditions */}
           <div className="pt-2 border-t border-border">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-center">
@@ -109,7 +119,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
                   <path d="M12 2V6M12 18V22M6 12H2M22 12H18M19 5L16 8M8 16L5 19M19 19L16 16M8 8L5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
                 </svg>
-                <span className="ml-2 text-sm">Bortle Scale: {bortleScale}/9 (Light Pollution)</span>
+                <span className="ml-2 text-sm">Bortle Scale: {bortleScale}/9 ({getBortleDescription(bortleScale)})</span>
               </div>
             </div>
           </div>
@@ -119,8 +129,10 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               <p>Excellent dark sky conditions for astrophotography.</p>
             ) : bortleScale <= 5 ? (
               <p>Moderate light pollution. Suitable for most deep-sky imaging with filters.</p>
-            ) : (
+            ) : bortleScale <= 7 ? (
               <p>Significant light pollution. Consider narrow-band filters for deep-sky imaging.</p>
+            ) : (
+              <p>High light pollution. Best for planetary imaging, bright stars, and the Moon.</p>
             )}
           </div>
         </div>

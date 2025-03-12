@@ -27,6 +27,9 @@ type SIQSResult = {
 export function calculateSIQS(input: SIQSInput): SIQSResult {
   const { cloudCover, bortleScale, seeingConditions, windSpeed, humidity, moonPhase = 0.5 } = input;
   
+  // Ensure the Bortle scale value is within valid range
+  const validBortleScale = Math.max(1, Math.min(9, bortleScale));
+  
   // Check cloud cover threshold first (≤ 40% is viable)
   const isViable = cloudCover <= 40;
   
@@ -51,7 +54,8 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
   const cloudCoverScore = Math.max(0, 10 - (cloudCover / 60) * 10);
   
   // Bortle Scale: 10 (Bortle 1) to 0 (Bortle 9)
-  const bortleScore = Math.max(0, 10 - ((bortleScale - 1) * (10 / 8)));
+  // Revised for better urban representation - higher Bortle values are more common in urban areas
+  const bortleScore = Math.max(0, 10 - ((validBortleScale - 1) * (10 / 8)));
   
   // Seeing Conditions: 10 (<1 arcsecond) to 0 (>3 arcseconds)
   const seeingScore = Math.max(0, 10 - ((seeingConditions - 1) * 5));
@@ -78,15 +82,19 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
   // Round to 1 decimal place
   const score = Math.round(siqs * 10) / 10;
   
-  // Determine ideal imaging type
+  // Determine ideal imaging type based on Bortle scale and moon phase
   let idealFor = "";
   let recommendedTargets: string[] = [];
   
-  if (moonPhase > 0.7) {
+  if (validBortleScale >= 7) {
+    // High light pollution area
+    idealFor = "Best for planetary and lunar imaging due to high light pollution";
+    recommendedTargets = [...getCurrentVisiblePlanets(), "Moon"];
+  } else if (moonPhase > 0.7) {
     // High moon phase - better for planetary
     idealFor = "Ideal for planetary imaging; limited for deep sky objects";
     recommendedTargets = getCurrentVisiblePlanets();
-  } else if (moonPhase < 0.3 && bortleScale <= 5) {
+  } else if (moonPhase < 0.3 && validBortleScale <= 5) {
     // Low moon phase, decent dark skies - good for deep sky
     idealFor = "Excellent for deep sky imaging";
     recommendedTargets = getSeasonalDeepSkyObjects();
@@ -96,9 +104,13 @@ export function calculateSIQS(input: SIQSInput): SIQSResult {
     recommendedTargets = [...getCurrentVisiblePlanets(), ...getBrightDeepSkyObjects()];
   }
   
-  // Generate qualitative feedback
+  // Generate qualitative feedback based on Bortle scale
   let qualitativeFeedback = "";
-  if (score >= 8.5) {
+  if (validBortleScale >= 8) {
+    qualitativeFeedback = "Very high light pollution. Limit imaging to planets, moon, and brightest stars.";
+  } else if (validBortleScale >= 6) {
+    qualitativeFeedback = "Significant light pollution. Consider narrowband filters for deep sky imaging.";
+  } else if (score >= 8.5) {
     qualitativeFeedback = "Exceptional conditions for astrophotography!";
   } else if (score >= 7) {
     qualitativeFeedback = "Excellent imaging conditions.";
