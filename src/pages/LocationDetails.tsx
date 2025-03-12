@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -169,10 +168,10 @@ const LocationDetails = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden sci-fi-scrollbar">
       <NavBar />
       
-      <main className="container mx-auto px-4 pt-24 pb-16">
+      <main className="container mx-auto px-4 pt-28 pb-16">
         <LocationHeader 
           name={locationData.name}
           latitude={locationData.latitude}
@@ -198,13 +197,15 @@ const LocationDetails = () => {
           </div>
           
           <div className="space-y-8">
-            <LocationMap
-              latitude={locationData.latitude}
-              longitude={locationData.longitude}
-              name={locationData.name || t("Unnamed Location", "未命名位置")}
-              onLocationUpdate={handleLocationUpdate}
-              editable={true}
-            />
+            <div className="search-component relative z-60">
+              <LocationMap
+                latitude={locationData.latitude}
+                longitude={locationData.longitude}
+                name={locationData.name || t("Unnamed Location", "未命名位置")}
+                onLocationUpdate={handleLocationUpdate}
+                editable={true}
+              />
+            </div>
             
             <ForecastTable 
               forecastData={forecastData}

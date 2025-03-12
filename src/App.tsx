@@ -27,18 +27,21 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
+        {/* Adjusted z-index for toasters to ensure they're above all content */}
+        <Toaster className="z-tooltip" />
+        <Sonner className="z-tooltip" position="top-right" expand={false} closeButton />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/location/:id" element={<LocationDetails />} />
-            <Route path="/share" element={<ShareLocation />} />
-            <Route path="/photo-points" element={<PhotoPointsNearby />} />
-            <Route path="/about" element={<AboutSIQS />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="sci-fi-scrollbar min-h-screen">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/location/:id" element={<LocationDetails />} />
+              <Route path="/share" element={<ShareLocation />} />
+              <Route path="/photo-points" element={<PhotoPointsNearby />} />
+              <Route path="/about" element={<AboutSIQS />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </LanguageProvider>

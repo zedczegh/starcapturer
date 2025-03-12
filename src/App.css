@@ -6,21 +6,21 @@
   text-align: center;
 }
 
-/* Sci-fi style logos with cosmic glow */
+/* Enhanced sci-fi style logos with stronger cosmic glow */
 .logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
-  filter: drop-shadow(0 0 0.5em rgba(104, 117, 255, 0.3));
+  filter: drop-shadow(0 0 0.8em rgba(104, 117, 255, 0.4));
 }
 
 .logo:hover {
-  filter: drop-shadow(0 0 1em rgba(104, 117, 255, 0.6));
+  filter: drop-shadow(0 0 1.2em rgba(104, 117, 255, 0.7));
 }
 
 .logo.react:hover {
-  filter: drop-shadow(0 0 1.5em rgba(97, 218, 251, 0.6));
+  filter: drop-shadow(0 0 1.8em rgba(97, 218, 251, 0.7));
 }
 
 /* Enhanced sci-fi animation */
@@ -42,22 +42,24 @@
   }
 }
 
+/* Improved card styling with better visibility */
 .card {
   padding: 2em;
-  background: rgba(30, 41, 59, 0.2);
-  border: 1px solid rgba(104, 117, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(104, 117, 255, 0.2);
+  backdrop-filter: blur(15px);
   border-radius: 8px;
   transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .card:hover {
-  border-color: rgba(104, 117, 255, 0.3);
-  box-shadow: 0 0 20px rgba(104, 117, 255, 0.1);
+  border-color: rgba(104, 117, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(104, 117, 255, 0.15);
 }
 
 .read-the-docs {
-  color: #888;
+  color: #aaa;
   font-size: 0.875rem;
   opacity: 0.8;
   transition: opacity 0.3s ease;
@@ -81,4 +83,45 @@
 .starfield-container {
   position: relative;
   overflow: hidden;
+}
+
+/* Improved glassmorphism effect for better mobile visibility */
+.glassmorphism-enhanced {
+  background: rgba(10, 15, 45, 0.7) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  border: 1px solid rgba(104, 117, 255, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Sci-fi scrollbar for better UX */
+.sci-fi-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sci-fi-scrollbar::-webkit-scrollbar-track {
+  background: rgba(10, 15, 45, 0.3);
+  border-radius: 3px;
+}
+
+.sci-fi-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(104, 117, 255, 0.5);
+  border-radius: 3px;
+}
+
+.sci-fi-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(104, 117, 255, 0.7);
+}
+
+/* Z-index fixes for search components */
+.search-component {
+  z-index: 60;
+  position: relative;
+}
+
+/* Improved focus states for interactive elements */
+.sci-fi-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(104, 117, 255, 0.4), 0 0 10px rgba(104, 117, 255, 0.3);
 }

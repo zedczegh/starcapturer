@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,9 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
   
+  // Force navbar background when menu is open
+  const showBackground = scrolled || menuOpen;
+  
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
@@ -54,12 +58,12 @@ const NavBar = () => {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out",
-        scrolled ? "py-2 glassmorphism" : "py-4 bg-transparent"
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out",
+        showBackground ? "py-2 glassmorphism shadow-lg" : "py-4 bg-transparent"
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to="/" className="flex items-center space-x-2 z-20">
           <MoonStar className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold tracking-tight">
             Astro<span className="text-primary">SIQS</span>
@@ -106,8 +110,9 @@ const NavBar = () => {
         </div>
         
         <button 
-          className="md:hidden flex items-center"
+          className="md:hidden flex items-center z-20"
           onClick={() => setMenuOpen(!menuOpen)}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
         >
           {menuOpen ? (
             <X className="h-6 w-6" />
@@ -118,8 +123,8 @@ const NavBar = () => {
       </div>
       
       {menuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 glassmorphism py-4 animate-fade-in">
-          <div className="container mx-auto px-4 flex flex-col space-y-4">
+        <div className="md:hidden fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pt-20 pb-6 glassmorphism animate-fade-in overflow-y-auto">
+          <div className="container mx-auto px-4 flex flex-col space-y-6 flex-1">
             <MobileNavLink to="/" onClick={() => setMenuOpen(false)}>
               {t("Home", "首页")}
             </MobileNavLink>
@@ -142,15 +147,18 @@ const NavBar = () => {
             <MobileNavLink to="/share" onClick={() => setMenuOpen(false)}>
               {t("Share Location", "分享位置")}
             </MobileNavLink>
-            <LanguageSwitcher />
-            <MapSelector onSelectLocation={handleLocationSelect}>
-              <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
-                <Search className="h-4 w-4" />
-                <span>{t("Search Location", "搜索位置")}</span>
-              </Button>
-            </MapSelector>
-            <div className="pt-2 border-t border-cosmic-700">
-              <Button className="w-full">{t("Sign In", "登录")}</Button>
+            
+            <div className="mt-auto space-y-4">
+              <LanguageSwitcher />
+              <MapSelector onSelectLocation={handleLocationSelect}>
+                <Button variant="outline" className="w-full flex items-center justify-center space-x-2">
+                  <Search className="h-4 w-4" />
+                  <span>{t("Search Location", "搜索位置")}</span>
+                </Button>
+              </MapSelector>
+              <div className="pt-4 border-t border-cosmic-700">
+                <Button className="w-full">{t("Sign In", "登录")}</Button>
+              </div>
             </div>
           </div>
         </div>
