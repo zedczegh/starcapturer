@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -162,9 +163,10 @@ const InteractiveMap = ({ onMapClick, position }: {
 
 interface MapSelectorProps {
   onSelectLocation: (location: { name: string; latitude: number; longitude: number }) => void;
+  children?: React.ReactNode; // Add support for children prop
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -410,12 +412,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild id="mapSelectorTrigger">
-        <Button variant="outline" className="w-full flex justify-between items-center hover:bg-primary/10">
-          <span className="flex items-center">
-            <Search className="mr-2 h-4 w-4" /> 
-            {language === 'en' ? "Search for a Location" : "搜索位置"}
-          </span>
-        </Button>
+        {children || (
+          <Button variant="outline" className="w-full flex justify-between items-center hover:bg-primary/10">
+            <span className="flex items-center">
+              <Search className="mr-2 h-4 w-4" /> 
+              {language === 'en' ? "Search for a Location" : "搜索位置"}
+            </span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[800px] flex flex-col">
         <DialogHeader>
