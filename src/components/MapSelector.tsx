@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -23,7 +22,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   
-  // Search for locations using a geocoding API
   const searchLocations = async (query: string) => {
     if (!query.trim()) {
       setSuggestions([]);
@@ -54,7 +52,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     const query = e.target.value;
     setSearchQuery(query);
     
-    // Debounce the search request
     const timeoutId = setTimeout(() => {
       searchLocations(query);
     }, 500);
@@ -74,7 +71,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     setSearchQuery(properties.formatted);
     setSuggestions([]);
     
-    // Update the map marker
     if (mapRef.current && markerRef.current) {
       markerRef.current.setLngLat([location.longitude, location.latitude]);
     }
@@ -88,11 +84,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
   };
   
   const initializeMap = () => {
-    // Initialize the map when the component mounts and dialog is open
     if (!mapContainerRef.current || !isOpen) return;
     
-    // This is a placeholder for the actual map implementation
-    // In a real app, you would use a map library like Leaflet or Mapbox here
     const dummyMapElement = document.createElement('div');
     dummyMapElement.style.width = '100%';
     dummyMapElement.style.height = '100%';
@@ -104,59 +97,18 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
     
     mapContainerRef.current.innerHTML = '';
     mapContainerRef.current.appendChild(dummyMapElement);
-    
-    // Instead of this placeholder, implement a full map integration
-    // For example, with Mapbox:
-    // 
-    // import mapboxgl from 'mapbox-gl';
-    // mapboxgl.accessToken = 'your-mapbox-access-token';
-    // 
-    // const map = new mapboxgl.Map({
-    //   container: mapContainerRef.current,
-    //   style: 'mapbox://styles/mapbox/streets-v11',
-    //   center: [0, 0],
-    //   zoom: 1
-    // });
-    // 
-    // const marker = new mapboxgl.Marker()
-    //   .setLngLat([0, 0])
-    //   .addTo(map);
-    // 
-    // map.on('click', (e) => {
-    //   const lngLat = e.lngLat;
-    //   marker.setLngLat(lngLat);
-    //   
-    //   // Get the location name from the coordinates
-    //   getLocationNameFromCoordinates(lngLat.lat, lngLat.lng)
-    //     .then(name => {
-    //       setSelectedLocation({
-    //         name,
-    //         latitude: lngLat.lat,
-    //         longitude: lngLat.lng
-    //       });
-    //       setSearchQuery(name);
-    //     });
-    // });
-    // 
-    // mapRef.current = map;
-    // markerRef.current = marker;
   };
   
   useEffect(() => {
     if (isOpen) {
-      // Initialize map when dialog opens
       setTimeout(initializeMap, 100);
     }
   }, [isOpen]);
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="flex gap-2 items-center w-full mt-2"
-          onClick={() => setIsOpen(true)}
-        >
+      <DialogTrigger asChild id="mapSelectorTrigger">
+        <Button variant="ghost" className="w-full sr-only">
           <MapIcon className="h-4 w-4" />
           <span>Search on Map</span>
         </Button>
@@ -172,6 +124,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation }) => {
             onChange={handleSearchChange}
             placeholder="Search for a location..."
             className="pr-8"
+            autoFocus
           />
           {searchQuery && (
             <button

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,9 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
 import { fetchWeatherData, getLocationNameFromCoordinates } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Calculator, Loader2 } from "lucide-react";
+import { MapPin, Search, Loader2 } from "lucide-react";
 import MapSelector from "./MapSelector";
+import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -42,6 +44,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
               title: "Location Retrieved",
               description: "Your current location has been added.",
             });
+            
+            // Automatically calculate SIQS after getting location
+            await calculateSIQSForLocation(lat, lng, name);
           } catch (error) {
             console.error("Error getting location name:", error);
           } finally {
@@ -72,7 +77,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     }
   };
   
-  const handleMapLocationSelect = (location: { name: string; latitude: number; longitude: number }) => {
+  const handleLocationSelect = (location: { name: string; latitude: number; longitude: number }) => {
     setLocationName(location.name);
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
@@ -81,6 +86,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       title: "Location Selected",
       description: `Selected ${location.name}`,
     });
+  };
+  
+  const handleRecommendedPointSelect = (point: { name: string; latitude: number; longitude: number }) => {
+    setLocationName(point.name);
+    setLatitude(point.latitude.toFixed(6));
+    setLongitude(point.longitude.toFixed(6));
+    
+    // Automatically calculate for recommended points
+    calculateSIQSForLocation(point.latitude, point.longitude, point.name);
   };
   
   const validateInputs = (): boolean => {
@@ -117,15 +131,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     return true;
   };
   
-  const handleCalculate = async () => {
-    if (!validateInputs()) return;
-    
+  const calculateSIQSForLocation = async (lat: number, lng: number, name: string) => {
     setLoading(true);
     
     try {
       const weatherData = await fetchWeatherData({
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        latitude: lat,
+        longitude: lng,
       });
       
       if (!weatherData) {
@@ -145,9 +157,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
       
       const locationData = {
         id: locationId,
-        name: locationName,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        name: name,
+        latitude: lat,
+        longitude: lng,
         bortleScale,
         seeingConditions,
         weatherData,
@@ -168,112 +180,112 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ className }) => {
     }
   };
   
+  const handleCalculate = () => {
+    if (!validateInputs()) return;
+    calculateSIQSForLocation(parseFloat(latitude), parseFloat(longitude), locationName);
+  };
+  
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
       <h2 className="text-xl font-bold mb-6">Calculate Stellar Imaging Quality Score</h2>
       
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="locationName">Location Name</Label>
-          <Input
-            id="locationName"
-            placeholder="e.g., Atacama Desert Viewpoint"
-            value={locationName}
-            onChange={(e) => setLocationName(e.target.value)}
-            className="mt-1.5"
-          />
-          <MapSelector onSelectLocation={handleMapLocationSelect} />
+        <div className="flex flex-col space-y-3">
+          <Button 
+            variant="default" 
+            type="button" 
+            onClick={handleUseCurrentLocation}
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <MapPin className="mr-2 h-4 w-4" />
+            )}
+            Use My Location
+          </Button>
+          
+          <div className="relative">
+            <Button
+              variant="outline"
+              className="w-full flex justify-between items-center"
+              onClick={() => document.getElementById('mapSelectorTrigger')?.click()}
+            >
+              <span className="flex items-center">
+                <Search className="mr-2 h-4 w-4" /> 
+                Search for a Location
+              </span>
+            </Button>
+            <div className="hidden">
+              <MapSelector onSelectLocation={handleLocationSelect} />
+            </div>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="pt-2 pb-2">
+          <hr className="border-cosmic-800/30" />
+        </div>
+        
+        <RecommendedPhotoPoints onSelectPoint={handleRecommendedPointSelect} />
+        
+        <div className="pt-2 pb-2">
+          <hr className="border-cosmic-800/30" />
+        </div>
+        
+        {locationName && (
           <div>
-            <Label htmlFor="latitude">Latitude</Label>
-            <Input
-              id="latitude"
-              placeholder="-23.4567"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              className="mt-1.5"
-            />
+            <Label htmlFor="locationName">Selected Location</Label>
+            <div className="flex gap-2 mt-1.5 items-center">
+              <Input
+                id="locationName"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+                disabled={loading}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleCalculate}
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Go"
+                )}
+              </Button>
+            </div>
+            
+            <div className="hidden">
+              <div>
+                <Label htmlFor="bortleScale">Bortle Scale</Label>
+                <Slider
+                  id="bortleScale"
+                  min={1}
+                  max={9}
+                  step={1}
+                  value={[bortleScale]}
+                  onValueChange={(value) => setBortleScale(value[0])}
+                  className="mt-1.5"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="seeingConditions">Seeing Conditions</Label>
+                <Slider
+                  id="seeingConditions"
+                  min={1}
+                  max={5}
+                  step={0.5}
+                  value={[seeingConditions]}
+                  onValueChange={(value) => setSeeingConditions(value[0])}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="longitude">Longitude</Label>
-            <Input
-              id="longitude"
-              placeholder="-69.2344"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              className="mt-1.5"
-            />
-          </div>
-        </div>
-        
-        <Button 
-          variant="outline" 
-          type="button" 
-          onClick={handleUseCurrentLocation}
-          disabled={loading}
-          className="w-full"
-        >
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <MapPin className="mr-2 h-4 w-4" />
-          )}
-          Use Current Location
-        </Button>
-        
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <Label htmlFor="bortleScale">Bortle Scale (Light Pollution)</Label>
-            <span className="text-sm text-muted-foreground">{bortleScale}</span>
-          </div>
-          <Slider
-            id="bortleScale"
-            min={1}
-            max={9}
-            step={1}
-            value={[bortleScale]}
-            onValueChange={(value) => setBortleScale(value[0])}
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>Darkest (1)</span>
-            <span>Brightest (9)</span>
-          </div>
-        </div>
-        
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <Label htmlFor="seeingConditions">Seeing Conditions (arcseconds)</Label>
-            <span className="text-sm text-muted-foreground">{seeingConditions}</span>
-          </div>
-          <Slider
-            id="seeingConditions"
-            min={1}
-            max={5}
-            step={0.5}
-            value={[seeingConditions]}
-            onValueChange={(value) => setSeeingConditions(value[0])}
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>Excellent (1)</span>
-            <span>Poor (5)</span>
-          </div>
-        </div>
-        
-        <Button
-          type="button"
-          onClick={handleCalculate}
-          disabled={loading}
-          className="w-full mt-2"
-        >
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Calculator className="mr-2 h-4 w-4" />
-          )}
-          Calculate SIQS
-        </Button>
+        )}
       </div>
     </div>
   );
