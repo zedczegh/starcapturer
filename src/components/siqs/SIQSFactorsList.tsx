@@ -84,13 +84,22 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return descriptionsMap[description] || description;
   };
   
+  // Get progress color based on score range to match About SIQS page
+  const getProgressColor = (score: number): string => {
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
+    if (score >= 4) return "bg-yellow-400";
+    if (score >= 2) return "bg-orange-400";
+    return "bg-red-500";
+  };
+  
   return (
     <div className="space-y-4 mt-2">
       {factors.map((factor, index) => {
         // Convert score from 0-100 to 0-10 scale
         const scoreOn10Scale = factor.score / 10;
         const colorClass = getScoreColorClass(scoreOn10Scale);
-        const progressColorClass = colorClass.replace('text-', '');
+        const progressColor = getProgressColor(scoreOn10Scale);
         const translatedName = getTranslatedFactorName(factor.name);
         const translatedDescription = getTranslatedDescription(factor.description);
         
@@ -108,9 +117,9 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
             
             <Progress 
               value={factor.score} 
-              className="h-2 bg-cosmic-700/40"
+              className="h-2 bg-cosmic-700/40 animate-enter"
               style={{ 
-                '--progress-background': `var(--${progressColorClass})`,
+                '--progress-background': progressColor,
               } as React.CSSProperties}
             />
             
