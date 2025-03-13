@@ -49,7 +49,7 @@ export const prefetchLocationData = async (
     if (!queryClient.getQueryData(forecastKey)) {
       queryClient.fetchQuery({
         queryKey: forecastKey,
-        queryFn: () => fetchForecastData({ latitude, longitude }),
+        queryFn: () => fetchForecastData({ latitude, longitude, days: 3 }),
         staleTime: 30 * 60 * 1000 // 30 minutes
       });
     }

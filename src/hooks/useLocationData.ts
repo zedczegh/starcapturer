@@ -74,7 +74,7 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
       }
       
       // Use our local location database
-      const locationInfo = getLocationFromCoordinates(validLat, validLng);
+      const locationInfo = await getLocationFromCoordinates(validLat, validLng, language);
       
       setLocationName(locationInfo.name);
       setFormattedLocationName(locationInfo.formattedName);

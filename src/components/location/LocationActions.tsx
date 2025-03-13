@@ -87,6 +87,7 @@ export const LocationActions = () => {
         const forecast = await fetchForecastData({
           latitude: newLocation.latitude,
           longitude: newLocation.longitude,
+          days: 3
         });
         
         setForecastData(forecast);

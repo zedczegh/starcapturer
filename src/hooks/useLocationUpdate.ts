@@ -65,6 +65,7 @@ export const useLocationUpdate = (locationData: any, setLocationData: (data: any
         forecastData = await fetchForecastData({
           latitude: newLocation.latitude,
           longitude: newLocation.longitude,
+          days: 3
         });
       } catch (forecastError) {
         console.error("Error fetching forecast during location update:", forecastError);

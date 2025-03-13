@@ -191,15 +191,15 @@ export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortS
 /**
  * Fetches forecast data for a specific location
  */
-export async function fetchForecastData(latitude: number, longitude: number, signal?: AbortSignal): Promise<any | null> {
+export async function fetchForecastData(coordinates: Coordinates, signal?: AbortSignal): Promise<any | null> {
   try {
-    const coordinates = validateCoordinates({ latitude, longitude, days: 3 });
+    const validCoords = validateCoordinates(coordinates);
     
     // Fetch from Open-Meteo API
     const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
       `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
-      `&forecast_days=${coordinates.days}&timezone=auto`,
+      `&forecast_days=${validCoords.days || 3}&timezone=auto`,
       { signal }
     );
     
@@ -222,16 +222,16 @@ export async function fetchForecastData(latitude: number, longitude: number, sig
 /**
  * Fetches long range forecast data for a specific location
  */
-export async function fetchLongRangeForecastData(latitude: number, longitude: number, signal?: AbortSignal): Promise<any | null> {
+export async function fetchLongRangeForecastData(coordinates: Coordinates, signal?: AbortSignal): Promise<any | null> {
   try {
-    const coordinates = validateCoordinates({ latitude, longitude, days: 16 });
+    const validCoords = validateCoordinates(coordinates);
     
     // Fetch from Open-Meteo API with daily data
     const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,` +
       `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean` +
-      `&forecast_days=${coordinates.days}&timezone=auto`,
+      `&forecast_days=${validCoords.days || 16}&timezone=auto`,
       { signal }
     );
     
@@ -456,4 +456,3 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number, name: 
   const encodedName = encodeURIComponent(name);
   return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }
-
