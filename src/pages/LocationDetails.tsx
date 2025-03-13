@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -16,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarRange, Calendar, MapPin, Locate, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -30,14 +30,36 @@ const LocationDetails = () => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const { language, t } = useLanguage();
+  const { toast } = useToast();
   const isMobile = window.innerWidth < 768;
 
   useEffect(() => {
     if (!locationData && location.state) {
       console.log("Setting location data from state:", location.state);
       setLocationData(location.state);
+      
+      if (!location.state?.latitude || !location.state?.longitude) {
+        toast({
+          title: t("Error", "错误"),
+          description: t("Incomplete location data", "位置数据不完整"),
+          variant: "destructive"
+        });
+        
+        const redirectTimer = setTimeout(() => {
+          navigate("/");
+        }, 2000);
+        
+        return () => clearTimeout(redirectTimer);
+      }
     } else if (!locationData && !location.state) {
       console.error("Location data is missing", { params: id, locationState: location.state });
+      
+      toast({
+        title: t("Error", "错误"),
+        description: t("Location data not found", "找不到位置数据"),
+        variant: "destructive"
+      });
+      
       setStatusMessage(t("The requested location information is not available or has expired.", 
                       "请求的位置信息不可用或已过期。"));
       
@@ -51,7 +73,7 @@ const LocationDetails = () => {
       fetchLongRangeForecast();
       updateLightPollutionData();
     }
-  }, [locationData, location.state, navigate, t, id]);
+  }, [locationData, location.state, navigate, t, id, toast]);
 
   const handleRefreshAll = async () => {
     if (!locationData) return;
@@ -86,7 +108,8 @@ const LocationDetails = () => {
         humidity: newWeatherData.humidity,
         moonPhase: locationData.moonPhase,
         aqi: newWeatherData.aqi,
-        weatherCondition: newWeatherData.weatherCondition
+        weatherCondition: newWeatherData.weatherCondition,
+        precipitation: newWeatherData.precipitation
       });
 
       const updatedLocationData = {
@@ -105,7 +128,6 @@ const LocationDetails = () => {
       setStatusMessage(t("All information has been updated with the latest data.", 
                       "所有信息都已使用最新数据更新。"));
       
-      // Clear status message after a delay
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -136,6 +158,9 @@ const LocationDetails = () => {
           windSpeed: locationData.weatherData.windSpeed,
           humidity: locationData.weatherData.humidity,
           moonPhase,
+          precipitation: locationData.weatherData.precipitation,
+          weatherCondition: locationData.weatherData.weatherCondition,
+          aqi: locationData.weatherData.aqi
         });
         
         setLocationData({
@@ -165,7 +190,6 @@ const LocationDetails = () => {
         setStatusMessage(t("Could not load weather forecast. Try refreshing.", 
                         "无法加载天气预报。请尝试刷新。"));
         
-        // Clear status message after a delay
         setTimeout(() => setStatusMessage(null), 3000);
       }
     } catch (error) {
@@ -205,7 +229,6 @@ const LocationDetails = () => {
     fetchLongRangeForecast();
     setStatusMessage(t("Updating 15-day forecast data...", "正在更新15天预报数据..."));
     
-    // Clear status message after a delay
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
@@ -213,7 +236,6 @@ const LocationDetails = () => {
     fetchLocationForecast();
     setStatusMessage(t("Updating weather forecast data...", "正在更新天气预报数据..."));
     
-    // Clear status message after a delay
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
@@ -250,7 +272,8 @@ const LocationDetails = () => {
         humidity: weatherData.humidity,
         moonPhase,
         aqi: weatherData.aqi,
-        weatherCondition: weatherData.weatherCondition
+        weatherCondition: weatherData.weatherCondition,
+        precipitation: weatherData.precipitation
       });
 
       const updatedLocationData = {
@@ -286,7 +309,6 @@ const LocationDetails = () => {
       setStatusMessage(t("SIQS score has been recalculated for the new location.", 
                      "已为新位置重新计算SIQS评分。"));
       
-      // Clear status message after a delay
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
       console.error("Error updating location:", error);
@@ -339,7 +361,6 @@ const LocationDetails = () => {
           
           setStatusMessage(t("Using your current location.", "使用您的当前位置。"));
           
-          // Clear status message after a delay
           setTimeout(() => setStatusMessage(null), 3000);
         } catch (error) {
           console.error("Error getting current location:", error);

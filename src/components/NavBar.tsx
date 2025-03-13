@@ -117,7 +117,7 @@ const NavBar = () => {
   const handleSIQSClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    if (locationId) {
+    if (locationId && location.pathname.startsWith('/location/')) {
       // If we're already on a location page, just stay there
       return;
     }
@@ -131,7 +131,10 @@ const NavBar = () => {
     try {
       // If we already have Beijing data cached, use it immediately
       if (beijingData) {
-        navigate(`/location/${beijingData.id}`, { state: beijingData });
+        navigate(`/location/${beijingData.id}`, { 
+          state: beijingData,
+          replace: false 
+        });
         return;
       }
       
@@ -219,7 +222,10 @@ const NavBar = () => {
         timestamp: new Date().toISOString(),
       };
       
-      navigate(`/location/${locationId}`, { state: locationData });
+      navigate(`/location/${locationId}`, { 
+        state: locationData,
+        replace: false 
+      });
     } catch (error) {
       console.error("Error navigating to Beijing:", error);
       

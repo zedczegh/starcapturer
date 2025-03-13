@@ -181,13 +181,18 @@ export const useSIQSCalculation = (
       
       console.log("Navigating to location details with data:", locationData);
       
-      // Prefetch and prepare the next page for faster transition
+      // Ensure navigation happens immediately to prevent data loss
+      navigate(`/location/${locationId}`, { 
+        state: locationData,
+        replace: false
+      });
+      
+      // Wait a small delay to ensure the state is updated
       setTimeout(() => {
-        navigate(`/location/${locationId}`, { 
-          state: locationData,
-          replace: false
-        });
-      }, 10);
+        setIsCalculating(false);
+        displayOnly ? null : setLoading && setLoading(false);
+      }, 100);
+      
     } catch (error) {
       console.error("Error calculating SIQS:", error);
       setStatusMessage && setStatusMessage(language === 'en' ? 
