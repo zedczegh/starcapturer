@@ -22,15 +22,17 @@ export const useLocationUpdate = (locationData: any, setLocationData: (data: any
         throw new Error("Failed to retrieve weather data for this location");
       }
 
-      let bortleScale = locationData?.bortleScale || 4;
+      // Always fetch fresh Bortle scale data when location changes
+      let bortleScale = 4; // Default value
       try {
         const bortleData = await fetchLightPollutionData(newLocation.latitude, newLocation.longitude);
         if (bortleData?.bortleScale) {
+          console.log("Updated Bortle scale:", bortleData.bortleScale);
           bortleScale = bortleData.bortleScale;
         }
       } catch (lightError) {
         console.error("Error fetching light pollution data during location update:", lightError);
-        // Continue with existing or default bortle scale
+        // Continue with default or existing bortle scale
       }
       
       const moonPhase = locationData?.moonPhase || 0;

@@ -28,7 +28,9 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
     setGettingUserLocation,
     handleRefreshAll,
     handleRefreshForecast,
-    handleRefreshLongRangeForecast
+    handleRefreshLongRangeForecast,
+    setLoading,
+    setForecastData
   } = useLocationDetails(locationData, setLocationData);
 
   return (
