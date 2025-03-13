@@ -1,7 +1,7 @@
-
 import { useState, useRef, useEffect } from "react";
 import { fetchLightPollutionData, getLocationNameFromCoordinates } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
 
 // Cache data between renders to improve performance
 export const useLocationDataCache = () => {
@@ -88,62 +88,59 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
           }
           
           try {
-            const name = await getLocationNameFromCoordinates(lat, lng, language);
-            console.log("Got location name:", name);
+            // First, try our own database for better location names
+            const closestLocation = findClosestKnownLocation(lat, lng);
+            let name;
+            
+            // If location is within 20km of a known location, use that name
+            if (closestLocation.distance <= 20) {
+              name = closestLocation.name;
+              setBortleScale(closestLocation.bortleScale);
+              console.log("Got location from database:", name, "Bortle:", closestLocation.bortleScale);
+            } else {
+              // Otherwise try to get a name from API
+              name = await getLocationNameFromCoordinates(lat, lng, language);
+              console.log("Got location name from API:", name);
+              
+              try {
+                const lightPollutionData = await fetchLightPollutionData(lat, lng);
+                if (lightPollutionData && lightPollutionData.bortleScale) {
+                  setBortleScale(lightPollutionData.bortleScale);
+                  console.log("Got Bortle scale:", lightPollutionData.bortleScale);
+                }
+              } catch (lightError) {
+                console.error("Error fetching light pollution data:", lightError);
+                // Use our Bortle scale database as fallback
+                const estimatedScale = findClosestKnownLocation(lat, lng).bortleScale;
+                setBortleScale(estimatedScale);
+                console.log("Using estimated Bortle scale:", estimatedScale);
+              }
+            }
+            
             setLocationName(name);
             
-            try {
-              const lightPollutionData = await fetchLightPollutionData(lat, lng);
-              if (lightPollutionData && lightPollutionData.bortleScale) {
-                setBortleScale(lightPollutionData.bortleScale);
-                console.log("Got Bortle scale:", lightPollutionData.bortleScale);
-                
-                // Cache this data for future use
-                setCachedData(cacheKey, {
-                  name,
-                  bortleScale: lightPollutionData.bortleScale
-                });
-              } else {
-                // If we can't get Bortle scale from API, estimate it
-                const estimatedScale = estimateBortleScale(name);
-                setBortleScale(estimatedScale);
-                
-                setCachedData(cacheKey, {
-                  name,
-                  bortleScale: estimatedScale
-                });
-              }
-            } catch (lightError) {
-              console.error("Error fetching light pollution data:", lightError);
-              
-              // Estimate Bortle scale based on location name
-              const estimatedScale = estimateBortleScale(name);
-              setBortleScale(estimatedScale);
-              
-              setCachedData(cacheKey, {
-                name,
-                bortleScale: estimatedScale
-              });
-              
-              toast({
-                title: language === 'en' ? "Using estimated Bortle scale" : "使用估算的伯特尔尺度",
-                description: language === 'en'
-                  ? "Could not fetch light pollution data. Using estimated value based on location type."
-                  : "无法获取光污染数据。使用基于位置类型的估算值。"
-              });
-            }
+            // Cache this data for future use
+            setCachedData(cacheKey, {
+              name,
+              bortleScale
+            });
             
             setLoading(false);
             setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + name);
           } catch (error) {
             console.error("Error getting location name:", error);
-            const fallbackName = language === 'en'
-              ? `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
-              : `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+            // Use our closest known location from the database as a fallback
+            const closestLocation = findClosestKnownLocation(lat, lng);
+            const fallbackName = closestLocation.distance <= 50 
+              ? closestLocation.name
+              : (language === 'en'
+                ? `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
+                : `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
+                
             setLocationName(fallbackName);
             
-            // Estimate Bortle scale conservatively for unknown locations
-            setBortleScale(5);
+            // Use our Bortle scale database
+            setBortleScale(closestLocation.bortleScale);
             
             setLoading(false);
             setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + fallbackName);
@@ -221,82 +218,10 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
   };
 };
 
-// Improved Bortle scale estimation for different location types
+// Import the improved Bortle scale estimation function
 export const estimateBortleScale = (locationName: string): number => {
   if (!locationName) return 5; // Default moderate value
   
-  const lowercaseName = locationName.toLowerCase();
-  
-  // Major urban centers - very high light pollution
-  if (
-    /\b(beijing|shanghai|tokyo|new york|nyc|los angeles|london|paris|chicago|seoul|mumbai|delhi|mexico city|cairo|singapore)\b/.test(lowercaseName) ||
-    lowercaseName.includes('downtown') ||
-    lowercaseName.includes('city center')
-  ) {
-    return 8; // Class 8: Urban center
-  }
-  
-  // Urban areas
-  if (
-    lowercaseName.includes('city') || 
-    lowercaseName.includes('urban') ||
-    lowercaseName.includes('metro') ||
-    lowercaseName.includes('municipal')
-  ) {
-    return 7; // Class 7: Urban area
-  }
-  
-  // Suburban areas
-  if (
-    lowercaseName.includes('suburb') || 
-    lowercaseName.includes('residential') || 
-    lowercaseName.includes('borough') ||
-    lowercaseName.includes('district')
-  ) {
-    return 6; // Class 6: Suburban
-  }
-  
-  // Small towns and villages
-  if (
-    lowercaseName.includes('town') ||
-    lowercaseName.includes('township') ||
-    lowercaseName.includes('village')
-  ) {
-    return 5; // Class 5: Small town
-  }
-  
-  // Rural areas
-  if (
-    lowercaseName.includes('rural') || 
-    lowercaseName.includes('countryside') ||
-    lowercaseName.includes('farmland') ||
-    lowercaseName.includes('agricultural')
-  ) {
-    return 4; // Class 4: Rural area
-  }
-  
-  // Natural areas
-  if (
-    lowercaseName.includes('park') || 
-    lowercaseName.includes('forest') || 
-    lowercaseName.includes('national') ||
-    lowercaseName.includes('reserve') ||
-    lowercaseName.includes('preserve')
-  ) {
-    return 3; // Class 3: Natural area
-  }
-  
-  // Remote areas
-  if (
-    lowercaseName.includes('desert') ||
-    lowercaseName.includes('mountain') ||
-    lowercaseName.includes('remote') ||
-    lowercaseName.includes('wilderness') ||
-    lowercaseName.includes('isolated')
-  ) {
-    return 2; // Class 2: Remote area
-  }
-  
-  // Default - moderate light pollution assumption
-  return 5; // Class 5 as default
+  const { estimateBortleScaleByLocation } = require("@/utils/bortleScaleEstimation");
+  return estimateBortleScaleByLocation(locationName);
 };

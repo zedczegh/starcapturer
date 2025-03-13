@@ -236,9 +236,14 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
  */
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null> {
   try {
-    // Use more accurate Bortle scale estimation
-    const estimatedBortleScale = getImprovedBortleScale(latitude, longitude);
-    return { bortleScale: estimatedBortleScale };
+    // Import the local database lookup function
+    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    
+    // Get Bortle scale from our local database
+    const closestLocation = findClosestKnownLocation(latitude, longitude);
+    console.log(`Found location for Bortle scale: ${closestLocation.name}, Bortle: ${closestLocation.bortleScale}, Distance: ${closestLocation.distance.toFixed(2)}km`);
+    
+    return { bortleScale: closestLocation.bortleScale };
 
     // Real API call would look like this:
     /*
@@ -251,132 +256,10 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
     */
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
-    // Return fallback value
-    return { bortleScale: getImprovedBortleScale(latitude, longitude) };
-  }
-}
-
-/**
- * Improved Bortle scale estimation based on latitude/longitude and geographical features
- * This provides more accurate results compared to the previous implementation
- */
-function getImprovedBortleScale(latitude: number, longitude: number): number {
-  // Major urban centers with high light pollution (Bortle 8-9)
-  const majorCities = [
-    { lat: 40.7128, lon: -74.0060, name: "New York", bortle: 8.5, radius: 50 },        // New York
-    { lat: 34.0522, lon: -118.2437, name: "Los Angeles", bortle: 8.4, radius: 45 },    // Los Angeles
-    { lat: 39.9042, lon: 116.4074, name: "Beijing", bortle: 8.7, radius: 50 },         // Beijing
-    { lat: 31.2304, lon: 121.4737, name: "Shanghai", bortle: 8.8, radius: 50 },        // Shanghai
-    { lat: 19.4326, lon: -99.1332, name: "Mexico City", bortle: 8.6, radius: 45 },     // Mexico City
-    { lat: 35.6762, lon: 139.6503, name: "Tokyo", bortle: 8.9, radius: 55 },           // Tokyo
-    { lat: 51.5074, lon: -0.1278, name: "London", bortle: 8.3, radius: 40 },           // London
-    { lat: 48.8566, lon: 2.3522, name: "Paris", bortle: 8.2, radius: 40 },             // Paris
-    { lat: 28.6139, lon: 77.2090, name: "Delhi", bortle: 8.6, radius: 45 },            // Delhi
-    { lat: 55.7558, lon: 37.6173, name: "Moscow", bortle: 8.3, radius: 45 },           // Moscow
-    { lat: 37.7749, lon: -122.4194, name: "San Francisco", bortle: 8.0, radius: 35 },  // San Francisco
-    { lat: 41.8781, lon: -87.6298, name: "Chicago", bortle: 8.2, radius: 40 },         // Chicago
-    { lat: 22.3193, lon: 114.1694, name: "Hong Kong", bortle: 8.7, radius: 30 },       // Hong Kong
-    { lat: 1.3521, lon: 103.8198, name: "Singapore", bortle: 8.5, radius: 30 },        // Singapore
-    { lat: 25.0330, lon: 121.5654, name: "Taipei", bortle: 7.4, radius: 25 },          // Taipei
-    { lat: 3.1390, lon: 101.6869, name: "Kuala Lumpur", bortle: 7.3, radius: 30 },     // Kuala Lumpur
-    { lat: 14.5995, lon: 120.9842, name: "Manila", bortle: 7.6, radius: 30 },          // Manila
-    { lat: 13.7563, lon: 100.2864, name: "Bangkok", bortle: 7.5, radius: 30 }          // Bangkok
-  ];
-  
-  // Smaller cities and suburban areas (Bortle 6-7)
-  const smallerCities = [
-    { lat: 47.6062, lon: -122.3321, name: "Seattle", bortle: 7.5, radius: 25 },        // Seattle
-    { lat: 30.2672, lon: -97.7431, name: "Austin", bortle: 7.0, radius: 20 },          // Austin
-    { lat: 43.6532, lon: -79.3832, name: "Toronto", bortle: 7.3, radius: 30 },         // Toronto
-    { lat: 45.5017, lon: -73.5673, name: "Montreal", bortle: 7.2, radius: 30 },        // Montreal
-    { lat: 52.5200, lon: 13.4050, name: "Berlin", bortle: 7.1, radius: 25 },           // Berlin
-    { lat: 59.3293, lon: 18.0686, name: "Stockholm", bortle: 6.8, radius: 20 },        // Stockholm
-    { lat: 37.9838, lon: 23.7275, name: "Athens", bortle: 7.0, radius: 25 },           // Athens
-    { lat: 34.6937, lon: 135.5023, name: "Osaka", bortle: 7.5, radius: 30 },           // Osaka
-    { lat: 6.9271, lon: 79.8612, name: "Colombo", bortle: 6.9, radius: 20 },           // Colombo
-    { lat: 25.0330, lon: 121.5654, name: "Taipei", bortle: 7.4, radius: 25 },          // Taipei
-    { lat: 3.1390, lon: 101.6869, name: "Kuala Lumpur", bortle: 7.3, radius: 30 },     // Kuala Lumpur
-    { lat: 14.5995, lon: 120.9842, name: "Manila", bortle: 7.6, radius: 30 },          // Manila
-    { lat: 13.7563, lon: 100.2864, name: "Bangkok", bortle: 7.5, radius: 30 }          // Bangkok
-  ];
-  
-  // Dark sky reserves and rural areas (Bortle 1-3)
-  const darkSkyAreas = [
-    { lat: 38.9332, lon: -114.2687, name: "Great Basin", bortle: 1.0, radius: 50 },    // Great Basin National Park
-    { lat: 29.2498, lon: -103.2502, name: "Big Bend", bortle: 1.2, radius: 45 },       // Big Bend National Park
-    { lat: 40.3428, lon: -105.6836, name: "Rocky Mountain", bortle: 2.5, radius: 30 }, // Rocky Mountain National Park
-    { lat: 44.4280, lon: -110.5885, name: "Yellowstone", bortle: 2.0, radius: 40 },    // Yellowstone
-    { lat: 36.1069, lon: -112.1129, name: "Grand Canyon", bortle: 2.2, radius: 30 },   // Grand Canyon
-    { lat: 37.7331, lon: -119.5874, name: "Yosemite", bortle: 2.8, radius: 25 },       // Yosemite
-    { lat: 51.1788, lon: -115.5708, name: "Banff", bortle: 2.0, radius: 30 },          // Banff National Park
-    { lat: -43.5321, lon: 170.3865, name: "New Zealand Alps", bortle: 1.5, radius: 40 }, // New Zealand Southern Alps
-    { lat: -25.3444, lon: 131.0369, name: "Uluru", bortle: 1.0, radius: 60 },          // Uluru Australia
-    { lat: 27.9881, lon: 86.9250, name: "Everest Region", bortle: 1.8, radius: 50 },   // Everest Region
-    { lat: -20.7359, lon: 139.4962, name: "Australian Outback", bortle: 1.0, radius: 100 }, // Australian Outback
-    { lat: 23.4241, lon: -110.2864, name: "Baja California", bortle: 2.0, radius: 40 },     // Baja California
-    { lat: 77.8750, lon: -166.0528, name: "Antarctica", bortle: 1.0, radius: 200 }          // Antarctica
-  ];
-  
-  // Calculate distances to all reference points
-  let closestCity = { distance: Number.MAX_VALUE, bortle: 5, gradientFactor: 0.02 };
-  let closestSmallCity = { distance: Number.MAX_VALUE, bortle: 5, gradientFactor: 0.03 };
-  let closestDarkSky = { distance: Number.MAX_VALUE, bortle: 5, gradientFactor: 0.01 };
-  
-  // Check against major cities
-  for (const city of majorCities) {
-    const distance = calculateDistance(latitude, longitude, city.lat, city.lon);
-    if (distance < closestCity.distance) {
-      const gradientFactor = 0.02; // How quickly the Bortle scale reduces with distance
-      closestCity = { distance, bortle: city.bortle, gradientFactor };
-    }
-  }
-  
-  // Check against smaller cities
-  for (const city of smallerCities) {
-    const distance = calculateDistance(latitude, longitude, city.lat, city.lon);
-    if (distance < closestSmallCity.distance) {
-      const gradientFactor = 0.03; // Slightly faster reduction for smaller cities
-      closestSmallCity = { distance, bortle: city.bortle, gradientFactor };
-    }
-  }
-  
-  // Check against dark sky areas
-  for (const area of darkSkyAreas) {
-    const distance = calculateDistance(latitude, longitude, area.lat, area.lon);
-    if (distance < closestDarkSky.distance) {
-      const gradientFactor = 0.01; // Slower increase in Bortle scale as you leave dark areas
-      closestDarkSky = { distance, bortle: area.bortle, gradientFactor };
-    }
-  }
-  
-  // Calculate Bortle scale values from each reference point
-  let bortleFromCity = calculateBortleAtDistance(closestCity.bortle, closestCity.distance, closestCity.gradientFactor);
-  let bortleFromSmallCity = calculateBortleAtDistance(closestSmallCity.bortle, closestSmallCity.distance, closestSmallCity.gradientFactor);
-  let bortleFromDarkSky = calculateBortleAtDistance(closestDarkSky.bortle, closestDarkSky.distance, closestDarkSky.gradientFactor);
-  
-  // Take the median value to avoid extreme values
-  const bortleValues = [bortleFromCity, bortleFromSmallCity, bortleFromDarkSky].sort((a, b) => a - b);
-  const medianBortle = bortleValues[1];
-  
-  // Ensure the result is in the valid range of 1-9
-  return Math.max(1, Math.min(9, Math.round(medianBortle * 10) / 10));
-}
-
-/**
- * Calculate how the Bortle scale changes with distance from a reference point
- */
-function calculateBortleAtDistance(baseBortle: number, distanceKm: number, gradientFactor: number): number {
-  if (distanceKm <= 5) {
-    return baseBortle; // Within 5km, use exact value
-  }
-  
-  // Beyond the reference distance, calculate using exponential decay/growth
-  if (baseBortle > 5) {
-    // For bright areas (Bortle > 5), decrease with distance
-    return 5 + (baseBortle - 5) * Math.exp(-gradientFactor * (distanceKm - 5));
-  } else {
-    // For dark areas (Bortle <= 5), increase with distance
-    return 5 - (5 - baseBortle) * Math.exp(-gradientFactor * (distanceKm - 5));
+    // Use our improved Bortle scale estimation
+    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    const estimatedBortleScale = findClosestKnownLocation(latitude, longitude).bortleScale;
+    return { bortleScale: estimatedBortleScale };
   }
 }
 
@@ -412,7 +295,17 @@ export async function getLocationNameFromCoordinates(
   language: string = 'en'
 ): Promise<string> {
   try {
-    // Import the Tianditu API function
+    // First use our local database
+    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    const closestLocation = findClosestKnownLocation(latitude, longitude);
+    
+    // If we found a location within 20km, use its name
+    if (closestLocation.distance <= 20) {
+      console.log(`Using location from database: ${closestLocation.name} (${closestLocation.distance.toFixed(2)}km away)`);
+      return closestLocation.name;
+    }
+    
+    // If not found in our database or too far, fall back to Tianditu API
     const { getTiandituLocationName } = await import('../utils/tiandituApi');
     return getTiandituLocationName(latitude, longitude, language);
   } catch (error) {
@@ -550,4 +443,3 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number, name: 
   const encodedName = encodeURIComponent(name);
   return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }
-

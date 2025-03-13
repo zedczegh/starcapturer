@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search, MapPin, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { locationDatabase } from "@/utils/bortleScaleEstimation";
 
 export interface Location {
   name: string;
@@ -53,6 +54,21 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
   const searchLocations = async (query: string): Promise<Location[]> => {
     const lowercaseQuery = query.toLowerCase();
     
+    const matchingLocations = locationDatabase
+      .filter(location => 
+        location.name.toLowerCase().includes(lowercaseQuery)
+      )
+      .map(location => ({
+        name: location.name,
+        placeDetails: `${location.name}, Bortle Scale: ${location.bortleScale.toFixed(1)}`,
+        latitude: location.coordinates[0],
+        longitude: location.coordinates[1]
+      }));
+    
+    if (matchingLocations.length >= 3) {
+      return matchingLocations.slice(0, 8);
+    }
+    
     const commonLocations: Location[] = [
       { name: "Beijing", placeDetails: "Beijing, China", latitude: 39.9042, longitude: 116.4074 },
       { name: "Tokyo", placeDetails: "Tokyo, Japan", latitude: 35.6762, longitude: 139.6503 },
@@ -71,23 +87,28 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       { name: "Namib Desert", placeDetails: "Namibia - Dark Sky", latitude: -24.7499, longitude: 15.1644 }
     ];
     
-    const filteredLocations = commonLocations.filter(location => 
-      location.name.toLowerCase().includes(lowercaseQuery) || 
-      location.placeDetails.toLowerCase().includes(lowercaseQuery)
+    const filteredCommonLocations = commonLocations.filter(location => 
+      location.name.toLowerCase().includes(lowercaseQuery) && 
+      !matchingLocations.some(match => match.name === location.name)
     );
     
-    if (filteredLocations.length >= 3) {
-      return filteredLocations;
+    const combinedResults = [...matchingLocations, ...filteredCommonLocations];
+    if (combinedResults.length >= 3) {
+      return combinedResults.slice(0, 8);
     }
     
-    const generatedLocation: Location = {
-      name: query,
-      placeDetails: `Searched location: ${query}`,
-      latitude: 20 + Math.random() * 40,
-      longitude: (Math.random() * 360) - 180
-    };
+    if (combinedResults.length < 3) {
+      const generatedLocation: Location = {
+        name: query,
+        placeDetails: `Searched location: ${query}`,
+        latitude: 20 + Math.random() * 40,
+        longitude: (Math.random() * 360) - 180
+      };
+      
+      return [...combinedResults, generatedLocation].slice(0, 8);
+    }
     
-    return [...filteredLocations, generatedLocation];
+    return combinedResults.slice(0, 8);
   };
 
   const handleSelectLocation = (location: Location) => {
