@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +50,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const locationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
     const lat = parseFloat(latitude);
@@ -62,10 +62,41 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   }, [latitude, longitude, locationName, bortleScale, seeingConditions]);
   
   const handleUseCurrentLocation = () => {
+    if (loading) return;
+    
     if (navigator.geolocation) {
       setLoading(true);
+      
+      toast.info(t("Requesting Location", "正在请求位置"), {
+        description: t(
+          "Waiting for permission and location data...",
+          "等待位置权限和数据..."
+        )
+      });
+      
+      if (locationTimeoutRef.current) {
+        clearTimeout(locationTimeoutRef.current);
+      }
+      
+      locationTimeoutRef.current = setTimeout(() => {
+        if (loading) {
+          setLoading(false);
+          toast.error(t("Location Request Timeout", "位置请求超时"), {
+            description: t(
+              "We couldn't get your location in time. Please try again or enter coordinates manually.",
+              "未能及时获取您的位置。请重试或手动输入坐标。"
+            )
+          });
+        }
+      }, 15000);
+      
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          if (locationTimeoutRef.current) {
+            clearTimeout(locationTimeoutRef.current);
+            locationTimeoutRef.current = null;
+          }
+          
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           
@@ -91,6 +122,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             
             setShowAdvancedSettings(true);
             setLoading(false);
+            
+            toast.success(t("Location Found", "位置已找到"), {
+              description: name
+            });
           } catch (error) {
             console.error("Error getting location name:", error);
             const fallbackName = t(
@@ -100,21 +135,55 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
             setLoading(false);
+            
+            toast.success(t("Location Found", "位置已找到"), {
+              description: fallbackName
+            });
           }
         },
         (error) => {
+          if (locationTimeoutRef.current) {
+            clearTimeout(locationTimeoutRef.current);
+            locationTimeoutRef.current = null;
+          }
+          
           setLoading(false);
+          
+          let errorMessage = "";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = t(
+                "Location permission denied. Please check your browser settings.",
+                "位置权限被拒绝。请检查您的浏览器设置。"
+              );
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = t(
+                "Location information is unavailable. Try another method.",
+                "位置信息不可用。请尝试其他方法。"
+              );
+              break;
+            case error.TIMEOUT:
+              errorMessage = t(
+                "Location request timed out. Please try again.",
+                "位置请求超时。请重试。"
+              );
+              break;
+            default:
+              errorMessage = t(
+                "An unknown error occurred while getting your location.",
+                "获取位置时发生未知错误。"
+              );
+          }
+          
           toast.error(t("Location Error", "位置错误"), {
-            description: t(
-              "Could not retrieve your location. Please enter coordinates manually.",
-              "无法获取您的位置，请手动输入坐标。"
-            )
+            description: errorMessage
           });
           console.error("Geolocation error:", error);
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 12000,
           maximumAge: 0
         }
       );
@@ -402,6 +471,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return descriptions[index] || t("Unknown", "未知");
   };
   
+  useEffect(() => {
+    return () => {
+      if (locationTimeoutRef.current) {
+        clearTimeout(locationTimeoutRef.current);
+      }
+    };
+  }, []);
+  
   return (
     <div className={`glassmorphism rounded-xl p-6 ${className}`}>
       <div className="flex justify-between items-center mb-6">
@@ -458,11 +535,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       <div className="space-y-4">
         <div className="flex flex-col space-y-3">
           <Button 
-            variant="outline" 
+            variant={locationName ? "default" : "outline"}
             type="button" 
             onClick={handleUseCurrentLocation}
             disabled={loading}
-            className="w-full hover-card transition-colors hover:bg-primary/10"
+            className={`w-full hover-card transition-colors ${locationName ? 'bg-primary' : 'hover:bg-primary/10'}`}
           >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -478,7 +555,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             )}
           </Button>
           
-          <div className="relative">
+          <div className="relative mt-2">
             <MapSelector onSelectLocation={handleLocationSelect} />
           </div>
         </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -5,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Home, Info, MapPin, Share, User, MoonStar, Telescope } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { toast } from "sonner";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
@@ -28,16 +33,98 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
   
-  const handleSIQSClick = (e: React.MouseEvent) => {
+  const handleSIQSClick = async (e: React.MouseEvent) => {
     e.preventDefault();
+    
     if (locationId) {
-      navigate(`/location/${locationId}`);
-    } else {
-      navigate('/');
+      // If we're already on a location page, just stay there
+      return;
+    }
+    
+    if (isNavigating) {
+      return;
+    }
+    
+    setIsNavigating(true);
+    toast.info(t("Loading Beijing's SIQS data...", "正在加载北京的SIQS数据..."));
+    
+    try {
+      // Default to Beijing coordinates
+      const beijing = {
+        name: t("Beijing", "北京"),
+        latitude: 39.9042,
+        longitude: 116.4074
+      };
+      
+      const weatherData = await fetchWeatherData({
+        latitude: beijing.latitude,
+        longitude: beijing.longitude,
+      });
+      
+      if (!weatherData) {
+        throw new Error("Failed to retrieve weather data");
+      }
+      
+      let bortleScale = 7; // Default for Beijing (urban)
+      try {
+        const bortleData = await fetchLightPollutionData(beijing.latitude, beijing.longitude);
+        if (bortleData?.bortleScale) {
+          bortleScale = bortleData.bortleScale;
+        }
+      } catch (error) {
+        console.error("Error fetching light pollution data:", error);
+        // Continue with default bortle scale
+      }
+      
+      // Calculate moon phase (simplified)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const day = now.getDate();
+      const c = 365.25 * year;
+      const e = 30.6 * month;
+      const jd = c + e + day - 694039.09;
+      const moonPhase = (jd % 29.53) / 29.53;
+      
+      const siqsResult = calculateSIQS({
+        cloudCover: weatherData.cloudCover,
+        bortleScale: bortleScale,
+        seeingConditions: 3, // Average
+        windSpeed: weatherData.windSpeed,
+        humidity: weatherData.humidity,
+        moonPhase,
+      });
+      
+      const locationId = Date.now().toString();
+      
+      const locationData = {
+        id: locationId,
+        name: beijing.name,
+        latitude: beijing.latitude,
+        longitude: beijing.longitude,
+        bortleScale: bortleScale,
+        seeingConditions: 3,
+        weatherData: weatherData,
+        siqsResult,
+        moonPhase,
+        timestamp: new Date().toISOString(),
+      };
+      
+      navigate(`/location/${locationId}`, { state: locationData });
+    } catch (error) {
+      console.error("Error navigating to Beijing:", error);
+      toast.error(t("Error loading SIQS data", "加载SIQS数据出错"), {
+        description: t("We'll try again in a moment", "稍后我们将重试")
+      });
+      
+      // Fallback - just navigate to home calculator section
+      navigate('/#calculator-section');
       const calculatorSection = document.getElementById('calculator-section');
       if (calculatorSection) {
         calculatorSection.scrollIntoView({ behavior: 'smooth' });
       }
+    } finally {
+      setIsNavigating(false);
     }
   };
 

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -11,6 +10,11 @@ import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import MapSelector, { Location } from "@/components/MapSelector";
+import LongRangeForecast from "@/components/LongRangeForecast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarRange, Calendar, MapPin } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -18,8 +22,10 @@ const LocationDetails = () => {
   const navigate = useNavigate();
   const [locationData, setLocationData] = useState<any>(null);
   const [forecastData, setForecastData] = useState(null);
+  const [longRangeForecast, setLongRangeForecast] = useState(null);
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
+  const [longRangeLoading, setLongRangeLoading] = useState(false);
   const { language, t } = useLanguage();
 
   useEffect(() => {
@@ -40,6 +46,7 @@ const LocationDetails = () => {
       return () => clearTimeout(redirectTimer);
     } else if (locationData) {
       fetchLocationForecast();
+      fetchLongRangeForecast();
       updateLightPollutionData();
     }
   }, [locationData, location.state, navigate, t, id]);
@@ -108,6 +115,39 @@ const LocationDetails = () => {
     } finally {
       setForecastLoading(false);
     }
+  };
+
+  const fetchLongRangeForecast = async () => {
+    if (!locationData) return;
+    
+    setLongRangeLoading(true);
+    try {
+      const forecast = await fetchForecastData({
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        days: 16 // Request 16 days including today
+      });
+      
+      setLongRangeForecast(forecast);
+      if (!forecast) {
+        console.error("Long range forecast data not available or incomplete");
+      }
+    } catch (error) {
+      console.error("Error fetching long range forecast:", error);
+      toast.error(t("Forecast Error", "预报错误"), {
+        description: t("Could not load extended forecast. Try refreshing.", 
+                      "无法加载延��天气预报。请尝试刷新。")
+      });
+    } finally {
+      setLongRangeLoading(false);
+    }
+  };
+
+  const handleRefreshLongRangeForecast = () => {
+    fetchLongRangeForecast();
+    toast.info(t("Refreshing Extended Forecast", "正在刷新延长预报"), {
+      description: t("Updating 15-day forecast data...", "正在更新15天预报数据...")
+    });
   };
 
   const handleRefreshForecast = () => {
@@ -194,6 +234,18 @@ const LocationDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLocationSearch = (selectedLocation: Location) => {
+    handleLocationUpdate({
+      name: selectedLocation.name,
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude
+    });
+    
+    toast.success(t("Location Updated", "位置已更新"), {
+      description: t(`Now viewing ${selectedLocation.name}`, `现在查看 ${selectedLocation.name}`)
+    });
   };
 
   const siqsResult = locationData?.siqsResult || { 
@@ -294,21 +346,60 @@ const LocationDetails = () => {
           </div>
           
           <div className="space-y-8">
-            <div className="search-component relative z-60">
-              <LocationMap
-                latitude={locationData.latitude}
-                longitude={locationData.longitude}
-                name={locationData.name || t("Unnamed Location", "未命名位置")}
-                onLocationUpdate={handleLocationUpdate}
-                editable={true}
-              />
+            <div className="relative z-60">
+              <Card className="shadow-md overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl flex items-center">
+                    <MapPin className="mr-2 h-5 w-5 text-primary/80" />
+                    {t("Location", "位置")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <LocationMap
+                    latitude={locationData.latitude}
+                    longitude={locationData.longitude}
+                    name={locationData.name || t("Unnamed Location", "未命名位置")}
+                    onLocationUpdate={handleLocationUpdate}
+                    editable={true}
+                  />
+                  <div className="p-4 border-t border-border/30">
+                    <div className="text-sm text-muted-foreground mb-3">
+                      {t("Search for another location", "搜索其他位置")}
+                    </div>
+                    <MapSelector onSelectLocation={handleLocationSearch} />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
             
-            <ForecastTable 
-              forecastData={forecastData}
-              isLoading={forecastLoading}
-              onRefresh={handleRefreshForecast}
-            />
+            <Tabs defaultValue="hourly" className="w-full">
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="hourly" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {t("Hourly Forecast", "小时预报")}
+                </TabsTrigger>
+                <TabsTrigger value="extended" className="flex items-center gap-2">
+                  <CalendarRange className="h-4 w-4" />
+                  {t("15-Day Forecast", "15天预报")}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="hourly" className="mt-0">
+                <ForecastTable 
+                  forecastData={forecastData}
+                  isLoading={forecastLoading}
+                  onRefresh={handleRefreshForecast}
+                />
+              </TabsContent>
+              
+              <TabsContent value="extended" className="mt-0">
+                <LongRangeForecast
+                  forecastData={longRangeForecast}
+                  isLoading={longRangeLoading}
+                  onRefresh={handleRefreshLongRangeForecast}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>
