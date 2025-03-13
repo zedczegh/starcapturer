@@ -13,7 +13,7 @@ interface WeatherConditionsProps {
     precipitation: number;
     time: string;
     condition: string;
-    aqi?: number;  // Added AQI
+    aqi?: number;
   };
   moonPhase: string;
   bortleScale: number;
@@ -93,6 +93,17 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
                 <p className="text-lg font-bold">{weatherData.windSpeed} {t("km/h", "公里/小时")}</p>
               </div>
             </div>
+            
+            {/* Moved seeing conditions here as requested */}
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
+                <Eye className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-cosmic-200">{t("Seeing Conditions", "视宁度")}</p>
+                <p className="text-lg font-bold">{t(seeingConditions, getSeeingConditionInChinese(seeingConditions))}</p>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-6">
@@ -133,25 +144,13 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </div>
             )}
             
-            <div className="space-y-3">
-              <div className="flex items-start group hover:scale-105 transition-transform duration-300">
-                <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
-                  <Lightbulb className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-cosmic-200">{t("Bortle Scale", "光污染等级")}</p>
-                  <p className="text-lg font-bold">{formatBortleScale(bortleScale)}</p>
-                </div>
+            <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+              <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
+                <Lightbulb className="h-4 w-4 text-primary" />
               </div>
-              
-              <div className="flex items-start group hover:scale-105 transition-transform duration-300">
-                <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
-                  <Eye className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-cosmic-200">{t("Seeing Conditions", "视宁度")}</p>
-                  <p className="text-lg font-bold">{t(seeingConditions, getSeeingConditionInChinese(seeingConditions))}</p>
-                </div>
+              <div>
+                <p className="text-sm font-medium text-cosmic-200">{t("Bortle Scale", "光污染等级")}</p>
+                <p className="text-lg font-bold">{formatBortleScale(bortleScale)}</p>
               </div>
             </div>
           </div>

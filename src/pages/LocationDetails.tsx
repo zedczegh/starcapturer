@@ -59,8 +59,6 @@ const LocationDetails = () => {
     
     setLoading(true);
     toast.info(t("Refreshing Data", "刷新数据"), {
-      position: "top-center",
-      duration: 3000,
       description: t("Updating all information...", "正在更新所有信息..."),
       icon: <RefreshCw className="h-4 w-4 animate-spin" />
     });
@@ -109,18 +107,14 @@ const LocationDetails = () => {
       fetchLongRangeForecast();
 
       toast.success(t("Data Refreshed", "数据已刷新"), {
-        position: "top-center",
-        duration: 3000,
         description: t("All information has been updated with the latest data.", 
-                       "所有信息都已使用最新数据更新。")
+                      "所有信息都已使用最新数据更新。")
       });
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast.error(t("Refresh Failed", "刷新失败"), {
-        position: "top-center",
-        duration: 5000,
         description: t("Could not update all information. Please try again later.", 
-                      "无法更新所有信息。请稍后再试。")
+                     "无法更新所有信息。请稍后再试。")
       });
     } finally {
       setLoading(false);
@@ -155,8 +149,6 @@ const LocationDetails = () => {
         });
         
         toast.success(t("Light Pollution Data Updated", "光污染数据已更新"), {
-          position: "top-center",
-          duration: 3000,
           description: t(
             "Light pollution level has been updated based on location coordinates.",
             "基于位置坐标已更新光污染级别。"
@@ -186,8 +178,6 @@ const LocationDetails = () => {
     } catch (error) {
       console.error("Error fetching forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
-        position: "top-center",
-        duration: 5000,
         description: t("Could not load weather forecast. Try refreshing.", 
                       "无法加载天气预报。请尝试刷新。")
       });
@@ -214,8 +204,6 @@ const LocationDetails = () => {
     } catch (error) {
       console.error("Error fetching long range forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
-        position: "top-center",
-        duration: 5000,
         description: t("Could not load extended forecast. Try refreshing.", 
                       "无法加载延��天气预报。请尝试刷新。")
       });
@@ -227,8 +215,6 @@ const LocationDetails = () => {
   const handleRefreshLongRangeForecast = () => {
     fetchLongRangeForecast();
     toast.info(t("Refreshing Extended Forecast", "正在刷新延长预报"), {
-      position: "top-center",
-      duration: 3000,
       description: t("Updating 15-day forecast data...", "正在更新15天预报数据..."),
       icon: <RefreshCw className="h-4 w-4 animate-spin" />
     });
@@ -237,8 +223,6 @@ const LocationDetails = () => {
   const handleRefreshForecast = () => {
     fetchLocationForecast();
     toast.info(t("Refreshing Forecast", "正在刷新预报"), {
-      position: "top-center",
-      duration: 3000,
       description: t("Updating weather forecast data...", "正在更新天气预报数据..."),
       icon: <RefreshCw className="h-4 w-4 animate-spin" />
     });
@@ -311,18 +295,14 @@ const LocationDetails = () => {
       });
 
       toast.success(t("Location Updated", "位置已更新"), {
-        position: "top-center",
-        duration: 3000,
         description: t("SIQS score has been recalculated for the new location.", 
                        "已为新位置重新计算SIQS评分。")
       });
     } catch (error) {
       console.error("Error updating location:", error);
       toast.error(t("Update Error", "更新错误"), {
-        position: "top-center",
-        duration: 5000,
         description: t("Failed to update location and recalculate SIQS score. Please try again.", 
-                      "无法更新位置并重新计算SIQS评分。请重试。")
+                     "无法更新位置并重新计算SIQS评分。请重试。")
       });
     } finally {
       setLoading(false);
