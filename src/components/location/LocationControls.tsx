@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Locate } from "lucide-react";
@@ -33,7 +32,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     placeDetails?: string;
   }) => {
     try {
-      // Ensure we have a valid name, even if it's just coordinates
       const locationName = selectedLocation.name || 
         `${t("Location at", "位置在")} ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°`;
       
@@ -57,7 +55,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
 
   const getProperLocationName = async (latitude: number, longitude: number): Promise<string> => {
     try {
-      // Check cache first
       const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
       const cachedData = getCachedData(cacheKey);
       
@@ -65,14 +62,11 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         return cachedData.name;
       }
       
-      // Try our own database first
       const closestLocation = findClosestKnownLocation(latitude, longitude);
       
-      // If location is within 20km of a known location, use that name
       if (closestLocation.distance <= 20) {
         const locationName = closestLocation.name;
         
-        // Cache this data
         setCachedData(cacheKey, {
           name: locationName,
           bortleScale: closestLocation.bortleScale
@@ -81,27 +75,23 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         return locationName;
       }
       
-      // Try to get a detailed location from the API
       const name = await getLocationNameFromCoordinates(latitude, longitude, language);
       
-      // Cache this data
       setCachedData(cacheKey, {
         name,
-        bortleScale: 4 // Default, will be updated later
+        bortleScale: 4
       });
       
       return name;
     } catch (error) {
       console.error("Error getting proper location name:", error);
       
-      // Use closest known location from database as fallback
       const closestLocation = findClosestKnownLocation(latitude, longitude);
       
       if (closestLocation.distance <= 50) {
         return `${closestLocation.name} ${t("area", "地区")}`;
       }
       
-      // Fallback to coordinates
       return t(`Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`, 
               `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
     }
@@ -129,7 +119,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         try {
           const { latitude, longitude } = position.coords;
           
-          // Get a proper location name instead of just coordinates
           const locationName = await getProperLocationName(latitude, longitude);
           
           await onLocationUpdate({
@@ -185,9 +174,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
           ? t("Retrieving location data...", "获取位置数据中...") 
           : t("Use my current location", "使用我的当前位置")}
       </Button>
-      <div className="text-sm text-primary-foreground/80 mb-3 font-medium">
-        {t("Search for another location", "搜索其他位置")}
-      </div>
       <MapSelector onSelectLocation={handleLocationSearch} />
     </div>
   );
