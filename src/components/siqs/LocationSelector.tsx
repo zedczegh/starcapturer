@@ -20,6 +20,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Check if locationName is just coordinates or a proper name
+  const isCoordinateOnly = locationName && locationName.includes("°");
+  const displayName = isCoordinateOnly ? 
+    t("Your current location", "您的当前位置") : 
+    locationName;
+  
   return (
     <div className="flex flex-col space-y-3">
       <Button 
@@ -36,7 +42,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         )}
         {locationName ? (
           <span className="truncate max-w-[90%]">
-            {locationName}
+            {displayName}
           </span>
         ) : (
           t("Use My Location", "使用我的位置")

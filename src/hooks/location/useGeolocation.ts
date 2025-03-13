@@ -32,6 +32,9 @@ export const useGeolocation = (options: GeolocationOptions) => {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude
     });
+    
+    // Log success for debugging
+    console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
   };
 
   const handleError = (geolocationError: GeolocationPositionError) => {
@@ -63,6 +66,13 @@ export const useGeolocation = (options: GeolocationOptions) => {
     
     setError(errorMessage);
     console.error("Geolocation error:", geolocationError);
+    
+    // Show toast for better user awareness
+    toast({
+      title: language === 'en' ? "Location Error" : "位置错误",
+      description: errorMessage,
+      variant: "destructive",
+    });
   };
 
   const getPosition = () => {
@@ -75,6 +85,7 @@ export const useGeolocation = (options: GeolocationOptions) => {
     }
     
     setLoading(true);
+    console.log("Requesting geolocation...");
     
     // Set timeout as a backup
     timeoutRef.current = setTimeout(() => {

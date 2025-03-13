@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -77,6 +78,20 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
         setBortleScale(scale);
       }
       
+      // If name still contains coordinates, try to get a friendlier name
+      if (name && (name.includes("Location at") || name.includes("("))) {
+        // Try to get a better name one more time
+        try {
+          const friendlyName = await getLocationNameFromCoordinates(lat, lng, language);
+          if (friendlyName && !friendlyName.includes("Location")) {
+            name = friendlyName;
+          }
+        } catch (error) {
+          console.warn("Error getting friendly location name:", error);
+          // Continue with the name we have
+        }
+      }
+      
       setLocationName(name);
       
       // Cache this data for future use
@@ -93,8 +108,8 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
       const fallbackName = closestLocation.distance <= 50 
         ? closestLocation.name
         : (language === 'en'
-          ? `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
-          : `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
+          ? `${t("Location near", "位置在附近")}: ${lat.toFixed(2)}°, ${lng.toFixed(2)}°`
+          : `${t("Location near", "位置在附近")}: ${lat.toFixed(2)}°, ${lng.toFixed(2)}°`);
               
       setLocationName(fallbackName);
       
