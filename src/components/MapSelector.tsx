@@ -35,7 +35,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
 
     setIsLoading(true);
     try {
-      // First try with Nominatim service
+      // First try with Nominatim service (international)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
           query

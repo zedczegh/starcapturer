@@ -1,3 +1,4 @@
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -317,59 +318,148 @@ function deg2rad(deg: number): number {
 
 /**
  * Get a location name from coordinates using reverse geocoding
+ * With fallback for China-based users
  */
 export async function getLocationNameFromCoordinates(
   latitude: number, 
   longitude: number,
   language: string = 'en'
 ): Promise<string> {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=${language}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Geocoding API error');
+  // Try multiple geocoding services for better reliability in China
+  const services = [
+    fetchFromOpenStreetMap,
+    fetchFromLocalCache,
+    fallbackLocationName
+  ];
+
+  // Try each service in order until one succeeds
+  for (const service of services) {
+    try {
+      const result = await service(latitude, longitude, language);
+      if (result) return result;
+    } catch (error) {
+      console.error(`Error with geocoding service: ${service.name}`, error);
+      // Continue to next service
     }
-    
-    const data = await response.json();
-    
-    if (data.display_name) {
-      // Try to extract a more concise name
-      if (data.address) {
-        const addressParts = [];
-        
-        // Urban areas
-        if (data.address.city || data.address.town || data.address.village) {
-          addressParts.push(data.address.city || data.address.town || data.address.village);
-        }
-        
-        // Add state/province and country
-        if (data.address.state || data.address.province) {
-          addressParts.push(data.address.state || data.address.province);
-        }
-        
-        if (data.address.country) {
-          addressParts.push(data.address.country);
-        }
-        
-        if (addressParts.length > 0) {
-          return addressParts.join(', ');
-        }
+  }
+
+  // Ultimate fallback
+  return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+}
+
+// Primary service - OpenStreetMap Nominatim
+async function fetchFromOpenStreetMap(latitude: number, longitude: number, language: string): Promise<string> {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=${language}`,
+    {
+      headers: {
+        "User-Agent": "AstroSIQS-App",
+        "Accept": "application/json"
+      },
+      timeout: 5000 // 5 second timeout for faster fallback
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error('OpenStreetMap geocoding error');
+  }
+  
+  const data = await response.json();
+  
+  if (data.display_name) {
+    // Try to extract a more concise name
+    if (data.address) {
+      const addressParts = [];
+      
+      // Urban areas
+      if (data.address.city || data.address.town || data.address.village) {
+        addressParts.push(data.address.city || data.address.town || data.address.village);
       }
       
-      // Fallback to display name, but limit length
-      if (data.display_name.length > 50) {
-        return data.display_name.substring(0, 47) + '...';
+      // Add state/province and country
+      if (data.address.state || data.address.province) {
+        addressParts.push(data.address.state || data.address.province);
       }
-      return data.display_name;
-    } else {
-      return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      
+      if (data.address.country) {
+        addressParts.push(data.address.country);
+      }
+      
+      if (addressParts.length > 0) {
+        return addressParts.join(', ');
+      }
     }
-  } catch (error) {
-    console.error('Error getting location name:', error);
-    return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    
+    // Fallback to display name, but limit length
+    if (data.display_name.length > 50) {
+      return data.display_name.substring(0, 47) + '...';
+    }
+    return data.display_name;
   }
+  
+  throw new Error('No name found in OpenStreetMap response');
+}
+
+// Secondary service - Local cached data for common locations in China
+async function fetchFromLocalCache(latitude: number, longitude: number, language: string): Promise<string> {
+  // Major cities in China with common names
+  const chineseCities = [
+    { lat: 39.9042, lon: 116.4074, nameEn: "Beijing", nameZh: "北京" },
+    { lat: 31.2304, lon: 121.4737, nameEn: "Shanghai", nameZh: "上海" },
+    { lat: 23.1291, lon: 113.2644, nameEn: "Guangzhou", nameZh: "广州" },
+    { lat: 22.5431, lon: 114.0579, nameEn: "Shenzhen", nameZh: "深圳" },
+    { lat: 30.5928, lon: 114.3055, nameEn: "Wuhan", nameZh: "武汉" },
+    { lat: 32.0617, lon: 118.7778, nameEn: "Nanjing", nameZh: "南京" },
+    { lat: 28.2278, lon: 112.9388, nameEn: "Changsha", nameZh: "长沙" },
+    { lat: 30.2741, lon: 120.1551, nameEn: "Hangzhou", nameZh: "杭州" },
+    { lat: 29.5633, lon: 106.5530, nameEn: "Chongqing", nameZh: "重庆" },
+    { lat: 34.3416, lon: 108.9398, nameEn: "Xi'an", nameZh: "西安" }
+  ];
+  
+  // Find closest major city within 50km
+  for (const city of chineseCities) {
+    const distance = calculateDistance(latitude, longitude, city.lat, city.lon);
+    if (distance < 50) {
+      return language === 'zh' ? city.nameZh : city.nameEn;
+    }
+  }
+  
+  // No match in cache
+  throw new Error('Location not found in local cache');
+}
+
+// Final fallback - Generate a name from just coordinates
+function fallbackLocationName(latitude: number, longitude: number, language: string): Promise<string> {
+  const rounded = {
+    lat: Math.round(latitude * 100) / 100,
+    lon: Math.round(longitude * 100) / 100
+  };
+  
+  // Get approximate region based on coordinates
+  let region = '';
+  
+  // Simple country approximation based on lat/long ranges
+  if (rounded.lat > 18 && rounded.lat < 54 && rounded.lon > 73 && rounded.lon < 135) {
+    region = language === 'zh' ? '中国' : 'China';
+  } else if (rounded.lat > 25 && rounded.lat < 50 && rounded.lon > -125 && rounded.lon < -65) {
+    region = language === 'zh' ? '美国' : 'USA';
+  } else if (rounded.lat > 35 && rounded.lat < 60 && rounded.lon > -10 && rounded.lon < 30) {
+    region = language === 'zh' ? '欧洲' : 'Europe';
+  }
+  
+  if (region) {
+    return Promise.resolve(
+      language === 'zh' ? 
+        `位置 (${rounded.lat}, ${rounded.lon}), ${region}` : 
+        `Location (${rounded.lat}, ${rounded.lon}), ${region}`
+    );
+  }
+  
+  return Promise.resolve(
+    language === 'zh' ? 
+      `位置 (${rounded.lat}, ${rounded.lon})` : 
+      `Location (${rounded.lat}, ${rounded.lon})`
+  );
 }
 
 /**
