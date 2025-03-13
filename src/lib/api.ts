@@ -1,3 +1,4 @@
+
 import type { WeatherData, ForecastData, ForecastItem, SharedAstroSpot } from "@/types/weather";
 
 const BASE_API_URL = "https://weather-api-proxy.azurewebsites.net";
