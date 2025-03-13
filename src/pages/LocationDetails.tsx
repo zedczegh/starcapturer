@@ -10,6 +10,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
 import { motion } from "framer-motion";
+import { useLocationDataCache } from "@/hooks/location/useLocationCache";
+import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -21,13 +23,27 @@ const LocationDetails = () => {
   const { loading, handleLocationUpdate } = useLocationUpdate(locationData, setLocationData);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'info' | 'success' | 'error'>('info');
+  const { getLocationName } = useLocationDataCache();
 
   useEffect(() => {
     if (!locationData && location.state) {
       console.log("Setting location data from state:", location.state);
-      setLocationData(location.state);
       
-      if (!location.state?.latitude || !location.state?.longitude) {
+      // Check if we need to improve the location name
+      let stateData = { ...location.state };
+      
+      if (stateData.name && stateData.name.includes("Location at") && 
+          stateData.latitude && stateData.longitude) {
+        // Try to get a better name from our database
+        const closestLocation = findClosestKnownLocation(stateData.latitude, stateData.longitude);
+        if (closestLocation.distance <= 20) {
+          stateData.name = closestLocation.name;
+        }
+      }
+      
+      setLocationData(stateData);
+      
+      if (!stateData?.latitude || !stateData?.longitude) {
         toast({
           title: t("Error", "错误"),
           description: t("Incomplete location data", "位置数据不完整"),
@@ -53,6 +69,14 @@ const LocationDetails = () => {
 
   const handleUpdateLocation = async (newLocation: { name: string; latitude: number; longitude: number }) => {
     try {
+      // If the location name is coordinate-based, try to get a better name
+      if (newLocation.name.includes("Location at")) {
+        const betterName = getLocationName(newLocation.latitude, newLocation.longitude);
+        if (!betterName.includes("Location at")) {
+          newLocation.name = betterName;
+        }
+      }
+      
       await handleLocationUpdate(newLocation);
       setStatusMessage(t("SIQS score has been recalculated for the new location.", 
                    "已为新位置重新计算SIQS评分。"));

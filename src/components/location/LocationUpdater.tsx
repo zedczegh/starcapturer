@@ -7,6 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/LocationMap";
 import MapSelector, { Location } from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
+import { useLocationDataCache } from "@/hooks/location/useLocationCache";
+import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -26,12 +28,20 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [mapError, setMapError] = useState<string | null>(null);
+  const { getLocationName } = useLocationDataCache();
 
   const handleLocationSearch = (selectedLocation: Location) => {
     try {
-      // Ensure we have a valid name, even if it's just coordinates
-      const locationName = selectedLocation.name || 
-        `Location at ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°`;
+      // Get a good location name
+      let locationName = selectedLocation.name;
+      
+      // If name is missing or looks like coordinates, try to get a better name
+      if (!locationName || locationName.includes("Location at")) {
+        const betterName = getLocationName(selectedLocation.latitude, selectedLocation.longitude);
+        if (betterName && !betterName.includes("Location at")) {
+          locationName = betterName;
+        }
+      }
       
       onLocationUpdate({
         name: locationName,
@@ -73,8 +83,13 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         try {
           const { latitude, longitude } = position.coords;
           
-          // Generate a location name based on coordinates
-          const locationName = `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
+          // Try to get a proper location name from our database
+          const closestLocation = findClosestKnownLocation(latitude, longitude);
+          let locationName = `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
+          
+          if (closestLocation.distance <= 20) {
+            locationName = closestLocation.name;
+          }
           
           await onLocationUpdate({
             name: locationName,

@@ -5,6 +5,7 @@ import WeatherConditions from "@/components/WeatherConditions";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import ForecastTabs from "@/components/location/ForecastTabs";
 import { determineWeatherCondition } from "@/lib/api";
+import { calculateMoonPhase } from "@/utils/siqsValidation";
 
 interface LocationContentProps {
   locationData: any;
@@ -33,10 +34,29 @@ const LocationContent: React.FC<LocationContentProps> = ({
   onRefreshForecast,
   onRefreshLongRange
 }) => {
+  // Get real-time moon phase
+  const currentMoonPhase = calculateMoonPhase();
+  
+  // Calculate real-time seeing conditions based on weather data
+  const calculateSeeingConditions = () => {
+    const { humidity = 50, windSpeed = 10, cloudCover = 30 } = locationData?.weatherData || {};
+    
+    // Higher humidity, wind speed, and cloud cover all negatively affect seeing conditions
+    let seeingValue = 2; // Start with default "Good"
+    
+    if (humidity > 85) seeingValue += 1;
+    if (windSpeed > 15) seeingValue += 1;
+    if (cloudCover > 30) seeingValue += 0.5;
+    
+    // Clamp value between 1-5
+    return Math.max(1, Math.min(5, seeingValue));
+  };
+  
+  // Get real-time seeing conditions
+  const realTimeSeeingValue = calculateSeeingConditions();
+  
   // Format helpers for the UI
   const formatMoonPhase = (phase: number) => {
-    if (typeof phase !== 'number') return "Unknown";
-    
     if (phase <= 0.05 || phase >= 0.95) return "New Moon";
     if (phase < 0.25) return "Waxing Crescent";
     if (phase < 0.30) return "First Quarter";
@@ -48,8 +68,6 @@ const LocationContent: React.FC<LocationContentProps> = ({
   };
 
   const formatSeeingConditions = (value: number) => {
-    if (typeof value !== 'number') return "Average";
-    
     if (value <= 1) return "Excellent";
     if (value <= 2) return "Good";
     if (value <= 3) return "Average";
@@ -80,9 +98,9 @@ const LocationContent: React.FC<LocationContentProps> = ({
         
         <WeatherConditions
           weatherData={weatherData}
-          moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
+          moonPhase={formatMoonPhase(currentMoonPhase)}
           bortleScale={locationData.bortleScale || 4}
-          seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
+          seeingConditions={formatSeeingConditions(realTimeSeeingValue)}
         />
       </div>
       
