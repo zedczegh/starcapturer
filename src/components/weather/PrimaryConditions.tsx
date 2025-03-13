@@ -42,7 +42,7 @@ const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
       <ConditionItem
         icon={<Eye className="h-4 w-4 text-primary" />}
         label={t("Seeing Conditions", "视宁度")}
-        value={t(seeingConditions, seeingConditions === "Unknown" ? "未知" : "")}
+        value={seeingConditions}
       />
     </div>
   );

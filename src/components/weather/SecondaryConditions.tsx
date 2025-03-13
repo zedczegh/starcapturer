@@ -19,7 +19,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   bortleScale,
   aqi
 }) => {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   
   // AQI display with conditional rendering
   const aqiValue = aqi !== undefined ? (
@@ -42,7 +42,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
       <ConditionItem
         icon={<MoonPhaseIcon />}
         label={t("Moon Phase", "月相")}
-        value={t(moonPhase, "")}
+        value={moonPhase}
       />
       
       {aqi !== undefined && (

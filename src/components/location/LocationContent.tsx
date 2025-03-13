@@ -5,6 +5,7 @@ import WeatherConditions from "@/components/WeatherConditions";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import ForecastTabs from "@/components/location/ForecastTabs";
 import { determineWeatherCondition } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LocationContentProps {
   locationData: any;
@@ -33,6 +34,8 @@ const LocationContent: React.FC<LocationContentProps> = ({
   onRefreshForecast,
   onRefreshLongRange
 }) => {
+  const { language } = useLanguage();
+  
   // Format helpers for the UI
   const formatMoonPhase = (phase: number) => {
     if (typeof phase !== 'number') return "Unknown";

@@ -26,7 +26,8 @@ export function getSeeingConditionInChinese(condition: string): string {
     "Good": "良好",
     "Average": "一般",
     "Poor": "较差",
-    "Very Poor": "非常差"
+    "Very Poor": "非常差",
+    "Unknown": "未知"
   };
   return translations[condition] || condition;
 }

@@ -50,12 +50,12 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             temperature={weatherData.temperature}
             humidity={weatherData.humidity}
             windSpeed={weatherData.windSpeed}
-            seeingConditions={language === 'zh' ? translatedSeeingConditions : seeingConditions}
+            seeingConditions={translatedSeeingConditions}
           />
           
           <SecondaryConditions
             cloudCover={weatherData.cloudCover}
-            moonPhase={language === 'zh' ? translatedMoonPhase : moonPhase}
+            moonPhase={translatedMoonPhase}
             bortleScale={bortleScale}
             aqi={weatherData.aqi}
           />
