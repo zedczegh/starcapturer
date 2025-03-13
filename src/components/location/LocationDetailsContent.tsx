@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContent from "@/components/location/LocationContent";
@@ -11,7 +11,7 @@ interface LocationDetailsContentProps {
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
 }
 
-const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
+const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   locationData,
   setLocationData,
   onLocationUpdate
@@ -34,7 +34,7 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
   } = useLocationDetails(locationData, setLocationData);
 
   return (
-    <main className="container mx-auto px-4 pt-28 pb-16">
+    <>
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
@@ -62,8 +62,10 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
         onRefreshForecast={handleRefreshForecast}
         onRefreshLongRange={handleRefreshLongRangeForecast}
       />
-    </main>
+    </>
   );
-};
+});
+
+LocationDetailsContent.displayName = 'LocationDetailsContent';
 
 export default LocationDetailsContent;

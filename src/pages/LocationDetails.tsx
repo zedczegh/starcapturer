@@ -1,15 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import NavBar from "@/components/NavBar";
 import LocationError from "@/components/location/LocationError";
-import LocationDetailsContent from "@/components/location/LocationDetailsContent";
-import LocationDetailsHeader from "@/components/location/LocationDetailsHeader";
-import LocationStatusMessage from "@/components/location/LocationStatusMessage";
+import LocationDetailsViewport from "@/components/location/LocationDetailsViewport";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
-import { motion } from "framer-motion";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -70,29 +66,14 @@ const LocationDetails = () => {
   }
 
   return (
-    <motion.div 
-      className="min-h-screen overflow-x-hidden sci-fi-scrollbar pb-16 md:pb-0"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <NavBar />
-      <main className="container mx-auto px-4 pt-28 pb-16">
-        <LocationDetailsHeader name={locationData.name} />
-        
-        <LocationStatusMessage 
-          message={statusMessage}
-          type={messageType}
-          onClear={() => setStatusMessage(null)}
-        />
-        
-        <LocationDetailsContent
-          locationData={locationData}
-          setLocationData={setLocationData}
-          onLocationUpdate={handleUpdateLocation}
-        />
-      </main>
-    </motion.div>
+    <LocationDetailsViewport 
+      locationData={locationData}
+      setLocationData={setLocationData}
+      statusMessage={statusMessage}
+      messageType={messageType}
+      setStatusMessage={setStatusMessage}
+      handleUpdateLocation={handleUpdateLocation}
+    />
   );
 };
 

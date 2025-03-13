@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Cloud, Gauge } from "lucide-react";
 import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,7 +13,7 @@ interface SecondaryConditionsProps {
   aqi?: number;
 }
 
-const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
+const SecondaryConditions = memo<SecondaryConditionsProps>(({
   cloudCover,
   moonPhase,
   bortleScale,
@@ -60,6 +60,8 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
       />
     </div>
   );
-};
+});
+
+SecondaryConditions.displayName = 'SecondaryConditions';
 
 export default SecondaryConditions;

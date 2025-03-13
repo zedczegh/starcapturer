@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Thermometer, Wind, Eye } from "lucide-react";
 import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,7 +12,7 @@ interface PrimaryConditionsProps {
   seeingConditions: string;
 }
 
-const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
+const PrimaryConditions = memo<PrimaryConditionsProps>(({
   temperature,
   humidity,
   windSpeed,
@@ -47,6 +47,8 @@ const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
       />
     </div>
   );
-};
+});
+
+PrimaryConditions.displayName = 'PrimaryConditions';
 
 export default PrimaryConditions;

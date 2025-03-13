@@ -2,6 +2,18 @@
 import { QueryClient } from '@tanstack/react-query';
 import { fetchWeatherData, fetchLightPollutionData, fetchForecastData } from './api';
 
+// Cache keys generator to ensure consistency
+const generateCacheKeys = (latitude: number, longitude: number) => {
+  const latKey = latitude.toFixed(4);
+  const lngKey = longitude.toFixed(4);
+  
+  return {
+    weatherKey: ['weather', latKey, lngKey],
+    lightPollutionKey: ['lightPollution', latKey, lngKey],
+    forecastKey: ['forecast', latKey, lngKey]
+  };
+};
+
 /**
  * Pre-fetches common location data to improve page transition speed
  * Called before navigation to have data ready when the page loads
@@ -11,30 +23,28 @@ export const prefetchLocationData = async (
   latitude: number, 
   longitude: number
 ) => {
-  // Generate cache keys
-  const weatherKey = ['weather', latitude.toFixed(4), longitude.toFixed(4)];
-  const lightPollutionKey = ['lightPollution', latitude.toFixed(4), longitude.toFixed(4)];
-  const forecastKey = ['forecast', latitude.toFixed(4), longitude.toFixed(4)];
+  const { weatherKey, lightPollutionKey, forecastKey } = generateCacheKeys(latitude, longitude);
   
-  // Prefetch weather data
-  if (!queryClient.getQueryData(weatherKey)) {
-    queryClient.prefetchQuery({
-      queryKey: weatherKey,
-      queryFn: () => fetchWeatherData({ latitude, longitude }),
-      staleTime: 5 * 60 * 1000 // 5 minutes
-    });
-  }
+  // Use Promise.all to fetch data in parallel
+  await Promise.all([
+    // Prefetch weather data
+    !queryClient.getQueryData(weatherKey) && 
+      queryClient.prefetchQuery({
+        queryKey: weatherKey,
+        queryFn: () => fetchWeatherData({ latitude, longitude }),
+        staleTime: 5 * 60 * 1000 // 5 minutes
+      }),
+    
+    // Prefetch light pollution data
+    !queryClient.getQueryData(lightPollutionKey) && 
+      queryClient.prefetchQuery({
+        queryKey: lightPollutionKey,
+        queryFn: () => fetchLightPollutionData(latitude, longitude),
+        staleTime: 60 * 60 * 1000 // 1 hour
+      })
+  ]);
   
-  // Prefetch light pollution data
-  if (!queryClient.getQueryData(lightPollutionKey)) {
-    queryClient.prefetchQuery({
-      queryKey: lightPollutionKey,
-      queryFn: () => fetchLightPollutionData(latitude, longitude),
-      staleTime: 60 * 60 * 1000 // 1 hour
-    });
-  }
-  
-  // Prefetch forecast data - lower priority so we'll use .fetchQuery instead of prefetchQuery
+  // Lower priority data can be fetched after the main data
   setTimeout(() => {
     if (!queryClient.getQueryData(forecastKey)) {
       queryClient.fetchQuery({
@@ -43,7 +53,7 @@ export const prefetchLocationData = async (
         staleTime: 30 * 60 * 1000 // 30 minutes
       });
     }
-  }, 500); // Delay to prioritize more important data
+  }, 500);
 };
 
 /**

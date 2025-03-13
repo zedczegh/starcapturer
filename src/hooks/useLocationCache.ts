@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 interface CacheItem<T> {
   data: T;
@@ -48,12 +48,13 @@ const useLocationCache = <T,>() => {
     });
   }, []);
   
-  return { 
+  // Memoize the returned object to prevent unnecessary rerenders
+  return useMemo(() => ({ 
     setCachedData, 
     getCachedData, 
     clearCache,
     clearCacheItem
-  };
+  }), [setCachedData, getCachedData, clearCache, clearCacheItem]);
 };
 
 export default useLocationCache;
