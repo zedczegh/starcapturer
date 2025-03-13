@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { useLocationDataCache } from "./useLocationData";
+import { useToast } from "@/hooks/use-toast";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -13,6 +14,7 @@ export const useSIQSCalculation = (
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
+  const { toast } = useToast();
   
   // Pre-compute values for better performance
   const currentMoonPhase = useMemo(() => {
@@ -71,14 +73,41 @@ export const useSIQSCalculation = (
       if (cachedWeatherData) {
         data = cachedWeatherData;
       } else {
-        data = await fetchWeatherData({
-          latitude: lat,
-          longitude: lng,
-        });
-        
-        if (data) {
-          // Cache the weather data for future use
-          setCachedData(cacheKey, data);
+        try {
+          data = await fetchWeatherData({
+            latitude: lat,
+            longitude: lng,
+          });
+          
+          if (data) {
+            // Cache the weather data for future use
+            setCachedData(cacheKey, data);
+          }
+        } catch (weatherError) {
+          console.error("Failed to fetch weather data:", weatherError);
+          
+          // Use fallback weather data
+          data = {
+            temperature: 20,
+            humidity: 50,
+            cloudCover: 30,
+            windSpeed: 10,
+            precipitation: 0,
+            time: new Date().toISOString(),
+            condition: "Clear",
+            weatherCondition: "Clear",
+            aqi: 50
+          };
+          
+          // Show toast notification if not in display-only mode
+          if (!displayOnly) {
+            toast({
+              title: language === 'en' ? "Using offline data" : "使用离线数据",
+              description: language === 'en'
+                ? "Could not fetch real-time weather. Using offline data instead."
+                : "无法获取实时天气数据，使用离线数据替代。"
+            });
+          }
         }
       }
       
@@ -112,7 +141,7 @@ export const useSIQSCalculation = (
             }
           } catch (lightError) {
             console.error("Error fetching light pollution data in SIQS calculation:", lightError);
-            // Continue with current Bortle scale value
+            // Continue with current Bortle scale value based on location or user setting
           }
         }
       }

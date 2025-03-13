@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { fetchLightPollutionData, getLocationNameFromCoordinates } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 // Cache data between renders to improve performance
 export const useLocationDataCache = () => {
@@ -39,6 +40,7 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const locationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setCachedData, getCachedData } = useLocationDataCache();
+  const { toast } = useToast();
 
   const handleUseCurrentLocation = () => {
     if (loading) return;
@@ -101,10 +103,34 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
                   name,
                   bortleScale: lightPollutionData.bortleScale
                 });
+              } else {
+                // If we can't get Bortle scale from API, estimate it
+                const estimatedScale = estimateBortleScale(name);
+                setBortleScale(estimatedScale);
+                
+                setCachedData(cacheKey, {
+                  name,
+                  bortleScale: estimatedScale
+                });
               }
             } catch (lightError) {
               console.error("Error fetching light pollution data:", lightError);
-              // Continue with default Bortle scale
+              
+              // Estimate Bortle scale based on location name
+              const estimatedScale = estimateBortleScale(name);
+              setBortleScale(estimatedScale);
+              
+              setCachedData(cacheKey, {
+                name,
+                bortleScale: estimatedScale
+              });
+              
+              toast({
+                title: language === 'en' ? "Using estimated Bortle scale" : "使用估算的伯特尔尺度",
+                description: language === 'en'
+                  ? "Could not fetch light pollution data. Using estimated value based on location type."
+                  : "无法获取光污染数据。使用基于位置类型的估算值。"
+              });
             }
             
             setLoading(false);
@@ -115,6 +141,10 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
               ? `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
               : `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
             setLocationName(fallbackName);
+            
+            // Estimate Bortle scale conservatively for unknown locations
+            setBortleScale(5);
+            
             setLoading(false);
             setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + fallbackName);
           }
@@ -191,45 +221,82 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
   };
 };
 
+// Improved Bortle scale estimation for different location types
 export const estimateBortleScale = (locationName: string): number => {
+  if (!locationName) return 5; // Default moderate value
+  
   const lowercaseName = locationName.toLowerCase();
   
+  // Major urban centers - very high light pollution
   if (
-    lowercaseName.includes('city') || 
-    lowercaseName.includes('downtown') || 
-    lowercaseName.includes('urban') ||
-    lowercaseName.includes('metro')
+    /\b(beijing|shanghai|tokyo|new york|nyc|los angeles|london|paris|chicago|seoul|mumbai|delhi|mexico city|cairo|singapore)\b/.test(lowercaseName) ||
+    lowercaseName.includes('downtown') ||
+    lowercaseName.includes('city center')
   ) {
-    return 8;
+    return 8; // Class 8: Urban center
   }
   
+  // Urban areas
+  if (
+    lowercaseName.includes('city') || 
+    lowercaseName.includes('urban') ||
+    lowercaseName.includes('metro') ||
+    lowercaseName.includes('municipal')
+  ) {
+    return 7; // Class 7: Urban area
+  }
+  
+  // Suburban areas
   if (
     lowercaseName.includes('suburb') || 
     lowercaseName.includes('residential') || 
-    lowercaseName.includes('town')
+    lowercaseName.includes('borough') ||
+    lowercaseName.includes('district')
   ) {
-    return 6;
+    return 6; // Class 6: Suburban
   }
   
+  // Small towns and villages
+  if (
+    lowercaseName.includes('town') ||
+    lowercaseName.includes('township') ||
+    lowercaseName.includes('village')
+  ) {
+    return 5; // Class 5: Small town
+  }
+  
+  // Rural areas
   if (
     lowercaseName.includes('rural') || 
-    lowercaseName.includes('village') || 
-    lowercaseName.includes('countryside')
+    lowercaseName.includes('countryside') ||
+    lowercaseName.includes('farmland') ||
+    lowercaseName.includes('agricultural')
   ) {
-    return 4;
+    return 4; // Class 4: Rural area
   }
   
+  // Natural areas
   if (
     lowercaseName.includes('park') || 
     lowercaseName.includes('forest') || 
     lowercaseName.includes('national') ||
+    lowercaseName.includes('reserve') ||
+    lowercaseName.includes('preserve')
+  ) {
+    return 3; // Class 3: Natural area
+  }
+  
+  // Remote areas
+  if (
     lowercaseName.includes('desert') ||
     lowercaseName.includes('mountain') ||
     lowercaseName.includes('remote') ||
-    lowercaseName.includes('wilderness')
+    lowercaseName.includes('wilderness') ||
+    lowercaseName.includes('isolated')
   ) {
-    return 3;
+    return 2; // Class 2: Remote area
   }
   
-  return 5;
+  // Default - moderate light pollution assumption
+  return 5; // Class 5 as default
 };
