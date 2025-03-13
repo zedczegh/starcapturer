@@ -1,12 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { getLocationNameFromCoordinates } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
 import { useLocationDataCache } from "./location/useLocationCache";
 import { useGeolocation } from "./location/useGeolocation";
 import { getBortleScaleForLocation } from "./location/useBortleScale";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getLocationFromCoordinates, validateCoordinates } from "@/services/locationService";
 
 export { useLocationDataCache } from "./location/useLocationCache";
 export { estimateBortleScale } from "./location/useBortleScale";
@@ -14,6 +13,7 @@ export { estimateBortleScale } from "./location/useBortleScale";
 export const useCurrentLocation = (language: string, noAutoLocationRequest: boolean = false) => {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationName, setLocationName] = useState("");
+  const [formattedLocationName, setFormattedLocationName] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [bortleScale, setBortleScale] = useState(4);
@@ -45,80 +45,52 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
   }, [geo.coords]);
 
   const handleLocationFound = async (lat: number, lng: number) => {
-    setLatitude(lat.toFixed(6));
-    setLongitude(lng.toFixed(6));
-    setUserLocation({ latitude: lat, longitude: lng });
-    
-    // Check for cached data
-    const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
-    const cachedData = getCachedData(cacheKey);
-    
-    if (cachedData) {
-      setLocationName(cachedData.name);
-      setBortleScale(cachedData.bortleScale);
-      setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + cachedData.name);
-      return;
-    }
-    
     try {
-      // First, try our own database for better location names
-      const closestLocation = findClosestKnownLocation(lat, lng);
-      let name;
+      // Validate coordinates
+      const { latitude: validLat, longitude: validLng } = validateCoordinates({ latitude: lat, longitude: lng });
       
-      // If location is within 20km of a known location, use that name
-      if (closestLocation.distance <= 20) {
-        name = closestLocation.name;
-        setBortleScale(closestLocation.bortleScale);
-        console.log("Got location from database:", name, "Bortle:", closestLocation.bortleScale);
-      } else {
-        // Otherwise try to get a name from API
-        name = await getLocationNameFromCoordinates(lat, lng, language);
-        console.log("Got location name from API:", name);
-        
-        // Get Bortle scale
-        const scale = await getBortleScaleForLocation(lat, lng, name, setCachedData);
-        setBortleScale(scale);
+      setLatitude(validLat.toFixed(6));
+      setLongitude(validLng.toFixed(6));
+      setUserLocation({ latitude: validLat, longitude: validLng });
+      
+      // Check for cached data
+      const cacheKey = `loc-${validLat.toFixed(4)}-${validLng.toFixed(4)}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        setLocationName(cachedData.name);
+        setFormattedLocationName(cachedData.formattedName || cachedData.name);
+        setBortleScale(cachedData.bortleScale);
+        setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + (cachedData.formattedName || cachedData.name));
+        return;
       }
       
-      // If name still contains coordinates, try to get a friendlier name
-      if (name && (name.includes("Location at") || name.includes("("))) {
-        // Try to get a better name one more time
-        try {
-          const friendlyName = await getLocationNameFromCoordinates(lat, lng, language);
-          if (friendlyName && !friendlyName.includes("Location")) {
-            name = friendlyName;
-          }
-        } catch (error) {
-          console.warn("Error getting friendly location name:", error);
-          // Continue with the name we have
-        }
-      }
+      // Use our local location database
+      const locationInfo = getLocationFromCoordinates(validLat, validLng);
       
-      setLocationName(name);
+      setLocationName(locationInfo.name);
+      setFormattedLocationName(locationInfo.formattedName);
+      setBortleScale(locationInfo.bortleScale);
       
       // Cache this data for future use
       setCachedData(cacheKey, {
-        name,
-        bortleScale
+        name: locationInfo.name,
+        formattedName: locationInfo.formattedName,
+        bortleScale: locationInfo.bortleScale
       });
       
-      setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + name);
+      setStatusMessage(
+        language === 'en' 
+          ? `Location found: ${locationInfo.formattedName}` 
+          : `位置已找到：${locationInfo.formattedName}`
+      );
     } catch (error) {
-      console.error("Error getting location name:", error);
-      // Use our closest known location from the database as a fallback
-      const closestLocation = findClosestKnownLocation(lat, lng);
-      const fallbackName = closestLocation.distance <= 50 
-        ? closestLocation.name
-        : (language === 'en'
-          ? `${t("Location near", "位置在附近")}: ${lat.toFixed(2)}°, ${lng.toFixed(2)}°`
-          : `${t("Location near", "位置在附近")}: ${lat.toFixed(2)}°, ${lng.toFixed(2)}°`);
-              
-      setLocationName(fallbackName);
-      
-      // Use our Bortle scale database
-      setBortleScale(closestLocation.bortleScale);
-      
-      setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + fallbackName);
+      console.error("Error getting location:", error);
+      setStatusMessage(
+        language === 'en'
+          ? "Could not determine exact location. Using approximate coordinates."
+          : "无法确定确切位置。使用近似坐标。"
+      );
     }
   };
 
@@ -133,6 +105,7 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
     loading: geo.loading,
     userLocation,
     locationName,
+    formattedLocationName,
     latitude,
     longitude,
     bortleScale,
