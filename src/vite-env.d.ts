@@ -42,9 +42,6 @@ declare module 'react-leaflet' {
   export class Popup extends React.Component<PopupProps> {}
   
   export function useMap(): L.Map;
-  export function useMapEvents(handlers: {
-    [key: string]: (e: L.LeafletEvent) => void;
-  }): L.Map;
 }
 
 // Make Leaflet available globally

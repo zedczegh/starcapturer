@@ -37,7 +37,8 @@ const MapUpdater = ({ position }: { position: [number, number] }) => {
   useEffect(() => {
     if (map) {
       try {
-        map.setView(position, map.getZoom());
+        // Gentle panning instead of immediate view change to prevent jarring transitions
+        map.panTo(position, { animate: true, duration: 0.5 });
       } catch (error) {
         console.error("Error updating map view:", error);
       }
@@ -89,9 +90,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return ((lng + 180) % 360 + 360) % 360 - 180;
   };
 
-  // Get location name from coordinates - simplified version
-  const getLocationNameFromCoordinates = async (lat: number, lng: number): Promise<string> => {
-    return `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+  // Generate a location name from coordinates
+  const getLocationNameFromCoordinates = (lat: number, lng: number): string => {
+    return `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
   };
 
   // Interactive map component that handles clicks
@@ -102,7 +103,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
     useEffect(() => {
       if (!editable || !map) return;
       
-      const handleClick = async (e: L.LeafletMouseEvent) => {
+      const handleClick = (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         
         // Ensure latitude is in valid range (-90 to 90)
@@ -112,30 +113,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
         
         setPosition([validLat, validLng]);
         
-        try {
-          const newName = await getLocationNameFromCoordinates(validLat, validLng);
-          
-          if (onLocationUpdate) {
-            onLocationUpdate({
-              name: newName,
-              latitude: validLat,
-              longitude: validLng
-            });
-          }
-        } catch (error) {
-          console.error('Error getting location name:', error);
-          const fallbackName = t(
-            `Location at ${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`,
-            `位置：${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`
-          );
-          
-          if (onLocationUpdate) {
-            onLocationUpdate({
-              name: fallbackName,
-              latitude: validLat,
-              longitude: validLng
-            });
-          }
+        if (onLocationUpdate) {
+          const locationName = getLocationNameFromCoordinates(validLat, validLng);
+          onLocationUpdate({
+            name: locationName,
+            latitude: validLat,
+            longitude: validLng
+          });
         }
       };
       
@@ -266,14 +250,14 @@ const LocationMap: React.FC<LocationMapProps> = ({
             whenReady={handleMapReady}
             attributionControl={false}
           >
-            {/* Base Map Layer - Bing Road Map */}
+            {/* Base Map Layer - OpenStreetMap */}
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               subdomains={['a', 'b', 'c']}
             />
             
-            {/* Light Pollution Overlay - fallback to a simpler version */}
+            {/* Light Pollution Overlay Layer */}
             <TileLayer
               url="https://tiles.lightpollutionmap.info/tiles/world_atlas_2015/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.lightpollutionmap.info">Light Pollution Map</a>'

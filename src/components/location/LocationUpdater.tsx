@@ -29,13 +29,17 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
 
   const handleLocationSearch = (selectedLocation: Location) => {
     try {
+      // Ensure we have a valid name, even if it's just coordinates
+      const locationName = selectedLocation.name || 
+        `Location at ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°`;
+      
       onLocationUpdate({
-        name: selectedLocation.name,
+        name: locationName,
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude
       });
       
-      setStatusMessage(t(`Now viewing ${selectedLocation.name}`, `现在查看 ${selectedLocation.name}`));
+      setStatusMessage(t(`Now viewing ${locationName}`, `现在查看 ${locationName}`));
     } catch (error) {
       console.error("Error updating location:", error);
       setStatusMessage(t("Failed to update location", "无法更新位置"));
@@ -69,8 +73,8 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         try {
           const { latitude, longitude } = position.coords;
           
-          // Generate a simple location name based on coordinates
-          const locationName = `Location at ${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E`;
+          // Generate a location name based on coordinates
+          const locationName = `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
           
           await onLocationUpdate({
             name: locationName,
