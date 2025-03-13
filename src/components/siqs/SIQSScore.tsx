@@ -1,17 +1,18 @@
-
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage } from "../SIQSSummary";
+import { Link } from "react-router-dom";
 
 interface SIQSScoreProps {
   siqsScore: number;
+  locationId?: string;
 }
 
-const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore }) => {
+const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
   const { language, t } = useLanguage();
   
-  return (
-    <div className="mb-6 p-4 glass-card">
+  const scoreComponent = (
+    <div className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
           {t("Estimated SIQS Score", "预估SIQS评分")}
@@ -49,10 +50,18 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore }) => {
       
       <p className="text-xs text-muted-foreground mt-3">
         {language === 'en' 
-          ? "This is an estimated score based on current data. For detailed analysis with forecast data, click \"See More Details\" below." 
-          : "这是根据当前数据的预估评分。要获取基于预测数据的详细分析，请点击下方的\"查看更多详情\"。"}
+          ? "Click for detailed analysis with forecast data" 
+          : "点击获取基于预测数据的详细分析"}
       </p>
     </div>
+  );
+
+  return locationId ? (
+    <Link to={`/location/${locationId}`}>
+      {scoreComponent}
+    </Link>
+  ) : (
+    scoreComponent
   );
 };
 

@@ -6,10 +6,8 @@ import { useCurrentLocation, useLocationDataCache } from "@/hooks/useLocationDat
 import { useSIQSCalculation } from "@/hooks/useSIQSCalculation";
 import LocationSelector from "./siqs/LocationSelector";
 import SIQSScore from "./siqs/SIQSScore";
-import AdvancedSettings from "./siqs/AdvancedSettings";
 import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
 import StatusMessage from "./siqs/StatusMessage";
-import CalculateButton from "./siqs/CalculateButton";
 import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState";
 import { useSIQSAdvancedSettings } from "./siqs/hooks/useSIQSAdvancedSettings";
 
@@ -30,14 +28,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
-  const {
-    seeingConditions, 
-    setSeeingConditions,
-    bortleScale,
-    setBortleScale,
-    showAdvancedSettings, 
-    setShowAdvancedSettings
-  } = useSIQSAdvancedSettings();
+  const { seeingConditions, bortleScale } = useSIQSAdvancedSettings();
   
   const {
     userLocation,
@@ -54,9 +45,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     language,
     noAutoLocationRequest,
     bortleScale,
-    setBortleScale,
+    setBortleScale: () => {}, // No-op function since we don't allow changing bortleScale anymore
     setStatusMessage,
-    setShowAdvancedSettings,
+    setShowAdvancedSettings: () => {}, // No-op function since we don't use this anymore
     getCachedData,
     setCachedData
   });
@@ -93,30 +84,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, bortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
   
-  const handleCalculate = () => {
-    if (!validateInputs(locationName, latitude, longitude, language)) {
-      setStatusMessage(language === 'en' 
-        ? "Please enter a valid location with coordinates." 
-        : "请输入有效的位置和坐标。");
-      return;
-    }
-    
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    calculateSIQSForLocation(
-      lat, 
-      lng, 
-      locationName, 
-      false, 
-      bortleScale, 
-      seeingConditions, 
-      setLoading, 
-      setStatusMessage,
-      language
-    );
-  };
-  
   return (
     <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}>
       <SIQSCalculatorHeader />
@@ -133,33 +100,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           onSelectLocation={handleLocationSelect}
         />
         
-        <div className="pt-2 pb-2">
-          <hr className="border-cosmic-800/30" />
-        </div>
-        
         {!hideRecommendedPoints && (
           <RecommendedPhotoPoints 
             onSelectPoint={handleRecommendedPointSelect}
             userLocation={userLocation}
           />
-        )}
-        
-        {locationName && (
-          <div className="space-y-4 animate-fade-in">
-            <AdvancedSettings 
-              showAdvancedSettings={showAdvancedSettings}
-              setShowAdvancedSettings={setShowAdvancedSettings}
-              bortleScale={bortleScale}
-              setBortleScale={setBortleScale}
-              seeingConditions={seeingConditions}
-              setSeeingConditions={setSeeingConditions}
-            />
-            
-            <CalculateButton 
-              loading={loading} 
-              onClick={handleCalculate}
-            />
-          </div>
         )}
       </div>
     </div>

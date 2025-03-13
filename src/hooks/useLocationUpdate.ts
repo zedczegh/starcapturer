@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { fetchWeatherData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { useLightPollutionData } from "./useLightPollutionData";
+import { hasProperty } from "@/types/weather-utils";
 
 export const useLocationUpdate = (
   locationData: any,
@@ -30,7 +31,7 @@ export const useLocationUpdate = (
         if (!newWeatherData) throw new Error("Failed to fetch weather data");
         
         // Reuse existing Bortle scale or get a new one
-        let bortleScale = locationData.bortleScale;
+        let bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : 4;
         try {
           const { fetchLightPollutionData } = await import("@/lib/api");
           const bortleData = await fetchLightPollutionData(
@@ -46,10 +47,12 @@ export const useLocationUpdate = (
         }
         
         // Calculate new SIQS score
+        const seeingConditions = hasProperty(locationData, 'seeingConditions') ? locationData.seeingConditions : 3;
+        
         const siqsResult = calculateSIQS({
           cloudCover: newWeatherData.cloudCover,
           bortleScale: bortleScale,
-          seeingConditions: locationData.seeingConditions || 3,
+          seeingConditions: seeingConditions,
           windSpeed: newWeatherData.windSpeed,
           humidity: newWeatherData.humidity,
           moonPhase: locationData.moonPhase,
