@@ -1,15 +1,10 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MapPin, Locate } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import LocationMap from "@/components/LocationMap";
-import MapSelector, { Location } from "@/components/MapSelector";
-import { useToast } from "@/hooks/use-toast";
-import { getLocationNameFromCoordinates } from "@/lib/api";
-import { findClosestKnownLocation } from "@/utils/locationUtils";
-import { useLocationDataCache } from "@/hooks/useLocationData";
+import LocationMap from "@/components/location/LocationMap";
+import LocationControls from "@/components/location/LocationControls";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -26,151 +21,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   setGettingUserLocation,
   setStatusMessage
 }) => {
-  const { t, language } = useLanguage();
-  const { toast } = useToast();
-  const [mapError, setMapError] = useState<string | null>(null);
-  const { setCachedData, getCachedData } = useLocationDataCache();
-
-  const handleLocationSearch = (selectedLocation: Location) => {
-    try {
-      // Ensure we have a valid name, even if it's just coordinates
-      const locationName = selectedLocation.name || 
-        `Location at ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°`;
-      
-      onLocationUpdate({
-        name: locationName,
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude
-      });
-      
-      setStatusMessage(t(`Now viewing ${locationName}`, `现在查看 ${locationName}`));
-    } catch (error) {
-      console.error("Error updating location:", error);
-      setStatusMessage(t("Failed to update location", "无法更新位置"));
-      toast({
-        title: t("Error", "错误"),
-        description: t("Failed to update location", "无法更新位置"),
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getProperLocationName = async (latitude: number, longitude: number): Promise<string> => {
-    try {
-      // Check cache first
-      const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey);
-      
-      if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
-        return cachedData.name;
-      }
-      
-      // Try our own database first
-      const closestLocation = findClosestKnownLocation(latitude, longitude);
-      
-      // If location is within 20km of a known location, use that name
-      if (closestLocation.distance <= 20) {
-        const locationName = closestLocation.name;
-        
-        // Cache this data
-        setCachedData(cacheKey, {
-          name: locationName,
-          bortleScale: closestLocation.bortleScale
-        });
-        
-        return locationName;
-      }
-      
-      // Try to get a detailed location from the API
-      const name = await getLocationNameFromCoordinates(latitude, longitude, language);
-      
-      // Cache this data
-      setCachedData(cacheKey, {
-        name,
-        bortleScale: 4 // Default, will be updated later
-      });
-      
-      return name;
-    } catch (error) {
-      console.error("Error getting proper location name:", error);
-      
-      // Use closest known location from database as fallback
-      const closestLocation = findClosestKnownLocation(latitude, longitude);
-      
-      if (closestLocation.distance <= 50) {
-        return `${closestLocation.name} ${t("area", "地区")}`;
-      }
-      
-      // Fallback to coordinates
-      return t(`Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`, 
-              `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
-    }
-  };
-
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setStatusMessage(t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。"));
-      return;
-    }
-
-    setGettingUserLocation(true);
-    setStatusMessage(t("Retrieving your current location data...", "正在获取您的当前位置数据..."));
-
-    const locationTimeout = setTimeout(() => {
-      if (gettingUserLocation) {
-        setGettingUserLocation(false);
-        setStatusMessage(t("Could not get your location in time. Please try again.", "无法及时获取您的位置。请重试。"));
-      }
-    }, 15000);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        clearTimeout(locationTimeout);
-        try {
-          const { latitude, longitude } = position.coords;
-          
-          // Get a proper location name instead of just coordinates
-          const locationName = await getProperLocationName(latitude, longitude);
-          
-          await onLocationUpdate({
-            name: locationName,
-            latitude,
-            longitude
-          });
-          
-          setStatusMessage(t("Using your current location.", "使用您的当前位置。"));
-          
-          setTimeout(() => setStatusMessage(null), 3000);
-        } catch (error) {
-          console.error("Error getting current location:", error);
-          setStatusMessage(t("Failed to get your current location.", "无法获取您的当前位置。"));
-        } finally {
-          setGettingUserLocation(false);
-        }
-      },
-      (error) => {
-        clearTimeout(locationTimeout);
-        console.error("Geolocation error:", error);
-        let errorMessage = t("Unknown error occurred.", "发生了未知错误。");
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = t("You denied the request for geolocation. Please check your browser settings and try again.", "您拒绝了地理定位请求。请检查浏览器设置并重试。");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = t("Location information is unavailable. Please try again later.", "位置信息不可用。请稍后再试。");
-            break;
-          case error.TIMEOUT:
-            errorMessage = t("The request to get location timed out. Please try again.", "获取位置请求超时。请重试。");
-            break;
-        }
-        
-        setStatusMessage(errorMessage);
-        setGettingUserLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
+  const { t } = useLanguage();
 
   // Safely check if locationData has required properties
   const hasValidCoordinates = locationData && 
@@ -198,23 +49,12 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
           onLocationUpdate={onLocationUpdate}
           editable={true}
         />
-        <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30">
-          <Button 
-            variant="outline" 
-            className="w-full mb-4 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
-            onClick={handleGetCurrentLocation}
-            disabled={gettingUserLocation}
-          >
-            <Locate className="h-4 w-4" />
-            {gettingUserLocation 
-              ? t("Retrieving location data...", "获取位置数据中...") 
-              : t("Use my current location", "使用我的当前位置")}
-          </Button>
-          <div className="text-sm text-primary-foreground/80 mb-3 font-medium">
-            {t("Search for another location", "搜索其他位置")}
-          </div>
-          <MapSelector onSelectLocation={handleLocationSearch} />
-        </div>
+        <LocationControls
+          onLocationUpdate={onLocationUpdate}
+          gettingUserLocation={gettingUserLocation}
+          setGettingUserLocation={setGettingUserLocation}
+          setStatusMessage={setStatusMessage}
+        />
       </CardContent>
     </Card>
   );
