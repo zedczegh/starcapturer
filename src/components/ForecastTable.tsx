@@ -128,19 +128,19 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
   }
 
   return (
-    <Card className="shadow-md border-border/30 glassmorphism">
+    <Card className="shadow-md border-cosmic-700/30">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-xl text-gradient-blue">{t("Weather Forecast", "天气预报")}</CardTitle>
+          <CardTitle className="text-xl">{t("Weather Forecast", "天气预报")}</CardTitle>
           {onRefresh && (
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={onRefresh} 
-              className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
+              className="h-8 w-8 p-0 hover:bg-primary/10"
               title={t("Refresh Forecast", "刷新预报")}
             >
-              <RefreshCw className="h-4 w-4 text-primary" />
+              <RefreshCw className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -149,18 +149,18 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-background/50">
+              <TableRow>
                 <TableHead>{t("Time", "时间")}</TableHead>
-                <TableHead className="text-center"><Thermometer className="inline h-4 w-4 mr-1 text-primary/80" />{t("Temp", "温度")}</TableHead>
-                <TableHead className="text-center"><Cloud className="inline h-4 w-4 mr-1 text-primary/80" />{t("Clouds", "云层")}</TableHead>
-                <TableHead className="text-center"><Wind className="inline h-4 w-4 mr-1 text-primary/80" />{t("Wind", "风速")}</TableHead>
-                <TableHead className="text-center"><Droplets className="inline h-4 w-4 mr-1 text-primary/80" />{t("Humid", "湿度")}</TableHead>
+                <TableHead className="text-center"><Thermometer className="inline h-4 w-4 mr-1" />{t("Temp", "温度")}</TableHead>
+                <TableHead className="text-center"><Cloud className="inline h-4 w-4 mr-1" />{t("Clouds", "云层")}</TableHead>
+                <TableHead className="text-center"><Wind className="inline h-4 w-4 mr-1" />{t("Wind", "风速")}</TableHead>
+                <TableHead className="text-center"><Droplets className="inline h-4 w-4 mr-1" />{t("Humid", "湿度")}</TableHead>
                 <TableHead>{t("Conditions", "天气状况")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {forecasts.map((forecast, index) => (
-                <TableRow key={index} className="hover:bg-primary/5 transition-colors">
+                <TableRow key={index}>
                   <TableCell className="font-medium">
                     <div>{formatTime(forecast.time)}</div>
                     <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
