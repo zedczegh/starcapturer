@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader2 } from "lucide-react";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useCurrentLocation, useLocationDataCache } from "@/hooks/useLocationData";
 import { useSIQSCalculation } from "@/hooks/useSIQSCalculation";
 import LocationSelector from "./siqs/LocationSelector";
 import SIQSScore from "./siqs/SIQSScore";
 import AdvancedSettings from "./siqs/AdvancedSettings";
+import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
+import StatusMessage from "./siqs/StatusMessage";
+import CalculateButton from "./siqs/CalculateButton";
 
 import { fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScale } from "@/hooks/useLocationData";
@@ -147,18 +148,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   }, [latitude, longitude, locationName, bortleScale, seeingConditions, validateInputs, calculateSIQSForLocation, language]);
   
   return (
-    <div className={`glassmorphism rounded-xl p-6 ${className}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">
-          {t("Calculate Stellar Imaging Quality Score", "计算恒星成像质量评分")}
-        </h2>
-      </div>
+    <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover-card`}>
+      <SIQSCalculatorHeader />
       
-      {statusMessage && (
-        <div className="mb-4 p-3 bg-background/70 border border-border rounded-md text-sm">
-          {statusMessage}
-        </div>
-      )}
+      <StatusMessage message={statusMessage} />
       
       {siqsScore !== null && <SIQSScore siqsScore={siqsScore} />}
       
@@ -192,18 +185,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               setSeeingConditions={setSeeingConditions}
             />
             
-            <Button
-              type="button"
+            <CalculateButton 
+              loading={loading} 
               onClick={handleCalculate}
-              disabled={loading}
-              className="w-full mt-4 bg-gradient-to-r from-primary/80 to-primary hover:opacity-90 transition-all duration-200"
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                t("See More Details", "查看更多详情")
-              )}
-            </Button>
+            />
           </div>
         )}
       </div>
