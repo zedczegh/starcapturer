@@ -1,37 +1,40 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import LocationHeader from "@/components/location/LocationHeader";
-import SIQSSummary from "@/components/SIQSSummary";
-import WeatherConditions from "@/components/WeatherConditions";
-import LocationMap from "@/components/LocationMap";
-import ForecastTable from "@/components/ForecastTable";
+import StatusMessage from "@/components/location/StatusMessage";
+import LocationError from "@/components/location/LocationError";
+import LocationContent from "@/components/location/LocationContent";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData, getLocationNameFromCoordinates } from "@/lib/api";
+import { fetchWeatherData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import MapSelector, { Location } from "@/components/MapSelector";
-import LongRangeForecast from "@/components/LongRangeForecast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Calendar, MapPin, Locate, RefreshCw } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLocationDetails } from "@/hooks/useLocationDetails";
 
 const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [locationData, setLocationData] = useState<any>(null);
-  const [forecastData, setForecastData] = useState(null);
-  const [longRangeForecast, setLongRangeForecast] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [forecastLoading, setForecastLoading] = useState(false);
-  const [longRangeLoading, setLongRangeLoading] = useState(false);
-  const [gettingUserLocation, setGettingUserLocation] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const { language, t } = useLanguage();
   const { toast } = useToast();
   const isMobile = window.innerWidth < 768;
+
+  const {
+    forecastData,
+    longRangeForecast,
+    loading,
+    forecastLoading,
+    longRangeLoading,
+    gettingUserLocation,
+    statusMessage,
+    setStatusMessage,
+    setGettingUserLocation,
+    handleRefreshAll,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast,
+  } = useLocationDetails(locationData, setLocationData);
 
   useEffect(() => {
     if (!locationData && location.state) {
@@ -59,185 +62,8 @@ const LocationDetails = () => {
         description: t("Location data not found", "找不到位置数据"),
         variant: "destructive"
       });
-      
-      setStatusMessage(t("The requested location information is not available or has expired.", 
-                      "请求的位置信息不可用或已过期。"));
-      
-      const redirectTimer = setTimeout(() => {
-        navigate("/");
-      }, 3000);
-      
-      return () => clearTimeout(redirectTimer);
-    } else if (locationData) {
-      fetchLocationForecast();
-      fetchLongRangeForecast();
-      updateLightPollutionData();
     }
   }, [locationData, location.state, navigate, t, id, toast]);
-
-  const handleRefreshAll = async () => {
-    if (!locationData) return;
-    
-    setLoading(true);
-    setStatusMessage(t("Updating all information...", "正在更新所有信息..."));
-
-    try {
-      const newWeatherData = await fetchWeatherData({
-        latitude: locationData.latitude,
-        longitude: locationData.longitude,
-      });
-
-      if (!newWeatherData) throw new Error("Failed to fetch weather data");
-
-      let bortleScale = locationData.bortleScale;
-      try {
-        const bortleData = await fetchLightPollutionData(locationData.latitude, locationData.longitude);
-        if (bortleData?.bortleScale) {
-          bortleScale = bortleData.bortleScale;
-        }
-      } catch (error) {
-        console.error("Error fetching light pollution data:", error);
-        // Continue with existing bortle scale
-      }
-
-      const siqsResult = calculateSIQS({
-        cloudCover: newWeatherData.cloudCover,
-        bortleScale: bortleScale,
-        seeingConditions: locationData.seeingConditions || 3,
-        windSpeed: newWeatherData.windSpeed,
-        humidity: newWeatherData.humidity,
-        moonPhase: locationData.moonPhase,
-        aqi: newWeatherData.aqi,
-        weatherCondition: newWeatherData.weatherCondition,
-        precipitation: newWeatherData.precipitation
-      });
-
-      const updatedLocationData = {
-        ...locationData,
-        weatherData: newWeatherData,
-        bortleScale,
-        siqsResult,
-        timestamp: new Date().toISOString()
-      };
-
-      setLocationData(updatedLocationData);
-      
-      fetchLocationForecast();
-      fetchLongRangeForecast();
-
-      setStatusMessage(t("All information has been updated with the latest data.", 
-                      "所有信息都已使用最新数据更新。"));
-      
-      setTimeout(() => setStatusMessage(null), 3000);
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      setStatusMessage(t("Could not update all information. Please try again later.", 
-                     "无法更新所有信息。请稍后再试。"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateLightPollutionData = async () => {
-    if (!locationData) return;
-    
-    try {
-      const bortleData = await fetchLightPollutionData(locationData.latitude, locationData.longitude);
-      
-      if (bortleData && bortleData.bortleScale !== locationData.bortleScale) {
-        const updatedLocationData = {
-          ...locationData,
-          bortleScale: bortleData.bortleScale
-        };
-        
-        const moonPhase = locationData.moonPhase || 0;
-        const siqsResult = calculateSIQS({
-          cloudCover: locationData.weatherData.cloudCover,
-          bortleScale: bortleData.bortleScale,
-          seeingConditions: locationData.seeingConditions || 3,
-          windSpeed: locationData.weatherData.windSpeed,
-          humidity: locationData.weatherData.humidity,
-          moonPhase,
-          precipitation: locationData.weatherData.precipitation,
-          weatherCondition: locationData.weatherData.weatherCondition,
-          aqi: locationData.weatherData.aqi
-        });
-        
-        setLocationData({
-          ...updatedLocationData,
-          siqsResult
-        });
-      }
-    } catch (error) {
-      console.error("Error updating light pollution data:", error);
-      // Silent failure for light pollution updates - use existing data
-    }
-  };
-
-  const fetchLocationForecast = async () => {
-    if (!locationData) return;
-    
-    setForecastLoading(true);
-    try {
-      const forecast = await fetchForecastData({
-        latitude: locationData.latitude,
-        longitude: locationData.longitude,
-      });
-      
-      setForecastData(forecast);
-      if (!forecast) {
-        console.error("Forecast data not available or incomplete");
-        setStatusMessage(t("Could not load weather forecast. Try refreshing.", 
-                        "无法加载天气预报。请尝试刷新。"));
-        
-        setTimeout(() => setStatusMessage(null), 3000);
-      }
-    } catch (error) {
-      console.error("Error fetching forecast:", error);
-      setStatusMessage(t("Could not load weather forecast. Try refreshing.", 
-                      "无法加载天气预报。请尝试刷新。"));
-    } finally {
-      setForecastLoading(false);
-    }
-  };
-
-  const fetchLongRangeForecast = async () => {
-    if (!locationData) return;
-    
-    setLongRangeLoading(true);
-    try {
-      const forecast = await fetchForecastData({
-        latitude: locationData.latitude,
-        longitude: locationData.longitude,
-        days: 16 // Request 16 days including today
-      });
-      
-      setLongRangeForecast(forecast);
-      if (!forecast) {
-        console.error("Long range forecast data not available or incomplete");
-      }
-    } catch (error) {
-      console.error("Error fetching long range forecast:", error);
-      setStatusMessage(t("Could not load extended forecast. Try refreshing.", 
-                      "无法加载延��天气预报。请尝试刷新。"));
-    } finally {
-      setLongRangeLoading(false);
-    }
-  };
-
-  const handleRefreshLongRangeForecast = () => {
-    fetchLongRangeForecast();
-    setStatusMessage(t("Updating 15-day forecast data...", "正在更新15天预报数据..."));
-    
-    setTimeout(() => setStatusMessage(null), 3000);
-  };
-
-  const handleRefreshForecast = () => {
-    fetchLocationForecast();
-    setStatusMessage(t("Updating weather forecast data...", "正在更新天气预报数据..."));
-    
-    setTimeout(() => setStatusMessage(null), 3000);
-  };
 
   const handleLocationUpdate = async (newLocation: { name: string; latitude: number; longitude: number }) => {
     setLoading(true);
@@ -319,141 +145,29 @@ const LocationDetails = () => {
     }
   };
 
-  const handleLocationSearch = (selectedLocation: Location) => {
-    handleLocationUpdate({
-      name: selectedLocation.name,
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude
-    });
-    
-    setStatusMessage(t(`Now viewing ${selectedLocation.name}`, `现在查看 ${selectedLocation.name}`));
-  };
-
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setStatusMessage(t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。"));
-      return;
+  // Fix for missing functions in the refactored code
+  const fetchLightPollutionData = async (lat: number, lon: number) => {
+    try {
+      const { fetchLightPollutionData } = await import("@/lib/api");
+      return fetchLightPollutionData(lat, lon);
+    } catch (error) {
+      console.error("Error importing fetchLightPollutionData:", error);
+      return null;
     }
-
-    setGettingUserLocation(true);
-    setStatusMessage(t("Accessing your current location...", "正在访问您的当前位置..."));
-
-    const locationTimeout = setTimeout(() => {
-      if (gettingUserLocation) {
-        setGettingUserLocation(false);
-        setStatusMessage(t("Could not get your location in time. Please try again.", "无法及时获取您的位置。请重试。"));
-      }
-    }, 15000);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        clearTimeout(locationTimeout);
-        try {
-          const { latitude, longitude } = position.coords;
-          
-          const locationName = await getLocationNameFromCoordinates(latitude, longitude, language === 'zh' ? 'zh-CN' : 'en');
-          
-          await handleLocationUpdate({
-            name: locationName,
-            latitude,
-            longitude
-          });
-          
-          setStatusMessage(t("Using your current location.", "使用您的当前位置。"));
-          
-          setTimeout(() => setStatusMessage(null), 3000);
-        } catch (error) {
-          console.error("Error getting current location:", error);
-          setStatusMessage(t("Failed to get your current location.", "无法获取您的当前位置。"));
-        } finally {
-          setGettingUserLocation(false);
-        }
-      },
-      (error) => {
-        clearTimeout(locationTimeout);
-        console.error("Geolocation error:", error);
-        let errorMessage = t("Unknown error occurred.", "发生了未知错误。");
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = t("You denied the request for geolocation. Please check your browser settings and try again.", "您拒绝了地理定位请求。请检查浏览器设置并重试。");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = t("Location information is unavailable. Please try again later.", "位置信息不可用。请稍后再试。");
-            break;
-          case error.TIMEOUT:
-            errorMessage = t("The request to get location timed out. Please try again.", "获取位置请求超时。请重试。");
-            break;
-        }
-        
-        setStatusMessage(errorMessage);
-        setGettingUserLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
-  const siqsResult = locationData?.siqsResult || { 
-    score: 0, 
-    factors: [], 
-    isViable: false 
-  };
-  
-  const siqsScore = siqsResult.score;
-  
-  const weatherData = {
-    temperature: locationData?.weatherData?.temperature || 0,
-    humidity: locationData?.weatherData?.humidity || 0,
-    cloudCover: locationData?.weatherData?.cloudCover || 0,
-    windSpeed: locationData?.weatherData?.windSpeed || 0,
-    precipitation: locationData?.weatherData?.precipitation || 0,
-    time: locationData?.weatherData?.time || new Date().toISOString(),
-    condition: locationData?.weatherData?.condition || 
-      determineWeatherCondition(locationData?.weatherData?.cloudCover || 0),
-    aqi: locationData?.weatherData?.aqi
-  };
-
-  const formatMoonPhase = (phase: number) => {
-    if (typeof phase !== 'number') return t("Unknown", "未知");
-    
-    if (phase <= 0.05 || phase >= 0.95) return t("New Moon", "新月");
-    if (phase < 0.25) return t("Waxing Crescent", "眉月");
-    if (phase < 0.30) return t("First Quarter", "上弦月");
-    if (phase < 0.45) return t("Waxing Gibbous", "盈凸月");
-    if (phase < 0.55) return t("Full Moon", "满月");
-    if (phase < 0.70) return t("Waning Gibbous", "亏凸月");
-    if (phase < 0.80) return t("Last Quarter", "下弦月");
-    return t("Waning Crescent", "残月");
-  };
-
-  const formatSeeingConditions = (value: number) => {
-    if (typeof value !== 'number') return t("Average", "一般");
-    
-    if (value <= 1) return t("Excellent", "极佳");
-    if (value <= 2) return t("Good", "良好");
-    if (value <= 3) return t("Average", "一般");
-    if (value <= 4) return t("Poor", "较差");
-    return t("Very Poor", "非常差");
+  const fetchForecastData = async (params: any) => {
+    try {
+      const { fetchForecastData } = await import("@/lib/api");
+      return fetchForecastData(params);
+    } catch (error) {
+      console.error("Error importing fetchForecastData:", error);
+      return null;
+    }
   };
 
   if (!locationData) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <NavBar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">{t("Location Not Found", "位置未找到")}</h1>
-            <p className="text-muted-foreground mb-6">
-              {t("The location information you're looking for doesn't exist or has expired. Redirecting you to the home page...", 
-                 "您正在查找的位置信息不存在或已过期。正在将您重定向到首页...")}
-            </p>
-            <Button onClick={() => navigate("/")} className="mt-2">
-              {t("Go to Home Page", "返回首页")}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <LocationError />;
   }
 
   return (
@@ -461,11 +175,10 @@ const LocationDetails = () => {
       <NavBar />
       
       <main className="container mx-auto px-4 pt-28 pb-16">
-        {statusMessage && (
-          <div className="mb-4 p-3 bg-background/70 border border-border rounded-md text-sm">
-            {statusMessage}
-          </div>
-        )}
+        <StatusMessage 
+          message={statusMessage} 
+          onClear={() => setStatusMessage(null)} 
+        />
         
         <LocationHeader 
           name={locationData.name}
@@ -476,100 +189,19 @@ const LocationDetails = () => {
           onRefresh={handleRefreshAll}
         />
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-8">
-            <SIQSSummary
-              siqs={locationData.siqsResult?.score || 0}
-              factors={locationData.siqsResult?.factors || []}
-              isViable={locationData.siqsResult?.isViable || false}
-            />
-            
-            <WeatherConditions
-              weatherData={{
-                temperature: locationData.weatherData?.temperature || 0,
-                humidity: locationData.weatherData?.humidity || 0,
-                cloudCover: locationData.weatherData?.cloudCover || 0,
-                windSpeed: locationData.weatherData?.windSpeed || 0,
-                precipitation: locationData.weatherData?.precipitation || 0,
-                time: locationData.weatherData?.time || new Date().toISOString(),
-                condition: locationData.weatherData?.condition || 
-                  determineWeatherCondition(locationData.weatherData?.cloudCover || 0),
-                aqi: locationData.weatherData?.aqi
-              }}
-              moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
-              bortleScale={locationData.bortleScale || 4}
-              seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
-            />
-          </div>
-          
-          <div className="space-y-8">
-            <div className="relative z-60">
-              <Card className="shadow-md overflow-hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl flex items-center">
-                    <MapPin className="mr-2 h-5 w-5 text-primary/80" />
-                    {t("Location", "位置")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <LocationMap
-                    latitude={locationData.latitude}
-                    longitude={locationData.longitude}
-                    name={locationData.name || t("Unnamed Location", "未命名位置")}
-                    onLocationUpdate={handleLocationUpdate}
-                    editable={true}
-                  />
-                  <div className="p-4 border-t border-border/30">
-                    <Button 
-                      variant="outline" 
-                      className="w-full mb-4 flex items-center justify-center gap-2" 
-                      onClick={handleGetCurrentLocation}
-                      disabled={gettingUserLocation}
-                    >
-                      <Locate className="h-4 w-4" />
-                      {gettingUserLocation 
-                        ? t("Getting location...", "获取位置中...") 
-                        : t("Use my current location", "使用我的当前位置")}
-                    </Button>
-                    <div className="text-sm text-muted-foreground mb-3">
-                      {t("Search for another location", "搜索其他位置")}
-                    </div>
-                    <MapSelector onSelectLocation={handleLocationSearch} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <Tabs defaultValue="hourly" className="w-full">
-              <TabsList className="grid grid-cols-2 mb-4">
-                <TabsTrigger value="hourly" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {t("Hourly Forecast", "小时预报")}
-                </TabsTrigger>
-                <TabsTrigger value="extended" className="flex items-center gap-2">
-                  <CalendarRange className="h-4 w-4" />
-                  {t("15-Day Forecast", "15天预报")}
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="hourly" className="mt-0">
-                <ForecastTable 
-                  forecastData={forecastData}
-                  isLoading={forecastLoading}
-                  onRefresh={handleRefreshForecast}
-                />
-              </TabsContent>
-              
-              <TabsContent value="extended" className="mt-0">
-                <LongRangeForecast
-                  forecastData={longRangeForecast}
-                  isLoading={longRangeLoading}
-                  onRefresh={handleRefreshLongRangeForecast}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+        <LocationContent 
+          locationData={locationData}
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          gettingUserLocation={gettingUserLocation}
+          onLocationUpdate={handleLocationUpdate}
+          setGettingUserLocation={setGettingUserLocation}
+          setStatusMessage={setStatusMessage}
+          onRefreshForecast={handleRefreshForecast}
+          onRefreshLongRange={handleRefreshLongRangeForecast}
+        />
       </main>
     </div>
   );
