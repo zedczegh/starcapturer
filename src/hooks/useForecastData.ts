@@ -65,12 +65,10 @@ export const useForecastData = () => {
 
   const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
     fetchLocationForecast(latitude, longitude);
-    // No longer passing setStatusMessage as it's not used
   }, [fetchLocationForecast]);
 
   const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number) => {
     fetchLongRangeForecast(latitude, longitude);
-    // No longer passing setStatusMessage as it's not used
   }, [fetchLongRangeForecast]);
 
   return {

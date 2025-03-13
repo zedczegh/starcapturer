@@ -4,14 +4,15 @@ import { Droplets } from "lucide-react";
 
 interface DynamicHumidityIconProps {
   humidity: number;
+  className?: string;
 }
 
-const DynamicHumidityIcon: React.FC<DynamicHumidityIconProps> = ({ humidity }) => {
+const DynamicHumidityIcon: React.FC<DynamicHumidityIconProps> = ({ humidity, className }) => {
   // Calculate fill based on humidity level
   const fillOpacity = humidity / 100;
   
   return (
-    <div className="relative">
+    <div className={`relative ${className || ''}`}>
       <Droplets 
         className="h-4 w-4 text-primary" 
         style={{

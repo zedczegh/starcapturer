@@ -4,9 +4,10 @@ import { Wind } from "lucide-react";
 
 interface DynamicWindIconProps {
   windSpeed: number;
+  className?: string;
 }
 
-const DynamicWindIcon: React.FC<DynamicWindIconProps> = ({ windSpeed }) => {
+const DynamicWindIcon: React.FC<DynamicWindIconProps> = ({ windSpeed, className }) => {
   // Wind speed thresholds (km/h)
   // Light breeze: < 20
   // Moderate wind: 20-40
@@ -28,7 +29,7 @@ const DynamicWindIcon: React.FC<DynamicWindIconProps> = ({ windSpeed }) => {
   const animationClass = windSpeed > 30 ? "animate-pulse" : "";
   
   return (
-    <div className={`relative ${animationClass}`}>
+    <div className={`relative ${animationClass} ${className || ''}`}>
       <Wind 
         className="h-4 w-4 text-primary" 
         style={{

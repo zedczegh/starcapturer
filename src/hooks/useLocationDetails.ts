@@ -29,8 +29,8 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     if (!locationData) return;
     
     const fetchBothForecasts = () => {
-      handleRefreshForecast(locationData.latitude, locationData.longitude, setStatusMessage);
-      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude, setStatusMessage);
+      handleRefreshForecast(locationData.latitude, locationData.longitude);
+      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
     };
     
     refreshAll(locationData, setLocationData, fetchBothForecasts, setStatusMessage);
@@ -49,11 +49,11 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     handleRefreshAll,
     handleRefreshForecast: () => {
       if (!locationData) return;
-      handleRefreshForecast(locationData.latitude, locationData.longitude, setStatusMessage);
+      handleRefreshForecast(locationData.latitude, locationData.longitude);
     },
     handleRefreshLongRangeForecast: () => {
       if (!locationData) return;
-      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude, setStatusMessage);
+      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
     },
     setLoading,
     setForecastData

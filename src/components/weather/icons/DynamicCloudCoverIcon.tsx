@@ -4,14 +4,15 @@ import { Cloud } from "lucide-react";
 
 interface DynamicCloudCoverIconProps {
   cloudCover: number;
+  className?: string;
 }
 
-const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({ cloudCover }) => {
+const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({ cloudCover, className }) => {
   // Calculate fill based on cloud cover percentage
   const fillOpacity = cloudCover / 100;
   
   return (
-    <div className="relative">
+    <div className={`relative ${className || ''}`}>
       <Cloud 
         className="h-4 w-4 text-primary" 
         style={{

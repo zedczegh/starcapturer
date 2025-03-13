@@ -1,4 +1,3 @@
-
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -192,44 +191,62 @@ export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortS
 /**
  * Fetches forecast data for a specific location
  */
-export async function fetchForecastData(coordinates: Coordinates): Promise<ForecastData | null> {
+export async function fetchForecastData(latitude: number, longitude: number, signal?: AbortSignal): Promise<any | null> {
   try {
-    const { latitude, longitude, days = 3 } = validateCoordinates(coordinates);
+    const coordinates = validateCoordinates({ latitude, longitude, days: 3 });
     
     // Fetch from Open-Meteo API
     const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}` +
       `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
-      `&forecast_days=${days}&timezone=auto`
+      `&forecast_days=${coordinates.days}&timezone=auto`,
+      { signal }
     );
     
     if (!response.ok) {
       throw new Error(`Forecast API responded with status ${response.status}`);
     }
     
-    const data: WeatherResponse = await response.json();
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.log('Forecast data fetch aborted');
+      throw error;
+    }
+    console.error("Error fetching forecast data:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetches long range forecast data for a specific location
+ */
+export async function fetchLongRangeForecastData(latitude: number, longitude: number, signal?: AbortSignal): Promise<any | null> {
+  try {
+    const coordinates = validateCoordinates({ latitude, longitude, days: 16 });
     
-    if (!data.hourly || !data.hourly.time || !data.hourly.temperature_2m || !data.hourly.cloud_cover) {
-      throw new Error("Forecast data is missing required hourly fields");
+    // Fetch from Open-Meteo API with daily data
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,` +
+      `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean` +
+      `&forecast_days=${coordinates.days}&timezone=auto`,
+      { signal }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Long range forecast API responded with status ${response.status}`);
     }
     
-    // Transform data to our standard format
-    const forecast: ForecastData = {
-      hourly: {
-        time: data.hourly.time,
-        temperature: data.hourly.temperature_2m,
-        cloudCover: data.hourly.cloud_cover,
-        precipitation: data.hourly.precipitation,
-        windSpeed: data.hourly.wind_speed_10m || data.hourly.windspeed_10m || new Array(data.hourly.time.length).fill(0),
-        humidity: data.hourly.relative_humidity_2m || new Array(data.hourly.time.length).fill(0),
-        weatherCode: data.hourly.weather_code
-      }
-    };
-    
-    return forecast;
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error("Error fetching forecast data:", error);
-    // Return null instead of throwing to allow graceful fallback
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.log('Long range forecast data fetch aborted');
+      throw error;
+    }
+    console.error("Error fetching long range forecast data:", error);
     return null;
   }
 }
@@ -439,3 +456,4 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number, name: 
   const encodedName = encodeURIComponent(name);
   return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }
+
