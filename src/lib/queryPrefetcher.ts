@@ -45,15 +45,19 @@ export const prefetchLocationData = async (
   ]);
   
   // Lower priority data can be fetched after the main data
-  setTimeout(() => {
-    if (!queryClient.getQueryData(forecastKey)) {
+  if (!queryClient.getQueryData(forecastKey)) {
+    setTimeout(() => {
       queryClient.fetchQuery({
         queryKey: forecastKey,
-        queryFn: () => fetchForecastData({ latitude, longitude, days: 3 }),
+        queryFn: () => fetchForecastData({ 
+          latitude, 
+          longitude, 
+          days: 3 
+        }),
         staleTime: 30 * 60 * 1000 // 30 minutes
       });
-    }
-  }, 500);
+    }, 500);
+  }
 };
 
 /**

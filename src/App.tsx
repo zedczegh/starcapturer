@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { prefetchPopularLocations } from "./lib/queryPrefetcher";
 
 // Lazy load pages for faster initial load
@@ -19,11 +19,11 @@ const AboutSIQS = lazy(() => import("./pages/AboutSIQS"));
 // Loading fallback
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
 
-// Create a new QueryClient instance with performance optimized settings
+// Create a new QueryClient instance with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -31,6 +31,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 15 * 60 * 1000, // 15 minutes
+      cacheTime: 20 * 60 * 1000, // 20 minutes
     },
   },
 });
@@ -42,14 +43,17 @@ prefetchPopularLocations(queryClient);
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
+  // Use key based on pathname without query parameters for smoother transitions
+  const pathnameBase = location.pathname.split('?')[0];
+  
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
-        key={location.pathname}
+        key={pathnameBase}
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -5 }}
-        transition={{ duration: 0.12 }} // Reduced for faster transitions
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.1 }} // Even faster transitions
         className="min-h-screen"
       >
         {children}

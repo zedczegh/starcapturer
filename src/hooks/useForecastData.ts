@@ -27,7 +27,12 @@ export const useForecastData = () => {
       // Create a new AbortController
       forecastController = new AbortController();
       
-      const data = await fetchForecastData(latitude, longitude, forecastController.signal);
+      const data = await fetchForecastData({
+        latitude,
+        longitude,
+        days: 3
+      }, forecastController.signal);
+      
       setForecastData(data);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
@@ -51,7 +56,12 @@ export const useForecastData = () => {
       // Create a new AbortController
       longRangeController = new AbortController();
       
-      const data = await fetchLongRangeForecastData(latitude, longitude, longRangeController.signal);
+      const data = await fetchLongRangeForecastData({
+        latitude,
+        longitude,
+        days: 16
+      }, longRangeController.signal);
+      
       setLongRangeForecast(data);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {

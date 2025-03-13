@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
 
@@ -13,28 +13,39 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     forecastLoading,
     longRangeLoading,
     setForecastData,
-    handleRefreshForecast,
-    handleRefreshLongRangeForecast
+    handleRefreshForecast: refreshForecast,
+    handleRefreshLongRangeForecast: refreshLongRange
   } = useForecastManager(locationData);
   
   const {
     loading,
     setLoading,
-    handleRefreshAll: refreshAll,
+    handleRefreshAll: refreshWeather,
     updateLightPollutionData
   } = useWeatherUpdater();
 
-  // Wrapper function to pass through the right parameters
-  const handleRefreshAll = () => {
+  // Memoized wrapper functions
+  const handleRefreshForecast = useCallback(() => {
+    if (!locationData) return;
+    refreshForecast(locationData.latitude, locationData.longitude);
+  }, [locationData, refreshForecast]);
+
+  const handleRefreshLongRangeForecast = useCallback(() => {
+    if (!locationData) return;
+    refreshLongRange(locationData.latitude, locationData.longitude);
+  }, [locationData, refreshLongRange]);
+  
+  // Wrapper function for refreshing all data
+  const handleRefreshAll = useCallback(() => {
     if (!locationData) return;
     
     const fetchBothForecasts = () => {
-      handleRefreshForecast(locationData.latitude, locationData.longitude);
-      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+      handleRefreshForecast();
+      handleRefreshLongRangeForecast();
     };
     
-    refreshAll(locationData, setLocationData, fetchBothForecasts, setStatusMessage);
-  };
+    refreshWeather(locationData, setLocationData, fetchBothForecasts, setStatusMessage);
+  }, [locationData, setLocationData, refreshWeather, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage]);
 
   return {
     forecastData,
@@ -47,14 +58,8 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     setStatusMessage,
     setGettingUserLocation,
     handleRefreshAll,
-    handleRefreshForecast: () => {
-      if (!locationData) return;
-      handleRefreshForecast(locationData.latitude, locationData.longitude);
-    },
-    handleRefreshLongRangeForecast: () => {
-      if (!locationData) return;
-      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-    },
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast,
     setLoading,
     setForecastData
   };

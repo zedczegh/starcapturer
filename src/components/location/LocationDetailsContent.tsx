@@ -2,7 +2,7 @@
 import React, { memo } from "react";
 import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
-import LocationContent from "@/components/location/LocationContent";
+import LocationContentGrid from "@/components/location/LocationContentGrid";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 
 interface LocationDetailsContentProps {
@@ -49,7 +49,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         onRefresh={handleRefreshAll}
       />
       
-      <LocationContent 
+      <LocationContentGrid 
         locationData={locationData}
         forecastData={forecastData}
         longRangeForecast={longRangeForecast}
