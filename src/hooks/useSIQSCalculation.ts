@@ -2,7 +2,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { useToast } from "@/hooks/use-toast";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 
@@ -14,7 +13,6 @@ export const useSIQSCalculation = (
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
-  const { toast } = useToast();
   
   // Pre-compute moon phase for better performance
   const currentMoonPhase = useMemo(() => calculateMoonPhase(), []);
@@ -27,7 +25,7 @@ export const useSIQSCalculation = (
     bortleScale: number, 
     seeingConditions: number, 
     setLoading?: (loading: boolean) => void, 
-    setStatusMessage?: (message: string) => void,
+    setStatusMessage?: (message: string | null) => void,
     language: string = 'en'
   ) => {
     if (isCalculating) return;
@@ -45,7 +43,8 @@ export const useSIQSCalculation = (
         getCachedData, 
         setCachedData, 
         displayOnly,
-        language
+        language,
+        setStatusMessage
       );
       
       if (!data) {
@@ -68,7 +67,8 @@ export const useSIQSCalculation = (
         displayOnly,
         getCachedData,
         setCachedData,
-        language
+        language,
+        setStatusMessage
       );
       
       // Validate Bortle scale before proceeding

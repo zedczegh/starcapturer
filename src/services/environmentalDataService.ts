@@ -1,7 +1,6 @@
 
 import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScaleByLocation } from "@/utils/bortleScaleEstimation";
-import { useToast } from "@/hooks/use-toast";
 
 /**
  * Get weather data with fallback for errors
@@ -13,9 +12,9 @@ export const getWeatherData = async (
   getCachedData: (key: string, maxAge?: number) => any,
   setCachedData: (key: string, data: any) => void,
   displayOnly: boolean,
-  language: string = 'en'
+  language: string = 'en',
+  setStatusMessage?: (message: string | null) => void
 ): Promise<any> => {
-  const { toast } = useToast();
   const cachedWeatherData = !displayOnly ? null : getCachedData(cacheKey, 2 * 60 * 1000); // 2 minute cache for weather
   
   if (cachedWeatherData) {
@@ -49,14 +48,11 @@ export const getWeatherData = async (
       aqi: 50
     };
     
-    // Show toast notification if not in display-only mode
-    if (!displayOnly) {
-      toast({
-        title: language === 'en' ? "Using offline data" : "使用离线数据",
-        description: language === 'en'
-          ? "Could not fetch real-time weather. Using offline data instead."
-          : "无法获取实时天气数据，使用离线数据替代。"
-      });
+    // Show status message if not in display-only mode
+    if (!displayOnly && setStatusMessage) {
+      setStatusMessage(language === 'en'
+        ? "Could not fetch real-time weather. Using offline data instead."
+        : "无法获取实时天气数据，使用离线数据替代。");
     }
     
     return fallbackData;
@@ -76,10 +72,9 @@ export const getBortleScaleData = async (
   displayOnly: boolean,
   getCachedData: (key: string, maxAge?: number) => any,
   setCachedData: (key: string, data: any) => void,
-  language: string = 'en'
+  language: string = 'en',
+  setStatusMessage?: (message: string | null) => void
 ): Promise<number> => {
-  const { toast } = useToast();
-  
   if (!displayOnly || bortleScale === 4) {
     // Check if we have cached Bortle scale data
     const bortleCacheKey = `bortle-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
@@ -112,13 +107,10 @@ export const getBortleScaleData = async (
     // Cache the estimated data
     setCachedData(bortleCacheKey, { bortleScale: estimatedScale, estimated: true });
     
-    if (!displayOnly) {
-      toast({
-        title: language === 'en' ? "Using estimated light pollution data" : "使用估算的光污染数据",
-        description: language === 'en'
-          ? "Could not fetch precise light pollution data. Using location-based estimation."
-          : "无法获取精确的光污染数据。使用基于位置的估算。"
-      });
+    if (!displayOnly && setStatusMessage) {
+      setStatusMessage(language === 'en'
+        ? "Could not fetch precise light pollution data. Using location-based estimation."
+        : "无法获取精确的光污染数据。使用基于位置的估算。");
     }
     
     return estimatedScale;

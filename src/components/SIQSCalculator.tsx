@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +8,9 @@ import { useSIQSCalculation } from "@/hooks/useSIQSCalculation";
 import LocationSelector from "./siqs/LocationSelector";
 import SIQSScore from "./siqs/SIQSScore";
 import AdvancedSettings from "./siqs/AdvancedSettings";
+
+import { fetchLightPollutionData } from "@/lib/api";
+import { estimateBortleScale } from "@/hooks/useLocationData";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -50,7 +52,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation
   } = useSIQSCalculation(setCachedData, getCachedData);
   
-  // Optimize calculations with debounce
   useEffect(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
@@ -67,7 +68,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           bortleScale, 
           seeingConditions,
           undefined,
-          undefined,
+          setStatusMessage,
           language
         );
       }
@@ -81,7 +82,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
     
-    // Check if we have cached data
     const cacheKey = `loc-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
     const cachedData = getCachedData(cacheKey);
     
@@ -98,7 +98,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         setBortleScale(lightPollutionData.bortleScale);
         console.log("Got Bortle scale for selected location:", lightPollutionData.bortleScale);
         
-        // Cache this data
         setCachedData(cacheKey, {
           name: location.name,
           bortleScale: lightPollutionData.bortleScale
@@ -106,7 +105,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       }
     } catch (error) {
       console.error("Error fetching light pollution data for selected location:", error);
-      // Use our utility function to estimate Bortle scale
       const estimatedBortleScale = estimateBortleScale(location.name);
       setBortleScale(estimatedBortleScale);
     }
@@ -214,7 +212,3 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 };
 
 export default SIQSCalculator;
-
-// Missing import that was referenced in handleLocationSelect
-import { fetchLightPollutionData } from "@/lib/api";
-import { estimateBortleScale } from "@/hooks/useLocationData";
