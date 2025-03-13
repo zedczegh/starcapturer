@@ -19,23 +19,23 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
       staleTime: 10 * 60 * 1000, // 10 minutes - increased from 5 for better caching
-      cacheTime: 15 * 60 * 1000, // 15 minutes
+      gcTime: 15 * 60 * 1000, // 15 minutes - replaced cacheTime with gcTime
     },
   },
 });
 
-// Animated page transitions
+// Optimized animated page transitions with shorter durations
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={location.pathname}
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.2 }}
+        exit={{ opacity: 0, y: -5 }}
+        transition={{ duration: 0.15 }} // Reduced for faster transitions
         className="min-h-screen"
       >
         {children}

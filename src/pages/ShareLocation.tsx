@@ -14,6 +14,12 @@ const ShareLocation = () => {
   const getUserLocation = useCallback(async () => {
     // Attempt to get user's current location
     if (navigator.geolocation) {
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 5000, // Reduced from 10000 for faster response
+        maximumAge: 0
+      };
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -38,14 +44,20 @@ const ShareLocation = () => {
             message: "We couldn't access your current location. You can still enter coordinates manually.",
             type: 'error'
           });
-        }
+        },
+        options
       );
     }
   }, []);
   
   useEffect(() => {
     // Pre-fetch user location when component mounts
-    getUserLocation();
+    // Adding a small delay to allow the page to render first
+    const timer = setTimeout(() => {
+      getUserLocation();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [getUserLocation]);
   
   return (
@@ -53,16 +65,16 @@ const ShareLocation = () => {
       className="min-h-screen"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.2 }} // Faster animation
     >
       <NavBar />
       
       <main className="container mx-auto px-4 pt-32 pb-20">
         <motion.div 
           className="max-w-3xl mx-auto"
-          initial={{ y: 20, opacity: 0 }}
+          initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
+          transition={{ delay: 0.05, duration: 0.2 }} // Faster transitions
         >
           <h1 className="text-3xl font-bold mb-6">Share Your Astrophotography Spot</h1>
           <p className="text-muted-foreground mb-8">

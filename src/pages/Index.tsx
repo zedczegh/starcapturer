@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -7,10 +6,18 @@ import SIQSCalculator from "@/components/SIQSCalculator";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Sparkles, Star, Camera, Map, LocateFixed, CloudLightning } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchPopularLocations } from '@/lib/queryPrefetcher';
 
 const Index = () => {
+  const queryClient = useQueryClient();
   const { t } = useLanguage();
   
+  // Prefetch popular locations data on app startup
+  useEffect(() => {
+    prefetchPopularLocations(queryClient);
+  }, [queryClient]);
+
   return (
     <div className="min-h-screen">
       <NavBar />
@@ -133,7 +140,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center text-center mb-12">
             <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-6">
-              <Map className="h-3.5 w-3.5 mr-2 text-primary" />
+              <Map className="h-3.5 w-3.5 text-primary mr-2" />
               <span className="text-xs font-medium text-primary">
                 {t("Discover Photo Spots", "发现拍摄地点")}
               </span>
