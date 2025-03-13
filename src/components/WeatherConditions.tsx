@@ -40,12 +40,12 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     : moonPhase;
 
   return (
-    <Card className="glassmorphism border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300">
-      <CardHeader className="pb-2">
+    <Card className="glassmorphism border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden">
+      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
         <CardTitle className="text-xl text-gradient-blue">{t("Current Conditions", "当前状况")}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-6">
+      <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PrimaryConditions
             temperature={weatherData.temperature}
             humidity={weatherData.humidity}

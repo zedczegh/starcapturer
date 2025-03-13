@@ -1,10 +1,10 @@
 
 import React from "react";
-import { Cloud, Lightbulb, Gauge } from "lucide-react";
+import { Cloud, Gauge } from "lucide-react";
 import ConditionItem from "./ConditionItem";
-import MoonPhaseIcon from "./MoonPhaseIcon";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
+import { DynamicMoonIcon, DynamicLightbulbIcon } from "./DynamicIcons";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -40,7 +40,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
       />
       
       <ConditionItem
-        icon={<MoonPhaseIcon />}
+        icon={<DynamicMoonIcon phase={moonPhase} />}
         label={t("Moon Phase", "月相")}
         value={moonPhase}
       />
@@ -54,7 +54,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
       )}
       
       <ConditionItem
-        icon={<Lightbulb className="h-4 w-4 text-primary" />}
+        icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
         label={t("Bortle Scale", "光污染等级")}
         value={formatBortleScale(bortleScale, t)}
       />

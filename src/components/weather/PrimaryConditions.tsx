@@ -1,8 +1,9 @@
 
 import React from "react";
-import { Thermometer, Droplets, Wind, Eye } from "lucide-react";
+import { Thermometer, Wind, Eye } from "lucide-react";
 import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { DynamicHumidityIcon } from "./DynamicIcons";
 
 interface PrimaryConditionsProps {
   temperature: number;
@@ -28,7 +29,7 @@ const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
       />
       
       <ConditionItem
-        icon={<Droplets className="h-4 w-4 text-primary" />}
+        icon={<DynamicHumidityIcon humidity={humidity} />}
         label={t("Humidity", "湿度")}
         value={`${humidity}%`}
       />
