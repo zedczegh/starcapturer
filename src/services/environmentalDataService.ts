@@ -31,7 +31,7 @@ export const getWeatherData = async (
     const data = await fetchWeatherData({
       latitude,
       longitude,
-      signal: controller.signal
+      options: { signal: controller.signal }
     });
     
     clearTimeout(timeoutId);
@@ -131,7 +131,7 @@ export const getBortleScaleData = async (
     }
     
     // If API returned invalid data or failed, use location-based estimation
-    const estimatedScale = estimateBortleScaleByLocation(locationName, latitude, longitude);
+    const estimatedScale = estimateBortleScaleByLocation(locationName);
     
     // Cache the estimated data
     setCachedData(bortleCacheKey, { bortleScale: estimatedScale, estimated: true });

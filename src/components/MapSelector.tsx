@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Loader2, Search, MapPin, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { locationDatabase } from "@/utils/locationUtils";
-import { useDebounce } from "@/hooks/useDebounce";
+import useDebounce from "@/hooks/useDebounce";
 
 export interface Location {
   name: string;
@@ -29,7 +28,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Use debounced search term to avoid too many searches while typing
   useEffect(() => {
     if (debouncedSearchTerm.length > 2) {
       searchLocation(debouncedSearchTerm);
@@ -66,7 +64,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
   const searchLocations = async (query: string): Promise<Location[]> => {
     const lowercaseQuery = query.toLowerCase();
     
-    // First, search our pre-defined database which contains Bortle scale info
     const matchingLocations = locationDatabase
       .filter(location => 
         location.name.toLowerCase().includes(lowercaseQuery)
@@ -82,7 +79,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       return matchingLocations.slice(0, 8);
     }
     
-    // If we don't have enough results, add some common locations
     const commonLocations: Location[] = [
       { name: "Beijing", placeDetails: "Beijing, China", latitude: 39.9042, longitude: 116.4074 },
       { name: "Shanghai", placeDetails: "Shanghai, China", latitude: 31.2304, longitude: 121.4737 },
@@ -107,12 +103,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       return combinedResults.slice(0, 8);
     }
     
-    // If we still don't have enough results, generate a placeholder
     if (combinedResults.length < 3) {
       const generatedLocation: Location = {
         name: query,
         placeDetails: `Searched location: ${query}`,
-        latitude: 30 + Math.random() * 20, // Generates random location in China region
+        latitude: 30 + Math.random() * 20,
         longitude: 100 + Math.random() * 20
       };
       
@@ -159,7 +154,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
   }, []);
 
   if (children) {
-    // Render as child trigger
     return (
       <div className="relative" ref={containerRef}>
         <div onClick={() => setShowResults(true)}>
@@ -228,7 +222,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
     );
   }
 
-  // Render as standalone search component
   return (
     <div className="relative w-full" ref={containerRef}>
       <div className="relative">
