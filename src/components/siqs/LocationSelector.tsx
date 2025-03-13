@@ -22,6 +22,8 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   
   // Check if locationName is just coordinates or a proper name
   const isCoordinateOnly = locationName && locationName.includes("°");
+  
+  // Format nicer display name for coordinates
   const displayName = isCoordinateOnly ? 
     t("Your current location", "您的当前位置") : 
     locationName;

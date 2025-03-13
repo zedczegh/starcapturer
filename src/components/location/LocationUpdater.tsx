@@ -61,7 +61,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
       const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
       const cachedData = getCachedData(cacheKey);
       
-      if (cachedData && cachedData.name) {
+      if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
         return cachedData.name;
       }
       
@@ -81,7 +81,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         return locationName;
       }
       
-      // Otherwise try to get a name from API
+      // Try to get a detailed location from the API
       const name = await getLocationNameFromCoordinates(latitude, longitude, language);
       
       // Cache this data

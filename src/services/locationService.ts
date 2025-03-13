@@ -1,5 +1,6 @@
 
 import { calculateDistance, getLocationInfo } from "@/data/locationDatabase";
+import { getLocationNameFromCoordinates as getLocationNameFromAPI } from "@/lib/api";
 
 /**
  * Normalize longitude to the range [-180, 180]
@@ -34,25 +35,38 @@ export function validateCoordinates(coordinates: { latitude: number; longitude: 
 /**
  * Get location name and Bortle scale from coordinates
  */
-export function getLocationFromCoordinates(
+export async function getLocationFromCoordinates(
   latitude: number, 
-  longitude: number
-): {
+  longitude: number,
+  language: string = 'en'
+): Promise<{
   name: string;
   formattedName: string;
   bortleScale: number;
   latitude: number;
   longitude: number;
-} {
+}> {
   // Validate coordinates first
   const validCoords = validateCoordinates({ latitude, longitude });
   
   // Get location info from our database
   const locationInfo = getLocationInfo(validCoords.latitude, validCoords.longitude);
   
+  // Try to get a more detailed location name from the API
+  let formattedName = locationInfo.formattedName;
+  try {
+    const apiLocationName = await getLocationNameFromAPI(validCoords.latitude, validCoords.longitude, language);
+    if (apiLocationName && !apiLocationName.includes("°")) {
+      formattedName = apiLocationName;
+    }
+  } catch (error) {
+    console.error("Error getting location name from API:", error);
+    // Continue with the database-derived name
+  }
+  
   return {
     name: locationInfo.name,
-    formattedName: locationInfo.formattedName,
+    formattedName: formattedName,
     bortleScale: locationInfo.bortleScale,
     latitude: validCoords.latitude,
     longitude: validCoords.longitude

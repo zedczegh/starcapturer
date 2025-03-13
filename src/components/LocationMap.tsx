@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -8,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
+import { getLocationNameFromCoordinates } from "@/lib/api";
 
 // Fix for default marker icons - essential for Leaflet to show markers correctly
 delete L.Icon.Default.prototype._getIconUrl;
@@ -94,7 +94,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return ((lng + 180) % 360 + 360) % 360 - 180;
   };
 
-  // Get location name for clicked position
+  // Enhanced function to get a proper location name with administrative hierarchy
   const getLocationNameForCoordinates = async (lat: number, lng: number): Promise<string> => {
     setLocationLoading(true);
     try {
@@ -102,7 +102,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
       const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
       const cachedData = getCachedData(cacheKey);
       
-      if (cachedData && cachedData.name) {
+      if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
         setLocationLoading(false);
         return cachedData.name;
       }
@@ -124,10 +124,43 @@ const LocationMap: React.FC<LocationMapProps> = ({
         return locationName;
       }
       
-      // If we can't get a name, use a generic format
+      // Try to get a proper location name from the API with administrative details
+      try {
+        const locationName = await getLocationNameFromCoordinates(lat, lng, language);
+        if (locationName && !locationName.includes("°")) {
+          // Cache this data
+          setCachedData(cacheKey, {
+            name: locationName,
+            bortleScale: closestLocation.bortleScale || 4
+          });
+          
+          setLocationLoading(false);
+          return locationName;
+        }
+      } catch (apiError) {
+        console.error("Error getting location name from API:", apiError);
+      }
+      
+      // If we still don't have a proper name, create a formatted name based on the closest known location
+      if (closestLocation.distance <= 100) {
+        const distanceText = language === 'en' ? 
+          `Near ${closestLocation.name}` : 
+          `${closestLocation.name}附近`;
+        
+        // Cache this data
+        setCachedData(cacheKey, {
+          name: distanceText,
+          bortleScale: closestLocation.bortleScale
+        });
+        
+        setLocationLoading(false);
+        return distanceText;
+      }
+      
+      // Last resort: use a generic format with region information if available
       const formattedName = t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
-                             `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
-                             
+                            `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+                            
       // Cache this generic name
       setCachedData(cacheKey, {
         name: formattedName,
@@ -142,7 +175,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
       // Fallback to coordinates format
       setLocationLoading(false);
       return t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
-               `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+              `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
     }
   };
 

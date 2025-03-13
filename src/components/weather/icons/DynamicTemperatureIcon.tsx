@@ -4,9 +4,10 @@ import { Thermometer } from "lucide-react";
 
 interface DynamicTemperatureIconProps {
   temperature: number;
+  className?: string;
 }
 
-const DynamicTemperatureIcon: React.FC<DynamicTemperatureIconProps> = ({ temperature }) => {
+const DynamicTemperatureIcon: React.FC<DynamicTemperatureIconProps> = ({ temperature, className }) => {
   // Define temperature ranges and corresponding colors
   let fillColor = "rgba(96, 165, 250, 0.5)"; // Default blue for neutral temps
   let fillOpacity = 0.5;
@@ -30,7 +31,7 @@ const DynamicTemperatureIcon: React.FC<DynamicTemperatureIconProps> = ({ tempera
   }
   
   return (
-    <div className="relative">
+    <div className={`relative ${className || ''}`}>
       <Thermometer 
         className="h-4 w-4 text-primary" 
         style={{
