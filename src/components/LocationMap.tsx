@@ -1,7 +1,7 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import { toast } from "sonner";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -31,6 +31,17 @@ const createCustomMarker = (): L.DivIcon => {
   });
 };
 
+// Component to update the map view when position changes
+const MapUpdater = ({ position }: { position: [number, number] }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    map.setView(position, map.getZoom());
+  }, [position, map]);
+  
+  return null;
+};
+
 interface LocationMapProps {
   latitude: number;
   longitude: number;
@@ -48,12 +59,19 @@ const LocationMap: React.FC<LocationMapProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
-  const mapRef = useRef<L.Map>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
   const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
+
+  // Update position when props change
+  useEffect(() => {
+    if (validLatitude !== position[0] || validLongitude !== position[1]) {
+      setPosition([validLatitude, validLongitude]);
+    }
+  }, [validLatitude, validLongitude]);
 
   // Function to normalize longitude to -180 to 180 range
   const normalizeLongitude = (lng: number): number => {
@@ -89,6 +107,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
           
           toast.success(t("Location Updated", "位置已更新"), {
             description: t(`New location: ${newName}`, `新位置：${newName}`),
+            position: "top-center",
+            duration: 3000
           });
         } catch (error) {
           console.error('Error getting location name:', error);
@@ -108,6 +128,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
           toast.error(t("Location Error", "位置错误"), {
             description: t("Could not get location name. Using coordinates instead.", 
                           "无法获取位置名称。使用坐标代替。"),
+            position: "top-center",
+            duration: 5000
           });
         }
       },
@@ -116,8 +138,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return null;
   };
 
+  // Store map instance when it's created
+  const handleMapCreated = (map: L.Map) => {
+    mapRef.current = map;
+  };
+
   // Effect to add custom CSS for marker animation if not already present
-  React.useEffect(() => {
+  useEffect(() => {
     if (!document.getElementById('custom-marker-styles')) {
       const style = document.createElement('style');
       style.id = 'custom-marker-styles';
@@ -192,7 +219,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
-            ref={mapRef}
+            ref={handleMapCreated as any}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -202,6 +229,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
               position={position}
               icon={createCustomMarker()}
             />
+            <MapUpdater position={position} />
             {editable && <MapEvents />}
           </MapContainer>
         </div>

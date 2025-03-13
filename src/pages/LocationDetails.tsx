@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -13,7 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector, { Location } from "@/components/MapSelector";
 import LongRangeForecast from "@/components/LongRangeForecast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Calendar, MapPin, Locate } from "lucide-react";
+import { CalendarRange, Calendar, MapPin, Locate, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +38,8 @@ const LocationDetails = () => {
     } else if (!locationData && !location.state) {
       console.error("Location data is missing", { params: id, locationState: location.state });
       toast.error(t("Location Not Found", "位置未找到"), {
+        position: "top-center",
+        duration: 5000,
         description: t("The requested location information is not available or has expired.", 
                        "请求的位置信息不可用或已过期。"),
       });
@@ -52,6 +55,84 @@ const LocationDetails = () => {
       updateLightPollutionData();
     }
   }, [locationData, location.state, navigate, t, id]);
+
+  const handleRefreshAll = async () => {
+    if (!locationData) return;
+    
+    setLoading(true);
+    toast.info(t("Refreshing Data", "刷新数据"), {
+      position: "top-center",
+      duration: 3000,
+      description: t("Updating all information...", "正在更新所有信息..."),
+      icon: <RefreshCw className="h-4 w-4 animate-spin" />
+    });
+
+    try {
+      // Refresh weather data
+      const newWeatherData = await fetchWeatherData({
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+      });
+
+      if (!newWeatherData) throw new Error("Failed to fetch weather data");
+
+      // Refresh light pollution data
+      let bortleScale = locationData.bortleScale;
+      try {
+        const bortleData = await fetchLightPollutionData(locationData.latitude, locationData.longitude);
+        if (bortleData?.bortleScale) {
+          bortleScale = bortleData.bortleScale;
+        }
+      } catch (error) {
+        console.error("Error fetching light pollution data:", error);
+        // Continue with existing bortle scale
+      }
+
+      // Recalculate SIQS with new data
+      const siqsResult = calculateSIQS({
+        cloudCover: newWeatherData.cloudCover,
+        bortleScale: bortleScale,
+        seeingConditions: locationData.seeingConditions || 3,
+        windSpeed: newWeatherData.windSpeed,
+        humidity: newWeatherData.humidity,
+        moonPhase: locationData.moonPhase,
+        aqi: newWeatherData.aqi,
+        weatherCondition: newWeatherData.weatherCondition
+      });
+
+      // Update location data with new information
+      const updatedLocationData = {
+        ...locationData,
+        weatherData: newWeatherData,
+        bortleScale,
+        siqsResult,
+        timestamp: new Date().toISOString()
+      };
+
+      setLocationData(updatedLocationData);
+      
+      // Refresh forecasts
+      fetchLocationForecast();
+      fetchLongRangeForecast();
+
+      toast.success(t("Data Refreshed", "数据已刷新"), {
+        position: "top-center",
+        duration: 3000,
+        description: t("All information has been updated with the latest data.", 
+                       "所有信息都已使用最新数据更新。")
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error(t("Refresh Failed", "刷新失败"), {
+        position: "top-center",
+        duration: 5000,
+        description: t("Could not update all information. Please try again later.", 
+                      "无法更新所有信息。请稍后再试。")
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateLightPollutionData = async () => {
     if (!locationData) return;
@@ -81,6 +162,8 @@ const LocationDetails = () => {
         });
         
         toast.success(t("Light Pollution Data Updated", "光污染数据已更新"), {
+          position: "top-center",
+          duration: 3000,
           description: t(
             "Light pollution level has been updated based on location coordinates.",
             "基于位置坐标已更新光污染级别。"
@@ -90,7 +173,6 @@ const LocationDetails = () => {
     } catch (error) {
       console.error("Error updating light pollution data:", error);
       // Silent failure for light pollution updates - use existing data
-      // This prevents disrupting the user experience due to API issues
     }
   };
 
@@ -111,6 +193,8 @@ const LocationDetails = () => {
     } catch (error) {
       console.error("Error fetching forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
+        position: "top-center",
+        duration: 5000,
         description: t("Could not load weather forecast. Try refreshing.", 
                       "无法加载天气预报。请尝试刷新。")
       });
@@ -137,6 +221,8 @@ const LocationDetails = () => {
     } catch (error) {
       console.error("Error fetching long range forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
+        position: "top-center",
+        duration: 5000,
         description: t("Could not load extended forecast. Try refreshing.", 
                       "无法加载延��天气预报。请尝试刷新。")
       });
@@ -148,14 +234,20 @@ const LocationDetails = () => {
   const handleRefreshLongRangeForecast = () => {
     fetchLongRangeForecast();
     toast.info(t("Refreshing Extended Forecast", "正在刷新延长预报"), {
-      description: t("Updating 15-day forecast data...", "正在更新15天预报数据...")
+      position: "top-center",
+      duration: 3000,
+      description: t("Updating 15-day forecast data...", "正在更新15天预报数据..."),
+      icon: <RefreshCw className="h-4 w-4 animate-spin" />
     });
   };
 
   const handleRefreshForecast = () => {
     fetchLocationForecast();
     toast.info(t("Refreshing Forecast", "正在刷新预报"), {
-      description: t("Updating weather forecast data...", "正在更新天气预报数据...")
+      position: "top-center",
+      duration: 3000,
+      description: t("Updating weather forecast data...", "正在更新天气预报数据..."),
+      icon: <RefreshCw className="h-4 w-4 animate-spin" />
     });
   };
 
@@ -191,7 +283,7 @@ const LocationDetails = () => {
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
         moonPhase,
-        aqi: weatherData.aqi, // Include AQI in SIQS calculation if available
+        aqi: weatherData.aqi,
         weatherCondition: weatherData.weatherCondition
       });
 
@@ -226,14 +318,18 @@ const LocationDetails = () => {
       });
 
       toast.success(t("Location Updated", "位置已更新"), {
+        position: "top-center",
+        duration: 3000,
         description: t("SIQS score has been recalculated for the new location.", 
-                       "已为新位置重新计算SIQS评分。"),
+                       "已为新位置重新计算SIQS评分。")
       });
     } catch (error) {
       console.error("Error updating location:", error);
       toast.error(t("Update Error", "更新错误"), {
+        position: "top-center",
+        duration: 5000,
         description: t("Failed to update location and recalculate SIQS score. Please try again.", 
-                      "无法更新位置并重新计算SIQS评分。请重试。"),
+                      "无法更新位置并重新计算SIQS评分。请重试。")
       });
     } finally {
       setLoading(false);
@@ -248,6 +344,8 @@ const LocationDetails = () => {
     });
     
     toast.success(t("Location Updated", "位置已更新"), {
+      position: "top-center",
+      duration: 3000,
       description: t(`Now viewing ${selectedLocation.name}`, `现在查看 ${selectedLocation.name}`)
     });
   };
@@ -255,15 +353,35 @@ const LocationDetails = () => {
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast.error(t("Geolocation Error", "定位错误"), {
+        position: "top-center",
+        duration: 5000,
         description: t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。")
       });
       return;
     }
 
     setGettingUserLocation(true);
+    toast.info(t("Getting Location", "正在获取位置"), {
+      position: "top-center",
+      duration: 3000,
+      description: t("Accessing your current location...", "正在访问您的当前位置..."),
+      icon: <Locate className="h-4 w-4 animate-ping" />
+    });
+
+    const locationTimeout = setTimeout(() => {
+      if (gettingUserLocation) {
+        setGettingUserLocation(false);
+        toast.error(t("Location Timeout", "位置超时"), {
+          position: "top-center",
+          duration: 5000,
+          description: t("Could not get your location in time. Please try again.", "无法及时获取您的位置。请重试。")
+        });
+      }
+    }, 15000);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        clearTimeout(locationTimeout);
         try {
           const { latitude, longitude } = position.coords;
           
@@ -278,11 +396,15 @@ const LocationDetails = () => {
           });
           
           toast.success(t("Location Updated", "位置已更新"), {
+            position: "top-center",
+            duration: 3000,
             description: t("Using your current location.", "使用您的当前位置。")
           });
         } catch (error) {
           console.error("Error getting current location:", error);
           toast.error(t("Location Error", "位置错误"), {
+            position: "top-center",
+            duration: 5000,
             description: t("Failed to get your current location.", "无法获取您的当前位置。")
           });
         } finally {
@@ -290,22 +412,25 @@ const LocationDetails = () => {
         }
       },
       (error) => {
+        clearTimeout(locationTimeout);
         console.error("Geolocation error:", error);
         let errorMessage = t("Unknown error occurred.", "发生了未知错误。");
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = t("You denied the request for geolocation.", "您拒绝了地理定位请求。");
+            errorMessage = t("You denied the request for geolocation. Please check your browser settings and try again.", "您拒绝了地理定位请求。请检查浏览器设置并重试。");
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = t("Location information is unavailable.", "位置信息不可用。");
+            errorMessage = t("Location information is unavailable. Please try again later.", "位置信息不可用。请稍后再试。");
             break;
           case error.TIMEOUT:
-            errorMessage = t("The request to get location timed out.", "获取位置请求超时。");
+            errorMessage = t("The request to get location timed out. Please try again.", "获取位置请求超时。请重试。");
             break;
         }
         
         toast.error(t("Geolocation Error", "定位错误"), {
+          position: "top-center",
+          duration: 7000,
           description: errorMessage
         });
         
@@ -369,6 +494,9 @@ const LocationDetails = () => {
               {t("The location information you're looking for doesn't exist or has expired. Redirecting you to the home page...", 
                  "您正在查找的位置信息不存在或已过期。正在将您重定向到首页...")}
             </p>
+            <Button onClick={() => navigate("/")} className="mt-2">
+              {t("Go to Home Page", "返回首页")}
+            </Button>
           </div>
         </div>
       </div>
@@ -386,6 +514,7 @@ const LocationDetails = () => {
           longitude={locationData.longitude}
           timestamp={locationData.timestamp}
           loading={loading}
+          onRefresh={handleRefreshAll}
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -406,7 +535,7 @@ const LocationDetails = () => {
                 time: locationData.weatherData?.time || new Date().toISOString(),
                 condition: locationData.weatherData?.condition || 
                   determineWeatherCondition(locationData.weatherData?.cloudCover || 0),
-                aqi: locationData.weatherData?.aqi // Pass AQI to component
+                aqi: locationData.weatherData?.aqi
               }}
               moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
               bortleScale={locationData.bortleScale || 4}

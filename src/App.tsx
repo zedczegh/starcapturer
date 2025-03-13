@@ -29,7 +29,23 @@ const App = () => (
       <TooltipProvider>
         {/* Using regular Toaster without className */}
         <Toaster />
-        <Sonner className="z-tooltip" position="top-right" expand={false} closeButton />
+        <Sonner 
+          className="z-tooltip" 
+          position="top-center" 
+          expand={true} 
+          closeButton 
+          richColors 
+          toastOptions={{
+            style: { 
+              fontSize: '0.95rem',
+              borderRadius: '8px',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+              border: '1px solid rgba(64, 64, 86, 0.1)'
+            },
+            duration: 4000
+          }}
+        />
         <BrowserRouter>
           <div className="sci-fi-scrollbar min-h-screen">
             <Routes>
