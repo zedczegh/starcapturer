@@ -3,11 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import ShareLocationForm from "@/components/ShareLocationForm";
-import { toast } from "@/components/ui/use-toast";
 
 const ShareLocation = () => {
   const navigate = useNavigate();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; name?: string } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
   useEffect(() => {
     // Attempt to get user's current location
@@ -24,14 +24,17 @@ const ShareLocation = () => {
             setUserLocation(prev => prev ? { ...prev, name: locationName } : null);
           } catch (error) {
             console.error("Error getting location name:", error);
+            setStatusMessage({
+              message: "We couldn't get your location name. You can still enter it manually.",
+              type: 'error'
+            });
           }
         },
         (error) => {
           console.error("Error getting location:", error);
-          toast({
-            title: "Location Access Failed",
-            description: "We couldn't access your current location. You can still enter coordinates manually.",
-            variant: "destructive",
+          setStatusMessage({
+            message: "We couldn't access your current location. You can still enter coordinates manually.",
+            type: 'error'
           });
         }
       );
@@ -50,6 +53,12 @@ const ShareLocation = () => {
             spots for stargazing and astrophotography. Your contributions will be visible to the 
             community as recommended photo points.
           </p>
+          
+          {statusMessage && (
+            <div className={`mb-4 p-3 rounded-md ${statusMessage.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-green-500/15 text-green-600'}`}>
+              {statusMessage.message}
+            </div>
+          )}
           
           <ShareLocationForm userLocation={userLocation} />
         </div>

@@ -1,2 +1,4 @@
-const dummyFunction = () => {};
-export { dummyFunction as useToast, dummyFunction as toast };
+
+import { useToast, toast } from "@/hooks/use-toast";
+
+export { useToast, toast };

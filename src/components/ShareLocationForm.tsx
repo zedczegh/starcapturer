@@ -1,11 +1,9 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
 import { shareAstroSpot, SharedAstroSpot } from "@/lib/api";
 import { Share, Camera, X, Upload, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -32,15 +30,15 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
   const [photoUrl, setPhotoUrl] = useState("");
   const [targets, setTargets] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim() || !latitude || !longitude || !description.trim() || !photographer.trim()) {
-      toast({
-        title: t("Missing Information", "缺少信息"),
-        description: t("Please fill in all required fields.", "请填写所有必填字段。"),
-        variant: "destructive",
+      setStatusMessage({
+        message: t("Please fill in all required fields.", "请填写所有必填字段。"),
+        type: 'error'
       });
       return;
     }
@@ -50,10 +48,9 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
     const longValue = parseFloat(longitude);
     
     if (isNaN(latValue) || isNaN(longValue)) {
-      toast({
-        title: t("Invalid Coordinates", "无效坐标"),
-        description: t("Please enter valid latitude and longitude values.", "请输入有效的纬度和经度值。"),
-        variant: "destructive",
+      setStatusMessage({
+        message: t("Please enter valid latitude and longitude values.", "请输入有效的纬度和经度值。"),
+        type: 'error'
       });
       return;
     }
@@ -82,9 +79,9 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
         timestamp: new Date().toISOString(),
       });
       
-      toast({
-        title: t("Location Shared", "位置已分享"),
-        description: t("Thank you for sharing your astrophotography spot!", "感谢您分享您的天文摄影点！"),
+      setStatusMessage({
+        message: t("Thank you for sharing your astrophotography spot!", "感谢您分享您的天文摄影点！"),
+        type: 'success'
       });
       
       // Reset form
@@ -101,10 +98,9 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
       
     } catch (error) {
       console.error("Error sharing location:", error);
-      toast({
-        title: t("Error", "错误"),
-        description: t("Failed to share location. Please try again.", "分享位置失败。请重试。"),
-        variant: "destructive",
+      setStatusMessage({
+        message: t("Failed to share location. Please try again.", "分享位置失败。请重试。"),
+        type: 'error'
       });
     } finally {
       setIsSubmitting(false);
@@ -131,6 +127,12 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
       </CardHeader>
       
       <CardContent>
+        {statusMessage && (
+          <div className={`mb-4 p-3 rounded-md ${statusMessage.type === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-green-500/15 text-green-600'}`}>
+            {statusMessage.message}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">{t("Location Name *", "位置名称 *")}</Label>
