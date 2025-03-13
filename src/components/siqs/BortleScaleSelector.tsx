@@ -46,8 +46,8 @@ const BortleScaleSelector: React.FC<BortleScaleSelectorProps> = ({
               <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-80">
-              {t("The Bortle scale measures the night sky's brightness. Lower values indicate darker skies, better for astrophotography.", 
-                "伯特尔尺度测量夜空的亮度。数值越低表示天空越暗，越适合天文摄影。")}
+              {t("The Bortle scale measures the night sky's brightness on a scale of 1-9. Lower values (1-3) indicate darker skies that are better for astrophotography, while higher values (7-9) indicate brighter urban skies with significant light pollution.", 
+                "伯特尔尺度用1-9的等级测量夜空的亮度。数值越低(1-3)表示天空越暗，越适合天文摄影，而数值越高(7-9)表示城市中有明显光污染的明亮天空。")}
             </TooltipContent>
           </Tooltip>
         </Label>

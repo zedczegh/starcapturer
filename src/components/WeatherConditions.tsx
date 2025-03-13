@@ -29,11 +29,16 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   const { language, t } = useLanguage();
   
   const formatBortleScale = (value: number) => {
-    if (value <= 1) return `1 (${t("Excellent Dark", "极暗")})`;
-    if (value <= 3) return `${value.toFixed(1)} (${t("Very Dark", "很暗")})`;
-    if (value <= 5) return `${value.toFixed(1)} (${t("Suburban", "郊区")})`;
-    if (value <= 7) return `${value.toFixed(1)} (${t("Bright Suburban", "明亮郊区")})`;
-    return `${value.toFixed(1)} (${t("City", "城市")})`;
+    // Ensure Bortle scale is a valid number between 1-9
+    let sanitizedValue = value;
+    if (isNaN(value) || value < 1) sanitizedValue = 1;
+    if (value > 9) sanitizedValue = 9;
+    
+    if (sanitizedValue <= 1) return `1 (${t("Excellent Dark", "极暗")})`;
+    if (sanitizedValue <= 3) return `${sanitizedValue.toFixed(1)} (${t("Very Dark", "很暗")})`;
+    if (sanitizedValue <= 5) return `${sanitizedValue.toFixed(1)} (${t("Suburban", "郊区")})`;
+    if (sanitizedValue <= 7) return `${sanitizedValue.toFixed(1)} (${t("Bright Suburban", "明亮郊区")})`;
+    return `${sanitizedValue.toFixed(1)} (${t("City", "城市")})`;
   };
 
   const getAQIColor = (aqi: number) => {
