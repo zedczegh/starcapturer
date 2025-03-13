@@ -12,7 +12,19 @@ const Index = () => {
   const queryClient = useQueryClient();
   
   useEffect(() => {
+    // Prefetch data for popular locations when the home page loads
     prefetchPopularLocations(queryClient);
+    
+    // Scroll to section if hash is present in URL
+    const hash = window.location.hash;
+    if (hash) {
+      const element = document.querySelector(hash);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
   }, [queryClient]);
 
   return (

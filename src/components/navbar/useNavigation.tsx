@@ -8,14 +8,28 @@ import { calculateSIQS } from "@/lib/calculateSIQS";
 
 export const useNavigation = (locationId: string | null, beijingData: any, isLoading: boolean, setIsLoading: (value: boolean) => void) => {
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { toast } = useToast();
+  
+  // Precompute the navigation target for better performance
+  const [navigateTarget, setNavigateTarget] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // If we already have a location ID, update the navigate target
+    if (locationId && locationId.startsWith('/location/')) {
+      setNavigateTarget(`/location/${locationId}`);
+    } else if (beijingData) {
+      setNavigateTarget(`/location/${beijingData.id}`);
+    } else {
+      setNavigateTarget("/#calculator-section");
+    }
+  }, [locationId, beijingData]);
   
   const handleSIQSClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
+    // If we're already on a location page, just stay there
     if (locationId && locationId.startsWith('/location/')) {
-      // If we're already on a location page, just stay there
       return;
     }
     
@@ -119,6 +133,7 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
         timestamp: new Date().toISOString(),
       };
       
+      // Use a more efficient navigation approach
       navigate(`/location/${locationId}`, { 
         state: locationData,
         replace: false 
@@ -134,10 +149,12 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
       
       // Fallback - just navigate to home calculator section
       navigate('/#calculator-section');
-      const calculatorSection = document.getElementById('calculator-section');
-      if (calculatorSection) {
-        calculatorSection.scrollIntoView({ behavior: 'smooth' });
-      }
+      setTimeout(() => {
+        const calculatorSection = document.getElementById('calculator-section');
+        if (calculatorSection) {
+          calculatorSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     } finally {
       setIsLoading(false);
     }
