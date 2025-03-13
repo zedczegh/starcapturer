@@ -59,3 +59,20 @@ interface WeatherData {
   weatherCondition?: string;
   aqi?: number;
 }
+
+// Location database function type
+declare module '@/lib/api' {
+  export function findNearestLocationsInDatabase(
+    latitude: number, 
+    longitude: number, 
+    maxDistance?: number
+  ): Array<{
+    name: string;
+    country?: string;
+    region?: string;
+    latitude: number;
+    longitude: number;
+    bortleScale: number;
+    distance: number;
+  }>;
+}

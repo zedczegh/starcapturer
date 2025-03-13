@@ -1,3 +1,5 @@
+import { getBortleScaleFromDatabase } from "@/data/bortleScaleDatabase";
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -236,30 +238,19 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
  */
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null> {
   try {
-    // Fallback logic - estimate Bortle scale based on population density
-    // This is a temporary solution until light pollution API is fixed
-    const estimatedBortleScale = estimateBortleScale(latitude, longitude);
-    return { bortleScale: estimatedBortleScale };
-
-    // Real API call would look like this:
-    /*
-    const response = await fetch(`https://api.example.com/light-pollution?lat=${latitude}&lon=${longitude}`);
-    if (!response.ok) {
-      throw new Error(`Light pollution API error: ${response.status}`);
-    }
-    const data = await response.json();
-    return { bortleScale: data.bortleScale };
-    */
+    // Use our offline Bortle scale database instead of an API
+    const bortleScale = getBortleScaleFromDatabase(latitude, longitude);
+    return { bortleScale };
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
-    // Return fallback value
+    // Fallback to the old estimateBortleScale function
     return { bortleScale: estimateBortleScale(latitude, longitude) };
   }
 }
 
 /**
  * Estimates Bortle scale based on latitude/longitude
- * This is a fallback when API fails
+ * This is a fallback when database lookup fails
  */
 function estimateBortleScale(latitude: number, longitude: number): number {
   // Major urban centers with high light pollution (Bortle 8-9)
@@ -324,6 +315,18 @@ export async function getLocationNameFromCoordinates(
   language: string = 'en'
 ): Promise<string> {
   try {
+    // First, try to find a name in our local Bortle scale database
+    const closestLocations = findNearestLocationsInDatabase(latitude, longitude, 5);
+    if (closestLocations.length > 0 && closestLocations[0].distance < 5) {
+      // Use the name from the database if we're close enough (within 5km)
+      let name = closestLocations[0].name;
+      if (closestLocations[0].country) {
+        name += `, ${closestLocations[0].country}`;
+      }
+      return name;
+    }
+    
+    // Fall back to OpenStreetMap's Nominatim API
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=${language}`
     );
@@ -364,12 +367,46 @@ export async function getLocationNameFromCoordinates(
       }
       return data.display_name;
     } else {
-      return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      throw new Error('No display name found');
     }
   } catch (error) {
     console.error('Error getting location name:', error);
+    
+    // Try one last time with our database, but with a larger distance threshold
+    const closestLocations = findNearestLocationsInDatabase(latitude, longitude, 20);
+    if (closestLocations.length > 0 && closestLocations[0].distance < 50) {
+      let name = closestLocations[0].name;
+      if (closestLocations[0].distance > 10) {
+        // If we're not very close, indicate it's near this location
+        name = `Near ${name}`;
+      }
+      if (closestLocations[0].country) {
+        name += `, ${closestLocations[0].country}`;
+      }
+      return name;
+    }
+    
     return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
   }
+}
+
+/**
+ * Find the nearest locations in our database to given coordinates
+ */
+function findNearestLocationsInDatabase(latitude: number, longitude: number, maxDistance: number = 10) {
+  const { bortleScaleDatabase } = require('@/data/bortleScaleDatabase');
+  
+  // Calculate distance to all locations in the database
+  const locationsWithDistance = bortleScaleDatabase.map((location: any) => ({
+    ...location,
+    distance: calculateDistance(latitude, longitude, location.latitude, location.longitude)
+  }));
+  
+  // Sort by distance
+  locationsWithDistance.sort((a: any, b: any) => a.distance - b.distance);
+  
+  // Return locations within maxDistance
+  return locationsWithDistance.filter((loc: any) => loc.distance <= maxDistance);
 }
 
 /**

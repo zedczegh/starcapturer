@@ -7,6 +7,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import OfflineMapControl from "./OfflineMapControl";
+import offlineMapService from "@/services/OfflineMapService";
 
 // Fix for default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -88,6 +90,11 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return ((lng + 180) % 360 + 360) % 360 - 180;
   };
 
+  // Store map instance when it's created
+  const handleMapCreated = (map: L.Map) => {
+    mapRef.current = map;
+  };
+
   // Interactive map component that handles clicks
   const MapEvents = () => {
     useMapEvents({
@@ -145,11 +152,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
     });
     
     return null;
-  };
-
-  // Store map instance when it's created
-  const handleMapCreated = (map: L.Map) => {
-    mapRef.current = map;
   };
 
   // Effect to add custom CSS for marker animation if not already present
@@ -233,6 +235,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              // Use the offline map service to handle tile loading
+              {...(offlineMapService.createTileLayer as any)}
             />
             <Marker 
               position={position}
@@ -240,6 +244,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
             />
             <MapUpdater position={position} />
             {editable && <MapEvents />}
+            
+            {/* Add controls in the top-right corner */}
+            <div className="leaflet-top leaflet-right" style={{ zIndex: 1000, margin: '10px' }}>
+              <div className="leaflet-control leaflet-bar flex gap-2">
+                <OfflineMapControl mapRef={mapRef} />
+              </div>
+            </div>
           </MapContainer>
         </div>
         <div className="p-4">
