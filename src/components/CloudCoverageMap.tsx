@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -7,6 +6,7 @@ import { Compass, PlayCircle, PauseCircle, RefreshCw, Calendar } from 'lucide-re
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
+import L from 'leaflet';
 
 interface CloudCoverageMapProps {
   latitude: number;
@@ -32,16 +32,13 @@ const CloudCoverageMap: React.FC<CloudCoverageMapProps> = ({
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const animationRef = useRef<number | null>(null);
   
-  // Generate Open-Meteo cloud layer URL
   const getCloudLayerUrl = (time: Date) => {
     const apiBase = "https://openmeteo.atmosfera.unam.mx/meteosat-10/cloudiness/"; 
     const timestamp = time.toISOString().replace(/[-:]/g, "").split(".")[0];
     return `${apiBase}${timestamp}Z.png`;
   };
   
-  // Generate date range times for the slider
   useEffect(() => {
-    // Create an array of times, from now to 48 hours in the future, every 3 hours
     const now = new Date();
     now.setMinutes(0);
     now.setSeconds(0);
@@ -58,51 +55,38 @@ const CloudCoverageMap: React.FC<CloudCoverageMapProps> = ({
     setCurrentTime(newTimes[0]);
   }, [lastUpdated]);
   
-  // Leaflet map initialization
   useEffect(() => {
     if (!mapRef.current) return;
     
-    // Load Leaflet and initialize map
-    const L = window.L;
-    if (!L) return;
-    
-    // Center map on the given coordinates
     const map = L.map(mapRef.current).setView([latitude, longitude], 4);
     
-    // Add OpenStreetMap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
-    // Add marker for the location
     L.marker([latitude, longitude])
       .addTo(map)
       .bindPopup(name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
       .openPopup();
     
-    // Create cloud overlay layer (initial)
     const cloudOverlay = L.imageOverlay(
       getCloudLayerUrl(currentTime),
       [[90, -180], [-90, 180]],
       { opacity: 0.6 }
     ).addTo(map);
     
-    // Update the cloud overlay when currentTime changes
     const updateCloudLayer = () => {
       cloudOverlay.setUrl(getCloudLayerUrl(currentTime));
     };
     
-    // Watch for time changes
     const timeInterval = setInterval(updateCloudLayer, 1000);
     
-    // Clean up
     return () => {
       clearInterval(timeInterval);
       map.remove();
     };
-  }, [latitude, longitude, name, mapRef.current]);
+  }, [latitude, longitude, name, currentTime]);
   
-  // Timeline animation
   useEffect(() => {
     if (isPlaying) {
       animationRef.current = window.requestAnimationFrame(() => {
@@ -116,7 +100,7 @@ const CloudCoverageMap: React.FC<CloudCoverageMapProps> = ({
             setCurrentTime(times[nextIndex]);
             return nextIndex;
           });
-        }, 800); // Animation speed
+        }, 800);
       });
     }
     

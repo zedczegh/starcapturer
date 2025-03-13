@@ -42,7 +42,7 @@ declare module 'react-leaflet' {
   }): L.Map | null;
 }
 
-// Add global L declaration for Leaflet
+// Make Leaflet available globally
 declare global {
   interface Window {
     L: typeof import('leaflet');
