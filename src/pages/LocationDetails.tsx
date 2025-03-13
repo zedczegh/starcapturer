@@ -8,13 +8,14 @@ import LocationMap from "@/components/LocationMap";
 import ForecastTable from "@/components/ForecastTable";
 import { toast } from "sonner";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData } from "@/lib/api";
+import { fetchWeatherData, fetchForecastData, determineWeatherCondition, fetchLightPollutionData, getLocationNameFromCoordinates } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector, { Location } from "@/components/MapSelector";
 import LongRangeForecast from "@/components/LongRangeForecast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Calendar, MapPin } from "lucide-react";
+import { CalendarRange, Calendar, MapPin, Locate } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -26,6 +27,7 @@ const LocationDetails = () => {
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
   const [longRangeLoading, setLongRangeLoading] = useState(false);
+  const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const { language, t } = useLanguage();
 
   useEffect(() => {
@@ -189,6 +191,8 @@ const LocationDetails = () => {
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
         moonPhase,
+        aqi: weatherData.aqi, // Include AQI in SIQS calculation if available
+        weatherCondition: weatherData.weatherCondition
       });
 
       const updatedLocationData = {
@@ -248,6 +252,69 @@ const LocationDetails = () => {
     });
   };
 
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error(t("Geolocation Error", "定位错误"), {
+        description: t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。")
+      });
+      return;
+    }
+
+    setGettingUserLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          
+          // Get location name
+          const locationName = await getLocationNameFromCoordinates(latitude, longitude, language === 'zh' ? 'zh-CN' : 'en');
+          
+          // Update with current location
+          await handleLocationUpdate({
+            name: locationName,
+            latitude,
+            longitude
+          });
+          
+          toast.success(t("Location Updated", "位置已更新"), {
+            description: t("Using your current location.", "使用您的当前位置。")
+          });
+        } catch (error) {
+          console.error("Error getting current location:", error);
+          toast.error(t("Location Error", "位置错误"), {
+            description: t("Failed to get your current location.", "无法获取您的当前位置。")
+          });
+        } finally {
+          setGettingUserLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        let errorMessage = t("Unknown error occurred.", "发生了未知错误。");
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = t("You denied the request for geolocation.", "您拒绝了地理定位请求。");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = t("Location information is unavailable.", "位置信息不可用。");
+            break;
+          case error.TIMEOUT:
+            errorMessage = t("The request to get location timed out.", "获取位置请求超时。");
+            break;
+        }
+        
+        toast.error(t("Geolocation Error", "定位错误"), {
+          description: errorMessage
+        });
+        
+        setGettingUserLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   const siqsResult = locationData?.siqsResult || { 
     score: 0, 
     factors: [], 
@@ -264,7 +331,8 @@ const LocationDetails = () => {
     precipitation: locationData?.weatherData?.precipitation || 0,
     time: locationData?.weatherData?.time || new Date().toISOString(),
     condition: locationData?.weatherData?.condition || 
-      determineWeatherCondition(locationData?.weatherData?.cloudCover || 0)
+      determineWeatherCondition(locationData?.weatherData?.cloudCover || 0),
+    aqi: locationData?.weatherData?.aqi // Pass AQI to WeatherConditions component
   };
 
   const formatMoonPhase = (phase: number) => {
@@ -337,7 +405,8 @@ const LocationDetails = () => {
                 precipitation: locationData.weatherData?.precipitation || 0,
                 time: locationData.weatherData?.time || new Date().toISOString(),
                 condition: locationData.weatherData?.condition || 
-                  determineWeatherCondition(locationData.weatherData?.cloudCover || 0)
+                  determineWeatherCondition(locationData.weatherData?.cloudCover || 0),
+                aqi: locationData.weatherData?.aqi // Pass AQI to component
               }}
               moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
               bortleScale={locationData.bortleScale || 4}
@@ -363,6 +432,17 @@ const LocationDetails = () => {
                     editable={true}
                   />
                   <div className="p-4 border-t border-border/30">
+                    <Button 
+                      variant="outline" 
+                      className="w-full mb-4 flex items-center justify-center gap-2" 
+                      onClick={handleGetCurrentLocation}
+                      disabled={gettingUserLocation}
+                    >
+                      <Locate className="h-4 w-4" />
+                      {gettingUserLocation 
+                        ? t("Getting location...", "获取位置中...") 
+                        : t("Use my current location", "使用我的当前位置")}
+                    </Button>
                     <div className="text-sm text-muted-foreground mb-3">
                       {t("Search for another location", "搜索其他位置")}
                     </div>

@@ -52,14 +52,22 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
       return { score: 0, quality: t("Bad", "很差"), color: "bg-red-500" };
     }
     
-    // Simplified SIQS calculation for forecast
-    const cloudFactor = (100 - cloudCover) / 100;
-    const windFactor = windSpeed > 20 ? 0 : (20 - windSpeed) / 20;
+    // Simplified SIQS calculation for forecast that aligns with the main algorithm
+    // Cloud factor is more important as per the main algorithm (30%)
+    const cloudFactor = (100 - cloudCover * 2.5) / 100; // Scale 0-40% to 0-100%
+    
+    // Wind factor - max acceptable is 30mph/48kmh in main algorithm
+    const windFactor = windSpeed > 30 ? 0 : (30 - windSpeed) / 30;
+    
+    // Humidity factor - lower is better
     const humidityFactor = humidity > 90 ? 0 : (90 - humidity) / 90;
     
+    // Weight factors similar to main algorithm (cloud is most important)
     const score = (cloudFactor * 0.6 + windFactor * 0.2 + humidityFactor * 0.2) * 10;
     
     let quality, color;
+    
+    // Align quality descriptions with main SIQS scale
     if (score >= 8) {
       quality = t("Excellent", "极佳");
       color = "bg-green-500";
