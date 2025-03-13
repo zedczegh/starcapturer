@@ -74,6 +74,7 @@ interface MapDisplayProps {
   editable?: boolean;
   onMapReady: () => void;
   onMapClick: (lat: number, lng: number) => void;
+  showInfoPanel?: boolean;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -81,7 +82,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   locationName,
   editable = false,
   onMapReady,
-  onMapClick
+  onMapClick,
+  showInfoPanel = false
 }) => {
   const { t } = useLanguage();
   const [mapInitialized, setMapInitialized] = useState(false);
@@ -190,6 +192,22 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         <MapUpdater position={position} />
         {editable && <MapEvents onMapClick={onMapClick} />}
       </MapContainer>
+      
+      {showInfoPanel && (
+        <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
+          <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
+          <p className="text-sm text-muted-foreground">
+            {t(`${locationName} is located at coordinates ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`, 
+               `${locationName}位于坐标 ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`)}
+          </p>
+          {editable && (
+            <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

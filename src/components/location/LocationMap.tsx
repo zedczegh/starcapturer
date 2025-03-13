@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -13,6 +12,7 @@ interface LocationMapProps {
   name: string;
   onLocationUpdate?: (location: { name: string; latitude: number; longitude: number }) => void;
   editable?: boolean;
+  showInfoPanel?: boolean;
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ 
@@ -20,7 +20,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
   longitude, 
   name,
   onLocationUpdate,
-  editable = false 
+  editable = false,
+  showInfoPanel = false
 }) => {
   const { language, t } = useLanguage();
   const [position, setPosition] = useState<[number, number]>([
@@ -192,6 +193,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
         editable={editable}
         onMapReady={handleMapReady}
         onMapClick={handleMapClick}
+        showInfoPanel={showInfoPanel}
       />
       
       {mapError && (
@@ -204,20 +206,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
           </div>
         </div>
       )}
-      
-      <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
-        <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t(`${validName} is located at coordinates ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`, 
-             `${validName}位于坐标 ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`)}
-        </p>
-        {editable && (
-          <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
-          </p>
-        )}
-      </div>
     </div>
   );
 };

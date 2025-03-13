@@ -48,6 +48,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
           name={hasValidCoordinates && locationData.name ? locationData.name : fallbackName}
           onLocationUpdate={onLocationUpdate}
           editable={true}
+          showInfoPanel={false}
         />
         <LocationControls
           onLocationUpdate={onLocationUpdate}
