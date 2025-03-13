@@ -1,10 +1,10 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import { getSeeingConditionInChinese, getMoonPhaseInChinese } from "@/utils/weatherUtils";
+import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -30,19 +30,28 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  // Translate the seeing conditions and moon phase for Chinese
-  const translatedSeeingConditions = language === 'zh' 
-    ? getSeeingConditionInChinese(seeingConditions)
-    : seeingConditions;
-    
-  const translatedMoonPhase = language === 'zh'
-    ? getMoonPhaseInChinese(moonPhase)
-    : moonPhase;
+  // Use memoized translations for better performance
+  const translatedData = useMemo(() => {
+    // Translate relevant conditions for Chinese
+    return {
+      seeingConditions: language === 'zh' 
+        ? getSeeingConditionInChinese(seeingConditions)
+        : seeingConditions,
+      moonPhase: language === 'zh'
+        ? getMoonPhaseInChinese(moonPhase)
+        : moonPhase,
+      weatherCondition: language === 'zh' && weatherData.condition
+        ? getWeatherConditionInChinese(weatherData.condition)
+        : weatherData.condition
+    };
+  }, [language, seeingConditions, moonPhase, weatherData.condition]);
 
   return (
-    <Card className="glassmorphism border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden">
+    <Card className={`glassmorphism border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden ${language === 'zh' ? 'zh-card' : ''}`}>
       <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-        <CardTitle className="text-xl text-gradient-blue">{t("Current Conditions", "当前状况")}</CardTitle>
+        <CardTitle className={`text-xl text-gradient-blue ${language === 'zh' ? 'tracking-wider' : ''}`}>
+          {t("Current Conditions", "当前状况")}
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -50,12 +59,12 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             temperature={weatherData.temperature}
             humidity={weatherData.humidity}
             windSpeed={weatherData.windSpeed}
-            seeingConditions={translatedSeeingConditions}
+            seeingConditions={translatedData.seeingConditions}
           />
           
           <SecondaryConditions
             cloudCover={weatherData.cloudCover}
-            moonPhase={translatedMoonPhase}
+            moonPhase={translatedData.moonPhase}
             bortleScale={bortleScale}
             aqi={weatherData.aqi}
           />

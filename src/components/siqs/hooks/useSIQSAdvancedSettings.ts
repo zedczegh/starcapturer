@@ -10,17 +10,17 @@ export const useSIQSAdvancedSettings = () => {
     try {
       const cachedSettings = getCachedData('siqs_settings', 30 * 24 * 60 * 60 * 1000); // 30 day cache
       
-      // Use cached settings or defaults
+      // Use cached settings or defaults with improved defaults based on average conditions
       return {
-        seeingConditions: cachedSettings?.seeingConditions ?? 2,
-        bortleScale: cachedSettings?.bortleScale ?? 4
+        seeingConditions: cachedSettings?.seeingConditions ?? 2.5, // Better default based on average global seeing conditions
+        bortleScale: cachedSettings?.bortleScale ?? 4.5  // More accurate default for suburban areas
       };
     } catch (error) {
       console.error("Error retrieving SIQS settings:", error);
       // Fallback to defaults
       return {
-        seeingConditions: 2,
-        bortleScale: 4
+        seeingConditions: 2.5,
+        bortleScale: 4.5
       };
     }
   }, [getCachedData]);

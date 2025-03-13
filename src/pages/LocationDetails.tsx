@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import LocationError from "@/components/location/LocationError";
 import LocationDetailsViewport from "@/components/location/LocationDetailsViewport";
@@ -12,12 +12,13 @@ const LocationDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [locationData, setLocationData] = useState<any>(null);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const { loading, handleLocationUpdate } = useLocationUpdate(locationData, setLocationData);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'info' | 'success' | 'error'>('info');
 
+  // Optimize data initialization - only run once when component mounts
   useEffect(() => {
     if (!locationData && location.state) {
       console.log("Setting location data from state:", location.state);
@@ -37,6 +38,17 @@ const LocationDetails = () => {
         return () => clearTimeout(redirectTimer);
       }
     } else if (!locationData && !location.state) {
+      // Try to load data from localStorage if available
+      try {
+        const savedLocationData = localStorage.getItem(`location_${id}`);
+        if (savedLocationData) {
+          setLocationData(JSON.parse(savedLocationData));
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to load from localStorage", e);
+      }
+      
       console.error("Location data is missing", { params: id, locationState: location.state });
       
       toast({
@@ -47,7 +59,18 @@ const LocationDetails = () => {
     }
   }, [locationData, location.state, navigate, t, id, toast]);
 
-  const handleUpdateLocation = async (newLocation: { name: string; latitude: number; longitude: number }) => {
+  // Cache location data in localStorage for better persistence
+  useEffect(() => {
+    if (locationData && id) {
+      try {
+        localStorage.setItem(`location_${id}`, JSON.stringify(locationData));
+      } catch (e) {
+        console.error("Failed to save to localStorage", e);
+      }
+    }
+  }, [locationData, id]);
+
+  const handleUpdateLocation = useCallback(async (newLocation: { name: string; latitude: number; longitude: number }) => {
     try {
       await handleLocationUpdate(newLocation);
       setStatusMessage(t("SIQS score has been recalculated for the new location.", 
@@ -59,7 +82,7 @@ const LocationDetails = () => {
                    "无法更新位置并重新计算SIQS评分。请重试。"));
       setMessageType('error');                   
     }
-  };
+  }, [handleLocationUpdate, t]);
 
   if (!locationData) {
     return <LocationError />;

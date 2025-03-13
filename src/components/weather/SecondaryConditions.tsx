@@ -23,7 +23,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   bortleScale,
   aqi
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // AQI display with conditional rendering
   const aqiValue = aqi !== undefined ? (
