@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { fetchWeatherData, getLocationNameFromCoordinates, fetchLightPollutionData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { MapPin, Loader2, Info, SlidersHorizontal, AlertCircle } from "lucide-react";
+import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
 import MapSelector from "./MapSelector";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,7 +19,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface WeatherData {
   cloudCover: number;
@@ -53,30 +51,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [seeingConditions, setSeeingConditions] = useState(2);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [showManualInput, setShowManualInput] = useState(false);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [locationPermissionStatus, setLocationPermissionStatus] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
   const locationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Check for location permission status
-  useEffect(() => {
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' })
-        .then(permissionStatus => {
-          setLocationPermissionStatus(permissionStatus.state as "granted" | "denied" | "prompt");
-          
-          permissionStatus.onchange = () => {
-            setLocationPermissionStatus(permissionStatus.state as "granted" | "denied" | "prompt");
-          };
-        })
-        .catch(err => {
-          console.error("Error checking geolocation permission:", err);
-          setLocationPermissionStatus("unknown");
-        });
-    }
-  }, []);
   
   useEffect(() => {
     const lat = parseFloat(latitude);
@@ -179,17 +157,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           switch (error.code) {
             case error.PERMISSION_DENIED:
               errorMessage = t(
-                "Location permission denied. Please check your browser settings or enter coordinates manually.",
-                "位置权限被拒绝。请检查您的浏览器设置或手动输入坐标。"
+                "Location permission denied. Please check your browser settings.",
+                "位置权限被拒绝。请检查您的浏览器设置。"
               );
-              setShowManualInput(true);
               break;
             case error.POSITION_UNAVAILABLE:
               errorMessage = t(
                 "Location information is unavailable. Try another method.",
                 "位置信息不可用。请尝试其他方法。"
               );
-              setShowManualInput(true);
               break;
             case error.TIMEOUT:
               errorMessage = t(
@@ -222,7 +198,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           "您的浏览器不支持地理位置，请手动输入坐标。"
         )
       });
-      setShowManualInput(true);
     }
   };
   
@@ -248,63 +223,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     });
     
     setShowAdvancedSettings(true);
-  };
-  
-  const handleManualCoordinatesSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      toast.error(t("Invalid Latitude", "无效纬度"), {
-        description: t("Latitude must be between -90 and 90", "纬度必须在-90到90之间")
-      });
-      return;
-    }
-    
-    if (isNaN(lng) || lng < -180 || lng > 180) {
-      toast.error(t("Invalid Longitude", "无效经度"), {
-        description: t("Longitude must be between -180 and 180", "经度必须在-180到180之间")
-      });
-      return;
-    }
-    
-    // Get location name from coordinates
-    getLocationNameFromCoordinates(lat, lng, language)
-      .then(name => {
-        setLocationName(name);
-        
-        // Try to get Bortle scale
-        fetchLightPollutionData(lat, lng)
-          .then(data => {
-            if (data && data.bortleScale) {
-              setBortleScale(data.bortleScale);
-            }
-          })
-          .catch(error => {
-            console.error("Error fetching light pollution data:", error);
-          });
-        
-        setShowAdvancedSettings(true);
-        
-        toast.success(t("Location Set", "位置已设置"), {
-          description: name
-        });
-      })
-      .catch(error => {
-        console.error("Error getting location name:", error);
-        const fallbackName = t(
-          `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`,
-          `位置：${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
-        );
-        setLocationName(fallbackName);
-        setShowAdvancedSettings(true);
-        
-        toast.success(t("Location Set", "位置已设置"), {
-          description: fallbackName
-        });
-      });
   };
   
   const estimateBortleScale = (locationName: string): number => {
@@ -408,7 +326,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return moonPhase;
   };
   
-  // Calculate SIQS for a location - can be used for preview or full calculation
   const calculateSIQSForLocation = async (lat: number, lng: number, name: string, displayOnly: boolean = false) => {
     if (isCalculating) return;
     
@@ -424,8 +341,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       if (!data) {
         toast.error(t("Weather Data Error", "天气数据错误"), {
           description: t(
-            "Could not retrieve weather data. Please try again later.",
-            "无法获取天气数据，请稍后重试。"
+            "Could not retrieve weather data. Please try again.",
+            "无法获取天气数据，请重试。"
           )
         });
         setIsCalculating(false);
@@ -573,19 +490,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         </h2>
       </div>
       
-      {locationPermissionStatus === "denied" && (
-        <Alert variant="destructive" className="mb-4 bg-red-500/10 border-red-500/30">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("Location Permission Denied", "位置权限被拒绝")}</AlertTitle>
-          <AlertDescription>
-            {t(
-              "Your browser is blocking location access. Please enable location services in your browser settings or enter coordinates manually.",
-              "您的浏览器正在阻止位置访问。请在浏览器设置中启用位置服务或手动输入坐标。"
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {siqsScore !== null && (
         <div className="mb-6 p-4 glass-card">
           <div className="flex items-center justify-between mb-2">
@@ -637,7 +541,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             variant={locationName ? "default" : "outline"}
             type="button" 
             onClick={handleUseCurrentLocation}
-            disabled={loading || locationPermissionStatus === "denied"}
+            disabled={loading}
             className={`w-full hover-card transition-colors ${locationName ? 'bg-primary' : 'hover:bg-primary/10'}`}
           >
             {loading ? (
@@ -653,64 +557,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               t("Use My Location", "使用我的位置")
             )}
           </Button>
-          
-          <div className="flex justify-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowManualInput(!showManualInput)}
-              className="text-xs flex items-center"
-            >
-              {showManualInput 
-                ? t("Hide Manual Input", "隐藏手动输入") 
-                : t("Enter Coordinates Manually", "手动输入坐标")}
-            </Button>
-          </div>
-          
-          {showManualInput && (
-            <div className="p-3 bg-cosmic-900/20 rounded-md border border-cosmic-700/30 space-y-3">
-              <h3 className="text-sm font-medium mb-2">
-                {t("Enter Coordinates Manually", "手动输入坐标")}
-              </h3>
-              <form onSubmit={handleManualCoordinatesSubmit} className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="latitude" className="text-xs">
-                      {t("Latitude", "纬度")}
-                    </Label>
-                    <Input
-                      id="latitude"
-                      type="text"
-                      placeholder="-90 to 90"
-                      value={latitude}
-                      onChange={(e) => setLatitude(e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="longitude" className="text-xs">
-                      {t("Longitude", "经度")}
-                    </Label>
-                    <Input
-                      id="longitude"
-                      type="text"
-                      placeholder="-180 to 180"
-                      value={longitude}
-                      onChange={(e) => setLongitude(e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
-                <Button 
-                  type="submit" 
-                  size="sm" 
-                  className="w-full"
-                >
-                  {t("Set Location", "设置位置")}
-                </Button>
-              </form>
-            </div>
-          )}
           
           <div className="relative mt-2">
             <MapSelector onSelectLocation={handleLocationSelect} />

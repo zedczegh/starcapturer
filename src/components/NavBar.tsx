@@ -62,12 +62,6 @@ const NavBar = () => {
       });
       
       if (!weatherData) {
-        // If we can't get weather data, just navigate to the calculator
-        navigate('/#calculator-section');
-        const calculatorSection = document.getElementById('calculator-section');
-        if (calculatorSection) {
-          calculatorSection.scrollIntoView({ behavior: 'smooth' });
-        }
         throw new Error("Failed to retrieve weather data");
       }
       
@@ -99,9 +93,6 @@ const NavBar = () => {
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
         moonPhase,
-        precipitation: weatherData.precipitation,
-        weatherCondition: weatherData.weatherCondition,
-        aqi: weatherData.aqi
       });
       
       const locationId = Date.now().toString();
@@ -123,7 +114,7 @@ const NavBar = () => {
     } catch (error) {
       console.error("Error navigating to Beijing:", error);
       toast.error(t("Error loading SIQS data", "加载SIQS数据出错"), {
-        description: t("Please try using the calculator instead", "请尝试使用计算器")
+        description: t("We'll try again in a moment", "稍后我们将重试")
       });
       
       // Fallback - just navigate to home calculator section
@@ -203,7 +194,8 @@ const NavBar = () => {
           />
           
           <MobileNavButton
-            to="/#calculator-section"
+            to={locationId ? `/location/${locationId}` : "/#calculator-section"}
+            onClick={handleSIQSClick}
             icon={<MapPin className="h-5 w-5" />}
             label={t("SIQS", "SIQS")}
             active={location.pathname.startsWith('/location/')}

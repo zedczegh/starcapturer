@@ -13,7 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector, { Location } from "@/components/MapSelector";
 import LongRangeForecast from "@/components/LongRangeForecast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Calendar, MapPin, Locate, Navigation, RefreshCcw } from "lucide-react";
+import { CalendarRange, Calendar, MapPin, Locate } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -83,7 +83,7 @@ const LocationDetails = () => {
         toast.success(t("Light Pollution Data Updated", "光污染数据已更新"), {
           description: t(
             "Light pollution level has been updated based on location coordinates.",
-            "基于位置坐标已更新光污染级��。"
+            "基于位置坐标已更新光污染级别。"
           )
         });
       }
@@ -138,7 +138,7 @@ const LocationDetails = () => {
       console.error("Error fetching long range forecast:", error);
       toast.error(t("Forecast Error", "预报错误"), {
         description: t("Could not load extended forecast. Try refreshing.", 
-                      "无法加载延长天气预报。请尝试刷新。")
+                      "无法加载延��天气预报。请尝试刷新。")
       });
     } finally {
       setLongRangeLoading(false);
@@ -261,26 +261,14 @@ const LocationDetails = () => {
     }
 
     setGettingUserLocation(true);
-    toast.info(t("Getting Your Location", "正在获取您的位置"), { 
-      description: t("Please wait while we determine your current location...", "请等待，我们正在确定您的当前位置...")
-    });
-
-    const locationTimeout = setTimeout(() => {
-      setGettingUserLocation(false);
-      toast.error(t("Location Timeout", "位置请求超时"), {
-        description: t("Could not get your location in time. Please try again or use another method.", 
-                      "无法及时获取您的位置。请重试或使用其他方法。")
-      });
-    }, 15000);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        clearTimeout(locationTimeout);
         try {
           const { latitude, longitude } = position.coords;
           
           // Get location name
-          const locationName = await getLocationNameFromCoordinates(latitude, longitude, language === 'zh' ? 'zh' : 'en');
+          const locationName = await getLocationNameFromCoordinates(latitude, longitude, language === 'zh' ? 'zh-CN' : 'en');
           
           // Update with current location
           await handleLocationUpdate({
@@ -302,7 +290,6 @@ const LocationDetails = () => {
         }
       },
       (error) => {
-        clearTimeout(locationTimeout);
         console.error("Geolocation error:", error);
         let errorMessage = t("Unknown error occurred.", "发生了未知错误。");
         
@@ -324,53 +311,8 @@ const LocationDetails = () => {
         
         setGettingUserLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  };
-
-  const handleManualCoordinates = () => {
-    if (locationData) {
-      const lat = prompt(t("Enter latitude (-90 to 90):", "输入纬度（-90至90）:"), locationData.latitude.toString());
-      const lng = prompt(t("Enter longitude (-180 to 180):", "输入经度（-180至180）:"), locationData.longitude.toString());
-      
-      if (lat && lng) {
-        const latitude = parseFloat(lat);
-        const longitude = parseFloat(lng);
-        
-        if (!isNaN(latitude) && !isNaN(longitude) && 
-            latitude >= -90 && latitude <= 90 && 
-            longitude >= -180 && longitude <= 180) {
-          
-          (async () => {
-            try {
-              const name = await getLocationNameFromCoordinates(latitude, longitude, language === 'zh' ? 'zh' : 'en');
-              handleLocationUpdate({
-                name,
-                latitude,
-                longitude
-              });
-            } catch (error) {
-              const fallbackName = t(
-                `Location at ${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E`,
-                `位置：${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E`
-              );
-              handleLocationUpdate({
-                name: fallbackName,
-                latitude,
-                longitude
-              });
-            }
-          })();
-        } else {
-          toast.error(t("Invalid Coordinates", "无效坐标"), {
-            description: t(
-              "Please enter valid coordinates: latitude (-90 to 90) and longitude (-180 to 180).",
-              "请输入有效坐标：纬度（-90至90）和经度（-180至180）。"
-            )
-          });
-        }
-      }
-    }
   };
 
   const siqsResult = locationData?.siqsResult || { 
@@ -394,7 +336,6 @@ const LocationDetails = () => {
   };
 
   const formatMoonPhase = (phase: number) => {
-    const { t } = useLanguage();
     if (typeof phase !== 'number') return t("Unknown", "未知");
     
     if (phase <= 0.05 || phase >= 0.95) return t("New Moon", "新月");
@@ -408,7 +349,6 @@ const LocationDetails = () => {
   };
 
   const formatSeeingConditions = (value: number) => {
-    const { t } = useLanguage();
     if (typeof value !== 'number') return t("Average", "一般");
     
     if (value <= 1) return t("Excellent", "极佳");
@@ -423,13 +363,12 @@ const LocationDetails = () => {
       <div className="min-h-screen flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md p-6 bg-cosmic-900/60 backdrop-blur-sm rounded-lg border border-cosmic-700/30 shadow-lg">
+          <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">{t("Location Not Found", "位置未找到")}</h1>
             <p className="text-muted-foreground mb-6">
               {t("The location information you're looking for doesn't exist or has expired. Redirecting you to the home page...", 
                  "您正在查找的位置信息不存在或已过期。正在将您重定向到首页...")}
             </p>
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
           </div>
         </div>
       </div>
@@ -477,10 +416,10 @@ const LocationDetails = () => {
           
           <div className="space-y-8">
             <div className="relative z-60">
-              <Card className="shadow-md overflow-hidden border-cosmic-700/40 bg-cosmic-900/60 backdrop-blur-md hover:shadow-cosmic-700/20 transition-all hover:shadow-lg">
-                <CardHeader className="pb-2 bg-cosmic-800/40 border-b border-cosmic-700/30">
-                  <CardTitle className="text-xl flex items-center text-primary/90">
-                    <MapPin className="mr-2 h-5 w-5" />
+              <Card className="shadow-md overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl flex items-center">
+                    <MapPin className="mr-2 h-5 w-5 text-primary/80" />
                     {t("Location", "位置")}
                   </CardTitle>
                 </CardHeader>
@@ -492,46 +431,34 @@ const LocationDetails = () => {
                     onLocationUpdate={handleLocationUpdate}
                     editable={true}
                   />
-                  <div className="p-4 border-t border-border/30 space-y-4">
-                    <div className="flex flex-col md:flex-row gap-3">
-                      <Button 
-                        variant="outline" 
-                        className="group flex-1 flex items-center justify-center gap-2 bg-cosmic-800/50 border-cosmic-700/30 hover:bg-cosmic-700/50 transition-all" 
-                        onClick={handleGetCurrentLocation}
-                        disabled={gettingUserLocation}
-                      >
-                        <Locate className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                        {gettingUserLocation 
-                          ? t("Getting location...", "获取位置中...") 
-                          : t("Use my current location", "使用我的当前位置")}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="group flex-1 flex items-center justify-center gap-2 bg-cosmic-800/50 border-cosmic-700/30 hover:bg-cosmic-700/50 transition-all" 
-                        onClick={handleManualCoordinates}
-                      >
-                        <Navigation className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                        {t("Enter coordinates", "输入坐标")}
-                      </Button>
+                  <div className="p-4 border-t border-border/30">
+                    <Button 
+                      variant="outline" 
+                      className="w-full mb-4 flex items-center justify-center gap-2" 
+                      onClick={handleGetCurrentLocation}
+                      disabled={gettingUserLocation}
+                    >
+                      <Locate className="h-4 w-4" />
+                      {gettingUserLocation 
+                        ? t("Getting location...", "获取位置中...") 
+                        : t("Use my current location", "使用我的当前位置")}
+                    </Button>
+                    <div className="text-sm text-muted-foreground mb-3">
+                      {t("Search for another location", "搜索其他位置")}
                     </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-3">
-                        {t("Search for another location", "搜索其他位置")}
-                      </div>
-                      <MapSelector onSelectLocation={handleLocationSearch} />
-                    </div>
+                    <MapSelector onSelectLocation={handleLocationSearch} />
                   </div>
                 </CardContent>
               </Card>
             </div>
             
             <Tabs defaultValue="hourly" className="w-full">
-              <TabsList className="grid grid-cols-2 mb-4 bg-cosmic-800/60 backdrop-blur-md border border-cosmic-700/30">
-                <TabsTrigger value="hourly" className="flex items-center gap-2 data-[state=active]:bg-cosmic-700/70">
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="hourly" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   {t("Hourly Forecast", "小时预报")}
                 </TabsTrigger>
-                <TabsTrigger value="extended" className="flex items-center gap-2 data-[state=active]:bg-cosmic-700/70">
+                <TabsTrigger value="extended" className="flex items-center gap-2">
                   <CalendarRange className="h-4 w-4" />
                   {t("15-Day Forecast", "15天预报")}
                 </TabsTrigger>
@@ -554,24 +481,6 @@ const LocationDetails = () => {
               </TabsContent>
             </Tabs>
           </div>
-        </div>
-        
-        <div className="mt-10 flex justify-center">
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              toast.info(t("Refreshing Data", "正在刷新数据"), {
-                description: t("Updating all data for this location", "正在更新此位置的所有数据")
-              });
-              fetchLocationForecast();
-              fetchLongRangeForecast();
-              updateLightPollutionData();
-            }}
-            className="bg-cosmic-800/40 border-cosmic-700/30 hover:bg-cosmic-700/60 transition-all group"
-          >
-            <RefreshCcw className="mr-2 h-4 w-4 group-hover:rotate-180 transition-transform duration-700" />
-            {t("Refresh All Data", "刷新所有数据")}
-          </Button>
         </div>
       </main>
     </div>

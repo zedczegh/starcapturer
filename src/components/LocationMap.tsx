@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import { toast } from "sonner";
@@ -48,9 +48,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
-  const mapRef = useRef<L.Map | null>(null);
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const mapRef = useRef<L.Map>(null);
 
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
@@ -118,19 +116,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return null;
   };
 
-  // Handle map initialization
-  const handleMapReady = (map: L.Map) => {
-    mapRef.current = map;
-    setIsMapReady(true);
-    
-    // Fix for any map display issues
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
-  };
-
   // Effect to add custom CSS for marker animation if not already present
-  useEffect(() => {
+  React.useEffect(() => {
     if (!document.getElementById('custom-marker-styles')) {
       const style = document.createElement('style');
       style.id = 'custom-marker-styles';
@@ -196,90 +183,30 @@ const LocationMap: React.FC<LocationMapProps> = ({
     }
   }, []);
 
-  // Fix for map not showing - ensure map gets reinitialized properly when coordinates change
-  useEffect(() => {
-    setPosition([validLatitude, validLongitude]);
-    
-    // Force map update when coordinates change
-    if (mapRef.current) {
-      mapRef.current.setView([validLatitude, validLongitude], mapRef.current.getZoom());
-      mapRef.current.invalidateSize();
-    }
-    
-    // Clear any previous errors
-    setMapError(null);
-  }, [validLatitude, validLongitude]);
-
-  // Add error handling for map loading
-  useEffect(() => {
-    // Set timeout to check if map loads
-    const mapLoadTimeout = setTimeout(() => {
-      if (!isMapReady) {
-        setMapError(t("Map failed to load. Please try refreshing the page.", 
-                     "地图加载失败。请尝试刷新页面。"));
-      }
-    }, 5000);
-    
-    return () => clearTimeout(mapLoadTimeout);
-  }, [isMapReady, t]);
-
   return (
-    <Card className="overflow-hidden shadow-lg border-cosmic-700/50 bg-cosmic-900/40 backdrop-blur-md transition-all hover:shadow-cosmic-700/20 hover:shadow-xl">
+    <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
-        <div className="aspect-video w-full h-[300px] relative">
-          {!mapError ? (
-            <MapContainer 
-              center={position}
-              zoom={12} 
-              style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom={true}
-              whenCreated={handleMapReady}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <Marker 
-                position={position}
-                icon={createCustomMarker()}
-              />
-              {editable && <MapEvents />}
-            </MapContainer>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-cosmic-900/60 backdrop-blur-sm">
-              <div className="text-center p-6">
-                <div className="bg-red-500/20 p-3 rounded-lg border border-red-500/30 mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-red-500">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                </div>
-                <p className="text-sm text-muted-foreground">{mapError}</p>
-                <button 
-                  onClick={() => window.location.reload()} 
-                  className="mt-3 px-3 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary rounded-md transition-colors"
-                >
-                  {t("Refresh Page", "刷新页面")}
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Loading overlay */}
-          {!isMapReady && !mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-cosmic-900/60 backdrop-blur-sm">
-              <div className="text-center">
-                <div className="inline-block w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin mb-3"></div>
-                <p className="text-sm text-muted-foreground">
-                  {t("Loading map...", "加载地图中...")}
-                </p>
-              </div>
-            </div>
-          )}
+        <div className="aspect-video w-full h-[300px]">
+          <MapContainer 
+            center={position}
+            zoom={12} 
+            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={true}
+            ref={mapRef}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker 
+              position={position}
+              icon={createCustomMarker()}
+            />
+            {editable && <MapEvents />}
+          </MapContainer>
         </div>
-        <div className="p-4 bg-cosmic-800/40 border-t border-cosmic-700/30">
-          <h3 className="font-medium text-sm mb-1 text-primary/90">{t("Location", "位置")}</h3>
+        <div className="p-4">
+          <h3 className="font-medium text-sm mb-1">{t("Location", "位置")}</h3>
           <p className="text-sm text-muted-foreground">
             {t(`${validName} is located at coordinates ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`, 
                `${validName}位于坐标 ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`)}
