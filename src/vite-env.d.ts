@@ -21,6 +21,8 @@ declare module 'react-leaflet' {
     url: string;
     attribution?: string;
     subdomains?: string | string[];
+    opacity?: number;
+    zIndex?: number;
     children?: React.ReactNode;
   }
 

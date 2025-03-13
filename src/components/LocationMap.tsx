@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { getTiandituLocationName } from "@/utils/tiandituApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 
@@ -85,6 +84,17 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return ((lng + 180) % 360 + 360) % 360 - 180;
   };
 
+  // Get location name from coordinates
+  const getLocationNameFromCoordinates = async (lat: number, lng: number): Promise<string> => {
+    try {
+      // We'll use a reverse geocoding service - for now returning a simple formatted string
+      return `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+    } catch (error) {
+      console.error('Error getting location name:', error);
+      return `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
+    }
+  };
+
   // Interactive map component that handles clicks
   const MapEvents = () => {
     useMapEvents({
@@ -101,7 +111,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
         setPosition([validLat, validLng]);
         
         try {
-          const newName = await getTiandituLocationName(validLat, validLng, language as 'en' | 'zh');
+          const newName = await getLocationNameFromCoordinates(validLat, validLng);
           
           if (onLocationUpdate) {
             onLocationUpdate({
@@ -249,17 +259,21 @@ const LocationMap: React.FC<LocationMapProps> = ({
             whenReady={handleMapReady}
             attributionControl={false}
           >
-            {/* Use Tianditu map layers */}
+            {/* Base Map Layer - Bing Road Map */}
             <TileLayer
-              url="https://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=1f2df41008fa6dca06da53a1422935f5"
+              url="https://ecn.t{s}.tiles.virtualearth.net/tiles/r{q}?g=1&mkt=en-US&shading=hill"
               subdomains={['0', '1', '2', '3', '4', '5', '6', '7']}
-              attribution='&copy; <a href="https://www.tianditu.gov.cn/">天地图</a>'
+              attribution='&copy; <a href="https://www.bing.com/maps/">Bing Maps</a>'
             />
-            {/* Add Tianditu annotation layer */}
+            
+            {/* Light Pollution Overlay from lightpollutionmap.info (World Atlas 2015) */}
             <TileLayer
-              url="https://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=1f2df41008fa6dca06da53a1422935f5"
-              subdomains={['0', '1', '2', '3', '4', '5', '6', '7']}
+              url="https://tiles.lightpollutionmap.info/tiles/world_atlas_2015/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.lightpollutionmap.info">Light Pollution Map</a>'
+              opacity={0.6}
+              zIndex={10}
             />
+            
             <Marker 
               position={position}
               icon={createCustomMarker()}

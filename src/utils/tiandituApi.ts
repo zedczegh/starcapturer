@@ -1,7 +1,6 @@
 
 /**
- * Tianditu API utilities
- * This uses the free Tianditu API service which is available in China
+ * Location services utilities
  */
 
 // Tianditu requires an API key (we use a public test key - replace with your own in production)
@@ -9,6 +8,7 @@ const TIANDITU_KEY = "1f2df41008fa6dca06da53a1422935f5";
 
 /**
  * Get location name from coordinates (reverse geocoding)
+ * This uses Tianditu service which is available in China
  */
 export async function getTiandituLocationName(
   latitude: number,
@@ -81,16 +81,24 @@ export async function getTiandituLocationName(
       }
     }
     
-    // Final fallback
-    return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    // If Tianditu fails, use a fallback formatted location string
+    return getFormattedLocationString(latitude, longitude);
   } catch (error) {
     console.error('Error getting location name from Tianditu:', error);
-    return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    return getFormattedLocationString(latitude, longitude);
   }
 }
 
 /**
+ * Generate a formatted location string based on coordinates
+ */
+function getFormattedLocationString(latitude: number, longitude: number): string {
+  return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+}
+
+/**
  * Search for locations by name
+ * This uses Tianditu service which is available in China
  */
 export async function searchTiandituLocations(
   query: string,
