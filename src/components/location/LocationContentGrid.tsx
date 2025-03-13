@@ -1,4 +1,3 @@
-
 import React from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
@@ -48,20 +47,19 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
-        {/* Rearranged: SIQSSummary first, then WeatherConditions */}
+        <WeatherConditions
+          weatherData={weatherData}
+          moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
+          bortleScale={locationData.bortleScale || 4}
+          seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
+        />
+        
         <SIQSSummary
           siqsData={{
             score: locationData.siqsResult?.score || 0,
             isViable: locationData.siqsResult?.isViable || false,
             factors: locationData.siqsResult?.factors || []
           }}
-        />
-        
-        <WeatherConditions
-          weatherData={weatherData}
-          moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
-          bortleScale={locationData.bortleScale || 4}
-          seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
         />
       </div>
       
@@ -89,7 +87,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   );
 };
 
-// Helper functions for formatting
 const formatMoonPhase = (phase: number) => {
   if (typeof phase !== 'number') return "Unknown";
   
