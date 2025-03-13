@@ -14,6 +14,7 @@ declare module 'react-leaflet' {
     whenCreated?: (map: L.Map) => void;
     whenReady?: (map: { target: L.Map }) => void;
     attributionControl?: boolean;
+    className?: string;
     children?: React.ReactNode;
   }
 

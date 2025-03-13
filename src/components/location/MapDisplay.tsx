@@ -163,33 +163,34 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   return (
-    <MapContainer 
-      center={position}
-      zoom={12} 
-      style={{ height: "100%", width: "100%" }}
-      scrollWheelZoom={true}
-      whenReady={handleMapReady}
-      attributionControl={false}
-      className="z-0"
-    >
-      <TileLayer
-        url={tileServerUrl}
-        attribution={attribution}
-        subdomains={['a', 'b', 'c']}
-      />
-      
-      <Marker 
-        position={position}
-        icon={createCustomMarker()}
+    <div className="z-0 h-full w-full">
+      <MapContainer 
+        center={position}
+        zoom={12} 
+        style={{ height: "100%", width: "100%" }}
+        scrollWheelZoom={true}
+        whenReady={handleMapReady}
+        attributionControl={false}
       >
-        <Popup>
-          {locationName}
-        </Popup>
-      </Marker>
-      
-      <MapUpdater position={position} />
-      {editable && <MapEvents onMapClick={onMapClick} />}
-    </MapContainer>
+        <TileLayer
+          url={tileServerUrl}
+          attribution={attribution}
+          subdomains={['a', 'b', 'c']}
+        />
+        
+        <Marker 
+          position={position}
+          icon={createCustomMarker()}
+        >
+          <Popup>
+            {locationName}
+          </Popup>
+        </Marker>
+        
+        <MapUpdater position={position} />
+        {editable && <MapEvents onMapClick={onMapClick} />}
+      </MapContainer>
+    </div>
   );
 };
 
