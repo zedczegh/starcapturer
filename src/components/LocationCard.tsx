@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { siqsToColor } from "@/lib/calculateSIQS";
 import { CalendarClock, MapPin, Star } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LocationCardProps {
   id: string;
@@ -28,6 +29,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   timestamp,
   className,
 }) => {
+  const { t } = useLanguage();
+  
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -40,6 +43,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
   });
   
   const scoreColor = siqsToColor(siqs, isViable);
+
+  // Display name more prominently than coordinates
+  const displayName = name && !name.includes("Location at") ? name : 
+    t("Location near coordinates", "坐标附近的位置");
   
   return (
     <Link to={`/location/${id}`}>
@@ -81,7 +88,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-lg line-clamp-1">{name}</h3>
+              <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
               <div className="flex items-center text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3.5 w-3.5 mr-1" />
                 <span>
@@ -96,10 +103,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
               {isViable ? (
                 <span className="flex items-center">
                   <Star className="h-3 w-3 mr-1" />
-                  Viable
+                  {t("Viable", "可行")}
                 </span>
               ) : (
-                "Not Viable"
+                t("Not Viable", "不可行")
               )}
             </Badge>
           </div>
