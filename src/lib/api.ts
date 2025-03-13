@@ -1,5 +1,4 @@
-
-import type { WeatherData, ForecastData, ForecastItem } from "@/types/weather";
+import type { WeatherData, ForecastData, ForecastItem, SharedAstroSpot } from "@/types/weather";
 
 const BASE_API_URL = "https://weather-api-proxy.azurewebsites.net";
 
@@ -310,4 +309,196 @@ const estimateBortleScale = (
     // Default to Bortle 5 (suburban sky) if estimation fails
     return { bortleScale: 5 };
   }
+};
+
+// Generate Baidu Maps URL for navigation
+export const generateBaiduMapsUrl = (latitude: number, longitude: number, name: string = ''): string => {
+  // Ensure coordinates are properly formatted
+  const lat = Number(latitude).toFixed(6);
+  const lng = Number(longitude).toFixed(6);
+  
+  // Encode the location name for the URL
+  const encodedName = encodeURIComponent(name || 'Selected Location');
+  
+  // Create a Baidu Maps URL
+  return `https://api.map.baidu.com/marker?location=${lat},${lng}&title=${encodedName}&content=${encodedName}&output=html`;
+};
+
+// Get recommended photo points based on user location
+export const getRecommendedPhotoPoints = async (
+  latitude: number,
+  longitude: number
+): Promise<SharedAstroSpot[]> => {
+  try {
+    // In a real implementation, this would fetch data from a server
+    // For now, we'll generate mock data based on the user's location
+    
+    const spots: SharedAstroSpot[] = [
+      {
+        id: "spot1",
+        name: "Mountain Viewpoint",
+        latitude: latitude + 0.05,
+        longitude: longitude + 0.05,
+        description: "Excellent elevation with clear views of the horizon. Popular for Milky Way photography.",
+        bortleScale: 3,
+        photographer: "StarGazer42",
+        photoUrl: "https://images.unsplash.com/photo-1527856263669-12c3a0af2aa6?w=800&auto=format&fit=crop",
+        targets: ["Milky Way", "Andromeda"],
+        siqs: 8.5,
+        isViable: true,
+        distance: calculateDistance(latitude, longitude, latitude + 0.05, longitude + 0.05)
+      },
+      {
+        id: "spot2",
+        name: "Lakeside Point",
+        latitude: latitude - 0.03,
+        longitude: longitude + 0.02,
+        description: "Beautiful reflections on the lake surface. Good for wide-angle night landscapes.",
+        bortleScale: 4,
+        photographer: "NightSky",
+        photoUrl: "https://images.unsplash.com/photo-1506318164473-2dfd3ede3623?w=800&auto=format&fit=crop",
+        targets: ["Orion Nebula", "Pleiades"],
+        siqs: 7.2,
+        isViable: true,
+        distance: calculateDistance(latitude, longitude, latitude - 0.03, longitude + 0.02)
+      },
+      {
+        id: "spot3",
+        name: "Desert Viewpoint",
+        latitude: latitude + 0.01,
+        longitude: longitude - 0.04,
+        description: "No light pollution and clear skies most of the year. Perfect for deep sky objects.",
+        bortleScale: 2,
+        photographer: "AstroPhotographyLover",
+        targets: ["Galaxies", "Nebulae"],
+        siqs: 9.1,
+        isViable: true,
+        distance: calculateDistance(latitude, longitude, latitude + 0.01, longitude - 0.04)
+      }
+    ];
+    
+    // Sort by distance
+    return spots.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+  } catch (error) {
+    console.error("Error getting recommended photo points:", error);
+    return [];
+  }
+};
+
+// Calculate distance between two coordinates in kilometers
+export const calculateDistance = (
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number => {
+  // Implementation of the Haversine formula to calculate distance between two points
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; // Distance in km
+  
+  return distance;
+};
+
+// Function to share an astronomy spot
+export const shareAstroSpot = async (spot: SharedAstroSpot): Promise<void> => {
+  // This would normally send data to a server
+  // For now, we'll just log it and pretend it was successful
+  console.log("Sharing astro spot:", spot);
+  
+  // In a real implementation, this would be an API call:
+  // return fetch(`${BASE_API_URL}/spots`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(spot)
+  // }).then(response => {
+  //   if (!response.ok) throw new Error('Failed to share spot');
+  //   return response.json();
+  // });
+  
+  // Simulating async behavior
+  return new Promise((resolve) => {
+    setTimeout(resolve, 1000);
+  });
+};
+
+// Function to get shared astronomy spots
+export const getSharedAstroSpots = async (
+  latitude?: number,
+  longitude?: number
+): Promise<SharedAstroSpot[]> => {
+  // This would normally fetch from a server
+  // For demonstration, we'll return mock data
+  const spots: SharedAstroSpot[] = [
+    {
+      id: "p1",
+      name: "Eagle Peak Observatory",
+      latitude: latitude ? latitude + 0.07 : 40.712776,
+      longitude: longitude ? longitude - 0.03 : -74.005974,
+      description: "High elevation with minimal light pollution. Great for deep sky objects.",
+      bortleScale: 3,
+      photographer: "AstroEnthusiast",
+      photoUrl: "https://images.unsplash.com/photo-1465101162946-4377e57745c3?w=800&auto=format&fit=crop",
+      targets: ["Milky Way", "Andromeda Galaxy"],
+      siqs: 8.7,
+      isViable: true,
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: "p2",
+      name: "Coastal Horizon Point",
+      latitude: latitude ? latitude - 0.05 : 34.052235,
+      longitude: longitude ? longitude + 0.08 : -118.243683,
+      description: "Beautiful ocean views with dark skies to the west.",
+      bortleScale: 4,
+      photographer: "NightSkyCaptures",
+      photoUrl: "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?w=800&auto=format&fit=crop",
+      targets: ["Planets", "Moon"],
+      siqs: 7.2,
+      isViable: true,
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: "p3",
+      name: "Desert Star Point",
+      latitude: latitude ? latitude + 0.02 : 36.169941,
+      longitude: longitude ? longitude - 0.07 : -115.139832,
+      description: "Clear desert skies with minimal humidity. Perfect for galaxy photography.",
+      bortleScale: 2,
+      photographer: "StarTracker",
+      photoUrl: "https://images.unsplash.com/photo-1509647924673-e4b2612d8358?w=800&auto=format&fit=crop",
+      targets: ["Galaxies", "Nebulae"],
+      siqs: 9.3,
+      isViable: true,
+      timestamp: new Date().toISOString()
+    }
+  ];
+  
+  // If we have user coordinates, calculate and add distances
+  if (latitude && longitude) {
+    spots.forEach(spot => {
+      spot.distance = calculateDistance(
+        latitude, 
+        longitude, 
+        spot.latitude, 
+        spot.longitude
+      );
+    });
+    
+    // Sort by distance
+    spots.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+  }
+  
+  // Simulate async behavior
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(spots), 1000);
+  });
 };

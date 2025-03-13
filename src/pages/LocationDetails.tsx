@@ -560,7 +560,7 @@ const LocationDetails = () => {
           <Button 
             variant="outline" 
             onClick={() => {
-              toast({
+              toast.info(t("Refreshing Data", "正在刷新数据"), {
                 description: t("Updating all data for this location", "正在更新此位置的所有数据")
               });
               fetchLocationForecast();
