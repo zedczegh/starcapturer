@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,15 @@ interface SIQSSummaryProps {
   }[];
   isViable: boolean;
 }
+
+export const getRecommendationMessage = (score: number, language: string = 'en'): string => {
+  if (score === 0) return language === 'en' ? "Imaging not possible with current conditions." : "在当前条件下无法进行拍摄。";
+  if (score >= 8) return language === 'en' ? "Grab your rig and run!" : "带上你的设备立刻出发！";
+  if (score >= 6) return language === 'en' ? "Yeah! Should give it a go, eh?" : "不错！值得一试，对吧？";
+  if (score >= 4) return language === 'en' ? "Acceptable. Could try with bright targets." : "可接受。可以尝试拍摄明亮目标。";
+  if (score >= 2) return language === 'en' ? "Uh... let me think twice." : "呃...再考虑一下吧。";
+  return language === 'en' ? "Not recommended. Better stay home." : "不建议。最好待在家里。";
+};
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable }) => {
   const { t, language } = useLanguage();
@@ -34,6 +42,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
   };
 
   const getViabilityStatus = (score: number) => {
+    if (score === 0) return {
+      isViable: false,
+      label: t("Impossible", "不可能"),
+      icon: <XCircle className="mr-1 h-3 w-3" />
+    };
     if (score >= 8) return {
       isViable: true,
       label: t("Exceptional", "理想"),
@@ -51,12 +64,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
     };
   };
 
-  const getRecommendationMessage = (score: number) => {
-    if (score >= 8) return t("Grab your rig and run!", "带上你的设备立刻出发！");
-    if (score >= 5) return t("Yeah! Should give it a go, eh?", "不错！值得一试，对吧？");
-    return t("Uh... let me think twice.", "呃...再考虑一下吧。");
-  };
-
   const getScoreTextColor = (score: number) => {
     if (score >= 8) return "text-green-400";
     if (score >= 6) return "text-green-300";
@@ -72,14 +79,14 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
   };
 
   React.useEffect(() => {
-    const message = getRecommendationMessage(normalizedSiqs);
+    const message = getRecommendationMessage(normalizedSiqs, language);
     const scoreFormatted = formatSiqsScore(normalizedSiqs);
     
     toast(`SIQS: ${scoreFormatted}/10 - ${message}`, {
       position: "top-center",
       duration: 4000,
     });
-  }, [normalizedSiqs]);
+  }, [normalizedSiqs, language]);
 
   const viabilityStatus = getViabilityStatus(normalizedSiqs);
 
@@ -111,7 +118,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqs, factors = [], isViable 
             </div>
             <span className="text-sm text-muted-foreground mt-1">{t("Overall Quality Score", "总体质量评分")}</span>
             <p className="text-sm mt-2 font-medium italic terminal-text">
-              "{getRecommendationMessage(normalizedSiqs)}"
+              "{getRecommendationMessage(normalizedSiqs, language)}"
             </p>
           </div>
           <div className="w-full h-3 bg-cosmic-800 rounded-full overflow-hidden">
@@ -169,7 +176,9 @@ function getFactorNameInChinese(name: string): string {
     "Humidity": "湿度",
     "Moon Phase": "月相",
     "Light Pollution": "光污染",
-    "Temperature": "温度"
+    "Temperature": "温度",
+    "Air Quality": "空气质量",
+    "Weather Conditions": "天气状况"
   };
   return translations[name] || name;
 }
@@ -215,7 +224,14 @@ function getFactorDescriptionInChinese(description: string): string {
     "Low humidity, good optical performance": "低湿度，良好的光学性能",
     "Moderate humidity, acceptable conditions": "中等湿度，可接受的条件",
     "High humidity, potential for dew formation": "高湿度，可能形成露水",
-    "Very high humidity, significant dew issues likely": "非常高的湿度，可能有明显的露水问题"
+    "Very high humidity, significant dew issues likely": "非常高的湿度，可能有明显的露水问题",
+    "Good air quality, excellent for imaging": "空气质量良好，非常适合拍摄",
+    "Moderate air quality, good for imaging": "空气质量中等，适合拍摄",
+    "Unhealthy for sensitive groups, acceptable for imaging": "对敏感人群不健康，勉强可以拍摄",
+    "Unhealthy air quality, reduced clarity": "空气质量不健康，清晰度降低",
+    "Very unhealthy air quality, significant haze": "空气质量非常不健康，明显雾霾",
+    "Hazardous air quality, imaging not recommended": "危险的空气质量，不建议拍摄",
+    "Current conditions make imaging impossible": "当前条件使拍摄不可能"
   };
   return translations[description] || description;
 }

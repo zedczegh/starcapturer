@@ -11,6 +11,7 @@ import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
 import MapSelector from "./MapSelector";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getRecommendationMessage } from "./SIQSSummary";
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +25,9 @@ interface WeatherData {
   windSpeed: number;
   humidity: number;
   temperature?: number;
+  precipitation?: number;
+  weatherCondition?: string;
+  aqi?: number;
 }
 
 interface SIQSCalculatorProps {
@@ -373,6 +377,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         windSpeed: data.windSpeed,
         humidity: data.humidity,
         moonPhase,
+        precipitation: data.precipitation,
+        weatherCondition: data.weatherCondition,
+        aqi: data.aqi
       });
       
       if (displayOnly) {
@@ -431,12 +438,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation(lat, lng, locationName);
   };
 
-  const getRecommendationMessage = (siqsScore: number): string => {
-    if (siqsScore >= 80) return t("Perfect conditions for astrophotography!", "天文摄影的完美条件！");
-    if (siqsScore >= 60) return t("Good conditions for imaging!", "适合拍摄的良好条件！");
-    if (siqsScore >= 40) return t("Average conditions, might be challenging.", "一般条件，可能有挑战性。");
-    if (siqsScore >= 20) return t("Poor conditions, consider rescheduling.", "条件较差，考虑��期。");
-    return t("Very poor conditions, not recommended.", "条件非常差，不推荐。");
+  const getRecommendationMessageLocal = (siqsScore: number): string => {
+    return getRecommendationMessage(siqsScore / 10, language);
   };
 
   const getBortleScaleDescription = (value: number): string => {
@@ -521,7 +524,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           </div>
           
           <p className="text-sm mt-3 font-medium italic text-center">
-            "{getRecommendationMessage(siqsScore)}"
+            "{getRecommendationMessageLocal(siqsScore)}"
           </p>
           
           <p className="text-xs text-muted-foreground mt-3">

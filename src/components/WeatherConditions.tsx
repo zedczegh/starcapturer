@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Cloud, Droplets, Eye, Lightbulb, Thermometer, Wind } from "lucide-react";
+import { Cloud, Droplets, Eye, Lightbulb, Thermometer, Wind, Gauge } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WeatherConditionsProps {
@@ -13,6 +13,7 @@ interface WeatherConditionsProps {
     precipitation: number;
     time: string;
     condition: string;
+    aqi?: number;  // Added AQI
   };
   moonPhase: string;
   bortleScale: number;
@@ -33,6 +34,24 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     if (value <= 5) return `${value.toFixed(1)} (${t("Suburban", "郊区")})`;
     if (value <= 7) return `${value.toFixed(1)} (${t("Bright Suburban", "明亮郊区")})`;
     return `${value.toFixed(1)} (${t("City", "城市")})`;
+  };
+
+  const getAQIColor = (aqi: number) => {
+    if (aqi <= 50) return "text-green-400";
+    if (aqi <= 100) return "text-yellow-400";
+    if (aqi <= 150) return "text-orange-400";
+    if (aqi <= 200) return "text-red-400";
+    if (aqi <= 300) return "text-purple-400";
+    return "text-rose-700";
+  };
+
+  const getAQIDescription = (aqi: number) => {
+    if (aqi <= 50) return t("Good", "优");
+    if (aqi <= 100) return t("Moderate", "中等");
+    if (aqi <= 150) return t("Unhealthy for Sensitive Groups", "对敏感人群不健康");
+    if (aqi <= 200) return t("Unhealthy", "不健康");
+    if (aqi <= 300) return t("Very Unhealthy", "非常不健康");
+    return t("Hazardous", "危险");
   };
 
   return (
@@ -96,6 +115,23 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
                 <p className="text-lg font-bold">{t(moonPhase, getMoonPhaseInChinese(moonPhase))}</p>
               </div>
             </div>
+            
+            {weatherData.aqi !== undefined && (
+              <div className="flex items-start group hover:scale-105 transition-transform duration-300">
+                <div className="mr-2 rounded-full bg-cosmic-700/50 p-1.5 group-hover:bg-primary/20 transition-colors">
+                  <Gauge className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-cosmic-200">{t("Air Quality", "空气质量")}</p>
+                  <p className="text-lg font-bold">
+                    <span className={getAQIColor(weatherData.aqi)}>
+                      {weatherData.aqi} 
+                    </span> 
+                    <span className="text-sm ml-1">({getAQIDescription(weatherData.aqi)})</span>
+                  </p>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-3">
               <div className="flex items-start group hover:scale-105 transition-transform duration-300">
