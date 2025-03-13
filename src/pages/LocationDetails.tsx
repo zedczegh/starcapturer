@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -84,7 +83,7 @@ const LocationDetails = () => {
         toast.success(t("Light Pollution Data Updated", "光污染数据已更新"), {
           description: t(
             "Light pollution level has been updated based on location coordinates.",
-            "基于位置坐标已更新光污染级别。"
+            "基于位置坐标已更新光污染级��。"
           )
         });
       }
@@ -266,8 +265,17 @@ const LocationDetails = () => {
       description: t("Please wait while we determine your current location...", "请等待，我们正在确定您的当前位置...")
     });
 
+    const locationTimeout = setTimeout(() => {
+      setGettingUserLocation(false);
+      toast.error(t("Location Timeout", "位置请求超时"), {
+        description: t("Could not get your location in time. Please try again or use another method.", 
+                      "无法及时获取您的位置。请重试或使用其他方法。")
+      });
+    }, 15000);
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        clearTimeout(locationTimeout);
         try {
           const { latitude, longitude } = position.coords;
           
@@ -294,6 +302,7 @@ const LocationDetails = () => {
         }
       },
       (error) => {
+        clearTimeout(locationTimeout);
         console.error("Geolocation error:", error);
         let errorMessage = t("Unknown error occurred.", "发生了未知错误。");
         
@@ -315,13 +324,11 @@ const LocationDetails = () => {
         
         setGettingUserLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
     );
   };
 
   const handleManualCoordinates = () => {
-    // This could open a modal for manual coordinate entry
-    // Simplified implementation for this example
     if (locationData) {
       const lat = prompt(t("Enter latitude (-90 to 90):", "输入纬度（-90至90）:"), locationData.latitude.toString());
       const lng = prompt(t("Enter longitude (-180 to 180):", "输入经度（-180至180）:"), locationData.longitude.toString());
@@ -387,6 +394,7 @@ const LocationDetails = () => {
   };
 
   const formatMoonPhase = (phase: number) => {
+    const { t } = useLanguage();
     if (typeof phase !== 'number') return t("Unknown", "未知");
     
     if (phase <= 0.05 || phase >= 0.95) return t("New Moon", "新月");
@@ -400,6 +408,7 @@ const LocationDetails = () => {
   };
 
   const formatSeeingConditions = (value: number) => {
+    const { t } = useLanguage();
     if (typeof value !== 'number') return t("Average", "一般");
     
     if (value <= 1) return t("Excellent", "极佳");
@@ -552,7 +561,6 @@ const LocationDetails = () => {
             variant="outline" 
             onClick={() => {
               toast({
-                title: t("Refreshing Data", "刷新数据"),
                 description: t("Updating all data for this location", "正在更新此位置的所有数据")
               });
               fetchLocationForecast();
