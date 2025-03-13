@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getScoreColorClass } from "./SIQSSummaryScore";
@@ -86,8 +87,10 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
   return (
     <div className="space-y-4 mt-2">
       {factors.map((factor, index) => {
-        const colorClass = getScoreColorClass(factor.score);
-        const progressColorClass = colorClass.replace('text-', 'bg-');
+        // Convert score from 0-100 to 0-10 scale
+        const scoreOn10Scale = factor.score / 10;
+        const colorClass = getScoreColorClass(scoreOn10Scale);
+        const progressColorClass = colorClass.replace('text-', '');
         const translatedName = getTranslatedFactorName(factor.name);
         const translatedDescription = getTranslatedDescription(factor.description);
         
@@ -99,15 +102,15 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-medium">{translatedName}</h4>
               <span className={`text-sm ${colorClass} font-semibold`}>
-                {factor.score.toFixed(1)}
+                {scoreOn10Scale.toFixed(1)}
               </span>
             </div>
             
             <Progress 
-              value={factor.score * 10} 
+              value={factor.score} 
               className="h-2 bg-cosmic-700/40"
               style={{ 
-                '--progress-background': `var(--${progressColorClass.replace('bg-', '')})`,
+                '--progress-background': `var(--${progressColorClass})`,
               } as React.CSSProperties}
             />
             
