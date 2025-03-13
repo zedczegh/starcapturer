@@ -48,6 +48,7 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
+        {/* Rearranged: SIQSSummary first, then WeatherConditions */}
         <SIQSSummary
           siqsData={{
             score: locationData.siqsResult?.score || 0,
