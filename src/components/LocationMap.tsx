@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -32,14 +32,12 @@ const createCustomMarker = (): L.DivIcon => {
 
 // Component to update the map view when position changes
 const MapUpdater = ({ position }: { position: [number, number] }) => {
-  const map = useMapEvents({
-    load: () => {
-      map.setView(position, map.getZoom());
-    }
-  });
+  const map = useMap(); // Using useMap instead of useMapEvents
   
   useEffect(() => {
-    map.setView(position, map.getZoom());
+    if (map) {
+      map.setView(position, map.getZoom());
+    }
   }, [position, map]);
   
   return null;
@@ -97,10 +95,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
   // Interactive map component that handles clicks
   const MapEvents = () => {
-    useMapEvents({
-      click: async (e: L.LeafletMouseEvent) => {
-        if (!editable) return;
-        
+    const map = useMap(); // Using useMap instead of useMapEvents
+    
+    // Set up click handler
+    useEffect(() => {
+      if (!editable || !map) return;
+      
+      const handleClick = async (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         
         // Ensure latitude is in valid range (-90 to 90)
@@ -135,8 +136,14 @@ const LocationMap: React.FC<LocationMapProps> = ({
             });
           }
         }
-      },
-    });
+      };
+      
+      map.on('click', handleClick);
+      
+      return () => {
+        map.off('click', handleClick);
+      };
+    }, [map, editable]);
     
     return null;
   };
@@ -217,7 +224,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return () => {
       if (mapRef.current) {
         console.log("Cleaning up map instance");
-        mapRef.current.remove();
         mapRef.current = null;
       }
     };
@@ -256,7 +262,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
-            whenReady={handleMapReady}
+            whenReady={(map) => handleMapReady(map.target)}
             attributionControl={false}
           >
             {/* Base Map Layer - Bing Road Map */}
@@ -277,7 +283,11 @@ const LocationMap: React.FC<LocationMapProps> = ({
             <Marker 
               position={position}
               icon={createCustomMarker()}
-            />
+            >
+              <Popup>
+                {validName}
+              </Popup>
+            </Marker>
             <MapUpdater position={position} />
             {editable && <MapEvents />}
           </MapContainer>
