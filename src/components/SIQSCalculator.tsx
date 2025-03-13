@@ -90,7 +90,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       
       <StatusMessage message={statusMessage} />
       
-      {siqsScore !== null && <SIQSScore siqsScore={siqsScore} />}
+      {siqsScore !== null && (
+        <SIQSScore 
+          siqsScore={siqsScore} 
+          latitude={parseFloat(latitude)}
+          longitude={parseFloat(longitude)}
+          locationName={locationName}
+        />
+      )}
       
       <div className="space-y-4">
         <LocationSelector 

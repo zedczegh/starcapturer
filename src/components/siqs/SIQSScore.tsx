@@ -1,16 +1,26 @@
 
-import React from "react";
+import React, { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage } from "../SIQSSummary";
-import { Link } from "react-router-dom";
 
 interface SIQSScoreProps {
   siqsScore: number;
   locationId?: string;
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
 }
 
-const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
+const SIQSScore: React.FC<SIQSScoreProps> = ({ 
+  siqsScore, 
+  locationId,
+  latitude,
+  longitude,
+  locationName
+}) => {
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
   
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-400';
@@ -28,8 +38,41 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
     return 'score-bad';
   };
   
+  const handleClick = useCallback(() => {
+    if (locationId) {
+      navigate(`/location/${locationId}`);
+    } else if (latitude && longitude && locationName) {
+      // Create a timestamp-based ID for this location
+      const generatedId = `${locationName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+      
+      // Navigate immediately to reduce perceived latency
+      navigate(`/location/${generatedId}`, {
+        state: {
+          id: generatedId,
+          name: locationName,
+          latitude: latitude,
+          longitude: longitude,
+          // We'll let the location page fetch the rest of the data
+        }
+      });
+    } else {
+      // Fallback to SIQS Now using Beijing data
+      navigate(`/location/beijing-${Date.now()}`, {
+        state: {
+          id: `beijing-${Date.now()}`,
+          name: "Beijing",
+          latitude: 39.9042,
+          longitude: 116.4074,
+        }
+      });
+    }
+  }, [navigate, locationId, latitude, longitude, locationName]);
+  
   const scoreComponent = (
-    <div className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer">
+    <div 
+      className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
+      onClick={handleClick}
+    >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
           {t("Estimated SIQS Score", "预估SIQS评分")}
@@ -71,13 +114,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
     </div>
   );
 
-  return locationId ? (
-    <Link to={`/location/${locationId}`} className="block">
-      {scoreComponent}
-    </Link>
-  ) : (
-    scoreComponent
-  );
+  return scoreComponent;
 };
 
-export default SIQSScore;
+export default React.memo(SIQSScore);

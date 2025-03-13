@@ -8,6 +8,7 @@ export const useSIQSAdvancedSettings = () => {
   // Get settings from cache if available, otherwise use defaults
   return useMemo(() => {
     try {
+      // First, check for specific location settings in cache
       const cachedSettings = getCachedData('siqs_settings', 30 * 24 * 60 * 60 * 1000); // 30 day cache
       
       // Use cached settings or defaults with improved defaults based on average conditions
