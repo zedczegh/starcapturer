@@ -35,18 +35,18 @@ const createCustomMarker = (): L.DivIcon => {
 const MapUpdater = ({ position }: { position: [number, number] }) => {
   const mapRef = useRef<L.Map | null>(null);
   
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setView(position, mapRef.current.getZoom());
-    }
-  }, [position]);
-  
-  // Use MapEvents to capture the map instance
-  useMapEvents({
+  const map = useMapEvents({
     load: (e) => {
       mapRef.current = e.target;
     }
   });
+  
+  useEffect(() => {
+    if (map) {
+      map.setView(position, map.getZoom());
+      mapRef.current = map;
+    }
+  }, [position, map]);
   
   return null;
 };
@@ -242,7 +242,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             {editable && <MapEvents />}
           </MapContainer>
         </div>
-        <div className="p-4">
+        <div className="p-4 bg-gradient-to-t from-background/5 to-transparent">
           <h3 className="font-medium text-sm mb-1">{t("Location", "位置")}</h3>
           <p className="text-sm text-muted-foreground">
             {t(`${validName} is located at coordinates ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`, 

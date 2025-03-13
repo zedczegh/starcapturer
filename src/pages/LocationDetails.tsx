@@ -518,6 +518,7 @@ const LocationDetails = () => {
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - SIQS Info and Current Conditions */}
           <div className="space-y-8">
             <SIQSSummary
               siqs={locationData.siqsResult?.score || 0}
@@ -541,8 +542,39 @@ const LocationDetails = () => {
               bortleScale={locationData.bortleScale || 4}
               seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
             />
+            
+            {/* Weather Forecast Moved Below Current Conditions */}
+            <Tabs defaultValue="hourly" className="w-full">
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="hourly" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {t("Hourly Forecast", "小时预报")}
+                </TabsTrigger>
+                <TabsTrigger value="extended" className="flex items-center gap-2">
+                  <CalendarRange className="h-4 w-4" />
+                  {t("15-Day Forecast", "15天预报")}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="hourly" className="mt-0">
+                <ForecastTable 
+                  forecastData={forecastData}
+                  isLoading={forecastLoading}
+                  onRefresh={handleRefreshForecast}
+                />
+              </TabsContent>
+              
+              <TabsContent value="extended" className="mt-0">
+                <LongRangeForecast
+                  forecastData={longRangeForecast}
+                  isLoading={longRangeLoading}
+                  onRefresh={handleRefreshLongRangeForecast}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
           
+          {/* Right Column - Map and Location Selection */}
           <div className="space-y-8">
             <div className="relative z-60">
               <Card className="shadow-md overflow-hidden">
@@ -580,35 +612,6 @@ const LocationDetails = () => {
                 </CardContent>
               </Card>
             </div>
-            
-            <Tabs defaultValue="hourly" className="w-full">
-              <TabsList className="grid grid-cols-2 mb-4">
-                <TabsTrigger value="hourly" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {t("Hourly Forecast", "小时预报")}
-                </TabsTrigger>
-                <TabsTrigger value="extended" className="flex items-center gap-2">
-                  <CalendarRange className="h-4 w-4" />
-                  {t("15-Day Forecast", "15天预报")}
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="hourly" className="mt-0">
-                <ForecastTable 
-                  forecastData={forecastData}
-                  isLoading={forecastLoading}
-                  onRefresh={handleRefreshForecast}
-                />
-              </TabsContent>
-              
-              <TabsContent value="extended" className="mt-0">
-                <LongRangeForecast
-                  forecastData={longRangeForecast}
-                  isLoading={longRangeLoading}
-                  onRefresh={handleRefreshLongRangeForecast}
-                />
-              </TabsContent>
-            </Tabs>
           </div>
         </div>
       </main>
