@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import Hero from "@/components/Hero";
@@ -13,7 +13,6 @@ const Index = () => {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
   
-  // Prefetch popular locations data on app startup
   useEffect(() => {
     prefetchPopularLocations(queryClient);
   }, [queryClient]);
@@ -26,7 +25,6 @@ const Index = () => {
       <section id="calculator-section" className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-nebula-gradient -z-10" />
         
-        {/* Background image for calculator section */}
         <div className="absolute inset-0 opacity-20 -z-10">
           <img 
             src="https://images.unsplash.com/photo-1506744038136-46273834b3fb" 
@@ -207,7 +205,6 @@ const Index = () => {
   );
 };
 
-// Helper component for feature cards
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
   <div className="glassmorphism p-6 rounded-xl text-left hover-card">
     <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
