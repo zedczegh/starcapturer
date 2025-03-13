@@ -1,5 +1,5 @@
 
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage } from "../SIQSSummary";
@@ -22,53 +22,51 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-green-300';
-    if (score >= 40) return 'text-yellow-300';
-    if (score >= 20) return 'text-orange-300';
-    return 'text-red-400';
-  };
+  // Memoize these values to prevent recalculations
+  const scoreColor = useMemo(() => getScoreColor(siqsScore), [siqsScore]);
+  const scoreClass = useMemo(() => getScoreClass(siqsScore), [siqsScore]);
+  const recommendation = useMemo(() => getRecommendationMessage(siqsScore / 10, language), [siqsScore, language]);
   
-  const getScoreClass = (score: number) => {
-    if (score >= 80) return 'score-excellent';
-    if (score >= 60) return 'score-good';
-    if (score >= 40) return 'score-average';
-    if (score >= 20) return 'score-poor';
-    return 'score-bad';
-  };
+  // Pre-generate the locationData object for faster navigation
+  const preparedLocationData = useMemo(() => {
+    if (!latitude || !longitude || !locationName) return null;
+    
+    const generatedId = `${locationName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    return {
+      id: generatedId,
+      name: locationName,
+      latitude: latitude,
+      longitude: longitude,
+      timestamp: new Date().toISOString()
+    };
+  }, [latitude, longitude, locationName]);
   
   const handleClick = useCallback(() => {
     if (locationId) {
       navigate(`/location/${locationId}`);
-    } else if (latitude && longitude && locationName) {
-      // Create a timestamp-based ID for this location
-      const generatedId = `${locationName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-      
-      // Navigate immediately to reduce perceived latency
-      navigate(`/location/${generatedId}`, {
-        state: {
-          id: generatedId,
-          name: locationName,
-          latitude: latitude,
-          longitude: longitude,
-          // We'll let the location page fetch the rest of the data
-        }
-      });
-    } else {
-      // Fallback to SIQS Now using Beijing data
-      navigate(`/location/beijing-${Date.now()}`, {
-        state: {
-          id: `beijing-${Date.now()}`,
-          name: "Beijing",
-          latitude: 39.9042,
-          longitude: 116.4074,
-        }
-      });
+      return;
     }
-  }, [navigate, locationId, latitude, longitude, locationName]);
+    
+    if (preparedLocationData) {
+      navigate(`/location/${preparedLocationData.id}`, {
+        state: preparedLocationData
+      });
+      return;
+    }
+    
+    // Fallback to Beijing data with unique ID
+    const fallbackId = `beijing-${Date.now()}`;
+    navigate(`/location/${fallbackId}`, {
+      state: {
+        id: fallbackId,
+        name: "Beijing",
+        latitude: 39.9042,
+        longitude: 116.4074
+      }
+    });
+  }, [navigate, locationId, preparedLocationData]);
   
-  const scoreComponent = (
+  return (
     <div 
       className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
       onClick={handleClick}
@@ -78,7 +76,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           {t("Estimated SIQS Score", "预估SIQS评分")}
         </h3>
         <div className="flex items-center">
-          <span className={`text-2xl font-bold ${getScoreColor(siqsScore)}`}>
+          <span className={`text-2xl font-bold ${scoreColor}`}>
             {(siqsScore / 10).toFixed(1)}
           </span>
           <span className="text-lg text-muted-foreground">/10</span>
@@ -86,7 +84,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </div>
       <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
         <div 
-          className={`h-full ${getScoreClass(siqsScore)}`} 
+          className={`h-full ${scoreClass}`} 
           style={{ width: `${siqsScore}%`, transition: 'width 0.5s ease-in-out' }}
         />
       </div>
@@ -98,7 +96,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </div>
       
       <p className="text-sm mt-3 font-medium italic text-center">
-        "{getRecommendationMessage(siqsScore / 10, language)}"
+        "{recommendation}"
       </p>
       
       <p className="text-xs text-muted-foreground mt-3">
@@ -113,8 +111,23 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </div>
     </div>
   );
+};
 
-  return scoreComponent;
+// Helper functions to determine visual styling
+const getScoreColor = (score: number) => {
+  if (score >= 80) return 'text-green-400';
+  if (score >= 60) return 'text-green-300';
+  if (score >= 40) return 'text-yellow-300';
+  if (score >= 20) return 'text-orange-300';
+  return 'text-red-400';
+};
+
+const getScoreClass = (score: number) => {
+  if (score >= 80) return 'score-excellent';
+  if (score >= 60) return 'score-good';
+  if (score >= 40) return 'score-average';
+  if (score >= 20) return 'score-poor';
+  return 'score-bad';
 };
 
 export default React.memo(SIQSScore);

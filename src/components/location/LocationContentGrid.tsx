@@ -49,9 +49,11 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
         <SIQSSummary
-          siqs={locationData.siqsResult?.score || 0}
-          factors={locationData.siqsResult?.factors || []}
-          isViable={locationData.siqsResult?.isViable || false}
+          siqsData={{
+            score: locationData.siqsResult?.score || 0,
+            isViable: locationData.siqsResult?.isViable || false,
+            factors: locationData.siqsResult?.factors || []
+          }}
         />
         
         <WeatherConditions
