@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getScoreColorClass } from "./SIQSSummaryScore";
@@ -52,6 +51,9 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     
     // Comprehensive mapping of descriptions to Chinese translations
     const descriptionsMap: Record<string, string> = {
+      // Specific description translations
+      "Current conditions make imaging impossible": "当前条件不适合任何形式的天文摄影",
+      
       // Cloud cover descriptions
       "Excellent clear skies, ideal for all types of astrophotography": "天空非常晴朗，适合所有类型的天文摄影",
       "Very good conditions with minimal cloud interference": "很好的条件，云层干扰最小",
