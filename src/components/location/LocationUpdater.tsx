@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -61,4 +61,4 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   );
 };
 
-export default LocationUpdater;
+export default memo(LocationUpdater);

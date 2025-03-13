@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import MapDisplay from "./MapDisplay";
@@ -47,12 +48,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
   }, [validLatitude, validLongitude, position]);
 
   // Function to normalize longitude to -180 to 180 range
-  const normalizeLongitude = (lng: number): number => {
+  const normalizeLongitude = useCallback((lng: number): number => {
     return ((lng + 180) % 360 + 360) % 360 - 180;
-  };
+  }, []);
 
   // Enhanced function to get a proper location name with administrative hierarchy
-  const getLocationNameForCoordinates = async (lat: number, lng: number): Promise<string> => {
+  const getLocationNameForCoordinates = useCallback(async (lat: number, lng: number): Promise<string> => {
     setLocationLoading(true);
     try {
       // Check cache first
@@ -84,73 +85,59 @@ const LocationMap: React.FC<LocationMapProps> = ({
       // Try from database as fallback
       const closestLocation = findClosestKnownLocation(lat, lng);
       
-      // If location is within 20km of a known location, use that name
+      // Use closest known location
       if (closestLocation.distance <= 20) {
         const locationName = closestLocation.name;
-        
-        // Cache this data
         setCachedData(cacheKey, {
           name: locationName,
           bortleScale: closestLocation.bortleScale
         });
-        
         setLocationLoading(false);
         return locationName;
       }
       
-      // If we still don't have a proper name, create a formatted name based on the closest known location
       if (closestLocation.distance <= 100) {
         const distanceText = language === 'en' ? 
           `Near ${closestLocation.name}` : 
           `${closestLocation.name}附近`;
-        
-        // Cache this data
         setCachedData(cacheKey, {
           name: distanceText,
           bortleScale: closestLocation.bortleScale
         });
-        
         setLocationLoading(false);
         return distanceText;
       }
       
-      // Last resort: use a generic format with region information if available
+      // Last resort
       const formattedName = t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
                             `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
-                            
-      // Cache this generic name
       setCachedData(cacheKey, {
         name: formattedName,
-        bortleScale: 4 // Default value
+        bortleScale: 4
       });
-      
       setLocationLoading(false);
       return formattedName;
     } catch (error) {
       console.error("Error getting location name for coordinates:", error);
-      
-      // Fallback to coordinates format
       setLocationLoading(false);
       return t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
               `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
     }
-  };
+  }, [language, t, getCachedData, setCachedData]);
 
-  const handleMapReady = () => {
+  const handleMapReady = useCallback(() => {
     setIsLoading(false);
-  };
+  }, []);
 
-  const handleMapClick = async (lat: number, lng: number) => {
+  const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (!editable || !onLocationUpdate) return;
     
-    // Ensure latitude is in valid range (-90 to 90)
+    // Ensure valid coordinates
     const validLat = Math.max(-90, Math.min(90, lat));
-    // Ensure longitude is in valid range (-180 to 180)
     const validLng = normalizeLongitude(lng);
     
     setPosition([validLat, validLng]);
     
-    // Get proper location name instead of just coordinates
     const locationName = await getLocationNameForCoordinates(validLat, validLng);
     
     onLocationUpdate({
@@ -158,7 +145,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
       latitude: validLat,
       longitude: validLng
     });
-  };
+  }, [editable, onLocationUpdate, normalizeLongitude, getLocationNameForCoordinates]);
 
   // Handle map initialization error
   useEffect(() => {
@@ -167,7 +154,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
         setMapError(t("Failed to load map. Please try refreshing the page.", 
                     "无法加载地图。请尝试刷新页面。"));
       }
-    }, 5000); // Reduced from 10s to 5s
+    }, 5000);
     
     return () => clearTimeout(timeoutId);
   }, [isLoading, t, mapError]);
@@ -210,4 +197,4 @@ const LocationMap: React.FC<LocationMapProps> = ({
   );
 };
 
-export default LocationMap;
+export default memo(LocationMap);

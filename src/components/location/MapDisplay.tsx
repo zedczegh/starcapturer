@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -29,7 +29,7 @@ const createCustomMarker = (): L.DivIcon => {
 };
 
 // Component to update the map view when position changes
-const MapUpdater = ({ position }: { position: [number, number] }) => {
+const MapUpdater = memo(({ position }: { position: [number, number] }) => {
   const map = useMap();
   
   useEffect(() => {
@@ -43,13 +43,14 @@ const MapUpdater = ({ position }: { position: [number, number] }) => {
   }, [position, map]);
   
   return null;
-};
+});
+
+MapUpdater.displayName = 'MapUpdater';
 
 // Interactive map component that handles clicks
-const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
   const map = useMap();
   
-  // Set up click handler
   useEffect(() => {
     if (!map) return;
     
@@ -66,29 +67,12 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
   }, [map, onMapClick]);
   
   return null;
-};
+});
 
-interface MapDisplayProps {
-  position: [number, number];
-  locationName: string;
-  editable?: boolean;
-  onMapReady: () => void;
-  onMapClick: (lat: number, lng: number) => void;
-  showInfoPanel?: boolean;
-}
+MapEvents.displayName = 'MapEvents';
 
-const MapDisplay: React.FC<MapDisplayProps> = ({
-  position,
-  locationName,
-  editable = false,
-  onMapReady,
-  onMapClick,
-  showInfoPanel = false
-}) => {
-  const { t } = useLanguage();
-  const [mapInitialized, setMapInitialized] = useState(false);
-
-  // Effect to add custom CSS for marker animation
+// CSS injector component to avoid duplicate style tags
+const MapStyles = memo(() => {
   useEffect(() => {
     if (!document.getElementById('custom-marker-styles')) {
       const style = document.createElement('style');
@@ -154,11 +138,34 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
       document.head.appendChild(style);
     }
   }, []);
+  
+  return null;
+});
 
-  const handleMapReady = (event: { target: L.Map }) => {
-    setMapInitialized(true);
+MapStyles.displayName = 'MapStyles';
+
+interface MapDisplayProps {
+  position: [number, number];
+  locationName: string;
+  editable?: boolean;
+  onMapReady: () => void;
+  onMapClick: (lat: number, lng: number) => void;
+  showInfoPanel?: boolean;
+}
+
+const MapDisplay: React.FC<MapDisplayProps> = ({
+  position,
+  locationName,
+  editable = false,
+  onMapReady,
+  onMapClick,
+  showInfoPanel = false
+}) => {
+  const { t } = useLanguage();
+
+  const handleMapReady = useCallback((event: { target: L.Map }) => {
     onMapReady();
-  };
+  }, [onMapReady]);
 
   // Use a China-friendly tile server
   const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -166,32 +173,35 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
 
   return (
     <div className="z-0 h-full w-full">
-      <MapContainer 
-        center={position}
-        zoom={12} 
-        style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
-        whenReady={handleMapReady}
-        attributionControl={false}
-      >
-        <TileLayer
-          url={tileServerUrl}
-          attribution={attribution}
-          subdomains={['a', 'b', 'c']}
-        />
-        
-        <Marker 
-          position={position}
-          icon={createCustomMarker()}
+      <MapStyles />
+      <div className="h-full w-full">
+        <MapContainer 
+          center={position}
+          zoom={12} 
+          style={{ height: "100%", width: "100%" }}
+          scrollWheelZoom={true}
+          whenReady={handleMapReady}
+          attributionControl={false}
         >
-          <Popup>
-            {locationName}
-          </Popup>
-        </Marker>
-        
-        <MapUpdater position={position} />
-        {editable && <MapEvents onMapClick={onMapClick} />}
-      </MapContainer>
+          <TileLayer
+            url={tileServerUrl}
+            attribution={attribution}
+            subdomains={['a', 'b', 'c']}
+          />
+          
+          <Marker 
+            position={position}
+            icon={createCustomMarker()}
+          >
+            <Popup>
+              {locationName}
+            </Popup>
+          </Marker>
+          
+          <MapUpdater position={position} />
+          {editable && <MapEvents onMapClick={onMapClick} />}
+        </MapContainer>
+      </div>
       
       {showInfoPanel && (
         <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
@@ -212,4 +222,4 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   );
 };
 
-export default React.memo(MapDisplay);
+export default memo(MapDisplay);
