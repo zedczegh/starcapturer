@@ -106,11 +106,12 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
         return (
           <div 
             key={`factor-${index}`} 
-            className="p-3 rounded-lg bg-cosmic-800/30 hover:bg-cosmic-800/40 transition-colors"
+            className="p-3 rounded-lg bg-cosmic-800/40 hover:bg-cosmic-800/50 transition-colors border border-cosmic-600/20 shadow-md"
+            style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-medium">{translatedName}</h4>
-              <span className={`text-sm ${colorClass} font-semibold`}>
+              <span className={`text-sm ${colorClass} font-semibold px-2 py-0.5 rounded-full bg-cosmic-700/40`}>
                 {scoreOn10Scale.toFixed(1)}
               </span>
             </div>

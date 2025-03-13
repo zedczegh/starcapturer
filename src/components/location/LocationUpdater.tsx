@@ -114,7 +114,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
     }
 
     setGettingUserLocation(true);
-    setStatusMessage(t("Accessing your current location...", "正在访问您的当前位置..."));
+    setStatusMessage(t("Retrieving your current location data...", "正在获取您的当前位置数据..."));
 
     const locationTimeout = setTimeout(() => {
       if (gettingUserLocation) {
@@ -183,10 +183,10 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const fallbackName = t("Unnamed Location", "未命名位置");
 
   return (
-    <Card className="shadow-md overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className="shadow-xl overflow-hidden bg-cosmic-900/80 border-cosmic-600/20 hover:shadow-2xl transition-all duration-300">
+      <CardHeader className="pb-2 bg-cosmic-800/50 border-b border-cosmic-600/10">
         <CardTitle className="text-xl flex items-center">
-          <MapPin className="mr-2 h-5 w-5 text-primary/80" />
+          <MapPin className="mr-2 h-5 w-5 text-primary" />
           {t("Location", "位置")}
         </CardTitle>
       </CardHeader>
@@ -198,19 +198,19 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
           onLocationUpdate={onLocationUpdate}
           editable={true}
         />
-        <div className="p-4 border-t border-border/30">
+        <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30">
           <Button 
             variant="outline" 
-            className="w-full mb-4 flex items-center justify-center gap-2" 
+            className="w-full mb-4 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
             onClick={handleGetCurrentLocation}
             disabled={gettingUserLocation}
           >
             <Locate className="h-4 w-4" />
             {gettingUserLocation 
-              ? t("Getting location...", "获取位置中...") 
+              ? t("Retrieving location data...", "获取位置数据中...") 
               : t("Use my current location", "使用我的当前位置")}
           </Button>
-          <div className="text-sm text-muted-foreground mb-3">
+          <div className="text-sm text-primary-foreground/80 mb-3 font-medium">
             {t("Search for another location", "搜索其他位置")}
           </div>
           <MapSelector onSelectLocation={handleLocationSearch} />

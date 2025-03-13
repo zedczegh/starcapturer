@@ -25,7 +25,7 @@ const StatusMessage: React.FC<StatusMessageProps> = ({
   if (!message) return null;
   
   return (
-    <div className="mb-4 p-3 bg-background/70 border border-border rounded-md text-sm">
+    <div className="mb-4 p-3 bg-cosmic-800/50 border border-primary/20 rounded-md text-sm shadow-lg animate-fade-in text-primary-foreground/90">
       {message}
     </div>
   );
