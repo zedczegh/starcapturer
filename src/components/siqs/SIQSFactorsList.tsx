@@ -86,11 +86,11 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
   
   // Get progress color based on score range to match About SIQS page
   const getProgressColor = (score: number): string => {
-    if (score >= 8) return "bg-green-500";
-    if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
-    if (score >= 4) return "bg-yellow-400";
-    if (score >= 2) return "bg-orange-400";
-    return "bg-red-500";
+    if (score >= 8) return "var(--green-500)";
+    if (score >= 6) return "var(--olive-500)";
+    if (score >= 4) return "var(--yellow-400)";
+    if (score >= 2) return "var(--orange-400)";
+    return "var(--red-500)";
   };
   
   return (
