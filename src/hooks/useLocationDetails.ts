@@ -203,5 +203,8 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     handleRefreshAll,
     handleRefreshForecast,
     handleRefreshLongRangeForecast,
+    // Added these state setters to fix the build errors
+    setLoading,
+    setForecastData
   };
 };

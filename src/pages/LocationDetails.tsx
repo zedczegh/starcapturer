@@ -34,6 +34,8 @@ const LocationDetails = () => {
     handleRefreshAll,
     handleRefreshForecast,
     handleRefreshLongRangeForecast,
+    setLoading, // Added this from the hook
+    setForecastData, // Added this from the hook
   } = useLocationDetails(locationData, setLocationData);
 
   useEffect(() => {
