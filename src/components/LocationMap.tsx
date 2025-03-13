@@ -6,8 +6,9 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getTiandituLocationName } from "@/utils/tiandituApi";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader } from "lucide-react";
 
-// Fix for default marker icons
+// Fix for default marker icons - essential for Leaflet to show markers correctly
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -63,6 +64,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const { language, t } = useLanguage();
   const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
   const mapRef = useRef<L.Map | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
@@ -131,6 +134,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   // Store map instance when it's created
   const handleMapCreated = (map: L.Map) => {
     mapRef.current = map;
+    setIsLoading(false);
   };
 
   // Effect to add custom CSS for marker animation if not already present
@@ -203,7 +207,18 @@ const LocationMap: React.FC<LocationMapProps> = ({
   return (
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
-        <div className="aspect-video w-full h-[300px]">
+        <div className="aspect-video w-full h-[300px] relative">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
+              <div className="flex flex-col items-center gap-2">
+                <Loader className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">
+                  {t("Loading map...", "正在加载地图...")}
+                </p>
+              </div>
+            </div>
+          )}
+          
           <MapContainer 
             center={position}
             zoom={12} 
@@ -211,7 +226,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             scrollWheelZoom={true}
             whenCreated={handleMapCreated}
           >
-            {/* Use Tianditu map layers instead of OpenStreetMap */}
+            {/* Use Tianditu map layers */}
             <TileLayer
               url="https://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=1f2df41008fa6dca06da53a1422935f5"
               subdomains={['0', '1', '2', '3', '4', '5', '6', '7']}
@@ -229,6 +244,17 @@ const LocationMap: React.FC<LocationMapProps> = ({
             <MapUpdater position={position} />
             {editable && <MapEvents />}
           </MapContainer>
+          
+          {mapError && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+              <div className="p-4 text-center">
+                <p className="text-destructive font-medium">{mapError}</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {t("Please refresh the page or try again later.", "请刷新页面或稍后再试。")}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="p-4">
           <h3 className="font-medium text-sm mb-1">{t("Location", "位置")}</h3>

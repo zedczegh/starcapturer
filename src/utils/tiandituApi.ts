@@ -22,15 +22,19 @@ export async function getTiandituLocationName(
     
     const langCode = language === 'zh' ? 'c' : 'e'; // c for Chinese, e for English
     
+    console.log(`Calling Tianditu API for reverse geocoding at: ${latitude}, ${longitude}`);
+    
     const response = await fetch(
       `https://api.tianditu.gov.cn/geocoder?postStr={'lon':${longitude},'lat':${latitude},'ver':1}&type=geocode&tk=${TIANDITU_KEY}`
     );
     
     if (!response.ok) {
+      console.error('Tianditu API response not OK:', response.status, response.statusText);
       throw new Error('Tianditu geocoding API error');
     }
     
     const data = await response.json();
+    console.log('Tianditu geocoding response:', data);
     
     if (data.status === '0' && data.result) {
       // Format the response based on the data structure
@@ -92,15 +96,19 @@ export async function searchTiandituLocations(
   try {
     const langCode = language === 'zh' ? 'c' : 'e'; // c for Chinese, e for English
     
+    console.log(`Searching Tianditu locations for: ${query}`);
+    
     const response = await fetch(
       `https://api.tianditu.gov.cn/search?postStr={'keyWord':'${encodeURIComponent(query)}','level':12,'mapBound':'73.66,3.86,135.05,53.55','queryType':1,'start':0,'count':10}&type=query&tk=${TIANDITU_KEY}`
     );
     
     if (!response.ok) {
+      console.error('Tianditu search API response not OK:', response.status, response.statusText);
       throw new Error('Tianditu search API error');
     }
     
     const data = await response.json();
+    console.log('Tianditu search response:', data);
     
     if (data.status === '0' && data.pois && data.pois.length > 0) {
       // Map the response to our expected format
