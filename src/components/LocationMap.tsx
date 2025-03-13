@@ -1,13 +1,14 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { toast } from "sonner";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { getLocationNameFromCoordinates } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader } from "lucide-react";
 
-// Fix for default marker icons - essential for Leaflet to show markers correctly
+// Fix for default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -32,18 +33,20 @@ const createCustomMarker = (): L.DivIcon => {
 
 // Component to update the map view when position changes
 const MapUpdater = ({ position }: { position: [number, number] }) => {
-  const map = useMap();
+  const mapRef = useRef<L.Map | null>(null);
   
   useEffect(() => {
-    if (map) {
-      try {
-        // Gentle panning instead of immediate view change to prevent jarring transitions
-        map.panTo(position, { animate: true, duration: 0.5 });
-      } catch (error) {
-        console.error("Error updating map view:", error);
-      }
+    if (mapRef.current) {
+      mapRef.current.setView(position, mapRef.current.getZoom());
     }
-  }, [position, map]);
+  }, [position]);
+  
+  // Use MapEvents to capture the map instance
+  useMapEvents({
+    load: (e) => {
+      mapRef.current = e.target;
+    }
+  });
   
   return null;
 };
@@ -64,46 +67,33 @@ const LocationMap: React.FC<LocationMapProps> = ({
   editable = false 
 }) => {
   const { language, t } = useLanguage();
-  const [position, setPosition] = useState<[number, number]>([
-    isFinite(latitude) ? latitude : 0, 
-    isFinite(longitude) ? longitude : 0
-  ]);
+  const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
   const mapRef = useRef<L.Map | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [mapError, setMapError] = useState<string | null>(null);
 
   // Handle potential invalid coordinates with safer defaults
-  const validLatitude = isFinite(latitude) ? latitude : 0;
-  const validLongitude = isFinite(longitude) ? longitude : 0;
+  const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
+  const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
 
   // Update position when props change
   useEffect(() => {
-    if (isFinite(latitude) && isFinite(longitude) && 
-       (validLatitude !== position[0] || validLongitude !== position[1])) {
+    if (validLatitude !== position[0] || validLongitude !== position[1]) {
       setPosition([validLatitude, validLongitude]);
     }
   }, [validLatitude, validLongitude]);
 
   // Function to normalize longitude to -180 to 180 range
   const normalizeLongitude = (lng: number): number => {
+    // Handle cases where longitude is outside -180 to 180 range
     return ((lng + 180) % 360 + 360) % 360 - 180;
-  };
-
-  // Generate a location name from coordinates
-  const getLocationNameFromCoordinates = (lat: number, lng: number): string => {
-    return `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
   };
 
   // Interactive map component that handles clicks
   const MapEvents = () => {
-    const map = useMap();
-    
-    // Set up click handler
-    useEffect(() => {
-      if (!editable || !map) return;
-      
-      const handleClick = (e: L.LeafletMouseEvent) => {
+    useMapEvents({
+      click: async (e: L.LeafletMouseEvent) => {
+        if (!editable) return;
+        
         const { lat, lng } = e.latlng;
         
         // Ensure latitude is in valid range (-90 to 90)
@@ -113,30 +103,53 @@ const LocationMap: React.FC<LocationMapProps> = ({
         
         setPosition([validLat, validLng]);
         
-        if (onLocationUpdate) {
-          const locationName = getLocationNameFromCoordinates(validLat, validLng);
-          onLocationUpdate({
-            name: locationName,
-            latitude: validLat,
-            longitude: validLng
+        try {
+          const newName = await getLocationNameFromCoordinates(validLat, validLng, language as 'en' | 'zh');
+          
+          if (onLocationUpdate) {
+            onLocationUpdate({
+              name: newName,
+              latitude: validLat,
+              longitude: validLng
+            });
+          }
+          
+          toast.success(t("Location Updated", "位置已更新"), {
+            description: t(`New location: ${newName}`, `新位置：${newName}`),
+            position: "top-center",
+            duration: 3000
+          });
+        } catch (error) {
+          console.error('Error getting location name:', error);
+          const fallbackName = t(
+            `Location at ${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`,
+            `位置：${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E`
+          );
+          
+          if (onLocationUpdate) {
+            onLocationUpdate({
+              name: fallbackName,
+              latitude: validLat,
+              longitude: validLng
+            });
+          }
+          
+          toast.error(t("Location Error", "位置错误"), {
+            description: t("Could not get location name. Using coordinates instead.", 
+                          "无法获取位置名称。使用坐标代替。"),
+            position: "top-center",
+            duration: 5000
           });
         }
-      };
-      
-      map.on('click', handleClick);
-      
-      return () => {
-        map.off('click', handleClick);
-      };
-    }, [map, editable]);
+      },
+    });
     
     return null;
   };
 
-  const handleMapReady = (event: { target: L.Map }) => {
-    console.log("Map instance created and ready");
-    mapRef.current = event.target;
-    setIsLoading(false);
+  // Store map instance when it's created
+  const handleMapCreated = (map: L.Map) => {
+    mapRef.current = map;
   };
 
   // Effect to add custom CSS for marker animation if not already present
@@ -204,89 +217,30 @@ const LocationMap: React.FC<LocationMapProps> = ({
       `;
       document.head.appendChild(style);
     }
-    
-    // Cleanup function for the map in case component unmounts
-    return () => {
-      if (mapRef.current) {
-        console.log("Cleaning up map instance");
-        mapRef.current = null;
-      }
-    };
   }, []);
-
-  // Handle map initialization error
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isLoading && !mapRef.current) {
-        console.error("Map failed to initialize within timeout period");
-        setMapError(t("Failed to load map. Please try refreshing the page.", 
-                     "无法加载地图。请尝试刷新页面。"));
-      }
-    }, 10000); // 10 second timeout
-    
-    return () => clearTimeout(timeoutId);
-  }, [isLoading, t]);
 
   return (
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
-        <div className="aspect-video w-full h-[300px] relative">
-          {isLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
-              <div className="flex flex-col items-center gap-2">
-                <Loader className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">
-                  {t("Loading map...", "正在加载地图...")}
-                </p>
-              </div>
-            </div>
-          )}
-          
+        <div className="aspect-video w-full h-[300px]">
           <MapContainer 
             center={position}
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
-            whenReady={handleMapReady}
-            attributionControl={false}
+            whenCreated={handleMapCreated}
           >
-            {/* Base Map Layer - OpenStreetMap */}
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              subdomains={['a', 'b', 'c']}
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            
-            {/* Light Pollution Overlay Layer */}
-            <TileLayer
-              url="https://tiles.lightpollutionmap.info/tiles/world_atlas_2015/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.lightpollutionmap.info">Light Pollution Map</a>'
-              opacity={0.6}
-              zIndex={10}
-            />
-            
             <Marker 
               position={position}
               icon={createCustomMarker()}
-            >
-              <Popup>
-                {validName}
-              </Popup>
-            </Marker>
+            />
             <MapUpdater position={position} />
             {editable && <MapEvents />}
           </MapContainer>
-          
-          {mapError && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
-              <div className="p-4 text-center">
-                <p className="text-destructive font-medium">{mapError}</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {t("Please refresh the page or try again later.", "请刷新页面或稍后再试。")}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
         <div className="p-4">
           <h3 className="font-medium text-sm mb-1">{t("Location", "位置")}</h3>

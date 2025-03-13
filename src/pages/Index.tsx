@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+
+import React from "react";
 import { Link } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import Hero from "@/components/Hero";
@@ -6,17 +7,10 @@ import SIQSCalculator from "@/components/SIQSCalculator";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Sparkles, Star, Camera, Map, LocateFixed, CloudLightning } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useQueryClient } from '@tanstack/react-query';
-import { prefetchPopularLocations } from '@/lib/queryPrefetcher';
 
 const Index = () => {
-  const queryClient = useQueryClient();
   const { t } = useLanguage();
   
-  useEffect(() => {
-    prefetchPopularLocations(queryClient);
-  }, [queryClient]);
-
   return (
     <div className="min-h-screen">
       <NavBar />
@@ -25,6 +19,7 @@ const Index = () => {
       <section id="calculator-section" className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-nebula-gradient -z-10" />
         
+        {/* Background image for calculator section */}
         <div className="absolute inset-0 opacity-20 -z-10">
           <img 
             src="https://images.unsplash.com/photo-1506744038136-46273834b3fb" 
@@ -138,7 +133,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center text-center mb-12">
             <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-6">
-              <Map className="h-3.5 w-3.5 text-primary mr-2" />
+              <Map className="h-3.5 w-3.5 mr-2 text-primary" />
               <span className="text-xs font-medium text-primary">
                 {t("Discover Photo Spots", "发现拍摄地点")}
               </span>
@@ -205,6 +200,7 @@ const Index = () => {
   );
 };
 
+// Helper component for feature cards
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
   <div className="glassmorphism p-6 rounded-xl text-left hover-card">
     <div className="bg-primary/20 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">

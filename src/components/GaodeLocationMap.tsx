@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 
@@ -33,7 +34,6 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
   const [marker, setMarker] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Note: For production, use a server-side proxy to hide the key or use environment variables
   const GAODE_API_KEY = '2037ca2420bdfcf4319725f57c9c1739';
@@ -67,7 +67,9 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
     script.onerror = () => {
       setError(t("Failed to load map service", "加载地图服务失败"));
       setLoading(false);
-      setStatusMessage(t("Could not load the map service. Please try again later.", "无法加载地图服务，请稍后重试。"));
+      toast.error(t("Map Error", "地图错误"), {
+        description: t("Could not load the map service. Please try again later.", "无法加载地图服务，请稍后重试。"),
+      });
     };
 
     script.onload = () => {
@@ -117,7 +119,10 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
                       latitude: clickLat,
                       longitude: clickLng
                     });
-                    setStatusMessage(t(`New location: ${newName}`, `新位置：${newName}`));
+
+                    toast.success(t("Location Updated", "位置已更新"), {
+                      description: t(`New location: ${newName}`, `新位置：${newName}`),
+                    });
                   } else {
                     const fallbackName = t(
                       `Location at ${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`,
@@ -132,8 +137,10 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
                 });
               } catch (error) {
                 console.error('Error updating location:', error);
-                setStatusMessage(t("Could not get location name. Using coordinates instead.", 
-                              "无法获取位置名称。使用坐标代替。"));
+                toast.error(t("Location Error", "位置错误"), {
+                  description: t("Could not get location name. Using coordinates instead.", 
+                                "无法获取位置名称。使用坐标代替。"),
+                });
               }
             }
           });
@@ -145,8 +152,10 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
         console.error('Error initializing map:', err);
         setError(t("Failed to initialize map", "初始化地图失败"));
         setLoading(false);
-        setStatusMessage(t("Could not initialize the map. Please try again later.", 
-                      "无法初始化地图，请稍后重试。"));
+        toast.error(t("Map Error", "地图错误"), {
+          description: t("Could not initialize the map. Please try again later.", 
+                        "无法初始化地图，请稍后重试。"),
+        });
       }
     };
 
@@ -160,7 +169,7 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
       // Remove script tag on cleanup
       document.head.removeChild(script);
     };
-  }, [t, editable, onLocationUpdate]);
+  }, [lat, lng, t, editable, onLocationUpdate]);
 
   // Update marker position when coordinates change
   useEffect(() => {
@@ -175,12 +184,6 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
         <div className="aspect-video w-full h-[300px] relative">
-          {statusMessage && (
-            <div className="absolute top-0 left-0 right-0 z-50 bg-background/80 p-2 text-sm">
-              {statusMessage}
-            </div>
-          )}
-          
           <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
           
           {loading && (

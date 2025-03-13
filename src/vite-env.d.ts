@@ -12,17 +12,12 @@ declare module 'react-leaflet' {
     scrollWheelZoom?: boolean;
     style?: React.CSSProperties;
     whenCreated?: (map: L.Map) => void;
-    whenReady?: (map: { target: L.Map }) => void;
-    attributionControl?: boolean;
     children?: React.ReactNode;
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
     url: string;
     attribution?: string;
-    subdomains?: string | string[];
-    opacity?: number;
-    zIndex?: number;
     children?: React.ReactNode;
   }
 
@@ -41,7 +36,10 @@ declare module 'react-leaflet' {
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
   
-  export function useMap(): L.Map;
+  // Add useMapEvents hook type
+  export function useMapEvents(handlers: {
+    [key: string]: (e: L.LeafletEvent) => void;
+  }): L.Map | null;
 }
 
 // Make Leaflet available globally

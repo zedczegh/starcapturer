@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,96 +8,14 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { useToast } from "@/hooks/use-toast";
-
-const usePrefetchBeijingData = () => {
-  const [beijingData, setBeijingData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const { t } = useLanguage();
-  
-  useEffect(() => {
-    const prefetchData = async () => {
-      try {
-        const beijing = {
-          latitude: 39.9042,
-          longitude: 116.4074
-        };
-        
-        const weatherData = await fetchWeatherData({
-          latitude: beijing.latitude,
-          longitude: beijing.longitude,
-        });
-        
-        if (!weatherData) {
-          console.error("Failed to fetch weather data for Beijing");
-          return null;
-        }
-        
-        let bortleScale = 7; 
-        
-        try {
-          const bortleData = await fetchLightPollutionData(beijing.latitude, beijing.longitude);
-          if (bortleData?.bortleScale) {
-            bortleScale = bortleData.bortleScale;
-          }
-        } catch (error) {
-          console.error("Error fetching light pollution data:", error);
-          // Continue with default value
-        }
-        
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-        const day = now.getDate();
-        const c = 365.25 * year;
-        const e = 30.6 * month;
-        const jd = c + e + day - 694039.09;
-        const moonPhase = (jd % 29.53) / 29.53;
-        
-        const siqsResult = calculateSIQS({
-          cloudCover: weatherData.cloudCover,
-          bortleScale: bortleScale,
-          seeingConditions: 3, // Average
-          windSpeed: weatherData.windSpeed,
-          humidity: weatherData.humidity,
-          moonPhase,
-          aqi: weatherData.aqi,
-          weatherCondition: weatherData.weatherCondition
-        });
-        
-        const locationId = "beijing-" + Date.now().toString();
-        
-        setBeijingData({
-          id: locationId,
-          name: "Beijing",
-          latitude: beijing.latitude,
-          longitude: beijing.longitude,
-          bortleScale: bortleScale,
-          seeingConditions: 3,
-          weatherData: weatherData,
-          siqsResult,
-          moonPhase,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        console.error("Error prefetching Beijing data:", error);
-      }
-    };
-    
-    prefetchData();
-  }, []);
-  
-  return { beijingData, isLoading, setIsLoading };
-};
+import { toast } from "sonner";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { beijingData, isLoading, setIsLoading } = usePrefetchBeijingData();
-  const { toast } = useToast();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
@@ -117,27 +36,19 @@ const NavBar = () => {
   const handleSIQSClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    if (locationId && location.pathname.startsWith('/location/')) {
+    if (locationId) {
       // If we're already on a location page, just stay there
       return;
     }
     
-    if (isLoading) {
+    if (isNavigating) {
       return;
     }
     
-    setIsLoading(true);
+    setIsNavigating(true);
+    toast.info(t("Loading Beijing's SIQS data...", "正在加载北京的SIQS数据..."));
     
     try {
-      // If we already have Beijing data cached, use it immediately
-      if (beijingData) {
-        navigate(`/location/${beijingData.id}`, { 
-          state: beijingData,
-          replace: false 
-        });
-        return;
-      }
-      
       // Default to Beijing coordinates
       const beijing = {
         name: t("Beijing", "北京"),
@@ -145,37 +56,16 @@ const NavBar = () => {
         longitude: 116.4074
       };
       
-      // Attempt to fetch weather data with error handling
-      let weatherData;
-      try {
-        weatherData = await fetchWeatherData({
-          latitude: beijing.latitude,
-          longitude: beijing.longitude,
-        });
-      } catch (weatherError) {
-        console.error("Failed to fetch weather data:", weatherError);
-        // Use fallback values
-        weatherData = {
-          temperature: 20,
-          humidity: 50,
-          cloudCover: 30,
-          windSpeed: 10,
-          precipitation: 0,
-          time: new Date().toISOString(),
-          condition: "Clear",
-          weatherCondition: "Clear",
-          aqi: 50
-        };
-        toast({
-          title: t("Using offline data", "使用离线数据"),
-          description: t("Could not fetch real-time weather. Using offline data instead.", "无法获取实时天气数据，使用离线数据替代。"),
-          variant: "default"
-        });
+      const weatherData = await fetchWeatherData({
+        latitude: beijing.latitude,
+        longitude: beijing.longitude,
+      });
+      
+      if (!weatherData) {
+        throw new Error("Failed to retrieve weather data");
       }
       
-      // Default for Beijing (urban area)
-      let bortleScale = 7; 
-      
+      let bortleScale = 7; // Default for Beijing (urban)
       try {
         const bortleData = await fetchLightPollutionData(beijing.latitude, beijing.longitude);
         if (bortleData?.bortleScale) {
@@ -203,8 +93,6 @@ const NavBar = () => {
         windSpeed: weatherData.windSpeed,
         humidity: weatherData.humidity,
         moonPhase,
-        aqi: weatherData.aqi,
-        weatherCondition: weatherData.weatherCondition
       });
       
       const locationId = Date.now().toString();
@@ -222,17 +110,11 @@ const NavBar = () => {
         timestamp: new Date().toISOString(),
       };
       
-      navigate(`/location/${locationId}`, { 
-        state: locationData,
-        replace: false 
-      });
+      navigate(`/location/${locationId}`, { state: locationData });
     } catch (error) {
       console.error("Error navigating to Beijing:", error);
-      
-      toast({
-        title: t("Error", "错误"),
-        description: t("Failed to load SIQS data. Redirecting to home.", "加载SIQS数据失败，正在重定向到首页。"),
-        variant: "destructive"
+      toast.error(t("Error loading SIQS data", "加载SIQS数据出错"), {
+        description: t("We'll try again in a moment", "稍后我们将重试")
       });
       
       // Fallback - just navigate to home calculator section
@@ -242,7 +124,7 @@ const NavBar = () => {
         calculatorSection.scrollIntoView({ behavior: 'smooth' });
       }
     } finally {
-      setIsLoading(false);
+      setIsNavigating(false);
     }
   };
 
