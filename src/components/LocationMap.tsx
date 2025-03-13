@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import { toast } from "sonner";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getLocationNameFromCoordinates } from "@/lib/api";
@@ -33,20 +32,15 @@ const createCustomMarker = (): L.DivIcon => {
 
 // Component to update the map view when position changes
 const MapUpdater = ({ position }: { position: [number, number] }) => {
-  const mapRef = useRef<L.Map | null>(null);
-  
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setView(position, mapRef.current.getZoom());
-    }
-  }, [position]);
-  
-  // Use MapEvents to capture the map instance
-  useMapEvents({
-    load: (e) => {
-      mapRef.current = e.target;
+  const map = useMapEvents({
+    load: () => {
+      map.setView(position, map.getZoom());
     }
   });
+  
+  useEffect(() => {
+    map.setView(position, map.getZoom());
+  }, [position, map]);
   
   return null;
 };
@@ -113,12 +107,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
               longitude: validLng
             });
           }
-          
-          toast.success(t("Location Updated", "位置已更新"), {
-            description: t(`New location: ${newName}`, `新位置：${newName}`),
-            position: "top-center",
-            duration: 3000
-          });
         } catch (error) {
           console.error('Error getting location name:', error);
           const fallbackName = t(
@@ -133,13 +121,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
               longitude: validLng
             });
           }
-          
-          toast.error(t("Location Error", "位置错误"), {
-            description: t("Could not get location name. Using coordinates instead.", 
-                          "无法获取位置名称。使用坐标代替。"),
-            position: "top-center",
-            duration: 5000
-          });
         }
       },
     });

@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { toast } from "sonner";
 import { fetchWeatherData, getLocationNameFromCoordinates, fetchLightPollutionData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { MapPin, Loader2, Info, SlidersHorizontal } from "lucide-react";
@@ -54,6 +54,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const locationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
@@ -70,13 +71,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     
     if (navigator.geolocation) {
       setLoading(true);
-      
-      toast.info(t("Requesting Location", "正在请求位置"), {
-        description: t(
-          "Waiting for permission and location data...",
-          "等待位置权限和数据..."
-        )
-      });
+      setStatusMessage(t("Waiting for permission and location data...", "等待位置权限和数据..."));
       
       if (locationTimeoutRef.current) {
         clearTimeout(locationTimeoutRef.current);
@@ -85,12 +80,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       locationTimeoutRef.current = setTimeout(() => {
         if (loading) {
           setLoading(false);
-          toast.error(t("Location Request Timeout", "位置请求超时"), {
-            description: t(
-              "We couldn't get your location in time. Please try again or enter coordinates manually.",
-              "未能及时获取您的位置。请重试或手动输入坐标。"
-            )
-          });
+          setStatusMessage(t("Location request timed out. Please try again or enter coordinates manually.", 
+            "位置请求超时。请重试或手动输入坐标。"));
         }
       }, 15000);
       
@@ -126,10 +117,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             
             setShowAdvancedSettings(true);
             setLoading(false);
-            
-            toast.success(t("Location Found", "位置已找到"), {
-              description: name
-            });
+            setStatusMessage(t("Location found: ", "位置已找到：") + name);
           } catch (error) {
             console.error("Error getting location name:", error);
             const fallbackName = t(
@@ -139,10 +127,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             setLocationName(fallbackName);
             setShowAdvancedSettings(true);
             setLoading(false);
-            
-            toast.success(t("Location Found", "位置已找到"), {
-              description: fallbackName
-            });
+            setStatusMessage(t("Location found: ", "位置已找到：") + fallbackName);
           }
         },
         (error) => {
@@ -180,9 +165,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               );
           }
           
-          toast.error(t("Location Error", "位置错误"), {
-            description: errorMessage
-          });
+          setStatusMessage(errorMessage);
           console.error("Geolocation error:", error);
         },
         {
@@ -192,12 +175,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         }
       );
     } else {
-      toast.error(t("Geolocation Not Supported", "不支持地理位置"), {
-        description: t(
-          "Your browser doesn't support geolocation. Please enter coordinates manually.",
-          "您的浏览器不支持地理位置，请手动输入坐标。"
-        )
-      });
+      setStatusMessage(t("Your browser doesn't support geolocation. Please enter coordinates manually.",
+        "您的浏览器不支持地理位置，请手动输入坐标。"));
     }
   };
   
@@ -218,10 +197,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       setBortleScale(estimatedBortleScale);
     }
     
-    toast.success(t("Location Selected", "已选择位置"), {
-      description: t(`Selected ${location.name}`, `已选择 ${location.name}`)
-    });
-    
+    setStatusMessage(t("Selected location: ", "已选择位置：") + location.name);
     setShowAdvancedSettings(true);
   };
   
@@ -274,17 +250,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setLongitude(point.longitude.toFixed(6));
     
     setShowAdvancedSettings(true);
-    
-    toast.success(t("Location Selected", "位置已选择"), {
-      description: t(`Selected ${point.name}`, `已选择 ${point.name}`)
-    });
+    setStatusMessage(t("Selected recommended location: ", "已选择推荐位置：") + point.name);
   };
   
   const validateInputs = (): boolean => {
     if (!locationName.trim()) {
-      toast.error(language === 'en' ? "Input Error" : "输入错误", {
-        description: language === 'en' ? "Please enter a location name." : "请输入位置名称。"
-      });
+      setStatusMessage(language === 'en' ? "Please enter a location name." : "请输入位置名称。");
       return false;
     }
     
@@ -292,20 +263,16 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     const lng = parseFloat(longitude);
     
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      toast.error(language === 'en' ? "Input Error" : "输入错误", {
-        description: language === 'en' 
-          ? "Please enter a valid latitude (-90 to 90)." 
-          : "请输入有效的纬度（-90至90）。"
-      });
+      setStatusMessage(language === 'en' 
+        ? "Please enter a valid latitude (-90 to 90)." 
+        : "请输入有效的纬度（-90至90）。");
       return false;
     }
     
     if (isNaN(lng) || lng < -180 || lng > 180) {
-      toast.error(language === 'en' ? "Input Error" : "输入错误", {
-        description: language === 'en' 
-          ? "Please enter a valid longitude (-180 to 180)." 
-          : "请输入有效的经度（-180至180）。"
-      });
+      setStatusMessage(language === 'en' 
+        ? "Please enter a valid longitude (-180 to 180)." 
+        : "请输入有效的经度（-180至180）。");
       return false;
     }
     
@@ -339,12 +306,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       });
       
       if (!data) {
-        toast.error(t("Weather Data Error", "天气数据错误"), {
-          description: t(
-            "Could not retrieve weather data. Please try again.",
-            "无法获取天气数据，请重试。"
-          )
-        });
+        setStatusMessage(t("Could not retrieve weather data. Please try again.", "无法获取天气数据，请重试。"));
         setIsCalculating(false);
         displayOnly ? null : setLoading(false);
         return;
@@ -408,12 +370,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       navigate(`/location/${locationId}`, { state: locationData });
     } catch (error) {
       console.error("Error calculating SIQS:", error);
-      toast.error(t("Calculation Error", "计算错误"), {
-        description: t(
-          "An error occurred while calculating SIQS. Please try again.",
-          "计算SIQS时发生错误，请重试。"
-        )
-      });
+      setStatusMessage(t("An error occurred while calculating SIQS. Please try again.", "计算SIQS时发生错误，请重试。"));
       setIsCalculating(false);
       displayOnly ? null : setLoading(false);
     }
@@ -426,12 +383,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     const lng = parseFloat(longitude);
     
     if (isNaN(lat) || isNaN(lng) || !locationName) {
-      toast.error(t("Invalid Location", "无效位置"), {
-        description: t(
-          "Please enter a valid location with coordinates.",
-          "请输入有效的位置和坐标。"
-        )
-      });
+      setStatusMessage(t("Please enter a valid location with coordinates.", "请输入有效的位置和坐标。"));
       return;
     }
     
@@ -489,6 +441,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           {t("Calculate Stellar Imaging Quality Score", "计算恒星成像质量评分")}
         </h2>
       </div>
+      
+      {statusMessage && (
+        <div className="mb-4 p-3 bg-background/70 border border-border rounded-md text-sm">
+          {statusMessage}
+        </div>
+      )}
       
       {siqsScore !== null && (
         <div className="mb-6 p-4 glass-card">
