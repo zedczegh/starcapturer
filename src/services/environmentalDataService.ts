@@ -1,6 +1,5 @@
-
 import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
-import { estimateBortleScaleByLocation } from "@/utils/bortleScaleEstimation";
+import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
 
 /**
  * Get weather data with fallback for errors

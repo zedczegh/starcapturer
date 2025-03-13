@@ -237,27 +237,17 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null> {
   try {
     // Import the local database lookup function
-    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    const { findClosestKnownLocation } = await import('../utils/locationUtils');
     
     // Get Bortle scale from our local database
     const closestLocation = findClosestKnownLocation(latitude, longitude);
     console.log(`Found location for Bortle scale: ${closestLocation.name}, Bortle: ${closestLocation.bortleScale}, Distance: ${closestLocation.distance.toFixed(2)}km`);
     
     return { bortleScale: closestLocation.bortleScale };
-
-    // Real API call would look like this:
-    /*
-    const response = await fetch(`https://api.example.com/light-pollution?lat=${latitude}&lon=${longitude}`);
-    if (!response.ok) {
-      throw new Error(`Light pollution API error: ${response.status}`);
-    }
-    const data = await response.json();
-    return { bortleScale: data.bortleScale };
-    */
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
-    // Use our improved Bortle scale estimation
-    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    // Use our improved Bortle scale estimation as fallback
+    const { findClosestKnownLocation } = await import('../utils/locationUtils');
     const estimatedBortleScale = findClosestKnownLocation(latitude, longitude).bortleScale;
     return { bortleScale: estimatedBortleScale };
   }
@@ -295,8 +285,8 @@ export async function getLocationNameFromCoordinates(
   language: string = 'en'
 ): Promise<string> {
   try {
-    // First use our local database
-    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    // Use our local database
+    const { findClosestKnownLocation } = await import('../utils/locationUtils');
     const closestLocation = findClosestKnownLocation(latitude, longitude);
     
     // If we found a location within 20km, use its name
@@ -305,9 +295,12 @@ export async function getLocationNameFromCoordinates(
       return closestLocation.name;
     }
     
-    // If not found in our database or too far, fall back to Tianditu API
-    const { getTiandituLocationName } = await import('../utils/tiandituApi');
-    return getTiandituLocationName(latitude, longitude, language);
+    // Fall back to coordinates format for locations not in our database
+    const formattedLatitude = latitude.toFixed(4);
+    const formattedLongitude = longitude.toFixed(4);
+    return language === 'en' 
+      ? `Location at ${formattedLatitude}°, ${formattedLongitude}°` 
+      : `位置在 ${formattedLatitude}°, ${formattedLongitude}°`;
   } catch (error) {
     console.error('Error getting location name:', error);
     return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;

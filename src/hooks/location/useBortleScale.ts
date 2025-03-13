@@ -1,11 +1,11 @@
 
-import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
+import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { fetchLightPollutionData } from "@/lib/api";
 
 export const estimateBortleScale = (locationName: string): number => {
   if (!locationName) return 5; // Default moderate value
   
-  const { estimateBortleScaleByLocation } = require("@/utils/bortleScaleEstimation");
+  const { estimateBortleScaleByLocation } = require("@/utils/locationUtils");
   return estimateBortleScaleByLocation(locationName);
 };
 

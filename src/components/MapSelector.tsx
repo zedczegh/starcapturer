@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search, MapPin, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import { locationDatabase } from "@/utils/bortleScaleEstimation";
+import { locationDatabase } from "@/utils/locationUtils";
 
 export interface Location {
   name: string;

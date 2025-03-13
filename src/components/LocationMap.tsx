@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -6,7 +7,7 @@ import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { getLocationNameFromCoordinates } from "@/lib/api";
-import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
+import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 
 // Fix for default marker icons - essential for Leaflet to show markers correctly

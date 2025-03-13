@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import LocationMap from "@/components/LocationMap";
 import MapSelector, { Location } from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
 import { getLocationNameFromCoordinates } from "@/lib/api";
-import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
+import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 
 interface LocationUpdaterProps {
