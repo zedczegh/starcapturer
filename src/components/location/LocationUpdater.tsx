@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/LocationMap";
 import MapSelector, { Location } from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
+import { getLocationNameFromCoordinates } from "@/lib/api";
+import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
+import { useLocationDataCache } from "@/hooks/useLocationData";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -26,6 +28,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [mapError, setMapError] = useState<string | null>(null);
+  const { setCachedData, getCachedData } = useLocationDataCache();
 
   const handleLocationSearch = (selectedLocation: Location) => {
     try {
@@ -51,6 +54,58 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
     }
   };
 
+  const getProperLocationName = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      // Check cache first
+      const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData && cachedData.name) {
+        return cachedData.name;
+      }
+      
+      // Try our own database first
+      const closestLocation = findClosestKnownLocation(latitude, longitude);
+      
+      // If location is within 20km of a known location, use that name
+      if (closestLocation.distance <= 20) {
+        const locationName = closestLocation.name;
+        
+        // Cache this data
+        setCachedData(cacheKey, {
+          name: locationName,
+          bortleScale: closestLocation.bortleScale
+        });
+        
+        return locationName;
+      }
+      
+      // Otherwise try to get a name from API
+      const name = await getLocationNameFromCoordinates(latitude, longitude, language);
+      
+      // Cache this data
+      setCachedData(cacheKey, {
+        name,
+        bortleScale: 4 // Default, will be updated later
+      });
+      
+      return name;
+    } catch (error) {
+      console.error("Error getting proper location name:", error);
+      
+      // Use closest known location from database as fallback
+      const closestLocation = findClosestKnownLocation(latitude, longitude);
+      
+      if (closestLocation.distance <= 50) {
+        return `${closestLocation.name} ${t("area", "地区")}`;
+      }
+      
+      // Fallback to coordinates
+      return t(`Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`, 
+              `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
+    }
+  };
+
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       setStatusMessage(t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。"));
@@ -73,8 +128,8 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         try {
           const { latitude, longitude } = position.coords;
           
-          // Generate a location name based on coordinates
-          const locationName = `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
+          // Get a proper location name instead of just coordinates
+          const locationName = await getProperLocationName(latitude, longitude);
           
           await onLocationUpdate({
             name: locationName,

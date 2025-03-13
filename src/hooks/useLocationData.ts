@@ -6,6 +6,7 @@ import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
 import { useLocationDataCache } from "./location/useLocationCache";
 import { useGeolocation } from "./location/useGeolocation";
 import { getBortleScaleForLocation } from "./location/useBortleScale";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export { useLocationDataCache } from "./location/useLocationCache";
 export { estimateBortleScale } from "./location/useBortleScale";
@@ -19,6 +20,7 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
@@ -140,6 +142,7 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
     setLongitude,
     setBortleScale,
     setStatusMessage,
-    handleUseCurrentLocation
+    handleUseCurrentLocation,
+    handleLocationFound
   };
 };

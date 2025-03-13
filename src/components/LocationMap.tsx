@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -6,6 +5,9 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
+import { getLocationNameFromCoordinates } from "@/lib/api";
+import { findClosestKnownLocation } from "@/utils/bortleScaleEstimation";
+import { useLocationDataCache } from "@/hooks/useLocationData";
 
 // Fix for default marker icons - essential for Leaflet to show markers correctly
 delete L.Icon.Default.prototype._getIconUrl;
@@ -71,6 +73,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const mapRef = useRef<L.Map | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const { setCachedData, getCachedData } = useLocationDataCache();
 
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = isFinite(latitude) ? latitude : 0;
@@ -90,9 +94,55 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return ((lng + 180) % 360 + 360) % 360 - 180;
   };
 
-  // Generate a location name from coordinates
-  const getLocationNameFromCoordinates = (lat: number, lng: number): string => {
-    return `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+  // Get location name for clicked position
+  const getLocationNameForCoordinates = async (lat: number, lng: number): Promise<string> => {
+    setLocationLoading(true);
+    try {
+      // Check cache first
+      const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData && cachedData.name) {
+        setLocationLoading(false);
+        return cachedData.name;
+      }
+      
+      // Try from database first
+      const closestLocation = findClosestKnownLocation(lat, lng);
+      
+      // If location is within 20km of a known location, use that name
+      if (closestLocation.distance <= 20) {
+        const locationName = closestLocation.name;
+        
+        // Cache this data
+        setCachedData(cacheKey, {
+          name: locationName,
+          bortleScale: closestLocation.bortleScale
+        });
+        
+        setLocationLoading(false);
+        return locationName;
+      }
+      
+      // Otherwise try to get a name from API
+      const name = await getLocationNameFromCoordinates(lat, lng, language);
+      
+      // Cache this data
+      setCachedData(cacheKey, {
+        name,
+        bortleScale: 4 // Default, will be updated later if needed
+      });
+      
+      setLocationLoading(false);
+      return name;
+    } catch (error) {
+      console.error("Error getting location name for coordinates:", error);
+      
+      // Fallback to coordinates format
+      setLocationLoading(false);
+      return t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
+               `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+    }
   };
 
   // Interactive map component that handles clicks
@@ -103,7 +153,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
     useEffect(() => {
       if (!editable || !map) return;
       
-      const handleClick = (e: L.LeafletMouseEvent) => {
+      const handleClick = async (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         
         // Ensure latitude is in valid range (-90 to 90)
@@ -114,7 +164,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
         setPosition([validLat, validLng]);
         
         if (onLocationUpdate) {
-          const locationName = getLocationNameFromCoordinates(validLat, validLng);
+          // Get proper location name instead of just coordinates
+          const locationName = await getLocationNameForCoordinates(validLat, validLng);
+          
           onLocationUpdate({
             name: locationName,
             latitude: validLat,
@@ -231,12 +283,14 @@ const LocationMap: React.FC<LocationMapProps> = ({
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
         <div className="aspect-video w-full h-[300px] relative">
-          {isLoading && (
+          {(isLoading || locationLoading) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
               <div className="flex flex-col items-center gap-2">
                 <Loader className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  {t("Loading map...", "正在加载地图...")}
+                  {locationLoading 
+                    ? t("Getting location name...", "正在获取位置名称...")
+                    : t("Loading map...", "正在加载地图...")}
                 </p>
               </div>
             </div>
