@@ -1,11 +1,13 @@
 
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Cloud, Droplets, Thermometer, Wind, RefreshCw, AlertTriangle, Sun, MoonStar } from "lucide-react";
+import { Cloud, Droplets, Thermometer, Wind, RefreshCw, Sun, MoonStar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { DynamicPrecipitationIcon } from "@/components/weather/DynamicIcons";
 
 interface LongRangeForecastProps {
   forecastData: any;
@@ -13,7 +15,7 @@ interface LongRangeForecastProps {
   onRefresh?: () => void;
 }
 
-const LongRangeForecast: React.FC<LongRangeForecastProps> = ({ 
+const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({ 
   forecastData, 
   isLoading = false,
   onRefresh
@@ -21,7 +23,7 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
   const { t } = useLanguage();
 
   // Format date from ISO string
-  const formatDate = (isoTime: string) => {
+  const formatDate = useCallback((isoTime: string) => {
     try {
       const date = new Date(isoTime);
       if (isNaN(date.getTime())) return "--/--";
@@ -30,9 +32,9 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
       console.error("Error formatting date:", error);
       return "--/--";
     }
-  };
+  }, []);
 
-  const formatCondition = (cloudCover: number) => {
+  const formatCondition = useCallback((cloudCover: number) => {
     if (typeof cloudCover !== 'number') return t("Unknown", "未知");
     
     if (cloudCover < 10) return t("Clear", "晴朗");
@@ -40,9 +42,9 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
     if (cloudCover < 70) return t("Partly Cloudy", "部分多云");
     if (cloudCover < 90) return t("Mostly Cloudy", "大部分多云");
     return t("Overcast", "阴天");
-  };
+  }, [t]);
 
-  const getSIQSRating = (cloudCover: number, windSpeed: number, humidity: number) => {
+  const getSIQSRating = useCallback((cloudCover: number, windSpeed: number, humidity: number) => {
     if (typeof cloudCover !== 'number' || typeof windSpeed !== 'number' || typeof humidity !== 'number') {
       return { score: 0, quality: t("Unknown", "未知"), color: "bg-gray-400" };
     }
@@ -86,10 +88,10 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
     }
     
     return { score: Math.round(score * 10) / 10, quality, color };
-  };
+  }, [t]);
 
-  // Generate fallback forecast data when API data is missing or invalid
-  const generateFallbackForecasts = () => {
+  // Generate fallback forecast data
+  const generateFallbackForecasts = useCallback(() => {
     const now = new Date();
     const forecasts = [];
     
@@ -109,61 +111,69 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
     }
     
     return forecasts;
-  };
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    if (onRefresh) {
+      onRefresh();
+      toast.info(t("Refreshing extended forecast data...", "正在刷新延长预报数据..."));
+    }
+  }, [onRefresh, t]);
+
+  // Create memoized forecast data
+  const forecasts = useMemo(() => {
+    try {
+      if (forecastData && forecastData.daily && Array.isArray(forecastData.daily.time)) {
+        const days = Math.min(forecastData.daily.time.length, 15);
+        const result = [];
+        
+        for (let i = 0; i < days; i++) {
+          result.push({
+            date: forecastData.daily.time[i] || new Date(new Date().setDate(new Date().getDate() + i)).toISOString(),
+            temperature_max: forecastData.daily.temperature_2m_max?.[i] ?? 25,
+            temperature_min: forecastData.daily.temperature_2m_min?.[i] ?? 15,
+            humidity: forecastData.daily.relative_humidity_2m_mean?.[i] ?? 60,
+            cloudCover: forecastData.daily.cloud_cover_mean?.[i] ?? 30,
+            windSpeed: forecastData.daily.wind_speed_10m_max?.[i] ?? 5,
+            precipitation: forecastData.daily.precipitation_sum?.[i] ?? 0,
+          });
+        }
+        
+        if (result.length > 0) {
+          return result;
+        }
+      }
+    } catch (error) {
+      console.error("Error processing long-range forecast data:", error);
+    }
+    
+    return generateFallbackForecasts();
+  }, [forecastData, generateFallbackForecasts]);
 
   if (isLoading) {
     return (
-      <Card className="shadow-md">
+      <Card className="shadow-md border-cosmic-700/30">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl">{t("15-Day Forecast", "15天预报")}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-[300px] w-full" />
+        <CardContent className="animate-pulse">
+          <Skeleton className="h-[300px] w-full bg-cosmic-700/20" />
         </CardContent>
       </Card>
     );
   }
 
-  // Create a subset of daily forecasts with fallbacks for missing data
-  let forecasts = [];
-  try {
-    if (forecastData && forecastData.daily && Array.isArray(forecastData.daily.time)) {
-      const days = Math.min(forecastData.daily.time.length, 15);
-      
-      for (let i = 0; i < days; i++) {
-        forecasts.push({
-          date: forecastData.daily.time[i] || new Date(new Date().setDate(new Date().getDate() + i)).toISOString(),
-          temperature_max: forecastData.daily.temperature_2m_max?.[i] ?? 25,
-          temperature_min: forecastData.daily.temperature_2m_min?.[i] ?? 15,
-          humidity: forecastData.daily.relative_humidity_2m_mean?.[i] ?? 60,
-          cloudCover: forecastData.daily.cloud_cover_mean?.[i] ?? 30,
-          windSpeed: forecastData.daily.wind_speed_10m_max?.[i] ?? 5,
-          precipitation: forecastData.daily.precipitation_sum?.[i] ?? 0,
-        });
-      }
-    }
-    
-    // If we couldn't generate valid forecasts from API data, use fallbacks
-    if (forecasts.length === 0) {
-      console.log("Using fallback long-range forecast data");
-      forecasts = generateFallbackForecasts();
-    }
-  } catch (error) {
-    console.error("Error processing long-range forecast data:", error);
-    forecasts = generateFallbackForecasts();
-  }
-
   return (
-    <Card className="shadow-md border-cosmic-700/30">
-      <CardHeader className="pb-2">
+    <Card className="shadow-md border-cosmic-700/30 hover:border-cosmic-600/60 transition-all duration-300">
+      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-xl">{t("15-Day Forecast", "15天预报")}</CardTitle>
+          <CardTitle className="text-xl text-gradient-blue">{t("15-Day Forecast", "15天预报")}</CardTitle>
           {onRefresh && (
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={onRefresh} 
-              className="h-8 w-8 p-0 hover:bg-primary/10"
+              onClick={handleRefresh} 
+              className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
               title={t("Refresh Extended Forecast", "刷新延长预报")}
             >
               <RefreshCw className="h-4 w-4" />
@@ -171,12 +181,12 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>{t("Date", "日期")}</TableHead>
+              <TableRow className="bg-cosmic-800/40 hover:bg-cosmic-800/60">
+                <TableHead className="py-3">{t("Date", "日期")}</TableHead>
                 <TableHead className="text-center"><Thermometer className="inline h-4 w-4 mr-1" />{t("Temp °C", "温度 °C")}</TableHead>
                 <TableHead className="text-center"><Cloud className="inline h-4 w-4 mr-1" />{t("Clouds", "云层")}</TableHead>
                 <TableHead className="text-center"><Wind className="inline h-4 w-4 mr-1" />{t("Wind", "风速")}</TableHead>
@@ -189,8 +199,11 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
                 const siqsRating = getSIQSRating(forecast.cloudCover, forecast.windSpeed, forecast.humidity);
                 
                 return (
-                  <TableRow key={index} className={index === 0 ? "bg-primary/5" : ""}>
-                    <TableCell className="font-medium">
+                  <TableRow 
+                    key={index} 
+                    className={`transition-colors ${index === 0 ? 'bg-primary/5' : index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} hover:bg-cosmic-700/20`}
+                  >
+                    <TableCell className="font-medium border-b border-cosmic-700/20">
                       <div className="flex items-center gap-2">
                         {index === 0 && (
                           <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
@@ -200,7 +213,7 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
                         {formatDate(forecast.date)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center border-b border-cosmic-700/20">
                       <div className="flex flex-col">
                         <span className="text-amber-400 flex items-center justify-center">
                           <Sun className="h-3 w-3 mr-1" />
@@ -212,15 +225,18 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</TableCell>
-                    <TableCell className="text-center">{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</TableCell>
-                    <TableCell className="text-center">{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className="flex-1 h-2 w-full rounded-full bg-gray-200 mr-2">
-                          <div className={`h-2 rounded-full ${siqsRating.color}`} style={{ width: `${siqsRating.score * 10}%` }}></div>
+                    <TableCell className="text-center border-b border-cosmic-700/20">{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</TableCell>
+                    <TableCell className="text-center border-b border-cosmic-700/20">{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</TableCell>
+                    <TableCell className="text-center border-b border-cosmic-700/20">{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</TableCell>
+                    <TableCell className="border-b border-cosmic-700/20">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 w-full rounded-full bg-cosmic-700/20">
+                          <div 
+                            className={`h-2 rounded-full ${siqsRating.color}`} 
+                            style={{ width: `${siqsRating.score * 10}%`, transition: 'width 0.3s ease-in-out' }}
+                          ></div>
                         </div>
-                        <span className="text-sm">{siqsRating.quality}</span>
+                        <span className="text-sm whitespace-nowrap">{siqsRating.quality}</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -229,13 +245,15 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
             </TableBody>
           </Table>
           
-          <div className="text-xs text-muted-foreground mt-3 text-center">
+          <div className="text-xs text-muted-foreground p-3 text-center bg-cosmic-800/20 border-t border-cosmic-700/20">
             {t("Astronomical scores are estimates based on weather conditions only.", "天文评分仅基于天气条件的估计。")}
           </div>
         </div>
       </CardContent>
     </Card>
   );
-};
+});
+
+LongRangeForecast.displayName = 'LongRangeForecast';
 
 export default LongRangeForecast;

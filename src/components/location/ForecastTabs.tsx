@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarRange, Calendar } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -25,36 +25,45 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Use useCallback to prevent unnecessary re-renders
+  const handleRefreshForecast = useCallback(() => {
+    onRefreshForecast();
+  }, [onRefreshForecast]);
+  
+  const handleRefreshLongRange = useCallback(() => {
+    onRefreshLongRange();
+  }, [onRefreshLongRange]);
+  
   return (
     <Tabs defaultValue="hourly" className="w-full">
-      <TabsList className="grid grid-cols-2 mb-4">
-        <TabsTrigger value="hourly" className="flex items-center gap-2">
+      <TabsList className="grid grid-cols-2 mb-4 bg-cosmic-800/60 border border-cosmic-700/40">
+        <TabsTrigger value="hourly" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
           <Calendar className="h-4 w-4" />
           {t("Hourly Forecast", "小时预报")}
         </TabsTrigger>
-        <TabsTrigger value="extended" className="flex items-center gap-2">
+        <TabsTrigger value="extended" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
           <CalendarRange className="h-4 w-4" />
           {t("15-Day Forecast", "15天预报")}
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="hourly" className="mt-0">
+      <TabsContent value="hourly" className="mt-0 animate-none">
         <ForecastTable 
           forecastData={forecastData}
           isLoading={forecastLoading}
-          onRefresh={onRefreshForecast}
+          onRefresh={handleRefreshForecast}
         />
       </TabsContent>
       
-      <TabsContent value="extended" className="mt-0">
+      <TabsContent value="extended" className="mt-0 animate-none">
         <LongRangeForecast
           forecastData={longRangeForecast}
           isLoading={longRangeLoading}
-          onRefresh={onRefreshLongRange}
+          onRefresh={handleRefreshLongRange}
         />
       </TabsContent>
     </Tabs>
   );
 };
 
-export default ForecastTabs;
+export default React.memo(ForecastTabs);
