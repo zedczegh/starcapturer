@@ -188,6 +188,19 @@
       transform: translateY(-10px);
     }
   }
+  
+  /* Enhanced toast styles */
+  .toast-container {
+    z-index: 9999;
+  }
+  
+  .desktop-toast {
+    @apply fixed bottom-4 right-4;
+  }
+  
+  .mobile-toast {
+    @apply fixed top-4 inset-x-0 mx-auto;
+  }
 }
 
 /* Star field animation */
@@ -341,4 +354,35 @@
   .mobile-nav-item:last-child {
     border-bottom: none;
   }
+}
+
+/* Enhanced toast animations */
+@keyframes toast-enter {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-exit {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+
+.toast-enter {
+  animation: toast-enter 0.3s ease forwards;
+}
+
+.toast-exit {
+  animation: toast-exit 0.3s ease forwards;
 }

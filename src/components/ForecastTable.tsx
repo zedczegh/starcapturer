@@ -2,10 +2,11 @@
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Cloud, Droplets, Thermometer, Wind, RefreshCw, AlertTriangle } from "lucide-react";
+import { Cloud, Droplets, Thermometer, Wind, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ForecastTableProps {
   forecastData: any;
@@ -21,7 +22,9 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
   const { t } = useLanguage();
   
   useEffect(() => {
-    console.log("Forecast data received:", forecastData);
+    if (forecastData) {
+      console.log("Forecast data received:", forecastData);
+    }
   }, [forecastData]);
 
   // Format time from ISO string to readable format
@@ -80,6 +83,13 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
     return forecasts;
   };
 
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+      toast.info(t("Refreshing forecast data...", "正在刷新预报数据..."));
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="shadow-md">
@@ -136,7 +146,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={onRefresh} 
+              onClick={handleRefresh} 
               className="h-8 w-8 p-0 hover:bg-primary/10"
               title={t("Refresh Forecast", "刷新预报")}
             >
