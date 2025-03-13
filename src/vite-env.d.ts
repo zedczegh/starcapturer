@@ -18,6 +18,7 @@ declare module 'react-leaflet' {
   export interface TileLayerProps extends L.TileLayerOptions {
     url: string;
     attribution?: string;
+    subdomains?: string | string[];
     children?: React.ReactNode;
   }
 
