@@ -1,94 +1,94 @@
+
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchWeatherData } from "@/lib/api";
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { useLightPollutionData } from "./useLightPollutionData";
 
-export const useForecastData = () => {
-  const [forecastData, setForecastData] = useState<any>(null);
-  const [longRangeForecast, setLongRangeForecast] = useState<any>(null);
-  const [forecastLoading, setForecastLoading] = useState<boolean>(false);
-  const [longRangeLoading, setLongRangeLoading] = useState<boolean>(false);
+export const useLocationUpdate = (
+  locationData: any,
+  setLocationData: (data: any) => void
+) => {
+  const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
+  const { updateLightPollutionData } = useLightPollutionData();
 
-  // Create AbortController refs
-  let forecastController: AbortController | null = null;
-  let longRangeController: AbortController | null = null;
-
-  const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {
-    try {
-      setForecastLoading(true);
+  const handleLocationUpdate = useCallback(
+    async (newLocation: { name: string; latitude: number; longitude: number }) => {
+      if (!newLocation) return;
       
-      // Cancel any ongoing requests
-      if (forecastController) {
-        forecastController.abort();
+      setLoading(true);
+      
+      try {
+        // Get new weather data for the updated location
+        const newWeatherData = await fetchWeatherData({
+          latitude: newLocation.latitude,
+          longitude: newLocation.longitude,
+        });
+        
+        if (!newWeatherData) throw new Error("Failed to fetch weather data");
+        
+        // Reuse existing Bortle scale or get a new one
+        let bortleScale = locationData.bortleScale;
+        try {
+          const { fetchLightPollutionData } = await import("@/lib/api");
+          const bortleData = await fetchLightPollutionData(
+            newLocation.latitude, 
+            newLocation.longitude
+          );
+          if (bortleData?.bortleScale) {
+            bortleScale = bortleData.bortleScale;
+          }
+        } catch (error) {
+          console.error("Error fetching light pollution data:", error);
+          // Continue with existing bortle scale
+        }
+        
+        // Calculate new SIQS score
+        const siqsResult = calculateSIQS({
+          cloudCover: newWeatherData.cloudCover,
+          bortleScale: bortleScale,
+          seeingConditions: locationData.seeingConditions || 3,
+          windSpeed: newWeatherData.windSpeed,
+          humidity: newWeatherData.humidity,
+          moonPhase: locationData.moonPhase,
+          aqi: newWeatherData.aqi,
+          weatherCondition: newWeatherData.weatherCondition,
+          precipitation: newWeatherData.precipitation
+        });
+        
+        // Update location data with new information
+        const updatedLocationData = {
+          ...locationData,
+          name: newLocation.name,
+          latitude: newLocation.latitude,
+          longitude: newLocation.longitude,
+          weatherData: newWeatherData,
+          bortleScale,
+          siqsResult,
+          timestamp: new Date().toISOString()
+        };
+        
+        setLocationData(updatedLocationData);
+        
+        // Show success toast
+        toast.success(t("Location updated successfully", "位置更新成功"));
+        
+        return updatedLocationData;
+      } catch (error) {
+        console.error("Error updating location:", error);
+        toast.error(t("Failed to update location", "位置更新失败"));
+        throw error;
+      } finally {
+        setLoading(false);
       }
-      
-      // Create a new AbortController
-      forecastController = new AbortController();
-      
-      const data = await fetchForecastData({
-        latitude,
-        longitude,
-        days: 3
-      }, forecastController.signal);
-      
-      setForecastData(data);
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        console.error("Error fetching forecast data:", error);
-        toast.error(t("Failed to fetch forecast data", "获取预报数据失败"));
-      }
-    } finally {
-      setForecastLoading(false);
-    }
-  }, [t]);
-
-  const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number) => {
-    try {
-      setLongRangeLoading(true);
-      
-      // Cancel any ongoing requests
-      if (longRangeController) {
-        longRangeController.abort();
-      }
-      
-      // Create a new AbortController
-      longRangeController = new AbortController();
-      
-      const data = await fetchLongRangeForecastData({
-        latitude,
-        longitude,
-        days: 16
-      }, longRangeController.signal);
-      
-      setLongRangeForecast(data);
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        console.error("Error fetching long range forecast data:", error);
-        toast.error(t("Failed to fetch long range forecast data", "获取长期预报数据失败"));
-      }
-    } finally {
-      setLongRangeLoading(false);
-    }
-  }, [t]);
-
-  const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
-    fetchLocationForecast(latitude, longitude);
-  }, [fetchLocationForecast]);
-
-  const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number) => {
-    fetchLongRangeForecast(latitude, longitude);
-  }, [fetchLongRangeForecast]);
+    },
+    [locationData, setLocationData, t]
+  );
 
   return {
-    forecastData,
-    longRangeForecast,
-    forecastLoading,
-    longRangeLoading,
-    setForecastData,
-    fetchLocationForecast,
-    fetchLongRangeForecast,
-    handleRefreshForecast,
-    handleRefreshLongRangeForecast
+    loading,
+    handleLocationUpdate
   };
 };
