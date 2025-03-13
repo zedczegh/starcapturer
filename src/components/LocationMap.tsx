@@ -131,8 +131,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return null;
   };
 
-  // Store map instance when it's created
-  const handleMapCreated = (map: L.Map) => {
+  const handleMapReady = (map: L.Map) => {
+    console.log("Map instance created and ready");
     mapRef.current = map;
     setIsLoading(false);
   };
@@ -202,7 +202,29 @@ const LocationMap: React.FC<LocationMapProps> = ({
       `;
       document.head.appendChild(style);
     }
+    
+    // Cleanup function for the map in case component unmounts
+    return () => {
+      if (mapRef.current) {
+        console.log("Cleaning up map instance");
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, []);
+
+  // Handle map initialization error
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isLoading && !mapRef.current) {
+        console.error("Map failed to initialize within timeout period");
+        setMapError(t("Failed to load map. Please try refreshing the page.", 
+                     "无法加载地图。请尝试刷新页面。"));
+      }
+    }, 10000); // 10 second timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, t]);
 
   return (
     <Card>
@@ -224,7 +246,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
-            whenCreated={handleMapCreated}
+            whenReady={handleMapReady}
+            attributionControl={false}
           >
             {/* Use Tianditu map layers */}
             <TileLayer

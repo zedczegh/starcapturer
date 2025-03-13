@@ -25,12 +25,20 @@ export async function getTiandituLocationName(
     console.log(`Calling Tianditu API for reverse geocoding at: ${latitude}, ${longitude}`);
     
     const response = await fetch(
-      `https://api.tianditu.gov.cn/geocoder?postStr={'lon':${longitude},'lat':${latitude},'ver':1}&type=geocode&tk=${TIANDITU_KEY}`
+      `https://api.tianditu.gov.cn/geocoder?postStr={'lon':${longitude},'lat':${latitude},'ver':1}&type=geocode&tk=${TIANDITU_KEY}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-cache'
+      }
     );
     
     if (!response.ok) {
       console.error('Tianditu API response not OK:', response.status, response.statusText);
-      throw new Error('Tianditu geocoding API error');
+      throw new Error(`Tianditu geocoding API error: ${response.status}`);
     }
     
     const data = await response.json();
@@ -99,12 +107,20 @@ export async function searchTiandituLocations(
     console.log(`Searching Tianditu locations for: ${query}`);
     
     const response = await fetch(
-      `https://api.tianditu.gov.cn/search?postStr={'keyWord':'${encodeURIComponent(query)}','level':12,'mapBound':'73.66,3.86,135.05,53.55','queryType':1,'start':0,'count':10}&type=query&tk=${TIANDITU_KEY}`
+      `https://api.tianditu.gov.cn/search?postStr={'keyWord':'${encodeURIComponent(query)}','level':12,'mapBound':'73.66,3.86,135.05,53.55','queryType':1,'start':0,'count':10}&type=query&tk=${TIANDITU_KEY}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-cache'
+      }
     );
     
     if (!response.ok) {
       console.error('Tianditu search API response not OK:', response.status, response.statusText);
-      throw new Error('Tianditu search API error');
+      throw new Error(`Tianditu search API error: ${response.status}`);
     }
     
     const data = await response.json();
