@@ -1,3 +1,4 @@
+
 import { getBortleScaleFromDatabase } from "@/data/bortleScaleDatabase";
 
 export interface Coordinates {
@@ -393,7 +394,7 @@ export async function getLocationNameFromCoordinates(
 /**
  * Find the nearest locations in our database to given coordinates
  */
-function findNearestLocationsInDatabase(latitude: number, longitude: number, maxDistance: number = 10) {
+export function findNearestLocationsInDatabase(latitude: number, longitude: number, maxDistance: number = 10) {
   const { bortleScaleDatabase } = require('@/data/bortleScaleDatabase');
   
   // Calculate distance to all locations in the database
@@ -472,7 +473,7 @@ export async function getSharedAstroSpots(
         name: 'Dark Sky Reserve',
         latitude: latitude + 0.1,
         longitude: longitude + 0.1,
-        description: 'Excellent dark sky site with minimal light pollution. Great for deep sky objects.',
+        description: 'Excellent dark-sky site with minimal light pollution. Great for deep sky objects.',
         bortleScale: 2,
         date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         username: 'AstroEnthusiast',

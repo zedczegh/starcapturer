@@ -60,8 +60,43 @@ interface WeatherData {
   aqi?: number;
 }
 
-// Location database function type
+// Define API related interfaces
 declare module '@/lib/api' {
+  // Weather and location APIs
+  export function fetchWeatherData(coordinates: { latitude: number; longitude: number; days?: number }): Promise<WeatherData | null>;
+  export function fetchForecastData(coordinates: { latitude: number; longitude: number; days?: number }): Promise<any | null>;
+  export function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null>;
+  export function getLocationNameFromCoordinates(latitude: number, longitude: number, language?: string): Promise<string>;
+  export function determineWeatherCondition(cloudCover: number): string;
+  export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number;
+  
+  // Shared spots and recommendations
+  export interface SharedAstroSpot {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    description: string;
+    bortleScale: number;
+    date: string;
+    userId?: string;
+    username?: string;
+    likes?: number;
+    distance?: number;
+    siqs?: number;
+    photoUrl?: string;
+    photographer?: string;
+    targets?: string[];
+    isViable?: boolean;
+    timestamp?: string;
+  }
+  
+  export function shareAstroSpot(spotData: Omit<SharedAstroSpot, 'id' | 'date'>): Promise<{ success: boolean; id?: string; message?: string }>;
+  export function getSharedAstroSpots(latitude: number, longitude: number, limit?: number, radius?: number): Promise<SharedAstroSpot[]>;
+  export function getRecommendedPhotoPoints(latitude: number, longitude: number, limit?: number): Promise<SharedAstroSpot[]>;
+  export function generateBaiduMapsUrl(latitude: number, longitude: number, name: string): string;
+  
+  // Location database function
   export function findNearestLocationsInDatabase(
     latitude: number, 
     longitude: number, 
