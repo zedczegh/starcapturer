@@ -1,15 +1,17 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
 import ShareLocationForm from "@/components/ShareLocationForm";
+import { motion } from "framer-motion";
 
 const ShareLocation = () => {
   const navigate = useNavigate();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; name?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
-  useEffect(() => {
+  // Use callback for better performance
+  const getUserLocation = useCallback(async () => {
     // Attempt to get user's current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -41,12 +43,27 @@ const ShareLocation = () => {
     }
   }, []);
   
+  useEffect(() => {
+    // Pre-fetch user location when component mounts
+    getUserLocation();
+  }, [getUserLocation]);
+  
   return (
-    <div className="min-h-screen">
+    <motion.div 
+      className="min-h-screen"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <NavBar />
       
       <main className="container mx-auto px-4 pt-32 pb-20">
-        <div className="max-w-3xl mx-auto">
+        <motion.div 
+          className="max-w-3xl mx-auto"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
           <h1 className="text-3xl font-bold mb-6">Share Your Astrophotography Spot</h1>
           <p className="text-muted-foreground mb-8">
             Help fellow astrophotographers discover amazing locations by sharing your favorite 
@@ -61,9 +78,9 @@ const ShareLocation = () => {
           )}
           
           <ShareLocationForm userLocation={userLocation} />
-        </div>
+        </motion.div>
       </main>
-    </div>
+    </motion.div>
   );
 };
 

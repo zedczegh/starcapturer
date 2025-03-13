@@ -1,8 +1,6 @@
-
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { fetchWeatherData, getLocationNameFromCoordinates, fetchLightPollutionData } from "@/lib/api";
@@ -15,7 +13,6 @@ import { getRecommendationMessage } from "./SIQSSummary";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -35,6 +32,33 @@ interface SIQSCalculatorProps {
   hideRecommendedPoints?: boolean;
   noAutoLocationRequest?: boolean;
 }
+
+// Cache data between renders to improve performance
+const useLocationDataCache = () => {
+  const [cache, setCache] = useState<Record<string, any>>({});
+  
+  const setCachedData = (key: string, data: any) => {
+    setCache(prev => ({
+      ...prev,
+      [key]: {
+        data,
+        timestamp: Date.now()
+      }
+    }));
+  };
+  
+  const getCachedData = (key: string, maxAge = 5 * 60 * 1000) => {
+    const cached = cache[key];
+    if (!cached) return null;
+    
+    const age = Date.now() - cached.timestamp;
+    if (age > maxAge) return null;
+    
+    return cached.data;
+  };
+  
+  return { setCachedData, getCachedData };
+};
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
   className,
@@ -56,17 +80,38 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const locationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { setCachedData, getCachedData } = useLocationDataCache();
   
+  // Pre-compute values for better performance
+  const currentMoonPhase = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const c = 365.25 * year;
+    const e = 30.6 * month;
+    const jd = c + e + day - 694039.09;
+    return (jd % 29.53) / 29.53;
+  }, []);
+  
+  // Optimize calculations with debounce
   useEffect(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
     
-    if (locationName && !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-      calculateSIQSForLocation(lat, lng, locationName, true);
-    }
+    if (!locationName || isNaN(lat) || isNaN(lng)) return;
+    
+    const handler = setTimeout(() => {
+      if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        calculateSIQSForLocation(lat, lng, locationName, true);
+      }
+    }, 500); // Debounce for better performance
+    
+    return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, bortleScale, seeingConditions]);
   
-  const handleUseCurrentLocation = () => {
+  // Memoize handlers for better performance
+  const handleUseCurrentLocation = useCallback(() => {
     if (loading) return;
     
     if (navigator.geolocation) {
@@ -99,6 +144,19 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           setLongitude(lng.toFixed(6));
           setUserLocation({ latitude: lat, longitude: lng });
           
+          // Check if we have cached data for this location
+          const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+          const cachedData = getCachedData(cacheKey);
+          
+          if (cachedData) {
+            setLocationName(cachedData.name);
+            setBortleScale(cachedData.bortleScale);
+            setShowAdvancedSettings(true);
+            setLoading(false);
+            setStatusMessage(t("Location found: ", "位置已找到：") + cachedData.name);
+            return;
+          }
+          
           try {
             const name = await getLocationNameFromCoordinates(lat, lng, language);
             console.log("Got location name:", name);
@@ -109,6 +167,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               if (lightPollutionData && lightPollutionData.bortleScale) {
                 setBortleScale(lightPollutionData.bortleScale);
                 console.log("Got Bortle scale:", lightPollutionData.bortleScale);
+                
+                // Cache this data for future use
+                setCachedData(cacheKey, {
+                  name,
+                  bortleScale: lightPollutionData.bortleScale
+                });
               }
             } catch (lightError) {
               console.error("Error fetching light pollution data:", lightError);
@@ -178,18 +242,35 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       setStatusMessage(t("Your browser doesn't support geolocation. Please enter coordinates manually.",
         "您的浏览器不支持地理位置，请手动输入坐标。"));
     }
-  };
+  }, [loading, language, t, getCachedData, setCachedData]);
   
-  const handleLocationSelect = async (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
+  const handleLocationSelect = useCallback(async (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
     setLocationName(location.name);
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
+    
+    // Check if we have cached data
+    const cacheKey = `loc-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData && cachedData.bortleScale) {
+      setBortleScale(cachedData.bortleScale);
+      setStatusMessage(t("Selected location: ", "已选择位置：") + location.name);
+      setShowAdvancedSettings(true);
+      return;
+    }
     
     try {
       const lightPollutionData = await fetchLightPollutionData(location.latitude, location.longitude);
       if (lightPollutionData && lightPollutionData.bortleScale) {
         setBortleScale(lightPollutionData.bortleScale);
         console.log("Got Bortle scale for selected location:", lightPollutionData.bortleScale);
+        
+        // Cache this data
+        setCachedData(cacheKey, {
+          name: location.name,
+          bortleScale: lightPollutionData.bortleScale
+        });
       }
     } catch (error) {
       console.error("Error fetching light pollution data for selected location:", error);
@@ -199,7 +280,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     
     setStatusMessage(t("Selected location: ", "已选择位置：") + location.name);
     setShowAdvancedSettings(true);
-  };
+  }, [t, setCachedData, getCachedData]);
   
   const estimateBortleScale = (locationName: string): number => {
     const lowercaseName = locationName.toLowerCase();
@@ -299,11 +380,26 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setIsCalculating(true);
     displayOnly ? null : setLoading(true);
     
+    // Check if we have cached weather data
+    const cacheKey = `weather-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+    const cachedWeatherData = !displayOnly ? null : getCachedData(cacheKey, 2 * 60 * 1000); // 2 minute cache for weather
+    
     try {
-      const data = await fetchWeatherData({
-        latitude: lat,
-        longitude: lng,
-      });
+      let data;
+      
+      if (cachedWeatherData) {
+        data = cachedWeatherData;
+      } else {
+        data = await fetchWeatherData({
+          latitude: lat,
+          longitude: lng,
+        });
+        
+        if (data) {
+          // Cache the weather data for future use
+          setCachedData(cacheKey, data);
+        }
+      }
       
       if (!data) {
         setStatusMessage(t("Could not retrieve weather data. Please try again.", "无法获取天气数据，请重试。"));
@@ -316,21 +412,33 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       
       let actualBortleScale = bortleScale;
       if (!displayOnly || actualBortleScale === 4) {
-        try {
-          const lightPollutionData = await fetchLightPollutionData(lat, lng);
-          if (lightPollutionData && lightPollutionData.bortleScale) {
-            actualBortleScale = lightPollutionData.bortleScale;
-            if (!displayOnly) {
-              setBortleScale(actualBortleScale);
-            }
+        // Check if we have cached Bortle scale data
+        const bortleCacheKey = `bortle-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+        const cachedBortleData = getCachedData(bortleCacheKey, 60 * 60 * 1000); // 1 hour cache
+        
+        if (cachedBortleData) {
+          actualBortleScale = cachedBortleData.bortleScale;
+          if (!displayOnly) {
+            setBortleScale(actualBortleScale);
           }
-        } catch (lightError) {
-          console.error("Error fetching light pollution data in SIQS calculation:", lightError);
-          // Continue with current Bortle scale value
+        } else {
+          try {
+            const lightPollutionData = await fetchLightPollutionData(lat, lng);
+            if (lightPollutionData && lightPollutionData.bortleScale) {
+              actualBortleScale = lightPollutionData.bortleScale;
+              if (!displayOnly) {
+                setBortleScale(actualBortleScale);
+              }
+              
+              // Cache the Bortle scale data
+              setCachedData(bortleCacheKey, lightPollutionData);
+            }
+          } catch (lightError) {
+            console.error("Error fetching light pollution data in SIQS calculation:", lightError);
+            // Continue with current Bortle scale value
+          }
         }
       }
-      
-      const moonPhase = getCurrentMoonPhase();
       
       const siqsResult = calculateSIQS({
         cloudCover: data.cloudCover,
@@ -338,7 +446,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         seeingConditions,
         windSpeed: data.windSpeed,
         humidity: data.humidity,
-        moonPhase,
+        moonPhase: currentMoonPhase,
         precipitation: data.precipitation,
         weatherCondition: data.weatherCondition,
         aqi: data.aqi
@@ -361,13 +469,19 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         seeingConditions,
         weatherData: data,
         siqsResult,
-        moonPhase,
+        moonPhase: currentMoonPhase,
         timestamp: new Date().toISOString(),
       };
       
       console.log("Navigating to location details with data:", locationData);
       
-      navigate(`/location/${locationId}`, { state: locationData });
+      // Prefetch and prepare the next page for faster transition
+      setTimeout(() => {
+        navigate(`/location/${locationId}`, { 
+          state: locationData,
+          replace: false
+        });
+      }, 10);
     } catch (error) {
       console.error("Error calculating SIQS:", error);
       setStatusMessage(t("An error occurred while calculating SIQS. Please try again.", "计算SIQS时发生错误，请重试。"));
@@ -376,7 +490,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   };
   
-  const handleCalculate = () => {
+  const handleCalculate = useCallback(() => {
     if (!validateInputs()) return;
     
     const lat = parseFloat(latitude);
@@ -388,7 +502,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
     
     calculateSIQSForLocation(lat, lng, locationName);
-  };
+  }, [latitude, longitude, locationName, validateInputs]);
 
   const getRecommendationMessageLocal = (siqsScore: number): string => {
     return getRecommendationMessage(siqsScore / 10, language);
@@ -482,7 +596,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           </div>
           
           <p className="text-sm mt-3 font-medium italic text-center">
-            "{getRecommendationMessageLocal(siqsScore)}"
+            "{getRecommendationMessage(siqsScore / 10, language)}"
           </p>
           
           <p className="text-xs text-muted-foreground mt-3">
@@ -538,7 +652,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               type="button"
               onClick={handleCalculate}
               disabled={loading}
-              className="w-full mt-4 bg-gradient-to-r from-primary/80 to-primary hover:opacity-90"
+              className="w-full mt-4 bg-gradient-to-r from-primary/80 to-primary hover:opacity-90 transition-all duration-200"
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
