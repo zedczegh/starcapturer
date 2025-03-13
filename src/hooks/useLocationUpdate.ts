@@ -1,135 +1,94 @@
-
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { fetchWeatherData, fetchLightPollutionData, fetchForecastData } from "@/lib/api";
-import { calculateSIQS } from "@/lib/calculateSIQS";
+import { toast } from "sonner";
+import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useQueryClient } from "@tanstack/react-query";
 
-export const useLocationUpdate = (locationData: any, setLocationData: (data: any) => void) => {
-  const [loading, setLoading] = useState(false);
+export const useForecastData = () => {
+  const [forecastData, setForecastData] = useState<any>(null);
+  const [longRangeForecast, setLongRangeForecast] = useState<any>(null);
+  const [forecastLoading, setForecastLoading] = useState<boolean>(false);
+  const [longRangeLoading, setLongRangeLoading] = useState<boolean>(false);
   const { t } = useLanguage();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
-  const handleLocationUpdate = useCallback(async (newLocation: { 
-    name: string; 
-    latitude: number; 
-    longitude: number;
-  }) => {
-    setLoading(true);
-    
+  // Create AbortController refs
+  let forecastController: AbortController | null = null;
+  let longRangeController: AbortController | null = null;
+
+  const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
-      // Generate cache keys for React Query
-      const latKey = newLocation.latitude.toFixed(4);
-      const lngKey = newLocation.longitude.toFixed(4);
-      const weatherKey = ['weather', latKey, lngKey];
+      setForecastLoading(true);
       
-      // Try to get cached data first
-      let weatherData = queryClient.getQueryData(weatherKey);
-      
-      // If no cached data, fetch fresh data
-      if (!weatherData) {
-        weatherData = await fetchWeatherData({
-          latitude: newLocation.latitude,
-          longitude: newLocation.longitude,
-        });
-        
-        if (!weatherData) {
-          throw new Error("Failed to retrieve weather data for this location");
-        }
-        
-        // Cache the result
-        queryClient.setQueryData(weatherKey, weatherData);
-      }
-
-      // Always fetch fresh Bortle scale data when location changes
-      const lightPollutionKey = ['lightPollution', latKey, lngKey];
-      let bortleScale = 4; // Default value
-      
-      try {
-        // Try to get cached Bortle data first
-        let bortleData = queryClient.getQueryData(lightPollutionKey);
-        
-        if (!bortleData) {
-          bortleData = await fetchLightPollutionData(newLocation.latitude, newLocation.longitude);
-          if (bortleData?.bortleScale) {
-            queryClient.setQueryData(lightPollutionKey, bortleData);
-          }
-        }
-        
-        if (bortleData?.bortleScale) {
-          console.log("Updated Bortle scale:", bortleData.bortleScale);
-          bortleScale = bortleData.bortleScale;
-        }
-      } catch (lightError) {
-        console.error("Error fetching light pollution data during location update:", lightError);
-        // Continue with default or existing bortle scale
+      // Cancel any ongoing requests
+      if (forecastController) {
+        forecastController.abort();
       }
       
-      const moonPhase = locationData?.moonPhase || 0;
+      // Create a new AbortController
+      forecastController = new AbortController();
       
-      const siqsResult = calculateSIQS({
-        cloudCover: weatherData.cloudCover,
-        bortleScale: bortleScale,
-        seeingConditions: locationData?.seeingConditions || 3,
-        windSpeed: weatherData.windSpeed,
-        humidity: weatherData.humidity,
-        moonPhase,
-        aqi: weatherData.aqi,
-        weatherCondition: weatherData.weatherCondition,
-        precipitation: weatherData.precipitation
-      });
-
-      const updatedLocationData = {
-        ...locationData,
-        ...newLocation,
-        weatherData,
-        bortleScale,
-        siqsResult,
-        timestamp: new Date().toISOString()
-      };
-
-      setLocationData(updatedLocationData);
-
-      // Fetch forecast in background
-      const forecastKey = ['forecast', latKey, lngKey];
-      let forecastData = queryClient.getQueryData(forecastKey);
+      const data = await fetchForecastData({
+        latitude,
+        longitude,
+        days: 3
+      }, forecastController.signal);
       
-      if (!forecastData) {
-        try {
-          forecastData = await fetchForecastData({
-            latitude: newLocation.latitude,
-            longitude: newLocation.longitude,
-            days: 3
-          });
-          if (forecastData) {
-            queryClient.setQueryData(forecastKey, forecastData);
-          }
-        } catch (forecastError) {
-          console.error("Error fetching forecast during location update:", forecastError);
-        }
-      }
-
-      const newLocationId = Date.now().toString();
-      
-      navigate(`/location/${newLocationId}`, { 
-        state: updatedLocationData,
-        replace: true 
-      });
-
-      return { updatedLocationData, forecastData };
+      setForecastData(data);
     } catch (error) {
-      console.error("Error updating location:", error);
-      throw error;
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error("Error fetching forecast data:", error);
+        toast.error(t("Failed to fetch forecast data", "获取预报数据失败"));
+      }
     } finally {
-      setLoading(false);
+      setForecastLoading(false);
     }
-  }, [locationData, setLocationData, navigate, queryClient]);
+  }, [t]);
+
+  const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number) => {
+    try {
+      setLongRangeLoading(true);
+      
+      // Cancel any ongoing requests
+      if (longRangeController) {
+        longRangeController.abort();
+      }
+      
+      // Create a new AbortController
+      longRangeController = new AbortController();
+      
+      const data = await fetchLongRangeForecastData({
+        latitude,
+        longitude,
+        days: 16
+      }, longRangeController.signal);
+      
+      setLongRangeForecast(data);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error("Error fetching long range forecast data:", error);
+        toast.error(t("Failed to fetch long range forecast data", "获取长期预报数据失败"));
+      }
+    } finally {
+      setLongRangeLoading(false);
+    }
+  }, [t]);
+
+  const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
+    fetchLocationForecast(latitude, longitude);
+  }, [fetchLocationForecast]);
+
+  const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number) => {
+    fetchLongRangeForecast(latitude, longitude);
+  }, [fetchLongRangeForecast]);
 
   return {
-    loading,
-    setLoading,
-    handleLocationUpdate
+    forecastData,
+    longRangeForecast,
+    forecastLoading,
+    longRangeLoading,
+    setForecastData,
+    fetchLocationForecast,
+    fetchLongRangeForecast,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast
   };
 };
