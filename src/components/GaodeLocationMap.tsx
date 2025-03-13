@@ -16,6 +16,9 @@ interface GaodeLocationMapProps {
 declare global {
   interface Window {
     AMap: any;
+    _AMapSecurityConfig: {
+      securityJsCode: string;
+    };
   }
 }
 
@@ -34,9 +37,12 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   // Note: For production, use a server-side proxy to hide the key or use environment variables
+  // This is a public key, which is OK to include in client-side code
   const GAODE_API_KEY = '2037ca2420bdfcf4319725f57c9c1739';
+  const GAODE_SECURITY_CODE = '39ebdd2f26d8723adc2f8f70561d06f7'; // Security code to use in China
 
   // Convert WGS84 coordinates to GCJ02 (required for Gaode Maps)
   const convertToGCJ02 = (lat: number, lng: number) => {
@@ -60,107 +66,124 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
     setLoading(true);
     setError(null);
 
+    // Set security config for China access
+    window._AMapSecurityConfig = {
+      securityJsCode: GAODE_SECURITY_CODE
+    };
+
     // Load Gaode Maps script dynamically
-    const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${GAODE_API_KEY}&plugin=AMap.Geocoder,AMap.ToolBar,AMap.Scale`;
-    script.async = true;
-    script.onerror = () => {
-      setError(t("Failed to load map service", "加载地图服务失败"));
-      setLoading(false);
-      setStatusMessage(t("Could not load the map service. Please try again later.", "无法加载地图服务，请稍后重试。"));
-    };
-
-    script.onload = () => {
-      try {
-        if (!window.AMap) {
-          throw new Error('AMap not loaded');
-        }
-
-        // Initialize map
-        const newMap = new window.AMap.Map(containerRef.current, {
-          zoom: 13,
-          center: [lng, lat],
-          resizeEnable: true
-        });
-
-        // Add controls
-        newMap.addControl(new window.AMap.ToolBar());
-        newMap.addControl(new window.AMap.Scale());
-
-        // Create marker
-        const newMarker = new window.AMap.Marker({
-          position: [lng, lat],
-          draggable: editable,
-          animation: 'AMAP_ANIMATION_DROP'
-        });
-
-        newMarker.setMap(newMap);
-        mapRef.current = newMap;
-        setMap(newMap);
-        setMarker(newMarker);
-
-        if (editable) {
-          // Handle map clicks for location updates
-          newMap.on('click', async (e: any) => {
-            const clickLng = e.lnglat.getLng();
-            const clickLat = e.lnglat.getLat();
-            newMarker.setPosition([clickLng, clickLat]);
-
-            if (onLocationUpdate) {
-              try {
-                const geocoder = new window.AMap.Geocoder();
-                geocoder.getAddress([clickLng, clickLat], (status: string, result: any) => {
-                  if (status === 'complete' && result.regeocode) {
-                    const newName = result.regeocode.formattedAddress;
-                    onLocationUpdate({
-                      name: newName,
-                      latitude: clickLat,
-                      longitude: clickLng
-                    });
-                    setStatusMessage(t(`New location: ${newName}`, `新位置：${newName}`));
-                  } else {
-                    const fallbackName = t(
-                      `Location at ${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`,
-                      `位置：${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`
-                    );
-                    onLocationUpdate({
-                      name: fallbackName,
-                      latitude: clickLat,
-                      longitude: clickLng
-                    });
-                  }
-                });
-              } catch (error) {
-                console.error('Error updating location:', error);
-                setStatusMessage(t("Could not get location name. Using coordinates instead.", 
-                              "无法获取位置名称。使用坐标代替。"));
-              }
-            }
-          });
-        }
-
+    if (!scriptLoaded) {
+      const script = document.createElement('script');
+      script.src = `https://webapi.amap.com/maps?v=2.0&key=${GAODE_API_KEY}&plugin=AMap.Geocoder,AMap.ToolBar,AMap.Scale`;
+      script.async = true;
+      script.onerror = () => {
+        setError(t("Failed to load map service", "加载地图服务失败"));
         setLoading(false);
+        setStatusMessage(t("Could not load the map service. Please try again later.", "无法加载地图服务，请稍后重试。"));
+      };
 
-      } catch (err) {
-        console.error('Error initializing map:', err);
-        setError(t("Failed to initialize map", "初始化地图失败"));
-        setLoading(false);
-        setStatusMessage(t("Could not initialize the map. Please try again later.", 
-                      "无法初始化地图，请稍后重试。"));
-      }
-    };
+      script.onload = () => {
+        setScriptLoaded(true);
+        initializeMap();
+      };
 
-    document.head.appendChild(script);
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.destroy();
-        mapRef.current = null;
-      }
-      // Remove script tag on cleanup
-      document.head.removeChild(script);
-    };
+      document.head.appendChild(script);
+      
+      return () => {
+        // Only remove if it's the script we added
+        const loadedScript = document.querySelector(`script[src*="webapi.amap.com"]`);
+        if (loadedScript) {
+          try {
+            document.head.removeChild(loadedScript);
+          } catch (e) {
+            console.error("Error removing script:", e);
+          }
+        }
+      };
+    } else {
+      initializeMap();
+    }
   }, [t, editable, onLocationUpdate]);
+
+  const initializeMap = () => {
+    try {
+      if (!window.AMap) {
+        throw new Error('AMap not loaded');
+      }
+
+      // Initialize map
+      const newMap = new window.AMap.Map(containerRef.current, {
+        zoom: 13,
+        center: [lng, lat],
+        resizeEnable: true
+      });
+
+      // Add controls
+      newMap.addControl(new window.AMap.ToolBar());
+      newMap.addControl(new window.AMap.Scale());
+
+      // Create marker
+      const newMarker = new window.AMap.Marker({
+        position: [lng, lat],
+        draggable: editable,
+        animation: 'AMAP_ANIMATION_DROP'
+      });
+
+      newMarker.setMap(newMap);
+      mapRef.current = newMap;
+      setMap(newMap);
+      setMarker(newMarker);
+
+      if (editable) {
+        // Handle map clicks for location updates
+        newMap.on('click', async (e: any) => {
+          const clickLng = e.lnglat.getLng();
+          const clickLat = e.lnglat.getLat();
+          newMarker.setPosition([clickLng, clickLat]);
+
+          if (onLocationUpdate) {
+            try {
+              const geocoder = new window.AMap.Geocoder();
+              geocoder.getAddress([clickLng, clickLat], (status: string, result: any) => {
+                if (status === 'complete' && result.regeocode) {
+                  const newName = result.regeocode.formattedAddress;
+                  onLocationUpdate({
+                    name: newName,
+                    latitude: clickLat,
+                    longitude: clickLng
+                  });
+                  setStatusMessage(t(`New location: ${newName}`, `新位置：${newName}`));
+                } else {
+                  const fallbackName = t(
+                    `Location at ${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`,
+                    `位置：${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`
+                  );
+                  onLocationUpdate({
+                    name: fallbackName,
+                    latitude: clickLat,
+                    longitude: clickLng
+                  });
+                }
+              });
+            } catch (error) {
+              console.error('Error updating location:', error);
+              setStatusMessage(t("Could not get location name. Using coordinates instead.", 
+                          "无法获取位置名称。使用坐标代替。"));
+            }
+          }
+        });
+      }
+
+      setLoading(false);
+
+    } catch (err) {
+      console.error('Error initializing map:', err);
+      setError(t("Failed to initialize map", "初始化地图失败"));
+      setLoading(false);
+      setStatusMessage(t("Could not initialize the map. Please try again later.", 
+                  "无法初始化地图，请稍后重试。"));
+    }
+  };
 
   // Update marker position when coordinates change
   useEffect(() => {
@@ -170,6 +193,16 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
       map.setCenter([newLng, newLat]);
     }
   }, [latitude, longitude, marker, map]);
+
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.destroy();
+        mapRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <Card>

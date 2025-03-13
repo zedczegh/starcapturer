@@ -1,3 +1,4 @@
+
 import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
 
@@ -14,17 +15,26 @@ export const getWeatherData = async (
   language: string = 'en',
   setStatusMessage?: (message: string | null) => void
 ): Promise<any> => {
-  const cachedWeatherData = !displayOnly ? null : getCachedData(cacheKey, 2 * 60 * 1000); // 2 minute cache for weather
-  
-  if (cachedWeatherData) {
-    return cachedWeatherData;
+  // First try to use cached data if in display-only mode
+  if (displayOnly) {
+    const cachedWeatherData = getCachedData(cacheKey, 5 * 60 * 1000); // 5 minute cache for weather
+    if (cachedWeatherData) {
+      return cachedWeatherData;
+    }
   }
   
   try {
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    
     const data = await fetchWeatherData({
       latitude,
       longitude,
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (data) {
       // Cache the weather data for future use
@@ -83,9 +93,28 @@ export const getBortleScaleData = async (
       return cachedBortleData.bortleScale;
     }
     
+    // First try to use the local database - fastest and works in all regions
+    const { findClosestKnownLocation } = require("@/utils/locationUtils");
+    const closestLocation = findClosestKnownLocation(latitude, longitude);
+    
+    if (closestLocation.distance <= 50) {
+      // Cache the valid Bortle scale data
+      setCachedData(bortleCacheKey, { bortleScale: closestLocation.bortleScale, source: 'database' });
+      return closestLocation.bortleScale;
+    }
+    
     try {
-      // Attempt to fetch Bortle scale from API
-      const lightPollutionData = await fetchLightPollutionData(latitude, longitude);
+      // Attempt to fetch Bortle scale from API with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const lightPollutionData = await fetchLightPollutionData(
+        latitude, 
+        longitude,
+        { signal: controller.signal }
+      );
+      
+      clearTimeout(timeoutId);
       
       if (lightPollutionData && 
           typeof lightPollutionData.bortleScale === 'number' && 
@@ -98,6 +127,7 @@ export const getBortleScaleData = async (
       }
     } catch (error) {
       console.error("Error fetching light pollution data:", error);
+      // Continue to fallback method
     }
     
     // If API returned invalid data or failed, use location-based estimation
@@ -108,8 +138,8 @@ export const getBortleScaleData = async (
     
     if (!displayOnly && setStatusMessage) {
       setStatusMessage(language === 'en'
-        ? "Could not fetch precise light pollution data. Using location-based estimation."
-        : "无法获取精确的光污染数据。使用基于位置的估算。");
+        ? "Using location-based light pollution estimation."
+        : "使用基于位置的光污染估算。");
     }
     
     return estimatedScale;

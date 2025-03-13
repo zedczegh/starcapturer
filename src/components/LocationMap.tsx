@@ -6,7 +6,6 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
-import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 
@@ -125,17 +124,18 @@ const LocationMap: React.FC<LocationMapProps> = ({
         return locationName;
       }
       
-      // Otherwise try to get a name from API
-      const name = await getLocationNameFromCoordinates(lat, lng, language);
-      
-      // Cache this data
+      // If we can't get a name, use a generic format
+      const formattedName = t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
+                             `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
+                             
+      // Cache this generic name
       setCachedData(cacheKey, {
-        name,
-        bortleScale: 4 // Default, will be updated later if needed
+        name: formattedName,
+        bortleScale: 4 // Default value
       });
       
       setLocationLoading(false);
-      return name;
+      return formattedName;
     } catch (error) {
       console.error("Error getting location name for coordinates:", error);
       
@@ -280,6 +280,11 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return () => clearTimeout(timeoutId);
   }, [isLoading, t]);
 
+  // Use a China-friendly tile server when possible
+  // OpenStreetMap tiles are usually accessible in China
+  const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
   return (
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
@@ -307,17 +312,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
           >
             {/* Base Map Layer - OpenStreetMap */}
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url={tileServerUrl}
+              attribution={attribution}
               subdomains={['a', 'b', 'c']}
-            />
-            
-            {/* Light Pollution Overlay Layer */}
-            <TileLayer
-              url="https://tiles.lightpollutionmap.info/tiles/world_atlas_2015/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.lightpollutionmap.info">Light Pollution Map</a>'
-              opacity={0.6}
-              zIndex={10}
             />
             
             <Marker 

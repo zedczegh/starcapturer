@@ -24,8 +24,8 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
 
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
-    timeout: 12000, 
-    maximumAge: 0,
+    timeout: 15000, // Increased timeout for slower connections
+    maximumAge: 60000, // Allow cached locations for 1 minute
     language 
   });
 
@@ -53,15 +53,23 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
       setLongitude(validLng.toFixed(6));
       setUserLocation({ latitude: validLat, longitude: validLng });
       
-      // Check for cached data
+      // Check for cached data to reduce API calls
       const cacheKey = `loc-${validLat.toFixed(4)}-${validLng.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = getCachedData(cacheKey, 24 * 60 * 60 * 1000); // 24 hour cache
       
       if (cachedData) {
-        setLocationName(cachedData.name);
-        setFormattedLocationName(cachedData.formattedName || cachedData.name);
-        setBortleScale(cachedData.bortleScale);
-        setStatusMessage(language === 'en' ? "Location found: " : "位置已找到：" + (cachedData.formattedName || cachedData.name));
+        setLocationName(cachedData.name || "");
+        setFormattedLocationName(cachedData.formattedName || cachedData.name || "");
+        setBortleScale(cachedData.bortleScale || 4);
+        
+        // Only show status message if we have a name
+        if (cachedData.name) {
+          setStatusMessage(
+            language === 'en' 
+              ? `Location found: ${cachedData.formattedName || cachedData.name}` 
+              : `位置已找到：${cachedData.formattedName || cachedData.name}`
+          );
+        }
         return;
       }
       

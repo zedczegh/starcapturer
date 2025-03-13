@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Loader2, Search, MapPin, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { locationDatabase } from "@/utils/locationUtils";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export interface Location {
   name: string;
@@ -21,10 +23,20 @@ interface MapSelectorProps {
 const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children }) => {
   const { language, t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Use debounced search term to avoid too many searches while typing
+  useEffect(() => {
+    if (debouncedSearchTerm.length > 2) {
+      searchLocation(debouncedSearchTerm);
+    } else if (debouncedSearchTerm.length === 0) {
+      setSearchResults([]);
+    }
+  }, [debouncedSearchTerm]);
 
   const searchLocation = async (query: string) => {
     if (!query.trim()) {
@@ -54,6 +66,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
   const searchLocations = async (query: string): Promise<Location[]> => {
     const lowercaseQuery = query.toLowerCase();
     
+    // First, search our pre-defined database which contains Bortle scale info
     const matchingLocations = locationDatabase
       .filter(location => 
         location.name.toLowerCase().includes(lowercaseQuery)
@@ -69,22 +82,19 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       return matchingLocations.slice(0, 8);
     }
     
+    // If we don't have enough results, add some common locations
     const commonLocations: Location[] = [
       { name: "Beijing", placeDetails: "Beijing, China", latitude: 39.9042, longitude: 116.4074 },
-      { name: "Tokyo", placeDetails: "Tokyo, Japan", latitude: 35.6762, longitude: 139.6503 },
-      { name: "New York", placeDetails: "New York, USA", latitude: 40.7128, longitude: -74.0060 },
-      { name: "London", placeDetails: "London, UK", latitude: 51.5074, longitude: -0.1278 },
-      { name: "Mauna Kea", placeDetails: "Hawaii, USA - Observatory Site", latitude: 19.8207, longitude: -155.4681 },
-      { name: "Atacama Desert", placeDetails: "Chile - Dark Sky Site", latitude: -23.4500, longitude: -69.2500 },
-      { name: "La Palma", placeDetails: "Canary Islands, Spain - Observatory", latitude: 28.7136, longitude: -17.8834 },
-      { name: "Zhangjiajie", placeDetails: "Hunan, China", latitude: 29.1174, longitude: 110.4794 },
-      { name: "Uluru", placeDetails: "Australia - Dark Sky Site", latitude: -25.3444, longitude: 131.0369 },
-      { name: "Tibet", placeDetails: "Tibet Autonomous Region, China", latitude: 29.6500, longitude: 91.1000 },
       { name: "Shanghai", placeDetails: "Shanghai, China", latitude: 31.2304, longitude: 121.4737 },
       { name: "Hong Kong", placeDetails: "Hong Kong SAR", latitude: 22.3193, longitude: 114.1694 },
-      { name: "Paris", placeDetails: "Paris, France", latitude: 48.8566, longitude: 2.3522 },
-      { name: "Everest Base Camp", placeDetails: "Nepal/Tibet", latitude: 28.0008, longitude: 86.8530 },
-      { name: "Namib Desert", placeDetails: "Namibia - Dark Sky", latitude: -24.7499, longitude: 15.1644 }
+      { name: "Guangzhou", placeDetails: "Guangdong, China", latitude: 23.1291, longitude: 113.2644 },
+      { name: "Shenzhen", placeDetails: "Guangdong, China", latitude: 22.5431, longitude: 114.0579 },
+      { name: "Chengdu", placeDetails: "Sichuan, China", latitude: 30.5728, longitude: 104.0668 },
+      { name: "Zhangjiajie", placeDetails: "Hunan, China", latitude: 29.1174, longitude: 110.4794 },
+      { name: "Xi'an", placeDetails: "Shaanxi, China", latitude: 34.3416, longitude: 108.9398 },
+      { name: "Lhasa", placeDetails: "Tibet, China", latitude: 29.6500, longitude: 91.1000 },
+      { name: "Urumqi", placeDetails: "Xinjiang, China", latitude: 43.8256, longitude: 87.6168 },
+      { name: "Harbin", placeDetails: "Heilongjiang, China", latitude: 45.8038, longitude: 126.5340 }
     ];
     
     const filteredCommonLocations = commonLocations.filter(location => 
@@ -97,12 +107,13 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
       return combinedResults.slice(0, 8);
     }
     
+    // If we still don't have enough results, generate a placeholder
     if (combinedResults.length < 3) {
       const generatedLocation: Location = {
         name: query,
         placeDetails: `Searched location: ${query}`,
-        latitude: 20 + Math.random() * 40,
-        longitude: (Math.random() * 360) - 180
+        latitude: 30 + Math.random() * 20, // Generates random location in China region
+        longitude: 100 + Math.random() * 20
       };
       
       return [...combinedResults, generatedLocation].slice(0, 8);
@@ -120,11 +131,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    if (e.target.value.length > 2) {
-      searchLocation(e.target.value);
-    } else {
-      setSearchResults([]);
-      setShowResults(false);
+    if (e.target.value.length > 0) {
+      setShowResults(true);
     }
   };
 
@@ -151,6 +159,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
   }, []);
 
   if (children) {
+    // Render as child trigger
     return (
       <div className="relative" ref={containerRef}>
         <div onClick={() => setShowResults(true)}>
@@ -219,6 +228,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
     );
   }
 
+  // Render as standalone search component
   return (
     <div className="relative w-full" ref={containerRef}>
       <div className="relative">
