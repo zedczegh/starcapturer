@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
-import { shareAstroSpot } from "@/lib/api";
+import { shareAstroSpot, SharedAstroSpot } from "@/lib/api";
 import { Share, Camera, X, Upload, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -72,6 +73,7 @@ const ShareLocationForm: React.FC<ShareLocationFormProps> = ({
         latitude: latValue,
         longitude: longValue,
         description,
+        bortleScale: 4, // Default value
         photographer,
         photoUrl: photoUrl || undefined,
         targets: targetsArray.length > 0 ? targetsArray : undefined,

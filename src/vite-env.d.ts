@@ -1,3 +1,4 @@
+
 /// <reference types="vite/client" />
 
 // Add type declarations for react-leaflet
@@ -39,6 +40,13 @@ declare module 'react-leaflet' {
   export function useMapEvents(handlers: {
     [key: string]: (e: L.LeafletEvent) => void;
   }): L.Map | null;
+}
+
+// Add global L declaration for Leaflet
+declare global {
+  interface Window {
+    L: typeof import('leaflet');
+  }
 }
 
 // Define WeatherData interface globally

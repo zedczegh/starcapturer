@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Telescope, MapPin, NavigationIcon, Share2, Loader2, Star, Plane } from "lucide-react";
@@ -39,9 +38,26 @@ const PhotoPointsNearby: React.FC = () => {
     }
     
     // Load all shared photo points
-    setLoading(true);
-    const points = getSharedAstroSpots(true);
-    setPhotoPoints(points);
+    const fetchPhotoPoints = async () => {
+      setLoading(true);
+      try {
+        // Use default coordinates if user location is not available
+        const defaultLat = 39.9042; // Beijing
+        const defaultLng = 116.4074;
+        
+        const points = await getSharedAstroSpots(
+          userLocation?.latitude || defaultLat,
+          userLocation?.longitude || defaultLng
+        );
+        setPhotoPoints(points);
+      } catch (error) {
+        console.error("Error fetching photo points:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPhotoPoints();
     
     // Try to get current location SIQS from localStorage
     try {
@@ -56,8 +72,6 @@ const PhotoPointsNearby: React.FC = () => {
     } catch (error) {
       console.error("Error getting recent locations:", error);
     }
-    
-    setLoading(false);
   }, [t]);
 
   // Calculate distance and filter locations when user location is available
@@ -81,7 +95,7 @@ const PhotoPointsNearby: React.FC = () => {
       
     const distant = pointsWithDistance
       .filter(point => point.distance > MAX_NEARBY_DISTANCE)
-      .sort((a, b) => b.siqs - a.siqs)
+      .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
       .slice(0, 5); // Top 5 distant locations with highest SIQS
     
     setNearbyLocations(nearby);
@@ -90,7 +104,7 @@ const PhotoPointsNearby: React.FC = () => {
 
   const handleNavigate = (e: React.MouseEvent, point: SharedAstroSpot) => {
     e.preventDefault(); // Prevent default link behavior
-    window.open(generateBaiduMapsUrl(point.latitude, point.longitude), '_blank');
+    window.open(generateBaiduMapsUrl(point.latitude, point.longitude, point.name), '_blank');
   };
 
   const handleShare = (e: React.MouseEvent, point: SharedAstroSpot) => {
@@ -101,8 +115,8 @@ const PhotoPointsNearby: React.FC = () => {
       navigator.share({
         title: t(`Astrophotography Spot: ${point.name}`, `天文摄影点：${point.name}`),
         text: t(
-          `Check out this amazing astrophotography location: ${point.name}. SIQS: ${point.siqs.toFixed(1)}`,
-          `看看这个绝佳的天文摄影地点: ${point.name}. SIQS评分: ${point.siqs.toFixed(1)}`
+          `Check out this amazing astrophotography location: ${point.name}. SIQS: ${point.siqs?.toFixed(1) || "N/A"}`,
+          `看看这个绝佳的天文摄影地点: ${point.name}. SIQS评分: ${point.siqs?.toFixed(1) || "N/A"}`
         ),
         url: window.location.origin + `/location/${point.id}`,
       }).catch((error) => console.log('Error sharing', error));
@@ -134,7 +148,7 @@ const PhotoPointsNearby: React.FC = () => {
 
   const bestDistantLocation = getBestLocationForTrip();
   const hasGoodNearbyLocations = nearbyLocations.some(loc => 
-    currentLocationSiqs === null || loc.siqs > currentLocationSiqs
+    currentLocationSiqs === null || (loc.siqs || 0) > (currentLocationSiqs || 0)
   );
 
   return (
@@ -201,7 +215,7 @@ const PhotoPointsNearby: React.FC = () => {
                     <h2 className="font-semibold text-lg">{bestDistantLocation.name}</h2>
                     <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded">
                       <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-                      <span className="font-medium text-sm">{bestDistantLocation.siqs.toFixed(1)}</span>
+                      <span className="font-medium text-sm">{bestDistantLocation.siqs?.toFixed(1) || "N/A"}</span>
                     </div>
                   </div>
                   
@@ -221,7 +235,7 @@ const PhotoPointsNearby: React.FC = () => {
                   
                   <div className="flex justify-between items-center mb-3">
                     <div className="text-xs text-primary-foreground/70">
-                      {t("By", "拍摄者：")} {bestDistantLocation.photographer}
+                      {t("By", "拍摄者：")} {bestDistantLocation.photographer || t("Unknown", "未知")}
                     </div>
                     <div className="text-xs font-medium bg-background/30 px-2 py-1 rounded-full">
                       {formatDistance(bestDistantLocation.distance)}
@@ -254,7 +268,7 @@ const PhotoPointsNearby: React.FC = () => {
                     <h2 className="font-semibold text-lg">{point.name}</h2>
                     <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded">
                       <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-                      <span className="font-medium text-sm">{point.siqs.toFixed(1)}</span>
+                      <span className="font-medium text-sm">{point.siqs?.toFixed(1) || "N/A"}</span>
                     </div>
                   </div>
                   
@@ -264,7 +278,7 @@ const PhotoPointsNearby: React.FC = () => {
                   
                   <div className="flex justify-between items-center mb-3">
                     <div className="text-xs text-primary-foreground/70">
-                      {t("By", "拍摄者：")} {point.photographer}
+                      {t("By", "拍摄者：")} {point.photographer || t("Unknown", "未知")}
                     </div>
                     {point.distance !== undefined && (
                       <div className="text-xs font-medium bg-background/30 px-2 py-1 rounded-full">
@@ -339,7 +353,7 @@ const PhotoPointsNearby: React.FC = () => {
                     <h2 className="font-semibold text-xl">{bestDistantLocation.name}</h2>
                     <div className="flex items-center gap-1 bg-primary/10 px-3 py-1 rounded">
                       <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                      <span className="font-medium">{bestDistantLocation.siqs.toFixed(1)}</span>
+                      <span className="font-medium">{bestDistantLocation.siqs?.toFixed(1) || "N/A"}</span>
                     </div>
                   </div>
                   
@@ -359,7 +373,7 @@ const PhotoPointsNearby: React.FC = () => {
                   
                   <div className="flex justify-between items-center mb-4">
                     <div className="text-sm text-primary-foreground/70">
-                      {t("By", "拍摄者：")} {bestDistantLocation.photographer}
+                      {t("By", "拍摄者：")} {bestDistantLocation.photographer || t("Unknown", "未知")}
                     </div>
                     <div className="text-sm font-medium bg-background/30 px-3 py-1 rounded-full">
                       {formatDistance(bestDistantLocation.distance)}
@@ -371,7 +385,7 @@ const PhotoPointsNearby: React.FC = () => {
                       className="w-full"
                       onClick={(e) => {
                         e.preventDefault();
-                        window.open(generateBaiduMapsUrl(bestDistantLocation.latitude, bestDistantLocation.longitude), '_blank');
+                        window.open(generateBaiduMapsUrl(bestDistantLocation.latitude, bestDistantLocation.longitude, bestDistantLocation.name), '_blank');
                       }}
                     >
                       <NavigationIcon className="h-4 w-4 mr-2" />

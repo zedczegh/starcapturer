@@ -24,10 +24,24 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    const points = getRecommendedPhotoPoints(userLocation);
-    setRecommendedPoints(points);
-    setLoading(false);
+    const fetchPoints = async () => {
+      if (!userLocation) return;
+      
+      setLoading(true);
+      try {
+        const points = await getRecommendedPhotoPoints(
+          userLocation.latitude,
+          userLocation.longitude
+        );
+        setRecommendedPoints(points);
+      } catch (error) {
+        console.error("Error fetching recommended points:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPoints();
   }, [userLocation]);
 
   const handleSelectPoint = (point: SharedAstroSpot) => {
@@ -39,7 +53,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 
   const handleNavigate = (e: React.MouseEvent, point: SharedAstroSpot) => {
     e.stopPropagation(); // Prevent triggering the parent onClick
-    window.open(generateBaiduMapsUrl(point.latitude, point.longitude), '_blank');
+    window.open(generateBaiduMapsUrl(point.latitude, point.longitude, point.name), '_blank');
   };
 
   const handleShare = (e: React.MouseEvent, point: SharedAstroSpot) => {
@@ -50,8 +64,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       navigator.share({
         title: t(`Astrophotography Spot: ${point.name}`, `天文摄影点：${point.name}`),
         text: t(
-          `Check out this amazing astrophotography location: ${point.name}. SIQS: ${point.siqs.toFixed(1)}`,
-          `看看这个绝佳的天文摄影地点: ${point.name}. SIQS评分: ${point.siqs.toFixed(1)}`
+          `Check out this amazing astrophotography location: ${point.name}. SIQS: ${point.siqs?.toFixed(1) || "N/A"}`,
+          `看看这个绝佳的天文摄影地点: ${point.name}. SIQS评分: ${point.siqs?.toFixed(1) || "N/A"}`
         ),
         url: window.location.origin + `/location/${point.id}`,
       }).catch((error) => console.log('Error sharing', error));
@@ -107,7 +121,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 <h4 className="font-medium text-sm">{point.name}</h4>
                 <div className="flex items-center">
                   <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
-                  <span className="text-xs font-medium">{point.siqs.toFixed(1)}</span>
+                  <span className="text-xs font-medium">{point.siqs?.toFixed(1) || "N/A"}</span>
                 </div>
               </div>
               
@@ -125,7 +139,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               
               <div className="flex justify-between items-center mb-2">
                 <div className="text-xs text-primary-foreground/70">
-                  {t("By ", "拍摄者：")} {point.photographer}
+                  {t("By ", "拍摄者：")} {point.photographer || t("Unknown", "未知")}
                 </div>
                 {point.distance !== undefined && (
                   <div className="text-xs font-medium">

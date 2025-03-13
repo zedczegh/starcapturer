@@ -1,4 +1,3 @@
-
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -388,6 +387,12 @@ export interface SharedAstroSpot {
   username?: string;
   likes?: number;
   distance?: number;
+  siqs?: number;
+  photoUrl?: string;
+  photographer?: string;
+  targets?: string[];
+  isViable?: boolean;
+  timestamp?: string;
 }
 
 /**
