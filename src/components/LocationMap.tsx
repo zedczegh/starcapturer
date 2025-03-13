@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import { toast } from "sonner";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -33,11 +33,20 @@ const createCustomMarker = (): L.DivIcon => {
 
 // Component to update the map view when position changes
 const MapUpdater = ({ position }: { position: [number, number] }) => {
-  const map = useMap();
+  const mapRef = useRef<L.Map | null>(null);
   
   useEffect(() => {
-    map.setView(position, map.getZoom());
-  }, [position, map]);
+    if (mapRef.current) {
+      mapRef.current.setView(position, mapRef.current.getZoom());
+    }
+  }, [position]);
+  
+  // Use MapEvents to capture the map instance
+  useMapEvents({
+    load: (e) => {
+      mapRef.current = e.target;
+    }
+  });
   
   return null;
 };
@@ -219,7 +228,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
-            ref={handleMapCreated as any}
+            whenCreated={handleMapCreated}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
