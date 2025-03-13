@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 
 export type Language = 'en' | 'zh';
 
@@ -17,6 +17,8 @@ const LANGUAGE_STORAGE_KEY = 'app-language-preference';
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Initialize with stored preference or default to browser language
   const getInitialLanguage = (): Language => {
+    if (typeof window === 'undefined') return 'en'; // SSR safety check
+    
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
     if (storedLanguage === 'en' || storedLanguage === 'zh') {
       return storedLanguage;
@@ -33,23 +35,26 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
 
-  // Update localStorage when language changes
-  const setLanguage = (lang: Language) => {
+  // Memoize the setLanguage function to avoid unnecessary re-renders
+  const setLanguage = useCallback((lang: Language) => {
+    if (typeof window === 'undefined') return; // SSR safety check
+    
     setLanguageState(lang);
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
     // Add a custom event to notify all components about language change
     window.dispatchEvent(new CustomEvent('language-changed', { detail: { language: lang } }));
-  };
+  }, []);
 
-  // Listen for language change events
+  // Optimize language change event handling
   useEffect(() => {
-    const handleLanguageChange = () => {
-      // Force re-render of all components using the language context
-      setLanguageState(prevLang => prevLang === 'en' ? 'en' : 'zh');
-      setTimeout(() => {
-        const currentLang = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
-        setLanguageState(currentLang);
-      }, 50);
+    if (typeof window === 'undefined') return; // SSR safety check
+    
+    const handleLanguageChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const newLang = customEvent.detail?.language;
+      if (newLang && (newLang === 'en' || newLang === 'zh')) {
+        setLanguageState(newLang);
+      }
     };
 
     window.addEventListener('language-changed', handleLanguageChange);
@@ -58,13 +63,20 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
   }, []);
 
-  // Simple translation function
-  const t = (en: string, zh: string): string => {
+  // Memoize the translation function to prevent unnecessary re-renders
+  const t = useCallback((en: string, zh: string): string => {
     return language === 'en' ? en : zh;
-  };
+  }, [language]);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    language,
+    setLanguage,
+    t
+  }), [language, setLanguage, t]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );

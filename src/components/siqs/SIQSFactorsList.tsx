@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
 
@@ -20,7 +20,7 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     <div className="space-y-4 mt-2">
       {factors.map((factor, index) => (
         <FactorItem 
-          key={`factor-${index}`}
+          key={`factor-${factor.name}-${index}`}
           factor={factor}
           index={index}
         />
@@ -29,4 +29,4 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
   );
 };
 
-export default React.memo(SIQSFactorsList);
+export default memo(SIQSFactorsList);

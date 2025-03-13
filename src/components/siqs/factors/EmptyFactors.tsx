@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const EmptyFactors: React.FC = () => {
@@ -12,4 +12,4 @@ const EmptyFactors: React.FC = () => {
   );
 };
 
-export default EmptyFactors;
+export default memo(EmptyFactors);

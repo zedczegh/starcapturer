@@ -1,5 +1,5 @@
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage } from "../SIQSSummary";
@@ -12,6 +12,46 @@ interface SIQSScoreProps {
   locationName?: string;
 }
 
+// Color caching for performance
+const scoreColorCache: Record<number, string> = {};
+const scoreClassCache: Record<number, string> = {};
+
+const getScoreColor = (score: number): string => {
+  // Round to nearest integer for caching
+  const roundedScore = Math.round(score);
+  
+  if (scoreColorCache[roundedScore] !== undefined) {
+    return scoreColorCache[roundedScore];
+  }
+  
+  let result = 'text-red-400';
+  if (score >= 80) result = 'text-green-400';
+  else if (score >= 60) result = 'text-green-300';
+  else if (score >= 40) result = 'text-yellow-300';
+  else if (score >= 20) result = 'text-orange-300';
+  
+  scoreColorCache[roundedScore] = result;
+  return result;
+};
+
+const getScoreClass = (score: number): string => {
+  // Round to nearest integer for caching
+  const roundedScore = Math.round(score);
+  
+  if (scoreClassCache[roundedScore] !== undefined) {
+    return scoreClassCache[roundedScore];
+  }
+  
+  let result = 'score-bad';
+  if (score >= 80) result = 'score-excellent';
+  else if (score >= 60) result = 'score-good';
+  else if (score >= 40) result = 'score-average';
+  else if (score >= 20) result = 'score-poor';
+  
+  scoreClassCache[roundedScore] = result;
+  return result;
+};
+
 const SIQSScore: React.FC<SIQSScoreProps> = ({ 
   siqsScore, 
   locationId,
@@ -22,15 +62,19 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   
-  // Memoize these values to prevent recalculations
-  const scoreColor = useMemo(() => getScoreColor(siqsScore), [siqsScore]);
-  const scoreClass = useMemo(() => getScoreClass(siqsScore), [siqsScore]);
-  const recommendation = useMemo(() => getRecommendationMessage(siqsScore / 10, language), [siqsScore, language]);
+  // Memoize calculations to prevent unnecessary re-renders
+  const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
+    scoreColor: getScoreColor(siqsScore),
+    scoreClass: getScoreClass(siqsScore),
+    recommendation: getRecommendationMessage(siqsScore / 10, language),
+    scoreOn10Scale: siqsScore / 10
+  }), [siqsScore, language]);
   
   // Pre-generate the locationData object for faster navigation
   const preparedLocationData = useMemo(() => {
     if (!latitude || !longitude || !locationName) return null;
     
+    // Use a more deterministic ID format for better caching
     const generatedId = `${locationName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
     return {
       id: generatedId,
@@ -77,7 +121,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         </h3>
         <div className="flex items-center">
           <span className={`text-2xl font-bold ${scoreColor}`}>
-            {(siqsScore / 10).toFixed(1)}
+            {scoreOn10Scale.toFixed(1)}
           </span>
           <span className="text-lg text-muted-foreground">/10</span>
         </div>
@@ -113,21 +157,4 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   );
 };
 
-// Helper functions to determine visual styling
-const getScoreColor = (score: number) => {
-  if (score >= 80) return 'text-green-400';
-  if (score >= 60) return 'text-green-300';
-  if (score >= 40) return 'text-yellow-300';
-  if (score >= 20) return 'text-orange-300';
-  return 'text-red-400';
-};
-
-const getScoreClass = (score: number) => {
-  if (score >= 80) return 'score-excellent';
-  if (score >= 60) return 'score-good';
-  if (score >= 40) return 'score-average';
-  if (score >= 20) return 'score-poor';
-  return 'score-bad';
-};
-
-export default React.memo(SIQSScore);
+export default memo(SIQSScore);

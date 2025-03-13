@@ -1,9 +1,18 @@
 
 import { Language } from "@/contexts/LanguageContext";
 
+// Create a memoization cache for translations
+const factorNameCache: Record<string, Record<Language, string>> = {};
+const descriptionCache: Record<string, Record<Language, string>> = {};
+
 // Translate factor names to Chinese if language is set to Chinese
 export const getTranslatedFactorName = (name: string, language: Language): string => {
   if (language === 'en') return name;
+  
+  // Check cache first
+  if (factorNameCache[name]?.[language]) {
+    return factorNameCache[name][language];
+  }
   
   const translations: Record<string, string> = {
     "Light Pollution": "光污染",
@@ -21,18 +30,35 @@ export const getTranslatedFactorName = (name: string, language: Language): strin
     "Temperature": "温度"
   };
   
-  return translations[name] || name;
+  const result = translations[name] || name;
+  
+  // Cache the result
+  if (!factorNameCache[name]) {
+    factorNameCache[name] = {} as Record<Language, string>;
+  }
+  factorNameCache[name][language] = result;
+  
+  return result;
 };
 
 // Complete translation system for factor descriptions
 export const getTranslatedDescription = (description: string, language: Language): string => {
   if (language === 'en') return description;
   
+  // Check cache first
+  if (descriptionCache[description]?.[language]) {
+    return descriptionCache[description][language];
+  }
+  
+  // Specific description handling for common cases
+  if (description === "Current conditions make imaging impossible") {
+    const result = "当前条件不适合任何形式的天文摄影";
+    cacheDescription(description, language, result);
+    return result;
+  }
+  
   // Comprehensive mapping of descriptions to Chinese translations
   const descriptionsMap: Record<string, string> = {
-    // Specific description translations
-    "Current conditions make imaging impossible": "当前条件不适合任何形式的天文摄影",
-    
     // Cloud cover descriptions
     "Excellent clear skies, ideal for all types of astrophotography": "天空非常晴朗，适合所有类型的天文摄影",
     "Very good conditions with minimal cloud interference": "很好的条件，云层干扰最小",
@@ -99,7 +125,9 @@ export const getTranslatedDescription = (description: string, language: Language
   
   // Try to find an exact match first
   if (descriptionsMap[description]) {
-    return descriptionsMap[description];
+    const result = descriptionsMap[description];
+    cacheDescription(description, language, result);
+    return result;
   }
   
   // For descriptions that don't have an exact match, try to translate parts
@@ -134,14 +162,38 @@ export const getTranslatedDescription = (description: string, language: Language
     translatedDesc = translatedDesc.replace(new RegExp(english, 'gi'), chinese);
   });
   
+  // Cache the result
+  cacheDescription(description, language, translatedDesc);
+  
   return translatedDesc;
 };
 
+// Helper to cache description translations
+function cacheDescription(description: string, language: Language, translation: string) {
+  if (!descriptionCache[description]) {
+    descriptionCache[description] = {} as Record<Language, string>;
+  }
+  descriptionCache[description][language] = translation;
+}
+
+// Optimize progress color calculation with a small cache
+const progressColorCache: Record<number, string> = {};
+
 // Get progress color based on score range to match About SIQS page
 export const getProgressColor = (score: number): string => {
-  if (score >= 8) return "var(--green-500)";
-  if (score >= 6) return "var(--olive-500)";
-  if (score >= 4) return "var(--yellow-400)";
-  if (score >= 2) return "var(--orange-400)";
-  return "var(--red-500)";
+  // Round to nearest 0.1 for caching
+  const roundedScore = Math.round(score * 10) / 10;
+  
+  if (progressColorCache[roundedScore] !== undefined) {
+    return progressColorCache[roundedScore];
+  }
+  
+  let result = "var(--red-500)";
+  if (score >= 8) result = "var(--green-500)";
+  else if (score >= 6) result = "var(--olive-500)";
+  else if (score >= 4) result = "var(--yellow-400)";
+  else if (score >= 2) result = "var(--orange-400)";
+  
+  progressColorCache[roundedScore] = result;
+  return result;
 };
