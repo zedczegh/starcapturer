@@ -47,6 +47,11 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = ({
       return { score: 0, quality: t("Unknown", "未知"), color: "bg-gray-400" };
     }
     
+    // Apply the cloud cover > 40% rule - set score to 0 if cloud coverage is over 40%
+    if (cloudCover > 40) {
+      return { score: 0, quality: t("Bad", "很差"), color: "bg-red-500" };
+    }
+    
     // Simplified SIQS calculation for forecast
     const cloudFactor = (100 - cloudCover) / 100;
     const windFactor = windSpeed > 20 ? 0 : (20 - windSpeed) / 20;

@@ -55,4 +55,7 @@ interface WeatherData {
   windSpeed: number;
   humidity: number;
   temperature?: number;
+  precipitation?: number;
+  weatherCondition?: string;
+  aqi?: number;
 }
