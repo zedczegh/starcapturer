@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage } from "../SIQSSummary";
@@ -11,6 +12,22 @@ interface SIQSScoreProps {
 const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
   const { language, t } = useLanguage();
   
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-400';
+    if (score >= 60) return 'text-green-300';
+    if (score >= 40) return 'text-yellow-300';
+    if (score >= 20) return 'text-orange-300';
+    return 'text-red-400';
+  };
+  
+  const getScoreClass = (score: number) => {
+    if (score >= 80) return 'score-excellent';
+    if (score >= 60) return 'score-good';
+    if (score >= 40) return 'score-average';
+    if (score >= 20) return 'score-poor';
+    return 'score-bad';
+  };
+  
   const scoreComponent = (
     <div className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer">
       <div className="flex items-center justify-between mb-2">
@@ -18,23 +35,16 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
           {t("Estimated SIQS Score", "预估SIQS评分")}
         </h3>
         <div className="flex items-center">
-          <span className={`text-2xl font-bold ${
-            siqsScore >= 80 ? 'text-green-400' : 
-            siqsScore >= 60 ? 'text-green-300' : 
-            siqsScore >= 40 ? 'text-yellow-300' : 
-            siqsScore >= 20 ? 'text-orange-300' : 'text-red-400'
-          }`}>{(siqsScore / 10).toFixed(1)}</span>
+          <span className={`text-2xl font-bold ${getScoreColor(siqsScore)}`}>
+            {(siqsScore / 10).toFixed(1)}
+          </span>
           <span className="text-lg text-muted-foreground">/10</span>
         </div>
       </div>
       <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
         <div 
-          className={`h-full ${
-            siqsScore >= 80 ? 'score-excellent' : 
-            siqsScore >= 60 ? 'score-good' : 
-            siqsScore >= 40 ? 'score-average' : 
-            siqsScore >= 20 ? 'score-poor' : 'score-bad'}`} 
-          style={{ width: `${siqsScore}%` }}
+          className={`h-full ${getScoreClass(siqsScore)}`} 
+          style={{ width: `${siqsScore}%`, transition: 'width 0.5s ease-in-out' }}
         />
       </div>
       
@@ -53,11 +63,16 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({ siqsScore, locationId }) => {
           ? "Click for detailed analysis with forecast data" 
           : "点击获取基于预测数据的详细分析"}
       </p>
+      
+      {/* Visual indicator that this is clickable */}
+      <div className="w-full flex justify-center mt-1">
+        <span className="inline-block w-2 h-2 rounded-full bg-primary/80 animate-pulse"></span>
+      </div>
     </div>
   );
 
   return locationId ? (
-    <Link to={`/location/${locationId}`}>
+    <Link to={`/location/${locationId}`} className="block">
       {scoreComponent}
     </Link>
   ) : (

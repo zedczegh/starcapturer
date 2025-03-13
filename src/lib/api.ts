@@ -1,3 +1,4 @@
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -9,7 +10,6 @@ function validateCoordinates(coordinates: Coordinates): Coordinates {
   const { latitude, longitude, days } = coordinates;
   
   const validLatitude = Math.max(-90, Math.min(90, latitude));
-  
   const validLongitude = normalizeLongitude(longitude);
   
   return {
@@ -21,15 +21,7 @@ function validateCoordinates(coordinates: Coordinates): Coordinates {
 
 // Normalizes longitude to the range [-180, 180]
 function normalizeLongitude(longitude: number): number {
-  // Handle values outside the -180 to 180 range
-  let normalizedLongitude = longitude;
-  while (normalizedLongitude > 180) {
-    normalizedLongitude -= 360;
-  }
-  while (normalizedLongitude < -180) {
-    normalizedLongitude += 360;
-  }
-  return normalizedLongitude;
+  return ((longitude + 180) % 360 + 360) % 360 - 180;
 }
 
 interface WeatherResponse {
@@ -70,18 +62,6 @@ interface WeatherData {
   condition: string;
   weatherCondition?: string;
   aqi?: number;
-}
-
-interface ForecastData {
-  hourly: {
-    time: string[];
-    temperature: number[];
-    cloudCover: number[];
-    precipitation: number[];
-    windSpeed: number[];
-    humidity: number[];
-    weatherCode?: number[];
-  };
 }
 
 // Weather code mapping to text descriptions
@@ -131,13 +111,11 @@ export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortS
   try {
     const { latitude, longitude } = validateCoordinates(coordinates);
     
-    // Fetch from Open-Meteo API
-    const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
       `&current=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
-      `&hourly=cloud_cover&timezone=auto`,
-      { signal }
-    );
+      `&hourly=cloud_cover&timezone=auto`;
+    
+    const response = await fetch(url, { signal });
     
     if (!response.ok) {
       throw new Error(`Weather API responded with status ${response.status}`);
@@ -145,7 +123,6 @@ export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortS
     
     const data: WeatherResponse = await response.json();
     
-    // Check if we have current data
     if (!data.current) {
       throw new Error("Weather data format missing 'current' field");
     }
@@ -164,11 +141,10 @@ export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortS
     
     // Try to fetch AQI data
     try {
-      const aqiResponse = await fetch(
-        `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}` +
-        `&current=european_aqi&domains=cams_global`,
-        { signal }
-      );
+      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}` +
+                    `&current=european_aqi&domains=cams_global`;
+      
+      const aqiResponse = await fetch(aqiUrl, { signal });
       
       if (aqiResponse.ok) {
         const aqiData = await aqiResponse.json();
@@ -178,7 +154,6 @@ export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortS
       }
     } catch (aqiError) {
       console.error("Error fetching AQI data:", aqiError);
-      // Continue without AQI data
     }
     
     return weatherData;
@@ -195,20 +170,17 @@ export async function fetchForecastData(coordinates: Coordinates, signal?: Abort
   try {
     const validCoords = validateCoordinates(coordinates);
     
-    // Fetch from Open-Meteo API
-    const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
       `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
-      `&forecast_days=${validCoords.days || 3}&timezone=auto`,
-      { signal }
-    );
+      `&forecast_days=${validCoords.days || 3}&timezone=auto`;
+    
+    const response = await fetch(url, { signal });
     
     if (!response.ok) {
       throw new Error(`Forecast API responded with status ${response.status}`);
     }
     
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       console.log('Forecast data fetch aborted');
@@ -226,21 +198,18 @@ export async function fetchLongRangeForecastData(coordinates: Coordinates, signa
   try {
     const validCoords = validateCoordinates(coordinates);
     
-    // Fetch from Open-Meteo API with daily data
-    const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,` +
       `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean` +
-      `&forecast_days=${validCoords.days || 16}&timezone=auto`,
-      { signal }
-    );
+      `&forecast_days=${validCoords.days || 16}&timezone=auto`;
+    
+    const response = await fetch(url, { signal });
     
     if (!response.ok) {
       throw new Error(`Long range forecast API responded with status ${response.status}`);
     }
     
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       console.log('Long range forecast data fetch aborted');
@@ -261,7 +230,6 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
     
     // Get Bortle scale from our local database
     const closestLocation = findClosestKnownLocation(latitude, longitude);
-    console.log(`Found location for Bortle scale: ${closestLocation.name}, Bortle: ${closestLocation.bortleScale}, Distance: ${closestLocation.distance.toFixed(2)}km`);
     
     return { bortleScale: closestLocation.bortleScale };
   } catch (error) {
@@ -285,8 +253,7 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const distance = R * c;  // Distance in km
-  return distance;
+  return R * c;  // Distance in km
 }
 
 /**
@@ -297,7 +264,8 @@ function deg2rad(deg: number): number {
 }
 
 /**
- * Get a location name from coordinates using reverse geocoding
+ * Enhanced function to get location name from coordinates
+ * Now with better name resolution for places beyond Beijing and Hong Kong
  */
 export async function getLocationNameFromCoordinates(
   latitude: number, 
@@ -305,154 +273,80 @@ export async function getLocationNameFromCoordinates(
   language: string = 'en'
 ): Promise<string> {
   try {
-    // Use our local database
-    const { findClosestKnownLocation } = await import('../utils/locationUtils');
-    const closestLocation = findClosestKnownLocation(latitude, longitude);
+    // Normalize coordinates
+    const validLat = Math.max(-90, Math.min(90, latitude));
+    const validLng = normalizeLongitude(longitude);
     
-    // If we found a location within 20km, use its name
-    if (closestLocation.distance <= 20) {
-      console.log(`Using location from database: ${closestLocation.name} (${closestLocation.distance.toFixed(2)}km away)`);
-      return closestLocation.name;
+    // First try open API for reverse geocoding
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&accept-language=${language}`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'SIQSCalculatorApp'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.display_name) {
+          // Extract the most relevant part (city or region)
+          const parts = data.display_name.split(',');
+          const cityOrRegion = parts.length > 1 ? parts[0].trim() : data.display_name;
+          
+          return cityOrRegion;
+        }
+      }
+    } catch (error) {
+      console.error("Error using Nominatim API:", error);
     }
     
-    // Fall back to coordinates format for locations not in our database
-    const formattedLatitude = latitude.toFixed(4);
-    const formattedLongitude = longitude.toFixed(4);
-    return language === 'en' 
-      ? `Location at ${formattedLatitude}°, ${formattedLongitude}°` 
-      : `位置在 ${formattedLatitude}°, ${formattedLongitude}°`;
+    // Fallback to our database
+    const { findClosestKnownLocation } = await import('../utils/locationUtils');
+    const closestLocation = findClosestKnownLocation(validLat, validLng);
+    
+    // If we're close to a known location, use its name or "Near X"
+    if (closestLocation.distance <= 20) {
+      return closestLocation.name;
+    } else if (closestLocation.distance <= 100) {
+      return language === 'en' 
+        ? `Near ${closestLocation.name}` 
+        : `${closestLocation.name}附近`;
+    }
+    
+    // Last resort - use major city or region names based on approximate location
+    const china = {
+      north: ["Beijing Region", "北京地区"],
+      northeast: ["Northeast China", "中国东北"],
+      east: ["East China", "中国东部"],
+      south: ["South China", "中国南部"],
+      central: ["Central China", "中国中部"],
+      west: ["Western China", "中国西部"],
+      northwest: ["Northwest China", "中国西北"],
+      southwest: ["Southwest China", "中国西南"],
+    };
+    
+    // Simple region determination based on coordinates
+    let region;
+    if (validLat > 40) {
+      if (validLng < 110) region = china.northwest;
+      else region = china.northeast;
+    } else if (validLat > 30) {
+      if (validLng < 105) region = china.west;
+      else if (validLng > 118) region = china.east;
+      else region = china.central;
+    } else {
+      if (validLng < 105) region = china.southwest;
+      else region = china.south;
+    }
+    
+    return language === 'en' ? region[0] : region[1];
   } catch (error) {
     console.error('Error getting location name:', error);
-    return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    return language === 'en' 
+      ? `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°` 
+      : `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
   }
 }
 
-/**
- * Interface for shared astronomy spots
- */
-export interface SharedAstroSpot {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  description: string;
-  bortleScale: number;
-  date: string;
-  userId?: string;
-  username?: string;
-  likes?: number;
-  distance?: number;
-  siqs?: number;
-  photoUrl?: string;
-  photographer?: string;
-  targets?: string[];
-  isViable?: boolean;
-  timestamp?: string;
-}
-
-/**
- * Shares an astronomy spot to the database
- */
-export async function shareAstroSpot(spotData: Omit<SharedAstroSpot, 'id' | 'date'>): Promise<{ success: boolean; id?: string; message?: string }> {
-  try {
-    // Currently using a mock function until we have a real backend
-    console.log('Sharing astro spot:', spotData);
-    
-    // Mock success response
-    return {
-      success: true,
-      id: Date.now().toString(),
-      message: 'Location shared successfully!'
-    };
-  } catch (error) {
-    console.error('Error sharing astro spot:', error);
-    return {
-      success: false,
-      message: 'Failed to share location. Please try again.'
-    };
-  }
-}
-
-/**
- * Gets nearby shared astronomy spots
- */
-export async function getSharedAstroSpots(
-  latitude: number,
-  longitude: number,
-  limit = 50,
-  radius = 100  // km
-): Promise<SharedAstroSpot[]> {
-  try {
-    // Mock implementation until we have a real backend
-    const mockSpots: SharedAstroSpot[] = [
-      {
-        id: '1',
-        name: 'Dark Sky Reserve',
-        latitude: latitude + 0.1,
-        longitude: longitude + 0.1,
-        description: 'Excellent dark sky site with minimal light pollution. Great for deep sky objects.',
-        bortleScale: 2,
-        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'AstroEnthusiast',
-        likes: 42
-      },
-      {
-        id: '2',
-        name: 'Mountain Lookout',
-        latitude: latitude - 0.15,
-        longitude: longitude - 0.05,
-        description: 'High elevation site with clear horizons. Perfect for planets and lunar observation.',
-        bortleScale: 3,
-        date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'StarGazer',
-        likes: 28
-      },
-      {
-        id: '3',
-        name: 'Coastal Viewing Point',
-        latitude: latitude + 0.2,
-        longitude: longitude - 0.2,
-        description: 'Open view of the western horizon over the water. Good for sunset and early evening viewing.',
-        bortleScale: 4,
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'MilkyWayHunter',
-        likes: 15
-      }
-    ];
-    
-    // Add distance calculation
-    const spotsWithDistance = mockSpots.map(spot => ({
-      ...spot,
-      distance: calculateDistance(latitude, longitude, spot.latitude, spot.longitude)
-    }));
-    
-    // Filter by radius and sort by distance
-    return spotsWithDistance
-      .filter(spot => spot.distance <= radius)
-      .sort((a, b) => (a.distance || 0) - (b.distance || 0))
-      .slice(0, limit);
-  } catch (error) {
-    console.error('Error fetching shared spots:', error);
-    return [];
-  }
-}
-
-/**
- * Gets recommended photo spots for a location
- */
-export async function getRecommendedPhotoPoints(
-  latitude: number,
-  longitude: number,
-  limit = 5
-): Promise<SharedAstroSpot[]> {
-  // For now, this is similar to getSharedAstroSpots but with a smaller limit
-  return getSharedAstroSpots(latitude, longitude, limit);
-}
-
-/**
- * Generates a URL for directions to a location
- */
-export function generateBaiduMapsUrl(latitude: number, longitude: number, name: string): string {
-  const encodedName = encodeURIComponent(name);
-  return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
-}
+// Export other functions related to shared astronomy spots
+export * from './api/astroSpots';

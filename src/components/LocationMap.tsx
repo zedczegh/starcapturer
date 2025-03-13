@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -9,7 +10,7 @@ import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { getLocationNameFromCoordinates } from "@/lib/api";
 
-// Fix for default marker icons - essential for Leaflet to show markers correctly
+// Fix for default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -39,7 +40,6 @@ const MapUpdater = ({ position }: { position: [number, number] }) => {
   useEffect(() => {
     if (map) {
       try {
-        // Gentle panning instead of immediate view change to prevent jarring transitions
         map.panTo(position, { animate: true, duration: 0.5 });
       } catch (error) {
         console.error("Error updating map view:", error);
@@ -87,7 +87,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
        (validLatitude !== position[0] || validLongitude !== position[1])) {
       setPosition([validLatitude, validLongitude]);
     }
-  }, [validLatitude, validLongitude]);
+  }, [validLatitude, validLongitude, position]);
 
   // Function to normalize longitude to -180 to 180 range
   const normalizeLongitude = (lng: number): number => {
@@ -107,7 +107,24 @@ const LocationMap: React.FC<LocationMapProps> = ({
         return cachedData.name;
       }
       
-      // Try from database first
+      // Try external API for reverse geocoding first
+      try {
+        const locationName = await getLocationNameFromCoordinates(lat, lng, language);
+        if (locationName && !locationName.includes("°")) {
+          // Cache this data
+          setCachedData(cacheKey, {
+            name: locationName,
+            formattedName: locationName
+          });
+          
+          setLocationLoading(false);
+          return locationName;
+        }
+      } catch (apiError) {
+        console.error("Error getting location name from API:", apiError);
+      }
+      
+      // Try from database as fallback
       const closestLocation = findClosestKnownLocation(lat, lng);
       
       // If location is within 20km of a known location, use that name
@@ -122,23 +139,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
         
         setLocationLoading(false);
         return locationName;
-      }
-      
-      // Try to get a proper location name from the API with administrative details
-      try {
-        const locationName = await getLocationNameFromCoordinates(lat, lng, language);
-        if (locationName && !locationName.includes("°")) {
-          // Cache this data
-          setCachedData(cacheKey, {
-            name: locationName,
-            bortleScale: closestLocation.bortleScale || 4
-          });
-          
-          setLocationLoading(false);
-          return locationName;
-        }
-      } catch (apiError) {
-        console.error("Error getting location name from API:", apiError);
       }
       
       // If we still don't have a proper name, create a formatted name based on the closest known location
@@ -220,12 +220,11 @@ const LocationMap: React.FC<LocationMapProps> = ({
   };
 
   const handleMapReady = (event: { target: L.Map }) => {
-    console.log("Map instance created and ready");
     mapRef.current = event.target;
     setIsLoading(false);
   };
 
-  // Effect to add custom CSS for marker animation if not already present
+  // Effect to add custom CSS for marker animation
   useEffect(() => {
     if (!document.getElementById('custom-marker-styles')) {
       const style = document.createElement('style');
@@ -291,10 +290,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
       document.head.appendChild(style);
     }
     
-    // Cleanup function for the map in case component unmounts
     return () => {
       if (mapRef.current) {
-        console.log("Cleaning up map instance");
         mapRef.current = null;
       }
     };
@@ -304,17 +301,15 @@ const LocationMap: React.FC<LocationMapProps> = ({
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (isLoading && !mapRef.current) {
-        console.error("Map failed to initialize within timeout period");
         setMapError(t("Failed to load map. Please try refreshing the page.", 
                      "无法加载地图。请尝试刷新页面。"));
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // Reduced from 10s to 5s
     
     return () => clearTimeout(timeoutId);
   }, [isLoading, t]);
 
-  // Use a China-friendly tile server when possible
-  // OpenStreetMap tiles are usually accessible in China
+  // Use a China-friendly tile server
   const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
@@ -343,7 +338,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
             whenReady={handleMapReady}
             attributionControl={false}
           >
-            {/* Base Map Layer - OpenStreetMap */}
             <TileLayer
               url={tileServerUrl}
               attribution={attribution}
