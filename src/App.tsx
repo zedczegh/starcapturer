@@ -34,7 +34,7 @@ const App = () => {
           {/* Using regular Toaster without className */}
           <Toaster />
           <Sonner 
-            className="z-tooltip" 
+            className="z-[100]" 
             position={isMobile ? "top-center" : "bottom-right"}
             expand={true} 
             closeButton 
