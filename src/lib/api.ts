@@ -1,5 +1,3 @@
-import { getBortleScaleFromDatabase } from "@/data/bortleScaleDatabase";
-
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -238,49 +236,31 @@ export async function fetchForecastData(coordinates: Coordinates): Promise<Forec
  */
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null> {
   try {
-    // Use our offline Bortle scale database instead of an API
-    const bortleScale = getBortleScaleFromDatabase(latitude, longitude);
-    return { bortleScale };
+    // Import the local database lookup function
+    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    
+    // Get Bortle scale from our local database
+    const closestLocation = findClosestKnownLocation(latitude, longitude);
+    console.log(`Found location for Bortle scale: ${closestLocation.name}, Bortle: ${closestLocation.bortleScale}, Distance: ${closestLocation.distance.toFixed(2)}km`);
+    
+    return { bortleScale: closestLocation.bortleScale };
+
+    // Real API call would look like this:
+    /*
+    const response = await fetch(`https://api.example.com/light-pollution?lat=${latitude}&lon=${longitude}`);
+    if (!response.ok) {
+      throw new Error(`Light pollution API error: ${response.status}`);
+    }
+    const data = await response.json();
+    return { bortleScale: data.bortleScale };
+    */
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
-    // Fallback to the old estimateBortleScale function
-    return { bortleScale: estimateBortleScale(latitude, longitude) };
+    // Use our improved Bortle scale estimation
+    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    const estimatedBortleScale = findClosestKnownLocation(latitude, longitude).bortleScale;
+    return { bortleScale: estimatedBortleScale };
   }
-}
-
-/**
- * Estimates Bortle scale based on latitude/longitude
- * This is a fallback when database lookup fails
- */
-function estimateBortleScale(latitude: number, longitude: number): number {
-  // Major urban centers with high light pollution (Bortle 8-9)
-  const majorCities = [
-    { lat: 40.7128, lon: -74.0060, name: "New York", bortle: 8.5 },  // New York
-    { lat: 34.0522, lon: -118.2437, name: "Los Angeles", bortle: 8.3 },  // Los Angeles
-    { lat: 39.9042, lon: 116.4074, name: "Beijing", bortle: 8.7 },  // Beijing
-    { lat: 31.2304, lon: 121.4737, name: "Shanghai", bortle: 8.8 },  // Shanghai
-    { lat: 19.4326, lon: -99.1332, name: "Mexico City", bortle: 8.6 },  // Mexico City
-    { lat: 35.6762, lon: 139.6503, name: "Tokyo", bortle: 8.9 },  // Tokyo
-    { lat: 51.5074, lon: -0.1278, name: "London", bortle: 8.2 },  // London
-    { lat: 48.8566, lon: 2.3522, name: "Paris", bortle: 8.1 },  // Paris
-    { lat: 28.6139, lon: 77.2090, name: "Delhi", bortle: 8.5 },  // Delhi
-    { lat: 55.7558, lon: 37.6173, name: "Moscow", bortle: 8.3 }  // Moscow
-  ];
-  
-  // Check if we're near any major cities (within ~30km)
-  for (const city of majorCities) {
-    const distance = calculateDistance(latitude, longitude, city.lat, city.lon);
-    if (distance < 30) {
-      return city.bortle;
-    } else if (distance < 60) {
-      return city.bortle - 1;  // Slightly less light pollution as we move away
-    } else if (distance < 100) {
-      return city.bortle - 2;  // Even less light pollution further away
-    }
-  }
-  
-  // Default (more sophisticated logic could be implemented)
-  return 4;  // Rural default
 }
 
 /**
@@ -315,98 +295,23 @@ export async function getLocationNameFromCoordinates(
   language: string = 'en'
 ): Promise<string> {
   try {
-    // First, try to find a name in our local Bortle scale database
-    const closestLocations = findNearestLocationsInDatabase(latitude, longitude, 5);
-    if (closestLocations.length > 0 && closestLocations[0].distance < 5) {
-      // Use the name from the database if we're close enough (within 5km)
-      let name = closestLocations[0].name;
-      if (closestLocations[0].country) {
-        name += `, ${closestLocations[0].country}`;
-      }
-      return name;
+    // First use our local database
+    const { findClosestKnownLocation } = await import('../utils/bortleScaleEstimation');
+    const closestLocation = findClosestKnownLocation(latitude, longitude);
+    
+    // If we found a location within 20km, use its name
+    if (closestLocation.distance <= 20) {
+      console.log(`Using location from database: ${closestLocation.name} (${closestLocation.distance.toFixed(2)}km away)`);
+      return closestLocation.name;
     }
     
-    // Fall back to OpenStreetMap's Nominatim API
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=${language}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Geocoding API error');
-    }
-    
-    const data = await response.json();
-    
-    if (data.display_name) {
-      // Try to extract a more concise name
-      if (data.address) {
-        const addressParts = [];
-        
-        // Urban areas
-        if (data.address.city || data.address.town || data.address.village) {
-          addressParts.push(data.address.city || data.address.town || data.address.village);
-        }
-        
-        // Add state/province and country
-        if (data.address.state || data.address.province) {
-          addressParts.push(data.address.state || data.address.province);
-        }
-        
-        if (data.address.country) {
-          addressParts.push(data.address.country);
-        }
-        
-        if (addressParts.length > 0) {
-          return addressParts.join(', ');
-        }
-      }
-      
-      // Fallback to display name, but limit length
-      if (data.display_name.length > 50) {
-        return data.display_name.substring(0, 47) + '...';
-      }
-      return data.display_name;
-    } else {
-      throw new Error('No display name found');
-    }
+    // If not found in our database or too far, fall back to Tianditu API
+    const { getTiandituLocationName } = await import('../utils/tiandituApi');
+    return getTiandituLocationName(latitude, longitude, language);
   } catch (error) {
     console.error('Error getting location name:', error);
-    
-    // Try one last time with our database, but with a larger distance threshold
-    const closestLocations = findNearestLocationsInDatabase(latitude, longitude, 20);
-    if (closestLocations.length > 0 && closestLocations[0].distance < 50) {
-      let name = closestLocations[0].name;
-      if (closestLocations[0].distance > 10) {
-        // If we're not very close, indicate it's near this location
-        name = `Near ${name}`;
-      }
-      if (closestLocations[0].country) {
-        name += `, ${closestLocations[0].country}`;
-      }
-      return name;
-    }
-    
     return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
   }
-}
-
-/**
- * Find the nearest locations in our database to given coordinates
- */
-function findNearestLocationsInDatabase(latitude: number, longitude: number, maxDistance: number = 10) {
-  const { bortleScaleDatabase } = require('@/data/bortleScaleDatabase');
-  
-  // Calculate distance to all locations in the database
-  const locationsWithDistance = bortleScaleDatabase.map((location: any) => ({
-    ...location,
-    distance: calculateDistance(latitude, longitude, location.latitude, location.longitude)
-  }));
-  
-  // Sort by distance
-  locationsWithDistance.sort((a: any, b: any) => a.distance - b.distance);
-  
-  // Return locations within maxDistance
-  return locationsWithDistance.filter((loc: any) => loc.distance <= maxDistance);
 }
 
 /**

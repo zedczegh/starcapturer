@@ -12,12 +12,17 @@ declare module 'react-leaflet' {
     scrollWheelZoom?: boolean;
     style?: React.CSSProperties;
     whenCreated?: (map: L.Map) => void;
+    whenReady?: (map: { target: L.Map }) => void;
+    attributionControl?: boolean;
     children?: React.ReactNode;
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
     url: string;
     attribution?: string;
+    subdomains?: string | string[];
+    opacity?: number;
+    zIndex?: number;
     children?: React.ReactNode;
   }
 
@@ -36,10 +41,7 @@ declare module 'react-leaflet' {
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
   
-  // Add useMapEvents hook type
-  export function useMapEvents(handlers: {
-    [key: string]: (e: L.LeafletEvent) => void;
-  }): L.Map | null;
+  export function useMap(): L.Map;
 }
 
 // Make Leaflet available globally
@@ -58,21 +60,4 @@ interface WeatherData {
   precipitation?: number;
   weatherCondition?: string;
   aqi?: number;
-}
-
-// Location database function type
-declare module '@/lib/api' {
-  export function findNearestLocationsInDatabase(
-    latitude: number, 
-    longitude: number, 
-    maxDistance?: number
-  ): Array<{
-    name: string;
-    country?: string;
-    region?: string;
-    latitude: number;
-    longitude: number;
-    bortleScale: number;
-    distance: number;
-  }>;
 }

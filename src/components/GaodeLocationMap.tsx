@@ -1,11 +1,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader, WifiOff, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import offlineMapService from "@/services/OfflineMapService";
+import { Loader } from "lucide-react";
 
 interface GaodeLocationMapProps {
   latitude: number;
@@ -36,7 +33,7 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
   const [marker, setMarker] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isOfflineMode, setIsOfflineMode] = useState(offlineMapService.isInOfflineMode());
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Note: For production, use a server-side proxy to hide the key or use environment variables
   const GAODE_API_KEY = '2037ca2420bdfcf4319725f57c9c1739';
@@ -49,61 +46,9 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
 
   const { lat, lng } = convertToGCJ02(latitude, longitude);
 
-  const toggleOfflineMode = () => {
-    const newMode = offlineMapService.toggleOfflineMode();
-    setIsOfflineMode(newMode);
-    
-    if (newMode) {
-      toast.success(t("Offline Mode Enabled", "离线模式已启用"), {
-        description: t(
-          "Using cached map tiles. Some areas may not be available if not downloaded.",
-          "使用缓存的地图瓦片。如果未下载，某些区域可能不可用。"
-        ),
-      });
-    } else {
-      toast.success(t("Online Mode Enabled", "在线模式已启用"), {
-        description: t("Using live map data from servers.", "使用服务器的实时地图数据。"),
-      });
-    }
-    
-    // Reload the map if possible
-    if (mapRef.current) {
-      mapRef.current.destroy();
-      initializeMap();
-    }
-  };
-  
-  const handleDownloadArea = () => {
-    if (!map) return;
-    
-    toast.success(t("Area Downloaded", "区域已下载"), {
-      description: t(
-        "Current map view has been saved for offline use.",
-        "当前地图视图已保存以供离线使用。"
-      ),
-    });
-    
-    const bounds = map.getBounds();
-    const ne = bounds.getNorthEast();
-    const sw = bounds.getSouthWest();
-    
-    // Create a leaflet-compatible bounds object for our service
-    const leafletBounds = {
-      getNorthEast: () => ({ lat: ne.lat, lng: ne.lng }),
-      getSouthWest: () => ({ lat: sw.lat, lng: sw.lng }),
-      contains: () => true // Simple implementation
-    };
-    
-    const zoom = map.getZoom();
-    offlineMapService.saveRegionForOffline(leafletBounds, zoom - 2, zoom + 2);
-  };
-
-  const initializeMap = () => {
-    setLoading(true);
-    setError(null);
-    
+  useEffect(() => {
     if (!containerRef.current) return;
-    
+
     // Clean up previous map instance
     if (mapRef.current) {
       mapRef.current.destroy();
@@ -112,6 +57,9 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
       setMarker(null);
     }
 
+    setLoading(true);
+    setError(null);
+
     // Load Gaode Maps script dynamically
     const script = document.createElement('script');
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${GAODE_API_KEY}&plugin=AMap.Geocoder,AMap.ToolBar,AMap.Scale`;
@@ -119,9 +67,7 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
     script.onerror = () => {
       setError(t("Failed to load map service", "加载地图服务失败"));
       setLoading(false);
-      toast.error(t("Map Error", "地图错误"), {
-        description: t("Could not load the map service. Please try again later.", "无法加载地图服务，请稍后重试。"),
-      });
+      setStatusMessage(t("Could not load the map service. Please try again later.", "无法加载地图服务，请稍后重试。"));
     };
 
     script.onload = () => {
@@ -171,45 +117,23 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
                       latitude: clickLat,
                       longitude: clickLng
                     });
-
-                    toast.success(t("Location Updated", "位置已更新"), {
-                      description: t(`New location: ${newName}`, `新位置：${newName}`),
-                    });
+                    setStatusMessage(t(`New location: ${newName}`, `新位置：${newName}`));
                   } else {
-                    // Try to get a name from our offline database
-                    const { findNearestLocationsInDatabase } = require('@/lib/api');
-                    const nearbyLocations = findNearestLocationsInDatabase(clickLat, clickLng, 20);
-                    
-                    let fallbackName;
-                    if (nearbyLocations && nearbyLocations.length > 0 && nearbyLocations[0].distance < 50) {
-                      fallbackName = nearbyLocations[0].name;
-                      if (nearbyLocations[0].country) {
-                        fallbackName += `, ${nearbyLocations[0].country}`;
-                      }
-                    } else {
-                      fallbackName = t(
-                        `Location at ${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`,
-                        `位置：${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`
-                      );
-                    }
-                    
+                    const fallbackName = t(
+                      `Location at ${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`,
+                      `位置：${clickLat.toFixed(4)}°N, ${clickLng.toFixed(4)}°E`
+                    );
                     onLocationUpdate({
                       name: fallbackName,
                       latitude: clickLat,
                       longitude: clickLng
                     });
-                    
-                    toast.info(t("Using Local Data", "使用本地数据"), {
-                      description: t(`Location identified as: ${fallbackName}`, `位置识别为：${fallbackName}`),
-                    });
                   }
                 });
               } catch (error) {
                 console.error('Error updating location:', error);
-                toast.error(t("Location Error", "位置错误"), {
-                  description: t("Could not get location name. Using coordinates instead.", 
-                                "无法获取位置名称。使用坐标代替。"),
-                });
+                setStatusMessage(t("Could not get location name. Using coordinates instead.", 
+                              "无法获取位置名称。使用坐标代替。"));
               }
             }
           });
@@ -221,32 +145,22 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
         console.error('Error initializing map:', err);
         setError(t("Failed to initialize map", "初始化地图失败"));
         setLoading(false);
-        toast.error(t("Map Error", "地图错误"), {
-          description: t("Could not initialize the map. Please try again later.", 
-                        "无法初始化地图，请稍后重试。"),
-        });
+        setStatusMessage(t("Could not initialize the map. Please try again later.", 
+                      "无法初始化地图，请稍后重试。"));
       }
     };
 
     document.head.appendChild(script);
-  };
 
-  useEffect(() => {
-    initializeMap();
-    
     return () => {
       if (mapRef.current) {
         mapRef.current.destroy();
         mapRef.current = null;
       }
-      
       // Remove script tag on cleanup
-      const scriptTag = document.querySelector('script[src*="webapi.amap.com"]');
-      if (scriptTag) {
-        document.head.removeChild(scriptTag);
-      }
+      document.head.removeChild(script);
     };
-  }, []);
+  }, [t, editable, onLocationUpdate]);
 
   // Update marker position when coordinates change
   useEffect(() => {
@@ -261,6 +175,12 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
     <Card>
       <CardContent className="p-0 overflow-hidden rounded-md">
         <div className="aspect-video w-full h-[300px] relative">
+          {statusMessage && (
+            <div className="absolute top-0 left-0 right-0 z-50 bg-background/80 p-2 text-sm">
+              {statusMessage}
+            </div>
+          )}
+          
           <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
           
           {loading && (
@@ -285,29 +205,6 @@ const GaodeLocationMap: React.FC<GaodeLocationMapProps> = ({
               </div>
             </div>
           )}
-          
-          {/* Map controls */}
-          <div className="absolute top-2 right-2 z-10 flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className={`rounded-full p-2 ${isOfflineMode ? 'bg-primary text-primary-foreground' : ''}`}
-              onClick={toggleOfflineMode}
-              title={t("Toggle Offline Mode", "切换离线模式")}
-            >
-              <WifiOff className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full p-2"
-              onClick={handleDownloadArea}
-              title={t("Download This Area", "下载此区域")}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
         <div className="p-4">
           <h3 className="font-medium text-sm mb-1">{t("Location", "位置")}</h3>
