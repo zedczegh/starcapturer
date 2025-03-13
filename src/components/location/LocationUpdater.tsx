@@ -6,7 +6,7 @@ import { MapPin, Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/LocationMap";
 import MapSelector, { Location } from "@/components/MapSelector";
-import { getLocationNameFromCoordinates } from "@/lib/api";
+import { getTiandituLocationName } from "@/utils/tiandituApi";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -57,7 +57,8 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         try {
           const { latitude, longitude } = position.coords;
           
-          const locationName = await getLocationNameFromCoordinates(latitude, longitude, language === 'zh' ? 'zh-CN' : 'en');
+          // Use Tianditu reverse geocoding instead of OpenStreetMap
+          const locationName = await getTiandituLocationName(latitude, longitude, language === 'zh' ? 'zh' : 'en');
           
           await onLocationUpdate({
             name: locationName,

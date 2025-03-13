@@ -277,8 +277,10 @@ function getImprovedBortleScale(latitude: number, longitude: number): number {
     { lat: 41.8781, lon: -87.6298, name: "Chicago", bortle: 8.2, radius: 40 },         // Chicago
     { lat: 22.3193, lon: 114.1694, name: "Hong Kong", bortle: 8.7, radius: 30 },       // Hong Kong
     { lat: 1.3521, lon: 103.8198, name: "Singapore", bortle: 8.5, radius: 30 },        // Singapore
-    { lat: 25.2048, lon: 55.2708, name: "Dubai", bortle: 8.4, radius: 35 },            // Dubai
-    { lat: 23.1291, lon: 113.2644, name: "Guangzhou", bortle: 8.6, radius: 40 }        // Guangzhou
+    { lat: 25.0330, lon: 121.5654, name: "Taipei", bortle: 7.4, radius: 25 },          // Taipei
+    { lat: 3.1390, lon: 101.6869, name: "Kuala Lumpur", bortle: 7.3, radius: 30 },     // Kuala Lumpur
+    { lat: 14.5995, lon: 120.9842, name: "Manila", bortle: 7.6, radius: 30 },          // Manila
+    { lat: 13.7563, lon: 100.2864, name: "Bangkok", bortle: 7.5, radius: 30 }          // Bangkok
   ];
   
   // Smaller cities and suburban areas (Bortle 6-7)
@@ -293,7 +295,7 @@ function getImprovedBortleScale(latitude: number, longitude: number): number {
     { lat: 34.6937, lon: 135.5023, name: "Osaka", bortle: 7.5, radius: 30 },           // Osaka
     { lat: 6.9271, lon: 79.8612, name: "Colombo", bortle: 6.9, radius: 20 },           // Colombo
     { lat: 25.0330, lon: 121.5654, name: "Taipei", bortle: 7.4, radius: 25 },          // Taipei
-    { lat: 3.1390, lon: 101.6869, name: "Kuala Lumpur", bortle: 7.3, radius: 25 },     // Kuala Lumpur
+    { lat: 3.1390, lon: 101.6869, name: "Kuala Lumpur", bortle: 7.3, radius: 30 },     // Kuala Lumpur
     { lat: 14.5995, lon: 120.9842, name: "Manila", bortle: 7.6, radius: 30 },          // Manila
     { lat: 13.7563, lon: 100.2864, name: "Bangkok", bortle: 7.5, radius: 30 }          // Bangkok
   ];
@@ -410,48 +412,9 @@ export async function getLocationNameFromCoordinates(
   language: string = 'en'
 ): Promise<string> {
   try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=${language}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Geocoding API error');
-    }
-    
-    const data = await response.json();
-    
-    if (data.display_name) {
-      // Try to extract a more concise name
-      if (data.address) {
-        const addressParts = [];
-        
-        // Urban areas
-        if (data.address.city || data.address.town || data.address.village) {
-          addressParts.push(data.address.city || data.address.town || data.address.village);
-        }
-        
-        // Add state/province and country
-        if (data.address.state || data.address.province) {
-          addressParts.push(data.address.state || data.address.province);
-        }
-        
-        if (data.address.country) {
-          addressParts.push(data.address.country);
-        }
-        
-        if (addressParts.length > 0) {
-          return addressParts.join(', ');
-        }
-      }
-      
-      // Fallback to display name, but limit length
-      if (data.display_name.length > 50) {
-        return data.display_name.substring(0, 47) + '...';
-      }
-      return data.display_name;
-    } else {
-      return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-    }
+    // Import the Tianditu API function
+    const { getTiandituLocationName } = await import('../utils/tiandituApi');
+    return getTiandituLocationName(latitude, longitude, language);
   } catch (error) {
     console.error('Error getting location name:', error);
     return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
@@ -587,3 +550,4 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number, name: 
   const encodedName = encodeURIComponent(name);
   return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }
+

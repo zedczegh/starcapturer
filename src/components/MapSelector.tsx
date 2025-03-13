@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, MapPin, X } from "lucide-react";
-import { getLocationNameFromCoordinates } from "@/lib/api";
+import { searchTiandituLocations } from "@/utils/tiandituApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
@@ -35,34 +35,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onSelectLocation, children })
 
     setIsLoading(true);
     try {
-      // First try with Nominatim service
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          query
-        )}&format=json&addressdetails=1&limit=5&accept-language=${language}`,
-        {
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "AstroSIQS-App",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Search request failed");
-      }
-
-      const data = await response.json();
-      
-      // Format the search results
-      const formattedResults = data.map((item: any) => ({
-        name: item.display_name.split(",")[0], // First part of display name (locality)
-        placeDetails: item.display_name, // Full address for display
-        latitude: parseFloat(item.lat),
-        longitude: parseFloat(item.lon),
-      }));
-
-      setSearchResults(formattedResults);
+      // Use Tianditu search API instead of Nominatim
+      const results = await searchTiandituLocations(query, language);
+      setSearchResults(results);
       setShowResults(true);
     } catch (error) {
       console.error("Location search error:", error);

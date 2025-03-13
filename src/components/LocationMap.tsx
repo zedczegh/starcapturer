@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { getLocationNameFromCoordinates } from "@/lib/api";
+import { getTiandituLocationName } from "@/utils/tiandituApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Fix for default marker icons
@@ -98,7 +98,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
         setPosition([validLat, validLng]);
         
         try {
-          const newName = await getLocationNameFromCoordinates(validLat, validLng, language as 'en' | 'zh');
+          const newName = await getTiandituLocationName(validLat, validLng, language as 'en' | 'zh');
           
           if (onLocationUpdate) {
             onLocationUpdate({
@@ -211,9 +211,16 @@ const LocationMap: React.FC<LocationMapProps> = ({
             scrollWheelZoom={true}
             whenCreated={handleMapCreated}
           >
+            {/* Use Tianditu map layers instead of OpenStreetMap */}
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              url="https://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=1f2df41008fa6dca06da53a1422935f5"
+              subdomains={['0', '1', '2', '3', '4', '5', '6', '7']}
+              attribution='&copy; <a href="https://www.tianditu.gov.cn/">天地图</a>'
+            />
+            {/* Add Tianditu annotation layer */}
+            <TileLayer
+              url="https://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=1f2df41008fa6dca06da53a1422935f5"
+              subdomains={['0', '1', '2', '3', '4', '5', '6', '7']}
             />
             <Marker 
               position={position}
