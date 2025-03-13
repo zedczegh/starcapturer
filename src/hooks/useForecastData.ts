@@ -1,125 +1,77 @@
 
-import { useState, useCallback, useRef } from "react";
-import { fetchForecastData } from "@/lib/api";
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
+import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export const useForecastData = () => {
-  const [forecastData, setForecastData] = useState(null);
-  const [longRangeForecast, setLongRangeForecast] = useState(null);
-  const [forecastLoading, setForecastLoading] = useState(false);
-  const [longRangeLoading, setLongRangeLoading] = useState(false);
+  const [forecastData, setForecastData] = useState<any>(null);
+  const [longRangeForecast, setLongRangeForecast] = useState<any>(null);
+  const [forecastLoading, setForecastLoading] = useState<boolean>(false);
+  const [longRangeLoading, setLongRangeLoading] = useState<boolean>(false);
   const { t } = useLanguage();
-  
-  // Controller references to prevent race conditions
-  const forecastControllerRef = useRef<AbortController | null>(null);
-  const longRangeControllerRef = useRef<AbortController | null>(null);
 
-  const fetchLocationForecast = useCallback(async (latitude: number, longitude: number, setStatusMessage?: (message: string | null) => void) => {
-    if (!latitude || !longitude) return;
-    
-    // Abort any previous request
-    if (forecastControllerRef.current) {
-      forecastControllerRef.current.abort();
-    }
-    
-    // Create new controller
-    forecastControllerRef.current = new AbortController();
-    const signal = forecastControllerRef.current.signal;
-    
-    setForecastLoading(true);
+  // Create AbortController refs
+  let forecastController: AbortController | null = null;
+  let longRangeController: AbortController | null = null;
+
+  const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
-      const forecast = await fetchForecastData({
-        latitude,
-        longitude,
-      }, signal);
+      setForecastLoading(true);
       
-      // Only update if this is still the current request
-      if (!signal.aborted) {
-        setForecastData(forecast);
-        if (!forecast) {
-          console.error("Forecast data not available or incomplete");
-          setStatusMessage && setStatusMessage(t("Could not load weather forecast. Try refreshing.", 
-                          "无法加载天气预报。请尝试刷新。"));
-          
-          setTimeout(() => {
-            if (setStatusMessage) setStatusMessage(null);
-          }, 3000);
-        }
+      // Cancel any ongoing requests
+      if (forecastController) {
+        forecastController.abort();
       }
+      
+      // Create a new AbortController
+      forecastController = new AbortController();
+      
+      const data = await fetchForecastData(latitude, longitude, forecastController.signal);
+      setForecastData(data);
     } catch (error) {
-      // Only handle errors if this is still the current request
-      if (!signal.aborted) {
-        console.error("Error fetching forecast:", error);
-        setStatusMessage && setStatusMessage(t("Could not load weather forecast. Try refreshing.", 
-                        "无法加载天气预报。请尝试刷新。"));
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error("Error fetching forecast data:", error);
+        toast.error(t("Failed to fetch forecast data", "获取预报数据失败"));
       }
     } finally {
-      // Only update loading state if this is still the current request
-      if (!signal.aborted) {
-        setForecastLoading(false);
-      }
+      setForecastLoading(false);
     }
   }, [t]);
 
-  const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number, setStatusMessage?: (message: string | null) => void) => {
-    if (!latitude || !longitude) return;
-    
-    // Abort any previous request
-    if (longRangeControllerRef.current) {
-      longRangeControllerRef.current.abort();
-    }
-    
-    // Create new controller
-    longRangeControllerRef.current = new AbortController();
-    const signal = longRangeControllerRef.current.signal;
-    
-    setLongRangeLoading(true);
+  const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
-      const forecast = await fetchForecastData({
-        latitude,
-        longitude,
-        days: 16 // Request 16 days including today
-      }, signal);
+      setLongRangeLoading(true);
       
-      // Only update if this is still the current request
-      if (!signal.aborted) {
-        setLongRangeForecast(forecast);
-        if (!forecast) {
-          console.error("Long range forecast data not available or incomplete");
-        }
+      // Cancel any ongoing requests
+      if (longRangeController) {
+        longRangeController.abort();
       }
+      
+      // Create a new AbortController
+      longRangeController = new AbortController();
+      
+      const data = await fetchLongRangeForecastData(latitude, longitude, longRangeController.signal);
+      setLongRangeForecast(data);
     } catch (error) {
-      // Only handle errors if this is still the current request
-      if (!signal.aborted) {
-        console.error("Error fetching long range forecast:", error);
-        setStatusMessage && setStatusMessage(t("Could not load extended forecast. Try refreshing.", 
-                        "无法加载延长天气预报。请尝试刷新。"));
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error("Error fetching long range forecast data:", error);
+        toast.error(t("Failed to fetch long range forecast data", "获取长期预报数据失败"));
       }
     } finally {
-      // Only update loading state if this is still the current request
-      if (!signal.aborted) {
-        setLongRangeLoading(false);
-      }
+      setLongRangeLoading(false);
     }
   }, [t]);
 
-  const handleRefreshForecast = useCallback((latitude: number, longitude: number, setStatusMessage?: (message: string | null) => void) => {
-    fetchLocationForecast(latitude, longitude, setStatusMessage);
-    setStatusMessage && setStatusMessage(t("Updating weather forecast data...", "正在更新天气预报数据..."));
-    
-    setTimeout(() => {
-      if (setStatusMessage) setStatusMessage(null);
-    }, 3000);
-  }, [fetchLocationForecast, t]);
+  const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
+    fetchLocationForecast(latitude, longitude);
+    // No longer passing setStatusMessage as it's not used
+  }, [fetchLocationForecast]);
 
-  const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number, setStatusMessage?: (message: string | null) => void) => {
-    fetchLongRangeForecast(latitude, longitude, setStatusMessage);
-    setStatusMessage && setStatusMessage(t("Updating 15-day forecast data...", "正在更新15天预报数据..."));
-    
-    setTimeout(() => {
-      if (setStatusMessage) setStatusMessage(null);
-    }, 3000);
-  }, [fetchLongRangeForecast, t]);
+  const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number) => {
+    fetchLongRangeForecast(latitude, longitude);
+    // No longer passing setStatusMessage as it's not used
+  }, [fetchLongRangeForecast]);
 
   return {
     forecastData,
@@ -127,7 +79,6 @@ export const useForecastData = () => {
     forecastLoading,
     longRangeLoading,
     setForecastData,
-    setLongRangeForecast,
     fetchLocationForecast,
     fetchLongRangeForecast,
     handleRefreshForecast,

@@ -2,12 +2,18 @@
 import React, { useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Cloud, Droplets, Thermometer, Wind, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { DynamicPrecipitationIcon } from "@/components/weather/DynamicIcons";
+import { 
+  DynamicPrecipitationIcon, 
+  DynamicTemperatureIcon, 
+  DynamicCloudCoverIcon, 
+  DynamicWindIcon, 
+  DynamicHumidityIcon 
+} from "@/components/weather/DynamicIcons";
 
 interface ForecastTableProps {
   forecastData: any;
@@ -158,10 +164,22 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
             <TableHeader>
               <TableRow className="bg-cosmic-800/40 hover:bg-cosmic-800/60">
                 <TableHead className="py-3">{t("Time", "时间")}</TableHead>
-                <TableHead className="text-center"><Thermometer className="inline h-4 w-4 mr-1" />{t("Temp", "温度")}</TableHead>
-                <TableHead className="text-center"><Cloud className="inline h-4 w-4 mr-1" />{t("Clouds", "云层")}</TableHead>
-                <TableHead className="text-center"><Wind className="inline h-4 w-4 mr-1" />{t("Wind", "风速")}</TableHead>
-                <TableHead className="text-center"><Droplets className="inline h-4 w-4 mr-1" />{t("Humid", "湿度")}</TableHead>
+                <TableHead className="text-center">
+                  <DynamicTemperatureIcon temperature={20} className="inline h-4 w-4 mr-1" />
+                  {t("Temp", "温度")}
+                </TableHead>
+                <TableHead className="text-center">
+                  <DynamicCloudCoverIcon cloudCover={50} className="inline h-4 w-4 mr-1" />
+                  {t("Clouds", "云层")}
+                </TableHead>
+                <TableHead className="text-center">
+                  <DynamicWindIcon windSpeed={15} className="inline h-4 w-4 mr-1" />
+                  {t("Wind", "风速")}
+                </TableHead>
+                <TableHead className="text-center">
+                  <DynamicHumidityIcon humidity={50} className="inline h-4 w-4 mr-1" />
+                  {t("Humid", "湿度")}
+                </TableHead>
                 <TableHead>{t("Conditions", "天气状况")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,13 +191,31 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                     <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
                   </TableCell>
                   <TableCell className="text-center border-b border-cosmic-700/20">
-                    <span className={forecast.temperature > 25 ? 'text-amber-400' : forecast.temperature < 15 ? 'text-blue-400' : ''}>
-                      {isNaN(forecast.temperature) ? "--" : forecast.temperature.toFixed(1)}°C
-                    </span>
+                    <div className="flex items-center justify-center">
+                      <DynamicTemperatureIcon temperature={forecast.temperature} className="mr-1 h-4 w-4" />
+                      <span className={forecast.temperature > 25 ? 'text-amber-400' : forecast.temperature < 15 ? 'text-blue-400' : ''}>
+                        {isNaN(forecast.temperature) ? "--" : forecast.temperature.toFixed(1)}°C
+                      </span>
+                    </div>
                   </TableCell>
-                  <TableCell className="text-center border-b border-cosmic-700/20">{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</TableCell>
-                  <TableCell className="text-center border-b border-cosmic-700/20">{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</TableCell>
-                  <TableCell className="text-center border-b border-cosmic-700/20">{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</TableCell>
+                  <TableCell className="text-center border-b border-cosmic-700/20">
+                    <div className="flex items-center justify-center">
+                      <DynamicCloudCoverIcon cloudCover={forecast.cloudCover} className="mr-1 h-4 w-4" />
+                      <span>{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center border-b border-cosmic-700/20">
+                    <div className="flex items-center justify-center">
+                      <DynamicWindIcon windSpeed={forecast.windSpeed} className="mr-1 h-4 w-4" />
+                      <span>{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center border-b border-cosmic-700/20">
+                    <div className="flex items-center justify-center">
+                      <DynamicHumidityIcon humidity={forecast.humidity} className="mr-1 h-4 w-4" />
+                      <span>{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="border-b border-cosmic-700/20">
                     <div className="flex items-center gap-2">
                       <DynamicPrecipitationIcon precipitation={forecast.precipitation} />

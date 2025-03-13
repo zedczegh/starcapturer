@@ -28,9 +28,9 @@ export const useForecastManager = (locationData: any) => {
     forecastLoading,
     longRangeLoading,
     setForecastData,
-    handleRefreshForecast: (latitude: number, longitude: number, setStatusMessage?: (message: string | null) => void) => 
-      handleRefreshForecast(latitude, longitude, setStatusMessage),
-    handleRefreshLongRangeForecast: (latitude: number, longitude: number, setStatusMessage?: (message: string | null) => void) => 
-      handleRefreshLongRangeForecast(latitude, longitude, setStatusMessage)
+    handleRefreshForecast: (latitude: number, longitude: number) => 
+      handleRefreshForecast(latitude, longitude),
+    handleRefreshLongRangeForecast: (latitude: number, longitude: number) => 
+      handleRefreshLongRangeForecast(latitude, longitude)
   };
 };

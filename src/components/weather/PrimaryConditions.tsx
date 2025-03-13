@@ -1,9 +1,13 @@
 
 import React, { memo } from "react";
-import { Thermometer, Wind, Eye } from "lucide-react";
 import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { DynamicHumidityIcon } from "./DynamicIcons";
+import { 
+  DynamicHumidityIcon, 
+  DynamicTemperatureIcon,
+  DynamicWindIcon,
+  DynamicSeeingIcon
+} from "./DynamicIcons";
 
 interface PrimaryConditionsProps {
   temperature: number;
@@ -23,7 +27,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
   return (
     <div className="space-y-6">
       <ConditionItem
-        icon={<Thermometer className="h-4 w-4 text-primary" />}
+        icon={<DynamicTemperatureIcon temperature={temperature} />}
         label={t("Temperature", "温度")}
         value={`${temperature.toFixed(1)}°C`}
       />
@@ -35,13 +39,13 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
       />
       
       <ConditionItem
-        icon={<Wind className="h-4 w-4 text-primary" />}
+        icon={<DynamicWindIcon windSpeed={windSpeed} />}
         label={t("Wind Speed", "风速")}
         value={`${windSpeed} ${t("km/h", "公里/小时")}`}
       />
       
       <ConditionItem
-        icon={<Eye className="h-4 w-4 text-primary" />}
+        icon={<DynamicSeeingIcon seeingConditions={seeingConditions} />}
         label={t("Seeing Conditions", "视宁度")}
         value={seeingConditions}
       />

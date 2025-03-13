@@ -1,10 +1,14 @@
 
 import React, { memo } from "react";
-import { Cloud, Gauge } from "lucide-react";
+import { Gauge } from "lucide-react";
 import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
-import { DynamicMoonIcon, DynamicLightbulbIcon } from "./DynamicIcons";
+import { 
+  DynamicMoonIcon, 
+  DynamicLightbulbIcon,
+  DynamicCloudCoverIcon
+} from "./DynamicIcons";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -34,7 +38,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   return (
     <div className="space-y-6">
       <ConditionItem
-        icon={<Cloud className="h-4 w-4 text-primary" />}
+        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
         label={t("Cloud Cover", "云层覆盖")}
         value={`${cloudCover}%`}
       />
