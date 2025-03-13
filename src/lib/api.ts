@@ -1,3 +1,4 @@
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -127,7 +128,7 @@ export function determineWeatherCondition(cloudCover: number): string {
 /**
  * Fetches current weather data for a specific location
  */
-export async function fetchWeatherData(coordinates: Coordinates): Promise<WeatherData | null> {
+export async function fetchWeatherData(coordinates: Coordinates, signal?: AbortSignal): Promise<WeatherData | null> {
   try {
     const { latitude, longitude } = validateCoordinates(coordinates);
     
@@ -135,7 +136,8 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     const response = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
       `&current=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
-      `&hourly=cloud_cover&timezone=auto`
+      `&hourly=cloud_cover&timezone=auto`,
+      { signal }
     );
     
     if (!response.ok) {
@@ -165,7 +167,8 @@ export async function fetchWeatherData(coordinates: Coordinates): Promise<Weathe
     try {
       const aqiResponse = await fetch(
         `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}` +
-        `&current=european_aqi&domains=cams_global`
+        `&current=european_aqi&domains=cams_global`,
+        { signal }
       );
       
       if (aqiResponse.ok) {

@@ -31,8 +31,8 @@ export const getWeatherData = async (
     const data = await fetchWeatherData({
       latitude,
       longitude,
-      options: { signal: controller.signal }
-    });
+      days: 3
+    }, controller.signal);
     
     clearTimeout(timeoutId);
     
@@ -94,7 +94,7 @@ export const getBortleScaleData = async (
     }
     
     // First try to use the local database - fastest and works in all regions
-    const { findClosestKnownLocation } = require("@/utils/locationUtils");
+    const { findClosestKnownLocation } = await import("@/utils/locationUtils");
     const closestLocation = findClosestKnownLocation(latitude, longitude);
     
     if (closestLocation.distance <= 50) {
@@ -110,8 +110,7 @@ export const getBortleScaleData = async (
       
       const lightPollutionData = await fetchLightPollutionData(
         latitude, 
-        longitude,
-        { signal: controller.signal }
+        longitude
       );
       
       clearTimeout(timeoutId);
