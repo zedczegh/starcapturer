@@ -12,7 +12,7 @@ declare module 'react-leaflet' {
     scrollWheelZoom?: boolean;
     style?: React.CSSProperties;
     whenCreated?: (map: L.Map) => void;
-    whenReady?: (event: { target: L.Map }) => void;
+    whenReady?: (map: { target: L.Map }) => void;
     attributionControl?: boolean;
     children?: React.ReactNode;
   }
@@ -41,7 +41,6 @@ declare module 'react-leaflet' {
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
   
-  // Fix: Update the map events hooks
   export function useMap(): L.Map;
   export function useMapEvents(handlers: {
     [key: string]: (e: L.LeafletEvent) => void;

@@ -32,11 +32,15 @@ const createCustomMarker = (): L.DivIcon => {
 
 // Component to update the map view when position changes
 const MapUpdater = ({ position }: { position: [number, number] }) => {
-  const map = useMap(); // Using useMap instead of useMapEvents
+  const map = useMap();
   
   useEffect(() => {
     if (map) {
-      map.setView(position, map.getZoom());
+      try {
+        map.setView(position, map.getZoom());
+      } catch (error) {
+        console.error("Error updating map view:", error);
+      }
     }
   }, [position, map]);
   
@@ -59,43 +63,40 @@ const LocationMap: React.FC<LocationMapProps> = ({
   editable = false 
 }) => {
   const { language, t } = useLanguage();
-  const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
+  const [position, setPosition] = useState<[number, number]>([
+    isFinite(latitude) ? latitude : 0, 
+    isFinite(longitude) ? longitude : 0
+  ]);
   const mapRef = useRef<L.Map | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
   // Handle potential invalid coordinates with safer defaults
-  const validLatitude = latitude !== undefined && isFinite(latitude) ? latitude : 0;
-  const validLongitude = longitude !== undefined && isFinite(longitude) ? longitude : 0;
+  const validLatitude = isFinite(latitude) ? latitude : 0;
+  const validLongitude = isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
 
   // Update position when props change
   useEffect(() => {
-    if (validLatitude !== position[0] || validLongitude !== position[1]) {
+    if (isFinite(latitude) && isFinite(longitude) && 
+       (validLatitude !== position[0] || validLongitude !== position[1])) {
       setPosition([validLatitude, validLongitude]);
     }
   }, [validLatitude, validLongitude]);
 
   // Function to normalize longitude to -180 to 180 range
   const normalizeLongitude = (lng: number): number => {
-    // Handle cases where longitude is outside -180 to 180 range
     return ((lng + 180) % 360 + 360) % 360 - 180;
   };
 
-  // Get location name from coordinates
+  // Get location name from coordinates - simplified version
   const getLocationNameFromCoordinates = async (lat: number, lng: number): Promise<string> => {
-    try {
-      // We'll use a reverse geocoding service - for now returning a simple formatted string
-      return `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
-    } catch (error) {
-      console.error('Error getting location name:', error);
-      return `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
-    }
+    return `Location at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`;
   };
 
   // Interactive map component that handles clicks
   const MapEvents = () => {
-    const map = useMap(); // Using useMap instead of useMapEvents
+    const map = useMap();
     
     // Set up click handler
     useEffect(() => {
@@ -148,9 +149,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return null;
   };
 
-  const handleMapReady = (map: L.Map) => {
+  const handleMapReady = (event: { target: L.Map }) => {
     console.log("Map instance created and ready");
-    mapRef.current = map;
+    mapRef.current = event.target;
     setIsLoading(false);
   };
 
@@ -262,17 +263,17 @@ const LocationMap: React.FC<LocationMapProps> = ({
             zoom={12} 
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
-            whenReady={(map) => handleMapReady(map.target)}
+            whenReady={handleMapReady}
             attributionControl={false}
           >
             {/* Base Map Layer - Bing Road Map */}
             <TileLayer
-              url="https://ecn.t{s}.tiles.virtualearth.net/tiles/r{q}?g=1&mkt=en-US&shading=hill"
-              subdomains={['0', '1', '2', '3', '4', '5', '6', '7']}
-              attribution='&copy; <a href="https://www.bing.com/maps/">Bing Maps</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              subdomains={['a', 'b', 'c']}
             />
             
-            {/* Light Pollution Overlay from lightpollutionmap.info (World Atlas 2015) */}
+            {/* Light Pollution Overlay - fallback to a simpler version */}
             <TileLayer
               url="https://tiles.lightpollutionmap.info/tiles/world_atlas_2015/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.lightpollutionmap.info">Light Pollution Map</a>'

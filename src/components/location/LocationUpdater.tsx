@@ -1,11 +1,12 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/LocationMap";
 import MapSelector, { Location } from "@/components/MapSelector";
+import { useToast } from "@/hooks/use-toast";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -23,15 +24,27 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   setStatusMessage
 }) => {
   const { t, language } = useLanguage();
+  const { toast } = useToast();
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const handleLocationSearch = (selectedLocation: Location) => {
-    onLocationUpdate({
-      name: selectedLocation.name,
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude
-    });
-    
-    setStatusMessage(t(`Now viewing ${selectedLocation.name}`, `现在查看 ${selectedLocation.name}`));
+    try {
+      onLocationUpdate({
+        name: selectedLocation.name,
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude
+      });
+      
+      setStatusMessage(t(`Now viewing ${selectedLocation.name}`, `现在查看 ${selectedLocation.name}`));
+    } catch (error) {
+      console.error("Error updating location:", error);
+      setStatusMessage(t("Failed to update location", "无法更新位置"));
+      toast({
+        title: t("Error", "错误"),
+        description: t("Failed to update location", "无法更新位置"),
+        variant: "destructive"
+      });
+    }
   };
 
   const handleGetCurrentLocation = () => {
@@ -99,6 +112,16 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
     );
   };
 
+  // Safely check if locationData has required properties
+  const hasValidCoordinates = locationData && 
+    typeof locationData.latitude === 'number' && isFinite(locationData.latitude) && 
+    typeof locationData.longitude === 'number' && isFinite(locationData.longitude);
+
+  // Default coordinates to use if locationData is invalid
+  const fallbackLatitude = 0;
+  const fallbackLongitude = 0;
+  const fallbackName = t("Unnamed Location", "未命名位置");
+
   return (
     <Card className="shadow-md overflow-hidden">
       <CardHeader className="pb-2">
@@ -109,9 +132,9 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
       </CardHeader>
       <CardContent className="p-0">
         <LocationMap
-          latitude={locationData.latitude}
-          longitude={locationData.longitude}
-          name={locationData.name || t("Unnamed Location", "未命名位置")}
+          latitude={hasValidCoordinates ? locationData.latitude : fallbackLatitude}
+          longitude={hasValidCoordinates ? locationData.longitude : fallbackLongitude}
+          name={hasValidCoordinates && locationData.name ? locationData.name : fallbackName}
           onLocationUpdate={onLocationUpdate}
           editable={true}
         />
