@@ -1,9 +1,8 @@
-
 import { calculateDistance } from "@/data/locationDatabase";
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 
-// Import the location database from a separate file
-import { locationDatabase } from "./locationDatabase";
+// Import the correct location database from the utils file
+import { quickLocationDatabase } from "./locationDatabase";
 
 /**
  * Find the closest known location from our database
@@ -15,7 +14,7 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
   distance: number;
   type: string;
 } {
-  if (!locationDatabase || !locationDatabase.length) {
+  if (!quickLocationDatabase || !quickLocationDatabase.length) {
     return { name: "Unknown", bortleScale: 4, distance: 999, type: 'unknown' };
   }
 
@@ -31,15 +30,15 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
   }
 
   // Find closest location in the legacy database
-  let closestLocation = locationDatabase[0];
+  let closestLocation = quickLocationDatabase[0];
   let shortestDistance = calculateDistance(
     latitude, longitude, 
-    locationDatabase[0].coordinates[0], 
-    locationDatabase[0].coordinates[1]
+    quickLocationDatabase[0].coordinates[0], 
+    quickLocationDatabase[0].coordinates[1]
   );
 
-  for (let i = 1; i < locationDatabase.length; i++) {
-    const location = locationDatabase[i];
+  for (let i = 1; i < quickLocationDatabase.length; i++) {
+    const location = quickLocationDatabase[i];
     const distance = calculateDistance(
       latitude, longitude, 
       location.coordinates[0], 
@@ -92,7 +91,7 @@ export function estimateBortleScaleByLocation(
     const lowercaseName = locationName.toLowerCase();
     
     // First check for specific location names that are in our database
-    for (const location of locationDatabase) {
+    for (const location of quickLocationDatabase) {
       if (lowercaseName.includes(location.name.toLowerCase())) {
         return location.bortleScale;
       }
