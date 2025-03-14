@@ -1,8 +1,19 @@
 
 import { QueryClient } from '@tanstack/react-query';
 import { fetchWeatherData, fetchLightPollutionData, fetchForecastData } from './api';
-import { generateCacheKeys } from './cache/cacheKeyGenerator';
-import { prefetchCommonData } from './cache/prefetchUtils';
+
+// Cache keys generator to ensure consistency
+const generateCacheKeys = (latitude: number, longitude: number) => {
+  const latKey = latitude.toFixed(4);
+  const lngKey = longitude.toFixed(4);
+  
+  return {
+    weatherKey: ['weather', latKey, lngKey],
+    lightPollutionKey: ['lightPollution', latKey, lngKey],
+    forecastKey: ['forecast', latKey, lngKey],
+    siqsDetailsKey: ['siqsDetails', latKey, lngKey]
+  };
+};
 
 /**
  * Pre-fetches common location data to improve page transition speed
@@ -56,6 +67,7 @@ export const prefetchLocationData = async (
 
 /**
  * Pre-fetches data specifically for SIQS detail view
+ * Called on hover or when a user is likely to view SIQS details
  */
 export const prefetchSIQSDetails = (
   queryClient: QueryClient,
@@ -86,12 +98,13 @@ export const prefetchSIQSDetails = (
 };
 
 /**
- * Pre-fetches data for popular locations
+ * Pre-fetches data for popular locations to make subsequent
+ * navigation to these locations faster
  */
 export const prefetchPopularLocations = (queryClient: QueryClient) => {
   // Beijing coordinates - commonly accessed location
-  prefetchCommonData(queryClient, 39.9042, 116.4074);
+  prefetchLocationData(queryClient, 39.9042, 116.4074);
   
   // Add Guangzhou as a popular location for faster access
-  prefetchCommonData(queryClient, 23.1291, 113.2644);
+  prefetchLocationData(queryClient, 23.1291, 113.2644);
 };

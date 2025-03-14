@@ -61,7 +61,6 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     handleRefreshForecast,
     handleRefreshLongRangeForecast,
     setLoading,
-    setForecastData,
-    updateLightPollutionData
+    setForecastData
   };
 };

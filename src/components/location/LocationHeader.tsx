@@ -26,11 +26,6 @@ const LocationHeader = ({
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  const handleGoBack = (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate("/");
-  };
-
   const handleRefresh = () => {
     if (onRefresh) {
       onRefresh();
@@ -47,7 +42,7 @@ const LocationHeader = ({
     <div className="mb-8">
       <Button 
         variant="ghost" 
-        onClick={handleGoBack}
+        onClick={() => navigate(-1)}
         className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
