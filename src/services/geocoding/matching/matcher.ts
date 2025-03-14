@@ -1,5 +1,7 @@
+
 import { Location } from '../types';
 import { getMatchScore } from './scoreCalculator';
+import { containsChineseCharacters } from './pinyinUtils';
 
 /**
  * Find the best matching locations based on search query
@@ -11,8 +13,6 @@ import { getMatchScore } from './scoreCalculator';
 export function findBestMatches(locations: Location[], query: string, language: string = 'en'): Location[] {
   if (!locations || locations.length === 0) return [];
   
-  // Import here to avoid circular dependencies
-  import { containsChineseCharacters } from './pinyinUtils';
   const hasChineseQuery = containsChineseCharacters(query);
   
   // Calculate match scores for all locations
