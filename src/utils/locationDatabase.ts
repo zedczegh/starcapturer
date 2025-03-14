@@ -27,6 +27,18 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Jiangning District", coordinates: [31.9523, 118.8399], bortleScale: 6.6, radius: 15, type: 'suburban' },
   { name: "Chang'an District", coordinates: [33.9449, 108.9071], bortleScale: 6.2, radius: 15, type: 'suburban' },
   
+  // Key mountain regions in China for quick access
+  { name: "Huangshan Mountains", coordinates: [30.1300, 118.1650], bortleScale: 3.5, radius: 25, type: 'natural' },
+  { name: "Tianshan Mountains", coordinates: [43.0000, 84.5000], bortleScale: 2.0, radius: 60, type: 'natural' },
+  { name: "Qinling Mountains", coordinates: [33.9500, 108.8833], bortleScale: 3.0, radius: 40, type: 'natural' },
+  { name: "Tibetan Plateau", coordinates: [31.6927, 88.7083], bortleScale: 2.0, radius: 60, type: 'natural' },
+  { name: "Hengduan Mountains", coordinates: [29.2000, 100.3000], bortleScale: 2.2, radius: 45, type: 'natural' },
+  { name: "Himalayan Range (China)", coordinates: [28.5000, 86.0000], bortleScale: 1.2, radius: 80, type: 'natural' },
+  { name: "Greater Khingan Range", coordinates: [50.0000, 123.0000], bortleScale: 2.5, radius: 70, type: 'natural' },
+  { name: "Mount Tai", coordinates: [36.2500, 117.1000], bortleScale: 4.5, radius: 15, type: 'natural' },
+  { name: "Zhangjiajie National Forest Park", coordinates: [29.3167, 110.4833], bortleScale: 3.8, radius: 20, type: 'natural' },
+  { name: "Jiuzhaigou Valley", coordinates: [33.2600, 103.9167], bortleScale: 3.0, radius: 25, type: 'natural' },
+  
   // Smaller Chinese cities and towns
   { name: "Suzhou", coordinates: [31.2983, 120.5832], bortleScale: 7, type: 'urban', radius: 25 },
   { name: "Dongguan", coordinates: [23.0207, 113.7518], bortleScale: 7, type: 'urban', radius: 25 },
@@ -71,7 +83,7 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Taklamakan Desert", coordinates: [38.8600, 83.5000], bortleScale: 1, type: 'natural', radius: 100 },
 ];
 
-// Update spatial index to include suburban areas in China
+// Update spatial index to include mountain regions in China
 export const spatialIndex = {
   northChina: quickLocationDatabase.filter(loc => 
     (loc.coordinates[0] > 30 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130) && 
@@ -84,10 +96,24 @@ export const spatialIndex = {
   centralAsia: quickLocationDatabase.filter(loc => 
     (loc.coordinates[0] > 30 && loc.coordinates[1] > 60 && loc.coordinates[1] < 95)
   ),
+  mountainRegions: quickLocationDatabase.filter(loc => 
+    loc.type === 'natural' && 
+    (loc.name.toLowerCase().includes('mountain') || 
+     loc.name.toLowerCase().includes('mountains') ||
+     loc.name.toLowerCase().includes('plateau') ||
+     loc.name.toLowerCase().includes('range'))
+  ),
+  naturalSites: quickLocationDatabase.filter(loc => 
+    loc.type === 'natural' && 
+    !(loc.name.toLowerCase().includes('mountain') || 
+      loc.name.toLowerCase().includes('mountains') ||
+      loc.name.toLowerCase().includes('plateau') ||
+      loc.name.toLowerCase().includes('range'))
+  ),
   northAmerica: quickLocationDatabase.filter(loc => loc.coordinates[1] < -50),
   europe: quickLocationDatabase.filter(loc => loc.coordinates[0] > 30 && loc.coordinates[1] > -20 && loc.coordinates[1] < 40),
   australasia: quickLocationDatabase.filter(loc => loc.coordinates[0] < 0 && loc.coordinates[1] > 100),
-  naturalSites: quickLocationDatabase.filter(loc => loc.type === 'natural' || loc.type === 'dark-site'),
+  darkSites: quickLocationDatabase.filter(loc => loc.type === 'dark-site'),
   other: quickLocationDatabase.filter(loc => 
     !((loc.coordinates[0] > 30 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130) || 
       (loc.coordinates[0] <= 30 && loc.coordinates[0] > 0 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130) ||

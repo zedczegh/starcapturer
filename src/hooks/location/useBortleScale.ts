@@ -3,6 +3,7 @@ import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionD
 
 /**
  * Estimate Bortle scale based on location name without coordinates
+ * Enhanced with mountain region awareness
  * @param locationName Name of the location
  * @returns Estimated Bortle scale
  */
@@ -11,7 +12,26 @@ export const estimateBortleScale = (locationName: string): number => {
   
   const lowercaseName = locationName.toLowerCase();
   
-  // Check for urban keywords
+  // Check for mountain keywords - darker skies
+  if (
+    lowercaseName.includes('mountain') || 
+    lowercaseName.includes('mountains') || 
+    lowercaseName.includes('peak') ||
+    lowercaseName.includes('summit') ||
+    lowercaseName.includes('ridge') ||
+    lowercaseName.includes('highland') ||
+    lowercaseName.includes('hill') ||
+    lowercaseName.includes('plateau') ||
+    lowercaseName.includes('山') ||
+    lowercaseName.includes('峰') ||
+    lowercaseName.includes('岭') ||
+    lowercaseName.includes('高原')
+  ) {
+    // Mountain regions tend to have darker skies
+    return 3;
+  }
+  
+  // Check for urban keywords - brighter skies
   if (
     lowercaseName.includes('city') || 
     lowercaseName.includes('downtown') || 
@@ -22,7 +42,7 @@ export const estimateBortleScale = (locationName: string): number => {
     return 7;
   }
   
-  // Check for suburban/town keywords
+  // Check for suburban/town keywords - moderately bright skies
   if (
     lowercaseName.includes('town') || 
     lowercaseName.includes('village') || 
@@ -34,18 +54,16 @@ export const estimateBortleScale = (locationName: string): number => {
     return 5;
   }
   
-  // Check for rural/dark site keywords
+  // Check for rural/dark site keywords - darker skies
   if (
     lowercaseName.includes('forest') || 
     lowercaseName.includes('park') || 
     lowercaseName.includes('reserve') ||
-    lowercaseName.includes('mountain') ||
     lowercaseName.includes('wilderness') ||
     lowercaseName.includes('national') ||
     lowercaseName.includes('desert') ||
     lowercaseName.includes('森林') ||
     lowercaseName.includes('公园') ||
-    lowercaseName.includes('山') ||
     lowercaseName.includes('沙漠')
   ) {
     return 3;
@@ -57,6 +75,7 @@ export const estimateBortleScale = (locationName: string): number => {
 
 /**
  * Get Bortle scale for a location based on coordinates and name
+ * Enhanced with mountain region sensitivity
  * @param latitude Latitude of the location
  * @param longitude Longitude of the location
  * @param locationName Optional location name for fallback estimation
@@ -72,6 +91,55 @@ export const getBortleScaleForLocation = async (
   try {
     // First try to find the closest known city
     const closestCity = findClosestCity(latitude, longitude);
+    
+    // Special case for mountainous regions in China
+    if (
+      // China's general bounds
+      longitude > 73 && longitude < 135 && latitude > 18 && latitude < 54 &&
+      locationName && 
+      (
+        locationName.toLowerCase().includes('mountain') ||
+        locationName.toLowerCase().includes('山') ||
+        locationName.toLowerCase().includes('高原') ||
+        locationName.toLowerCase().includes('plateau') ||
+        locationName.toLowerCase().includes('peak') ||
+        locationName.toLowerCase().includes('峰')
+      )
+    ) {
+      // Import mountain data
+      const { chinaMountainLocations } = await import('@/data/regions/chinaMountainLocations');
+      const { calculateDistance } = await import('@/data/utils/distanceCalculator');
+      
+      // Find closest mountain
+      let closestMountain = null;
+      let shortestDistance = Infinity;
+      
+      for (const mountain of chinaMountainLocations) {
+        const distance = calculateDistance(
+          latitude, 
+          longitude, 
+          mountain.coordinates[0], 
+          mountain.coordinates[1]
+        );
+        
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          closestMountain = mountain;
+        }
+      }
+      
+      // If we found a close mountain, use its data
+      if (closestMountain && shortestDistance < 50) {
+        const bortleValue = closestMountain.bortleScale;
+        
+        // Cache the result if caching function provided
+        if (setCachedData) {
+          setCachedData(`bortleScale-${latitude.toFixed(2)}-${longitude.toFixed(2)}`, bortleValue);
+        }
+        
+        return bortleValue;
+      }
+    }
     
     if (closestCity.distance < 50) {
       // If we're close to a known city, use its Bortle scale
@@ -109,8 +177,9 @@ export const getBortleScaleForLocation = async (
 
 /**
  * Hook to get the Bortle scale for a location
+ * Enhanced with mountain region detection and improved accuracy
  */
-export const useBortleScale = (latitude?: number, longitude?: number) => {
+export const useBortleScale = (latitude?: number, longitude?: number, locationName?: string) => {
   const [bortleScale, setBortleScale] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -124,26 +193,82 @@ export const useBortleScale = (latitude?: number, longitude?: number) => {
     setLoading(true);
     setError(null);
     
-    try {
-      // First try to find the closest known city
-      const closestCity = findClosestCity(latitude, longitude);
-      
-      if (closestCity.distance < 50) {
-        // If we're close to a known city, use its Bortle scale
-        setBortleScale(closestCity.bortleScale);
-      } else {
-        // Otherwise use interpolation for more accurate estimate
-        const interpolatedScale = interpolateBortleScale(latitude, longitude);
-        setBortleScale(interpolatedScale);
+    const getBortleScale = async () => {
+      try {
+        // Check if we have a mountain location name
+        const isMountainous = locationName && (
+          locationName.toLowerCase().includes('mountain') ||
+          locationName.toLowerCase().includes('山') ||
+          locationName.toLowerCase().includes('peak') ||
+          locationName.toLowerCase().includes('峰') ||
+          locationName.toLowerCase().includes('plateau') ||
+          locationName.toLowerCase().includes('高原')
+        );
+        
+        if (isMountainous) {
+          // Use specialized mountain database
+          try {
+            const { chinaMountainLocations } = await import('@/data/regions/chinaMountainLocations');
+            const { calculateDistance } = await import('@/data/utils/distanceCalculator');
+            
+            // Find closest mountain
+            let closestMountain = null;
+            let shortestDistance = Infinity;
+            
+            for (const mountain of chinaMountainLocations) {
+              const distance = calculateDistance(
+                latitude, 
+                longitude, 
+                mountain.coordinates[0], 
+                mountain.coordinates[1]
+              );
+              
+              if (distance < shortestDistance) {
+                shortestDistance = distance;
+                closestMountain = mountain;
+              }
+            }
+            
+            // If we found a close mountain, use its data
+            if (closestMountain && shortestDistance < 50) {
+              setBortleScale(closestMountain.bortleScale);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.warn("Error using mountain database:", err);
+            // Continue with standard lookup
+          }
+        }
+        
+        // First try to find the closest known city
+        const closestCity = findClosestCity(latitude, longitude);
+        
+        if (closestCity.distance < 50) {
+          // If we're close to a known city, use its Bortle scale
+          setBortleScale(closestCity.bortleScale);
+        } else {
+          // Otherwise use interpolation for more accurate estimate
+          const interpolatedScale = interpolateBortleScale(latitude, longitude);
+          setBortleScale(interpolatedScale);
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error("Error determining Bortle scale:", err);
+        setError(err instanceof Error ? err : new Error("Failed to determine Bortle scale"));
+        
+        // Fall back to name-based estimation if we have a name
+        if (locationName) {
+          setBortleScale(estimateBortleScale(locationName));
+        }
+        
+        setLoading(false);
       }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error("Error determining Bortle scale:", err);
-      setError(err instanceof Error ? err : new Error("Failed to determine Bortle scale"));
-      setLoading(false);
-    }
-  }, [latitude, longitude]);
+    };
+    
+    getBortleScale();
+  }, [latitude, longitude, locationName]);
   
   return { bortleScale, loading, error };
 };
