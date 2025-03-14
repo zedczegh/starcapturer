@@ -1,6 +1,8 @@
+
 // Import required functions and constants from matchingUtils
 import { containsChineseCharacters, findBestMatches } from './matchingUtils';
 import { Location, Language } from './types';
+import { locationDatabase } from '@/data/locationDatabase';
 
 // Chinese city names and their alternatives for better searching
 export const chineseCityAlternatives: Record<string, {
@@ -24,6 +26,13 @@ export const chineseCityAlternatives: Record<string, {
     coordinates: [31.2304, 121.4737],
     placeDetails: "Major city in China"
   },
+  "xuhui": {
+    name: "Xuhui District, Shanghai, China",
+    chinese: "徐汇区，上海",
+    alternatives: ["xu hui", "徐汇", "徐汇区", "上海徐汇", "徐匯"],
+    coordinates: [31.1889, 121.4361],
+    placeDetails: "District in Shanghai"
+  },
   "guangzhou": {
     name: "Guangzhou, China",
     chinese: "广州",
@@ -37,6 +46,13 @@ export const chineseCityAlternatives: Record<string, {
     alternatives: ["shen zhen", "深圳市", "深圳市区"],
     coordinates: [22.5431, 114.0579],
     placeDetails: "Tech hub in Guangdong Province"
+  },
+  "nanming": {
+    name: "Nanming District, Guiyang, China",
+    chinese: "南明区，贵阳",
+    alternatives: ["nan ming", "南明", "南明区", "贵阳南明", "南明贵阳"],
+    coordinates: [26.5676, 106.7144],
+    placeDetails: "District in Guiyang"
   },
   "chengdu": {
     name: "Chengdu, China",
@@ -134,12 +150,40 @@ export function findMatchingLocations(query: string, limit: number = 5, language
     let match = false;
     
     // Prioritize Chinese character matches for Chinese queries
-    if (hasChineseChars && city.chinese.includes(queryLower)) {
+    if (hasChineseChars && (
+        city.chinese.includes(queryLower) || 
+        queryLower.includes(city.chinese) ||
+        city.alternatives.some(alt => containsChineseCharacters(alt) && (alt.includes(queryLower) || queryLower.includes(alt)))
+      )) {
       match = true;
     } 
-    // For Duyun (都匀) special case, check for exact match
-    else if ((key === 'duyun' && (queryLower === 'duyun' || queryLower === 'du yun' || 
-              queryLower === '都匀' || queryLower.includes('都匀')))) {
+    // For Duyun (都匀) special case, prioritize it highly
+    else if (key === 'duyun' && (
+        queryLower === 'duyun' || 
+        queryLower === 'du yun' || 
+        queryLower.includes('都匀') || 
+        '都匀'.includes(queryLower)
+      )) {
+      match = true;
+    }
+    // For Nanming (南明) special case
+    else if (key === 'nanming' && (
+        queryLower === 'nanming' || 
+        queryLower === 'nan ming' || 
+        queryLower.includes('南明') || 
+        '南明'.includes(queryLower)
+      )) {
+      match = true;
+    }
+    // For Xuhui (徐汇) special case
+    else if (key === 'xuhui' && (
+        queryLower === 'xuhui' || 
+        queryLower === 'xu hui' || 
+        queryLower.includes('徐汇') || 
+        '徐汇'.includes(queryLower) ||
+        queryLower.includes('徐匯') || 
+        '徐匯'.includes(queryLower)
+      )) {
       match = true;
     }
     // Also check alternatives
@@ -165,9 +209,7 @@ export function findMatchingLocations(query: string, limit: number = 5, language
     }
   }
   
-  // Now let's look through the full location database
-  const { locationDatabase } = require('../../../data/locationDatabase');
-  
+  // Get locations from our imported database 
   const dbLocations: Location[] = locationDatabase.map((loc: any) => ({
     name: loc.name,
     placeDetails: loc.type ? `${loc.type} location` : undefined,
@@ -178,7 +220,7 @@ export function findMatchingLocations(query: string, limit: number = 5, language
   // Find matching locations from the database
   const matchingLocations = findBestMatches(dbLocations, query, language);
   
-  // Combine results
+  // Combine results, but prioritize our manual entries (especially for Chinese queries)
   const combinedResults = [...results, ...matchingLocations];
   
   // Prioritize Chinese locations for Chinese language and queries

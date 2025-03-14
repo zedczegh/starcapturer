@@ -65,31 +65,34 @@ export function getMatchScore(location: string, query: string, language: string 
   
   // Language-specific boosting - prioritize matches that align with the current language
   const languageMatch = language === 'zh' && (hasChineseQuery || hasChineseLocation);
-  const languageBoost = languageMatch ? 10 : 0;
+  const languageBoost = languageMatch ? 20 : 0; // Increased boost for Chinese matches
   
   // Perfect match
   if (locationLower === queryLower) return 100 + languageBoost;
   
   // For Chinese queries, give strong preference to locations with Chinese characters
   if (hasChineseQuery && hasChineseLocation) {
-    // Direct Chinese character matching
+    // Direct Chinese character matching - increased scores for better prioritization
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
     
     if (matchPercentage === 1) return 99 + languageBoost; // All characters match
-    if (matchPercentage >= 0.8) return 95 + languageBoost;
-    if (matchPercentage >= 0.6) return 90 + languageBoost;
-    if (matchPercentage >= 0.4) return 85 + languageBoost;
-    if (matchPercentage >= 0.2) return 80 + languageBoost;
+    if (matchPercentage >= 0.8) return 97 + languageBoost; // Increased from 95
+    if (matchPercentage >= 0.6) return 95 + languageBoost; // Increased from 90
+    if (matchPercentage >= 0.4) return 93 + languageBoost; // Increased from 85
+    if (matchPercentage >= 0.2) return 90 + languageBoost; // Increased from 80
+    
+    // Even a single character match gets a good score for Chinese
+    if (matchPercentage > 0) return 85 + languageBoost;
   }
   
   // Strong boost for Chinese character matches when in Chinese language mode
   if (language === 'zh' && hasChineseQuery) {
     // If query has Chinese but location doesn't, this is likely a poor match
-    if (!hasChineseLocation) return 20; // Low score for non-Chinese locations
+    if (!hasChineseLocation) return 10; // Very low score for non-Chinese locations
   }
   
-  // Prefix match gets high priority (e.g. "cali" matching "california")
+  // Prefix match still gets high priority for non-Chinese queries
   if (locationLower.startsWith(queryLower)) return 98 + languageBoost;
 
   // Split the query and location into words for better matching
@@ -185,8 +188,9 @@ export function getMatchScore(location: string, query: string, language: string 
   if (queryLower.length >= 1 && hasChineseQuery) { 
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
-    if (matchPercentage > 0.5) return 50 + languageBoost;
-    if (matchPercentage > 0.3) return 40 + languageBoost;
+    if (matchPercentage > 0.5) return 70 + languageBoost; // Increased from 50
+    if (matchPercentage > 0.3) return 60 + languageBoost; // Increased from 40
+    if (matchPercentage > 0) return 50 + languageBoost;   // Handle any match
   } else if (queryLower.length >= 1) { 
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
@@ -220,11 +224,11 @@ export function findBestMatches(locations: Location[], query: string, language: 
   // Apply language-specific filtering
   let filteredLocations = scoredLocations;
   
-  // In Chinese mode with Chinese query, heavily filter non-Chinese results
+  // In Chinese mode with Chinese query, heavily prioritize Chinese results
   if (language === 'zh' && hasChineseQuery) {
     // First try to find locations with Chinese characters
     const chineseLocations = filteredLocations.filter(
-      item => containsChineseCharacters(item.location.name) && item.score >= 30
+      item => containsChineseCharacters(item.location.name) && item.score >= 50
     );
     
     // If we have good Chinese matches, use only those
@@ -232,7 +236,7 @@ export function findBestMatches(locations: Location[], query: string, language: 
       filteredLocations = chineseLocations;
     } else {
       // Otherwise, just filter very low scores
-      filteredLocations = filteredLocations.filter(item => item.score >= 30);
+      filteredLocations = filteredLocations.filter(item => item.score >= 40);
     }
   } else {
     // For other languages, use a lower threshold
@@ -279,6 +283,40 @@ export function soundex(s: string): string {
 export function checkAlternativeSpellings(query: string): Location[] {
   const results: Location[] = [];
   const queryLower = query.toLowerCase().trim();
+  
+  // Special case handling for specific Chinese locations
+  if (queryLower.includes('徐汇') || queryLower.includes('xu hui') || queryLower === 'xuhui') {
+    const city = chineseCityAlternatives['xuhui'];
+    results.push({ 
+      name: city.name, 
+      placeDetails: city.placeDetails, 
+      latitude: city.coordinates[0], 
+      longitude: city.coordinates[1] 
+    });
+    return results; // Return immediately for this special case
+  }
+  
+  if (queryLower.includes('南明') || queryLower.includes('nan ming') || queryLower === 'nanming') {
+    const city = chineseCityAlternatives['nanming'];
+    results.push({ 
+      name: city.name, 
+      placeDetails: city.placeDetails, 
+      latitude: city.coordinates[0], 
+      longitude: city.coordinates[1] 
+    });
+    return results; // Return immediately for this special case
+  }
+  
+  if (queryLower.includes('都匀') || queryLower.includes('du yun') || queryLower === 'duyun') {
+    const city = chineseCityAlternatives['duyun'];
+    results.push({ 
+      name: city.name, 
+      placeDetails: city.placeDetails, 
+      latitude: city.coordinates[0], 
+      longitude: city.coordinates[1] 
+    });
+    return results; // Return immediately for this special case
+  }
   
   // Generate variations for the whole query
   const queryVariations = generatePinyinVariations(queryLower);

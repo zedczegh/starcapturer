@@ -1,6 +1,7 @@
 
 import { Location, Language } from './types';
 import { findBestMatches, containsChineseCharacters, checkAlternativeSpellings } from './matchingUtils';
+import { findMatchingLocations } from './locationDatabase';
 
 /**
  * Search for locations matching the given query
@@ -21,18 +22,29 @@ export async function searchLocations(
     const lowercaseQuery = query.toLowerCase().trim();
     const hasChineseChars = containsChineseCharacters(lowercaseQuery);
     
-    // For Chinese queries, first try to check our internal database
-    // as it's better optimized for Chinese place names
+    // Immediately check for specific Chinese locations
     if (hasChineseChars || language === 'zh') {
+      // Special Chinese location checks with higher priority
+      if (lowercaseQuery.includes('徐汇') || lowercaseQuery === 'xuhui' || lowercaseQuery === 'xu hui') {
+        return checkAlternativeSpellings('徐汇');
+      }
+      
+      if (lowercaseQuery.includes('南明') || lowercaseQuery === 'nanming' || lowercaseQuery === 'nan ming') {
+        return checkAlternativeSpellings('南明');
+      }
+      
+      if (lowercaseQuery.includes('都匀') || lowercaseQuery === 'duyun' || lowercaseQuery === 'du yun') {
+        return checkAlternativeSpellings('都匀');
+      }
+      
+      // Check for other alternative spellings
       const alternativeResults = checkAlternativeSpellings(lowercaseQuery);
       
       if (alternativeResults.length > 0) {
         return alternativeResults;
       }
       
-      // If we didn't find a match in our internal database,
-      // also check the database for fallback options
-      const { findMatchingLocations } = await import('./locationDatabase');
+      // Check the internal database for Chinese locations
       const internalResults = findMatchingLocations(lowercaseQuery, 5, language);
       
       if (internalResults.length > 0) {
@@ -82,12 +94,35 @@ export async function searchLocations(
     }));
     
     // Find the best matches for the query, considering the language
-    return findBestMatches(locations, query, language);
+    const bestMatches = findBestMatches(locations, query, language);
+    
+    // If searching in Chinese or with Chinese characters, try to combine with our internal database results
+    if (hasChineseChars || language === 'zh') {
+      const internalResults = findMatchingLocations(lowercaseQuery, 3, language);
+      
+      // Combine and sort by relevance
+      const combined = [...internalResults, ...bestMatches];
+      
+      // Remove duplicates (basic deduplication by coordinates)
+      const uniqueResults: Location[] = [];
+      const seenCoords = new Set<string>();
+      
+      for (const loc of combined) {
+        const coordKey = `${loc.latitude.toFixed(3)},${loc.longitude.toFixed(3)}`;
+        if (!seenCoords.has(coordKey)) {
+          uniqueResults.push(loc);
+          seenCoords.add(coordKey);
+        }
+      }
+      
+      return uniqueResults;
+    }
+    
+    return bestMatches;
   } catch (error) {
     console.error("Error searching for locations:", error);
     
-    // Return a limited fallback based on the query matching from our database
-    const { findMatchingLocations } = await import('./locationDatabase');
+    // Return a fallback based on internal database
     return findMatchingLocations(query, 5, language);
   }
 }
