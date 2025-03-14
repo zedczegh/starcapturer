@@ -10,6 +10,7 @@ export interface CachedLocationData {
   bortleScale?: number;
   nameInEnglish?: string;
   nameInChinese?: string;
+  timestamp?: number; // Add timestamp for cache freshness
 }
 
 export interface LocationCacheService {
@@ -63,7 +64,8 @@ export async function getLocationNameForCoordinates(
         // Cache both language versions
         const cacheData: CachedLocationData = {
           name: locationName,
-          formattedName: locationName
+          formattedName: locationName,
+          timestamp: Date.now()
         };
         
         if (language === 'en') {
@@ -93,7 +95,8 @@ export async function getLocationNameForCoordinates(
         name: locationName,
         nameInEnglish: locationName,
         nameInChinese: locationName, // Ideally this would be translated
-        bortleScale: closestLocation.bortleScale
+        bortleScale: closestLocation.bortleScale,
+        timestamp: Date.now()
       });
       return locationName;
     }
@@ -107,7 +110,8 @@ export async function getLocationNameForCoordinates(
         name: distanceText,
         nameInEnglish: englishText,
         nameInChinese: chineseText,
-        bortleScale: closestLocation.bortleScale
+        bortleScale: closestLocation.bortleScale,
+        timestamp: Date.now()
       });
       return distanceText;
     }
@@ -121,7 +125,8 @@ export async function getLocationNameForCoordinates(
       name: formattedName,
       nameInEnglish: englishName,
       nameInChinese: chineseName,
-      bortleScale: 4
+      bortleScale: 4,
+      timestamp: Date.now()
     });
     return formattedName;
   } catch (error) {

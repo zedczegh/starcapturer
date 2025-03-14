@@ -1,5 +1,5 @@
 
-import React, { memo, lazy, Suspense } from "react";
+import React, { memo, lazy, Suspense, useEffect } from "react";
 import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
@@ -32,6 +32,12 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshForecast,
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
+
+  // Log updates for debugging
+  useEffect(() => {
+    console.debug("LocationDetailsContent updated with location:", 
+      locationData?.name, locationData?.latitude, locationData?.longitude);
+  }, [locationData?.name, locationData?.latitude, locationData?.longitude]);
 
   return (
     <>

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -27,15 +27,26 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   const { toast } = useToast();
   const { setCachedData, getCachedData } = useLocationDataCache();
   const [isMounted, setIsMounted] = useState(false);
+  const [lastTranslationRequest, setLastTranslationRequest] = useState<string | null>(null);
 
   // Avoid unnecessary effect runs on initial mount
   useEffect(() => {
     setIsMounted(true);
+    return () => setIsMounted(false);
   }, []);
+
+  // Create a debounced translation request key
+  const translationRequestKey = useMemo(() => {
+    if (!currentLocation) return null;
+    return `${currentLocation.latitude}-${currentLocation.longitude}-${language}`;
+  }, [currentLocation, language]);
 
   // Update location name when language changes, only for non-special locations
   useEffect(() => {
-    if (!isMounted || !currentLocation) return;
+    if (!isMounted || !currentLocation || !translationRequestKey) return;
+    
+    // Skip if we've already processed this exact request
+    if (translationRequestKey === lastTranslationRequest) return;
     
     // Skip special locations like Beijing
     if (currentLocation.name === "北京" || currentLocation.name === "Beijing") return;
@@ -57,13 +68,16 @@ const LocationControls: React.FC<LocationControlsProps> = ({
             longitude: currentLocation.longitude
           });
         }
+        
+        // Update the last translation request to prevent duplicates
+        setLastTranslationRequest(translationRequestKey);
       } catch (error) {
         console.error("Error updating location name on language change:", error);
       }
     };
     
     updateLocationNameOnLanguageChange();
-  }, [language, currentLocation, onLocationUpdate, setCachedData, getCachedData, isMounted]);
+  }, [translationRequestKey, currentLocation, onLocationUpdate, setCachedData, getCachedData, isMounted, language, lastTranslationRequest]);
 
   // Memoize the location search handler
   const handleLocationSearch = useCallback((selectedLocation: { 
@@ -81,6 +95,9 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude
       });
+      
+      // Reset last translation request when manually selecting a location
+      setLastTranslationRequest(null);
       
       setStatusMessage(t(`Now viewing ${locationName}`, `现在查看 ${locationName}`));
     } catch (error) {
@@ -130,6 +147,9 @@ const LocationControls: React.FC<LocationControlsProps> = ({
             longitude
           });
           
+          // Reset last translation request when getting current location
+          setLastTranslationRequest(`${latitude}-${longitude}-${language}`);
+          
           setStatusMessage(t("Using your current location.", "使用您的当前位置。"));
           
           setTimeout(() => setStatusMessage(null), 3000);
@@ -164,19 +184,24 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     );
   }, [t, setStatusMessage, setGettingUserLocation, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData]);
 
+  // Performance optimization - only re-render the button when necessary
+  const locateButton = useMemo(() => (
+    <Button 
+      variant="outline" 
+      className="w-full mb-4 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
+      onClick={handleGetCurrentLocation}
+      disabled={gettingUserLocation}
+    >
+      <Locate className="h-4 w-4" />
+      {gettingUserLocation 
+        ? t("Retrieving location data...", "获取位置数据中...") 
+        : t("Use my current location", "使用我的当前位置")}
+    </Button>
+  ), [gettingUserLocation, handleGetCurrentLocation, t]);
+
   return (
     <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30 relative z-10">
-      <Button 
-        variant="outline" 
-        className="w-full mb-4 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
-        onClick={handleGetCurrentLocation}
-        disabled={gettingUserLocation}
-      >
-        <Locate className="h-4 w-4" />
-        {gettingUserLocation 
-          ? t("Retrieving location data...", "获取位置数据中...") 
-          : t("Use my current location", "使用我的当前位置")}
-      </Button>
+      {locateButton}
       <div className="relative z-30">
         <MapSelector onSelectLocation={handleLocationSearch} />
       </div>

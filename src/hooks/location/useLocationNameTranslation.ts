@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 import type { Language } from "@/services/geocoding/types";
@@ -18,6 +18,11 @@ export const useLocationNameTranslation = ({
   getCachedData
 }: UseLocationNameTranslationProps) => {
   const { language } = useLanguage();
+  const lastTranslationRef = useRef<{
+    language: string;
+    coords: string;
+    name: string;
+  } | null>(null);
   
   // Memoize the update function to prevent recreation on each render
   const updateLocationNameForLanguage = useCallback(async () => {
@@ -25,6 +30,16 @@ export const useLocationNameTranslation = ({
     
     // Skip translation for explicitly named locations like Beijing
     if (locationData.name === "北京" || locationData.name === "Beijing") return;
+    
+    const coordsKey = `${locationData.latitude.toFixed(4)}-${locationData.longitude.toFixed(4)}`;
+    
+    // Skip if we already translated for this language and coordinates recently
+    if (lastTranslationRef.current && 
+        lastTranslationRef.current.language === language &&
+        lastTranslationRef.current.coords === coordsKey &&
+        lastTranslationRef.current.name === locationData.name) {
+      return;
+    }
     
     try {
       const newName = await getLocationNameForCoordinates(
@@ -45,10 +60,21 @@ export const useLocationNameTranslation = ({
         
         // Also update the cache with the new name
         const cacheKey = `loc-${locationData.latitude.toFixed(4)}-${locationData.longitude.toFixed(4)}`;
+        const existingData = getCachedData(cacheKey) || {};
+        
         setCachedData(cacheKey, { 
-          ...getCachedData(cacheKey),
-          name: newName 
+          ...existingData,
+          name: newName,
+          ...(language === 'en' ? { nameInEnglish: newName } : { nameInChinese: newName }),
+          timestamp: Date.now()
         });
+        
+        // Update our reference to prevent duplicate work
+        lastTranslationRef.current = {
+          language,
+          coords: coordsKey,
+          name: newName
+        };
       }
     } catch (error) {
       console.error("Error updating location name for language change:", error);

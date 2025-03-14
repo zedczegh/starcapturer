@@ -24,6 +24,13 @@ import { isImagingImpossible, siqsToColor } from './siqs/utils';
 export type { SIQSFactors, SIQSResult } from './siqs/types';
 export { siqsToColor } from './siqs/utils';
 
+// Define a type for individual factor data
+type FactorData = {
+  name: string;
+  score: number;
+  description: string;
+};
+
 /**
  * Calculate the Stellar Imaging Quality Score based on various factors
  * @param factors Environmental and geographical factors
@@ -109,7 +116,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   const isViable = finalScore >= 4.0;
   
   // Create factors array for the result
-  const factorsList = [
+  const factorsList: FactorData[] = [
     {
       name: "Cloud Cover",
       score: cloudScore,
