@@ -1,4 +1,3 @@
-
 import { locationDatabase } from "@/utils/locationUtils";
 import { Location } from "@/components/MapSelector";
 
@@ -127,35 +126,29 @@ function getMatchScore(location: string, query: string): number {
   const locationLower = location.toLowerCase();
   const queryLower = query.toLowerCase();
   
-  // Exact match gives highest score
   if (locationLower === queryLower) return 100;
   
-  // Starting with the query is very good
   if (locationLower.startsWith(queryLower)) return 90;
   
-  // Word boundary match is good (e.g. "New York" matches "York")
   const words = locationLower.split(/\s+/);
   for (const word of words) {
     if (word === queryLower) return 80;
     if (word.startsWith(queryLower)) return 70;
   }
   
-  // Contains the query is decent
   if (locationLower.includes(queryLower)) return 60;
   
-  // Partial match for each word
   for (const word of words) {
     if (word.includes(queryLower)) return 40;
   }
   
-  // Fuzzy match (if the query is at least 3 chars and more than 60% of the chars match)
   if (queryLower.length >= 3) {
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
     if (matchPercentage > 0.6) return 30;
   }
   
-  return 0; // No match
+  return 0;
 }
 
 // Soundex implementation for phonetic matching (useful for names that sound similar)
@@ -192,14 +185,11 @@ function checkAlternativeSpellings(query: string): Location[] {
   const results: Location[] = [];
   const queryLower = query.toLowerCase().trim();
   
-  // Check each city's alternatives
   for (const [key, city] of Object.entries(chineseCityAlternatives)) {
-    // Check if query matches any alternative spelling
     const matchesAlternative = city.alternatives.some(alt => 
       alt.includes(queryLower) || queryLower.includes(alt)
     );
     
-    // Also check if it's close to the city name or Chinese name
     const matchesName = key.includes(queryLower) || queryLower.includes(key);
     const matchesChinese = city.chinese.includes(queryLower) || queryLower.includes(city.chinese);
     
@@ -218,6 +208,7 @@ function checkAlternativeSpellings(query: string): Location[] {
 
 /**
  * Search for locations based on a query string
+ * Enhanced to find any location worldwide using multiple data sources
  */
 export async function searchLocations(query: string): Promise<Location[]> {
   if (!query || query.trim().length < 2) {
@@ -227,16 +218,14 @@ export async function searchLocations(query: string): Promise<Location[]> {
   const lowercaseQuery = query.toLowerCase().trim();
   const allResults: Array<Location & { score: number }> = [];
   
-  // Check for alternative spellings and transliterations of Chinese cities
   const alternativeMatches = checkAlternativeSpellings(lowercaseQuery);
   alternativeMatches.forEach(match => {
     allResults.push({
       ...match,
-      score: 95 // Very high score for alternative spelling matches
+      score: 95
     });
   });
   
-  // First search our database of locations
   locationDatabase.forEach(location => {
     const score = getMatchScore(location.name, lowercaseQuery);
     if (score > 0) {
@@ -250,16 +239,13 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }
   });
   
-  // Also search common locations
   const allLocations = [...commonLocations, ...internationalLocations];
   allLocations.forEach(location => {
-    // Check both name and placeDetails for matches
     const nameScore = getMatchScore(location.name, lowercaseQuery);
     const detailScore = location.placeDetails ? getMatchScore(location.placeDetails, lowercaseQuery) : 0;
     const score = Math.max(nameScore, detailScore);
     
     if (score > 0) {
-      // Only add if not already in results with same name
       if (!allResults.some(r => r.name === location.name)) {
         allResults.push({
           ...location,
@@ -269,8 +255,6 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }
   });
   
-  // Special case for English/Chinese location matching
-  // If few results and query might be in Chinese or English, try some direct mappings
   if (allResults.length < 3) {
     const chineseToEnglish: Record<string, string> = {
       '北京': 'Beijing',
@@ -306,7 +290,6 @@ export async function searchLocations(query: string): Promise<Location[]> {
       'chongqing': '重庆'
     };
     
-    // Check if query is a Chinese name we know
     Object.entries(chineseToEnglish).forEach(([chinese, english]) => {
       if (chinese.includes(lowercaseQuery) || lowercaseQuery.includes(chinese)) {
         const matchedLocation = allLocations.find(l => 
@@ -322,7 +305,6 @@ export async function searchLocations(query: string): Promise<Location[]> {
       }
     });
     
-    // Check if query is an English name with a Chinese equivalent
     Object.entries(englishToChinese).forEach(([english, chinese]) => {
       if (english.includes(lowercaseQuery) || lowercaseQuery.includes(english)) {
         const matchedLocation = allLocations.find(l => 
@@ -338,7 +320,6 @@ export async function searchLocations(query: string): Promise<Location[]> {
       }
     });
     
-    // If the query is similar to "naning" but we know it should be "nanning"
     const querySoundex = soundex(lowercaseQuery);
     allLocations.forEach(location => {
       const locationSoundex = soundex(location.name.toLowerCase());
@@ -351,10 +332,105 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   }
   
-  // If still no results, create a generic suggestion
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=5&addressdetails=1`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'SIQSCalculatorApp'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach((item: any, index: number) => {
+          const name = item.name || item.display_name.split(',')[0];
+          
+          let placeDetails = '';
+          
+          if (item.address) {
+            const addressParts = [];
+            
+            if (item.address.county) addressParts.push(item.address.county);
+            if (item.address.state) addressParts.push(item.address.state);
+            if (item.address.country) addressParts.push(item.address.country);
+            
+            placeDetails = addressParts.join(', ');
+          } else {
+            placeDetails = item.display_name;
+          }
+          
+          if (!allResults.some(r => 
+              r.latitude === parseFloat(item.lat) && 
+              r.longitude === parseFloat(item.lon)
+          )) {
+            allResults.push({
+              name: name,
+              placeDetails: placeDetails,
+              latitude: parseFloat(item.lat),
+              longitude: parseFloat(item.lon),
+              score: 90 - index * 5
+            });
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error querying Nominatim API:', error);
+  }
+  
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=5`;
+    
+    const response = await fetch(url);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (data.features && Array.isArray(data.features)) {
+        data.features.forEach((feature: any, index: number) => {
+          const properties = feature.properties;
+          const geometry = feature.geometry;
+          
+          if (geometry && geometry.coordinates && properties) {
+            const name = properties.name || query;
+            
+            const addressParts = [];
+            if (properties.city && !name.includes(properties.city)) addressParts.push(properties.city);
+            if (properties.county && !name.includes(properties.county)) addressParts.push(properties.county);
+            if (properties.state) addressParts.push(properties.state);
+            if (properties.country) addressParts.push(properties.country);
+            
+            const placeDetails = addressParts.join(', ');
+            
+            const longitude = geometry.coordinates[0];
+            const latitude = geometry.coordinates[1];
+            
+            if (!allResults.some(r => 
+                Math.abs(r.latitude - latitude) < 0.01 && 
+                Math.abs(r.longitude - longitude) < 0.01
+            )) {
+              allResults.push({
+                name: name,
+                placeDetails: placeDetails || `Location: ${name}`,
+                latitude: latitude,
+                longitude: longitude,
+                score: 85 - index * 5
+              });
+            }
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error querying Photon API:', error);
+  }
+  
   if (allResults.length === 0) {
-    // Try to make an intelligent guess about what this might be
-    // Format like "Query, Region" if possible
     allResults.push({
       name: query,
       placeDetails: `Search result for: ${query}`,
@@ -364,7 +440,6 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   }
   
-  // Sort by score (highest first) and return top results
   return allResults
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
@@ -372,3 +447,4 @@ export async function searchLocations(query: string): Promise<Location[]> {
       name, latitude, longitude, placeDetails
     }));
 }
+
