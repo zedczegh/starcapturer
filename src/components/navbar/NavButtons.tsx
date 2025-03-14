@@ -49,13 +49,13 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
       to={to}
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center px-3 py-1 mobile-nav-item",
-        active ? "active text-primary" : "text-foreground/70"
+        "flex flex-col items-center px-3 py-1.5 rounded-lg transition-all duration-300 mobile-nav-item cosmic-glow",
+        active ? "active text-primary" : "text-foreground/70 hover:text-foreground/90"
       )}
     >
       <div className={cn(
-        "icon-container p-1.5 rounded-full transition-all",
-        active ? "bg-primary/20" : "bg-transparent"
+        "icon-container p-1.5 rounded-full transition-all duration-300",
+        active ? "bg-cosmic-100/20 pulse-glow" : "bg-transparent hover:bg-cosmic-100/10"
       )}>
         {icon}
       </div>
