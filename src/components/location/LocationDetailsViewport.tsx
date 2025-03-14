@@ -2,7 +2,6 @@
 import React, { memo } from "react";
 import { motion } from "framer-motion";
 import NavBar from "@/components/NavBar";
-import LocationDetailsHeader from "@/components/location/LocationDetailsHeader";
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import LocationDetailsContent from "@/components/location/LocationDetailsContent";
 
@@ -32,8 +31,6 @@ const LocationDetailsViewport = memo<LocationDetailsViewportProps>(({
     >
       <NavBar />
       <main className="container mx-auto px-4 pt-28 pb-16">
-        <LocationDetailsHeader name={locationData.name} />
-        
         <LocationStatusMessage 
           message={statusMessage}
           type={messageType}

@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
