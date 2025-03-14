@@ -21,7 +21,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const { t } = useLanguage();
   const autoLocationTriggered = useRef(false);
   
-  // Auto-trigger location request once when component mounts
+  // Auto-trigger location request when component mounts if no location exists
   useEffect(() => {
     // Only auto-trigger if we don't have a location yet and haven't triggered before
     if (!locationName && !loading && !autoLocationTriggered.current) {
@@ -29,6 +29,14 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       handleUseCurrentLocation();
     }
   }, [locationName, loading, handleUseCurrentLocation]);
+  
+  // Reset the auto-trigger flag when locationName changes to empty
+  // This allows re-triggering when user clears their location
+  useEffect(() => {
+    if (!locationName) {
+      autoLocationTriggered.current = false;
+    }
+  }, [locationName]);
   
   // Check if locationName is just coordinates or a proper name
   const isCoordinateOnly = locationName && locationName.includes("°");

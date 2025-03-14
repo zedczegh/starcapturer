@@ -53,12 +53,33 @@ const LocationDetails = () => {
     getCachedData
   });
 
-  // Debugging log to track the location data
+  // Make sure we have Bortle scale data
   useEffect(() => {
-    if (locationData) {
-      console.log('Current location data in LocationDetails:', locationData);
-    }
-  }, [locationData]);
+    const updateBortleScale = async () => {
+      if (locationData && !isLoading && 
+          (locationData.bortleScale === null || locationData.bortleScale === undefined)) {
+        
+        try {
+          const { fetchLightPollutionData } = await import("@/lib/api");
+          const pollution = await fetchLightPollutionData(
+            locationData.latitude, 
+            locationData.longitude
+          );
+          
+          if (pollution && typeof pollution.bortleScale === 'number') {
+            setLocationData({
+              ...locationData,
+              bortleScale: pollution.bortleScale
+            });
+          }
+        } catch (error) {
+          console.error("Failed to update Bortle scale:", error);
+        }
+      }
+    };
+    
+    updateBortleScale();
+  }, [locationData, isLoading, setLocationData]);
 
   if (isLoading) {
     return <PageLoader />;
