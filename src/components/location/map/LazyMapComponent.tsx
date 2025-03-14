@@ -15,6 +15,21 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/marker-shadow.png',
 });
 
+// Create custom marker icon
+const createCustomMarker = () => {
+  return L.divIcon({
+    html: `
+      <div class="marker-pin-container">
+        <div class="marker-pin animate-pulse-subtle"></div>
+        <div class="marker-shadow"></div>
+      </div>
+    `,
+    className: 'custom-map-marker',
+    iconSize: [30, 42],
+    iconAnchor: [15, 42]
+  });
+};
+
 // Component to update map view when coordinates change
 const MapUpdater = ({ center }) => {
   const map = useMap();
@@ -72,6 +87,12 @@ const LazyMapComponent = ({
   const [locationName, setLocationName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [markerPosition, setMarkerPosition] = useState(center);
+  const [customIcon, setCustomIcon] = useState(null);
+  
+  // Create custom marker icon on component mount
+  useEffect(() => {
+    setCustomIcon(createCustomMarker());
+  }, []);
   
   // Update marker position when center changes
   useEffect(() => {
@@ -150,7 +171,16 @@ const LazyMapComponent = ({
           subdomains={['a', 'b', 'c']}
         />
         
-        <Marker position={markerPosition} className="animate-pulse-subtle">
+        <Marker 
+          position={markerPosition}
+          icon={customIcon || L.icon({
+            iconUrl: '/marker-icon.png',
+            iconRetinaUrl: '/marker-icon-2x.png',
+            shadowUrl: '/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+          })}
+        >
           {showPopup && (
             <Popup>
               <div className="text-slate-800">

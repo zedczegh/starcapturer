@@ -46,11 +46,10 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
   // Update position when props change
   useEffect(() => {
-    if (isFinite(latitude) && isFinite(longitude) && 
-       (latitude !== position[0] || longitude !== position[1])) {
+    if (isFinite(latitude) && isFinite(longitude)) {
       setPosition([latitude, longitude]);
     }
-  }, [latitude, longitude, position]);
+  }, [latitude, longitude]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);

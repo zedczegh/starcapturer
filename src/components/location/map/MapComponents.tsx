@@ -46,14 +46,29 @@ export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: 
 
 MapEvents.displayName = 'MapEvents';
 
-// CSS injector component to avoid duplicate style tags
+// Create a custom marker with animation effects
+export const createCustomMarker = (): L.DivIcon => {
+  return L.divIcon({
+    className: 'custom-map-marker',
+    html: `
+      <div class="marker-pin-container">
+        <div class="marker-pin animate-pulse-subtle"></div>
+        <div class="marker-shadow"></div>
+      </div>
+    `,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42]
+  });
+};
+
+// CSS injector component to inject map-specific styles
 export const MapStyles = memo(() => {
   useEffect(() => {
     if (!document.getElementById('custom-marker-styles')) {
       const style = document.createElement('style');
       style.id = 'custom-marker-styles';
       style.innerHTML = `
-        .custom-marker-icon {
+        .custom-map-marker {
           background: transparent;
           border: none;
         }
@@ -66,7 +81,7 @@ export const MapStyles = memo(() => {
           width: 24px;
           height: 24px;
           border-radius: 50% 50% 50% 0;
-          background: #9b87f5;
+          background: hsl(var(--primary));
           position: absolute;
           transform: rotate(-45deg);
           left: 50%;
@@ -95,20 +110,6 @@ export const MapStyles = memo(() => {
           transform: rotateX(55deg);
           z-index: -1;
         }
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
-          }
-          70% {
-            box-shadow: 0 0 0 10px rgba(155, 135, 245, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0);
-          }
-        }
-        .animate-bounce {
-          animation: pulse 2s infinite;
-        }
       `;
       document.head.appendChild(style);
     }
@@ -118,18 +119,3 @@ export const MapStyles = memo(() => {
 });
 
 MapStyles.displayName = 'MapStyles';
-
-// Create a custom marker with animation effects
-export const createCustomMarker = (): L.DivIcon => {
-  return L.divIcon({
-    className: 'custom-marker-icon',
-    html: `
-      <div class="marker-pin-container">
-        <div class="marker-pin animate-bounce"></div>
-        <div class="marker-shadow"></div>
-      </div>
-    `,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42]
-  });
-};
