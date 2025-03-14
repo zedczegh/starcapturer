@@ -1,13 +1,14 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useLocationDataCache } from "./location/useLocationCache";
+import useLocationCache from "./location/useLocationCache";
 import { useGeolocation } from "./location/useGeolocation";
 import { getBortleScaleForLocation } from "./location/useBortleScale";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getLocationFromCoordinates, validateCoordinates } from "@/services/locationService";
 
-export { useLocationDataCache } from "./location/useLocationCache";
+// Re-export the location cache hook with a more descriptive name
+export const useLocationDataCache = useLocationCache;
 export { estimateBortleScale } from "./location/useBortleScale";
 
 export const useCurrentLocation = (language: string, noAutoLocationRequest: boolean = false) => {
