@@ -22,12 +22,15 @@ export function useBortleUpdater() {
         return existingBortleScale;
       }
       
-      // Determine if we're in a remote region
+      // Determine if we're in a remote region (Tibet, Xinjiang, etc.)
       const remoteRegion = identifyRemoteRegion(latitude, longitude);
       
-      // For remote regions, force a fresh fetch to ensure accuracy
-      if (remoteRegion && (existingBortleScale === null || existingBortleScale === undefined)) {
+      // For remote regions, always fetch fresh data to ensure accuracy
+      // This is crucial for places like Lhasa where we need up-to-date values
+      if (remoteRegion) {
+        console.log(`Remote region detected: ${locationName}. Fetching fresh Bortle data.`);
         const pollution = await fetchLightPollutionData(latitude, longitude);
+        
         if (pollution && typeof pollution.bortleScale === 'number') {
           return pollution.bortleScale;
         }

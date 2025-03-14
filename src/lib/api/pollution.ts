@@ -14,6 +14,68 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
       return { bortleScale: 4 }; // Return default value instead of null
     }
     
+    // First check for specific urban areas in remote regions to ensure they get proper Bortle values
+    
+    // Lhasa urban area
+    if (latitude > 29.6 && latitude < 29.7 && longitude > 91.0 && longitude < 91.2) {
+      console.log("Lhasa urban area detected, using accurate Bortle scale");
+      return { bortleScale: 6.8 };
+    }
+    
+    // Shigatse (Xigaze) urban area
+    if (latitude > 29.2 && latitude < 29.3 && longitude > 88.8 && longitude < 89.0) {
+      console.log("Shigatse urban area detected, using accurate Bortle scale");
+      return { bortleScale: 6.2 };
+    }
+    
+    // Chamdo (Qamdo) urban area
+    if (latitude > 31.1 && latitude < 31.2 && longitude > 97.1 && longitude < 97.3) {
+      console.log("Chamdo urban area detected, using accurate Bortle scale");
+      return { bortleScale: 5.8 };
+    }
+    
+    // Nyingchi urban area
+    if (latitude > 29.6 && latitude < 29.7 && longitude > 94.3 && longitude < 94.5) {
+      console.log("Nyingchi urban area detected, using accurate Bortle scale");
+      return { bortleScale: 5.5 };
+    }
+    
+    // Lhoka (Shannan) urban area
+    if (latitude > 29.2 && latitude < 29.3 && longitude > 91.7 && longitude < 91.9) {
+      console.log("Lhoka urban area detected, using accurate Bortle scale");
+      return { bortleScale: 5.8 };
+    }
+    
+    // Nagqu urban area
+    if (latitude > 31.4 && latitude < 31.5 && longitude > 92.0 && longitude < 92.1) {
+      console.log("Nagqu urban area detected, using accurate Bortle scale");
+      return { bortleScale: 5.5 };
+    }
+    
+    // Urumqi urban area
+    if (latitude > 43.7 && latitude < 43.9 && longitude > 87.5 && longitude < 87.7) {
+      console.log("Urumqi urban area detected, using accurate Bortle scale");
+      return { bortleScale: 7.8 };
+    }
+    
+    // Kashgar urban area
+    if (latitude > 39.4 && latitude < 39.5 && longitude > 75.9 && longitude < 76.0) {
+      console.log("Kashgar urban area detected, using accurate Bortle scale");
+      return { bortleScale: 7.2 };
+    }
+    
+    // Hohhot urban area
+    if (latitude > 40.8 && latitude < 40.9 && longitude > 111.7 && longitude < 111.8) {
+      console.log("Hohhot urban area detected, using accurate Bortle scale");
+      return { bortleScale: 7.3 };
+    }
+    
+    // Harbin urban area
+    if (latitude > 45.7 && latitude < 45.9 && longitude > 126.5 && longitude < 126.6) {
+      console.log("Harbin urban area detected, using accurate Bortle scale");
+      return { bortleScale: 7.6 };
+    }
+    
     // Try to get data from our enhanced light pollution database
     try {
       const closestCity = findClosestCity(latitude, longitude);

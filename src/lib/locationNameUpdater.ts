@@ -1,6 +1,6 @@
 
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { Type as CacheService } from "@/hooks/location/useLocationCache";
+import { LocationCacheService } from "@/components/location/map/LocationNameService";
 import { Language } from "@/services/geocoding/types";
 import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
 
@@ -13,7 +13,7 @@ export async function updateLocationName(
   longitude: number,
   currentName: string,
   language: Language,
-  cacheService: CacheService
+  cacheService: LocationCacheService
 ): Promise<string> {
   try {
     // Skip processing invalid coordinates

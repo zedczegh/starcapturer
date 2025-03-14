@@ -67,7 +67,7 @@ export async function getLocationNameForCoordinates(
       return finalName;
     } catch (apiError) {
       console.error("Error getting location name from API:", apiError);
-      throw apiError;
+      // Continue to fallbacks
     }
   } catch (error) {
     console.error("Error in getLocationNameForCoordinates:", error);

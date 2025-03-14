@@ -7,6 +7,8 @@ import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
 import { prefetchLocationData } from "@/lib/queryPrefetcher";
 import { useQueryClient } from "@tanstack/react-query";
+import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -18,6 +20,7 @@ const LocationDetails = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
+  const { updateBortleScale } = useBortleUpdater();
   
   const {
     locationData, 
@@ -63,23 +66,30 @@ const LocationDetails = () => {
     }
   }, [locationData, isLoading, queryClient]);
 
-  // Make sure we have Bortle scale data
+  // Make sure we have Bortle scale data, with special handling for remote regions
   useEffect(() => {
-    const updateBortleScale = async () => {
-      if (locationData && !isLoading && 
-          (locationData.bortleScale === null || locationData.bortleScale === undefined)) {
-        
+    const updateBortleScaleData = async () => {
+      if (!locationData || isLoading) return;
+      
+      const isRemoteRegion = locationData.latitude && locationData.longitude ? 
+        identifyRemoteRegion(locationData.latitude, locationData.longitude) : false;
+      
+      // For remote regions, or if Bortle scale is missing, update it
+      if (isRemoteRegion || locationData.bortleScale === null || locationData.bortleScale === undefined) {
         try {
-          const { fetchLightPollutionData } = await import("@/lib/api");
-          const pollution = await fetchLightPollutionData(
-            locationData.latitude, 
-            locationData.longitude
+          // Use our improved Bortle updater for more accurate data
+          const newBortleScale = await updateBortleScale(
+            locationData.latitude,
+            locationData.longitude,
+            locationData.name,
+            locationData.bortleScale
           );
           
-          if (pollution && typeof pollution.bortleScale === 'number') {
+          if (newBortleScale !== null && newBortleScale !== locationData.bortleScale) {
+            console.log(`Bortle scale updated: ${locationData.bortleScale} -> ${newBortleScale}`);
             setLocationData({
               ...locationData,
-              bortleScale: pollution.bortleScale
+              bortleScale: newBortleScale
             });
           }
         } catch (error) {
@@ -88,8 +98,8 @@ const LocationDetails = () => {
       }
     };
     
-    updateBortleScale();
-  }, [locationData, isLoading, setLocationData]);
+    updateBortleScaleData();
+  }, [locationData, isLoading, setLocationData, updateBortleScale]);
 
   if (isLoading) {
     return <PageLoader />;

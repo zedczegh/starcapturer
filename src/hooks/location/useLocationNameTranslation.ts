@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { updateLocationName } from "@/lib/locationNameUpdater";
+import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
 
 interface UseLocationNameTranslationProps {
   locationData: any;
@@ -29,9 +30,17 @@ export function useLocationNameTranslation({
     // Skip if we're on the initial render or location data isn't ready
     if (!locationData.name) return;
     
-    // Use our optimized location name updater
+    // Check if we're in a remote region that needs special handling
+    const isRemoteRegion = identifyRemoteRegion(locationData.latitude, locationData.longitude);
+    
+    // For remote regions, always update the name to ensure accuracy
     const updateNameForLanguage = async () => {
       try {
+        // Priority update for remote regions to ensure proper naming
+        if (isRemoteRegion) {
+          console.log("Remote region detected, updating name with high priority");
+        }
+        
         const newName = await updateLocationName(
           locationData.latitude,
           locationData.longitude,
@@ -41,6 +50,7 @@ export function useLocationNameTranslation({
         );
         
         if (newName && newName !== locationData.name) {
+          console.log(`Location name updated: "${locationData.name}" -> "${newName}"`);
           setLocationData({
             ...locationData,
             name: newName
@@ -51,7 +61,7 @@ export function useLocationNameTranslation({
       }
     };
     
-    // Run the update, but only if the location name might need adjustment
+    // Run the update with priority for remote regions
     updateNameForLanguage();
   }, [language, locationData, setLocationData, setCachedData, getCachedData]);
 

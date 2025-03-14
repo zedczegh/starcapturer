@@ -9,6 +9,9 @@ import { hasProperty } from "@/types/weather-utils";
 import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
 import { useBortleUpdater } from "./location/useBortleUpdater";
 
+/**
+ * Hook for handling location updates with improved handling for remote regions
+ */
 export const useLocationUpdate = (
   locationData: any,
   setLocationData: (data: any) => void
@@ -25,6 +28,8 @@ export const useLocationUpdate = (
       setLoading(true);
       
       try {
+        console.log("Location update received:", newLocation);
+        
         // Get new weather data for the updated location
         let newWeatherData;
         try {
@@ -53,12 +58,14 @@ export const useLocationUpdate = (
         // For remote regions, always get fresh Bortle scale data
         let bortleScale: number | null;
         if (isRemoteRegion) {
+          console.log("Remote region detected, fetching fresh Bortle data");
           bortleScale = await updateBortleScale(
             newLocation.latitude, 
             newLocation.longitude, 
             newLocation.name, 
             null // Force refresh for remote regions
           );
+          console.log("Updated Bortle scale for remote region:", bortleScale);
         } else {
           // For other regions, reuse existing if available
           bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : null;
