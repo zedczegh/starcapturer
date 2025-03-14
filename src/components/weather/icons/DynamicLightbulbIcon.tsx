@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Lightbulb, HelpCircle } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 
 interface DynamicLightbulbIconProps {
   bortleScale: number | null;
@@ -49,4 +49,4 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale
   );
 };
 
-export default DynamicLightbulbIcon;
+export default React.memo(DynamicLightbulbIcon);

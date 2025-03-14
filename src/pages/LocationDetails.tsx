@@ -5,6 +5,8 @@ import { useLocationDataManager } from "@/hooks/location/useLocationDataManager"
 import PageLoader from "@/components/loaders/PageLoader";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
+import { prefetchLocationData } from "@/lib/queryPrefetcher";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -14,6 +16,7 @@ const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
   
   const {
@@ -52,6 +55,13 @@ const LocationDetails = () => {
     setCachedData,
     getCachedData
   });
+
+  // Prefetch data when location data is available to improve loading speed
+  useEffect(() => {
+    if (locationData && !isLoading && locationData.latitude && locationData.longitude) {
+      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
+    }
+  }, [locationData, isLoading, queryClient]);
 
   // Make sure we have Bortle scale data
   useEffect(() => {

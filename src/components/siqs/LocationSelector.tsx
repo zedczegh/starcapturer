@@ -77,4 +77,4 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   );
 };
 
-export default LocationSelector;
+export default React.memo(LocationSelector);

@@ -81,10 +81,14 @@ export const useLocationNameTranslation = ({
     }
   }, [language, locationData, setLocationData, setCachedData, getCachedData]);
   
-  // Update location name when language changes
+  // Update location name when language changes - use a shorter timeout
   useEffect(() => {
     if (locationData) {
-      updateLocationNameForLanguage();
+      const translationTimer = setTimeout(() => {
+        updateLocationNameForLanguage();
+      }, 50); // Reduced timeout for faster translation
+      
+      return () => clearTimeout(translationTimer);
     }
-  }, [language, updateLocationNameForLanguage]);
+  }, [language, updateLocationNameForLanguage, locationData]);
 };
