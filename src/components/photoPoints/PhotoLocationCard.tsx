@@ -93,10 +93,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           {location.description}
         </p>
         
-        <div className="flex justify-between items-center mb-3">
-          <div className="text-xs text-primary-foreground/70">
-            {t("By", "拍摄者：")} {location.photographer || t("Unknown", "未知")}
-          </div>
+        <div className="flex justify-end items-center mb-3">
           {location.distance !== undefined && (
             <div className="text-xs font-medium bg-background/30 px-2 py-1 rounded-full">
               {formatDistance(location.distance)}

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -27,6 +27,7 @@ const PhotoPointsNearby: React.FC = () => {
   // Fetch photo points using custom hook
   const {
     loading,
+    searching,
     searchDistance,
     setSearchDistance,
     displayedLocations,
@@ -138,10 +139,43 @@ const PhotoPointsNearby: React.FC = () => {
           />
         </div>
         
-        {/* Loading State */}
-        {(loading || geoLoading) && (
+        {/* Searching State */}
+        {searching && (
+          <motion.div 
+            className="flex justify-center py-12 flex-col items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Radar className="h-16 w-16 text-primary animate-pulse mb-4" />
+            <h2 className="text-xl font-medium text-center">
+              {t("Searching for ideal photo points nearby...", "正在搜索附近的理想拍摄点...")}
+            </h2>
+            <p className="text-muted-foreground mt-2 text-center">
+              {t("Calculating real-time SIQS scores based on weather and light pollution data", 
+                 "正在根据天气和光污染数据计算实时SIQS评分")}
+            </p>
+          </motion.div>
+        )}
+        
+        {/* Loading State (but not searching) */}
+        {loading && !searching && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          </div>
+        )}
+        
+        {/* Geolocation Loading */}
+        {geoLoading && !coords && (
+          <div className="flex justify-center py-12 flex-col items-center">
+            <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+            <h2 className="text-xl font-medium text-center">
+              {t("Getting your location...", "正在获取您的位置...")}
+            </h2>
+            <p className="text-muted-foreground mt-2 text-center">
+              {t("We need your location to find the best photo spots near you", 
+                 "我们需要您的位置来找到您附近最好的拍摄点")}
+            </p>
           </div>
         )}
         
@@ -203,16 +237,16 @@ const PhotoPointsNearby: React.FC = () => {
         )}
         
         {/* No locations found */}
-        {!loading && !geoLoading && coords && displayedLocations.length === 0 && !isUserInGoodLocation && (
+        {!loading && !searching && !geoLoading && coords && displayedLocations.length === 0 && !isUserInGoodLocation && (
           <div className="text-center py-16 glassmorphism rounded-lg">
             <MapPin className="h-16 w-16 text-primary/50 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold mb-2">
-              {t("No Photo Points Found Nearby", "附近未找到拍摄点")}
+              {t("No Better Photo Points Found Nearby", "附近未找到更好的拍摄点")}
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-6">
               {t(
-                "Be the first to share an astrophotography location in this area!",
-                "成为第一个在这个地区分享天文摄影位置的人！"
+                "We couldn't find locations with significantly better conditions within your search radius.",
+                "在您的搜索半径内，我们未能找到条件明显更好的位置。"
               )}
             </p>
             <Link to="/share">
@@ -225,7 +259,7 @@ const PhotoPointsNearby: React.FC = () => {
         )}
         
         {/* Location grid */}
-        {!loading && !geoLoading && coords && displayedLocations.length > 0 && !isUserInGoodLocation && (
+        {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && !isUserInGoodLocation && (
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -245,7 +279,7 @@ const PhotoPointsNearby: React.FC = () => {
         )}
         
         {/* Load more button */}
-        {!loading && hasMoreLocations && displayedLocations.length > 0 && !isUserInGoodLocation && (
+        {!loading && !searching && hasMoreLocations && displayedLocations.length > 0 && !isUserInGoodLocation && (
           <div className="flex justify-center mt-8">
             <Button 
               variant="outline" 
@@ -259,7 +293,7 @@ const PhotoPointsNearby: React.FC = () => {
         )}
         
         {/* Distant location recommendation */}
-        {!loading && !isUserInGoodLocation && currentSiqs !== null && bestDistantLocation && (
+        {!loading && !searching && !isUserInGoodLocation && currentSiqs !== null && bestDistantLocation && (
           <div className="mt-16 pt-8 border-t border-cosmic-700">
             <div className="flex items-center justify-center mb-4">
               <Plane className="h-6 w-6 text-primary mr-2" />
