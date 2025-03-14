@@ -4,7 +4,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
 import { useLocationInit } from "./useLocationInit";
 import { NavigateFunction } from "react-router-dom";
-import { toast } from "sonner";
 
 interface UseLocationDataManagerProps {
   id: string | undefined;
@@ -37,16 +36,10 @@ export const useLocationDataManager = ({
                    "已为新位置重新计算SIQS评分。"));
       setMessageType('success');
       setTimeout(() => setStatusMessage(null), 3000);
-      
-      // Show additional feedback
-      toast.success(t("Location updated successfully", "位置更新成功"));
     } catch (error) {
-      console.error("Error updating location:", error);
       setStatusMessage(t("Failed to update location and recalculate SIQS score. Please try again.", 
                    "无法更新位置并重新计算SIQS评分。请重试。"));
-      setMessageType('error');
-      
-      toast.error(t("Failed to update location", "位置更新失败"));
+      setMessageType('error');                   
     }
   }, [handleLocationUpdate, t]);
 

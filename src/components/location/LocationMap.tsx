@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader } from "lucide-react";
 import MapDisplay from "./MapDisplay";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { 
@@ -8,8 +9,6 @@ import {
   normalizeLongitude,
   type LocationCacheService
 } from "./map/LocationNameService";
-import MapLoader from "../loaders/MapLoader";
-import { toast } from "sonner";
 
 interface LocationMapProps {
   latitude: number;
@@ -44,12 +43,18 @@ const LocationMap: React.FC<LocationMapProps> = ({
     getCachedData: (key) => getCachedData(key)
   };
 
+  // Handle potential invalid coordinates with safer defaults
+  const validLatitude = isFinite(latitude) ? latitude : 0;
+  const validLongitude = isFinite(longitude) ? longitude : 0;
+  const validName = name || t("Unknown Location", "未知位置");
+
   // Update position when props change
   useEffect(() => {
-    if (isFinite(latitude) && isFinite(longitude)) {
-      setPosition([latitude, longitude]);
+    if (isFinite(latitude) && isFinite(longitude) && 
+       (validLatitude !== position[0] || validLongitude !== position[1])) {
+      setPosition([validLatitude, validLongitude]);
     }
-  }, [latitude, longitude]);
+  }, [validLatitude, validLongitude, position]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
@@ -62,32 +67,18 @@ const LocationMap: React.FC<LocationMapProps> = ({
     const validLat = Math.max(-90, Math.min(90, lat));
     const validLng = normalizeLongitude(lng);
     
-    // Update position immediately for better user feedback
     setPosition([validLat, validLng]);
     
-    // Show loading state
     setLocationLoading(true);
+    const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
+    setLocationLoading(false);
     
-    try {
-      // Get location name for the new coordinates
-      const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
-      
-      // Update location data via callback
-      onLocationUpdate({
-        name: locationName,
-        latitude: validLat,
-        longitude: validLng
-      });
-      
-      // Show success message
-      toast.success(t("Location updated", "位置已更新"));
-    } catch (error) {
-      console.error("Error updating location:", error);
-      toast.error(t("Failed to update location", "位置更新失败"));
-    } finally {
-      setLocationLoading(false);
-    }
-  }, [editable, onLocationUpdate, language, cacheService, t]);
+    onLocationUpdate({
+      name: locationName,
+      latitude: validLat,
+      longitude: validLng
+    });
+  }, [editable, onLocationUpdate, language, cacheService]);
 
   // Handle map initialization error
   useEffect(() => {
@@ -101,23 +92,23 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return () => clearTimeout(timeoutId);
   }, [isLoading, t, mapError]);
 
-  // Validate and default props
-  const validLatitude = isFinite(latitude) ? latitude : 0;
-  const validLongitude = isFinite(longitude) ? longitude : 0;
-  const validName = name || t("Unknown Location", "未知位置");
-
   return (
     <div className="aspect-video w-full h-[300px] relative">
-      {isLoading && <MapLoader />}
-      
-      {locationLoading && (
-        <MapLoader 
-          message={t("Retrieving location data...", "正在获取位置数据...")} 
-        />
+      {(isLoading || locationLoading) && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-500">
+          <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-cosmic-800/70 border border-cosmic-600/20 shadow-lg">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-primary-foreground font-medium tracking-wide">
+              {locationLoading 
+                ? t("Retrieving location data...", "正在获取位置数据...")
+                : t("Initializing map...", "正在初始化地图...")}
+            </p>
+          </div>
+        </div>
       )}
       
       <MapDisplay 
-        position={[validLatitude, validLongitude]}
+        position={position}
         locationName={validName}
         editable={editable}
         onMapReady={handleMapReady}

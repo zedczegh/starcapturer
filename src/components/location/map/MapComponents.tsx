@@ -10,10 +10,7 @@ export const MapUpdater = memo(({ position }: { position: [number, number] }) =>
   useEffect(() => {
     if (map) {
       try {
-        map.setView(position, map.getZoom(), {
-          animate: true,
-          duration: 0.5
-        });
+        map.panTo(position, { animate: true, duration: 0.5 });
       } catch (error) {
         console.error("Error updating map view:", error);
       }
@@ -39,27 +36,6 @@ export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: 
     
     map.on('click', handleClick);
     
-    // Improve map interactions
-    if (map.dragging) {
-      map.dragging.enable();
-      
-      // Set inertia and inertia deceleration to make dragging feel more responsive
-      if (map.dragging._draggable) {
-        map.dragging._draggable.options.inertia = true;
-        map.dragging._draggable.options.inertiaDeceleration = 2000; // Higher value = faster stop (default is 3000)
-        map.dragging._draggable.options.inertiaMaxSpeed = 1500; // Higher value = more momentum (default is 1500)
-      }
-    }
-    
-    // Enable all interactions with improved settings
-    if (map.touchZoom) map.touchZoom.enable();
-    if (map.doubleClickZoom) map.doubleClickZoom.enable();
-    if (map.scrollWheelZoom) {
-      map.scrollWheelZoom.enable();
-      // Make zoom more responsive
-      map.options.wheelDebounceTime = 40; // Lower value = more responsive (default is 150)
-    }
-    
     return () => {
       map.off('click', handleClick);
     };
@@ -70,29 +46,14 @@ export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: 
 
 MapEvents.displayName = 'MapEvents';
 
-// Create a custom marker with animation effects
-export const createCustomMarker = (): L.DivIcon => {
-  return L.divIcon({
-    className: 'custom-map-marker',
-    html: `
-      <div class="marker-pin-container">
-        <div class="marker-pin animate-pulse-subtle"></div>
-        <div class="marker-shadow"></div>
-      </div>
-    `,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42]
-  });
-};
-
-// CSS injector component to inject map-specific styles
+// CSS injector component to avoid duplicate style tags
 export const MapStyles = memo(() => {
   useEffect(() => {
     if (!document.getElementById('custom-marker-styles')) {
       const style = document.createElement('style');
       style.id = 'custom-marker-styles';
       style.innerHTML = `
-        .custom-map-marker {
+        .custom-marker-icon {
           background: transparent;
           border: none;
         }
@@ -105,7 +66,7 @@ export const MapStyles = memo(() => {
           width: 24px;
           height: 24px;
           border-radius: 50% 50% 50% 0;
-          background: #9b87f5; 
+          background: #9b87f5;
           position: absolute;
           transform: rotate(-45deg);
           left: 50%;
@@ -134,42 +95,19 @@ export const MapStyles = memo(() => {
           transform: rotateX(55deg);
           z-index: -1;
         }
-        
-        @keyframes pulse-subtle {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1) rotate(-45deg);
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
           }
-          50% {
-            opacity: 0.85;
-            transform: scale(1.05) rotate(-45deg);
+          70% {
+            box-shadow: 0 0 0 10px rgba(155, 135, 245, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0);
           }
         }
-        
-        .animate-pulse-subtle {
-          animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        /* Ensure map is fully interactive with improved styling */
-        .leaflet-container {
-          touch-action: manipulation;
-          cursor: grab !important;
-          background: #0a0f25;
-        }
-        .leaflet-container:active {
-          cursor: grabbing !important;
-        }
-        
-        /* Improve tile transition */
-        .leaflet-fade-anim .leaflet-tile {
-          will-change: opacity;
-          transition: opacity 0.15s linear;
-        }
-        
-        /* Improve drag transitions */
-        .leaflet-zoom-anim .leaflet-zoom-animated {
-          will-change: transform;
-          transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        .animate-bounce {
+          animation: pulse 2s infinite;
         }
       `;
       document.head.appendChild(style);
@@ -180,3 +118,18 @@ export const MapStyles = memo(() => {
 });
 
 MapStyles.displayName = 'MapStyles';
+
+// Create a custom marker with animation effects
+export const createCustomMarker = (): L.DivIcon => {
+  return L.divIcon({
+    className: 'custom-marker-icon',
+    html: `
+      <div class="marker-pin-container">
+        <div class="marker-pin animate-bounce"></div>
+        <div class="marker-shadow"></div>
+      </div>
+    `,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42]
+  });
+};

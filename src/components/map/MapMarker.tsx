@@ -25,9 +25,7 @@ const MapMarker: React.FC<MapMarkerProps> = ({ name, placeDetails, onClick }) =>
       onClick={handleClick}
     >
       <div className="flex items-start">
-        <div className="mr-2 mt-0.5 flex-shrink-0 text-primary">
-          <MapPin className="h-5 w-5 animate-pulse-subtle" />
-        </div>
+        <MapPin className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-primary" />
         <div className="w-full">
           <div className={`font-medium ${language === 'zh' ? 'text-cosmic-200' : ''}`}>{name}</div>
           {placeDetails && (

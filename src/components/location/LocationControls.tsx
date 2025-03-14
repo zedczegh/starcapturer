@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useCallback, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Locate, Search, MapPin } from "lucide-react";
+import { Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +27,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   const { toast } = useToast();
   const { setCachedData, getCachedData } = useLocationDataCache();
   const [isMounted, setIsMounted] = useState(false);
-  const [showSelector, setShowSelector] = useState(false);
   const [lastTranslationRequest, setLastTranslationRequest] = useState<string | null>(null);
 
   // Avoid unnecessary effect runs on initial mount
@@ -99,7 +98,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
       
       // Reset last translation request when manually selecting a location
       setLastTranslationRequest(null);
-      setShowSelector(false);
       
       setStatusMessage(t(`Now viewing ${locationName}`, `现在查看 ${locationName}`));
     } catch (error) {
@@ -186,77 +184,30 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     );
   }, [t, setStatusMessage, setGettingUserLocation, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData]);
 
-  const toggleLocationSelector = useCallback(() => {
-    setShowSelector(prev => !prev);
-  }, []);
-
-  // Performance optimization - only re-render the buttons when necessary
-  const actionButtons = useMemo(() => (
-    <div className="flex gap-2 mb-4">
-      <Button 
-        variant="outline" 
-        className="flex-1 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
-        onClick={handleGetCurrentLocation}
-        disabled={gettingUserLocation}
-      >
-        <Locate className="h-4 w-4" />
-        {gettingUserLocation 
-          ? t("Retrieving...", "获取中...") 
-          : t("My location", "我的位置")}
-      </Button>
-      
-      <Button 
-        variant="outline" 
-        className="flex-1 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20"
-        onClick={toggleLocationSelector}
-      >
-        <Search className="h-4 w-4" />
-        {t("Search", "搜索")}
-      </Button>
-    </div>
-  ), [gettingUserLocation, handleGetCurrentLocation, t, toggleLocationSelector]);
-
-  // Current location display
-  const currentLocationDisplay = useMemo(() => {
-    if (!currentLocation) return null;
-    
-    return (
-      <div className="mb-4 p-3 rounded-md bg-cosmic-800/50 border border-cosmic-600/20 flex items-center gap-2">
-        <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
-        <div className="text-sm truncate flex-1">
-          {currentLocation.name}
-        </div>
-      </div>
-    );
-  }, [currentLocation]);
+  // Performance optimization - only re-render the button when necessary
+  const locateButton = useMemo(() => (
+    <Button 
+      variant="outline" 
+      className="w-full mb-4 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
+      onClick={handleGetCurrentLocation}
+      disabled={gettingUserLocation}
+    >
+      <Locate className="h-4 w-4" />
+      {gettingUserLocation 
+        ? t("Retrieving location data...", "获取位置数据中...") 
+        : t("Use my current location", "使用我的当前位置")}
+    </Button>
+  ), [gettingUserLocation, handleGetCurrentLocation, t]);
 
   return (
     <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30 relative z-10">
-      {currentLocationDisplay}
-      {actionButtons}
-      
-      {showSelector && (
-        <div className="relative z-30 animate-fade-in">
-          <div className="absolute top-0 w-full">
-            <div className="p-4 bg-cosmic-900/95 backdrop-blur-sm rounded-md border border-cosmic-600/30 shadow-lg">
-              <h3 className="text-sm font-medium mb-3 text-primary-foreground">
-                {t("Search for a location", "搜索位置")}
-              </h3>
-              <MapSelector onSelectLocation={handleLocationSearch} />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full mt-3 text-xs"
-                onClick={() => setShowSelector(false)}
-              >
-                {t("Cancel", "取消")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {locateButton}
+      <div className="relative z-30">
+        <MapSelector onSelectLocation={handleLocationSearch} />
+      </div>
     </div>
   );
 };
 
+// Use memo to prevent unnecessary re-renders
 export default memo(LocationControls);
