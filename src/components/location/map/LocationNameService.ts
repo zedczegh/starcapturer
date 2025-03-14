@@ -1,6 +1,5 @@
 
 import { findClosestKnownLocation } from "@/utils/locationUtils";
-import { getLocationNameFromCoordinates } from "@/services/geocoding";
 import type { Language } from "@/services/geocoding/types";
 
 // Define CachedLocationData interface for type safety
@@ -40,7 +39,7 @@ export async function getLocationNameForCoordinates(
     
     // Try external API for reverse geocoding first
     try {
-      const locationName = await getLocationNameFromCoordinates(lat, lng, language);
+      const locationName = await fetchLocationNameFromAPI(lat, lng, language);
       if (locationName && !locationName.includes("°")) {
         // Cache this data
         cacheService.setCachedData(cacheKey, {
@@ -94,6 +93,49 @@ export async function getLocationNameForCoordinates(
       `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°` : 
       `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
   }
+}
+
+/**
+ * Fetch location name from an external API
+ */
+async function fetchLocationNameFromAPI(lat: number, lng: number, language: Language): Promise<string> {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${language}`
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Reverse geocoding failed with status: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  
+  // Format the address based on available data
+  let locationName = '';
+  
+  if (data.name) {
+    locationName = data.name;
+  } else if (data.address) {
+    const address = data.address;
+    
+    if (address.city || address.town || address.village) {
+      locationName = address.city || address.town || address.village;
+    } else if (address.county) {
+      locationName = address.county;
+    } else if (address.state) {
+      locationName = address.state;
+    } else if (address.country) {
+      locationName = 
+        language === 'en' ? 
+          `Location in ${address.country}` : 
+          `${address.country}中的位置`;
+    }
+  }
+  
+  if (!locationName) {
+    throw new Error('No location name found in response');
+  }
+  
+  return locationName;
 }
 
 /**

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,13 +12,40 @@ interface SearchResultsProps {
   isLoading: boolean;
 }
 
-const SearchResults: React.FC<SearchResultsProps> = ({
+// Memoize individual search result item for better performance
+const SearchResultItem = memo(({ 
+  location, 
+  onSelect 
+}: { 
+  location: Location; 
+  onSelect: () => void 
+}) => (
+  <div
+    className="px-3 py-2 hover:bg-slate-800/40 transition-colors cursor-pointer flex items-start gap-2"
+    onClick={onSelect}
+  >
+    <MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" />
+    <div>
+      <p className="text-sm font-medium leading-tight">{location.name}</p>
+      {location.placeDetails && (
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {location.placeDetails}
+        </p>
+      )}
+    </div>
+  </div>
+));
+
+SearchResultItem.displayName = 'SearchResultItem';
+
+// Main component using memo for performance optimization
+const SearchResults = memo<SearchResultsProps>(({
   searchResults,
   handleSelectLocation,
   searchTerm,
   isLoading
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   if (isLoading) {
     return (
@@ -51,25 +78,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     <ScrollArea className="max-h-[300px] overflow-auto">
       <div className="py-1">
         {searchResults.map((location, index) => (
-          <div
+          <SearchResultItem
             key={`${location.name}-${index}`}
-            className="px-3 py-2 hover:bg-slate-800/40 transition-colors cursor-pointer flex items-start gap-2"
-            onClick={() => handleSelectLocation(location)}
-          >
-            <MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium leading-tight">{location.name}</p>
-              {location.placeDetails && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {location.placeDetails}
-                </p>
-              )}
-            </div>
-          </div>
+            location={location}
+            onSelect={() => handleSelectLocation(location)}
+          />
         ))}
       </div>
     </ScrollArea>
   );
-};
+});
+
+SearchResults.displayName = 'SearchResults';
 
 export default SearchResults;

@@ -1,9 +1,12 @@
 
-import React, { useEffect } from "react";
+import React, { Suspense, lazy } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import LocationError from "@/components/location/LocationError";
-import LocationDetailsViewport from "@/components/location/LocationDetailsViewport";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
+import PageLoader from "@/components/loaders/PageLoader";
+
+// Lazy-loaded components for better performance
+const LocationError = lazy(() => import("@/components/location/LocationError"));
+const LocationDetailsViewport = lazy(() => import("@/components/location/LocationDetailsViewport"));
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -21,26 +24,28 @@ const LocationDetails = () => {
   } = useLocationDataManager({ id, initialState: location.state, navigate });
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!locationData) {
-    return <LocationError />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <LocationError />
+      </Suspense>
+    );
   }
 
   return (
-    <LocationDetailsViewport 
-      locationData={locationData}
-      setLocationData={setLocationData}
-      statusMessage={statusMessage}
-      messageType={messageType}
-      setStatusMessage={setStatusMessage}
-      handleUpdateLocation={handleUpdateLocation}
-    />
+    <Suspense fallback={<PageLoader />}>
+      <LocationDetailsViewport 
+        locationData={locationData}
+        setLocationData={setLocationData}
+        statusMessage={statusMessage}
+        messageType={messageType}
+        setStatusMessage={setStatusMessage}
+        handleUpdateLocation={handleUpdateLocation}
+      />
+    </Suspense>
   );
 };
 

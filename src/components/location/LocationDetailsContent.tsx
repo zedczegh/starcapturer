@@ -1,9 +1,11 @@
 
-import React, { memo } from "react";
+import React, { memo, lazy, Suspense } from "react";
 import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
-import LocationContentGrid from "@/components/location/LocationContentGrid";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
+
+// Lazy load the content grid for better performance
+const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
 
 interface LocationDetailsContentProps {
   locationData: any;
@@ -28,9 +30,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     setGettingUserLocation,
     handleRefreshAll,
     handleRefreshForecast,
-    handleRefreshLongRangeForecast,
-    setLoading,
-    setForecastData
+    handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
 
   return (
@@ -49,19 +49,21 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         onRefresh={handleRefreshAll}
       />
       
-      <LocationContentGrid 
-        locationData={locationData}
-        forecastData={forecastData}
-        longRangeForecast={longRangeForecast}
-        forecastLoading={forecastLoading}
-        longRangeLoading={longRangeLoading}
-        gettingUserLocation={gettingUserLocation}
-        onLocationUpdate={onLocationUpdate}
-        setGettingUserLocation={setGettingUserLocation}
-        setStatusMessage={setStatusMessage}
-        onRefreshForecast={handleRefreshForecast}
-        onRefreshLongRange={handleRefreshLongRangeForecast}
-      />
+      <Suspense fallback={<div className="animate-pulse h-96 bg-slate-800/20 rounded-lg"></div>}>
+        <LocationContentGrid 
+          locationData={locationData}
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          gettingUserLocation={gettingUserLocation}
+          onLocationUpdate={onLocationUpdate}
+          setGettingUserLocation={setGettingUserLocation}
+          setStatusMessage={setStatusMessage}
+          onRefreshForecast={handleRefreshForecast}
+          onRefreshLongRange={handleRefreshLongRangeForecast}
+        />
+      </Suspense>
     </>
   );
 });

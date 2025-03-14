@@ -5,21 +5,15 @@ import { Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
-import { getLocationNameFromCoordinates } from "@/services/geocoding";
 import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
+import { getLocationNameForCoordinates } from "./map/LocationNameService";
 
 interface LocationControlsProps {
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
   gettingUserLocation: boolean;
   setGettingUserLocation: (state: boolean) => void;
   setStatusMessage: (message: string | null) => void;
-}
-
-interface CachedLocationData {
-  name?: string;
-  formattedName?: string;
-  bortleScale?: number;
 }
 
 const LocationControls: React.FC<LocationControlsProps> = ({
@@ -60,50 +54,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     }
   };
 
-  const getProperLocationName = async (latitude: number, longitude: number): Promise<string> => {
-    try {
-      const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey) as CachedLocationData | null;
-      
-      if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
-        return cachedData.name;
-      }
-      
-      const closestLocation = findClosestKnownLocation(latitude, longitude);
-      
-      if (closestLocation.distance <= 20) {
-        const locationName = closestLocation.name;
-        
-        setCachedData(cacheKey, {
-          name: locationName,
-          bortleScale: closestLocation.bortleScale
-        });
-        
-        return locationName;
-      }
-      
-      const name = await getLocationNameFromCoordinates(latitude, longitude, language);
-      
-      setCachedData(cacheKey, {
-        name,
-        bortleScale: 4
-      });
-      
-      return name;
-    } catch (error) {
-      console.error("Error getting proper location name:", error);
-      
-      const closestLocation = findClosestKnownLocation(latitude, longitude);
-      
-      if (closestLocation.distance <= 50) {
-        return `${closestLocation.name} ${t("area", "地区")}`;
-      }
-      
-      return t(`Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`, 
-              `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
-    }
-  };
-
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       setStatusMessage(t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。"));
@@ -126,7 +76,12 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         try {
           const { latitude, longitude } = position.coords;
           
-          const locationName = await getProperLocationName(latitude, longitude);
+          const locationName = await getLocationNameForCoordinates(
+            latitude, 
+            longitude, 
+            language, 
+            { setCachedData, getCachedData }
+          );
           
           await onLocationUpdate({
             name: locationName,

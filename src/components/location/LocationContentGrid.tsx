@@ -1,10 +1,12 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
 import LocationUpdater from "@/components/location/LocationUpdater";
-import ForecastTabs from "@/components/location/ForecastTabs";
 import { determineWeatherCondition } from "@/lib/api";
+
+// Lazy load the forecast tabs to improve initial load time
+const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
 
 interface LocationContentGridProps {
   locationData: any;
@@ -93,14 +95,16 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           />
         </div>
         
-        <ForecastTabs 
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          onRefreshForecast={onRefreshForecast}
-          onRefreshLongRange={onRefreshLongRange}
-        />
+        <Suspense fallback={<div className="animate-pulse h-64 bg-slate-800/20 rounded-lg"></div>}>
+          <ForecastTabs 
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            onRefreshForecast={onRefreshForecast}
+            onRefreshLongRange={onRefreshLongRange}
+          />
+        </Suspense>
       </div>
     </div>
   );

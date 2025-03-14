@@ -22,7 +22,7 @@ const LanguageSwitcher: React.FC = () => {
     >
       <Globe className="h-5 w-5" />
       <span className="absolute -top-1 -right-1 text-[10px] font-bold bg-primary text-white rounded-full w-4 h-4 flex items-center justify-center">
-        {language === 'en' ? 'EN' : 'CN'}
+        {language === 'en' ? 'EN' : '中'}
       </span>
     </Button>
   );
