@@ -27,10 +27,10 @@ const LocationDetailsViewport = memo<LocationDetailsViewportProps>(({
       className="min-h-screen overflow-x-hidden sci-fi-scrollbar pb-16 md:pb-0"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.15 }}
     >
       <NavBar />
-      <main className="container mx-auto px-4 pt-28 pb-16">
+      <main className="container mx-auto px-4 pt-24 pb-16">
         <LocationStatusMessage 
           message={statusMessage}
           type={messageType}

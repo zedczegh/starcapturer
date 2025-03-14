@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Cloud, CloudFog, CloudDrizzle, CloudSnow, CloudHail } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DynamicCloudCoverIconProps {
   cloudCover: number;
@@ -18,9 +19,10 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
   // Calculate fill based on cloud cover percentage
   const fillOpacity = cloudCover / 100;
   
-  // Add red glow for rainy conditions
-  const rainGlowStyle = precipitation > 0 ? {
-    filter: "drop-shadow(0 0 2px rgba(234, 56, 76, 0.4))",
+  // Add red glow for rainy conditions - smaller and more aesthetic
+  const hasRain = precipitation > 0;
+  const rainGlowStyle = hasRain ? {
+    filter: "drop-shadow(0 0 1.5px rgba(234, 56, 76, 0.5))",
     transition: "all 0.3s ease"
   } : {};
   
@@ -30,10 +32,11 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (snowfall > 0.5) {
       return (
         <CloudSnow 
-          className="h-4 w-4 text-primary" 
+          className={cn("h-3.5 w-3.5 text-primary", hasRain && "text-red-400")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
-            stroke: "currentColor"
+            stroke: "currentColor",
+            ...rainGlowStyle
           }}
         />
       );
@@ -43,7 +46,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (precipitation > 0.5) {
       return (
         <CloudDrizzle 
-          className="h-4 w-4 text-primary" 
+          className={cn("h-3.5 w-3.5", hasRain ? "text-red-400" : "text-primary")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor",
@@ -57,7 +60,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (precipitation > 0) {
       return (
         <CloudHail 
-          className="h-4 w-4 text-primary" 
+          className={cn("h-3.5 w-3.5", "text-red-400")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor",
@@ -71,7 +74,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (cloudCover > 80) {
       return (
         <CloudFog 
-          className="h-4 w-4 text-primary" 
+          className="h-3.5 w-3.5 text-primary"
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor"
@@ -83,7 +86,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     // Default cloud icon
     return (
       <Cloud 
-        className="h-4 w-4 text-primary" 
+        className="h-3.5 w-3.5 text-primary" 
         style={{
           fill: `rgba(148, 163, 184, ${fillOpacity})`,
           stroke: "currentColor"

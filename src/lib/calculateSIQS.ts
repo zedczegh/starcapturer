@@ -26,7 +26,6 @@ export { siqsToColor } from './siqs/utils';
 
 /**
  * Calculate the Stellar Imaging Quality Score based on various factors
- * Takes into account the average conditions throughout the night (until 6am)
  * @param factors Environmental and geographical factors
  * @returns SIQS score from 0-10 (higher is better)
  */
@@ -44,85 +43,40 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     aqi
   } = factors;
   
-  // If we have night forecast data, use it to calculate average conditions
-  if (nightForecast.length > 0) {
-    // Calculate average values for the night forecast
-    const avgCloudCover = nightForecast.reduce((sum, item) => sum + item.cloudCover, 0) / nightForecast.length;
-    const avgWindSpeed = nightForecast.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecast.length;
-    const avgHumidity = nightForecast.reduce((sum, item) => sum + item.humidity, 0) / nightForecast.length;
-    
-    // Check if conditions make imaging impossible
-    if (isImagingImpossible(avgCloudCover, precipitation, weatherCondition, aqi)) {
-      return {
-        score: 0,
-        isViable: false,
-        factors: [
-          {
-            name: "Weather Conditions",
-            score: 0,
-            description: "Current conditions make imaging impossible"
-          }
-        ]
-      };
-    }
-    
-    return calculateSIQSWithData(
-      avgCloudCover,
-      bortleScale,
-      seeingConditions,
-      avgWindSpeed,
-      avgHumidity,
-      moonPhase,
-      aqi
-    );
-  } 
-  // If no night forecast data, use the current values
-  else {
-    // Check if conditions make imaging impossible
-    if (isImagingImpossible(cloudCover, precipitation, weatherCondition, aqi)) {
-      return {
-        score: 0,
-        isViable: false,
-        factors: [
-          {
-            name: "Weather Conditions",
-            score: 0,
-            description: "Current conditions make imaging impossible"
-          }
-        ]
-      };
-    }
-    
-    return calculateSIQSWithData(
-      cloudCover,
-      bortleScale,
-      seeingConditions,
-      windSpeed,
-      humidity,
-      moonPhase,
-      aqi
-    );
+  // Check if conditions make imaging impossible first (fast path)
+  if (isImagingImpossible(cloudCover, precipitation, weatherCondition, aqi)) {
+    return {
+      score: 0,
+      isViable: false,
+      factors: [
+        {
+          name: "Weather Conditions",
+          score: 0,
+          description: "Current conditions make imaging impossible"
+        }
+      ]
+    };
   }
-}
-
-/**
- * Helper function to calculate SIQS with a given set of data
- */
-function calculateSIQSWithData(
-  cloudCover: number,
-  bortleScale: number,
-  seeingConditions: number,
-  windSpeed: number,
-  humidity: number,
-  moonPhase: number,
-  aqi?: number
-): SIQSResult {
+  
+  // Use night forecast if available, otherwise use current conditions
+  const actualCloudCover = nightForecast.length > 0 
+    ? nightForecast.reduce((sum, item) => sum + item.cloudCover, 0) / nightForecast.length
+    : cloudCover;
+    
+  const actualWindSpeed = nightForecast.length > 0
+    ? nightForecast.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecast.length
+    : windSpeed;
+    
+  const actualHumidity = nightForecast.length > 0
+    ? nightForecast.reduce((sum, item) => sum + item.humidity, 0) / nightForecast.length
+    : humidity;
+    
   // Calculate individual factor scores (0-100 scale)
-  const cloudScore = calculateCloudScore(cloudCover);
+  const cloudScore = calculateCloudScore(actualCloudCover);
   const lightPollutionScore = calculateLightPollutionScore(bortleScale);
   const seeingScore = calculateSeeingScore(seeingConditions);
-  const windScore = calculateWindScore(windSpeed);
-  const humidityScore = calculateHumidityScore(humidity);
+  const windScore = calculateWindScore(actualWindSpeed);
+  const humidityScore = calculateHumidityScore(actualHumidity);
   const moonScore = calculateMoonScore(moonPhase);
   const aqiScore = aqi ? calculateAQIScore(aqi) : 100;
   
@@ -154,11 +108,12 @@ function calculateSIQSWithData(
   // Determine if conditions are viable (SIQS >= 4.0)
   const isViable = finalScore >= 4.0;
   
+  // Create factors array
   const factors = [
     {
       name: "Cloud Cover",
       score: cloudScore,
-      description: getCloudDescription(cloudCover)
+      description: getCloudDescription(actualCloudCover)
     },
     {
       name: "Light Pollution",
@@ -173,12 +128,12 @@ function calculateSIQSWithData(
     {
       name: "Wind",
       score: windScore,
-      description: getWindDescription(windSpeed)
+      description: getWindDescription(actualWindSpeed)
     },
     {
       name: "Humidity",
       score: humidityScore,
-      description: getHumidityDescription(humidity)
+      description: getHumidityDescription(actualHumidity)
     }
   ];
   

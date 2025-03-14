@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,27 +11,33 @@ export const useForecastData = () => {
   const [longRangeLoading, setLongRangeLoading] = useState<boolean>(false);
   const { t } = useLanguage();
 
-  // Create AbortController refs
-  let forecastController: AbortController | null = null;
-  let longRangeController: AbortController | null = null;
+  // Use refs for controllers for better cleanup
+  const forecastControllerRef = useRef<AbortController | null>(null);
+  const longRangeControllerRef = useRef<AbortController | null>(null);
+
+  // Clean up function to abort ongoing requests
+  const cleanupRequest = useCallback((controllerRef: React.MutableRefObject<AbortController | null>) => {
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+      controllerRef.current = null;
+    }
+  }, []);
 
   const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
       setForecastLoading(true);
       
       // Cancel any ongoing requests
-      if (forecastController) {
-        forecastController.abort();
-      }
+      cleanupRequest(forecastControllerRef);
       
       // Create a new AbortController
-      forecastController = new AbortController();
+      forecastControllerRef.current = new AbortController();
       
       const data = await fetchForecastData({
         latitude,
         longitude,
         days: 3
-      }, forecastController.signal);
+      }, forecastControllerRef.current.signal);
       
       setForecastData(data);
     } catch (error) {
@@ -42,25 +48,23 @@ export const useForecastData = () => {
     } finally {
       setForecastLoading(false);
     }
-  }, [t]);
+  }, [t, cleanupRequest]);
 
   const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
       setLongRangeLoading(true);
       
       // Cancel any ongoing requests
-      if (longRangeController) {
-        longRangeController.abort();
-      }
+      cleanupRequest(longRangeControllerRef);
       
       // Create a new AbortController
-      longRangeController = new AbortController();
+      longRangeControllerRef.current = new AbortController();
       
       const data = await fetchLongRangeForecastData({
         latitude,
         longitude,
         days: 16
-      }, longRangeController.signal);
+      }, longRangeControllerRef.current.signal);
       
       setLongRangeForecast(data);
     } catch (error) {
@@ -71,8 +75,15 @@ export const useForecastData = () => {
     } finally {
       setLongRangeLoading(false);
     }
-  }, [t]);
+  }, [t, cleanupRequest]);
 
+  // Clean up on unmount
+  const cleanupOnUnmount = useCallback(() => {
+    cleanupRequest(forecastControllerRef);
+    cleanupRequest(longRangeControllerRef);
+  }, [cleanupRequest]);
+
+  // Handle refresh functions
   const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
     fetchLocationForecast(latitude, longitude);
   }, [fetchLocationForecast]);
@@ -90,6 +101,7 @@ export const useForecastData = () => {
     fetchLocationForecast,
     fetchLongRangeForecast,
     handleRefreshForecast,
-    handleRefreshLongRangeForecast
+    handleRefreshLongRangeForecast,
+    cleanupOnUnmount
   };
 };

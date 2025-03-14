@@ -1,8 +1,13 @@
 
 import { fetchWeatherData } from "@/lib/api";
 
+// Default timeout for weather API requests (in milliseconds)
+const DEFAULT_TIMEOUT = 5000;
+// Default cache lifetime for weather data (in milliseconds)
+const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
+
 /**
- * Service for retrieving weather data with fallback for errors
+ * Optimized service for retrieving weather data with better caching and error handling
  */
 export const getWeatherData = async (
   latitude: number,
@@ -12,20 +17,19 @@ export const getWeatherData = async (
   setCachedData: (key: string, data: any) => void,
   displayOnly: boolean,
   language: string = 'en',
-  setStatusMessage?: (message: string | null) => void
+  setStatusMessage?: (message: string | null) => void,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<any> => {
-  // First try to use cached data if in display-only mode
-  if (displayOnly) {
-    const cachedWeatherData = getCachedData(cacheKey, 5 * 60 * 1000); // 5 minute cache for weather
-    if (cachedWeatherData) {
-      return cachedWeatherData;
-    }
+  // First try to use cached data
+  const cachedWeatherData = getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
+  if (cachedWeatherData) {
+    return cachedWeatherData;
   }
   
   try {
     // Add timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     const data = await fetchWeatherData({
       latitude,
@@ -56,13 +60,15 @@ export const getWeatherData = async (
       aqi: 50
     };
     
-    // Show status message if not in display-only mode
+    // Show status message if needed
     if (!displayOnly && setStatusMessage) {
       setStatusMessage(language === 'en'
         ? "Could not fetch real-time weather. Using offline data instead."
         : "无法获取实时天气数据，使用离线数据替代。");
     }
     
+    // Even fallback data should be cached to prevent repeated failed requests
+    setCachedData(cacheKey, fallbackData);
     return fallbackData;
   }
   

@@ -9,7 +9,7 @@ import { findMatchingLocations } from '../locationDatabase';
 import { containsChineseCharacters } from '../matching';
 
 /**
- * Search for locations matching the given query
+ * Optimized version of location search with better caching and error handling
  * @param query Search query string
  * @param language Language for the search results
  * @returns Promise resolving to an array of matching locations
@@ -18,53 +18,53 @@ export async function searchLocations(
   query: string, 
   language: Language = 'en'
 ): Promise<Location[]> {
-  if (!query || query.trim().length === 0) {
-    return [];
-  }
+  // Short-circuit for empty queries
+  if (!query?.trim()) return [];
 
   // Normalize query for comparison
   const lowercaseQuery = query.toLowerCase().trim();
   
   // Try to get results from cache first
   const cachedResults = searchCache.getCachedResults(lowercaseQuery, language);
-  if (cachedResults && cachedResults.length > 0) {
-    console.log('Using cached search results for:', lowercaseQuery);
+  if (cachedResults?.length > 0) {
     return cachedResults;
   }
 
   try {
     const hasChineseChars = containsChineseCharacters(lowercaseQuery);
     
-    // Handle English language searches efficiently
-    if (language === 'en' && !hasChineseChars) {
-      const results = await searchWesternCities(lowercaseQuery);
+    // Prioritize search methods based on query type
+    let results: Location[] = [];
+    
+    // Method 1: Handle Chinese language searches
+    if (hasChineseChars || language === 'zh') {
+      results = await handleChineseSearch(lowercaseQuery, language);
       if (results.length > 0) {
         searchCache.cacheSearchResults(lowercaseQuery, language, results);
         return results;
       }
     }
     
-    // Handle Chinese language searches
-    if (hasChineseChars || language === 'zh') {
-      // Check for Chinese location matches
-      const chineseResults = await handleChineseSearch(lowercaseQuery, language);
-      if (chineseResults.length > 0) {
-        searchCache.cacheSearchResults(lowercaseQuery, language, chineseResults);
-        return chineseResults;
+    // Method 2: Handle English language searches efficiently
+    if (language === 'en' && !hasChineseChars) {
+      results = await searchWesternCities(lowercaseQuery);
+      if (results.length > 0) {
+        searchCache.cacheSearchResults(lowercaseQuery, language, results);
+        return results;
       }
     }
     
-    // Handle special case searches
-    const specialCaseResult = handleSpecialCases(lowercaseQuery, language);
-    if (specialCaseResult.length > 0) {
-      searchCache.cacheSearchResults(lowercaseQuery, language, specialCaseResult);
-      return specialCaseResult;
+    // Method 3: Handle special case searches
+    results = handleSpecialCases(lowercaseQuery, language);
+    if (results.length > 0) {
+      searchCache.cacheSearchResults(lowercaseQuery, language, results);
+      return results;
     }
     
-    // Fall back to external API search
-    const externalResults = await fetchAndProcessExternalResults(lowercaseQuery, language, hasChineseChars);
-    searchCache.cacheSearchResults(lowercaseQuery, language, externalResults);
-    return externalResults;
+    // Method 4: Fall back to external API search
+    results = await fetchAndProcessExternalResults(lowercaseQuery, language, hasChineseChars);
+    searchCache.cacheSearchResults(lowercaseQuery, language, results);
+    return results;
   } catch (error) {
     console.error("Error searching for locations:", error);
     
