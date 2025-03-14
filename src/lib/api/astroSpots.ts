@@ -118,14 +118,73 @@ export async function getSharedAstroSpots(
       { name: "Cherry Springs State Park", latitude: 41.6626, longitude: -77.8223, bortleScale: 2 }
     ];
     
+    // Chinese location names for language support
+    const chineseNames: Record<string, string> = {
+      "Zhangbei Grassland Observatory": "张北草原天文台",
+      "Wudalianchi Dark Sky Park": "五大连池暗夜公园",
+      "Nagchu Highland": "那曲高原",
+      "Arxan Dark Sky": "阿尔山暗夜",
+      "Qilian Mountains": "祁连山",
+      "Kanas Lake Viewpoint": "喀纳斯湖观景点",
+      "Changbai Mountain": "长白山",
+      "Dunhuang Desert": "敦煌沙漠",
+      "Ngari Observatory": "阿里天文台",
+      "Qinghai Lake Viewing Point": "青海湖观景点",
+      "Lugu Lake Hills": "泸沽湖山丘",
+      "Jade Dragon Mountain": "玉龙雪山",
+      "Xishuangbanna Tropical Sky": "西双版纳热带星空",
+      "Altay Mountains": "阿尔泰山",
+      "Namtso Lake": "纳木错湖",
+      "Wuyuan Rural Viewpoint": "婺源乡村观景点",
+      "Lushan Mountain": "庐山",
+      "Xinglong Observatory": "兴隆天文台",
+      "Mount Emei": "峨眉山",
+      "Zhangjiajie Heights": "张家界高处",
+      "Yellow Mountain": "黄山",
+      "Daocheng Yading": "稻城亚丁",
+      "Mount Tai": "泰山",
+      "Taihu Lake Observatory": "太湖天文台",
+      "Hainan Tropical Island": "海南热带岛屿",
+      "Xisha Islands": "西沙群岛",
+      "Dinghu Mountain": "鼎湖山",
+      "Wuyi Mountains": "武夷山",
+      "Dahinggan Mountains": "大兴安岭",
+      "Western Desert View": "西部沙漠景观",
+      "Inner Mongolia Grassland": "内蒙古草原",
+      "Lhasa Mountains": "拉萨山脉",
+      "Yamdrok Lake": "羊卓雍措",
+      "Mount Kailash": "冈仁波齐山",
+      "Taklamakan Desert Edge": "塔克拉玛干沙漠边缘",
+      "Taklimakan Desert": "塔克拉玛干沙漠",
+      "Daxing'anling Forest": "大兴安岭森林",
+      "Guilin Hills": "桂林山丘",
+      "Yading Nature Reserve": "亚丁自然保护区",
+      "Nujiang Canyon": "怒江峡谷",
+      "Xiata Forest Viewpoint": "夏塔森林观景点",
+      "Mauna Kea": "莫纳克亚山",
+      "Atacama Desert": "阿塔卡马沙漠",
+      "Namibian Desert": "纳米比亚沙漠",
+      "Australian Outback": "澳大利亚内陆",
+      "Death Valley": "死亡谷",
+      "La Palma Observatory": "拉帕尔马天文台",
+      "Pic du Midi": "米迪峰",
+      "NamibRand Dark Sky Reserve": "纳米布兰德暗夜保护区",
+      "Aoraki Mackenzie": "奥拉基麦肯齐",
+      "Cherry Springs State Park": "樱泉州立公园"
+    };
+    
     // Calculate distance for each location and filter by radius
-    const locationsWithDistance = realLocations.map(location => ({
-      ...location,
-      id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
-      description: `Astronomical observation location with Bortle ${location.bortleScale}`,
-      date: new Date().toISOString(),
-      distance: calculateDistance(latitude, longitude, location.latitude, location.longitude)
-    }));
+    const locationsWithDistance = realLocations.map(location => {
+      const distance = calculateDistance(latitude, longitude, location.latitude, location.longitude);
+      return {
+        ...location,
+        id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
+        description: `Astronomical observation location with Bortle ${location.bortleScale}`,
+        date: new Date().toISOString(),
+        distance,
+        chineseName: chineseNames[location.name] || location.name
+      };
+    });
     
     // Filter by distance and sort by closest
     return locationsWithDistance

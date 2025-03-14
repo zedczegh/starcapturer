@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MapPin, Star } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -16,7 +16,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   location,
   index
 }) => {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const navigate = useNavigate();
   
   // Animation variants
   const cardVariants = {
@@ -50,6 +51,25 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   
   // Get score color based on SIQS
   const scoreColorClass = location.siqs ? getScoreColorClass(location.siqs) : "text-muted-foreground";
+  
+  // Handle navigation to location details
+  const handleCardClick = () => {
+    navigate(`/location/${location.id}`, {
+      state: {
+        id: location.id,
+        name: language === 'en' ? location.name : (location.chineseName || location.name),
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale,
+        timestamp: new Date().toISOString()
+      }
+    });
+  };
+
+  // Get the appropriate name based on language
+  const displayName = language === 'en' ? 
+    location.name : 
+    (location.chineseName || location.name);
 
   return (
     <motion.div
@@ -59,12 +79,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       custom={index}
       className="h-full"
     >
-      <Link 
-        to={`/location/${location.id}`}
-        className="glassmorphism p-4 rounded-lg hover:bg-background/50 transition-colors flex flex-col h-full"
+      <div 
+        onClick={handleCardClick}
+        className="glassmorphism p-4 rounded-lg hover:bg-background/50 transition-colors flex flex-col h-full cursor-pointer"
       >
         <div className="flex items-start justify-between mb-2">
-          <h2 className="font-semibold text-lg">{location.name}</h2>
+          <h2 className="font-semibold text-lg">{displayName}</h2>
           <div className={`flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded ${scoreAnimationClass}`}>
             <Star className={`h-3.5 w-3.5 fill-current ${scoreColorClass}`} />
             <span className={`font-medium text-sm ${scoreColorClass}`}>
@@ -79,7 +99,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             {formatDistance(location.distance)}
           </span>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 };

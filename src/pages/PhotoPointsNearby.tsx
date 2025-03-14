@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -11,10 +11,12 @@ import { useGeolocation } from "@/hooks/location/useGeolocation";
 import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
+import { toast } from "sonner";
 
 const PhotoPointsNearby: React.FC = () => {
   const { t, language } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
+  const navigate = useNavigate();
   
   // Get user's location
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
@@ -69,6 +71,39 @@ const PhotoPointsNearby: React.FC = () => {
         when: "beforeChildren" 
       } 
     }
+  };
+  
+  // Handle navigation to current location details
+  const handleViewCurrentLocation = () => {
+    if (!coords) return;
+    
+    const locationId = `current-${Date.now()}`;
+    navigate(`/location/${locationId}`, {
+      state: {
+        id: locationId,
+        name: t("Current Location", "当前位置"),
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        timestamp: new Date().toISOString()
+      }
+    });
+  };
+  
+  // Share current location
+  const handleShareCurrentLocation = () => {
+    if (!coords) return;
+    
+    navigate("/share", {
+      state: {
+        latitude: coords.latitude,
+        longitude: coords.longitude
+      }
+    });
+    
+    toast.success(
+      t("Location prepared for sharing", "位置已准备好分享"),
+      { description: t("You can now add details about this location", "您现在可以添加有关此位置的详细信息") }
+    );
   };
   
   return (
@@ -181,16 +216,20 @@ const PhotoPointsNearby: React.FC = () => {
               <span className="text-green-400">{currentSiqs?.toFixed(1)}</span>
             </p>
             
-            <Link to="/">
-              <Button size="lg" variant="outline" className="mr-4">
-                {t("View Details", "查看详情")}
-              </Button>
-            </Link>
-            <Link to="/share">
-              <Button size="lg">
-                {t("Share This Spot", "分享此位置")}
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="mr-4"
+              onClick={handleViewCurrentLocation}
+            >
+              {t("View Details", "查看详情")}
+            </Button>
+            <Button 
+              size="lg"
+              onClick={handleShareCurrentLocation}
+            >
+              {t("Share This Spot", "分享此位置")}
+            </Button>
           </motion.div>
         )}
         
@@ -207,12 +246,13 @@ const PhotoPointsNearby: React.FC = () => {
                 "在您的搜索半径内，我们未能找到条件明显更好的位置。"
               )}
             </p>
-            <Link to="/share">
-              <Button size="lg">
-                <MapPin className="h-5 w-5 mr-2" />
-                {t("Share Your Spot", "分享您的拍摄点")}
-              </Button>
-            </Link>
+            <Button 
+              size="lg"
+              onClick={handleShareCurrentLocation}
+            >
+              <MapPin className="h-5 w-5 mr-2" />
+              {t("Share Your Spot", "分享您的拍摄点")}
+            </Button>
           </div>
         )}
         
