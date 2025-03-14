@@ -1,11 +1,10 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
-import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { getLocationNameForCoordinates } from "./map/LocationNameService";
 
@@ -14,17 +13,48 @@ interface LocationControlsProps {
   gettingUserLocation: boolean;
   setGettingUserLocation: (state: boolean) => void;
   setStatusMessage: (message: string | null) => void;
+  currentLocation?: { latitude: number; longitude: number; name: string } | null;
 }
 
 const LocationControls: React.FC<LocationControlsProps> = ({
   onLocationUpdate,
   gettingUserLocation,
   setGettingUserLocation,
-  setStatusMessage
+  setStatusMessage,
+  currentLocation
 }) => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const { setCachedData, getCachedData } = useLocationDataCache();
+
+  // Update location name when language changes
+  useEffect(() => {
+    const updateLocationNameOnLanguageChange = async () => {
+      if (!currentLocation) return;
+      
+      try {
+        const locationName = await getLocationNameForCoordinates(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          language,
+          { setCachedData, getCachedData }
+        );
+        
+        // Only update if the name changed to avoid unnecessary re-renders
+        if (locationName !== currentLocation.name) {
+          await onLocationUpdate({
+            name: locationName,
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude
+          });
+        }
+      } catch (error) {
+        console.error("Error updating location name on language change:", error);
+      }
+    };
+    
+    updateLocationNameOnLanguageChange();
+  }, [language, currentLocation, onLocationUpdate, setCachedData, getCachedData]);
 
   const handleLocationSearch = (selectedLocation: { 
     name: string; 

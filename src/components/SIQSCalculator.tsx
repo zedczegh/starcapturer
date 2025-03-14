@@ -11,6 +11,7 @@ import StatusMessage from "./siqs/StatusMessage";
 import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState";
 import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
 import { Language } from "@/services/geocoding/types";
+import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -65,6 +66,35 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     validateInputs,
     calculateSIQSForLocation
   } = useSIQSCalculation(setCachedData, getCachedData);
+  
+  // Update location name when language changes
+  useEffect(() => {
+    const updateLocationNameForLanguage = async () => {
+      if (!latitude || !longitude || !locationName) return;
+      
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      
+      if (isNaN(lat) || isNaN(lng)) return;
+      
+      try {
+        const newName = await getLocationNameForCoordinates(
+          lat, 
+          lng, 
+          language as Language, 
+          { setCachedData, getCachedData }
+        );
+        
+        if (newName !== locationName) {
+          setLocationName(newName);
+        }
+      } catch (error) {
+        console.error("Error updating location name for language change:", error);
+      }
+    };
+    
+    updateLocationNameForLanguage();
+  }, [language, latitude, longitude, locationName, setCachedData, getCachedData, setLocationName]);
   
   useEffect(() => {
     // Track calculation state for loading indicator

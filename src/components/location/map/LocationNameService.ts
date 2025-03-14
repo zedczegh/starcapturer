@@ -8,6 +8,8 @@ export interface CachedLocationData {
   name?: string;
   formattedName?: string;
   bortleScale?: number;
+  nameInEnglish?: string;
+  nameInChinese?: string;
 }
 
 export interface LocationCacheService {
@@ -34,20 +36,45 @@ export async function getLocationNameForCoordinates(
     const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
     const cachedData = cacheService.getCachedData(cacheKey);
     
-    if (cachedData && typeof cachedData === 'object' && cachedData.name && !cachedData.name.includes("°")) {
-      return cachedData.name;
+    // If we have cached data with translated names
+    if (cachedData && typeof cachedData === 'object') {
+      // Return language-specific name if available
+      if (language === 'en' && cachedData.nameInEnglish) {
+        return cachedData.nameInEnglish;
+      } 
+      if (language === 'zh' && cachedData.nameInChinese) {
+        return cachedData.nameInChinese;
+      }
+      
+      // Fallback to general name if it doesn't include coordinates
+      if (cachedData.name && !cachedData.name.includes("°")) {
+        return cachedData.name;
+      }
     }
     
     // Try external API for reverse geocoding first
     try {
       const locationName = await fetchLocationNameFromAPI(lat, lng, language);
       if (locationName && !locationName.includes("°")) {
-        // Cache this data
-        cacheService.setCachedData(cacheKey, {
+        // Try to get the name in the other language too
+        const otherLanguage = language === 'en' ? 'zh' : 'en';
+        const otherLanguageName = await fetchLocationNameFromAPI(lat, lng, otherLanguage).catch(() => null);
+        
+        // Cache both language versions
+        const cacheData: CachedLocationData = {
           name: locationName,
           formattedName: locationName
-        });
+        };
         
+        if (language === 'en') {
+          cacheData.nameInEnglish = locationName;
+          if (otherLanguageName) cacheData.nameInChinese = otherLanguageName;
+        } else {
+          cacheData.nameInChinese = locationName;
+          if (otherLanguageName) cacheData.nameInEnglish = otherLanguageName;
+        }
+        
+        cacheService.setCachedData(cacheKey, cacheData);
         return locationName;
       }
     } catch (apiError) {
@@ -60,39 +87,48 @@ export async function getLocationNameForCoordinates(
     // Use closest known location
     if (closestLocation.distance <= 20) {
       const locationName = closestLocation.name;
+      // For locations from our database, we don't have translations yet
+      // In a production app, we would store both language versions
       cacheService.setCachedData(cacheKey, {
         name: locationName,
+        nameInEnglish: locationName,
+        nameInChinese: locationName, // Ideally this would be translated
         bortleScale: closestLocation.bortleScale
       });
       return locationName;
     }
     
     if (closestLocation.distance <= 100) {
-      const distanceText = language === 'en' ? 
-        `Near ${closestLocation.name}` : 
-        `${closestLocation.name}附近`;
+      const englishText = `Near ${closestLocation.name}`;
+      const chineseText = `${closestLocation.name}附近`;
+      const distanceText = language === 'en' ? englishText : chineseText;
+      
       cacheService.setCachedData(cacheKey, {
         name: distanceText,
+        nameInEnglish: englishText,
+        nameInChinese: chineseText,
         bortleScale: closestLocation.bortleScale
       });
       return distanceText;
     }
     
     // Last resort
-    const formattedName = language === 'en' ? 
-      `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°` : 
-      `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    const englishName = `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    const chineseName = `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    const formattedName = language === 'en' ? englishName : chineseName;
       
     cacheService.setCachedData(cacheKey, {
       name: formattedName,
+      nameInEnglish: englishName,
+      nameInChinese: chineseName,
       bortleScale: 4
     });
     return formattedName;
   } catch (error) {
     console.error("Error getting location name for coordinates:", error);
-    return language === 'en' ? 
-      `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°` : 
-      `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    const englishName = `Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    const chineseName = `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    return language === 'en' ? englishName : chineseName;
   }
 }
 
