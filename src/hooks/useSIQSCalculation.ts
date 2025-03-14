@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
@@ -14,10 +14,10 @@ export const useSIQSCalculation = (
   const [weatherData, setWeatherData] = useState<any>(null);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   
-  // Pre-compute moon phase for better performance
+  // Pre-compute moon phase for better performance - refreshed on component mount
   const currentMoonPhase = useMemo(() => calculateMoonPhase(), []);
   
-  const calculateSIQSForLocation = async (
+  const calculateSIQSForLocation = useCallback(async (
     lat: number, 
     lng: number, 
     name: string, 
@@ -76,6 +76,9 @@ export const useSIQSCalculation = (
         ? 5 // Default to moderate value if invalid
         : actualBortleScale;
       
+      // We need to recalculate moon phase to ensure it's fresh
+      const freshMoonPhase = calculateMoonPhase();
+      
       // Calculate SIQS
       const siqsResult = calculateSIQS({
         cloudCover: data.cloudCover,
@@ -83,7 +86,7 @@ export const useSIQSCalculation = (
         seeingConditions,
         windSpeed: data.windSpeed,
         humidity: data.humidity,
-        moonPhase: currentMoonPhase,
+        moonPhase: freshMoonPhase,
         precipitation: data.precipitation,
         weatherCondition: data.weatherCondition,
         aqi: data.aqi
@@ -106,7 +109,7 @@ export const useSIQSCalculation = (
         seeingConditions,
         weatherData: data,
         siqsResult,
-        moonPhase: currentMoonPhase,
+        moonPhase: freshMoonPhase,
         timestamp: new Date().toISOString(),
       };
       
@@ -117,6 +120,13 @@ export const useSIQSCalculation = (
         state: locationData,
         replace: false
       });
+      
+      // Also save to localStorage as a backup
+      try {
+        localStorage.setItem(`location_${locationId}`, JSON.stringify(locationData));
+      } catch (e) {
+        console.error("Failed to save to localStorage", e);
+      }
       
       // Wait a small delay to ensure the state is updated
       setTimeout(() => {
@@ -132,7 +142,7 @@ export const useSIQSCalculation = (
       setIsCalculating(false);
       displayOnly ? null : setLoading && setLoading(false);
     }
-  };
+  }, [isCalculating, navigate, getCachedData, setCachedData]);
   
   return {
     isCalculating,

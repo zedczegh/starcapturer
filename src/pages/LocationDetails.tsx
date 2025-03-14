@@ -6,6 +6,7 @@ import LocationDetailsViewport from "@/components/location/LocationDetailsViewpo
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
+import { calculateMoonPhase } from "@/utils/siqsValidation";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -20,42 +21,65 @@ const LocationDetails = () => {
 
   // Optimize data initialization - only run once when component mounts
   useEffect(() => {
-    if (!locationData && location.state) {
-      console.log("Setting location data from state:", location.state);
-      setLocationData(location.state);
-      
-      if (!location.state?.latitude || !location.state?.longitude) {
+    if (!locationData) {
+      if (location.state) {
+        console.log("Setting location data from state:", location.state);
+        
+        // Ensure location data has fresh moon phase
+        const dataWithFreshMoonPhase = {
+          ...location.state,
+          moonPhase: location.state.moonPhase || calculateMoonPhase()
+        };
+        
+        setLocationData(dataWithFreshMoonPhase);
+        
+        // Also save to localStorage for persistence
+        try {
+          if (id) {
+            localStorage.setItem(`location_${id}`, JSON.stringify(dataWithFreshMoonPhase));
+          }
+        } catch (e) {
+          console.error("Failed to save to localStorage", e);
+        }
+        
+        if (!location.state?.latitude || !location.state?.longitude) {
+          toast({
+            title: t("Error", "错误"),
+            description: t("Incomplete location data", "位置数据不完整"),
+            variant: "destructive"
+          });
+          
+          const redirectTimer = setTimeout(() => {
+            navigate("/");
+          }, 2000);
+          
+          return () => clearTimeout(redirectTimer);
+        }
+      } else {
+        // Try to load data from localStorage if available
+        try {
+          const savedLocationData = localStorage.getItem(`location_${id}`);
+          if (savedLocationData) {
+            const parsedData = JSON.parse(savedLocationData);
+            
+            // Ensure we have a fresh moon phase
+            parsedData.moonPhase = parsedData.moonPhase || calculateMoonPhase();
+            
+            setLocationData(parsedData);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to load from localStorage", e);
+        }
+        
+        console.error("Location data is missing", { params: id, locationState: location.state });
+        
         toast({
           title: t("Error", "错误"),
-          description: t("Incomplete location data", "位置数据不完整"),
+          description: t("Location data not found", "找不到位置数据"),
           variant: "destructive"
         });
-        
-        const redirectTimer = setTimeout(() => {
-          navigate("/");
-        }, 2000);
-        
-        return () => clearTimeout(redirectTimer);
       }
-    } else if (!locationData && !location.state) {
-      // Try to load data from localStorage if available
-      try {
-        const savedLocationData = localStorage.getItem(`location_${id}`);
-        if (savedLocationData) {
-          setLocationData(JSON.parse(savedLocationData));
-          return;
-        }
-      } catch (e) {
-        console.error("Failed to load from localStorage", e);
-      }
-      
-      console.error("Location data is missing", { params: id, locationState: location.state });
-      
-      toast({
-        title: t("Error", "错误"),
-        description: t("Location data not found", "找不到位置数据"),
-        variant: "destructive"
-      });
     }
   }, [locationData, location.state, navigate, t, id, toast]);
 

@@ -1,6 +1,7 @@
-import React from "react";
+
+import React, { useMemo } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
-import WeatherConditions from "@/components/WeatherConditions";
+import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import ForecastTabs from "@/components/location/ForecastTabs";
 import { determineWeatherCondition } from "@/lib/api";
@@ -32,7 +33,8 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   onRefreshForecast,
   onRefreshLongRange
 }) => {
-  const weatherData = {
+  // Memoize the weather data to prevent unnecessary re-calculations
+  const weatherData = useMemo(() => ({
     temperature: locationData?.weatherData?.temperature || 0,
     humidity: locationData?.weatherData?.humidity || 0,
     cloudCover: locationData?.weatherData?.cloudCover || 0,
@@ -42,16 +44,33 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     condition: locationData?.weatherData?.condition || 
       determineWeatherCondition(locationData?.weatherData?.cloudCover || 0),
     aqi: locationData?.weatherData?.aqi
-  };
+  }), [locationData?.weatherData]);
+
+  // Format the moon phase as a human-readable string
+  const moonPhaseString = useMemo(() => {
+    return normalizeMoonPhase(locationData.moonPhase || 0);
+  }, [locationData.moonPhase]);
+
+  // Format the seeing conditions as a human-readable string
+  const seeingConditionsString = useMemo(() => {
+    const value = locationData.seeingConditions;
+    if (typeof value !== 'number') return "Average";
+    
+    if (value <= 1) return "Excellent";
+    if (value <= 2) return "Good";
+    if (value <= 3) return "Average";
+    if (value <= 4) return "Poor";
+    return "Very Poor";
+  }, [locationData.seeingConditions]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
         <WeatherConditions
           weatherData={weatherData}
-          moonPhase={formatMoonPhase(locationData.moonPhase || 0)}
+          moonPhase={moonPhaseString}
           bortleScale={locationData.bortleScale || 4}
-          seeingConditions={formatSeeingConditions(locationData.seeingConditions || 3)}
+          seeingConditions={seeingConditionsString}
         />
         
         <SIQSSummary
@@ -85,29 +104,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
       </div>
     </div>
   );
-};
-
-const formatMoonPhase = (phase: number) => {
-  if (typeof phase !== 'number') return "Unknown";
-  
-  if (phase <= 0.05 || phase >= 0.95) return "New Moon";
-  if (phase < 0.25) return "Waxing Crescent";
-  if (phase < 0.30) return "First Quarter";
-  if (phase < 0.45) return "Waxing Gibbous";
-  if (phase < 0.55) return "Full Moon";
-  if (phase < 0.70) return "Waning Gibbous";
-  if (phase < 0.80) return "Last Quarter";
-  return "Waning Crescent";
-};
-
-const formatSeeingConditions = (value: number) => {
-  if (typeof value !== 'number') return "Average";
-  
-  if (value <= 1) return "Excellent";
-  if (value <= 2) return "Good";
-  if (value <= 3) return "Average";
-  if (value <= 4) return "Poor";
-  return "Very Poor";
 };
 
 export default React.memo(LocationContentGrid);

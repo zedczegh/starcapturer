@@ -22,6 +22,21 @@ interface WeatherConditionsProps {
   seeingConditions: string;
 }
 
+// Helper function to normalize moon phase display
+export const normalizeMoonPhase = (phase: string | number): string => {
+  if (typeof phase === 'number') {
+    if (phase <= 0.05 || phase >= 0.95) return "New Moon";
+    if (phase < 0.25) return "Waxing Crescent";
+    if (phase < 0.30) return "First Quarter";
+    if (phase < 0.45) return "Waxing Gibbous";
+    if (phase < 0.55) return "Full Moon";
+    if (phase < 0.70) return "Waning Gibbous";
+    if (phase < 0.80) return "Last Quarter";
+    return "Waning Crescent";
+  }
+  return phase; // If it's already a string, return as is
+};
+
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   weatherData,
   moonPhase,
@@ -30,16 +45,19 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  // Use memoized translations for better performance
+  // Use memoized translations and normalizations for better performance
   const translatedData = useMemo(() => {
+    // Normalize moon phase first to ensure consistent format
+    const normalizedMoonPhase = normalizeMoonPhase(moonPhase);
+    
     // Translate relevant conditions for Chinese
     return {
       seeingConditions: language === 'zh' 
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
       moonPhase: language === 'zh'
-        ? getMoonPhaseInChinese(moonPhase)
-        : moonPhase,
+        ? getMoonPhaseInChinese(normalizedMoonPhase)
+        : normalizedMoonPhase,
       weatherCondition: language === 'zh' && weatherData.condition
         ? getWeatherConditionInChinese(weatherData.condition)
         : weatherData.condition
@@ -74,4 +92,4 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   );
 };
 
-export default WeatherConditions;
+export default React.memo(WeatherConditions);
