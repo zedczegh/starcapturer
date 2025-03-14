@@ -1,41 +1,39 @@
 
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useGeolocation } from "@/hooks/location/useGeolocation";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-export const useSiqsNavigation = (
-  locationId: string | null,
-  beijingData: any,
-  isLoading: boolean,
-  setIsLoading: (value: boolean) => void
-) => {
+export const useSiqsNavigation = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  
+  // Set up geolocation for direct access
+  const geo = useGeolocation({ 
+    enableHighAccuracy: true, 
+    timeout: 15000,
+    maximumAge: 60000,
+    language 
+  });
 
-  const handleSIQSClick = useCallback(() => {
-    if (isLoading) return;
+  const handleSIQSClick = useCallback((e: React.MouseEvent) => {
+    // If there's an onClick in a parent component, we don't want to trigger it
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
-    setIsLoading(true);
+    // Navigate directly to the calculator section on homepage
+    navigate("/#calculator-section");
     
-    // Create a clean copy of the Beijing data with explicit properties
-    const beijingLocation = {
-      id: `beijing-${Date.now()}`,
-      name: "北京", // Ensure the name is explicitly "北京"
-      latitude: beijingData?.latitude || 39.9042,
-      longitude: beijingData?.longitude || 116.4074,
-      bortleScale: beijingData?.bortleScale || 8,
-      seeingConditions: beijingData?.seeingConditions || 3,
-      // Copy other properties if they exist
-      weatherData: beijingData?.weatherData || null,
-      moonPhase: beijingData?.moonPhase || 0.5,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Navigate to home with Beijing data
-    navigate("/", { 
-      state: beijingLocation
-    });
-    
-    setIsLoading(false);
-  }, [navigate, beijingData, isLoading, setIsLoading]);
+    // After a short delay, trigger location request automatically
+    setTimeout(() => {
+      const useLocationButton = document.querySelector('[data-location-button="true"]');
+      if (useLocationButton && useLocationButton instanceof HTMLButtonElement) {
+        useLocationButton.click();
+      }
+    }, 300);
+  }, [navigate]);
 
-  return { handleSIQSClick };
+  return { handleSIQSClick, getPosition: geo.getPosition };
 };

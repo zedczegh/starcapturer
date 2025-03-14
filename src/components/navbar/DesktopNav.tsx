@@ -6,19 +6,19 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 
 interface DesktopNavProps {
   location: ReturnType<typeof useLocation>;
-  handleSIQSClick: (e: React.MouseEvent) => void;
   locationId: string | null;
 }
 
 const DesktopNav: React.FC<DesktopNavProps> = ({ 
   location, 
-  handleSIQSClick, 
   locationId 
 }) => {
   const { t } = useLanguage();
+  const { handleSIQSClick } = useSiqsNavigation();
   
   return (
     <>
@@ -27,7 +27,7 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
           {t("Home", "首页")}
         </NavLink>
         <a
-          href={locationId ? `/location/${locationId}` : "/#calculator-section"}
+          href="/#calculator-section"
           onClick={handleSIQSClick}
           className="relative text-sm font-medium transition-colors hover:text-primary"
           style={{ 

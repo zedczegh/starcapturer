@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, Loader2 } from "lucide-react";
 import MapSelector from "../MapSelector";
@@ -19,6 +19,16 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   onSelectLocation
 }) => {
   const { t } = useLanguage();
+  const autoLocationTriggered = useRef(false);
+  
+  // Auto-trigger location request once when component mounts
+  useEffect(() => {
+    // Only auto-trigger if we don't have a location yet and haven't triggered before
+    if (!locationName && !loading && !autoLocationTriggered.current) {
+      autoLocationTriggered.current = true;
+      handleUseCurrentLocation();
+    }
+  }, [locationName, loading, handleUseCurrentLocation]);
   
   // Check if locationName is just coordinates or a proper name
   const isCoordinateOnly = locationName && locationName.includes("°");
@@ -36,6 +46,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         onClick={handleUseCurrentLocation}
         disabled={loading}
         className={`w-full hover-card transition-colors ${locationName ? 'bg-primary' : 'hover:bg-primary/10'}`}
+        data-location-button="true"
       >
         {loading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />

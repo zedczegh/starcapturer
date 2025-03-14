@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo } from "react";
+import React, { useCallback, memo, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -42,6 +42,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   // Use a China-friendly tile server
   const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  
+  // Memoize marker icon to avoid recreating on each render
+  const markerIcon = useMemo(() => createCustomMarker(), []);
 
   return (
     <>
@@ -54,7 +57,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           scrollWheelZoom={true}
           whenReady={handleMapReady}
           attributionControl={false}
-          // Remove preferCanvas and renderer props that caused the error
         >
           <TileLayer
             url={tileServerUrl}
@@ -64,7 +66,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           
           <Marker 
             position={position}
-            icon={createCustomMarker()}
+            icon={markerIcon}
           >
             <Popup>
               {locationName}
