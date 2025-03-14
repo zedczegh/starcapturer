@@ -1,6 +1,6 @@
 
 import React from "react";
-import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableHead, TableHeader as UITableHeader, TableRow } from "@/components/ui/table";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   DynamicTemperatureIcon, 
@@ -13,7 +13,7 @@ const TableHeader: React.FC = () => {
   const { t } = useLanguage();
   
   return (
-    <TableHeader>
+    <UITableHeader>
       <TableRow className="bg-cosmic-800/40 hover:bg-cosmic-800/60">
         <TableHead className="py-3">{t("Time", "时间")}</TableHead>
         <TableHead className="text-center">
@@ -35,7 +35,7 @@ const TableHeader: React.FC = () => {
         <TableHead>{t("Conditions", "天气状况")}</TableHead>
         <TableHead className="text-center">{t("Astro Score", "天文评分")}</TableHead>
       </TableRow>
-    </TableHeader>
+    </UITableHeader>
   );
 };
 

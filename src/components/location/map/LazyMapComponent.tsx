@@ -1,113 +1,109 @@
 
-import React, { useCallback, memo, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { validateCoordinates, formatCoordinates } from '@/utils/coordinates';
+import LocationNameService from './LocationNameService';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-// Fix for default marker icons - only initialize once
-if (!L.Icon.Default.imagePath) {
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
-}
+// Fix for the default marker icon in Leaflet
+// This is needed because Leaflet's CSS assumes the images are in a different path
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: '/marker-icon-2x.png',
+  iconUrl: '/marker-icon.png',
+  shadowUrl: '/marker-shadow.png',
+});
 
-interface LazyMapComponentProps {
-  position: [number, number];
-  locationName: string;
-  editable?: boolean;
-  onMapReady: () => void;
-  onMapClick: (lat: number, lng: number) => void;
-  showInfoPanel?: boolean;
-}
-
-// Create optimized tile server URL options to improve load performance
-const TILE_SERVER_OPTIONS = {
-  url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  subdomains: ['a', 'b', 'c'],
-  maxZoom: 19,
-  minZoom: 2,
+// Component to update map view when coordinates change
+const MapUpdater = ({ center }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  
+  return null;
 };
 
-const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
-  position,
-  locationName,
-  editable = false,
-  onMapReady,
-  onMapClick,
-  showInfoPanel = false
+const LazyMapComponent = ({ 
+  latitude, 
+  longitude, 
+  onLocationNameUpdate, 
+  isInteractive = true,
+  mapHeight = '400px',
+  zoom = 12,
+  showPopup = true
 }) => {
-  const { t } = useLanguage();
+  // Validate coordinates to ensure they're within valid ranges
+  const validCoordinates = validateCoordinates({ latitude, longitude });
+  const center = [validCoordinates.latitude, validCoordinates.longitude];
+  const { language } = useLanguage();
   
-  // Optimized callback function that won't cause unnecessary re-renders
+  // State for the location name display
+  const [locationName, setLocationName] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Handle map ready event
   const handleMapReady = useCallback(() => {
-    onMapReady();
-  }, [onMapReady]);
+    setIsLoading(false);
+    
+    // Get location name if callback is provided
+    if (onLocationNameUpdate) {
+      const locationService = new LocationNameService();
+      locationService.getLocationName(validCoordinates.latitude, validCoordinates.longitude, language)
+        .then(name => {
+          setLocationName(name);
+          onLocationNameUpdate(name);
+        })
+        .catch(error => {
+          console.error("Error fetching location name:", error);
+          const fallbackName = formatCoordinates(validCoordinates.latitude, validCoordinates.longitude);
+          setLocationName(fallbackName);
+          onLocationNameUpdate(fallbackName);
+        });
+    }
+  }, [validCoordinates.latitude, validCoordinates.longitude, language, onLocationNameUpdate]);
   
-  // Memoize marker icon to avoid recreating on each render
-  const markerIcon = useMemo(() => createCustomMarker(), []);
-
   return (
-    <>
-      <MapStyles />
-      <div className="h-full w-full">
-        <MapContainer 
-          center={position}
-          zoom={12} 
-          style={{ height: "100%", width: "100%" }}
-          scrollWheelZoom={true}
-          whenReady={handleMapReady}
-          attributionControl={false}
-          // Performance-focused options
-          zoomControl={true}
-          trackResize={true}
-          preferCanvas={true}
-        >
-          <TileLayer
-            url={TILE_SERVER_OPTIONS.url}
-            attribution={TILE_SERVER_OPTIONS.attribution}
-            subdomains={TILE_SERVER_OPTIONS.subdomains}
-            maxZoom={TILE_SERVER_OPTIONS.maxZoom}
-            minZoom={TILE_SERVER_OPTIONS.minZoom}
-          />
-          
-          <Marker 
-            position={position}
-            icon={markerIcon}
-          >
-            <Popup>
-              {locationName}
-            </Popup>
-          </Marker>
-          
-          <MapUpdater position={position} />
-          {editable && <MapEvents onMapClick={onMapClick} />}
-        </MapContainer>
-      </div>
-      
-      {showInfoPanel && (
-        <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
-          <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
-          <p className="text-sm text-muted-foreground">
-            {t(`${locationName} is located at coordinates ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`, 
-               `${locationName}位于坐标 ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`)}
-          </p>
-          {editable && (
-            <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
-            </p>
-          )}
+    <div style={{ position: 'relative', height: mapHeight, width: '100%' }}>
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-800/20 z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cosmic-400"></div>
         </div>
       )}
-    </>
+      
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom={true}
+        whenReady={handleMapReady}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          subdomains={['a', 'b', 'c']}
+        />
+        
+        <Marker position={center}>
+          {showPopup && (
+            <Popup>
+              <div className="text-slate-800">
+                {locationName || formatCoordinates(validCoordinates.latitude, validCoordinates.longitude)}
+              </div>
+            </Popup>
+          )}
+        </Marker>
+        
+        <MapUpdater center={center} />
+      </MapContainer>
+    </div>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export default memo(LazyMapComponent);
+export default LazyMapComponent;
