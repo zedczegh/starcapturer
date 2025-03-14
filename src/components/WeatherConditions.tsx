@@ -17,7 +17,7 @@ interface WeatherConditionsProps {
     condition: string;
     aqi?: number;
   };
-  moonPhase: string;
+  moonPhase: string | number;
   bortleScale: number;
   seeingConditions: string;
 }
@@ -25,15 +25,25 @@ interface WeatherConditionsProps {
 // Helper function to normalize moon phase display
 export const normalizeMoonPhase = (phase: string | number): string => {
   if (typeof phase === 'number') {
-    if (phase <= 0.05 || phase >= 0.95) return "New Moon";
-    if (phase < 0.25) return "Waxing Crescent";
-    if (phase < 0.30) return "First Quarter";
-    if (phase < 0.45) return "Waxing Gibbous";
-    if (phase < 0.55) return "Full Moon";
-    if (phase < 0.70) return "Waning Gibbous";
-    if (phase < 0.80) return "Last Quarter";
-    return "Waning Crescent";
+    // If it's a value between 0 and 1 (fraction of lunar cycle)
+    if (phase >= 0 && phase <= 1) {
+      if (phase <= 0.05 || phase >= 0.95) return "New Moon";
+      if (phase < 0.25) return "Waxing Crescent";
+      if (phase < 0.30) return "First Quarter";
+      if (phase < 0.45) return "Waxing Gibbous";
+      if (phase < 0.55) return "Full Moon";
+      if (phase < 0.70) return "Waning Gibbous";
+      if (phase < 0.80) return "Last Quarter";
+      return "Waning Crescent";
+    }
+    
+    // For any other numeric format, convert to string
+    return `Moon Phase ${phase}`;
   }
+  
+  // If it's already a string but empty, provide a default
+  if (!phase) return "Unknown Phase";
+  
   return phase; // If it's already a string, return as is
 };
 

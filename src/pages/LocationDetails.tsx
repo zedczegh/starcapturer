@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
 import { calculateMoonPhase } from "@/utils/siqsValidation";
+import { fetchWeatherData } from "@/lib/api";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -25,6 +26,14 @@ const LocationDetails = () => {
       if (location.state) {
         console.log("Setting location data from state:", location.state);
         
+        // Check if weatherData is missing or has zeros for critical values
+        const needsWeatherUpdate = 
+          !location.state.weatherData || 
+          location.state.weatherData.temperature === 0 || 
+          location.state.weatherData.humidity === 0 || 
+          location.state.weatherData.cloudCover === 0 || 
+          location.state.weatherData.windSpeed === 0;
+        
         // Ensure location data has fresh moon phase
         const dataWithFreshMoonPhase = {
           ...location.state,
@@ -40,6 +49,39 @@ const LocationDetails = () => {
           }
         } catch (e) {
           console.error("Failed to save to localStorage", e);
+        }
+        
+        // If weatherData needs to be updated, trigger it immediately
+        if (needsWeatherUpdate && location.state.latitude && location.state.longitude) {
+          (async () => {
+            try {
+              const freshWeatherData = await fetchWeatherData({
+                latitude: location.state.latitude,
+                longitude: location.state.longitude
+              });
+              
+              if (freshWeatherData) {
+                const updatedData = {
+                  ...dataWithFreshMoonPhase,
+                  weatherData: freshWeatherData,
+                  timestamp: new Date().toISOString()
+                };
+                
+                setLocationData(updatedData);
+                
+                // Update localStorage
+                try {
+                  if (id) {
+                    localStorage.setItem(`location_${id}`, JSON.stringify(updatedData));
+                  }
+                } catch (e) {
+                  console.error("Failed to save updated data to localStorage", e);
+                }
+              }
+            } catch (error) {
+              console.error("Failed to update weather data:", error);
+            }
+          })();
         }
         
         if (!location.state?.latitude || !location.state?.longitude) {
@@ -65,7 +107,49 @@ const LocationDetails = () => {
             // Ensure we have a fresh moon phase
             parsedData.moonPhase = parsedData.moonPhase || calculateMoonPhase();
             
+            // Check if we need to update weather data
+            const needsWeatherUpdate = 
+              !parsedData.weatherData || 
+              parsedData.weatherData.temperature === 0 || 
+              parsedData.weatherData.humidity === 0 || 
+              parsedData.weatherData.cloudCover === 0 || 
+              parsedData.weatherData.windSpeed === 0;
+            
             setLocationData(parsedData);
+            
+            // If weatherData needs to be updated, trigger it immediately
+            if (needsWeatherUpdate && parsedData.latitude && parsedData.longitude) {
+              (async () => {
+                try {
+                  const freshWeatherData = await fetchWeatherData({
+                    latitude: parsedData.latitude,
+                    longitude: parsedData.longitude
+                  });
+                  
+                  if (freshWeatherData) {
+                    const updatedData = {
+                      ...parsedData,
+                      weatherData: freshWeatherData,
+                      timestamp: new Date().toISOString()
+                    };
+                    
+                    setLocationData(updatedData);
+                    
+                    // Update localStorage
+                    try {
+                      if (id) {
+                        localStorage.setItem(`location_${id}`, JSON.stringify(updatedData));
+                      }
+                    } catch (e) {
+                      console.error("Failed to save updated data to localStorage", e);
+                    }
+                  }
+                } catch (error) {
+                  console.error("Failed to update weather data:", error);
+                }
+              })();
+            }
+            
             return;
           }
         } catch (e) {
@@ -81,7 +165,7 @@ const LocationDetails = () => {
         });
       }
     }
-  }, [locationData, location.state, navigate, t, id, toast]);
+  }, [locationData, location.state, navigate, t, id, toast, language]);
 
   // Cache location data in localStorage for better persistence
   useEffect(() => {

@@ -10,24 +10,55 @@ interface DynamicMoonIconProps {
 const DynamicMoonIcon: React.FC<DynamicMoonIconProps> = ({ phase, className }) => {
   // Calculate fill percentage based on moon phase in both English and Chinese
   const fillPercentage = useMemo(() => {
-    // Support both English and Chinese moon phase names
-    const isFullMoon = phase.includes("Full") || phase.includes("满月");
-    const isGibbous = phase.includes("Gibbous") || phase.includes("凸月");
-    const isQuarter = phase.includes("Quarter") || phase.includes("弦月");
-    const isCrescent = phase.includes("Crescent") || phase.includes("眉月") || phase.includes("残月");
-    const isNewMoon = phase.includes("New") || phase.includes("新月");
-    const isWaxing = phase.includes("Waxing") || phase.includes("上弦") || phase.includes("眉月");
+    if (!phase) return 50; // Default to half moon if no phase provided
     
-    if (isFullMoon) {
+    // Support both numeric values and string names
+    if (typeof phase === 'number') {
+      return phase * 100; // If it's already a normalized value between 0-1
+    }
+    
+    // Exact phrase matching for better accuracy
+    const phaseLower = phase.toLowerCase();
+    
+    // Full moon
+    if (phaseLower.includes("full") || phaseLower.includes("满月")) {
       return 100;
-    } else if (isGibbous) {
-      return isWaxing ? 75 : 65;
-    } else if (isQuarter) {
-      return 50;
-    } else if (isCrescent) {
-      return isWaxing ? 25 : 15;
-    } else if (isNewMoon) {
+    }
+    
+    // New moon
+    if (phaseLower.includes("new") || phaseLower.includes("新月")) {
       return 0;
+    }
+    
+    // Waxing (growing) phases
+    if (phaseLower.includes("waxing") || phaseLower.includes("上弦") || phaseLower.includes("眉月")) {
+      if (phaseLower.includes("crescent") || phaseLower.includes("眉月")) {
+        return 25; // Waxing crescent
+      }
+      if (phaseLower.includes("gibbous") || phaseLower.includes("凸月")) {
+        return 75; // Waxing gibbous
+      }
+    }
+    
+    // Waning (shrinking) phases
+    if (phaseLower.includes("waning") || phaseLower.includes("下弦") || phaseLower.includes("残月")) {
+      if (phaseLower.includes("crescent") || phaseLower.includes("残月")) {
+        return 15; // Waning crescent
+      }
+      if (phaseLower.includes("gibbous") || phaseLower.includes("凸月")) {
+        return 65; // Waning gibbous
+      }
+    }
+    
+    // Quarter phases
+    if (phaseLower.includes("quarter") || phaseLower.includes("弦月")) {
+      if (phaseLower.includes("first") || phaseLower.includes("上弦")) {
+        return 50; // First quarter
+      }
+      if (phaseLower.includes("last") || phaseLower.includes("下弦")) {
+        return 50; // Last quarter (visually similar but different side)
+      }
+      return 50; // Generic quarter
     }
     
     // Default to 50% if we can't determine the phase

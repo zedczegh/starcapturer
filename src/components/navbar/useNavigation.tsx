@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { fetchWeatherData, fetchLightPollutionData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
+import { calculateMoonPhase } from "@/utils/siqsValidation";
 
 export const useNavigation = (locationId: string | null, beijingData: any, isLoading: boolean, setIsLoading: (value: boolean) => void) => {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
           state: beijingData,
           replace: false 
         });
+        setIsLoading(false);
         return;
       }
       
@@ -56,16 +58,30 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
         longitude: 116.4074
       };
       
-      // Attempt to fetch weather data with error handling
+      // Force fresh weather data fetch - no caching here
       let weatherData;
       try {
         weatherData = await fetchWeatherData({
           latitude: beijing.latitude,
           longitude: beijing.longitude,
         });
+        
+        if (!weatherData || Object.keys(weatherData).length === 0) {
+          throw new Error("Empty weather data");
+        }
+        
+        // Verify all required fields are present
+        if (
+          typeof weatherData.temperature !== 'number' || 
+          typeof weatherData.humidity !== 'number' || 
+          typeof weatherData.cloudCover !== 'number' || 
+          typeof weatherData.windSpeed !== 'number'
+        ) {
+          throw new Error("Invalid weather data fields");
+        }
       } catch (weatherError) {
         console.error("Failed to fetch weather data:", weatherError);
-        // Use fallback values
+        // Use fallback values that are more realistic than zeros
         weatherData = {
           temperature: 20,
           humidity: 50,
@@ -84,12 +100,12 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
         });
       }
       
-      // Default for Beijing (urban area)
-      let bortleScale = 7; 
+      // Get Bortle scale with better error handling
+      let bortleScale = 7; // Default for Beijing (urban area)
       
       try {
         const bortleData = await fetchLightPollutionData(beijing.latitude, beijing.longitude);
-        if (bortleData?.bortleScale) {
+        if (bortleData?.bortleScale && bortleData.bortleScale >= 1 && bortleData.bortleScale <= 9) {
           bortleScale = bortleData.bortleScale;
         }
       } catch (error) {
@@ -97,15 +113,8 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
         // Continue with default bortle scale
       }
       
-      // Calculate moon phase (simplified)
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      const day = now.getDate();
-      const c = 365.25 * year;
-      const e = 30.6 * month;
-      const jd = c + e + day - 694039.09;
-      const moonPhase = (jd % 29.53) / 29.53;
+      // Use our consistent moon phase calculation
+      const moonPhase = calculateMoonPhase();
       
       const siqsResult = calculateSIQS({
         cloudCover: weatherData.cloudCover,
@@ -132,6 +141,13 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
         moonPhase,
         timestamp: new Date().toISOString(),
       };
+      
+      // Also save to localStorage as backup
+      try {
+        localStorage.setItem(`location_${locationId}`, JSON.stringify(locationData));
+      } catch (e) {
+        console.error("Failed to save to localStorage", e);
+      }
       
       // Use a more efficient navigation approach
       navigate(`/location/${locationId}`, { 
