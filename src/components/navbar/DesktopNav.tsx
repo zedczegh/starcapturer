@@ -3,8 +3,6 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { NavLink } from "./NavButtons";
 import LanguageSwitcher from "../LanguageSwitcher";
-import { Button } from "@/components/ui/button";
-import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface DesktopNavProps {
@@ -35,13 +33,8 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         </NavLink>
       </nav>
       
-      <div className="hidden md:flex items-center space-x-2">
+      <div className="hidden md:flex items-center">
         <LanguageSwitcher />
-        <Button variant="outline" className="flex items-center space-x-2">
-          <User className="h-4 w-4" />
-          <span>{t("Sign In", "登录")}</span>
-        </Button>
-        <Button>{t("Get Started", "开始使用")}</Button>
       </div>
     </>
   );
