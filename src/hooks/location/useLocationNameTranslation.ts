@@ -1,8 +1,7 @@
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import type { Language } from "@/services/geocoding/types";
+import { updateLocationName } from "@/lib/locationNameUpdater";
 
 interface UseLocationNameTranslationProps {
   locationData: any;
@@ -11,90 +10,50 @@ interface UseLocationNameTranslationProps {
   getCachedData: (key: string) => any;
 }
 
-export const useLocationNameTranslation = ({
+/**
+ * Hook to handle location name translation based on language changes
+ * Enhanced for better geocoding in remote regions
+ */
+export function useLocationNameTranslation({
   locationData,
   setLocationData,
   setCachedData,
   getCachedData
-}: UseLocationNameTranslationProps) => {
+}: UseLocationNameTranslationProps) {
   const { language } = useLanguage();
-  const lastTranslationRef = useRef<{
-    language: string;
-    coords: string;
-    name: string;
-  } | null>(null);
-  
-  // Create cache service
-  const cacheService = {
-    setCachedData,
-    getCachedData
-  };
-  
-  // Memoize the update function to prevent recreation on each render
-  const updateLocationNameForLanguage = useCallback(async () => {
+
+  // Update location name when language changes
+  useEffect(() => {
     if (!locationData || !locationData.latitude || !locationData.longitude) return;
     
-    // Skip translation for explicitly named locations like Beijing
-    if (locationData.name === "北京" || locationData.name === "Beijing") return;
+    // Skip if we're on the initial render or location data isn't ready
+    if (!locationData.name) return;
     
-    const coordsKey = `${locationData.latitude.toFixed(4)}-${locationData.longitude.toFixed(4)}`;
-    
-    // Skip if we already translated for this language and coordinates recently
-    if (lastTranslationRef.current && 
-        lastTranslationRef.current.language === language &&
-        lastTranslationRef.current.coords === coordsKey &&
-        lastTranslationRef.current.name === locationData.name) {
-      return;
-    }
-    
-    try {
-      const newName = await getLocationNameForCoordinates(
-        locationData.latitude, 
-        locationData.longitude, 
-        language as Language, 
-        cacheService
-      );
-      
-      if (newName && newName !== locationData.name) {
-        setLocationData(prevData => {
-          if (!prevData) return null;
-          return {
-            ...prevData,
+    // Use our optimized location name updater
+    const updateNameForLanguage = async () => {
+      try {
+        const newName = await updateLocationName(
+          locationData.latitude,
+          locationData.longitude,
+          locationData.name,
+          language === 'zh' ? 'zh' : 'en',
+          { setCachedData, getCachedData }
+        );
+        
+        if (newName && newName !== locationData.name) {
+          setLocationData({
+            ...locationData,
             name: newName
-          };
-        });
-        
-        // Also update the cache with the new name
-        const cacheKey = `loc-${locationData.latitude.toFixed(4)}-${locationData.longitude.toFixed(4)}`;
-        const existingData = getCachedData(cacheKey) || {};
-        
-        setCachedData(cacheKey, { 
-          ...existingData,
-          name: newName,
-          ...(language === 'en' ? { nameInEnglish: newName } : { nameInChinese: newName }),
-          timestamp: Date.now()
-        });
-        
-        // Update our reference to prevent duplicate work
-        lastTranslationRef.current = {
-          language,
-          coords: coordsKey,
-          name: newName
-        };
+          });
+        }
+      } catch (error) {
+        console.error("Error updating location name for language change:", error);
       }
-    } catch (error) {
-      console.error("Error updating location name for language change:", error);
-    }
-  }, [language, locationData, setLocationData, setCachedData, getCachedData, cacheService]);
-  
-  // Update location name when language changes - use a shorter timeout
-  useEffect(() => {
-    if (locationData) {
-      const translationTimer = setTimeout(() => {
-        updateLocationNameForLanguage();
-      }, 50); // Reduced timeout for faster translation
-      
-      return () => clearTimeout(translationTimer);
-    }
-  }, [language, updateLocationNameForLanguage, locationData]);
-};
+    };
+    
+    // Run the update, but only if the location name might need adjustment
+    updateNameForLanguage();
+  }, [language, locationData, setLocationData, setCachedData, getCachedData]);
+
+  return null;
+}

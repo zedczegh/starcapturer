@@ -6,6 +6,8 @@ import { fetchWeatherData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { useLightPollutionData } from "./useLightPollutionData";
 import { hasProperty } from "@/types/weather-utils";
+import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { useBortleUpdater } from "./location/useBortleUpdater";
 
 export const useLocationUpdate = (
   locationData: any,
@@ -14,6 +16,7 @@ export const useLocationUpdate = (
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
   const { updateLightPollutionData } = useLightPollutionData();
+  const { updateBortleScale } = useBortleUpdater();
 
   const handleLocationUpdate = useCallback(
     async (newLocation: { name: string; latitude: number; longitude: number }) => {
@@ -44,20 +47,38 @@ export const useLocationUpdate = (
           };
         }
         
-        // Reuse existing Bortle scale or get a new one
-        let bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : 4;
-        try {
-          const { fetchLightPollutionData } = await import("@/lib/api");
-          const bortleData = await fetchLightPollutionData(
+        // Check if we're in a remote region that needs special handling
+        const isRemoteRegion = identifyRemoteRegion(newLocation.latitude, newLocation.longitude);
+        
+        // For remote regions, always get fresh Bortle scale data
+        let bortleScale: number | null;
+        if (isRemoteRegion) {
+          bortleScale = await updateBortleScale(
             newLocation.latitude, 
-            newLocation.longitude
+            newLocation.longitude, 
+            newLocation.name, 
+            null // Force refresh for remote regions
           );
-          if (bortleData?.bortleScale) {
-            bortleScale = bortleData.bortleScale;
+        } else {
+          // For other regions, reuse existing if available
+          bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : null;
+          
+          // If no existing value, get a new one
+          if (bortleScale === null || bortleScale === undefined) {
+            try {
+              const { fetchLightPollutionData } = await import("@/lib/api");
+              const bortleData = await fetchLightPollutionData(
+                newLocation.latitude, 
+                newLocation.longitude
+              );
+              if (bortleData?.bortleScale) {
+                bortleScale = bortleData.bortleScale;
+              }
+            } catch (error) {
+              console.error("Error fetching light pollution data:", error);
+              // Continue with existing bortle scale
+            }
           }
-        } catch (error) {
-          console.error("Error fetching light pollution data:", error);
-          // Continue with existing bortle scale
         }
         
         // Calculate new SIQS score
@@ -65,7 +86,7 @@ export const useLocationUpdate = (
         
         const siqsResult = calculateSIQS({
           cloudCover: newWeatherData.cloudCover,
-          bortleScale: bortleScale,
+          bortleScale: bortleScale !== null ? bortleScale : 4,
           seeingConditions: seeingConditions,
           windSpeed: newWeatherData.windSpeed,
           humidity: newWeatherData.humidity,
@@ -101,7 +122,7 @@ export const useLocationUpdate = (
         setLoading(false);
       }
     },
-    [locationData, setLocationData, t]
+    [locationData, setLocationData, t, updateBortleScale]
   );
 
   return {

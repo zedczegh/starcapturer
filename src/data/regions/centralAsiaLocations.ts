@@ -34,6 +34,27 @@ export const centralAsiaLocations: LocationEntry[] = [
   { name: "Dushanbe", coordinates: [38.5598, 68.7870], bortleScale: 7.0, radius: 20, type: 'urban' },
   { name: "Ashgabat", coordinates: [37.9601, 58.3261], bortleScale: 7.2, radius: 20, type: 'urban' },
   
+  // Tibet cities with correctly updated Bortle values
+  { name: "Lhasa City Center", coordinates: [29.6500, 91.1000], bortleScale: 7.2, radius: 15, type: 'urban' },
+  { name: "Lhasa Metropolitan Area", coordinates: [29.6700, 91.1300], bortleScale: 6.8, radius: 25, type: 'urban' },
+  { name: "Nyingchi City", coordinates: [29.6500, 94.3500], bortleScale: 5.8, radius: 10, type: 'urban' },
+  { name: "Shigatse City", coordinates: [29.2667, 88.8833], bortleScale: 6.5, radius: 12, type: 'urban' },
+  { name: "Lhoka (Shannan) City", coordinates: [29.2333, 91.7667], bortleScale: 6.3, radius: 10, type: 'urban' },
+  { name: "Qamdo City", coordinates: [31.1500, 97.1800], bortleScale: 6.0, radius: 10, type: 'urban' },
+  { name: "Nagqu City", coordinates: [31.4800, 92.0500], bortleScale: 5.7, radius: 8, type: 'urban' },
+  { name: "Ngari Prefecture", coordinates: [32.5000, 80.1000], bortleScale: 4.5, radius: 20, type: 'urban' },
+  
+  // Tibet suburban areas
+  { name: "Chengguan District", coordinates: [29.6524, 91.1200], bortleScale: 7.0, radius: 10, type: 'suburban' },
+  { name: "Doilungdêqên District", coordinates: [29.6708, 90.9647], bortleScale: 6.5, radius: 12, type: 'suburban' },
+  { name: "Dagzê District", coordinates: [29.6667, 91.3667], bortleScale: 6.2, radius: 10, type: 'suburban' },
+  { name: "Lhünzhub County", coordinates: [29.8333, 91.1833], bortleScale: 5.8, radius: 15, type: 'suburban' },
+  { name: "Maizhokunggar County", coordinates: [29.8300, 91.7300], bortleScale: 5.5, radius: 15, type: 'suburban' },
+  { name: "Gyantse County", coordinates: [28.9047, 89.6156], bortleScale: 5.4, radius: 10, type: 'suburban' },
+  { name: "Samzhubzê District", coordinates: [29.2700, 88.8800], bortleScale: 6.3, radius: 10, type: 'suburban' },
+  { name: "Barkor Street Area", coordinates: [29.6537, 91.1327], bortleScale: 7.1, radius: 3, type: 'suburban' },
+  { name: "Norbulingka Area", coordinates: [29.6497, 91.0802], bortleScale: 6.8, radius: 5, type: 'suburban' },
+  
   // Natural sites in Xinjiang and Central Asia
   { name: "Karakul Lake", coordinates: [38.4344, 73.3999], bortleScale: 1.9, radius: 30, type: 'natural' },
   { name: "Taklamakan Desert Center", coordinates: [38.8600, 83.5000], bortleScale: 1.2, radius: 100, type: 'natural' },
@@ -41,10 +62,22 @@ export const centralAsiaLocations: LocationEntry[] = [
   { name: "Pamir Mountains", coordinates: [38.0000, 73.0000], bortleScale: 1.3, radius: 80, type: 'natural' },
   { name: "Issyk-Kul Lake", coordinates: [42.4168, 77.6611], bortleScale: 2.8, radius: 30, type: 'natural' },
   
+  // Remote Tibetan natural sites with accurate Bortle scale
+  { name: "Nam Co Lake", coordinates: [30.7500, 90.5000], bortleScale: 2.0, radius: 30, type: 'natural' },
+  { name: "Mount Kailash", coordinates: [31.0700, 81.3100], bortleScale: 1.4, radius: 40, type: 'natural' },
+  { name: "Yamdrok Lake", coordinates: [29.4900, 90.6500], bortleScale: 2.5, radius: 20, type: 'natural' },
+  { name: "Yarlung Tsangpo Grand Canyon", coordinates: [29.4000, 94.9000], bortleScale: 1.8, radius: 40, type: 'natural' },
+  { name: "Namtso Lake", coordinates: [30.7000, 90.5500], bortleScale: 1.9, radius: 35, type: 'natural' },
+  
   // Culturally significant locations
   { name: "Id Kah Mosque", coordinates: [39.4700, 76.0000], bortleScale: 7.0, radius: 2, type: 'urban' },
   { name: "Kizil Caves", coordinates: [41.7833, 82.5333], bortleScale: 4.5, radius: 5, type: 'natural' },
   { name: "Jiaohe Ruins", coordinates: [42.9547, 89.1083], bortleScale: 5.0, radius: 3, type: 'natural' },
   { name: "Bezeklik Caves", coordinates: [42.9500, 89.5400], bortleScale: 4.0, radius: 5, type: 'natural' },
-  { name: "Gaochang Ruins", coordinates: [42.8600, 89.5358], bortleScale: 4.2, radius: 5, type: 'natural' }
+  { name: "Gaochang Ruins", coordinates: [42.8600, 89.5358], bortleScale: 4.2, radius: 5, type: 'natural' },
+  { name: "Potala Palace", coordinates: [29.6580, 91.1170], bortleScale: 7.0, radius: 2, type: 'urban' },
+  { name: "Jokhang Temple", coordinates: [29.6525, 91.1327], bortleScale: 7.0, radius: 2, type: 'urban' },
+  { name: "Drepung Monastery", coordinates: [29.6877, 91.0333], bortleScale: 6.2, radius: 5, type: 'natural' },
+  { name: "Sera Monastery", coordinates: [29.7136, 91.1225], bortleScale: 6.0, radius: 5, type: 'natural' },
+  { name: "Tashilhunpo Monastery", coordinates: [29.2680, 88.8800], bortleScale: 6.3, radius: 3, type: 'urban' }
 ];

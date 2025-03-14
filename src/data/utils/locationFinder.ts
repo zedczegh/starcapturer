@@ -41,8 +41,21 @@ export function findClosestLocationImpl(
     const [locLat, locLng] = location.coordinates;
     const distance = calculateDistance(latitude, longitude, locLat, locLng);
     
+    // Special handling for Tibetan cities and other remote urban areas
+    // Increase the effective radius for these areas to better reflect their light pollution spread
+    let effectiveRadius = location.radius;
+    
+    // Enhance radius for urban areas in Tibet, Xinjiang, Mongolia and remote regions
+    if (location.type === 'urban' && 
+        ((locLat > 27 && locLat < 33 && locLng > 85 && locLng < 95) || // Tibet
+         (locLat > 35 && locLat < 48 && locLng > 75 && locLng < 95) || // Xinjiang
+         (locLat > 38 && locLat < 46 && locLng > 105 && locLng < 125) || // Inner Mongolia
+         (locLat > 40 && locLat < 50 && locLng > 120 && locLng < 135))) { // Northeast
+      effectiveRadius = location.radius * 1.5; // 50% larger effective radius
+    }
+    
     // If we're within the radius of a location, it's likely to have the same light pollution characteristics
-    if (distance <= location.radius) {
+    if (distance <= effectiveRadius) {
       locationsWithinRadius.push({
         location,
         distance
@@ -89,11 +102,22 @@ export function findClosestLocationImpl(
       // Base weight is inverse of distance (closer = higher weight)
       let weight = 1 / Math.max(1, item.distance);
       
+      // Enhanced urban weighting for remote regions to account for concentrated light sources
+      const [locLat, locLng] = item.location.coordinates;
+      const isRemoteRegion = (
+        (locLat > 27 && locLat < 33 && locLng > 85 && locLng < 95) || // Tibet
+        (locLat > 35 && locLat < 48 && locLng > 75 && locLng < 95) || // Xinjiang
+        (locLat > 38 && locLat < 46 && locLng > 105 && locLng < 125) || // Inner Mongolia
+        (locLat > 40 && locLat < 50 && locLng > 120 && locLng < 135) // Northeast
+      );
+      
       // Give more weight to urban areas for light pollution (cities dominate nearby areas)
       if (item.location.type === 'urban') {
-        weight *= 2.0; // Increased from 1.5 to 2.0 to better reflect urban light pollution
+        // Urban areas in remote regions have even stronger influence
+        weight *= isRemoteRegion ? 2.5 : 2.0;
       } else if (item.location.type === 'suburban') {
-        weight *= 1.7; // Suburban areas also contribute significantly to light pollution
+        // Suburban areas also contribute significantly to light pollution
+        weight *= isRemoteRegion ? 2.0 : 1.7;
       }
       
       // Mountains still get some weight but less than urban areas
@@ -136,6 +160,14 @@ export function findClosestLocationImpl(
     let totalWeight = 0;
     let weightedBortleSum = 0;
     
+    // First, check if we're in a special region where urban centers should have more influence
+    const isRemoteRegion = (
+      (latitude > 27 && latitude < 33 && longitude > 85 && longitude < 95) || // Tibet
+      (latitude > 35 && latitude < 48 && longitude > 75 && longitude < 95) || // Xinjiang
+      (latitude > 38 && latitude < 46 && longitude > 105 && longitude < 125) || // Inner Mongolia
+      (latitude > 40 && latitude < 50 && longitude > 120 && longitude < 135) // Northeast
+    );
+    
     for (const loc of sortedLocations) {
       // Base weight - inverse square of distance for sharper falloff with distance
       const weight = 1 / Math.pow(Math.max(1, loc.distance), 1.8);
@@ -145,12 +177,21 @@ export function findClosestLocationImpl(
       
       // Urban areas have stronger influence on light pollution (higher weight)
       if (loc.type === 'urban') {
-        // Urban light pollution has strong but localized influence
-        // Higher exponent creates a sharper falloff from city centers
-        modifiedWeight *= loc.distance < 40 ? 2.5 : 1.0;
+        // Urban areas in remote regions have stronger influence over longer distances
+        if (isRemoteRegion) {
+          modifiedWeight *= loc.distance < 80 ? 3.0 : 1.5;
+        } else {
+          // Urban light pollution has strong but localized influence
+          // Higher exponent creates a sharper falloff from city centers
+          modifiedWeight *= loc.distance < 40 ? 2.5 : 1.0;
+        }
       } else if (loc.type === 'suburban') {
         // Suburban areas have moderate but significant light pollution
-        modifiedWeight *= loc.distance < 30 ? 1.8 : 0.9;
+        if (isRemoteRegion) {
+          modifiedWeight *= loc.distance < 60 ? 2.2 : 1.2;
+        } else {
+          modifiedWeight *= loc.distance < 30 ? 1.8 : 0.9;
+        }
       } else if (loc.type === 'natural' || loc.type === 'dark-site') {
         // Natural areas have less influence on increasing light pollution
         modifiedWeight *= 0.7;
@@ -162,8 +203,18 @@ export function findClosestLocationImpl(
     
     const estimatedBortle = totalWeight > 0 ? weightedBortleSum / totalWeight : 5;
     
+    // Adjust the calculated Bortle scale for remote regions
+    let finalBortle = estimatedBortle;
+    
+    // Apply a floor value for urban areas in remote regions
+    if (isRemoteRegion && closestLocation.type === 'urban' && closestLocation.distance < 100) {
+      // Don't let urban light pollution in remote areas go below a certain threshold
+      const minBortleForRemoteUrban = 4.5;
+      finalBortle = Math.max(finalBortle, minBortleForRemoteUrban);
+    }
+    
     // Round to one decimal place for consistency
-    const finalBortle = Math.round(estimatedBortle * 10) / 10;
+    finalBortle = Math.round(finalBortle * 10) / 10;
     
     return {
       name: `Area near ${closestLocation.name}`,

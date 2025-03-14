@@ -2,6 +2,7 @@
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestLocation } from "@/data/locationDatabase";
 import type { Language } from "@/services/geocoding/types";
+import { enhanceRemoteLocationName, identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
 
 export type LocationCacheService = {
   setCachedData: (key: string, data: any) => void;
@@ -17,6 +18,7 @@ export function normalizeLongitude(longitude: number): number {
 
 /**
  * Get a location name for given coordinates with fallback mechanisms
+ * Enhanced to better handle remote regions like Tibet and Xinjiang
  */
 export async function getLocationNameForCoordinates(
   latitude: number,
@@ -25,8 +27,18 @@ export async function getLocationNameForCoordinates(
   cacheService?: LocationCacheService
 ): Promise<string> {
   try {
+    // Validate coordinates
+    if (!isFinite(latitude) || !isFinite(longitude)) {
+      return language === 'en'
+        ? `Unknown Location`
+        : `未知位置`;
+    }
+    
+    // Normalize coordinates
+    const normalizedLng = normalizeLongitude(longitude);
+    
     // Check cache first for faster response
-    const cacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
+    const cacheKey = `loc-name-${latitude.toFixed(4)}-${normalizedLng.toFixed(4)}-${language}`;
     if (cacheService) {
       const cachedName = cacheService.getCachedData(cacheKey);
       if (cachedName) {
@@ -34,22 +46,45 @@ export async function getLocationNameForCoordinates(
       }
     }
     
+    // Check if we're in a remote region that needs special handling
+    const isRemoteRegion = identifyRemoteRegion(latitude, normalizedLng);
+    
     // Try to get location name from API
     try {
-      const locationName = await getLocationNameFromCoordinates(latitude, longitude, language);
+      const locationName = await getLocationNameFromCoordinates(latitude, normalizedLng, language);
       
-      // Cache successful result
-      if (cacheService && locationName) {
-        cacheService.setCachedData(cacheKey, locationName);
+      // For remote regions, enhance the name if needed
+      let finalName = locationName;
+      if (isRemoteRegion) {
+        finalName = enhanceRemoteLocationName(latitude, normalizedLng, locationName, language);
       }
       
-      return locationName;
+      // Cache successful result
+      if (cacheService && finalName) {
+        cacheService.setCachedData(cacheKey, finalName);
+      }
+      
+      return finalName;
     } catch (apiError) {
       console.error("Error getting location name from API:", apiError);
       throw apiError;
     }
   } catch (error) {
     console.error("Error in getLocationNameForCoordinates:", error);
+    
+    // Special handling for remote regions
+    const isRemoteRegion = identifyRemoteRegion(latitude, longitude);
+    if (isRemoteRegion) {
+      const enhancedName = enhanceRemoteLocationName(latitude, longitude, null, language);
+      
+      // Cache this result too
+      if (cacheService && enhancedName) {
+        const fallbackCacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
+        cacheService.setCachedData(fallbackCacheKey, enhancedName);
+      }
+      
+      return enhancedName;
+    }
     
     // First fallback: Try database
     try {
