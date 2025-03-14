@@ -10,7 +10,10 @@ export const MapUpdater = memo(({ position }: { position: [number, number] }) =>
   useEffect(() => {
     if (map) {
       try {
-        map.panTo(position, { animate: true, duration: 0.5 });
+        map.setView(position, map.getZoom(), {
+          animate: true,
+          duration: 0.5
+        });
       } catch (error) {
         console.error("Error updating map view:", error);
       }
@@ -35,6 +38,14 @@ export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: 
     };
     
     map.on('click', handleClick);
+    
+    // Enable all map interactions
+    if (map.dragging.enabled()) {
+      map.dragging.enable();
+    }
+    if (map.touchZoom) map.touchZoom.enable();
+    if (map.doubleClickZoom) map.doubleClickZoom.enable();
+    if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
     
     return () => {
       map.off('click', handleClick);
@@ -124,6 +135,15 @@ export const MapStyles = memo(() => {
         
         .animate-pulse-subtle {
           animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        /* Ensure map is fully interactive */
+        .leaflet-container {
+          touch-action: pan-x pan-y;
+          cursor: grab;
+        }
+        .leaflet-container:active {
+          cursor: grabbing;
         }
       `;
       document.head.appendChild(style);

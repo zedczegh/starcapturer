@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,7 +16,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/marker-shadow.png',
 });
 
-const LazyMapComponent = ({ 
+interface LazyMapComponentProps {
+  latitude: number;
+  longitude: number;
+  locationName: string;
+  isInteractive?: boolean;
+  mapHeight?: string;
+  zoom?: number;
+  showPopup?: boolean;
+  onMapReady?: () => void;
+  onMapClick: (lat: number, lng: number) => void;
+}
+
+const LazyMapComponent: React.FC<LazyMapComponentProps> = ({ 
   latitude, 
   longitude,
   locationName,
@@ -25,17 +37,17 @@ const LazyMapComponent = ({
   zoom = 12,
   showPopup = true,
   onMapReady = () => {},
-  onMapClick = () => {}
+  onMapClick
 }) => {
   // Validate coordinates to ensure they're within valid ranges
   const validCoordinates = validateCoordinates({ latitude, longitude });
-  const center = [validCoordinates.latitude, validCoordinates.longitude];
+  const center: [number, number] = [validCoordinates.latitude, validCoordinates.longitude]; // Explicitly type as tuple
   const { language } = useLanguage();
   
   // State for the location display
   const [isLoading, setIsLoading] = useState(true);
-  const [markerPosition, setMarkerPosition] = useState(center);
-  const [customIcon, setCustomIcon] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState<[number, number]>(center); // Explicitly type as tuple
+  const [customIcon, setCustomIcon] = useState<L.DivIcon | null>(null);
   
   // Create custom marker icon on component mount
   useEffect(() => {
@@ -50,14 +62,18 @@ const LazyMapComponent = ({
   // Handle map ready event
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
-    onMapReady();
+    if (onMapReady) {
+      onMapReady();
+    }
   }, [onMapReady]);
   
   // Handle map click 
-  const handleMapClick = useCallback((lat, lng) => {
+  const handleMapClick = useCallback((lat: number, lng: number) => {
     if (isInteractive) {
-      setMarkerPosition([lat, lng]);
-      onMapClick(lat, lng);
+      const validLat = Math.max(-90, Math.min(90, lat));
+      const validLng = ((lng + 180) % 360 + 360) % 360 - 180;
+      setMarkerPosition([validLat, validLng]);
+      onMapClick(validLat, validLng);
     }
   }, [isInteractive, onMapClick]);
   
@@ -79,6 +95,7 @@ const LazyMapComponent = ({
         scrollWheelZoom={true}
         whenReady={handleMapReady}
         attributionControl={false}
+        dragging={true}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

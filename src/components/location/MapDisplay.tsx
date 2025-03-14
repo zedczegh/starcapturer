@@ -10,7 +10,7 @@ interface MapDisplayProps {
   position: [number, number];
   locationName: string;
   editable?: boolean;
-  onMapReady: () => void;
+  onMapReady?: () => void; // Make this optional with ?
   onMapClick: (lat: number, lng: number) => void;
   showInfoPanel?: boolean;
 }
@@ -19,7 +19,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   position,
   locationName,
   editable = false,
-  onMapReady,
+  onMapReady = () => {}, // Add default empty function
   onMapClick,
   showInfoPanel = false
 }) => {
