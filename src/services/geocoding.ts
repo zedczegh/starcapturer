@@ -219,6 +219,9 @@ function getMatchScore(location: string, query: string): number {
   // Split the query into individual words and check each one
   const queryWords = queryLower.split(/\s+/);
   
+  // Define locationWords here so it's available throughout the function
+  const locationWords = locationLower.split(/\s+/);
+  
   // If this is a multi-word search
   if (queryWords.length > 1) {
     // Check if all query words are present in the location (regardless of order)
@@ -226,7 +229,6 @@ function getMatchScore(location: string, query: string): number {
     if (allWordsPresent) return 93;
     
     // Check if the first words of the query match a multi-word location (e.g. "new y" matches "New York")
-    const locationWords = locationLower.split(/\s+/);
     if (locationWords.length > 1) {
       // Count how many consecutive words match from the beginning
       let matchingWords = 0;
@@ -245,7 +247,6 @@ function getMatchScore(location: string, query: string): number {
     }
     
     // Check exact match for any individual word in the query against any word in the location
-    // Using the already declared locationWords from above
     for (const queryWord of queryWords) {
       for (const locationWord of locationWords) {
         if (locationWord === queryWord) {
@@ -272,7 +273,7 @@ function getMatchScore(location: string, query: string): number {
   }
   
   // For both single and multi-word queries
-  // Split location into words if not already done
+  // Use locationWords if we have multiple query words, otherwise split the location
   const words = queryWords.length > 1 ? locationWords : locationLower.split(/\s+/);
   
   // Exact word match
