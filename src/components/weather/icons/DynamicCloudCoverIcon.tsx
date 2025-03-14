@@ -18,6 +18,12 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
   // Calculate fill based on cloud cover percentage
   const fillOpacity = cloudCover / 100;
   
+  // Add red glow for rainy conditions
+  const rainGlowStyle = precipitation > 0 ? {
+    filter: "drop-shadow(0 0 2px rgba(234, 56, 76, 0.4))",
+    transition: "all 0.3s ease"
+  } : {};
+  
   // Determine which icon to display based on weather conditions
   const renderWeatherIcon = () => {
     // Heavy snow condition
@@ -40,7 +46,8 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
           className="h-4 w-4 text-primary" 
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
-            stroke: "currentColor"
+            stroke: "currentColor",
+            ...rainGlowStyle
           }}
         />
       );
@@ -53,7 +60,8 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
           className="h-4 w-4 text-primary" 
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
-            stroke: "currentColor"
+            stroke: "currentColor",
+            ...rainGlowStyle
           }}
         />
       );

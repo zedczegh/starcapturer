@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,7 +28,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
 }) => {
   const { t } = useLanguage();
   
-  // Format time from ISO string to readable format
   const formatTime = useCallback((isoTime: string) => {
     try {
       const date = new Date(isoTime);
@@ -41,7 +39,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     }
   }, []);
   
-  // Format date from ISO string
   const formatDate = useCallback((isoTime: string) => {
     try {
       const date = new Date(isoTime);
@@ -60,7 +57,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     }
   }, [onRefresh, t]);
 
-  // Generate fallback forecast data when API data is missing or invalid
   const generateFallbackForecasts = useCallback(() => {
     const now = new Date();
     const forecasts = [];
@@ -82,7 +78,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     return forecasts;
   }, []);
 
-  // Create a memoized subset of forecasts
   const forecasts = useMemo(() => {
     const isForecastDataValid = forecastData && 
                             forecastData.hourly && 
@@ -119,10 +114,9 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     return generateFallbackForecasts();
   }, [forecastData, generateFallbackForecasts]);
 
-  // Determine weather condition class
   const getWeatherClass = useCallback((precipitation: number, cloudCover: number) => {
-    if (precipitation > 0.5) return "animate-pulse bg-red-500/20";
-    if (cloudCover < 20) return "animate-pulse bg-green-500/20";
+    if (precipitation > 0.5) return "bg-red-500/10 animate-pulse";
+    if (cloudCover < 20) return "bg-green-500/10 animate-pulse";
     return "";
   }, []);
 
@@ -207,7 +201,11 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                     </TableCell>
                     <TableCell className={`text-center border-b border-cosmic-700/20 ${weatherClass}`}>
                       <div className="flex items-center justify-center">
-                        <DynamicCloudCoverIcon cloudCover={forecast.cloudCover} precipitation={forecast.precipitation} className="mr-1 h-4 w-4" />
+                        <DynamicCloudCoverIcon 
+                          cloudCover={forecast.cloudCover} 
+                          precipitation={forecast.precipitation} 
+                          className="mr-1 h-4 w-4" 
+                        />
                         <span>{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</span>
                       </div>
                     </TableCell>
@@ -225,7 +223,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                     </TableCell>
                     <TableCell className="border-b border-cosmic-700/20">
                       <div className="flex items-center gap-2">
-                        <DynamicPrecipitationIcon precipitation={forecast.precipitation} />
+                        <DynamicPrecipitationIcon precipitation={forecast.precipitation} weatherCode={forecast.weatherCode} />
                         <span>{formatCondition(forecast.cloudCover, t)}</span>
                       </div>
                     </TableCell>
