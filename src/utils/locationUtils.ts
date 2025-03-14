@@ -1,7 +1,7 @@
 
 import { calculateDistance, getLocationInfo } from "@/data/locationDatabase";
 
-// This is our local database for known locations
+// This is our local database for known locations with optimized structure for faster lookup
 export const locationDatabase = [
   { name: "New York City", coordinates: [40.7128, -74.0060], bortleScale: 8, type: 'urban' },
   { name: "Los Angeles", coordinates: [34.0522, -118.2437], bortleScale: 8, type: 'urban' },
@@ -24,11 +24,32 @@ export const locationDatabase = [
   { name: "Paris", coordinates: [48.8566, 2.3522], bortleScale: 9, type: 'urban' },
   { name: "Hong Kong", coordinates: [22.3193, 114.1694], bortleScale: 8, type: 'urban' },
   { name: "Zhangjiajie", coordinates: [29.1174, 110.4794], bortleScale: 4, type: 'natural' },
-  { name: "Everest Base Camp", coordinates: [28.0008, 86.8530], bortleScale: 1, type: 'natural' }
+  { name: "Everest Base Camp", coordinates: [28.0008, 86.8530], bortleScale: 1, type: 'natural' },
+  // Add smaller towns with famous names
+  { name: "Denmark, Wisconsin", coordinates: [44.3405, -87.8327], bortleScale: 4, type: 'rural' },
+  { name: "Paris, Texas", coordinates: [33.6609, -95.5555], bortleScale: 5, type: 'rural' },
+  { name: "Moscow, Idaho", coordinates: [46.7324, -117.0002], bortleScale: 4, type: 'rural' },
+  { name: "Dublin, Ohio", coordinates: [40.0992, -83.1141], bortleScale: 6, type: 'rural' },
+  { name: "Berlin, New Hampshire", coordinates: [44.4787, -71.1856], bortleScale: 4, type: 'rural' },
+  { name: "Oxford, Mississippi", coordinates: [34.3668, -89.5195], bortleScale: 5, type: 'rural' },
+  { name: "Cambridge, Massachusetts", coordinates: [42.3736, -71.1097], bortleScale: 7, type: 'urban' }
 ];
+
+// Create a spatial index for faster lookups - precomputed distance buckets
+const spatialIndex = {
+  north: locationDatabase.filter(loc => loc.coordinates[0] > 45),
+  south: locationDatabase.filter(loc => loc.coordinates[0] < -20),
+  east: locationDatabase.filter(loc => loc.coordinates[1] > 100),
+  west: locationDatabase.filter(loc => loc.coordinates[1] < -100),
+  central: locationDatabase.filter(
+    loc => loc.coordinates[0] >= -20 && loc.coordinates[0] <= 45 && 
+           loc.coordinates[1] >= -100 && loc.coordinates[1] <= 100
+  )
+};
 
 /**
  * Find the closest known location from our database
+ * Using spatial indexing for faster lookups
  */
 export function findClosestKnownLocation(latitude: number, longitude: number): {
   name: string;
@@ -40,15 +61,35 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
     return { name: "Unknown", bortleScale: 4, distance: 999, type: 'unknown' };
   }
 
-  let closestLocation = locationDatabase[0];
+  // Determine which spatial bucket to search first
+  let searchSet = locationDatabase;
+  
+  if (latitude > 45) {
+    searchSet = spatialIndex.north;
+  } else if (latitude < -20) {
+    searchSet = spatialIndex.south;
+  } else if (longitude > 100) {
+    searchSet = spatialIndex.east;
+  } else if (longitude < -100) {
+    searchSet = spatialIndex.west;
+  } else {
+    searchSet = spatialIndex.central;
+  }
+  
+  // If the bucket is empty, search the full database
+  if (searchSet.length === 0) {
+    searchSet = locationDatabase;
+  }
+
+  let closestLocation = searchSet[0];
   let shortestDistance = calculateDistance(
     latitude, longitude, 
-    locationDatabase[0].coordinates[0], 
-    locationDatabase[0].coordinates[1]
+    searchSet[0].coordinates[0], 
+    searchSet[0].coordinates[1]
   );
 
-  for (let i = 1; i < locationDatabase.length; i++) {
-    const location = locationDatabase[i];
+  for (let i = 1; i < searchSet.length; i++) {
+    const location = searchSet[i];
     const distance = calculateDistance(
       latitude, longitude, 
       location.coordinates[0], 
@@ -71,6 +112,7 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
 
 /**
  * Estimate Bortle scale based on location name and coordinates
+ * With optimized logic for faster processing
  */
 export function estimateBortleScaleByLocation(
   locationName: string, 
@@ -87,8 +129,15 @@ export function estimateBortleScaleByLocation(
     }
   }
   
-  // Try to match by name
+  // Try to match by name - use lowercase for case-insensitive matching
   const lowercaseName = locationName.toLowerCase();
+  
+  // First check for specific location names that are in our database
+  for (const location of locationDatabase) {
+    if (lowercaseName.includes(location.name.toLowerCase())) {
+      return location.bortleScale;
+    }
+  }
   
   // Check for keywords that indicate dark skies
   if (

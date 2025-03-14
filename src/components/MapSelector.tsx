@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2, Search, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import useDebounce from "@/hooks/useDebounce";
 import { searchLocations, Location } from "@/services/geocoding";
 import SearchResults from "./map/SearchResults";
+import SearchInput from "./map/SearchInput";
 
 interface MapSelectorProps {
   onSelectLocation: (location: Location) => void;
@@ -14,7 +12,7 @@ interface MapSelectorProps {
 }
 
 // Priority search terms for immediate results
-const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newcastle', 'new york', 'ny'];
+const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newcastle', 'new york', 'ny', 'denmark'];
 
 const MapSelector: React.FC<MapSelectorProps> = ({
   onSelectLocation,
@@ -22,7 +20,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Increased debounce time for better UX
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -93,7 +91,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
       
       // Keep cache size reasonable
       const cacheKeys = Object.keys(previousSearchCache.current);
-      if (cacheKeys.length > 30) { // Reduced cache size for better memory usage
+      if (cacheKeys.length > 30) {
         delete previousSearchCache.current[cacheKeys[0]];
       }
       
@@ -117,9 +115,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     setShowResults(false);
   };
 
-  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    if (e.target.value.length > 0) {
+  const handleSearchInputChange = (value: string) => {
+    setSearchTerm(value);
+    if (value.length > 0) {
       setShowResults(true);
     }
   };
@@ -162,30 +160,13 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         {showResults && (
           <div className="fixed md:absolute z-[9999] mt-1 w-96 max-w-[95vw] right-0 rounded-md bg-background/95 backdrop-blur-md border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
             <div className="p-3">
-              <Input 
-                type="text" 
-                placeholder={t("Search for a location...", "搜索位置...")} 
-                value={searchTerm} 
-                onChange={handleSearchInputChange} 
-                className="w-full pr-10" 
-                autoFocus 
+              <SearchInput
+                searchTerm={searchTerm}
+                setSearchTerm={handleSearchInputChange}
+                isLoading={isLoading}
+                clearSearch={clearSearch}
+                autoFocus
               />
-              {searchTerm && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute right-4 top-[22px] h-6 w-6" 
-                  onClick={clearSearch}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-              {isLoading && (
-                <div className="absolute right-10 top-[22px]">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              )}
             </div>
             
             <SearchResults 
@@ -202,28 +183,12 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      <div className="relative">
-        <Input 
-          type="text" 
-          placeholder={t("Search for a location...", "搜索位置...")} 
-          value={searchTerm} 
-          onChange={handleSearchInputChange} 
-          className="w-full pr-10 hover-card transition-colors focus:placeholder-transparent rounded-lg bg-slate-800" 
-        />
-        {searchTerm ? (
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" 
-            onClick={clearSearch}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        )}
-      </div>
+      <SearchInput
+        searchTerm={searchTerm}
+        setSearchTerm={handleSearchInputChange}
+        isLoading={isLoading}
+        clearSearch={clearSearch}
+      />
 
       {showResults && (
         <div className="fixed md:absolute z-[9999] mt-1 w-[calc(100vw-2rem)] md:w-full left-4 md:left-0 rounded-md bg-background border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
@@ -233,12 +198,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({
             searchTerm={searchTerm} 
             isLoading={isLoading} 
           />
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="absolute right-10 top-1/2 -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         </div>
       )}
     </div>

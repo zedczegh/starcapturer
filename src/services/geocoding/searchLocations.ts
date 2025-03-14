@@ -1,8 +1,8 @@
-
 import { Location, Language } from './types';
 import { findBestMatches, containsChineseCharacters } from './matchingUtils';
 import { findMatchingLocations } from './locationDatabase';
 import { checkAlternativeSpellings } from './chineseCityData';
+import { findSmallTownMatches } from './smallTownsDatabase';
 
 // Enhanced western cities database with improved search terms
 const westernCities: Record<string, Location> = {
@@ -53,6 +53,12 @@ const westernCities: Record<string, Location> = {
     placeDetails: 'State in United States',
     latitude: 36.7783,
     longitude: -119.4179
+  },
+  'denmark': {
+    name: 'Denmark',
+    placeDetails: 'Country in Northern Europe',
+    latitude: 56.2639,
+    longitude: 9.5018
   }
 };
 
@@ -66,7 +72,8 @@ const searchAliases: Record<string, string[]> = {
   'calif': ['california', 'ca', 'cali'],
   'new york': ['ny', 'nyc'],
   'ny': ['new york', 'nyc'],
-  'los angeles': ['la', 'los angeles ca']
+  'los angeles': ['la', 'los angeles ca'],
+  'denmark': ['danish']
 };
 
 /**
@@ -90,15 +97,32 @@ export async function searchLocations(
     
     // Handle English language searches efficiently
     if (language === 'en' && !hasChineseChars) {
-      // Check exact matches first
+      // First check for small towns with famous names
+      const smallTownResults = findSmallTownMatches(lowercaseQuery, language);
+      
+      // Check exact matches for major cities
       if (westernCities[lowercaseQuery]) {
+        // If we have both a major city match and small town matches with the same name,
+        // combine them with the major city first
+        if (smallTownResults.length > 0) {
+          return [westernCities[lowercaseQuery], ...smallTownResults];
+        }
         return [westernCities[lowercaseQuery]];
       }
       
       // Check for alias matches
       const aliasMatch = findAliasMatch(lowercaseQuery);
       if (aliasMatch) {
+        // Combine with small town results if available
+        if (smallTownResults.length > 0) {
+          return [westernCities[aliasMatch], ...smallTownResults];
+        }
         return [westernCities[aliasMatch]];
+      }
+      
+      // If we have small town matches, return them now
+      if (smallTownResults.length > 0) {
+        return smallTownResults;
       }
       
       // Check for partial matches with western cities database
@@ -180,7 +204,11 @@ function findPartialMatches(query: string): Location[] {
     }
   }
   
-  return results;
+  // Also check small town matches
+  const smallTownMatches = findSmallTownMatches(query);
+  
+  // Combine results, prioritizing major cities
+  return [...results, ...smallTownMatches];
 }
 
 /**
@@ -251,6 +279,14 @@ async function fetchAndProcessExternalResults(
   language: Language,
   hasChineseChars: boolean
 ): Promise<Location[]> {
+  // Check for small town matches first
+  if (language === 'en') {
+    const smallTownMatches = findSmallTownMatches(query);
+    if (smallTownMatches.length > 0) {
+      return smallTownMatches;
+    }
+  }
+
   // Use OpenStreetMap Nominatim API for geocoding
   const encodedQuery = encodeURIComponent(query);
   const languageParam = language === 'zh' ? '&accept-language=zh-CN' : '&accept-language=en';
