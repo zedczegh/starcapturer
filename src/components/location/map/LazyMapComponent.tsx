@@ -25,6 +25,15 @@ interface LazyMapComponentProps {
   showInfoPanel?: boolean;
 }
 
+// Create optimized tile server URL options to improve load performance
+const TILE_SERVER_OPTIONS = {
+  url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  subdomains: ['a', 'b', 'c'],
+  maxZoom: 19,
+  minZoom: 2,
+};
+
 const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   position,
   locationName,
@@ -34,14 +43,11 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   showInfoPanel = false
 }) => {
   const { t } = useLanguage();
-
+  
+  // Optimized callback function that won't cause unnecessary re-renders
   const handleMapReady = useCallback(() => {
     onMapReady();
   }, [onMapReady]);
-
-  // Use a China-friendly tile server
-  const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   
   // Memoize marker icon to avoid recreating on each render
   const markerIcon = useMemo(() => createCustomMarker(), []);
@@ -57,11 +63,17 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           scrollWheelZoom={true}
           whenReady={handleMapReady}
           attributionControl={false}
+          // Performance-focused options
+          zoomControl={true}
+          trackResize={true}
+          preferCanvas={true}
         >
           <TileLayer
-            url={tileServerUrl}
-            attribution={attribution}
-            subdomains={['a', 'b', 'c']}
+            url={TILE_SERVER_OPTIONS.url}
+            attribution={TILE_SERVER_OPTIONS.attribution}
+            subdomains={TILE_SERVER_OPTIONS.subdomains}
+            maxZoom={TILE_SERVER_OPTIONS.maxZoom}
+            minZoom={TILE_SERVER_OPTIONS.minZoom}
           />
           
           <Marker 

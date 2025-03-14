@@ -1,19 +1,14 @@
+
 import React, { useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody } from "@/components/ui/table";
 import { RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { 
-  DynamicPrecipitationIcon, 
-  DynamicTemperatureIcon, 
-  DynamicCloudCoverIcon, 
-  DynamicWindIcon, 
-  DynamicHumidityIcon 
-} from "@/components/weather/DynamicIcons";
-import { getSIQSRating, formatCondition } from "@/components/forecast/ForecastUtils";
+import TableHeader from "./forecast/TableHeader";
+import ForecastTableRow from "./forecast/ForecastTableRow";
 
 interface ForecastTableProps {
   forecastData: any;
@@ -27,28 +22,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
   onRefresh
 }) => {
   const { t } = useLanguage();
-  
-  const formatTime = useCallback((isoTime: string) => {
-    try {
-      const date = new Date(isoTime);
-      if (isNaN(date.getTime())) return "--:--";
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return "--:--";
-    }
-  }, []);
-  
-  const formatDate = useCallback((isoTime: string) => {
-    try {
-      const date = new Date(isoTime);
-      if (isNaN(date.getTime())) return "--/--";
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "--/--";
-    }
-  }, []);
 
   const handleRefresh = useCallback(() => {
     if (onRefresh) {
@@ -114,12 +87,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     return generateFallbackForecasts();
   }, [forecastData, generateFallbackForecasts]);
 
-  const getWeatherClass = useCallback((precipitation: number, cloudCover: number) => {
-    if (precipitation > 0.5) return "bg-red-500/10 animate-pulse";
-    if (cloudCover < 20) return "bg-green-500/10 animate-pulse";
-    return "";
-  }, []);
-
   if (isLoading) {
     return (
       <Card className="shadow-md border-cosmic-700/30">
@@ -154,87 +121,15 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow className="bg-cosmic-800/40 hover:bg-cosmic-800/60">
-                <TableHead className="py-3">{t("Time", "时间")}</TableHead>
-                <TableHead className="text-center">
-                  <DynamicTemperatureIcon temperature={20} className="inline h-4 w-4 mr-1" />
-                  {t("Temp", "温度")}
-                </TableHead>
-                <TableHead className="text-center">
-                  <DynamicCloudCoverIcon cloudCover={50} className="inline h-4 w-4 mr-1" />
-                  {t("Clouds", "云层")}
-                </TableHead>
-                <TableHead className="text-center">
-                  <DynamicWindIcon windSpeed={15} className="inline h-4 w-4 mr-1" />
-                  {t("Wind", "风速")}
-                </TableHead>
-                <TableHead className="text-center">
-                  <DynamicHumidityIcon humidity={50} className="inline h-4 w-4 mr-1" />
-                  {t("Humid", "湿度")}
-                </TableHead>
-                <TableHead>{t("Conditions", "天气状况")}</TableHead>
-                <TableHead className="text-center">{t("Astro Score", "天文评分")}</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader />
             <TableBody>
-              {forecasts.map((forecast, index) => {
-                const siqs = getSIQSRating(forecast.cloudCover, forecast.windSpeed, forecast.humidity, t);
-                const weatherClass = getWeatherClass(forecast.precipitation, forecast.cloudCover);
-                
-                return (
-                  <TableRow 
-                    key={index} 
-                    className={`transition-colors ${index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} hover:bg-cosmic-700/20`}
-                  >
-                    <TableCell className="font-medium border-b border-cosmic-700/20">
-                      <div>{formatTime(forecast.time)}</div>
-                      <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
-                    </TableCell>
-                    <TableCell className="text-center border-b border-cosmic-700/20">
-                      <div className="flex items-center justify-center">
-                        <DynamicTemperatureIcon temperature={forecast.temperature} className="mr-1 h-4 w-4" />
-                        <span className={forecast.temperature > 25 ? 'text-amber-400' : forecast.temperature < 15 ? 'text-blue-400' : ''}>
-                          {isNaN(forecast.temperature) ? "--" : forecast.temperature.toFixed(1)}°C
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className={`text-center border-b border-cosmic-700/20 ${weatherClass}`}>
-                      <div className="flex items-center justify-center">
-                        <DynamicCloudCoverIcon 
-                          cloudCover={forecast.cloudCover} 
-                          precipitation={forecast.precipitation} 
-                          className="mr-1 h-4 w-4" 
-                        />
-                        <span>{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center border-b border-cosmic-700/20">
-                      <div className="flex items-center justify-center">
-                        <DynamicWindIcon windSpeed={forecast.windSpeed} className="mr-1 h-4 w-4" />
-                        <span>{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center border-b border-cosmic-700/20">
-                      <div className="flex items-center justify-center">
-                        <DynamicHumidityIcon humidity={forecast.humidity} className="mr-1 h-4 w-4" />
-                        <span>{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="border-b border-cosmic-700/20">
-                      <div className="flex items-center gap-2">
-                        <DynamicPrecipitationIcon precipitation={forecast.precipitation} weatherCode={forecast.weatherCode} />
-                        <span>{formatCondition(forecast.cloudCover, t)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center border-b border-cosmic-700/20">
-                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px]`}>
-                        {siqs.score.toFixed(1)}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {forecasts.map((forecast, index) => (
+                <ForecastTableRow 
+                  key={index} 
+                  forecast={forecast} 
+                  index={index} 
+                />
+              ))}
             </TableBody>
           </Table>
           

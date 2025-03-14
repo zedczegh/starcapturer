@@ -12,7 +12,7 @@ import { prefetchPopularLocations } from "./lib/queryPrefetcher";
 // Improved loading component
 import PageLoader from "./components/loaders/PageLoader";
 
-// Lazily load pages with improved chunking for faster initial load
+// Performance improvement: Lazy-load pages with appropriate chunk names
 const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
 const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
 const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
@@ -20,26 +20,26 @@ const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */
 const PhotoPointsNearby = lazy(() => import(/* webpackChunkName: "photo-points" */ "./pages/PhotoPointsNearby"));
 const AboutSIQS = lazy(() => import(/* webpackChunkName: "about-siqs" */ "./pages/AboutSIQS"));
 
-// Create a new QueryClient instance with optimized settings
+// Create a new QueryClient instance with optimized settings for performance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 15 * 60 * 1000, // Increased to 15 minutes for better caching
-      gcTime: 30 * 60 * 1000,    // Increased to 30 minutes
+      staleTime: 15 * 60 * 1000, // 15 minutes for better caching
+      gcTime: 30 * 60 * 1000,    // 30 minutes for garbage collection
     },
   },
 });
 
-// Prefetch data for popular locations
+// Prefetch popular location data for faster initial experience
 prefetchPopularLocations(queryClient);
 
-// Optimized animated page transitions with shorter durations
+// Optimized page transitions component with shorter durations for better UX
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
-  // Use key based on pathname without query parameters for smoother transitions
+  // Use pathname without query params for smoother transitions
   const pathnameBase = location.pathname.split('?')[0];
   
   return (
@@ -58,6 +58,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Main App component
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>

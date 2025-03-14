@@ -11,7 +11,7 @@ import StatusMessage from "./siqs/StatusMessage";
 import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState";
 import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
 import { Language } from "@/services/geocoding/types";
-import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
+import { useSIQSCalculatorState } from "@/hooks/siqs/useSIQSCalculatorState";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -25,13 +25,24 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   noAutoLocationRequest = false
 }) => {
   const { language, t } = useLanguage();
-  const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [calculationInProgress, setCalculationInProgress] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
-  
   const { setCachedData, getCachedData } = useLocationDataCache();
+  
+  const {
+    loading,
+    statusMessage,
+    setStatusMessage,
+    calculationInProgress,
+    setCalculationInProgress,
+    isMounted,
+    localBortleScale,
+    setLocalBortleScale,
+    updateLocationNameForLanguage
+  } = useSIQSCalculatorState({
+    language: language as Language,
+    noAutoLocationRequest,
+    getCachedData,
+    setCachedData
+  });
   
   const locationSelectorProps = useMemo(() => ({
     language: language as Language,
@@ -39,7 +50,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     bortleScale: localBortleScale,
     setBortleScale: setLocalBortleScale,
     setStatusMessage,
-    setShowAdvancedSettings: () => {}, // This is now handled differently
+    setShowAdvancedSettings: () => {},
     getCachedData,
     setCachedData
   }), [language, noAutoLocationRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
@@ -56,12 +67,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     handleLocationSelect,
     handleRecommendedPointSelect
   } = useLocationSelectorState(locationSelectorProps);
-
-  // Track component mount state to avoid unnecessary effects
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
 
   // Parse latitude and longitude for hook usage
   const parsedLatitude = parseFloat(latitude) || 0;
@@ -90,35 +95,18 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     // Skip special locations
     if (locationName === "北京" || locationName === "Beijing") return;
     
-    const updateLocationNameForLanguage = async () => {
-      const lat = parseFloat(latitude);
-      const lng = parseFloat(longitude);
-      
-      if (isNaN(lat) || isNaN(lng)) return;
-      
-      try {
-        const newName = await getLocationNameForCoordinates(
-          lat, 
-          lng, 
-          language as Language, 
-          { setCachedData, getCachedData }
-        );
-        
+    updateLocationNameForLanguage(locationName, latitude, longitude)
+      .then(newName => {
         if (newName && newName !== locationName) {
           setLocationName(newName);
         }
-      } catch (error) {
-        console.error("Error updating location name for language change:", error);
-      }
-    };
-    
-    updateLocationNameForLanguage();
-  }, [language, latitude, longitude, locationName, setCachedData, getCachedData, setLocationName, isMounted]);
+      });
+  }, [language, latitude, longitude, locationName, updateLocationNameForLanguage, setLocationName, isMounted]);
   
   // Track calculation state for loading indicator
   useEffect(() => {
     setCalculationInProgress(isCalculating);
-  }, [isCalculating]);
+  }, [isCalculating, setCalculationInProgress]);
   
   // Memoize the SIQS calculation for better performance
   const calculateSIQS = useCallback(() => {
@@ -144,7 +132,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         setCalculationInProgress(false);
       });
     }
-  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage, setCalculationInProgress]);
   
   // Debounced SIQS calculation when inputs change
   useEffect(() => {
