@@ -205,7 +205,7 @@ function generatePinyinVariations(input: string): string[] {
   return [...new Set(variations)]; // Remove duplicates
 }
 
-// Match score function with improved partial matching for more predictive results
+// Enhanced match score function with multi-word search support
 function getMatchScore(location: string, query: string): number {
   const locationLower = location.toLowerCase();
   const queryLower = query.toLowerCase().trim();
@@ -215,6 +215,61 @@ function getMatchScore(location: string, query: string): number {
   
   // Exact start of string
   if (locationLower.startsWith(queryLower)) return 95;
+
+  // Split the query into individual words and check each one
+  const queryWords = queryLower.split(/\s+/);
+  
+  // If this is a multi-word search
+  if (queryWords.length > 1) {
+    // Check if all query words are present in the location (regardless of order)
+    const allWordsPresent = queryWords.every(word => locationLower.includes(word));
+    if (allWordsPresent) return 93;
+    
+    // Check if the first words of the query match a multi-word location (e.g. "new y" matches "New York")
+    const locationWords = locationLower.split(/\s+/);
+    if (locationWords.length > 1) {
+      // Count how many consecutive words match from the beginning
+      let matchingWords = 0;
+      for (let i = 0; i < Math.min(queryWords.length, locationWords.length); i++) {
+        if (locationWords[i].startsWith(queryWords[i])) {
+          matchingWords++;
+        } else {
+          break;
+        }
+      }
+      
+      if (matchingWords > 0) {
+        // Higher score for more consecutive word matches
+        return 90 + matchingWords;
+      }
+    }
+    
+    // Check exact match for any individual word in the query against any word in the location
+    const locationWords = locationLower.split(/\s+/);
+    for (const queryWord of queryWords) {
+      for (const locationWord of locationWords) {
+        if (locationWord === queryWord) {
+          return 88;
+        }
+      }
+    }
+
+    // Count how many words from the query match words in the location
+    let matchingWordCount = 0;
+    for (const queryWord of queryWords) {
+      for (const locationWord of locationWords) {
+        if (locationWord.includes(queryWord) || queryWord.includes(locationWord)) {
+          matchingWordCount++;
+          break;
+        }
+      }
+    }
+    
+    if (matchingWordCount > 0) {
+      // Score based on the percentage of query words that match
+      return 80 + ((matchingWordCount / queryWords.length) * 5);
+    }
+  }
   
   // Exact word match
   const words = locationLower.split(/\s+/);
@@ -305,25 +360,39 @@ function soundex(s: string): string {
   return (output + '000').slice(0, 4);
 }
 
-// Check for alternative spellings and transliterations
+// Check for alternative spellings and transliterations with multi-word support
 function checkAlternativeSpellings(query: string): Location[] {
   const results: Location[] = [];
   const queryLower = query.toLowerCase().trim();
+  
+  // Generate variations for the whole query
   const queryVariations = generatePinyinVariations(queryLower);
+  
+  // Also generate variations for each word in multi-word queries
+  const queryWords = queryLower.split(/\s+/);
+  const perWordVariations: string[] = [];
+  
+  if (queryWords.length > 1) {
+    queryWords.forEach(word => {
+      perWordVariations.push(...generatePinyinVariations(word));
+    });
+  }
+  
+  const allVariations = [...new Set([...queryVariations, ...perWordVariations])];
   
   for (const [key, city] of Object.entries(chineseCityAlternatives)) {
     // Check if any query variation matches any alternative spelling
     const matchesAlternative = city.alternatives.some(alt => 
-      queryVariations.some(qVar => 
+      allVariations.some(qVar => 
         alt.includes(qVar) || qVar.includes(alt)
       )
     );
     
     // Check if query matches the key or Chinese name
-    const matchesName = queryVariations.some(qVar => 
+    const matchesName = allVariations.some(qVar => 
       key.includes(qVar) || qVar.includes(key)
     );
-    const matchesChinese = queryVariations.some(qVar => 
+    const matchesChinese = allVariations.some(qVar => 
       city.chinese.includes(qVar) || qVar.includes(city.chinese)
     );
     
@@ -343,7 +412,7 @@ function checkAlternativeSpellings(query: string): Location[] {
 /**
  * Search for locations based on a query string
  * Enhanced to find any location worldwide using multiple data sources
- * And improved to handle language preferences
+ * And improved to handle language preferences and multi-word searches
  */
 export async function searchLocations(query: string, language: Language = 'en'): Promise<Location[]> {
   if (!query || query.trim().length === 0) {
@@ -351,6 +420,7 @@ export async function searchLocations(query: string, language: Language = 'en'):
   }
   
   const lowercaseQuery = query.toLowerCase().trim();
+  const queryWords = lowercaseQuery.split(/\s+/);
   const queryVariations = generatePinyinVariations(lowercaseQuery);
   const allResults: Array<Location & { score: number }> = [];
   
@@ -363,7 +433,7 @@ export async function searchLocations(query: string, language: Language = 'en'):
     });
   });
   
-  // Check against location database
+  // Check against location database with enhanced multi-word support
   locationDatabase.forEach(location => {
     let highestScore = 0;
     
@@ -372,6 +442,16 @@ export async function searchLocations(query: string, language: Language = 'en'):
       const score = getMatchScore(location.name, qVar);
       highestScore = Math.max(highestScore, score);
     });
+    
+    // If multi-word query, also check each word individually
+    if (queryWords.length > 1) {
+      queryWords.forEach(word => {
+        if (word.length >= 2) { // Only check words with 2+ characters
+          const score = getMatchScore(location.name, word) * 0.9; // Slightly lower score for partial matches
+          highestScore = Math.max(highestScore, score);
+        }
+      });
+    }
     
     if (highestScore > 0) {
       allResults.push({
@@ -389,7 +469,7 @@ export async function searchLocations(query: string, language: Language = 'en'):
     ? [...internationalLocations.filter(loc => /[\u4e00-\u9fa5]/.test(loc.name)), ...commonLocations]
     : [...commonLocations.filter(loc => !/[\u4e00-\u9fa5]/.test(loc.name)), ...internationalLocations];
 
-  // Check against prioritized locations based on language
+  // Check against prioritized locations with enhanced multi-word support
   prioritizedLocations.forEach(location => {
     let highestNameScore = 0;
     let highestDetailScore = 0;
@@ -401,6 +481,18 @@ export async function searchLocations(query: string, language: Language = 'en'):
       highestNameScore = Math.max(highestNameScore, nameScore);
       highestDetailScore = Math.max(highestDetailScore, detailScore);
     });
+    
+    // If multi-word query, also check each word individually
+    if (queryWords.length > 1) {
+      queryWords.forEach(word => {
+        if (word.length >= 2) { // Only check words with 2+ characters
+          const nameScore = getMatchScore(location.name, word) * 0.9; // Slightly lower score
+          const detailScore = location.placeDetails ? getMatchScore(location.placeDetails, word) * 0.9 : 0;
+          highestNameScore = Math.max(highestNameScore, nameScore);
+          highestDetailScore = Math.max(highestDetailScore, detailScore);
+        }
+      });
+    }
     
     const score = Math.max(highestNameScore, highestDetailScore);
     
@@ -621,7 +713,7 @@ export async function searchLocations(query: string, language: Language = 'en'):
   // Final processing - ensure language consistency in results
   const finalResults = allResults
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8)
+    .slice(0, 10) // Increase the number of results to show more matches
     .map(({ name, latitude, longitude, placeDetails, score }) => {
       // Process result based on language
       if (language === 'zh') {

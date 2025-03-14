@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapMarker from "./MapMarker";
@@ -43,7 +44,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     return null;
   }
 
-  // Improved language filtering
+  // Improved language filtering with multi-word search support
   const filteredResults = searchResults.filter(result => {
     const name = result.name || '';
     const details = result.placeDetails || '';
