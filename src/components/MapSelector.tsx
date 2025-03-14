@@ -106,7 +106,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         </div>
         
         {showResults && (
-          <div className="absolute z-50 mt-1 w-96 max-w-[95vw] right-0 rounded-md bg-background/95 backdrop-blur-md border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
+          <div className="fixed md:absolute z-50 mt-1 w-96 max-w-[95vw] right-0 rounded-md bg-background/95 backdrop-blur-md border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
             <div className="p-3">
               <Input 
                 type="text" 

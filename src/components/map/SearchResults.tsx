@@ -45,7 +45,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     <ul className="py-1 max-h-[60vh] overflow-y-auto divide-y divide-border/20">
       {searchResults.map((result, index) => (
         <MapMarker
-          key={index}
+          key={`${result.name}-${index}`}
           name={result.name}
           placeDetails={result.placeDetails}
           onClick={() => handleSelectLocation(result)}

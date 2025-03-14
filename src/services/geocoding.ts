@@ -14,7 +14,8 @@ const commonLocations: Location[] = [
   { name: "Xi'an", placeDetails: "Shaanxi, China", latitude: 34.3416, longitude: 108.9398 },
   { name: "Lhasa", placeDetails: "Tibet, China", latitude: 29.6500, longitude: 91.1000 },
   { name: "Urumqi", placeDetails: "Xinjiang, China", latitude: 43.8256, longitude: 87.6168 },
-  { name: "Harbin", placeDetails: "Heilongjiang, China", latitude: 45.8038, longitude: 126.5340 }
+  { name: "Harbin", placeDetails: "Heilongjiang, China", latitude: 45.8038, longitude: 126.5340 },
+  { name: "Nanning", placeDetails: "Guangxi, China", latitude: 22.8170, longitude: 108.3665 }
 ];
 
 // Additional international locations
@@ -35,7 +36,8 @@ const internationalLocations: Location[] = [
   { name: "上海", placeDetails: "上海市, 中国", latitude: 31.2304, longitude: 121.4737 },
   { name: "香港", placeDetails: "香港特别行政区", latitude: 22.3193, longitude: 114.1694 },
   { name: "广州", placeDetails: "广东省, 中国", latitude: 23.1291, longitude: 113.2644 },
-  { name: "深圳", placeDetails: "广东省, 中国", latitude: 22.5431, longitude: 114.0579 }
+  { name: "深圳", placeDetails: "广东省, 中国", latitude: 22.5431, longitude: 114.0579 },
+  { name: "南宁", placeDetails: "广西壮族自治区, 中国", latitude: 22.8170, longitude: 108.3665 }
 ];
 
 // Match score function to improve search relevance
@@ -47,31 +49,60 @@ function getMatchScore(location: string, query: string): number {
   if (locationLower === queryLower) return 100;
   
   // Starting with the query is very good
-  if (locationLower.startsWith(queryLower)) return 80;
+  if (locationLower.startsWith(queryLower)) return 90;
   
   // Word boundary match is good (e.g. "New York" matches "York")
   const words = locationLower.split(/\s+/);
   for (const word of words) {
-    if (word === queryLower) return 70;
-    if (word.startsWith(queryLower)) return 60;
+    if (word === queryLower) return 80;
+    if (word.startsWith(queryLower)) return 70;
   }
   
   // Contains the query is decent
-  if (locationLower.includes(queryLower)) return 50;
+  if (locationLower.includes(queryLower)) return 60;
   
   // Partial match for each word
   for (const word of words) {
-    if (word.includes(queryLower)) return 30;
+    if (word.includes(queryLower)) return 40;
   }
   
-  // Fuzzy match (if the query is at least 4 chars and more than 60% of the chars match)
-  if (queryLower.length >= 4) {
+  // Fuzzy match (if the query is at least 3 chars and more than 60% of the chars match)
+  if (queryLower.length >= 3) {
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
-    if (matchPercentage > 0.6) return 20;
+    if (matchPercentage > 0.6) return 30;
   }
   
   return 0; // No match
+}
+
+// Soundex implementation for phonetic matching (useful for names that sound similar)
+function soundex(s: string): string {
+  const a = s.toLowerCase().split('');
+  const firstLetter = a.shift();
+  if (!firstLetter) return '';
+  
+  const codes = {
+    b: 1, f: 1, p: 1, v: 1,
+    c: 2, g: 2, j: 2, k: 2, q: 2, s: 2, x: 2, z: 2,
+    d: 3, t: 3,
+    l: 4,
+    m: 5, n: 5,
+    r: 6
+  } as Record<string, number>;
+  
+  let output = firstLetter;
+  let previous = -1;
+  
+  for (let i = 0; i < a.length; i++) {
+    const current = codes[a[i]] || 0;
+    if (current && current !== previous) {
+      output += current;
+    }
+    previous = current;
+  }
+  
+  return (output + '000').slice(0, 4);
 }
 
 /**
@@ -108,7 +139,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
     const score = Math.max(nameScore, detailScore);
     
     if (score > 0) {
-      // Only add if not already in results
+      // Only add if not already in results with same name
       if (!allResults.some(r => r.name === location.name)) {
         allResults.push({
           ...location,
@@ -119,14 +150,15 @@ export async function searchLocations(query: string): Promise<Location[]> {
   });
   
   // Special case for English/Chinese location matching
-  // If no results and query might be in Chinese or English, try some direct mappings
-  if (allResults.length === 0) {
+  // If few results and query might be in Chinese or English, try some direct mappings
+  if (allResults.length < 3) {
     const chineseToEnglish: Record<string, string> = {
       '北京': 'Beijing',
       '上海': 'Shanghai',
       '香港': 'Hong Kong',
       '广州': 'Guangzhou',
-      '深圳': 'Shenzhen'
+      '深圳': 'Shenzhen',
+      '南宁': 'Nanning'
     };
     
     const englishToChinese: Record<string, string> = {
@@ -134,38 +166,53 @@ export async function searchLocations(query: string): Promise<Location[]> {
       'shanghai': '上海',
       'hong kong': '香港',
       'guangzhou': '广州',
-      'shenzhen': '深圳'
+      'shenzhen': '深圳',
+      'nanning': '南宁'
     };
     
     // Check if query is a Chinese name we know
-    if (chineseToEnglish[lowercaseQuery]) {
-      const englishName = chineseToEnglish[lowercaseQuery];
-      const matchedLocation = allLocations.find(l => 
-        l.name.toLowerCase() === englishName.toLowerCase()
-      );
-      
-      if (matchedLocation) {
-        allResults.push({
-          ...matchedLocation,
-          score: 90
-        });
+    Object.entries(chineseToEnglish).forEach(([chinese, english]) => {
+      if (chinese.includes(lowercaseQuery) || lowercaseQuery.includes(chinese)) {
+        const matchedLocation = allLocations.find(l => 
+          l.name.toLowerCase() === english.toLowerCase()
+        );
+        
+        if (matchedLocation && !allResults.some(r => r.name === matchedLocation.name)) {
+          allResults.push({
+            ...matchedLocation,
+            score: 85
+          });
+        }
       }
-    }
+    });
     
     // Check if query is an English name with a Chinese equivalent
-    if (englishToChinese[lowercaseQuery]) {
-      const chineseName = englishToChinese[lowercaseQuery];
-      const matchedLocation = allLocations.find(l => 
-        l.name === chineseName
-      );
-      
-      if (matchedLocation) {
+    Object.entries(englishToChinese).forEach(([english, chinese]) => {
+      if (english.includes(lowercaseQuery) || lowercaseQuery.includes(english)) {
+        const matchedLocation = allLocations.find(l => 
+          l.name === chinese
+        );
+        
+        if (matchedLocation && !allResults.some(r => r.name === matchedLocation.name)) {
+          allResults.push({
+            ...matchedLocation,
+            score: 85
+          });
+        }
+      }
+    });
+    
+    // If the query is similar to "naning" but we know it should be "nanning"
+    const querySoundex = soundex(lowercaseQuery);
+    allLocations.forEach(location => {
+      const locationSoundex = soundex(location.name.toLowerCase());
+      if (querySoundex === locationSoundex && !allResults.some(r => r.name === location.name)) {
         allResults.push({
-          ...matchedLocation,
-          score: 90
+          ...location,
+          score: 75
         });
       }
-    }
+    });
   }
   
   // If still no results, create a generic suggestion

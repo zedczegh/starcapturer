@@ -51,7 +51,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         )}
       </Button>
       
-      <div className="relative mt-2 z-20">
+      <div className="relative mt-2" style={{ zIndex: 20 }}>
         <MapSelector onSelectLocation={onSelectLocation} />
       </div>
     </div>

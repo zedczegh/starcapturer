@@ -27,7 +27,8 @@ export const getTranslatedFactorName = (name: string, language: Language): strin
     "Elevation": "海拔高度",
     "Air Quality": "空气质量",
     "Season": "季节",
-    "Temperature": "温度"
+    "Temperature": "温度",
+    "Location": "位置"
   };
   
   const result = translations[name] || name;
@@ -106,6 +107,10 @@ export const getTranslatedDescription = (description: string, language: Language
     "New moon provides darkest sky conditions": "新月提供最暗的天空条件",
     "Quarter moon provides moderate sky brightness": "半月提供中等的天空亮度",
     "Full moon significantly brightens the night sky": "满月显著增亮夜空",
+    
+    // Location descriptions
+    "Location search result": "位置搜索结果",
+    "Your current location": "您的当前位置",
     
     // Generic quality descriptions
     "Excellent": "极佳",
