@@ -1,6 +1,7 @@
 
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestLocation } from "@/data/locationDatabase";
+import type { Language } from "@/services/geocoding/types";
 
 export type LocationCacheService = {
   setCachedData: (key: string, data: any) => void;
@@ -20,7 +21,7 @@ export function normalizeLongitude(longitude: number): number {
 export async function getLocationNameForCoordinates(
   latitude: number,
   longitude: number,
-  language: string = 'en',
+  language: Language = 'en',
   cacheService?: LocationCacheService
 ): Promise<string> {
   try {
@@ -52,6 +53,7 @@ export async function getLocationNameForCoordinates(
     
     // First fallback: Try database
     try {
+      const cacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
       const nearest = findClosestLocation(latitude, longitude);
       if (nearest && nearest.name) {
         const fallbackName = nearest.distance <= 20 

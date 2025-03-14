@@ -24,6 +24,12 @@ export const useLocationNameTranslation = ({
     name: string;
   } | null>(null);
   
+  // Create cache service
+  const cacheService = {
+    setCachedData,
+    getCachedData
+  };
+  
   // Memoize the update function to prevent recreation on each render
   const updateLocationNameForLanguage = useCallback(async () => {
     if (!locationData || !locationData.latitude || !locationData.longitude) return;
@@ -46,7 +52,7 @@ export const useLocationNameTranslation = ({
         locationData.latitude, 
         locationData.longitude, 
         language as Language, 
-        { setCachedData, getCachedData }
+        cacheService
       );
       
       if (newName && newName !== locationData.name) {
@@ -79,7 +85,7 @@ export const useLocationNameTranslation = ({
     } catch (error) {
       console.error("Error updating location name for language change:", error);
     }
-  }, [language, locationData, setLocationData, setCachedData, getCachedData]);
+  }, [language, locationData, setLocationData, setCachedData, getCachedData, cacheService]);
   
   // Update location name when language changes - use a shorter timeout
   useEffect(() => {

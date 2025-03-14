@@ -31,6 +31,13 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Kunming", coordinates: [25.0389, 102.7183], bortleScale: 7, type: 'urban', radius: 25 },
   { name: "Huangshan", coordinates: [29.7147, 118.3380], bortleScale: 5, type: 'rural', radius: 15 },
   
+  // New Xinjiang and Central Asian cities
+  { name: "Urumqi", coordinates: [43.8256, 87.6168], bortleScale: 7, type: 'urban', radius: 25 },
+  { name: "Kashgar", coordinates: [39.4700, 75.9800], bortleScale: 7, type: 'urban', radius: 20 },
+  { name: "Turpan", coordinates: [42.9480, 89.1849], bortleScale: 6, type: 'urban', radius: 15 },
+  { name: "Almaty", coordinates: [43.2220, 76.8512], bortleScale: 7, type: 'urban', radius: 25 },
+  { name: "Tashkent", coordinates: [41.2995, 69.2401], bortleScale: 7, type: 'urban', radius: 25 },
+  
   // Major global cities
   { name: "New York City", coordinates: [40.7128, -74.0060], bortleScale: 8, type: 'urban', radius: 40 },
   { name: "Los Angeles", coordinates: [34.0522, -118.2437], bortleScale: 8, type: 'urban', radius: 40 },
@@ -50,18 +57,21 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Jiuzhaigou", coordinates: [33.2600, 103.9165], bortleScale: 3, type: 'natural', radius: 30 },
   { name: "Qinghai Lake", coordinates: [36.8977, 100.1802], bortleScale: 2, type: 'natural', radius: 40 },
   { name: "Dunhuang", coordinates: [40.1413, 94.6618], bortleScale: 2, type: 'natural', radius: 40 },
+  { name: "Taklamakan Desert", coordinates: [38.8600, 83.5000], bortleScale: 1, type: 'natural', radius: 100 },
 ];
 
-// Create a spatial index for faster lookups - precomputed distance buckets
+// Update spatial index with Central Asia region
 export const spatialIndex = {
   northChina: quickLocationDatabase.filter(loc => loc.coordinates[0] > 30 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130),
   southChina: quickLocationDatabase.filter(loc => loc.coordinates[0] <= 30 && loc.coordinates[0] > 0 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130),
+  centralAsia: quickLocationDatabase.filter(loc => loc.coordinates[0] > 30 && loc.coordinates[1] > 60 && loc.coordinates[1] < 95),
   northAmerica: quickLocationDatabase.filter(loc => loc.coordinates[1] < -50),
   europe: quickLocationDatabase.filter(loc => loc.coordinates[0] > 30 && loc.coordinates[1] > -20 && loc.coordinates[1] < 40),
   australasia: quickLocationDatabase.filter(loc => loc.coordinates[0] < 0 && loc.coordinates[1] > 100),
   other: quickLocationDatabase.filter(loc => 
     !((loc.coordinates[0] > 30 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130) || 
       (loc.coordinates[0] <= 30 && loc.coordinates[0] > 0 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130) ||
+      (loc.coordinates[0] > 30 && loc.coordinates[1] > 60 && loc.coordinates[1] < 95) ||
       (loc.coordinates[1] < -50) ||
       (loc.coordinates[0] > 30 && loc.coordinates[1] > -20 && loc.coordinates[1] < 40) ||
       (loc.coordinates[0] < 0 && loc.coordinates[1] > 100))

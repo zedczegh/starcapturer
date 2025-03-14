@@ -9,6 +9,7 @@ import { europeAfricaLocations } from './regions/europeAfricaLocations';
 import { oceaniaLocations } from './regions/oceaniaLocations';
 import { middleEastLocations } from './regions/middleEastLocations';
 import { polarLocations } from './regions/polarLocations';
+import { centralAsiaLocations } from './regions/centralAsiaLocations';
 
 export interface LocationEntry {
   name: string;
@@ -25,7 +26,8 @@ export const locationDatabase: LocationEntry[] = [
   ...europeAfricaLocations,
   ...oceaniaLocations,
   ...middleEastLocations,
-  ...polarLocations
+  ...polarLocations,
+  ...centralAsiaLocations
 ];
 
 // Move distance calculation to a utility file to avoid duplication
