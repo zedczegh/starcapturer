@@ -13,8 +13,8 @@ interface MapSelectorProps {
   children?: React.ReactNode;
 }
 
-// List of predefined search terms that should trigger immediate search
-const IMMEDIATE_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif'];
+// Priority search terms for immediate results
+const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newcastle', 'new york', 'ny'];
 
 const MapSelector: React.FC<MapSelectorProps> = ({
   onSelectLocation,
@@ -22,53 +22,51 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 50);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Increased debounce time for better UX
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const previousSearchCache = useRef<{[key: string]: Location[]}>({});
 
-  // Function to check if the search term requires immediate results
-  const isImmediateSearchTerm = useCallback((term: string): boolean => {
+  // Check if search term needs immediate results
+  const isPrioritySearchTerm = useCallback((term: string): boolean => {
     const normalizedTerm = term.toLowerCase().trim();
-    return IMMEDIATE_SEARCH_TERMS.includes(normalizedTerm) || 
-           normalizedTerm.startsWith('califo');
+    return PRIORITY_SEARCH_TERMS.includes(normalizedTerm) || 
+           normalizedTerm.startsWith('califo') ||
+           normalizedTerm.startsWith('new ca');
   }, []);
 
-  // Effect for immediate search on specific terms
+  // Effect for immediate search on priority terms
   useEffect(() => {
     if (searchTerm.length > 0) {
       const cacheKey = `${searchTerm.toLowerCase()}-${language}`;
       
-      // Use cache if available
+      // Use cache if available for faster response
       if (previousSearchCache.current[cacheKey]) {
         setSearchResults(previousSearchCache.current[cacheKey]);
         setShowResults(true);
         return;
       }
       
-      // For immediate search terms, search right away
-      if (isImmediateSearchTerm(searchTerm)) {
+      // For priority search terms, search immediately
+      if (isPrioritySearchTerm(searchTerm)) {
         handleSearch(searchTerm);
-        return;
       }
-      
-      setIsLoading(true);
     } else {
       setSearchResults([]);
     }
-  }, [searchTerm, language, isImmediateSearchTerm]);
+  }, [searchTerm, language, isPrioritySearchTerm]);
 
-  // Normal debounced search effect
+  // Normal debounced search effect for other terms
   useEffect(() => {
-    if (debouncedSearchTerm.length > 0 && !isImmediateSearchTerm(debouncedSearchTerm)) {
+    if (debouncedSearchTerm.length > 0 && !isPrioritySearchTerm(debouncedSearchTerm)) {
       handleSearch(debouncedSearchTerm);
     } else if (debouncedSearchTerm.length === 0) {
       setSearchResults([]);
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm, language, isImmediateSearchTerm]);
+  }, [debouncedSearchTerm, language, isPrioritySearchTerm]);
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) {
@@ -76,6 +74,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({
       setIsLoading(false);
       return;
     }
+    
+    setIsLoading(true);
     
     const cacheKey = `${query.toLowerCase()}-${language}`;
     if (previousSearchCache.current[cacheKey]) {
@@ -88,11 +88,12 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     try {
       const results = await searchLocations(query, language);
       
+      // Store in cache for future quick access
       previousSearchCache.current[cacheKey] = results;
       
-      // Limit cache size
+      // Keep cache size reasonable
       const cacheKeys = Object.keys(previousSearchCache.current);
-      if (cacheKeys.length > 50) {
+      if (cacheKeys.length > 30) { // Reduced cache size for better memory usage
         delete previousSearchCache.current[cacheKeys[0]];
       }
       
@@ -129,6 +130,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     setShowResults(false);
   };
 
+  // Handle clicks outside the search component
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -143,18 +145,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     };
   }, []);
 
-  // Legacy effect - now less important given our improved approach
-  useEffect(() => {
-    if (searchTerm.length >= 2 && !isImmediateSearchTerm(searchTerm)) {
-      const timerId = setTimeout(() => {
-        handleSearch(searchTerm);
-      }, 25);
-      
-      return () => clearTimeout(timerId);
-    }
-  }, [searchTerm, isImmediateSearchTerm]);
-
-  // Effect to reset search results when language changes
+  // Reset search results when language changes
   useEffect(() => {
     if (searchTerm.length > 0) {
       handleSearch(searchTerm);

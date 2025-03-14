@@ -4,8 +4,8 @@ import { findBestMatches, containsChineseCharacters } from './matchingUtils';
 import { findMatchingLocations } from './locationDatabase';
 import { checkAlternativeSpellings } from './chineseCityData';
 
-// Additional western cities to include in search results
-const additionalWesternCities: Record<string, Location> = {
+// Enhanced western cities database with improved search terms
+const westernCities: Record<string, Location> = {
   'new york': {
     name: 'New York City, USA',
     placeDetails: 'Major city in United States',
@@ -37,17 +37,36 @@ const additionalWesternCities: Record<string, Location> = {
     longitude: -118.2437
   },
   'new castle': {
-    name: 'Newcastle upon Tyne, United Kingdom',
+    name: 'Newcastle upon Tyne, UK',
     placeDetails: 'City in Northern England',
     latitude: 54.9783,
     longitude: -1.6178
   },
   'newcastle': {
-    name: 'Newcastle upon Tyne, United Kingdom',
+    name: 'Newcastle upon Tyne, UK',
     placeDetails: 'City in Northern England',
     latitude: 54.9783,
     longitude: -1.6178
+  },
+  'california': {
+    name: 'California, USA',
+    placeDetails: 'State in United States',
+    latitude: 36.7783,
+    longitude: -119.4179
   }
+};
+
+// Search term aliases to recognize different forms
+const searchAliases: Record<string, string[]> = {
+  'new castle': ['newcastle', 'newcastle upon tyne'],
+  'newcastle': ['new castle', 'newcastle upon tyne'],
+  'california': ['ca', 'calif', 'cali'],
+  'ca': ['california', 'calif', 'cali'],
+  'cali': ['california', 'ca', 'calif'],
+  'calif': ['california', 'ca', 'cali'],
+  'new york': ['ny', 'nyc'],
+  'ny': ['new york', 'nyc'],
+  'los angeles': ['la', 'los angeles ca']
 };
 
 /**
@@ -69,73 +88,124 @@ export async function searchLocations(
     const lowercaseQuery = query.toLowerCase().trim();
     const hasChineseChars = containsChineseCharacters(lowercaseQuery);
     
-    // Check for well-known western cities when in English mode
+    // Handle English language searches efficiently
     if (language === 'en' && !hasChineseChars) {
-      const westernCityMatches = checkWesternCities(lowercaseQuery);
-      if (westernCityMatches.length > 0) {
-        return westernCityMatches;
+      // Check exact matches first
+      if (westernCities[lowercaseQuery]) {
+        return [westernCities[lowercaseQuery]];
+      }
+      
+      // Check for alias matches
+      const aliasMatch = findAliasMatch(lowercaseQuery);
+      if (aliasMatch) {
+        return [westernCities[aliasMatch]];
+      }
+      
+      // Check for partial matches with western cities database
+      const westernMatches = findPartialMatches(lowercaseQuery);
+      if (westernMatches.length > 0) {
+        return westernMatches;
       }
     }
     
-    // Immediately check for specific Chinese locations and alternative spellings
+    // Handle Chinese language searches
     if (hasChineseChars || language === 'zh') {
-      // Check for key Chinese locations with higher priority
-      const specialLocation = await checkSpecialChineseLocations(lowercaseQuery);
-      if (specialLocation.length > 0) {
-        return specialLocation;
-      }
-      
-      // Check for alternative spellings
-      const alternativeResults = checkAlternativeSpellings(lowercaseQuery);
-      if (alternativeResults.length > 0) {
-        return alternativeResults;
-      }
-      
-      // Check the internal database for Chinese locations
-      const internalResults = findMatchingLocations(lowercaseQuery, 5, language);
-      if (internalResults.length > 0) {
-        return internalResults;
+      // Check for Chinese location matches
+      const chineseResults = await handleChineseSearch(lowercaseQuery, language);
+      if (chineseResults.length > 0) {
+        return chineseResults;
       }
     }
     
-    // Handle special cases
-    const specialCaseResults = handleSpecialCases(lowercaseQuery, language);
-    if (specialCaseResults) {
-      return specialCaseResults;
+    // Handle special case searches
+    const specialCaseResult = handleSpecialCases(lowercaseQuery, language);
+    if (specialCaseResult.length > 0) {
+      return specialCaseResult;
     }
     
+    // Fall back to external API search
     return await fetchAndProcessExternalResults(lowercaseQuery, language, hasChineseChars);
   } catch (error) {
     console.error("Error searching for locations:", error);
     
-    // Return a fallback based on internal database
+    // Return a fallback from internal database
     return findMatchingLocations(query, 5, language);
   }
 }
 
 /**
- * Check for well-known western cities
+ * Find matching aliases for the search term
  */
-function checkWesternCities(query: string): Location[] {
-  const results: Location[] = [];
-  
-  // First, check for exact matches
-  if (additionalWesternCities[query]) {
-    results.push(additionalWesternCities[query]);
-    return results;
+function findAliasMatch(query: string): string | null {
+  // Check if this query is a direct alias
+  for (const [key, aliases] of Object.entries(searchAliases)) {
+    if (aliases.includes(query)) {
+      return key;
+    }
   }
   
-  // Then, check for partial matches
-  for (const [key, city] of Object.entries(additionalWesternCities)) {
-    if (key.includes(query) || query.includes(key) || 
-        // Check for word matches in multi-word queries and city names
-        key.split(' ').some(word => query.includes(word)) || 
-        query.split(' ').some(word => key.includes(word))) {
+  // Check if this query is a key with aliases
+  if (searchAliases[query]) {
+    return query;
+  }
+  
+  return null;
+}
+
+/**
+ * Find partial matches within the western cities database
+ */
+function findPartialMatches(query: string): Location[] {
+  const results: Location[] = [];
+  const words = query.split(' ');
+  
+  // Check for matches with parts of city names
+  for (const [key, city] of Object.entries(westernCities)) {
+    // Direct substring match
+    if (key.includes(query) || query.includes(key)) {
+      results.push(city);
+      continue;
+    }
+    
+    // Word-level matching
+    const keyWords = key.split(' ');
+    const hasWordMatch = words.some(word => 
+      keyWords.some(keyWord => 
+        keyWord.includes(word) || word.includes(keyWord)
+      )
+    );
+    
+    if (hasWordMatch) {
       results.push(city);
     }
   }
   
   return results;
+}
+
+/**
+ * Handle Chinese language search
+ */
+async function handleChineseSearch(query: string, language: Language): Promise<Location[]> {
+  // Check for special Chinese locations
+  const specialLocation = await checkSpecialChineseLocations(query);
+  if (specialLocation.length > 0) {
+    return specialLocation;
+  }
+  
+  // Check for alternative spellings
+  const alternativeResults = checkAlternativeSpellings(query);
+  if (alternativeResults.length > 0) {
+    return alternativeResults;
+  }
+  
+  // Check internal database
+  const internalResults = findMatchingLocations(query, 5, language);
+  if (internalResults.length > 0) {
+    return internalResults;
+  }
+  
+  return [];
 }
 
 /**
@@ -161,23 +231,16 @@ async function checkSpecialChineseLocations(query: string): Promise<Location[]> 
 /**
  * Handle special case searches like abbreviated forms
  */
-function handleSpecialCases(query: string, language: Language): Location[] | null {
+function handleSpecialCases(query: string, language: Language): Location[] {
+  // California abbreviations
   if (query === 'cali' || 
       query === 'ca' || 
       query === 'calif' || 
       query.startsWith('califo')) {
-    // Prioritize California when these abbreviations are used
-    return [
-      {
-        name: language === 'zh' ? '加利福尼亚州，美国' : 'California, USA',
-        latitude: 36.7783,
-        longitude: -119.4179,
-        placeDetails: language === 'zh' ? '美国的一个州' : 'State in United States'
-      }
-    ];
+    return [westernCities['california']];
   }
   
-  return null;
+  return [];
 }
 
 /**
@@ -190,7 +253,7 @@ async function fetchAndProcessExternalResults(
 ): Promise<Location[]> {
   // Use OpenStreetMap Nominatim API for geocoding
   const encodedQuery = encodeURIComponent(query);
-  const languageParam = language === 'zh' ? '&accept-language=zh-CN' : '';
+  const languageParam = language === 'zh' ? '&accept-language=zh-CN' : '&accept-language=en';
   const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}${languageParam}&format=json&limit=10`;
   
   const response = await fetch(url, {
@@ -205,27 +268,38 @@ async function fetchAndProcessExternalResults(
   
   const results = await response.json();
   
-  // Format the results to match our Location type
+  // Format the results with proper localization
   const locations: Location[] = results.map((item: any) => ({
     name: item.display_name,
     latitude: parseFloat(item.lat),
     longitude: parseFloat(item.lon),
-    placeDetails: item.type && item.class 
-      ? language === 'en' 
-        ? `${item.type} in ${item.class}` 
-        : `${item.class}中的${item.type}`
-      : undefined
+    placeDetails: formatPlaceDetails(item, language)
   }));
   
-  // Find the best matches for the query, considering the language
+  // Find the best matches for the query
   const bestMatches = findBestMatches(locations, query, language);
   
-  // If searching in Chinese or with Chinese characters, combine with internal database
+  // Combine with internal results if appropriate
   if (hasChineseChars || language === 'zh') {
     return combineDatabaseWithExternalResults(bestMatches, query, language);
   }
   
   return bestMatches;
+}
+
+/**
+ * Format place details with proper localization
+ */
+function formatPlaceDetails(item: any, language: Language): string | undefined {
+  if (!item.type || !item.class) {
+    return undefined;
+  }
+  
+  if (language === 'en') {
+    return `${item.type} in ${item.class}`;
+  } else {
+    return `${item.class}中的${item.type}`;
+  }
 }
 
 /**
@@ -238,10 +312,10 @@ function combineDatabaseWithExternalResults(
 ): Location[] {
   const internalResults = findMatchingLocations(query.toLowerCase().trim(), 3, language);
   
-  // Combine and sort by relevance
+  // Combine and deduplicate
   const combined = [...internalResults, ...externalResults];
   
-  // Remove duplicates (basic deduplication by coordinates)
+  // Remove duplicates by coordinates
   const uniqueResults: Location[] = [];
   const seenCoords = new Set<string>();
   

@@ -18,7 +18,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   searchTerm,
   isLoading
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   if (isLoading) {
     return (
@@ -60,7 +60,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             <div>
               <p className="text-sm font-medium leading-tight">{location.name}</p>
               {location.placeDetails && (
-                <p className="text-xs text-muted-foreground mt-0.5">{location.placeDetails}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {location.placeDetails}
+                </p>
               )}
             </div>
           </div>
