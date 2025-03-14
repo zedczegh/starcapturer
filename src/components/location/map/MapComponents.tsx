@@ -81,7 +81,7 @@ export const MapStyles = memo(() => {
           width: 24px;
           height: 24px;
           border-radius: 50% 50% 50% 0;
-          background: hsl(var(--primary));
+          background: #9b87f5; 
           position: absolute;
           transform: rotate(-45deg);
           left: 50%;
@@ -109,6 +109,21 @@ export const MapStyles = memo(() => {
           margin: -6px 0 0 -12px;
           transform: rotateX(55deg);
           z-index: -1;
+        }
+        
+        @keyframes pulse-subtle {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1) rotate(-45deg);
+          }
+          50% {
+            opacity: 0.85;
+            transform: scale(1.05) rotate(-45deg);
+          }
+        }
+        
+        .animate-pulse-subtle {
+          animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
       `;
       document.head.appendChild(style);

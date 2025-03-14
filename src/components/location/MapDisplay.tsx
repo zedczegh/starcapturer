@@ -44,7 +44,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         <LazyMapComponent
           latitude={position[0]}
           longitude={position[1]}
-          onLocationNameUpdate={(name) => console.log("Location name updated:", name)}
+          locationName={locationName}
           isInteractive={editable}
           onMapReady={onMapReady}
           onMapClick={handleMapClick}

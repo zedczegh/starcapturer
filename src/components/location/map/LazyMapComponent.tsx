@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { validateCoordinates, formatCoordinates } from '@/utils/coordinates';
 import * as LocationNameService from './LocationNameService';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { MapUpdater, MapEvents, createCustomMarker, MapStyles } from './MapComponents';
 
 // Fix for the default marker icon in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,62 +16,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/marker-shadow.png',
 });
 
-// Create custom marker icon
-const createCustomMarker = () => {
-  return L.divIcon({
-    html: `
-      <div class="marker-pin-container">
-        <div class="marker-pin animate-pulse-subtle"></div>
-        <div class="marker-shadow"></div>
-      </div>
-    `,
-    className: 'custom-map-marker',
-    iconSize: [30, 42],
-    iconAnchor: [15, 42]
-  });
-};
-
-// Component to update map view when coordinates change
-const MapUpdater = ({ center }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (center) {
-      map.setView(center, map.getZoom());
-    }
-  }, [center, map]);
-  
-  return null;
-};
-
-// Map Events Handler component for handling clicks
-const MapEventsHandler = ({ onMapClick, isInteractive }) => {
-  const map = useMap();
-  
-  // Set up event listeners
-  useEffect(() => {
-    if (!isInteractive || !onMapClick) return;
-    
-    const handleMapClick = (e) => {
-      if (isInteractive && onMapClick) {
-        onMapClick(e.latlng.lat, e.latlng.lng);
-      }
-    };
-    
-    map.on('click', handleMapClick);
-    
-    return () => {
-      map.off('click', handleMapClick);
-    };
-  }, [map, isInteractive, onMapClick]);
-  
-  return null;
-};
-
 const LazyMapComponent = ({ 
   latitude, 
-  longitude, 
-  onLocationNameUpdate, 
+  longitude,
+  locationName,
   isInteractive = true,
   mapHeight = '400px',
   zoom = 12,
@@ -83,8 +32,7 @@ const LazyMapComponent = ({
   const center = [validCoordinates.latitude, validCoordinates.longitude];
   const { language } = useLanguage();
   
-  // State for the location name display
-  const [locationName, setLocationName] = useState('');
+  // State for the location display
   const [isLoading, setIsLoading] = useState(true);
   const [markerPosition, setMarkerPosition] = useState(center);
   const [customIcon, setCustomIcon] = useState(null);
@@ -103,42 +51,9 @@ const LazyMapComponent = ({
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
     onMapReady();
-    
-    // Get location name if callback is provided
-    if (onLocationNameUpdate) {
-      const locationService = LocationNameService;
-      locationService.getLocationNameForCoordinates(validCoordinates.latitude, validCoordinates.longitude, language, {
-        setCachedData: (key, data) => {
-          try {
-            localStorage.setItem(key, JSON.stringify(data));
-          } catch (e) {
-            console.error("Error caching location data:", e);
-          }
-        },
-        getCachedData: (key) => {
-          try {
-            const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : null;
-          } catch (e) {
-            console.error("Error retrieving cached location data:", e);
-            return null;
-          }
-        }
-      })
-        .then(name => {
-          setLocationName(name);
-          onLocationNameUpdate(name);
-        })
-        .catch(error => {
-          console.error("Error fetching location name:", error);
-          const fallbackName = formatCoordinates(validCoordinates.latitude, validCoordinates.longitude);
-          setLocationName(fallbackName);
-          onLocationNameUpdate(fallbackName);
-        });
-    }
-  }, [validCoordinates.latitude, validCoordinates.longitude, language, onLocationNameUpdate, onMapReady]);
+  }, [onMapReady]);
   
-  // Handle map click from the MapEventsHandler
+  // Handle map click 
   const handleMapClick = useCallback((lat, lng) => {
     if (isInteractive) {
       setMarkerPosition([lat, lng]);
@@ -190,8 +105,9 @@ const LazyMapComponent = ({
           )}
         </Marker>
         
-        <MapUpdater center={center} />
-        <MapEventsHandler onMapClick={handleMapClick} isInteractive={isInteractive} />
+        <MapUpdater position={center} />
+        <MapEvents onMapClick={handleMapClick} />
+        <MapStyles />
       </MapContainer>
     </div>
   );
