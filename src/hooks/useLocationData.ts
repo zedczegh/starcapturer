@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import useLocationCache from "./location/useLocationCache";
 import { useGeolocation } from "./location/useGeolocation";
@@ -18,7 +18,7 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
   const [formattedLocationName, setFormattedLocationName] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
-  const [bortleScale, setBortleScale] = useState(4);
+  const [bortleScale, setBortleScale] = useState<number | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { toast } = useToast();
@@ -27,7 +27,7 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
     timeout: 15000,
-    maximumAge: 60000,
+    maximumAge: 30000, // Reduced from 60000 to get more recent data
     language 
   });
 
@@ -46,7 +46,7 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
     }
   }, [geo.coords]);
 
-  const handleLocationFound = async (lat: number, lng: number) => {
+  const handleLocationFound = useCallback(async (lat: number, lng: number) => {
     try {
       // Validate coordinates
       const { latitude: validLat, longitude: validLng } = validateCoordinates({ latitude: lat, longitude: lng });
@@ -55,40 +55,21 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
       setLongitude(validLng.toFixed(6));
       setUserLocation({ latitude: validLat, longitude: validLng });
       
-      // Check for cached data to reduce API calls
-      const cacheKey = `loc-${validLat.toFixed(4)}-${validLng.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey, 24 * 60 * 60 * 1000); // 24 hour cache
-      
-      if (cachedData && typeof cachedData === 'object') {
-        const data = cachedData as { name?: string; formattedName?: string; bortleScale?: number };
-        if (data.name) setLocationName(data.name);
-        if (data.formattedName || data.name) setFormattedLocationName(data.formattedName || data.name || "");
-        if (typeof data.bortleScale === 'number') setBortleScale(data.bortleScale);
-        
-        // Only show status message if we have a name
-        if (data.name) {
-          setStatusMessage(
-            language === 'en' 
-              ? `Location found: ${data.formattedName || data.name}` 
-              : `位置已找到：${data.formattedName || data.name}`
-          );
-        }
-        return;
-      }
-      
-      // Use our local location database
+      // Get location information
       const locationInfo = await getLocationFromCoordinates(validLat, validLng, language);
       
       setLocationName(locationInfo.name);
       setFormattedLocationName(locationInfo.formattedName);
-      setBortleScale(locationInfo.bortleScale);
       
-      // Cache this data for future use
-      setCachedData(cacheKey, {
-        name: locationInfo.name,
-        formattedName: locationInfo.formattedName,
-        bortleScale: locationInfo.bortleScale
-      });
+      // Get fresh Bortle scale data - don't use the one from locationInfo directly
+      const bortleScaleValue = await getBortleScaleForLocation(
+        validLat, 
+        validLng, 
+        locationInfo.name,
+        setCachedData
+      );
+      
+      setBortleScale(bortleScaleValue);
       
       setStatusMessage(
         language === 'en' 
@@ -103,14 +84,17 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
           : "无法确定确切位置。使用近似坐标。"
       );
     }
-  };
+  }, [language, setCachedData]);
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = useCallback(() => {
     if (geo.loading) return;
+    
+    // Reset Bortle scale to ensure we don't display stale data
+    setBortleScale(null);
     
     setStatusMessage(language === 'en' ? "Waiting for permission and location data..." : "等待位置权限和数据...");
     geo.getPosition();
-  };
+  }, [geo, language]);
 
   return {
     loading: geo.loading,
@@ -119,7 +103,7 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
     formattedLocationName,
     latitude,
     longitude,
-    bortleScale,
+    bortleScale: bortleScale ?? 5, // Fallback value of 5 if null
     statusMessage,
     setLocationName,
     setLatitude,

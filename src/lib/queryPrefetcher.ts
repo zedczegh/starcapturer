@@ -26,7 +26,19 @@ export const prefetchLocationData = async (
 ) => {
   const { weatherKey, lightPollutionKey, forecastKey, siqsDetailsKey } = generateCacheKeys(latitude, longitude);
   
-  // Use Promise.all to fetch data in parallel
+  // Always fetch the light pollution data first as it's critical for accurate SIQS
+  try {
+    // Force refresh light pollution data
+    await queryClient.fetchQuery({
+      queryKey: lightPollutionKey,
+      queryFn: () => fetchLightPollutionData(latitude, longitude),
+      staleTime: 60 * 60 * 1000 // 1 hour
+    });
+  } catch (error) {
+    console.error("Error prefetching light pollution data:", error);
+  }
+  
+  // Use Promise.all to fetch remaining data in parallel
   await Promise.all([
     // Prefetch weather data
     !queryClient.getQueryData(weatherKey) && 
@@ -34,14 +46,6 @@ export const prefetchLocationData = async (
         queryKey: weatherKey,
         queryFn: () => fetchWeatherData({ latitude, longitude }),
         staleTime: 5 * 60 * 1000 // 5 minutes
-      }),
-    
-    // Prefetch light pollution data
-    !queryClient.getQueryData(lightPollutionKey) && 
-      queryClient.prefetchQuery({
-        queryKey: lightPollutionKey,
-        queryFn: () => fetchLightPollutionData(latitude, longitude),
-        staleTime: 60 * 60 * 1000 // 1 hour
       })
   ]);
   
@@ -57,7 +61,7 @@ export const prefetchLocationData = async (
         }),
         staleTime: 30 * 60 * 1000 // 30 minutes
       });
-    }, 100); // Reduced timeout from 500ms to 100ms
+    }, 100);
   }
 };
 
@@ -70,7 +74,14 @@ export const prefetchSIQSDetails = (
   latitude: number,
   longitude: number
 ) => {
-  const { forecastKey } = generateCacheKeys(latitude, longitude);
+  const { lightPollutionKey, forecastKey } = generateCacheKeys(latitude, longitude);
+  
+  // Always get fresh light pollution data
+  queryClient.fetchQuery({
+    queryKey: lightPollutionKey,
+    queryFn: () => fetchLightPollutionData(latitude, longitude),
+    staleTime: 60 * 60 * 1000 // 1 hour
+  });
   
   // Preload forecast data which is needed for SIQS details
   if (!queryClient.getQueryData(forecastKey)) {
@@ -94,5 +105,6 @@ export const prefetchPopularLocations = (queryClient: QueryClient) => {
   // Beijing coordinates - commonly accessed location
   prefetchLocationData(queryClient, 39.9042, 116.4074);
   
-  // We could add other popular locations here if needed
+  // Add Guangzhou as a popular location for faster access
+  prefetchLocationData(queryClient, 23.1291, 113.2644);
 };

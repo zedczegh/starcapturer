@@ -1,11 +1,11 @@
 
 import { fetchLightPollutionData } from "@/lib/api";
-import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
+import { estimateBortleScaleByLocation, findClosestKnownLocation } from "@/utils/locationUtils";
 
 // Default timeout for light pollution API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
 // Default cache lifetime for Bortle scale data (in milliseconds)
-const BORTLE_CACHE_LIFETIME = 24 * 60 * 60 * 1000; // 24 hours
+const BORTLE_CACHE_LIFETIME = 12 * 60 * 60 * 1000; // 12 hours
 
 /**
  * Optimized service for retrieving and calculating Bortle scale data
@@ -22,6 +22,8 @@ export const getBortleScaleData = async (
   setStatusMessage?: (message: string | null) => void,
   timeout: number = DEFAULT_TIMEOUT
 ): Promise<number> => {
+  console.log("Getting Bortle scale data for", latitude, longitude, locationName);
+  
   // If in display-only mode and a valid bortleScale is provided, use it
   if (displayOnly && bortleScale >= 1 && bortleScale <= 9) {
     return bortleScale;
@@ -35,20 +37,26 @@ export const getBortleScaleData = async (
       typeof cachedBortleData.bortleScale === 'number' &&
       cachedBortleData.bortleScale >= 1 && 
       cachedBortleData.bortleScale <= 9) {
+    console.log("Using cached Bortle scale:", cachedBortleData.bortleScale);
     return cachedBortleData.bortleScale;
   }
   
-  // Use local database (fastest and works in all regions)
-  const { findClosestKnownLocation } = await import("@/utils/locationUtils");
-  const closestLocation = findClosestKnownLocation(latitude, longitude);
-  
-  if (closestLocation.distance <= 50) {
-    // Cache the valid Bortle scale data
-    setCachedData(bortleCacheKey, { 
-      bortleScale: closestLocation.bortleScale, 
-      source: 'database' 
-    });
-    return closestLocation.bortleScale;
+  try {
+    // Try direct database lookup first (fastest and most reliable)
+    const { findClosestLocation } = await import("@/data/locationDatabase");
+    const closestLocation = findClosestLocation(latitude, longitude);
+    
+    if (closestLocation && typeof closestLocation.bortleScale === 'number') {
+      console.log("Using database Bortle scale:", closestLocation.bortleScale);
+      // Cache the valid Bortle scale data
+      setCachedData(bortleCacheKey, { 
+        bortleScale: closestLocation.bortleScale, 
+        source: 'database' 
+      });
+      return closestLocation.bortleScale;
+    }
+  } catch (error) {
+    console.error("Error using local database for Bortle scale:", error);
   }
   
   try {
@@ -68,22 +76,42 @@ export const getBortleScaleData = async (
         lightPollutionData.bortleScale >= 1 && 
         lightPollutionData.bortleScale <= 9) {
       
+      console.log("Using API Bortle scale:", lightPollutionData.bortleScale);
       // Cache the valid Bortle scale data
-      setCachedData(bortleCacheKey, lightPollutionData);
+      setCachedData(bortleCacheKey, { 
+        bortleScale: lightPollutionData.bortleScale,
+        source: 'api'
+      });
       return lightPollutionData.bortleScale;
     }
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
-    // Continue to fallback method
   }
   
-  // If API returned invalid data or failed, use location-based estimation
-  const estimatedScale = estimateBortleScaleByLocation(locationName);
+  // If still no valid data, use the backup utility
+  try {
+    const closestKnownLocation = findClosestKnownLocation(latitude, longitude);
+    if (closestKnownLocation && closestKnownLocation.bortleScale) {
+      console.log("Using utility Bortle scale:", closestKnownLocation.bortleScale);
+      setCachedData(bortleCacheKey, { 
+        bortleScale: closestKnownLocation.bortleScale,
+        source: 'utility' 
+      });
+      return closestKnownLocation.bortleScale;
+    }
+  } catch (error) {
+    console.error("Error using fallback utility for Bortle scale:", error);
+  }
+  
+  // Last resort: Use location-based estimation
+  const estimatedScale = estimateBortleScaleByLocation(locationName, latitude, longitude);
+  console.log("Using estimated Bortle scale:", estimatedScale);
   
   // Cache the estimated data
   setCachedData(bortleCacheKey, { 
     bortleScale: estimatedScale, 
-    estimated: true 
+    estimated: true,
+    source: 'estimation'
   });
   
   if (!displayOnly && setStatusMessage) {
