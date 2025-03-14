@@ -1,6 +1,16 @@
 
-// Re-export all geocoding related functions and types
-export * from './types';
-export * from './searchLocations';
-export * from './reverseGeocoding';
-export * from './coordinates';
+import { searchLocations } from './search';
+import { reverseGeocode } from './reverseGeocoding';
+import { Location, Language } from './types';
+
+// Export the main API
+export {
+  searchLocations,
+  reverseGeocode
+};
+
+// Export types
+export type { Location, Language };
+
+// Re-export utility methods for convenience
+export * from './matchingUtils';

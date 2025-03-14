@@ -6,22 +6,19 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense, useMemo } from "react";
+
+// Improve performance by prefetching popular locations
 import { prefetchPopularLocations } from "./lib/queryPrefetcher";
+// Improved loading component
+import PageLoader from "./components/loaders/PageLoader";
 
-// Lazy load pages for faster initial load
-const Index = lazy(() => import("./pages/Index"));
-const LocationDetails = lazy(() => import("./pages/LocationDetails"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const ShareLocation = lazy(() => import("./pages/ShareLocation"));
-const PhotoPointsNearby = lazy(() => import("./pages/PhotoPointsNearby"));
-const AboutSIQS = lazy(() => import("./pages/AboutSIQS"));
-
-// Loading fallback
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-  </div>
-);
+// Lazily load pages with improved chunking for faster initial load
+const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
+const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
+const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
+const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */ "./pages/ShareLocation"));
+const PhotoPointsNearby = lazy(() => import(/* webpackChunkName: "photo-points" */ "./pages/PhotoPointsNearby"));
+const AboutSIQS = lazy(() => import(/* webpackChunkName: "about-siqs" */ "./pages/AboutSIQS"));
 
 // Create a new QueryClient instance with optimized settings
 const queryClient = new QueryClient({
@@ -29,8 +26,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 15 * 60 * 1000, // 15 minutes
+      staleTime: 15 * 60 * 1000, // Increased to 15 minutes for better caching
+      gcTime: 30 * 60 * 1000,    // Increased to 30 minutes
     },
   },
 });
@@ -52,7 +49,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.1 }} // Even faster transitions
+        transition={{ duration: 0.1 }} // Faster transitions
         className="min-h-screen"
       >
         {children}

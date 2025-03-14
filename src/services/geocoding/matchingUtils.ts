@@ -1,6 +1,6 @@
 
-// This file re-exports functionality from the matching/ directory
-// to maintain backward compatibility
+// This file is now just a simple re-export wrapper to maintain compatibility
+// while the actual implementation has been moved to the matching/ directory
 import { Location } from './types';
 import { 
   containsChineseCharacters,
