@@ -79,5 +79,45 @@ export const chinaMountainLocations: LocationEntry[] = [
   { name: "Tiger Leaping Gorge", coordinates: [27.1667, 100.0667], bortleScale: 2.7, radius: 15, type: 'natural' },
   { name: "Mount Kailash", coordinates: [31.0667, 81.3167], bortleScale: 1.1, radius: 35, type: 'natural' },
   { name: "Three Parallel Rivers", coordinates: [27.9167, 98.4167], bortleScale: 2.0, radius: 40, type: 'natural' },
-  { name: "Potala Palace (Lhasa Mountain)", coordinates: [29.6578, 91.1175], bortleScale: 4.2, radius: 15, type: 'natural' }
+  
+  // Updated Tibetan cities with accurate light pollution values
+  { name: "Lhasa City", coordinates: [29.6500, 91.1000], bortleScale: 6.8, radius: 20, type: 'urban' },
+  { name: "Shigatse City", coordinates: [29.2667, 88.8833], bortleScale: 6.2, radius: 15, type: 'urban' },
+  { name: "Chamdo City", coordinates: [31.1500, 97.1700], bortleScale: 5.8, radius: 12, type: 'urban' },
+  { name: "Nyingchi City", coordinates: [29.5336, 94.4750], bortleScale: 5.5, radius: 10, type: 'urban' },
+  { name: "Nagqu City", coordinates: [31.4800, 92.0500], bortleScale: 5.7, radius: 12, type: 'urban' },
+  { name: "Ngari Prefecture", coordinates: [32.5000, 80.1000], bortleScale: 4.8, radius: 10, type: 'urban' },
+  
+  // Tibetan suburban areas
+  { name: "Doilungdêqên District", coordinates: [29.6708, 90.9647], bortleScale: 6.3, radius: 10, type: 'suburban' },
+  { name: "Dagzê District", coordinates: [29.6667, 91.3667], bortleScale: 5.9, radius: 8, type: 'suburban' },
+  { name: "Gyantse County", coordinates: [28.9000, 89.6000], bortleScale: 5.4, radius: 8, type: 'suburban' },
+  { name: "Bayi Town", coordinates: [29.6336, 94.3583], bortleScale: 5.5, radius: 8, type: 'suburban' },
+  
+  // Inner Mongolia cities
+  { name: "Hohhot City", coordinates: [40.8414, 111.7500], bortleScale: 7.3, radius: 25, type: 'urban' },
+  { name: "Baotou City", coordinates: [40.6562, 109.8345], bortleScale: 7.4, radius: 25, type: 'urban' },
+  { name: "Ordos City", coordinates: [39.6080, 109.7813], bortleScale: 6.8, radius: 20, type: 'urban' },
+  { name: "Chifeng City", coordinates: [42.2663, 118.9223], bortleScale: 6.7, radius: 20, type: 'urban' },
+  { name: "Tongliao City", coordinates: [43.6172, 122.2648], bortleScale: 6.5, radius: 18, type: 'urban' },
+  { name: "Hulunbuir City", coordinates: [49.2153, 119.7650], bortleScale: 6.3, radius: 18, type: 'urban' },
+  
+  // Qinghai cities
+  { name: "Xining City", coordinates: [36.6167, 101.7667], bortleScale: 7.0, radius: 22, type: 'urban' },
+  { name: "Golmud City", coordinates: [36.4167, 94.9000], bortleScale: 6.2, radius: 15, type: 'urban' },
+  { name: "Delingha City", coordinates: [37.3700, 97.3600], bortleScale: 5.8, radius: 12, type: 'urban' },
+  { name: "Yushu City", coordinates: [33.0167, 97.0083], bortleScale: 5.3, radius: 10, type: 'urban' },
+  
+  // Northeastern China cities
+  { name: "Harbin City", coordinates: [45.8038, 126.5350], bortleScale: 7.6, radius: 30, type: 'urban' },
+  { name: "Changchun City", coordinates: [43.8800, 125.3228], bortleScale: 7.5, radius: 28, type: 'urban' },
+  { name: "Shenyang City", coordinates: [41.8057, 123.4315], bortleScale: 7.7, radius: 30, type: 'urban' },
+  { name: "Jilin City", coordinates: [43.8500, 126.5667], bortleScale: 7.0, radius: 22, type: 'urban' },
+  { name: "Daqing City", coordinates: [46.5800, 125.1000], bortleScale: 6.8, radius: 20, type: 'urban' },
+  { name: "Mudanjiang City", coordinates: [44.5861, 129.5997], bortleScale: 6.5, radius: 18, type: 'urban' },
+  
+  // Cultural sites with adjusted light pollution values
+  { name: "Potala Palace", coordinates: [29.6578, 91.1175], bortleScale: 6.7, radius: 5, type: 'urban' },
+  { name: "Jokhang Temple", coordinates: [29.6525, 91.1324], bortleScale: 6.8, radius: 3, type: 'urban' },
+  { name: "Tashilhunpo Monastery", coordinates: [29.2700, 88.8700], bortleScale: 6.0, radius: 3, type: 'urban' }
 ];

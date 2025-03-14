@@ -78,7 +78,7 @@ export function findClosestLocationImpl(
     }
     
     // Get weighted average of Bortle scale from all locations within radius
-    // Closer locations and natural/dark-site types get higher weight
+    // Closer locations and urban types get higher weight for light pollution
     let totalWeight = 0;
     let weightedBortleSum = 0;
     
@@ -89,18 +89,21 @@ export function findClosestLocationImpl(
       // Base weight is inverse of distance (closer = higher weight)
       let weight = 1 / Math.max(1, item.distance);
       
-      // Give more weight to natural areas and dark sites for better accuracy
-      if (item.location.type === 'natural' || item.location.type === 'dark-site') {
-        weight *= 1.5;
+      // Give more weight to urban areas for light pollution (cities dominate nearby areas)
+      if (item.location.type === 'urban') {
+        weight *= 2.0; // Increased from 1.5 to 2.0 to better reflect urban light pollution
+      } else if (item.location.type === 'suburban') {
+        weight *= 1.7; // Suburban areas also contribute significantly to light pollution
       }
       
-      // Mountains at higher elevations tend to have darker skies
+      // Mountains still get some weight but less than urban areas
+      // Remote mountains should have darker skies
       if (item.location.type === 'natural' && 
-          item.location.name.toLowerCase().includes('mountain') || 
+          (item.location.name.toLowerCase().includes('mountain') || 
           item.location.name.toLowerCase().includes('mountains') ||
           item.location.name.toLowerCase().includes('peak') ||
-          item.location.name.toLowerCase().includes('range')) {
-        weight *= 1.3;
+          item.location.name.toLowerCase().includes('range'))) {
+        weight *= 0.8; // Reduced weight for mountains
       }
       
       totalWeight += weight;
@@ -140,12 +143,17 @@ export function findClosestLocationImpl(
       // Apply terrain type modifiers for better accuracy
       let modifiedWeight = weight;
       
-      // Natural areas and mountains have stronger influence on dark skies
-      if (loc.type === 'natural' || loc.type === 'dark-site') {
-        modifiedWeight *= 1.4;
-      } else if (loc.type === 'urban') {
+      // Urban areas have stronger influence on light pollution (higher weight)
+      if (loc.type === 'urban') {
         // Urban light pollution has strong but localized influence
-        modifiedWeight *= loc.distance < 30 ? 1.6 : 0.8;
+        // Higher exponent creates a sharper falloff from city centers
+        modifiedWeight *= loc.distance < 40 ? 2.5 : 1.0;
+      } else if (loc.type === 'suburban') {
+        // Suburban areas have moderate but significant light pollution
+        modifiedWeight *= loc.distance < 30 ? 1.8 : 0.9;
+      } else if (loc.type === 'natural' || loc.type === 'dark-site') {
+        // Natural areas have less influence on increasing light pollution
+        modifiedWeight *= 0.7;
       }
       
       totalWeight += modifiedWeight;
