@@ -95,7 +95,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         scrollWheelZoom={true}
         whenReady={handleMapReady}
         attributionControl={false}
-        dragging={true}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

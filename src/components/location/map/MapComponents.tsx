@@ -39,13 +39,26 @@ export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: 
     
     map.on('click', handleClick);
     
-    // Enable all map interactions
-    if (map.dragging.enabled()) {
+    // Improve map interactions
+    if (map.dragging) {
       map.dragging.enable();
+      
+      // Set inertia and inertia deceleration to make dragging feel more responsive
+      if (map.dragging._draggable) {
+        map.dragging._draggable.options.inertia = true;
+        map.dragging._draggable.options.inertiaDeceleration = 2000; // Higher value = faster stop (default is 3000)
+        map.dragging._draggable.options.inertiaMaxSpeed = 1500; // Higher value = more momentum (default is 1500)
+      }
     }
+    
+    // Enable all interactions with improved settings
     if (map.touchZoom) map.touchZoom.enable();
     if (map.doubleClickZoom) map.doubleClickZoom.enable();
-    if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+    if (map.scrollWheelZoom) {
+      map.scrollWheelZoom.enable();
+      // Make zoom more responsive
+      map.options.wheelDebounceTime = 40; // Lower value = more responsive (default is 150)
+    }
     
     return () => {
       map.off('click', handleClick);
@@ -137,13 +150,26 @@ export const MapStyles = memo(() => {
           animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
-        /* Ensure map is fully interactive */
+        /* Ensure map is fully interactive with improved styling */
         .leaflet-container {
-          touch-action: pan-x pan-y;
-          cursor: grab;
+          touch-action: manipulation;
+          cursor: grab !important;
+          background: #0a0f25;
         }
         .leaflet-container:active {
-          cursor: grabbing;
+          cursor: grabbing !important;
+        }
+        
+        /* Improve tile transition */
+        .leaflet-fade-anim .leaflet-tile {
+          will-change: opacity;
+          transition: opacity 0.15s linear;
+        }
+        
+        /* Improve drag transitions */
+        .leaflet-zoom-anim .leaflet-zoom-animated {
+          will-change: transform;
+          transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
       `;
       document.head.appendChild(style);
