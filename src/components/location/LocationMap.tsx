@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader } from "lucide-react";
 import MapDisplay from "./MapDisplay";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { 
@@ -9,6 +8,7 @@ import {
   normalizeLongitude,
   type LocationCacheService
 } from "./map/LocationNameService";
+import MapLoader from "../loaders/MapLoader";
 
 interface LocationMapProps {
   latitude: number;
@@ -94,17 +94,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
   return (
     <div className="aspect-video w-full h-[300px] relative">
-      {(isLoading || locationLoading) && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-500">
-          <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-cosmic-800/70 border border-cosmic-600/20 shadow-lg">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-primary-foreground font-medium tracking-wide">
-              {locationLoading 
-                ? t("Retrieving location data...", "正在获取位置数据...")
-                : t("Initializing map...", "正在初始化地图...")}
-            </p>
-          </div>
-        </div>
+      {isLoading && <MapLoader />}
+      
+      {locationLoading && (
+        <MapLoader 
+          message={t("Retrieving location data...", "正在获取位置数据...")} 
+        />
       )}
       
       <MapDisplay 

@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { validateCoordinates, formatCoordinates } from '@/utils/coordinates';
@@ -29,6 +29,19 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
+// Map Events Handler component for handling clicks
+const MapEventsHandler = ({ onMapClick, isInteractive }) => {
+  const map = useMapEvents({
+    click: (e) => {
+      if (isInteractive && onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  
+  return null;
+};
+
 const LazyMapComponent = ({ 
   latitude, 
   longitude, 
@@ -37,7 +50,8 @@ const LazyMapComponent = ({
   mapHeight = '400px',
   zoom = 12,
   showPopup = true,
-  onMapReady = () => {}
+  onMapReady = () => {},
+  onMapClick = () => {}
 }) => {
   // Validate coordinates to ensure they're within valid ranges
   const validCoordinates = validateCoordinates({ latitude, longitude });
@@ -47,6 +61,12 @@ const LazyMapComponent = ({
   // State for the location name display
   const [locationName, setLocationName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [markerPosition, setMarkerPosition] = useState(center);
+  
+  // Update marker position when center changes
+  useEffect(() => {
+    setMarkerPosition(center);
+  }, [center]);
   
   // Handle map ready event
   const handleMapReady = useCallback(() => {
@@ -87,11 +107,22 @@ const LazyMapComponent = ({
     }
   }, [validCoordinates.latitude, validCoordinates.longitude, language, onLocationNameUpdate, onMapReady]);
   
+  // Handle map click
+  const handleMapClick = useCallback((lat, lng) => {
+    if (isInteractive) {
+      setMarkerPosition([lat, lng]);
+      onMapClick(lat, lng);
+    }
+  }, [isInteractive, onMapClick]);
+  
   return (
     <div style={{ position: 'relative', height: mapHeight, width: '100%' }}>
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-800/20 z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cosmic-400"></div>
+        <div className="absolute inset-0 flex items-center justify-center bg-cosmic-800/50 backdrop-blur-sm z-20 transition-all duration-300">
+          <div className="flex flex-col items-center bg-cosmic-900/80 p-4 rounded-lg shadow-lg border border-primary/20">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+            <p className="mt-3 text-primary-foreground text-sm font-medium">Loading map...</p>
+          </div>
         </div>
       )}
       
@@ -109,7 +140,7 @@ const LazyMapComponent = ({
           subdomains={['a', 'b', 'c']}
         />
         
-        <Marker position={center}>
+        <Marker position={markerPosition}>
           {showPopup && (
             <Popup>
               <div className="text-slate-800">
@@ -120,6 +151,7 @@ const LazyMapComponent = ({
         </Marker>
         
         <MapUpdater center={center} />
+        <MapEventsHandler onMapClick={handleMapClick} isInteractive={isInteractive} />
       </MapContainer>
     </div>
   );

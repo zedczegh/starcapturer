@@ -24,12 +24,18 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   showInfoPanel = false
 }) => {
   const { t } = useLanguage();
+  
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (editable) {
+      onMapClick(lat, lng);
+    }
+  }, [editable, onMapClick]);
 
   return (
     <div className="z-0 h-full w-full">
       <Suspense fallback={
-        <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
-          <div className="flex flex-col items-center gap-3">
+        <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 p-4 rounded-lg shadow-lg border border-primary/20 bg-cosmic-900/80">
             <Loader className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-primary-foreground/90">{t("Loading map...", "正在加载地图...")}</p>
           </div>
@@ -41,6 +47,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
           onLocationNameUpdate={(name) => console.log("Location name updated:", name)}
           isInteractive={editable}
           onMapReady={onMapReady}
+          onMapClick={handleMapClick}
           showPopup={showInfoPanel}
         />
       </Suspense>
