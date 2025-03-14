@@ -7,6 +7,7 @@ import CalculatorSection from "@/components/index/CalculatorSection";
 import ScienceSection from "@/components/index/ScienceSection";
 import PhotoPointsSection from "@/components/index/PhotoPointsSection";
 import Footer from "@/components/index/Footer";
+import NavBar from "@/components/NavBar";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -29,6 +30,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
+      <NavBar />
       <HeroSection />
       <CalculatorSection />
       <ScienceSection />

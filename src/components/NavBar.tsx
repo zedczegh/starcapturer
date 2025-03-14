@@ -5,6 +5,10 @@ import NavHeader from "./navbar/NavHeader";
 import DesktopNav from "./navbar/DesktopNav";
 import MobileNav from "./navbar/MobileNav";
 
+interface NavBarProps {
+  transparent?: boolean;
+}
+
 const NavBar: React.FC<NavBarProps> = ({ transparent = false }) => {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
