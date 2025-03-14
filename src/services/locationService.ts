@@ -1,6 +1,7 @@
 
 import { calculateDistance, getLocationInfo } from "@/data/locationDatabase";
 import { getLocationNameFromCoordinates as getLocationNameFromAPI } from "@/lib/api";
+import { Language } from "@/services/geocoding/types";
 
 /**
  * Normalize longitude to the range [-180, 180]
@@ -38,7 +39,7 @@ export function validateCoordinates(coordinates: { latitude: number; longitude: 
 export async function getLocationFromCoordinates(
   latitude: number, 
   longitude: number,
-  language: string = 'en'
+  language: Language = 'en'
 ): Promise<{
   name: string;
   formattedName: string;
@@ -111,7 +112,7 @@ export function getNearbyStargazingLocations(
 /**
  * Create a user-friendly message about a location's stargazing quality
  */
-export function getStargazingQualityMessage(bortleScale: number, language: string = 'en'): string {
+export function getStargazingQualityMessage(bortleScale: number, language: Language = 'en'): string {
   if (bortleScale <= 3) {
     return language === 'en' 
       ? "This is an excellent location for astrophotography with dark skies." 
