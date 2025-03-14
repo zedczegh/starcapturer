@@ -1,4 +1,3 @@
-
 import { Location } from './types';
 import { chineseCityAlternatives } from './locationDatabase';
 
@@ -164,6 +163,32 @@ export function getMatchScore(location: string, query: string): number {
   }
   
   return 0;
+}
+
+/**
+ * Find the best matching locations based on search query
+ * @param locations List of locations to search through
+ * @param query User search query
+ * @param language Language for matching prioritization
+ * @returns Filtered and sorted list of locations
+ */
+export function findBestMatches(locations: Location[], query: string, language: string = 'en'): Location[] {
+  if (!locations || locations.length === 0) return [];
+  
+  // Calculate match scores for all locations
+  const scoredLocations = locations.map(location => {
+    const score = getMatchScore(location.name, query);
+    return { location, score };
+  });
+  
+  // Filter out locations with very low match scores (below 20)
+  const filteredLocations = scoredLocations.filter(item => item.score >= 20);
+  
+  // Sort by match score (highest first)
+  const sortedLocations = filteredLocations.sort((a, b) => b.score - a.score);
+  
+  // Extract just the location objects for the final result
+  return sortedLocations.map(item => item.location);
 }
 
 // Soundex implementation for phonetic matching

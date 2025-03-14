@@ -1,4 +1,3 @@
-
 import { Location } from './types';
 
 // Common well-known locations for fallback
@@ -156,3 +155,55 @@ export const chineseCityAlternatives: Record<string, {
     coordinates: [34.3416, 108.9398]
   }
 };
+
+/**
+ * Find locations matching a query from our internal database
+ * @param query Search query string
+ * @param limit Maximum number of results to return
+ * @returns Array of matching locations
+ */
+export function findMatchingLocations(query: string, limit: number = 5): Location[] {
+  if (!query || query.trim().length === 0) return [];
+  
+  const queryLower = query.toLowerCase().trim();
+  const results: Location[] = [];
+  
+  // Search common locations
+  for (const location of commonLocations) {
+    if (location.name.toLowerCase().includes(queryLower)) {
+      results.push(location);
+      if (results.length >= limit) break;
+    }
+  }
+  
+  // If we still need more results, search international locations
+  if (results.length < limit) {
+    for (const location of internationalLocations) {
+      if (location.name.toLowerCase().includes(queryLower) && 
+          !results.some(r => r.name === location.name)) {
+        results.push(location);
+        if (results.length >= limit) break;
+      }
+    }
+  }
+  
+  // Check alternative spellings for Chinese cities
+  if (results.length < limit) {
+    for (const [key, cityInfo] of Object.entries(chineseCityAlternatives)) {
+      if ((key.includes(queryLower) || 
+           cityInfo.chinese.includes(queryLower) ||
+           cityInfo.alternatives.some(alt => alt.includes(queryLower))) &&
+          !results.some(r => r.name === cityInfo.name)) {
+        results.push({
+          name: cityInfo.name,
+          placeDetails: cityInfo.placeDetails,
+          latitude: cityInfo.coordinates[0],
+          longitude: cityInfo.coordinates[1]
+        });
+        if (results.length >= limit) break;
+      }
+    }
+  }
+  
+  return results;
+}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -9,7 +8,7 @@ import SIQSScore from "./siqs/SIQSScore";
 import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
 import StatusMessage from "./siqs/StatusMessage";
 import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState";
-import { useSIQSAdvancedSettings } from "./siqs/hooks/useSIQSAdvancedSettings";
+import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
 
 interface SIQSCalculatorProps {
   className?: string;
