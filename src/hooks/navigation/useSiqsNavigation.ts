@@ -16,7 +16,7 @@ export const useSiqsNavigation = () => {
     language 
   });
 
-  const handleSIQSClick = useCallback((e: React.MouseEvent) => {
+  const handleSIQSClick = useCallback((e?: React.MouseEvent) => {
     // If there's an onClick in a parent component, we don't want to trigger it
     if (e) {
       e.preventDefault();

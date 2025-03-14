@@ -28,7 +28,7 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         </NavLink>
         <a
           href="/#calculator-section"
-          onClick={handleSIQSClick}
+          onClick={(e) => handleSIQSClick(e)}
           className="relative text-sm font-medium transition-colors hover:text-primary"
           style={{ 
             color: location.pathname.startsWith('/location/') 

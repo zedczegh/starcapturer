@@ -25,7 +25,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
         
         <MobileNavButton 
           to="/#calculator-section" 
-          onClick={handleSIQSClick} 
+          onClick={(e) => handleSIQSClick(e)} 
           icon={<MapPin className="h-5 w-5" />} 
           label={t("SIQS", "SIQS")} 
           active={location.pathname.startsWith('/location/')} 
