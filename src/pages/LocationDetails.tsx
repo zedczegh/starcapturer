@@ -32,13 +32,12 @@ const LocationDetails = () => {
 
   // Handle back navigation to ensure clean return to home page
   useEffect(() => {
-    const handleBackNavigation = (e: PopStateEvent) => {
-      // If user clicks back button, navigate directly to home
-      if (!e.state || !e.state.usr) {
-        navigate("/", { replace: true });
-      }
+    const handleBackNavigation = () => {
+      // We navigate directly to home rather than going back
+      navigate("/", { replace: true });
     };
 
+    // Use the popstate event to detect browser back button
     window.addEventListener('popstate', handleBackNavigation);
     
     return () => {

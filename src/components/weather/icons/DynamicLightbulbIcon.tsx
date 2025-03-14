@@ -18,7 +18,6 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale
   }
   
   // Higher Bortle scale = more light pollution = brighter bulb
-  // Use real Bortle scale value for proper representation
   const fillOpacity = Math.min(bortleScale / 9, 1);
   
   // Color changes with Bortle scale - using more accurate color representations
