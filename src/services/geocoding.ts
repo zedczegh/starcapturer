@@ -66,60 +66,143 @@ const chineseCityAlternatives: Record<string, {
   "nanning": {
     name: "Nanning",
     chinese: "南宁",
-    alternatives: ["naning", "nanling", "namning"],
+    alternatives: ["naning", "nanling", "namning", "nan ning", "nan-ning", "nanin", "nanin", "nannin"],
     placeDetails: "Guangxi, China",
     coordinates: [22.8170, 108.3665]
   },
   "guiyang": {
     name: "Guiyang",
     chinese: "贵阳",
-    alternatives: ["guiyang", "kuiyang", "gwiyang"],
+    alternatives: ["guiyang", "kuiyang", "gwiyang", "gui yang", "gui-yang", "guiyan", "guiyan", "guyang"],
     placeDetails: "Guizhou, China",
     coordinates: [26.5833, 106.7167]
   },
   "hohhot": {
     name: "Hohhot",
     chinese: "呼和浩特",
-    alternatives: ["huhehaote", "huhehot", "huhehaot", "hohhot", "huhhot", "huhe"],
+    alternatives: ["huhehaote", "huhehot", "huhehaot", "hohhot", "huhhot", "huhe", "huhehaot", "huhehao", "huhehaote", "hu he hao te", "huhe", "huhehao"],
     placeDetails: "Inner Mongolia, China",
     coordinates: [40.8424, 111.7496]
   },
   "kunming": {
     name: "Kunming",
     chinese: "昆明",
-    alternatives: ["kumming", "cunming", "kunming"],
+    alternatives: ["kumming", "cunming", "kunming", "kun ming", "kun-ming", "kunmin", "kunmming"],
     placeDetails: "Yunnan, China",
     coordinates: [24.8801, 102.8329]
   },
   "beijing": {
     name: "Beijing",
     chinese: "北京",
-    alternatives: ["beiging", "peiking", "peking"],
+    alternatives: ["beiging", "peiking", "peking", "bei jing", "bei-jing", "beijin", "beiji", "beijng"],
     placeDetails: "Beijing, China",
     coordinates: [39.9042, 116.4074]
   },
   "shanghai": {
     name: "Shanghai",
     chinese: "上海",
-    alternatives: ["shangai", "shanghi"],
+    alternatives: ["shangai", "shanghi", "shang hai", "shang-hai", "shangha", "shangha", "shangh"],
     placeDetails: "Shanghai, China",
     coordinates: [31.2304, 121.4737]
   },
   "chengdu": {
     name: "Chengdu",
     chinese: "成都",
-    alternatives: ["chengtu", "chendu"],
+    alternatives: ["chengtu", "chendu", "cheng du", "cheng-du", "chengd", "chengdu", "chendu"],
     placeDetails: "Sichuan, China",
     coordinates: [30.5728, 104.0668]
   },
   "chongqing": {
     name: "Chongqing",
     chinese: "重庆",
-    alternatives: ["chungking", "chongching", "chongqin"],
+    alternatives: ["chungking", "chongching", "chongqin", "chong qing", "chong-qing", "chongq", "chongq", "zhongqin"],
     placeDetails: "Chongqing, China",
     coordinates: [29.4316, 106.9123]
+  },
+  "guangzhou": {
+    name: "Guangzhou",
+    chinese: "广州",
+    alternatives: ["canton", "guanzhou", "guangjou", "guang zhou", "guang-zhou", "guangzh", "guangzh", "guangzhu"],
+    placeDetails: "Guangdong, China",
+    coordinates: [23.1291, 113.2644]
+  },
+  "shenzhen": {
+    name: "Shenzhen",
+    chinese: "深圳",
+    alternatives: ["shenzen", "shenchun", "shen zhen", "shen-zhen", "shenzh", "shenzh", "shenzhe"],
+    placeDetails: "Guangdong, China",
+    coordinates: [22.5431, 114.0579]
+  },
+  "hangzhou": {
+    name: "Hangzhou", 
+    chinese: "杭州",
+    alternatives: ["hangchow", "hangchou", "hang zhou", "hang-zhou", "hangzh", "hangzh", "hanzhou"],
+    placeDetails: "Zhejiang, China",
+    coordinates: [30.2741, 120.1551]
+  },
+  "wuhan": {
+    name: "Wuhan",
+    chinese: "武汉",
+    alternatives: ["wuhaan", "wuchan", "wu han", "wu-han", "wuha", "wuha", "whan"],
+    placeDetails: "Hubei, China",
+    coordinates: [30.5928, 114.3055]
+  },
+  "xian": {
+    name: "Xi'an",
+    chinese: "西安",
+    alternatives: ["xi'an", "xian", "sian", "xi an", "xi-an", "xian", "xia", "xian"],
+    placeDetails: "Shaanxi, China",
+    coordinates: [34.3416, 108.9398]
   }
 };
+
+// Chinese pinyin-specific matching
+// Map common pinyin syllables to possible variations when typing quickly
+const pinyinVariations: Record<string, string[]> = {
+  'zh': ['z', 'j'],
+  'ch': ['c', 'q'],
+  'sh': ['s', 'x'],
+  'ang': ['an', 'ang', 'ag'],
+  'eng': ['en', 'eng', 'eg'],
+  'ing': ['in', 'ing', 'ig'],
+  'ong': ['on', 'ong', 'og'],
+  'ian': ['ian', 'iam', 'yan'],
+  'uan': ['uan', 'wan'],
+  'uang': ['uang', 'wang'],
+};
+
+// Helper function to generate pinyin variations
+function generatePinyinVariations(input: string): string[] {
+  let variations: string[] = [input];
+  
+  // Generate basic variations with space/hyphen between syllables
+  if (input.length > 2) {
+    for (let i = 2; i < input.length; i++) {
+      const withSpace = input.slice(0, i) + ' ' + input.slice(i);
+      const withHyphen = input.slice(0, i) + '-' + input.slice(i);
+      variations.push(withSpace, withHyphen);
+    }
+  }
+  
+  // Apply pinyin-specific variations
+  Object.entries(pinyinVariations).forEach(([standard, variants]) => {
+    variants.forEach(variant => {
+      if (variant !== standard) {
+        const regex = new RegExp(variant, 'g');
+        if (input.match(regex)) {
+          variations.push(input.replace(regex, standard));
+        }
+        
+        const standardRegex = new RegExp(standard, 'g');
+        if (input.match(standardRegex)) {
+          variations.push(input.replace(standardRegex, variant));
+        }
+      }
+    });
+  });
+  
+  return [...new Set(variations)]; // Remove duplicates
+}
 
 // Match score function to improve search relevance
 function getMatchScore(location: string, query: string): number {
@@ -142,10 +225,15 @@ function getMatchScore(location: string, query: string): number {
     if (word.includes(queryLower)) return 40;
   }
   
-  if (queryLower.length >= 3) {
+  // Increase search flexibility for Chinese characters and pinyin
+  if (queryLower.length >= 1 && /[\u4e00-\u9fa5]/.test(queryLower)) { // Chinese character detection
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
-    if (matchPercentage > 0.6) return 30;
+    if (matchPercentage > 0.3) return 35; // More lenient for Chinese characters
+  } else if (queryLower.length >= 2) { // For pinyin/latin characters
+    const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
+    const matchPercentage = commonChars / queryLower.length;
+    if (matchPercentage > 0.5) return 30;
   }
   
   return 0;
@@ -184,14 +272,23 @@ function soundex(s: string): string {
 function checkAlternativeSpellings(query: string): Location[] {
   const results: Location[] = [];
   const queryLower = query.toLowerCase().trim();
+  const queryVariations = generatePinyinVariations(queryLower);
   
   for (const [key, city] of Object.entries(chineseCityAlternatives)) {
+    // Check if any query variation matches any alternative spelling
     const matchesAlternative = city.alternatives.some(alt => 
-      alt.includes(queryLower) || queryLower.includes(alt)
+      queryVariations.some(qVar => 
+        alt.includes(qVar) || qVar.includes(alt)
+      )
     );
     
-    const matchesName = key.includes(queryLower) || queryLower.includes(key);
-    const matchesChinese = city.chinese.includes(queryLower) || queryLower.includes(city.chinese);
+    // Check if query matches the key or Chinese name
+    const matchesName = queryVariations.some(qVar => 
+      key.includes(qVar) || qVar.includes(key)
+    );
+    const matchesChinese = queryVariations.some(qVar => 
+      city.chinese.includes(qVar) || qVar.includes(city.chinese)
+    );
     
     if (matchesAlternative || matchesName || matchesChinese) {
       results.push({ 
@@ -211,13 +308,15 @@ function checkAlternativeSpellings(query: string): Location[] {
  * Enhanced to find any location worldwide using multiple data sources
  */
 export async function searchLocations(query: string): Promise<Location[]> {
-  if (!query || query.trim().length < 2) {
+  if (!query || query.trim().length < 1) { // Reduced from < 2 to < 1 for better Chinese input support
     return [];
   }
   
   const lowercaseQuery = query.toLowerCase().trim();
+  const queryVariations = generatePinyinVariations(lowercaseQuery);
   const allResults: Array<Location & { score: number }> = [];
   
+  // First check alternative spellings which is especially important for Chinese cities
   const alternativeMatches = checkAlternativeSpellings(lowercaseQuery);
   alternativeMatches.forEach(match => {
     allResults.push({
@@ -226,24 +325,42 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   });
   
+  // Check against location database
   locationDatabase.forEach(location => {
-    const score = getMatchScore(location.name, lowercaseQuery);
-    if (score > 0) {
+    let highestScore = 0;
+    
+    // Try all query variations and use the highest score
+    queryVariations.forEach(qVar => {
+      const score = getMatchScore(location.name, qVar);
+      highestScore = Math.max(highestScore, score);
+    });
+    
+    if (highestScore > 0) {
       allResults.push({
         name: location.name,
         placeDetails: `${location.name}, Bortle Scale: ${location.bortleScale.toFixed(1)}`,
         latitude: location.coordinates[0],
         longitude: location.coordinates[1],
-        score
+        score: highestScore
       });
     }
   });
   
+  // Check against common and international locations
   const allLocations = [...commonLocations, ...internationalLocations];
   allLocations.forEach(location => {
-    const nameScore = getMatchScore(location.name, lowercaseQuery);
-    const detailScore = location.placeDetails ? getMatchScore(location.placeDetails, lowercaseQuery) : 0;
-    const score = Math.max(nameScore, detailScore);
+    let highestNameScore = 0;
+    let highestDetailScore = 0;
+    
+    // Try all query variations and use the highest score
+    queryVariations.forEach(qVar => {
+      const nameScore = getMatchScore(location.name, qVar);
+      const detailScore = location.placeDetails ? getMatchScore(location.placeDetails, qVar) : 0;
+      highestNameScore = Math.max(highestNameScore, nameScore);
+      highestDetailScore = Math.max(highestDetailScore, detailScore);
+    });
+    
+    const score = Math.max(highestNameScore, highestDetailScore);
     
     if (score > 0) {
       if (!allResults.some(r => r.name === location.name)) {
@@ -255,7 +372,8 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }
   });
   
-  if (allResults.length < 3) {
+  // Add special handling for Chinese-English translation
+  if (allResults.length < 5) {
     const chineseToEnglish: Record<string, string> = {
       '北京': 'Beijing',
       '上海': 'Shanghai',
@@ -270,7 +388,9 @@ export async function searchLocations(query: string): Promise<Location[]> {
       '长沙': 'Changsha',
       '南京': 'Nanjing',
       '杭州': 'Hangzhou',
-      '重庆': 'Chongqing'
+      '重庆': 'Chongqing',
+      '西安': 'Xi\'an',
+      '成都': 'Chengdu'
     };
     
     const englishToChinese: Record<string, string> = {
@@ -287,43 +407,54 @@ export async function searchLocations(query: string): Promise<Location[]> {
       'changsha': '长沙',
       'nanjing': '南京',
       'hangzhou': '杭州',
-      'chongqing': '重庆'
+      'chongqing': '重庆',
+      'xian': '西安',
+      'chengdu': '成都'
     };
     
+    // Check for Chinese character matches
     Object.entries(chineseToEnglish).forEach(([chinese, english]) => {
-      if (chinese.includes(lowercaseQuery) || lowercaseQuery.includes(chinese)) {
-        const matchedLocation = allLocations.find(l => 
-          l.name.toLowerCase() === english.toLowerCase()
-        );
-        
-        if (matchedLocation && !allResults.some(r => r.name === matchedLocation.name)) {
-          allResults.push({
-            ...matchedLocation,
-            score: 85
-          });
+      queryVariations.forEach(qVar => {
+        if (chinese.includes(qVar) || qVar.includes(chinese)) {
+          const matchedLocation = allLocations.find(l => 
+            l.name.toLowerCase() === english.toLowerCase()
+          );
+          
+          if (matchedLocation && !allResults.some(r => r.name === matchedLocation.name)) {
+            allResults.push({
+              ...matchedLocation,
+              score: 85
+            });
+          }
         }
-      }
+      });
     });
     
-    Object.entries(englishToChinese).forEach(([english, chinese]) => {
-      if (english.includes(lowercaseQuery) || lowercaseQuery.includes(english)) {
-        const matchedLocation = allLocations.find(l => 
-          l.name === chinese
-        );
-        
-        if (matchedLocation && !allResults.some(r => r.name === matchedLocation.name)) {
-          allResults.push({
-            ...matchedLocation,
-            score: 85
-          });
+    // Check for English/pinyin matches that should map to Chinese
+    queryVariations.forEach(qVar => {
+      Object.entries(englishToChinese).forEach(([english, chinese]) => {
+        if (english.includes(qVar) || qVar.includes(english)) {
+          const matchedLocation = allLocations.find(l => 
+            l.name === chinese
+          );
+          
+          if (matchedLocation && !allResults.some(r => r.name === matchedLocation.name)) {
+            allResults.push({
+              ...matchedLocation,
+              score: 85
+            });
+          }
         }
-      }
+      });
     });
     
-    const querySoundex = soundex(lowercaseQuery);
+    // Use soundex for phonetic matching
+    const queryVariationSoundexes = queryVariations.map(qVar => soundex(qVar));
     allLocations.forEach(location => {
       const locationSoundex = soundex(location.name.toLowerCase());
-      if (querySoundex === locationSoundex && !allResults.some(r => r.name === location.name)) {
+      
+      if (queryVariationSoundexes.some(qs => qs === locationSoundex) && 
+          !allResults.some(r => r.name === location.name)) {
         allResults.push({
           ...location,
           score: 75
@@ -332,6 +463,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   }
   
+  // Query external APIs for locations not in our database
   try {
     const encodedQuery = encodeURIComponent(query);
     const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=5&addressdetails=1`;
@@ -430,6 +562,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
     console.error('Error querying Photon API:', error);
   }
   
+  // If no results found, create a placeholder
   if (allResults.length === 0) {
     allResults.push({
       name: query,
@@ -440,6 +573,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   }
   
+  // Sort by score and return the top results
   return allResults
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
@@ -447,4 +581,3 @@ export async function searchLocations(query: string): Promise<Location[]> {
       name, latitude, longitude, placeDetails
     }));
 }
-

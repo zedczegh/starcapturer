@@ -34,7 +34,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (debouncedSearchTerm.length > 2) {
+    if (debouncedSearchTerm.length > 1) { // Reduced from > 2 to > 1 for better Chinese input support
       handleSearch(debouncedSearchTerm);
     } else if (debouncedSearchTerm.length === 0) {
       setSearchResults([]);
@@ -106,7 +106,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         </div>
         
         {showResults && (
-          <div className="fixed md:absolute z-[500] mt-1 w-96 max-w-[95vw] right-0 rounded-md bg-background/95 backdrop-blur-md border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
+          <div className="fixed md:absolute z-[9999] mt-1 w-96 max-w-[95vw] right-0 rounded-md bg-background/95 backdrop-blur-md border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
             <div className="p-3">
               <Input 
                 type="text" 
@@ -173,7 +173,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
       </div>
 
       {showResults && (
-        <div className="fixed md:absolute z-[500] mt-1 w-[calc(100vw-2rem)] md:w-full left-4 md:left-0 rounded-md bg-background border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
+        <div className="fixed md:absolute z-[9999] mt-1 w-[calc(100vw-2rem)] md:w-full left-4 md:left-0 rounded-md bg-background border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
           <SearchResults 
             searchResults={searchResults} 
             handleSelectLocation={handleSelectLocation} 

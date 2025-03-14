@@ -29,7 +29,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     );
   }
 
-  if (searchResults.length === 0 && searchTerm.length > 2 && !isLoading) {
+  if (searchResults.length === 0 && searchTerm.length > 1 && !isLoading) {
     return (
       <div className="px-3 py-6 text-sm text-center text-muted-foreground border-t border-border/30">
         {t("No locations found", "未找到位置")}
