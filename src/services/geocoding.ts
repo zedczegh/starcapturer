@@ -245,7 +245,7 @@ function getMatchScore(location: string, query: string): number {
     }
     
     // Check exact match for any individual word in the query against any word in the location
-    const locationWords = locationLower.split(/\s+/);
+    // Using the already declared locationWords from above
     for (const queryWord of queryWords) {
       for (const locationWord of locationWords) {
         if (locationWord === queryWord) {
@@ -271,8 +271,11 @@ function getMatchScore(location: string, query: string): number {
     }
   }
   
+  // For both single and multi-word queries
+  // Split location into words if not already done
+  const words = queryWords.length > 1 ? locationWords : locationLower.split(/\s+/);
+  
   // Exact word match
-  const words = locationLower.split(/\s+/);
   for (const word of words) {
     if (word === queryLower) return 90;
   }
