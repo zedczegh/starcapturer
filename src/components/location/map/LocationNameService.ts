@@ -53,7 +53,7 @@ export async function getLocationNameForCoordinates(
     
     // First fallback: Try database
     try {
-      const cacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
+      const fallbackCacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
       const nearest = findClosestLocation(latitude, longitude);
       if (nearest && nearest.name) {
         const fallbackName = nearest.distance <= 20 
@@ -62,7 +62,7 @@ export async function getLocationNameForCoordinates(
         
         // Cache this result too
         if (cacheService) {
-          cacheService.setCachedData(cacheKey, fallbackName);
+          cacheService.setCachedData(fallbackCacheKey, fallbackName);
         }
         
         return fallbackName;

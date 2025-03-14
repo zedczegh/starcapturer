@@ -1,8 +1,10 @@
+
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 
 // Import the correct location database
 import { locationDatabase } from "@/data/locationDatabase";
+import { quickLocationDatabase } from "@/utils/locationDatabase";
 
 /**
  * Find the closest known location from our database
@@ -15,6 +17,43 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
   distance: number;
   type: string;
 } {
+  // First try the quick database for better performance
+  if (quickLocationDatabase && quickLocationDatabase.length) {
+    try {
+      // Find closest location in the quick database
+      let closestLocation = quickLocationDatabase[0];
+      let shortestDistance = calculateDistance(
+        latitude, longitude, 
+        quickLocationDatabase[0].coordinates[0], 
+        quickLocationDatabase[0].coordinates[1]
+      );
+
+      for (let i = 1; i < quickLocationDatabase.length; i++) {
+        const location = quickLocationDatabase[i];
+        const distance = calculateDistance(
+          latitude, longitude, 
+          location.coordinates[0], 
+          location.coordinates[1]
+        );
+
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          closestLocation = location;
+        }
+      }
+
+      return {
+        name: closestLocation.name,
+        bortleScale: closestLocation.bortleScale,
+        distance: shortestDistance,
+        type: closestLocation.type || 'unknown'
+      };
+    } catch (error) {
+      console.error("Error finding closest location in quick database:", error);
+      // Fall back to full database
+    }
+  }
+
   if (!locationDatabase || !locationDatabase.length) {
     return { name: "Unknown", bortleScale: 4, distance: 999, type: 'unknown' };
   }

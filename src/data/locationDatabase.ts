@@ -1,3 +1,4 @@
+
 /**
  * Database of locations with accurate Bortle scale values
  * Data sourced from astronomical observations and light pollution maps
@@ -10,13 +11,14 @@ import { oceaniaLocations } from './regions/oceaniaLocations';
 import { middleEastLocations } from './regions/middleEastLocations';
 import { polarLocations } from './regions/polarLocations';
 import { centralAsiaLocations } from './regions/centralAsiaLocations';
+import { chinaSuburbanLocations } from './regions/chinaSuburbanLocations';
 
 export interface LocationEntry {
   name: string;
   coordinates: [number, number]; // [latitude, longitude]
   bortleScale: number;
   radius: number; // km - the approximate radius this location's Bortle scale applies to
-  type?: 'urban' | 'rural' | 'dark-site' | 'natural';
+  type?: 'urban' | 'rural' | 'dark-site' | 'natural' | 'suburban';
 }
 
 // Combine all regional location databases
@@ -27,7 +29,8 @@ export const locationDatabase: LocationEntry[] = [
   ...oceaniaLocations,
   ...middleEastLocations,
   ...polarLocations,
-  ...centralAsiaLocations
+  ...centralAsiaLocations,
+  ...chinaSuburbanLocations
 ];
 
 // Move distance calculation to a utility file to avoid duplication
