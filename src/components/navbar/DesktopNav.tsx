@@ -6,7 +6,6 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 
 interface DesktopNavProps {
   location: ReturnType<typeof useLocation>;
@@ -18,7 +17,6 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
   locationId 
 }) => {
   const { t } = useLanguage();
-  const { handleSIQSClick } = useSiqsNavigation();
   
   return (
     <>
@@ -26,21 +24,6 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         <NavLink to="/" active={location.pathname === "/"}>
           {t("Home", "首页")}
         </NavLink>
-        <a
-          href="/#calculator-section"
-          onClick={(e) => handleSIQSClick(e)}
-          className="relative text-sm font-medium transition-colors hover:text-primary"
-          style={{ 
-            color: location.pathname.startsWith('/location/') 
-              ? 'var(--primary)' 
-              : 'var(--foreground, #999)'
-          }}
-        >
-          {t("SIQS Now", "实时SIQS")}
-          {location.pathname.startsWith('/location/') && (
-            <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-          )}
-        </a>
         <NavLink to="/about" active={location.pathname === "/about"}>
           {t("About SIQS", "关于SIQS")}
         </NavLink>

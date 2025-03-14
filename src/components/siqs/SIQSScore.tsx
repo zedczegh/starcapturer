@@ -143,15 +143,18 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         "{recommendation}"
       </p>
       
-      <p className="text-xs text-muted-foreground mt-3">
-        {language === 'en' 
-          ? "Click for detailed analysis with forecast data" 
-          : "点击获取基于预测数据的详细分析"}
-      </p>
-      
-      {/* Visual indicator that this is clickable */}
-      <div className="w-full flex justify-center mt-1">
-        <span className="inline-block w-2 h-2 rounded-full bg-primary/80 animate-pulse"></span>
+      {/* Enhanced call-to-action button */}
+      <div className="mt-4 text-center">
+        <button 
+          className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
+                    transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
+                    border border-[#9b87f5]/30 animate-pulse hover:animate-none"
+          onClick={handleClick}
+        >
+          {language === 'en' 
+            ? "Click for more details about the current SIQS" 
+            : "点击获取更多关于当前SIQS的详细信息"}
+        </button>
       </div>
     </div>
   );
