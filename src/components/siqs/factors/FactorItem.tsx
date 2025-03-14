@@ -2,7 +2,11 @@
 import React, { useMemo, memo } from "react";
 import { Progress } from "@/components/ui/progress";
 import { getScoreColorClass } from "../SIQSSummaryScore";
-import { getTranslatedFactorName, getTranslatedDescription, getProgressColor } from "../utils/factorTranslations";
+import { 
+  getTranslatedFactorName, 
+  getTranslatedDescription, 
+  getProgressColor 
+} from "../utils/factorTranslations";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FactorItemProps {
