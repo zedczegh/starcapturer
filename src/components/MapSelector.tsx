@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -118,7 +119,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
           </Button> : <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
       </div>
 
-      {showResults && <div className="absolute z-50 mt-1 w-full rounded-md bg-background/95 backdrop-blur-md border border-border shadow-lg overflow-hidden">
+      {showResults && <div className="absolute z-50 mt-1 w-full rounded-md bg-background border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
           <SearchResults searchResults={searchResults} handleSelectLocation={handleSelectLocation} searchTerm={searchTerm} isLoading={isLoading} />
         </div>}
 

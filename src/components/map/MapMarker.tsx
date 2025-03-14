@@ -21,11 +21,11 @@ const MapMarker: React.FC<MapMarkerProps> = ({ name, placeDetails, onClick }) =>
   
   return (
     <li
-      className="cursor-pointer hover:bg-accent/50 active:bg-accent/70 transition-colors px-3 py-2 rounded-md"
+      className="cursor-pointer hover:bg-primary/10 active:bg-primary/20 transition-colors px-4 py-3 rounded-md"
       onClick={handleClick}
     >
       <div className="flex items-start">
-        <MapPin className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0 text-primary/80" />
+        <MapPin className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-primary" />
         <div className="w-full">
           <div className={`font-medium ${language === 'zh' ? 'text-cosmic-200' : ''}`}>{name}</div>
           {placeDetails && (
