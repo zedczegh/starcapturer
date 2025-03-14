@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -26,12 +26,21 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const { setCachedData, getCachedData } = useLocationDataCache();
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Update location name when language changes
+  // Avoid unnecessary effect runs on initial mount
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Update location name when language changes, only for non-special locations
+  useEffect(() => {
+    if (!isMounted || !currentLocation) return;
+    
+    // Skip special locations like Beijing
+    if (currentLocation.name === "北京" || currentLocation.name === "Beijing") return;
+    
     const updateLocationNameOnLanguageChange = async () => {
-      if (!currentLocation) return;
-      
       try {
         const locationName = await getLocationNameForCoordinates(
           currentLocation.latitude,
@@ -41,7 +50,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         );
         
         // Only update if the name changed to avoid unnecessary re-renders
-        if (locationName !== currentLocation.name) {
+        if (locationName && locationName !== currentLocation.name) {
           await onLocationUpdate({
             name: locationName,
             latitude: currentLocation.latitude,
@@ -54,9 +63,10 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     };
     
     updateLocationNameOnLanguageChange();
-  }, [language, currentLocation, onLocationUpdate, setCachedData, getCachedData]);
+  }, [language, currentLocation, onLocationUpdate, setCachedData, getCachedData, isMounted]);
 
-  const handleLocationSearch = (selectedLocation: { 
+  // Memoize the location search handler
+  const handleLocationSearch = useCallback((selectedLocation: { 
     name: string; 
     latitude: number; 
     longitude: number;
@@ -82,9 +92,10 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         variant: "destructive"
       });
     }
-  };
+  }, [onLocationUpdate, t, setStatusMessage, toast]);
 
-  const handleGetCurrentLocation = () => {
+  // Memoize the get current location handler
+  const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setStatusMessage(t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。"));
       return;
@@ -151,7 +162,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
-  };
+  }, [t, setStatusMessage, setGettingUserLocation, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData]);
 
   return (
     <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30 relative z-10">
@@ -173,4 +184,5 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   );
 };
 
-export default LocationControls;
+// Use memo to prevent unnecessary re-renders
+export default memo(LocationControls);

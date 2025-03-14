@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
@@ -36,4 +36,5 @@ const SiqsNavButton: React.FC<SiqsNavButtonProps> = ({
   );
 };
 
-export default SiqsNavButton;
+// Memoize the component to prevent unnecessary re-renders
+export default memo(SiqsNavButton);

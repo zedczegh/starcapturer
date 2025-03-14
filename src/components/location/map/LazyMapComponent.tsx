@@ -1,18 +1,20 @@
 
-import React, { useCallback } from "react";
+import React, { useCallback, memo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
 
-// Fix for default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+// Fix for default marker icons - only initialize once
+if (!L.Icon.Default.imagePath) {
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  });
+}
 
 interface LazyMapComponentProps {
   position: [number, number];
@@ -33,7 +35,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  const handleMapReady = useCallback((event: { target: L.Map }) => {
+  const handleMapReady = useCallback(() => {
     onMapReady();
   }, [onMapReady]);
 
@@ -52,6 +54,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           scrollWheelZoom={true}
           whenReady={handleMapReady}
           attributionControl={false}
+          // Add performance optimizations
+          preferCanvas={true}
+          renderer={L.canvas()}
         >
           <TileLayer
             url={tileServerUrl}
@@ -92,4 +97,5 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   );
 };
 
-export default LazyMapComponent;
+// Memoize the component to prevent unnecessary re-renders
+export default memo(LazyMapComponent);

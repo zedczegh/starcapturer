@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy, useEffect } from "react";
+import React, { Suspense, lazy, useEffect, useCallback, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import PageLoader from "@/components/loaders/PageLoader";
@@ -24,15 +24,22 @@ const LocationDetails = () => {
     setStatusMessage,
     handleUpdateLocation,
     isLoading
-  } = useLocationDataManager({ id, initialState: location.state, navigate });
+  } = useLocationDataManager({ 
+    id, 
+    initialState: location.state, 
+    navigate 
+  });
 
-  // Use the extracted hook for location name translation
-  useLocationNameTranslation({
+  // Memoize the translation props to prevent unnecessary re-renders
+  const translationProps = useMemo(() => ({
     locationData,
     setLocationData,
     setCachedData,
     getCachedData
-  });
+  }), [locationData, setLocationData, setCachedData, getCachedData]);
+
+  // Use the extracted hook for location name translation
+  useLocationNameTranslation(translationProps);
 
   if (isLoading) {
     return <PageLoader />;
