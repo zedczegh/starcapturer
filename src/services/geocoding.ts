@@ -207,33 +207,57 @@ function generatePinyinVariations(input: string): string[] {
 // Match score function to improve search relevance
 function getMatchScore(location: string, query: string): number {
   const locationLower = location.toLowerCase();
-  const queryLower = query.toLowerCase();
+  const queryLower = query.toLowerCase().trim();
   
+  // Perfect match
   if (locationLower === queryLower) return 100;
   
-  if (locationLower.startsWith(queryLower)) return 90;
+  // Exact start of string
+  if (locationLower.startsWith(queryLower)) return 95;
   
+  // Exact word match
   const words = locationLower.split(/\s+/);
   for (const word of words) {
-    if (word === queryLower) return 80;
-    if (word.startsWith(queryLower)) return 70;
+    if (word === queryLower) return 90;
   }
   
-  if (locationLower.includes(queryLower)) return 60;
-  
+  // Word starts with query (more important than substring match)
   for (const word of words) {
-    if (word.includes(queryLower)) return 40;
+    if (word.startsWith(queryLower)) return 85;
+  }
+  
+  // Contains the query as a substring
+  if (locationLower.includes(queryLower)) return 80;
+  
+  // Word contains query
+  for (const word of words) {
+    if (word.includes(queryLower)) return 70;
+  }
+  
+  // For partial word matching (better support for incomplete typing)
+  if (queryLower.length >= 2) {
+    // Check if the query is at least 60% of any word
+    for (const word of words) {
+      if (word.startsWith(queryLower.substring(0, Math.min(word.length, queryLower.length)))) {
+        const matchPercentage = queryLower.length / word.length;
+        if (matchPercentage >= 0.4) return 65 + (matchPercentage * 10); // Higher score for more complete matches
+      }
+    }
   }
   
   // Increase search flexibility for Chinese characters and pinyin
-  if (queryLower.length >= 1 && /[\u4e00-\u9fa5]/.test(queryLower)) { // Chinese character detection
+  if (queryLower.length >= 1 && /[\u4e00-\u9fa5]/.test(queryLower)) { 
+    // Chinese character detection
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
-    if (matchPercentage > 0.3) return 35; // More lenient for Chinese characters
-  } else if (queryLower.length >= 2) { // For pinyin/latin characters
+    if (matchPercentage > 0.5) return 60;
+    if (matchPercentage > 0.3) return 50;
+  } else if (queryLower.length >= 2) { 
+    // For pinyin/latin characters
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
-    if (matchPercentage > 0.5) return 30;
+    if (matchPercentage > 0.7) return 45;
+    if (matchPercentage > 0.5) return 40;
   }
   
   return 0;
@@ -308,7 +332,7 @@ function checkAlternativeSpellings(query: string): Location[] {
  * Enhanced to find any location worldwide using multiple data sources
  */
 export async function searchLocations(query: string): Promise<Location[]> {
-  if (!query || query.trim().length < 1) { // Reduced from < 2 to < 1 for better Chinese input support
+  if (!query || query.trim().length === 0) {
     return [];
   }
   

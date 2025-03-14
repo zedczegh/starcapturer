@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,14 +26,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 }) => {
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 200);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (debouncedSearchTerm.length > 1) { // Reduced from > 2 to > 1 for better Chinese input support
+    if (debouncedSearchTerm.length > 0) {
       handleSearch(debouncedSearchTerm);
     } else if (debouncedSearchTerm.length === 0) {
       setSearchResults([]);
@@ -97,7 +96,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     };
   }, []);
 
-  // Child mode (triggered through another component)
   if (children) {
     return (
       <div className="relative" ref={containerRef}>
@@ -146,7 +144,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     );
   }
 
-  // Standalone mode
   return (
     <div className="relative w-full" ref={containerRef}>
       <div className="relative">

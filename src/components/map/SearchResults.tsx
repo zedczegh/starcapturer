@@ -18,7 +18,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   searchTerm,
   isLoading,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   if (isLoading) {
     return (
@@ -44,9 +44,23 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     return null;
   }
 
+  // Filter results based on current language to prevent mixed language display
+  const filteredResults = searchResults.filter(result => {
+    // For Chinese language mode, prefer results with Chinese characters
+    if (language === 'zh') {
+      return /[\u4e00-\u9fa5]/.test(result.name) || 
+             (result.placeDetails && /[\u4e00-\u9fa5]/.test(result.placeDetails));
+    }
+    // For English mode, prefer results without Chinese characters
+    return !/[\u4e00-\u9fa5]/.test(result.name);
+  });
+
+  // If filtering removed all results, show original results
+  const resultsToShow = filteredResults.length > 0 ? filteredResults : searchResults;
+
   return (
     <ul className="py-1 max-h-[60vh] overflow-y-auto divide-y divide-border/20">
-      {searchResults.map((result, index) => (
+      {resultsToShow.map((result, index) => (
         <MapMarker
           key={`${result.name}-${index}`}
           name={result.name}
