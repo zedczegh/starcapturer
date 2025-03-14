@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Cloud, CloudFog, CloudDrizzle, CloudSnow, CloudHail } from "lucide-react";
+import { Cloud, CloudFog, CloudDrizzle, CloudSnow, CloudHail, Sun, CloudSun } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DynamicCloudCoverIconProps {
@@ -83,7 +83,32 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
       );
     }
     
-    // Default cloud icon
+    // Low cloud cover (sunny)
+    if (cloudCover < 25) {
+      return (
+        <Sun 
+          className="h-3.5 w-3.5 text-yellow-400" 
+          style={{
+            filter: "drop-shadow(0 0 2px rgba(250, 204, 21, 0.4))"
+          }}
+        />
+      );
+    }
+    
+    // Partly cloudy (25-40% cloud cover)
+    if (cloudCover >= 25 && cloudCover < 40) {
+      return (
+        <CloudSun 
+          className="h-3.5 w-3.5 text-primary" 
+          style={{
+            fill: `rgba(148, 163, 184, ${fillOpacity})`,
+            stroke: "currentColor"
+          }}
+        />
+      );
+    }
+    
+    // Default cloud icon for other conditions
     return (
       <Cloud 
         className="h-3.5 w-3.5 text-primary" 
