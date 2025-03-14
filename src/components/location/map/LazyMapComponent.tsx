@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { validateCoordinates, formatCoordinates } from '@/utils/coordinates';
@@ -8,7 +8,6 @@ import * as LocationNameService from './LocationNameService';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // Fix for the default marker icon in Leaflet
-// This is needed because Leaflet's CSS assumes the images are in a different path
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: '/marker-icon-2x.png',
@@ -31,13 +30,24 @@ const MapUpdater = ({ center }) => {
 
 // Map Events Handler component for handling clicks
 const MapEventsHandler = ({ onMapClick, isInteractive }) => {
-  const map = useMapEvents({
-    click: (e) => {
+  const map = useMap();
+  
+  // Set up event listeners
+  useEffect(() => {
+    if (!isInteractive || !onMapClick) return;
+    
+    const handleMapClick = (e) => {
       if (isInteractive && onMapClick) {
         onMapClick(e.latlng.lat, e.latlng.lng);
       }
-    },
-  });
+    };
+    
+    map.on('click', handleMapClick);
+    
+    return () => {
+      map.off('click', handleMapClick);
+    };
+  }, [map, isInteractive, onMapClick]);
   
   return null;
 };
@@ -107,7 +117,7 @@ const LazyMapComponent = ({
     }
   }, [validCoordinates.latitude, validCoordinates.longitude, language, onLocationNameUpdate, onMapReady]);
   
-  // Handle map click
+  // Handle map click from the MapEventsHandler
   const handleMapClick = useCallback((lat, lng) => {
     if (isInteractive) {
       setMarkerPosition([lat, lng]);
@@ -140,7 +150,7 @@ const LazyMapComponent = ({
           subdomains={['a', 'b', 'c']}
         />
         
-        <Marker position={markerPosition}>
+        <Marker position={markerPosition} className="animate-pulse-subtle">
           {showPopup && (
             <Popup>
               <div className="text-slate-800">

@@ -9,6 +9,7 @@ import {
   type LocationCacheService
 } from "./map/LocationNameService";
 import MapLoader from "../loaders/MapLoader";
+import { toast } from "sonner";
 
 interface LocationMapProps {
   latitude: number;
@@ -62,18 +63,32 @@ const LocationMap: React.FC<LocationMapProps> = ({
     const validLat = Math.max(-90, Math.min(90, lat));
     const validLng = normalizeLongitude(lng);
     
+    // Update position immediately for better user feedback
     setPosition([validLat, validLng]);
     
+    // Show loading state
     setLocationLoading(true);
-    const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
-    setLocationLoading(false);
     
-    onLocationUpdate({
-      name: locationName,
-      latitude: validLat,
-      longitude: validLng
-    });
-  }, [editable, onLocationUpdate, language, cacheService]);
+    try {
+      // Get location name for the new coordinates
+      const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
+      
+      // Update location data via callback
+      onLocationUpdate({
+        name: locationName,
+        latitude: validLat,
+        longitude: validLng
+      });
+      
+      // Show success message
+      toast.success(t("Location updated", "位置已更新"));
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast.error(t("Failed to update location", "位置更新失败"));
+    } finally {
+      setLocationLoading(false);
+    }
+  }, [editable, onLocationUpdate, language, cacheService, t]);
 
   // Handle map initialization error
   useEffect(() => {

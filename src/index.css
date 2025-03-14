@@ -98,4 +98,43 @@
       transform: scale(1.05);
     }
   }
+  
+  /* Custom map marker styles */
+  .custom-map-marker {
+    background: transparent;
+    border: none;
+  }
+  
+  .marker-pin {
+    width: 30px;
+    height: 42px;
+    border-radius: 50% 50% 50% 0;
+    background: hsl(var(--primary));
+    position: absolute;
+    transform: rotate(-45deg);
+    left: 50%;
+    top: 50%;
+    margin: -20px 0 0 -15px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  }
+  
+  .marker-pin::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    margin: 5px 0 0 5px;
+    background: rgba(0, 0, 0, 0.25);
+    position: absolute;
+    border-radius: 50%;
+  }
+  
+  .marker-pin-inner {
+    width: 14px;
+    height: 14px;
+    margin: 8px 0 0 8px;
+    background: white;
+    position: absolute;
+    border-radius: 50%;
+    z-index: 1;
+  }
 }
