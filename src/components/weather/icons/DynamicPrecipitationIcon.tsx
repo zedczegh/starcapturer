@@ -5,11 +5,13 @@ import { Cloud, CloudRain, CloudSnow, CloudHail, CloudFog, CloudLightning, Sun }
 interface DynamicPrecipitationIconProps {
   precipitation: number;
   weatherCode?: number;
+  temperature?: number; // Add temperature as an optional prop
 }
 
 const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({ 
   precipitation, 
-  weatherCode 
+  weatherCode,
+  temperature = 0 // Default to 0 if not provided
 }) => {
   // Determine which icon to show based on precipitation and weather code
   // Weather codes from Open Meteo API:
@@ -37,7 +39,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
   if ((weatherCode && (
       (weatherCode >= 71 && weatherCode <= 77) || 
       (weatherCode >= 85 && weatherCode <= 86)
-    )) || precipitation > 0 && temperature < 0) {
+    )) || (precipitation > 0 && temperature < 0)) {
     return (
       <div className="relative">
         <CloudSnow 

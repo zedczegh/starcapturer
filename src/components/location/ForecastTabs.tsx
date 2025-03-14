@@ -1,11 +1,10 @@
-
 import React, { useCallback, useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarRange, Calendar } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ForecastTable from "@/components/ForecastTable";
 import LongRangeForecast from "@/components/LongRangeForecast";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ForecastTabsProps {
   forecastData: any;
@@ -25,10 +24,9 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
   onRefreshLongRange
 }) => {
   const { t } = useLanguage();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("hourly");
   
-  // Use useCallback to prevent unnecessary re-renders
   const handleRefreshForecast = useCallback(() => {
     onRefreshForecast();
   }, [onRefreshForecast]);
@@ -37,14 +35,11 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
     onRefreshLongRange();
   }, [onRefreshLongRange]);
 
-  // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
   
-  // Adapt to screen size changes
   useEffect(() => {
-    // Force re-render when mobile state changes to ensure proper layout
     setActiveTab(activeTab);
   }, [isMobile, activeTab]);
   
