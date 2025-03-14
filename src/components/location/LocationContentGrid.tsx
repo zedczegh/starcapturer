@@ -65,13 +65,23 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return "Very Poor";
   }, [locationData.seeingConditions]);
 
+  // Get the Bortle scale, but allow null for unknown values
+  const bortleScale = useMemo(() => {
+    // If the value is undefined, null, or outside valid range (1-9), return null
+    const value = locationData.bortleScale;
+    if (value === undefined || value === null || value < 1 || value > 9) {
+      return null;
+    }
+    return value;
+  }, [locationData.bortleScale]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
         <WeatherConditions
           weatherData={weatherData}
           moonPhase={moonPhaseString}
-          bortleScale={locationData.bortleScale || 4}
+          bortleScale={bortleScale}
           seeingConditions={seeingConditionsString}
         />
         

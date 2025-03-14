@@ -29,19 +29,20 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [calculationInProgress, setCalculationInProgress] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
   const locationSelectorProps = useMemo(() => ({
     language: language as Language,
     noAutoLocationRequest,
-    bortleScale: 4, // Default value
-    setBortleScale: () => {}, // No-op function since we don't allow changing bortleScale anymore
+    bortleScale: localBortleScale,
+    setBortleScale: setLocalBortleScale,
     setStatusMessage,
-    setShowAdvancedSettings: () => {}, // No-op function since we don't use this anymore
+    setShowAdvancedSettings: () => {}, // This is now handled differently
     getCachedData,
     setCachedData
-  }), [language, noAutoLocationRequest, setStatusMessage, getCachedData, setCachedData]);
+  }), [language, noAutoLocationRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
 
   const {
     userLocation,
@@ -68,6 +69,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   // Pass the parsed coordinates to the hook
   const { seeingConditions, bortleScale } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
+
+  // Update local Bortle scale when hook value changes
+  useEffect(() => {
+    if (bortleScale !== undefined) {
+      setLocalBortleScale(bortleScale);
+    }
+  }, [bortleScale]);
 
   const {
     isCalculating,
@@ -126,7 +134,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         lng, 
         locationName, 
         true, 
-        bortleScale, 
+        localBortleScale, 
         seeingConditions,
         undefined,
         setStatusMessage,
@@ -136,18 +144,18 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         setCalculationInProgress(false);
       });
     }
-  }, [latitude, longitude, locationName, bortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
   
   // Debounced SIQS calculation when inputs change
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted || !locationName) return;
     
     const handler = setTimeout(() => {
       calculateSIQS();
     }, 500);
     
     return () => clearTimeout(handler);
-  }, [latitude, longitude, locationName, bortleScale, seeingConditions, calculateSIQS, isMounted]);
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
   
   return (
     <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}>

@@ -18,7 +18,7 @@ interface WeatherConditionsProps {
     aqi?: number;
   };
   moonPhase: string | number;
-  bortleScale: number;
+  bortleScale: number | null;
   seeingConditions: string;
 }
 

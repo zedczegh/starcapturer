@@ -2,6 +2,12 @@
 import { fetchLightPollutionData } from "@/lib/api";
 import { findClosestKnownLocation, estimateBortleScaleByLocation } from "@/utils/locationUtils";
 
+// Export this function for other modules to use
+export const estimateBortleScale = (locationName: string): number => {
+  // Default estimate based on location name
+  return estimateBortleScaleByLocation(locationName, 0, 0);
+};
+
 export const getBortleScaleForLocation = async (
   latitude: number, 
   longitude: number, 

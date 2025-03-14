@@ -1,12 +1,21 @@
 
 import React from "react";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, HelpCircle } from "lucide-react";
 
 interface DynamicLightbulbIconProps {
-  bortleScale: number;
+  bortleScale: number | null;
 }
 
 const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale }) => {
+  // If Bortle scale is null or invalid, show a question mark icon
+  if (bortleScale === null || bortleScale < 1 || bortleScale > 9) {
+    return (
+      <div className="relative">
+        <HelpCircle className="h-4 w-4 text-muted-foreground" />
+      </div>
+    );
+  }
+  
   // Higher Bortle scale = more light pollution = brighter bulb
   const fillOpacity = Math.min(bortleScale / 9, 1);
   

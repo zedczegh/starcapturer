@@ -13,7 +13,7 @@ import {
 interface SecondaryConditionsProps {
   cloudCover: number;
   moonPhase: string;
-  bortleScale: number;
+  bortleScale: number | null;
   aqi?: number;
 }
 

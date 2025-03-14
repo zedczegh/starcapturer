@@ -1,19 +1,19 @@
 
 import { useState, useCallback } from "react";
 import { fetchLightPollutionData } from "@/lib/api";
-import { estimateBortleScale } from "@/hooks/useLocationData";
+import { estimateBortleScale } from "@/hooks/location/useBortleScale";
 
 interface CachedLocationData {
   name?: string;
   formattedName?: string;
-  bortleScale?: number;
+  bortleScale?: number | null;
 }
 
 interface UseLocationSelectorStateProps {
   language: string;
   noAutoLocationRequest: boolean;
-  bortleScale: number;
-  setBortleScale: (scale: number) => void;
+  bortleScale: number | null;
+  setBortleScale: (scale: number | null) => void;
   setStatusMessage: (message: string | null) => void;
   setShowAdvancedSettings: (show: boolean) => void;
   getCachedData: (key: string, maxAge?: number) => CachedLocationData | null;
@@ -48,6 +48,9 @@ export const useLocationSelectorState = ({
           setLocationName(language === 'en' ? "Current Location" : "当前位置");
           setStatusMessage(language === 'en' ? "Current location found" : "已找到当前位置");
           setShowAdvancedSettings(true);
+          
+          // Reset Bortle scale to null until we get fresh data
+          setBortleScale(null);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -65,7 +68,7 @@ export const useLocationSelectorState = ({
           : "您的浏览器不支持地理位置"
       );
     }
-  }, [language, setStatusMessage, setShowAdvancedSettings]);
+  }, [language, setStatusMessage, setShowAdvancedSettings, setBortleScale]);
   
   const handleLocationSelect = useCallback(async (location: { 
     name: string; 
@@ -77,10 +80,13 @@ export const useLocationSelectorState = ({
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));
     
+    // Reset Bortle scale until we get fresh data
+    setBortleScale(null);
+    
     const cacheKey = `loc-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
     const cachedData = getCachedData(cacheKey);
     
-    if (cachedData && cachedData.bortleScale) {
+    if (cachedData && cachedData.bortleScale !== undefined) {
       setBortleScale(cachedData.bortleScale);
       setStatusMessage(language === 'en' 
         ? `Selected location: ${location.name}` 
@@ -91,18 +97,46 @@ export const useLocationSelectorState = ({
     
     try {
       const lightPollutionData = await fetchLightPollutionData(location.latitude, location.longitude);
-      if (lightPollutionData && lightPollutionData.bortleScale) {
+      if (lightPollutionData && lightPollutionData.bortleScale !== undefined) {
         setBortleScale(lightPollutionData.bortleScale);
         
         setCachedData(cacheKey, {
           name: location.name,
           bortleScale: lightPollutionData.bortleScale
         });
+      } else {
+        // If we couldn't get light pollution data, set to null and inform user
+        setBortleScale(null);
+        setStatusMessage(language === 'en'
+          ? `Light pollution data unavailable for ${location.name}`
+          : `无法获取${location.name}的光污染数据`);
+        
+        setCachedData(cacheKey, {
+          name: location.name,
+          bortleScale: null
+        });
       }
     } catch (error) {
       console.error("Error fetching light pollution data for selected location:", error);
-      const estimatedBortleScale = estimateBortleScale(location.name);
-      setBortleScale(estimatedBortleScale);
+      try {
+        const estimatedBortleScale = estimateBortleScale(location.name);
+        if (estimatedBortleScale >= 1 && estimatedBortleScale <= 9) {
+          setBortleScale(estimatedBortleScale);
+          setCachedData(cacheKey, {
+            name: location.name,
+            bortleScale: estimatedBortleScale
+          });
+        } else {
+          setBortleScale(null);
+          setCachedData(cacheKey, {
+            name: location.name,
+            bortleScale: null
+          });
+        }
+      } catch (estimationError) {
+        setBortleScale(null);
+        console.error("Error estimating Bortle scale:", estimationError);
+      }
     }
     
     setStatusMessage(language === 'en' 
@@ -120,11 +154,14 @@ export const useLocationSelectorState = ({
     setLatitude(point.latitude.toFixed(6));
     setLongitude(point.longitude.toFixed(6));
     
+    // Reset Bortle scale until we get fresh data
+    setBortleScale(null);
+    
     setShowAdvancedSettings(true);
     setStatusMessage(language === 'en' 
       ? `Selected recommended location: ${point.name}` 
       : `已选择推荐位置：${point.name}`);
-  }, [language, setStatusMessage, setShowAdvancedSettings]);
+  }, [language, setStatusMessage, setShowAdvancedSettings, setBortleScale]);
   
   return {
     userLocation,
