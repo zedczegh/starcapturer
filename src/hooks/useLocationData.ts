@@ -55,13 +55,16 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
       setLongitude(validLng.toFixed(6));
       setUserLocation({ latitude: validLat, longitude: validLng });
       
+      // Set Bortle scale to null until we get reliable data
+      setBortleScale(null);
+      
       // Get location information
       const locationInfo = await getLocationFromCoordinates(validLat, validLng, language);
       
       setLocationName(locationInfo.name);
       setFormattedLocationName(locationInfo.formattedName);
       
-      // Get fresh Bortle scale data - don't use the one from locationInfo directly
+      // Get fresh Bortle scale data - don't rely on the one from locationInfo
       const bortleScaleValue = await getBortleScaleForLocation(
         validLat, 
         validLng, 
@@ -71,11 +74,17 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
       
       setBortleScale(bortleScaleValue);
       
-      setStatusMessage(
-        language === 'en' 
-          ? `Location found: ${locationInfo.formattedName}` 
-          : `位置已找到：${locationInfo.formattedName}`
-      );
+      const locationMessage = language === 'en' 
+        ? `Location found: ${locationInfo.formattedName}` 
+        : `位置已找到：${locationInfo.formattedName}`;
+        
+      const bortleMessage = bortleScaleValue === null
+        ? (language === 'en' 
+            ? " (Light pollution level unknown)" 
+            : " (光污染水平未知)")
+        : "";
+        
+      setStatusMessage(locationMessage + bortleMessage);
     } catch (error) {
       console.error("Error getting location:", error);
       setStatusMessage(
@@ -103,7 +112,7 @@ export const useCurrentLocation = (language: Language, noAutoLocationRequest: bo
     formattedLocationName,
     latitude,
     longitude,
-    bortleScale: bortleScale ?? 5, // Fallback value of 5 if null
+    bortleScale, // Now correctly returns null when unknown
     statusMessage,
     setLocationName,
     setLatitude,

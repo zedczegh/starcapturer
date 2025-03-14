@@ -35,6 +35,9 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     </>
   ) : '--';
   
+  // Bortle scale value - now properly handles unknown values
+  const bortleValue = formatBortleScale(bortleScale, t);
+  
   return (
     <div className="space-y-6">
       <ConditionItem
@@ -60,7 +63,10 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       <ConditionItem
         icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
         label={t("Bortle Scale", "光污染等级")}
-        value={formatBortleScale(bortleScale, t)}
+        value={bortleValue}
+        tooltip={bortleScale === null ? (language === 'en' ? 
+          "Bortle scale could not be determined for this location" : 
+          "无法确定此位置的光污染等级") : undefined}
       />
     </div>
   );

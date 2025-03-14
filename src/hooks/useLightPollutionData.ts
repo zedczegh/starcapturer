@@ -7,7 +7,7 @@ export const useLightPollutionData = () => {
     locationData: any, 
     setLocationData: (data: any) => void
   ) => {
-    if (!locationData) return;
+    if (!locationData || !locationData.latitude || !locationData.longitude) return;
     
     try {
       const bortleData = await fetchLightPollutionData(
@@ -15,28 +15,43 @@ export const useLightPollutionData = () => {
         locationData.longitude
       );
       
-      if (bortleData && bortleData.bortleScale !== locationData.bortleScale) {
+      // Only update if we have a valid Bortle scale value
+      if (bortleData && typeof bortleData.bortleScale === 'number' && 
+          bortleData.bortleScale >= 1 && bortleData.bortleScale <= 9 && 
+          bortleData.bortleScale !== locationData.bortleScale) {
+        
         const updatedLocationData = {
           ...locationData,
           bortleScale: bortleData.bortleScale
         };
         
-        const moonPhase = locationData.moonPhase || 0;
-        const siqsResult = calculateSIQS({
-          cloudCover: locationData.weatherData.cloudCover,
-          bortleScale: bortleData.bortleScale,
-          seeingConditions: locationData.seeingConditions || 3,
-          windSpeed: locationData.weatherData.windSpeed,
-          humidity: locationData.weatherData.humidity,
-          moonPhase,
-          precipitation: locationData.weatherData.precipitation,
-          weatherCondition: locationData.weatherData.weatherCondition,
-          aqi: locationData.weatherData.aqi
-        });
-        
+        // Recalculate SIQS with new Bortle scale if we have the required data
+        if (locationData.weatherData && locationData.moonPhase !== undefined) {
+          const moonPhase = locationData.moonPhase || 0;
+          const siqsResult = calculateSIQS({
+            cloudCover: locationData.weatherData.cloudCover,
+            bortleScale: bortleData.bortleScale,
+            seeingConditions: locationData.seeingConditions || 3,
+            windSpeed: locationData.weatherData.windSpeed,
+            humidity: locationData.weatherData.humidity,
+            moonPhase,
+            precipitation: locationData.weatherData.precipitation,
+            weatherCondition: locationData.weatherData.weatherCondition,
+            aqi: locationData.weatherData.aqi
+          });
+          
+          setLocationData({
+            ...updatedLocationData,
+            siqsResult
+          });
+        } else {
+          setLocationData(updatedLocationData);
+        }
+      } else if (bortleData && bortleData.bortleScale === null && locationData.bortleScale !== null) {
+        // Update to show unknown Bortle scale if needed
         setLocationData({
-          ...updatedLocationData,
-          siqsResult
+          ...locationData,
+          bortleScale: null
         });
       }
     } catch (error) {

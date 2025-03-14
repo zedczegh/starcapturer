@@ -1,10 +1,11 @@
 
 /**
  * Fetches light pollution data based on coordinates
+ * Prioritizes our internal database over network requests or estimates
  */
-export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number } | null> {
+export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number | null } | null> {
   try {
-    // Use our improved location database directly
+    // First try to get accurate data from our expanded location database
     const { findClosestLocation } = await import('../../data/locationDatabase');
     
     // Get the closest location with accurate Bortle scale
@@ -12,40 +13,33 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
     console.log("Light pollution data for", latitude, longitude, ":", locationInfo);
     
     if (locationInfo && typeof locationInfo.bortleScale === 'number') {
-      return { bortleScale: locationInfo.bortleScale };
-    } else {
-      console.log("No Bortle scale data found in primary database");
-      throw new Error("No Bortle scale data found");
+      // Only return the value if it's valid (1-9)
+      if (locationInfo.bortleScale >= 1 && locationInfo.bortleScale <= 9) {
+        return { bortleScale: locationInfo.bortleScale };
+      }
     }
+
+    console.log("No reliable Bortle scale data found in primary database");
+    
+    // Try another approach with our known locations database
+    const { findClosestKnownLocation } = await import('../../utils/locationUtils');
+    const knownLocation = findClosestKnownLocation(latitude, longitude);
+    
+    if (knownLocation && 
+        typeof knownLocation.bortleScale === 'number' && 
+        knownLocation.bortleScale >= 1 && 
+        knownLocation.bortleScale <= 9 && 
+        knownLocation.distance < 100) {
+      console.log("Using known location database for Bortle scale:", knownLocation.bortleScale);
+      return { bortleScale: knownLocation.bortleScale };
+    }
+    
+    // If we get here, we need to be clear that we don't have reliable data
+    console.log("Could not determine Bortle scale for this location");
+    return { bortleScale: null };
+    
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
-    
-    try {
-      // Try another approach with the known locations database
-      const { findClosestKnownLocation } = await import('../../utils/locationUtils');
-      const knownLocation = findClosestKnownLocation(latitude, longitude);
-      
-      if (knownLocation && typeof knownLocation.bortleScale === 'number' && knownLocation.distance < 150) {
-        console.log("Using known location database for Bortle scale:", knownLocation.bortleScale);
-        return { bortleScale: knownLocation.bortleScale };
-      }
-      
-      // If we get here, we need the location-based estimation as last resort
-      const { estimateBortleScaleByLocation } = await import('../../utils/locationUtils');
-      const estimatedBortleScale = estimateBortleScaleByLocation("", latitude, longitude);
-      
-      // Only return estimated value if it's valid
-      if (estimatedBortleScale >= 1 && estimatedBortleScale <= 9) {
-        console.log("Using estimated Bortle scale:", estimatedBortleScale);
-        return { bortleScale: estimatedBortleScale };
-      }
-      
-      // If even estimation fails, return null to indicate unknown value
-      console.log("Could not determine Bortle scale for this location");
-      return null;
-    } catch (secondError) {
-      console.error("All light pollution data sources failed:", secondError);
-      return null;
-    }
+    return { bortleScale: null };
   }
 }

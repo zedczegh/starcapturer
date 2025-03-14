@@ -65,9 +65,8 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return "Very Poor";
   }, [locationData.seeingConditions]);
 
-  // Get the Bortle scale, but allow null for unknown values
+  // Get the Bortle scale, pass null for unknown values
   const bortleScale = useMemo(() => {
-    // If the value is undefined, null, or outside valid range (1-9), return null
     const value = locationData.bortleScale;
     if (value === undefined || value === null || value < 1 || value > 9) {
       return null;
