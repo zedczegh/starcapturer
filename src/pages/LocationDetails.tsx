@@ -7,8 +7,8 @@ import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
 import { prefetchLocationData } from "@/lib/queryPrefetcher";
 import { useQueryClient } from "@tanstack/react-query";
-import { identifyRemoteRegion, getRemoteCityBortleScale } from "@/services/geocoding/remoteRegionResolver";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
+import { isInChina } from "@/utils/chinaBortleData";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -66,32 +66,20 @@ const LocationDetails = () => {
     }
   }, [locationData, isLoading, queryClient]);
 
-  // Make sure we have Bortle scale data, with special handling for remote regions
+  // Make sure we have Bortle scale data, with special handling for Chinese locations
   useEffect(() => {
     const updateBortleScaleData = async () => {
       if (!locationData || isLoading) return;
       
-      // First check for specific city Bortle scale in remote regions
-      const specificCityBortle = locationData.latitude && locationData.longitude ? 
-        getRemoteCityBortleScale(locationData.latitude, locationData.longitude) : null;
+      // Check if we're in any Chinese region to update Bortle data
+      const inChina = locationData.latitude && locationData.longitude ? 
+        isInChina(locationData.latitude, locationData.longitude) : false;
       
-      if (specificCityBortle !== null) {
-        console.log(`Specific city detected in remote region. Using precise Bortle scale: ${specificCityBortle}`);
-        if (specificCityBortle !== locationData.bortleScale) {
-          setLocationData({
-            ...locationData,
-            bortleScale: specificCityBortle
-          });
-        }
-        return;
-      }
-      
-      const isRemoteRegion = locationData.latitude && locationData.longitude ? 
-        identifyRemoteRegion(locationData.latitude, locationData.longitude) : false;
-      
-      // For remote regions, or if Bortle scale is missing, update it
-      if (isRemoteRegion || locationData.bortleScale === null || locationData.bortleScale === undefined) {
+      // For Chinese locations, or if Bortle scale is missing, update it
+      if (inChina || locationData.bortleScale === null || locationData.bortleScale === undefined) {
         try {
+          console.log("Location may be in China or needs Bortle update:", locationData.name);
+          
           // Use our improved Bortle updater for more accurate data
           const newBortleScale = await updateBortleScale(
             locationData.latitude,

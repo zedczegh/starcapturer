@@ -1,14 +1,14 @@
 
 import { useCallback } from "react";
-import { identifyRemoteRegion, getRemoteCityBortleScale } from "@/services/geocoding/remoteRegionResolver";
 import { fetchLightPollutionData } from "@/lib/api";
+import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
 
 /**
- * Hook for optimized Bortle scale updates with better handling of remote regions
+ * Hook for optimized Bortle scale updates with better handling for all Chinese regions
  */
 export function useBortleUpdater() {
   /**
-   * Updates Bortle scale with proper handling for remote regions
+   * Updates Bortle scale with proper handling for all Chinese regions
    */
   const updateBortleScale = useCallback(async (
     latitude: number,
@@ -22,19 +22,19 @@ export function useBortleUpdater() {
         return existingBortleScale;
       }
       
-      // First check for specific urban areas in remote regions
-      const specificCityBortle = getRemoteCityBortleScale(latitude, longitude);
+      // First check for specific Chinese cities using our comprehensive database
+      const specificCityBortle = getCityBortleScale(latitude, longitude);
       if (specificCityBortle !== null) {
-        console.log(`Specific urban area detected: ${locationName}. Using precise Bortle value: ${specificCityBortle}`);
+        console.log(`Specific city detected: ${locationName}. Using precise Bortle value: ${specificCityBortle}`);
         return specificCityBortle;
       }
       
-      // Determine if we're in a remote region (Tibet, Xinjiang, etc.)
-      const isRemoteRegion = identifyRemoteRegion(latitude, longitude);
+      // Determine if we're in China (any province)
+      const inChina = isInChina(latitude, longitude);
       
-      // For remote regions, always fetch fresh data to ensure accuracy
-      if (isRemoteRegion) {
-        console.log(`Remote region detected: ${locationName}. Fetching fresh Bortle data.`);
+      // For locations in China, always fetch fresh data to ensure accuracy
+      if (inChina) {
+        console.log(`Location in China detected: ${locationName}. Fetching fresh Bortle data.`);
         const pollution = await fetchLightPollutionData(latitude, longitude);
         
         if (pollution && typeof pollution.bortleScale === 'number') {
@@ -42,13 +42,13 @@ export function useBortleUpdater() {
         }
       }
       
-      // If we already have a valid Bortle scale and we're not in a remote region,
+      // If we already have a valid Bortle scale and we're not in China,
       // don't update it unnecessarily
       if (existingBortleScale !== null && 
           existingBortleScale !== undefined && 
           existingBortleScale >= 1 && 
           existingBortleScale <= 9 &&
-          !isRemoteRegion) {
+          !inChina) {
         return existingBortleScale;
       }
       

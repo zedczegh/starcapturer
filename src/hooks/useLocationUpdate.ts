@@ -6,11 +6,11 @@ import { fetchWeatherData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { useLightPollutionData } from "./useLightPollutionData";
 import { hasProperty } from "@/types/weather-utils";
-import { identifyRemoteRegion, getRemoteCityBortleScale } from "@/services/geocoding/remoteRegionResolver";
 import { useBortleUpdater } from "./location/useBortleUpdater";
+import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
 
 /**
- * Hook for handling location updates with improved handling for remote regions
+ * Hook for handling location updates with improved handling for Chinese regions
  */
 export const useLocationUpdate = (
   locationData: any,
@@ -52,26 +52,26 @@ export const useLocationUpdate = (
           };
         }
         
-        // First check for specific city Bortle scale in remote regions
-        let bortleScale: number | null = getRemoteCityBortleScale(
+        // First check for specific city Bortle scale in our comprehensive database
+        let bortleScale: number | null = getCityBortleScale(
           newLocation.latitude, 
           newLocation.longitude
         );
         
-        // If not a specific city, check if we're in a remote region that needs special handling
+        // If not a specific city, check if we're in China
         if (bortleScale === null) {
-          const isRemoteRegion = identifyRemoteRegion(newLocation.latitude, newLocation.longitude);
+          const inChina = isInChina(newLocation.latitude, newLocation.longitude);
           
-          // For remote regions, always get fresh Bortle scale data
-          if (isRemoteRegion) {
-            console.log("Remote region detected, fetching fresh Bortle data");
+          // For Chinese locations, always get fresh Bortle scale data
+          if (inChina) {
+            console.log("Chinese location detected, fetching accurate Bortle data");
             bortleScale = await updateBortleScale(
               newLocation.latitude, 
               newLocation.longitude, 
               newLocation.name, 
-              null // Force refresh for remote regions
+              null // Force refresh for Chinese locations
             );
-            console.log("Updated Bortle scale for remote region:", bortleScale);
+            console.log("Updated Bortle scale for location in China:", bortleScale);
           } else {
             // For other regions, reuse existing if available
             bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : null;
@@ -94,7 +94,7 @@ export const useLocationUpdate = (
             }
           }
         } else {
-          console.log("Using specific city Bortle scale:", bortleScale);
+          console.log("Using specific city Bortle scale from database:", bortleScale);
         }
         
         // Calculate new SIQS score
