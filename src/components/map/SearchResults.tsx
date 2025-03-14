@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapMarker from "./MapMarker";
@@ -29,7 +28,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     );
   }
 
-  if (searchResults.length === 0 && searchTerm.length > 1 && !isLoading) {
+  if (searchResults.length === 0 && searchTerm.length > 0 && !isLoading) {
     return (
       <div className="px-3 py-6 text-sm text-center text-muted-foreground border-t border-border/30">
         {t("No locations found", "未找到位置")}
@@ -44,19 +43,44 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     return null;
   }
 
-  // Filter results based on current language to prevent mixed language display
+  // Improved language filtering
   const filteredResults = searchResults.filter(result => {
-    // For Chinese language mode, prefer results with Chinese characters
+    const name = result.name || '';
+    const details = result.placeDetails || '';
+    
+    // For Chinese language mode
     if (language === 'zh') {
-      return /[\u4e00-\u9fa5]/.test(result.name) || 
-             (result.placeDetails && /[\u4e00-\u9fa5]/.test(result.placeDetails));
+      // Keep results with Chinese characters in name or details
+      const hasChinese = /[\u4e00-\u9fa5]/.test(name) || /[\u4e00-\u9fa5]/.test(details);
+      
+      // Also accept if the name is in Chinese pinyin but details have Chinese characters
+      const hasChineseInDetails = /[\u4e00-\u9fa5]/.test(details);
+      
+      return hasChinese || hasChineseInDetails;
+    } 
+    // For English mode
+    else {
+      // Exclude results with significant Chinese character presence
+      const nameChineseRatio = (name.match(/[\u4e00-\u9fa5]/g) || []).length / name.length;
+      const detailsChineseRatio = (details.match(/[\u4e00-\u9fa5]/g) || []).length / (details.length || 1);
+      
+      // Accept if name is mostly non-Chinese or if details are mostly non-Chinese
+      return nameChineseRatio < 0.3 || detailsChineseRatio < 0.3;
     }
-    // For English mode, prefer results without Chinese characters
-    return !/[\u4e00-\u9fa5]/.test(result.name);
   });
 
-  // If filtering removed all results, show original results
-  const resultsToShow = filteredResults.length > 0 ? filteredResults : searchResults;
+  // If filtering removed all results, show a subset of the original results
+  // that best matches the current language
+  const resultsToShow = filteredResults.length > 0 ? filteredResults : 
+    searchResults.slice(0, 3).map(result => {
+      // For English mode, attempt to remove Chinese characters from display
+      if (language === 'en') {
+        const name = result.name.replace(/[\u4e00-\u9fa5]/g, '').trim() || result.name;
+        const placeDetails = result.placeDetails?.replace(/[\u4e00-\u9fa5]/g, '').trim() || result.placeDetails;
+        return { ...result, name, placeDetails };
+      }
+      return result;
+    });
 
   return (
     <ul className="py-1 max-h-[60vh] overflow-y-auto divide-y divide-border/20">

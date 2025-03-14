@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,9 +25,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({
   onSelectLocation,
   children
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 200);
+  const debouncedSearchTerm = useDebounce(searchTerm, 150); // Reduced debounce time
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -38,7 +39,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     } else if (debouncedSearchTerm.length === 0) {
       setSearchResults([]);
     }
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, language]); // Added language as dependency
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) {
@@ -48,7 +49,8 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     
     setIsLoading(true);
     try {
-      const results = await searchLocations(query);
+      // Pass language parameter to improve search relevance
+      const results = await searchLocations(query, language);
       setSearchResults(results);
       setShowResults(true);
     } catch (error) {
@@ -95,6 +97,13 @@ const MapSelector: React.FC<MapSelectorProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Force refresh search results when language changes
+  useEffect(() => {
+    if (searchTerm.length > 0) {
+      handleSearch(searchTerm);
+    }
+  }, [language]);
 
   if (children) {
     return (

@@ -1,5 +1,6 @@
 import { locationDatabase } from "@/utils/locationUtils";
 import { Location } from "@/components/MapSelector";
+import type { Language } from "@/contexts/LanguageContext";
 
 // Common well-known locations for fallback
 const commonLocations: Location[] = [
@@ -204,7 +205,7 @@ function generatePinyinVariations(input: string): string[] {
   return [...new Set(variations)]; // Remove duplicates
 }
 
-// Match score function to improve search relevance
+// Match score function with improved partial matching for more predictive results
 function getMatchScore(location: string, query: string): number {
   const locationLower = location.toLowerCase();
   const queryLower = query.toLowerCase().trim();
@@ -234,26 +235,38 @@ function getMatchScore(location: string, query: string): number {
     if (word.includes(queryLower)) return 70;
   }
   
-  // For partial word matching (better support for incomplete typing)
-  if (queryLower.length >= 2) {
-    // Check if the query is at least 60% of any word
+  // Enhanced partial word matching for more predictive search
+  // Even with a single character, try to predict what the user is looking for
+  if (queryLower.length >= 1) {
+    // Check if the query matches the beginning of any word
     for (const word of words) {
       if (word.startsWith(queryLower.substring(0, Math.min(word.length, queryLower.length)))) {
-        const matchPercentage = queryLower.length / word.length;
-        if (matchPercentage >= 0.4) return 65 + (matchPercentage * 10); // Higher score for more complete matches
+        const matchLength = Math.min(queryLower.length, word.length);
+        const matchPercentage = matchLength / word.length;
+        // Higher score for words that start with query
+        return 65 + (matchPercentage * 20); 
+      }
+    }
+    
+    // If first letter matches beginning of a word, it's a potential match
+    if (queryLower.length === 1) {
+      for (const word of words) {
+        if (word.startsWith(queryLower)) {
+          return 50; // Give significant score for first-letter matches
+        }
       }
     }
   }
   
-  // Increase search flexibility for Chinese characters and pinyin
+  // Special handling for Chinese characters
   if (queryLower.length >= 1 && /[\u4e00-\u9fa5]/.test(queryLower)) { 
     // Chinese character detection
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
     if (matchPercentage > 0.5) return 60;
     if (matchPercentage > 0.3) return 50;
-  } else if (queryLower.length >= 2) { 
-    // For pinyin/latin characters
+  } else if (queryLower.length >= 1) { 
+    // For pinyin/latin characters, even single character can be meaningful
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
     if (matchPercentage > 0.7) return 45;
@@ -263,7 +276,7 @@ function getMatchScore(location: string, query: string): number {
   return 0;
 }
 
-// Soundex implementation for phonetic matching (useful for names that sound similar)
+// Soundex implementation for phonetic matching
 function soundex(s: string): string {
   const a = s.toLowerCase().split('');
   const firstLetter = a.shift();
@@ -292,7 +305,7 @@ function soundex(s: string): string {
   return (output + '000').slice(0, 4);
 }
 
-// Check for alternative spellings and transliterations of Chinese cities
+// Check for alternative spellings and transliterations
 function checkAlternativeSpellings(query: string): Location[] {
   const results: Location[] = [];
   const queryLower = query.toLowerCase().trim();
@@ -330,8 +343,9 @@ function checkAlternativeSpellings(query: string): Location[] {
 /**
  * Search for locations based on a query string
  * Enhanced to find any location worldwide using multiple data sources
+ * And improved to handle language preferences
  */
-export async function searchLocations(query: string): Promise<Location[]> {
+export async function searchLocations(query: string, language: Language = 'en'): Promise<Location[]> {
   if (!query || query.trim().length === 0) {
     return [];
   }
@@ -370,9 +384,13 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }
   });
   
-  // Check against common and international locations
-  const allLocations = [...commonLocations, ...internationalLocations];
-  allLocations.forEach(location => {
+  // Language-specific location prioritization
+  const prioritizedLocations = language === 'zh' 
+    ? [...internationalLocations.filter(loc => /[\u4e00-\u9fa5]/.test(loc.name)), ...commonLocations]
+    : [...commonLocations.filter(loc => !/[\u4e00-\u9fa5]/.test(loc.name)), ...internationalLocations];
+
+  // Check against prioritized locations based on language
+  prioritizedLocations.forEach(location => {
     let highestNameScore = 0;
     let highestDetailScore = 0;
     
@@ -396,7 +414,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }
   });
   
-  // Add special handling for Chinese-English translation
+  // Add language-specific handling
   if (allResults.length < 5) {
     const chineseToEnglish: Record<string, string> = {
       '北京': 'Beijing',
@@ -472,8 +490,9 @@ export async function searchLocations(query: string): Promise<Location[]> {
       });
     });
     
-    // Use soundex for phonetic matching
+    // Enhanced phonetic matching
     const queryVariationSoundexes = queryVariations.map(qVar => soundex(qVar));
+    const allLocations = [...commonLocations, ...internationalLocations];
     allLocations.forEach(location => {
       const locationSoundex = soundex(location.name.toLowerCase());
       
@@ -487,14 +506,16 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   }
   
-  // Query external APIs for locations not in our database
+  // Query external APIs with language preference
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=5&addressdetails=1`;
+    const languageParam = language === 'zh' ? '&accept-language=zh-CN' : '';
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}${languageParam}&format=json&limit=5&addressdetails=1`;
     
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'SIQSCalculatorApp'
+        'User-Agent': 'SIQSCalculatorApp',
+        'Accept-Language': language === 'zh' ? 'zh-CN' : 'en-US'
       }
     });
     
@@ -540,7 +561,7 @@ export async function searchLocations(query: string): Promise<Location[]> {
   
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=5`;
+    const url = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=5&lang=${language === 'zh' ? 'zh' : 'en'}`;
     
     const response = await fetch(url);
     
@@ -597,11 +618,50 @@ export async function searchLocations(query: string): Promise<Location[]> {
     });
   }
   
-  // Sort by score and return the top results
-  return allResults
+  // Final processing - ensure language consistency in results
+  const finalResults = allResults
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
-    .map(({ name, latitude, longitude, placeDetails }) => ({
-      name, latitude, longitude, placeDetails
-    }));
+    .map(({ name, latitude, longitude, placeDetails, score }) => {
+      // Process result based on language
+      if (language === 'zh') {
+        // For Chinese, prefer results with Chinese characters
+        const hasChinese = /[\u4e00-\u9fa5]/.test(name) || (placeDetails && /[\u4e00-\u9fa5]/.test(placeDetails));
+        if (!hasChinese) {
+          // Try to find a Chinese alternative
+          const chineseAlt = Object.values(chineseCityAlternatives).find(city => 
+            city.name.toLowerCase() === name.toLowerCase()
+          );
+          if (chineseAlt) {
+            return {
+              name: chineseAlt.chinese,
+              placeDetails: placeDetails || chineseAlt.placeDetails,
+              latitude,
+              longitude
+            };
+          }
+        }
+      } else {
+        // For English, prefer results without Chinese characters
+        const chineseNameRatio = (name.match(/[\u4e00-\u9fa5]/g) || []).length / name.length;
+        if (chineseNameRatio > 0.5) {
+          // Try to find an English alternative
+          const englishAlt = Object.values(chineseCityAlternatives).find(city => 
+            city.chinese === name
+          );
+          if (englishAlt) {
+            return {
+              name: englishAlt.name,
+              placeDetails: placeDetails || englishAlt.placeDetails,
+              latitude,
+              longitude
+            };
+          }
+        }
+      }
+      
+      return { name, latitude, longitude, placeDetails };
+    });
+    
+  return finalResults;
 }
