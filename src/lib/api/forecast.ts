@@ -38,7 +38,7 @@ export async function fetchLongRangeForecastData(coordinates: Coordinates, signa
     
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,` +
-      `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean` +
+      `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean,weather_code` +
       `&forecast_days=${validCoords.days || 16}&timezone=auto`;
     
     const response = await fetch(url, { signal });

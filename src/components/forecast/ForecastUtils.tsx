@@ -77,14 +77,13 @@ export const generateFallbackForecasts = (): any[] => {
   const now = new Date();
   const forecasts = [];
   
-  for (let i = 0; i < 15; i++) {
-    const forecastDate = new Date(now);
-    forecastDate.setDate(now.getDate() + i);
+  for (let i = 0; i < 8; i++) {
+    const forecastTime = new Date(now);
+    forecastTime.setHours(now.getHours() + (i * 3));
     
     forecasts.push({
-      date: forecastDate.toISOString(),
-      temperature_max: 22 + Math.round(Math.random() * 8),
-      temperature_min: 15 + Math.round(Math.random() * 5),
+      time: forecastTime.toISOString(),
+      temperature: 22 + Math.round(Math.random() * 8),
       humidity: 60 + Math.round(Math.random() * 30),
       cloudCover: Math.round(Math.random() * 100),
       windSpeed: 5 + Math.round(Math.random() * 15),

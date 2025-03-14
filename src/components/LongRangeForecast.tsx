@@ -47,6 +47,7 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({
             cloudCover: forecastData.daily.cloud_cover_mean?.[i] ?? 30,
             windSpeed: forecastData.daily.wind_speed_10m_max?.[i] ?? 5,
             precipitation: forecastData.daily.precipitation_sum?.[i] ?? 0,
+            precipitation_probability: forecastData.daily.precipitation_probability_max?.[i] ?? 0
           });
         }
         
