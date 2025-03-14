@@ -49,34 +49,66 @@ export function generatePinyinVariations(input: string): string[] {
   return [...new Set(variations)]; // Remove duplicates
 }
 
-// Enhanced match score function with multi-word search support
-export function getMatchScore(location: string, query: string): number {
+// Check if string contains Chinese characters
+export function containsChineseCharacters(text: string): boolean {
+  return /[\u4e00-\u9fa5]/.test(text);
+}
+
+// Enhanced match score function with improved Chinese characters support
+export function getMatchScore(location: string, query: string, language: string = 'en'): number {
   const locationLower = location.toLowerCase();
   const queryLower = query.toLowerCase().trim();
   
+  // Detect if query contains Chinese characters
+  const hasChineseQuery = containsChineseCharacters(queryLower);
+  const hasChineseLocation = containsChineseCharacters(locationLower);
+  
+  // Language-specific boosting - prioritize matches that align with the current language
+  const languageMatch = language === 'zh' && (hasChineseQuery || hasChineseLocation);
+  const languageBoost = languageMatch ? 10 : 0;
+  
   // Perfect match
-  if (locationLower === queryLower) return 100;
+  if (locationLower === queryLower) return 100 + languageBoost;
+  
+  // For Chinese queries, give strong preference to locations with Chinese characters
+  if (hasChineseQuery && hasChineseLocation) {
+    // Direct Chinese character matching
+    const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
+    const matchPercentage = commonChars / queryLower.length;
+    
+    if (matchPercentage === 1) return 99 + languageBoost; // All characters match
+    if (matchPercentage >= 0.8) return 95 + languageBoost;
+    if (matchPercentage >= 0.6) return 90 + languageBoost;
+    if (matchPercentage >= 0.4) return 85 + languageBoost;
+    if (matchPercentage >= 0.2) return 80 + languageBoost;
+  }
+  
+  // Strong boost for Chinese character matches when in Chinese language mode
+  if (language === 'zh' && hasChineseQuery) {
+    // If query has Chinese but location doesn't, this is likely a poor match
+    if (!hasChineseLocation) return 20; // Low score for non-Chinese locations
+  }
   
   // Prefix match gets high priority (e.g. "cali" matching "california")
-  if (locationLower.startsWith(queryLower)) return 98;
+  if (locationLower.startsWith(queryLower)) return 98 + languageBoost;
 
   // Split the query and location into words for better matching
   const queryWords = queryLower.split(/\s+/);
   const locationWords = locationLower.split(/\s+/);
   
   // Highly prioritize exact substring match (e.g. "cali" in "california")
-  if (locationLower.includes(queryLower)) return 95;
+  if (locationLower.includes(queryLower)) return 95 + languageBoost;
   
   // Check if any location word starts with the query
   for (const word of locationWords) {
-    if (word.startsWith(queryLower)) return 92;
+    if (word.startsWith(queryLower)) return 92 + languageBoost;
   }
   
   // If this is a multi-word search
   if (queryWords.length > 1) {
     // Check if all query words are present in the location (regardless of order)
     const allWordsPresent = queryWords.every(word => locationLower.includes(word));
-    if (allWordsPresent) return 90;
+    if (allWordsPresent) return 90 + languageBoost;
     
     // Check for consecutive word matches from the beginning
     let matchingWords = 0;
@@ -90,14 +122,14 @@ export function getMatchScore(location: string, query: string): number {
     
     if (matchingWords > 0) {
       // Higher score for more consecutive word matches
-      return 85 + matchingWords;
+      return 85 + matchingWords + languageBoost;
     }
     
     // Check exact match for any individual word in the query against any word in the location
     for (const queryWord of queryWords) {
       for (const locationWord of locationWords) {
         if (locationWord === queryWord) {
-          return 84;
+          return 84 + languageBoost;
         }
       }
     }
@@ -115,18 +147,18 @@ export function getMatchScore(location: string, query: string): number {
     
     if (matchingWordCount > 0) {
       // Score based on the percentage of query words that match
-      return 80 + ((matchingWordCount / queryWords.length) * 3);
+      return 80 + ((matchingWordCount / queryWords.length) * 3) + languageBoost;
     }
   }
   
   // Exact word match
   for (const word of locationWords) {
-    if (word === queryLower) return 80;
+    if (word === queryLower) return 80 + languageBoost;
   }
   
   // Word contains query
   for (const word of locationWords) {
-    if (word.includes(queryLower)) return 75;
+    if (word.includes(queryLower)) return 75 + languageBoost;
   }
   
   // Partial word matching
@@ -135,7 +167,7 @@ export function getMatchScore(location: string, query: string): number {
       if (word.startsWith(queryLower.substring(0, Math.min(word.length, queryLower.length)))) {
         const matchLength = Math.min(queryLower.length, word.length);
         const matchPercentage = matchLength / word.length;
-        return 60 + (matchPercentage * 15); 
+        return 60 + (matchPercentage * 15) + languageBoost; 
       }
     }
   }
@@ -144,17 +176,17 @@ export function getMatchScore(location: string, query: string): number {
   if (queryLower.length === 1) {
     for (const word of locationWords) {
       if (word.startsWith(queryLower)) {
-        return 40;
+        return 40 + languageBoost;
       }
     }
   }
   
   // Special handling for Chinese characters
-  if (queryLower.length >= 1 && /[\u4e00-\u9fa5]/.test(queryLower)) { 
+  if (queryLower.length >= 1 && hasChineseQuery) { 
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
-    if (matchPercentage > 0.5) return 50;
-    if (matchPercentage > 0.3) return 40;
+    if (matchPercentage > 0.5) return 50 + languageBoost;
+    if (matchPercentage > 0.3) return 40 + languageBoost;
   } else if (queryLower.length >= 1) { 
     const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
     const matchPercentage = commonChars / queryLower.length;
@@ -175,14 +207,37 @@ export function getMatchScore(location: string, query: string): number {
 export function findBestMatches(locations: Location[], query: string, language: string = 'en'): Location[] {
   if (!locations || locations.length === 0) return [];
   
+  // Check if query has Chinese characters
+  const hasChineseQuery = containsChineseCharacters(query);
+  
   // Calculate match scores for all locations
   const scoredLocations = locations.map(location => {
-    const score = getMatchScore(location.name, query);
+    // Pass language to getMatchScore for language-specific optimizations
+    const score = getMatchScore(location.name, query, language);
     return { location, score };
   });
   
-  // Filter out locations with very low match scores (below 20)
-  const filteredLocations = scoredLocations.filter(item => item.score >= 20);
+  // Apply language-specific filtering
+  let filteredLocations = scoredLocations;
+  
+  // In Chinese mode with Chinese query, heavily filter non-Chinese results
+  if (language === 'zh' && hasChineseQuery) {
+    // First try to find locations with Chinese characters
+    const chineseLocations = filteredLocations.filter(
+      item => containsChineseCharacters(item.location.name) && item.score >= 30
+    );
+    
+    // If we have good Chinese matches, use only those
+    if (chineseLocations.length > 0) {
+      filteredLocations = chineseLocations;
+    } else {
+      // Otherwise, just filter very low scores
+      filteredLocations = filteredLocations.filter(item => item.score >= 30);
+    }
+  } else {
+    // For other languages, use a lower threshold
+    filteredLocations = filteredLocations.filter(item => item.score >= 20);
+  }
   
   // Sort by match score (highest first)
   const sortedLocations = filteredLocations.sort((a, b) => b.score - a.score);
