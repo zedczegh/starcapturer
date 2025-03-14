@@ -2,8 +2,12 @@
 // Import required functions and constants from matchingUtils
 import { containsChineseCharacters, findBestMatches } from './matchingUtils';
 import { Location, Language } from './types';
-import { chineseCityAlternatives, checkAlternativeSpellings } from './chineseCityData';
+import { chineseCityAlternatives } from './chineseCityData'; // Import from chineseCityData
 import { locationDatabase } from '@/data/locationDatabase';
+
+// Re-export what matchingUtils.ts needs
+export { chineseCityAlternatives };
+export { checkAlternativeSpellings } from './chineseCityData'; // Re-export from chineseCityData
 
 /**
  * Find locations in our internal database that match the search query

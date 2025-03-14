@@ -1,7 +1,8 @@
 
 import { Location, Language } from './types';
 import { findBestMatches, containsChineseCharacters } from './matchingUtils';
-import { findMatchingLocations, checkAlternativeSpellings } from './locationDatabase';
+import { findMatchingLocations } from './locationDatabase';
+import { checkAlternativeSpellings } from './chineseCityData'; // Import directly from chineseCityData
 
 /**
  * Search for locations matching the given query

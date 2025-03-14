@@ -1,5 +1,6 @@
 
 import { normalizeLongitude } from './coordinates';
+import { Language } from '@/services/geocoding/types';
 
 /**
  * Enhanced function to get location name from coordinates
@@ -8,7 +9,7 @@ import { normalizeLongitude } from './coordinates';
 export async function getLocationNameFromCoordinates(
   latitude: number, 
   longitude: number,
-  language: string = 'en'
+  language: Language = 'en'
 ): Promise<string> {
   try {
     // Normalize coordinates

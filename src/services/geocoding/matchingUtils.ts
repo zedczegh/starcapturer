@@ -1,5 +1,6 @@
+
 import { Location } from './types';
-import { chineseCityAlternatives } from './locationDatabase';
+import { chineseCityAlternatives } from './chineseCityData';  // Import from chineseCityData
 
 // Chinese pinyin-specific matching
 // Map common pinyin syllables to possible variations when typing quickly
@@ -285,8 +286,17 @@ export function checkAlternativeSpellings(query: string): Location[] {
   const queryLower = query.toLowerCase().trim();
   
   // Special case handling for specific Chinese locations
+  // Cast chineseCityAlternatives to the correct type to avoid TypeScript errors
+  const cityData = chineseCityAlternatives as Record<string, {
+    name: string;
+    chinese: string;
+    alternatives: string[];
+    coordinates: [number, number];
+    placeDetails?: string;
+  }>;
+  
   if (queryLower.includes('徐汇') || queryLower.includes('xu hui') || queryLower === 'xuhui') {
-    const city = chineseCityAlternatives['xuhui'];
+    const city = cityData['xuhui'];
     results.push({ 
       name: city.name, 
       placeDetails: city.placeDetails, 
@@ -297,7 +307,7 @@ export function checkAlternativeSpellings(query: string): Location[] {
   }
   
   if (queryLower.includes('南明') || queryLower.includes('nan ming') || queryLower === 'nanming') {
-    const city = chineseCityAlternatives['nanming'];
+    const city = cityData['nanming'];
     results.push({ 
       name: city.name, 
       placeDetails: city.placeDetails, 
@@ -308,7 +318,7 @@ export function checkAlternativeSpellings(query: string): Location[] {
   }
   
   if (queryLower.includes('都匀') || queryLower.includes('du yun') || queryLower === 'duyun') {
-    const city = chineseCityAlternatives['duyun'];
+    const city = cityData['duyun'];
     results.push({ 
       name: city.name, 
       placeDetails: city.placeDetails, 
@@ -333,7 +343,7 @@ export function checkAlternativeSpellings(query: string): Location[] {
   
   const allVariations = [...new Set([...queryVariations, ...perWordVariations])];
   
-  for (const [key, city] of Object.entries(chineseCityAlternatives)) {
+  for (const [key, city] of Object.entries(cityData)) {
     // Check if any query variation matches any alternative spelling
     const matchesAlternative = city.alternatives.some(alt => 
       allVariations.some(qVar => 

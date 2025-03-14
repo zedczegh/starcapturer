@@ -1,6 +1,7 @@
 
 import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { getLocationNameFromCoordinates } from "@/services/geocoding";
+import type { Language } from "@/services/geocoding/types";
 
 // Define CachedLocationData interface for type safety
 export interface CachedLocationData {
@@ -25,7 +26,7 @@ export interface LocationCacheService {
 export async function getLocationNameForCoordinates(
   lat: number, 
   lng: number, 
-  language: string,
+  language: Language, // Changed type to Language
   cacheService: LocationCacheService
 ): Promise<string> {
   try {
