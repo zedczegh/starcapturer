@@ -43,10 +43,76 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
     try {
       // If we already have Beijing data cached, use it immediately
       if (beijingData) {
-        navigate(`/location/${beijingData.id}`, { 
-          state: beijingData,
-          replace: false 
-        });
+        // Make sure we have valid weather data (not all zeros)
+        const needsFreshData = !beijingData.weatherData || 
+                              beijingData.weatherData.temperature === 0 || 
+                              beijingData.weatherData.cloudCover === 0 || 
+                              beijingData.weatherData.humidity === 0;
+        
+        if (needsFreshData) {
+          // Get fresh weather data
+          const beijing = {
+            name: t("Beijing", "北京"),
+            latitude: 39.9042,
+            longitude: 116.4074
+          };
+          
+          const freshWeatherData = await fetchWeatherData({
+            latitude: beijing.latitude,
+            longitude: beijing.longitude,
+          });
+          
+          if (freshWeatherData) {
+            // Update the cached Beijing data with fresh weather
+            const updatedBeijingData = {
+              ...beijingData,
+              weatherData: freshWeatherData,
+              timestamp: new Date().toISOString(),
+            };
+            
+            // Recalculate SIQS with fresh data
+            const moonPhase = calculateMoonPhase();
+            
+            const siqsResult = calculateSIQS({
+              cloudCover: freshWeatherData.cloudCover,
+              bortleScale: beijingData.bortleScale || 7,
+              seeingConditions: beijingData.seeingConditions || 3,
+              windSpeed: freshWeatherData.windSpeed,
+              humidity: freshWeatherData.humidity,
+              moonPhase,
+              aqi: freshWeatherData.aqi,
+              weatherCondition: freshWeatherData.weatherCondition
+            });
+            
+            updatedBeijingData.siqsResult = siqsResult;
+            updatedBeijingData.moonPhase = moonPhase;
+            
+            navigate(`/location/${beijingData.id}`, { 
+              state: updatedBeijingData,
+              replace: false 
+            });
+            
+            // Also update localStorage
+            try {
+              localStorage.setItem(`location_${beijingData.id}`, JSON.stringify(updatedBeijingData));
+            } catch (e) {
+              console.error("Failed to save updated data to localStorage", e);
+            }
+          } else {
+            // Use existing data if we couldn't fetch fresh data
+            navigate(`/location/${beijingData.id}`, { 
+              state: beijingData,
+              replace: false 
+            });
+          }
+        } else {
+          // Use existing data
+          navigate(`/location/${beijingData.id}`, { 
+            state: beijingData,
+            replace: false 
+          });
+        }
+        
         setIsLoading(false);
         return;
       }
@@ -70,12 +136,12 @@ export const useNavigation = (locationId: string | null, beijingData: any, isLoa
           throw new Error("Empty weather data");
         }
         
-        // Verify all required fields are present
+        // Verify all required fields are present and valid
         if (
-          typeof weatherData.temperature !== 'number' || 
-          typeof weatherData.humidity !== 'number' || 
-          typeof weatherData.cloudCover !== 'number' || 
-          typeof weatherData.windSpeed !== 'number'
+          typeof weatherData.temperature !== 'number' || weatherData.temperature === 0 || 
+          typeof weatherData.humidity !== 'number' || weatherData.humidity === 0 || 
+          typeof weatherData.cloudCover !== 'number' || weatherData.cloudCover === 0 || 
+          typeof weatherData.windSpeed !== 'number' || weatherData.windSpeed === 0
         ) {
           throw new Error("Invalid weather data fields");
         }

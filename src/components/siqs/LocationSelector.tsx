@@ -38,7 +38,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         className={`w-full hover-card transition-colors ${locationName ? 'bg-primary' : 'hover:bg-primary/10'}`}
       >
         {loading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />
         ) : (
           <MapPin className="mr-2 h-4 w-4" />
         )}

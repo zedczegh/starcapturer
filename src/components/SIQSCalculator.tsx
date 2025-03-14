@@ -25,6 +25,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [calculationInProgress, setCalculationInProgress] = useState(false);
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
@@ -60,6 +61,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   } = useSIQSCalculation(setCachedData, getCachedData);
   
   useEffect(() => {
+    // Track calculation state for loading indicator
+    setCalculationInProgress(isCalculating);
+  }, [isCalculating]);
+  
+  useEffect(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
     
@@ -67,6 +73,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     
     const handler = setTimeout(() => {
       if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        setCalculationInProgress(true);
         calculateSIQSForLocation(
           lat, 
           lng, 
@@ -77,7 +84,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           undefined,
           setStatusMessage,
           language
-        );
+        )
+        .finally(() => {
+          setCalculationInProgress(false);
+        });
       }
     }, 500); // Debounce for better performance
     
@@ -88,7 +98,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}>
       <SIQSCalculatorHeader />
       
-      <StatusMessage message={statusMessage} />
+      <StatusMessage message={statusMessage} loading={calculationInProgress} />
       
       {siqsScore !== null && (
         <SIQSScore 
@@ -102,7 +112,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       <div className="space-y-4">
         <LocationSelector 
           locationName={locationName} 
-          loading={loading} 
+          loading={loading || calculationInProgress} 
           handleUseCurrentLocation={handleUseCurrentLocation}
           onSelectLocation={handleLocationSelect}
         />
