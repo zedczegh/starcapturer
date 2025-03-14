@@ -1,124 +1,99 @@
+import { useState, useEffect } from "react";
+import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 
-import { fetchLightPollutionData } from "@/lib/api";
-import { findClosestKnownLocation, estimateBortleScaleByLocation } from "@/utils/locationUtils";
-
-// Export this function for other modules to use
-export const estimateBortleScale = (locationName: string): number | null => {
-  if (!locationName || locationName.length < 3) {
-    return null;
+/**
+ * Estimate Bortle scale based on location name without coordinates
+ * @param locationName Name of the location
+ * @returns Estimated Bortle scale
+ */
+export const estimateBortleScale = (locationName: string): number => {
+  if (!locationName) return 5;
+  
+  const lowercaseName = locationName.toLowerCase();
+  
+  // Check for urban keywords
+  if (
+    lowercaseName.includes('city') || 
+    lowercaseName.includes('downtown') || 
+    lowercaseName.includes('urban') ||
+    lowercaseName.includes('市') ||
+    lowercaseName.includes('区')
+  ) {
+    return 7;
   }
   
-  try {
-    // Default estimate based on location name
-    const estimate = estimateBortleScaleByLocation(locationName, 0, 0);
-    
-    // Only return the estimate if it's within valid range
-    if (estimate >= 1 && estimate <= 9) {
-      return estimate;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error estimating Bortle scale:", error);
-    return null;
+  // Check for suburban/town keywords
+  if (
+    lowercaseName.includes('town') || 
+    lowercaseName.includes('village') || 
+    lowercaseName.includes('suburb') ||
+    lowercaseName.includes('township') ||
+    lowercaseName.includes('镇') ||
+    lowercaseName.includes('乡')
+  ) {
+    return 5;
   }
+  
+  // Check for rural/dark site keywords
+  if (
+    lowercaseName.includes('forest') || 
+    lowercaseName.includes('park') || 
+    lowercaseName.includes('reserve') ||
+    lowercaseName.includes('mountain') ||
+    lowercaseName.includes('wilderness') ||
+    lowercaseName.includes('national') ||
+    lowercaseName.includes('desert') ||
+    lowercaseName.includes('森林') ||
+    lowercaseName.includes('公园') ||
+    lowercaseName.includes('山') ||
+    lowercaseName.includes('沙漠')
+  ) {
+    return 3;
+  }
+  
+  // Default value
+  return 5;
 };
 
-export const getBortleScaleForLocation = async (
-  latitude: number, 
-  longitude: number, 
-  locationName: string,
-  setCachedData: (key: string, data: any) => void
-): Promise<number | null> => {
-  console.log("Getting Bortle scale for:", latitude, longitude, locationName);
+/**
+ * Hook to get the Bortle scale for a location
+ */
+export const useBortleScale = (latitude?: number, longitude?: number) => {
+  const [bortleScale, setBortleScale] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    return null;
-  }
-  
-  const cacheKey = `bortle-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  
-  // First try our local database - this is most reliable
-  try {
-    const { findClosestLocation } = await import("@/data/locationDatabase");
-    const closestLocation = findClosestLocation(latitude, longitude);
-    
-    if (closestLocation && typeof closestLocation.bortleScale === 'number' && 
-        closestLocation.bortleScale >= 1 && closestLocation.bortleScale <= 9 && 
-        closestLocation.distance < 100) {
-      console.log("Using Bortle scale from primary database:", closestLocation.bortleScale, "for", closestLocation.name);
-      setCachedData(cacheKey, { 
-        bortleScale: closestLocation.bortleScale, 
-        source: 'database',
-        name: closestLocation.name,
-        distance: closestLocation.distance
-      });
-      return closestLocation.bortleScale;
+  useEffect(() => {
+    if (!latitude || !longitude) {
+      setBortleScale(null);
+      return;
     }
-  } catch (error) {
-    console.error("Error using primary database for Bortle scale:", error);
-  }
-  
-  // Try our secondary database
-  const closestLocation = findClosestKnownLocation(latitude, longitude);
-  
-  if (closestLocation && typeof closestLocation.bortleScale === 'number' && 
-      closestLocation.bortleScale >= 1 && closestLocation.bortleScale <= 9 && 
-      closestLocation.distance <= 100) {
-    console.log("Using Bortle scale from secondary database:", closestLocation.bortleScale, "for", closestLocation.name);
-    setCachedData(cacheKey, { 
-      bortleScale: closestLocation.bortleScale, 
-      source: 'secondary-database',
-      name: closestLocation.name,
-      distance: closestLocation.distance
-    });
-    return closestLocation.bortleScale;
-  }
-  
-  // Only try API as a fallback (with a timeout to prevent hanging)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-    const lightPollutionData = await fetchLightPollutionData(
-      latitude, 
-      longitude
-    );
     
-    clearTimeout(timeoutId);
+    setLoading(true);
+    setError(null);
     
-    if (lightPollutionData && typeof lightPollutionData.bortleScale === 'number' && 
-        lightPollutionData.bortleScale >= 1 && lightPollutionData.bortleScale <= 9) {
-      console.log("Got Bortle scale from API:", lightPollutionData.bortleScale);
-      setCachedData(cacheKey, { 
-        bortleScale: lightPollutionData.bortleScale, 
-        source: 'api' 
-      });
-      return lightPollutionData.bortleScale;
+    try {
+      // First try to find the closest known city
+      const closestCity = findClosestCity(latitude, longitude);
+      
+      if (closestCity.distance < 50) {
+        // If we're close to a known city, use its Bortle scale
+        setBortleScale(closestCity.bortleScale);
+      } else {
+        // Otherwise use interpolation for more accurate estimate
+        const interpolatedScale = interpolateBortleScale(latitude, longitude);
+        setBortleScale(interpolatedScale);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error("Error determining Bortle scale:", err);
+      setError(err instanceof Error ? err : new Error("Failed to determine Bortle scale"));
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching light pollution data:", error);
-  }
+  }, [latitude, longitude]);
   
-  // If we still don't have valid data, try estimation
-  if (locationName && locationName.length > 3) {
-    const estimatedScale = estimateBortleScaleByLocation(locationName, latitude, longitude);
-    
-    if (estimatedScale >= 1 && estimatedScale <= 9) {
-      console.log("Using estimated Bortle scale:", estimatedScale);
-      setCachedData(cacheKey, { 
-        bortleScale: estimatedScale, 
-        source: 'estimated' 
-      });
-      return estimatedScale;
-    }
-  }
-  
-  // If all attempts fail, return null
-  console.log("Could not determine Bortle scale for this location");
-  setCachedData(cacheKey, { 
-    bortleScale: null, 
-    source: 'unknown' 
-  });
-  
-  return null;
+  return { bortleScale, loading, error };
 };
+
+export default useBortleScale;

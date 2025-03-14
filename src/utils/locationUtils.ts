@@ -1,5 +1,6 @@
 
 import { calculateDistance } from "@/data/locationDatabase";
+import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 
 // Import the location database from a separate file
 import { locationDatabase } from "./locationDatabase";
@@ -18,7 +19,18 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
     return { name: "Unknown", bortleScale: 4, distance: 999, type: 'unknown' };
   }
 
-  // Find closest location in the database
+  // First try the enhanced light pollution database for better accuracy
+  try {
+    const closestCity = findClosestCity(latitude, longitude);
+    if (closestCity.distance < 100) {
+      return closestCity;
+    }
+  } catch (error) {
+    console.error("Error using enhanced database:", error);
+    // Fall back to legacy database if enhanced database fails
+  }
+
+  // Find closest location in the legacy database
   let closestLocation = locationDatabase[0];
   let shortestDistance = calculateDistance(
     latitude, longitude, 
@@ -57,8 +69,16 @@ export function estimateBortleScaleByLocation(
   latitude?: number, 
   longitude?: number
 ): number {
-  // If we have coordinates, first try to find closest known location
+  // If we have coordinates, use the enhanced interpolation method
   if (typeof latitude === 'number' && typeof longitude === 'number') {
+    try {
+      return interpolateBortleScale(latitude, longitude);
+    } catch (error) {
+      console.error("Error interpolating Bortle scale:", error);
+      // Fall back to database lookup if interpolation fails
+    }
+    
+    // Try to find closest known location
     const closestLocation = findClosestKnownLocation(latitude, longitude);
     
     // If location is close enough, use its Bortle scale

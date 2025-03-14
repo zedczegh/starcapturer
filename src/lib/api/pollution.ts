@@ -1,4 +1,6 @@
 
+import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
+
 /**
  * Fetches light pollution data based on coordinates
  * Prioritizes our internal database over network requests or estimates
@@ -11,7 +13,25 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
       return { bortleScale: 4 }; // Return default value instead of null
     }
     
-    // First try to get accurate data from our location database
+    // Try to get data from our enhanced light pollution database
+    try {
+      const closestCity = findClosestCity(latitude, longitude);
+      console.log("Using enhanced database for Bortle scale:", closestCity);
+      
+      if (closestCity.distance < 100) {
+        return { bortleScale: closestCity.bortleScale };
+      }
+      
+      // If no close city, use interpolation for better accuracy
+      const interpolatedScale = interpolateBortleScale(latitude, longitude);
+      console.log("Using interpolated Bortle scale:", interpolatedScale);
+      return { bortleScale: interpolatedScale };
+    } catch (error) {
+      console.error("Error using enhanced light pollution database:", error);
+      // Fall back to legacy database if enhanced database fails
+    }
+    
+    // Fall back to our legacy location database
     const { findClosestLocation } = await import('../../data/locationDatabase');
     
     // Check primary database (high-accuracy data)

@@ -19,24 +19,39 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale
   let fillColor = "";
   
   if (validBortleScale >= 8) {
-    // Extreme light pollution (8-9): bright orange/red
-    fillColor = `rgba(255, 99, 71, ${fillOpacity})`;
+    // Extreme light pollution (8-9): bright white/orange
+    fillColor = `rgba(255, 240, 230, ${fillOpacity})`;
   } else if (validBortleScale >= 6) {
-    // High light pollution (6-7): orange/yellow
-    fillColor = `rgba(255, 149, 0, ${fillOpacity})`;
+    // High light pollution (6-7): yellow/orange
+    fillColor = `rgba(255, 175, 60, ${fillOpacity})`;
   } else if (validBortleScale >= 4) {
     // Moderate light pollution (4-5): yellow
-    fillColor = `rgba(250, 204, 21, ${fillOpacity})`;
+    fillColor = `rgba(245, 215, 70, ${fillOpacity * 0.9})`;
   } else if (validBortleScale >= 2) {
     // Low light pollution (2-3): blue/green
-    fillColor = `rgba(156, 220, 254, ${fillOpacity * 0.8})`;
+    fillColor = `rgba(125, 200, 255, ${fillOpacity * 0.7})`;
   } else {
     // Very dark skies (1): deep blue
-    fillColor = `rgba(96, 165, 250, ${fillOpacity * 0.7})`;
+    fillColor = `rgba(70, 130, 230, ${fillOpacity * 0.6})`;
   }
   
+  // Add tooltip description of the Bortle scale
+  const getBortleDescription = () => {
+    if (validBortleScale >= 8) {
+      return "Extreme light pollution (Bortle 8-9): Only brightest stars visible";
+    } else if (validBortleScale >= 6) {
+      return "High light pollution (Bortle 6-7): Milky Way not visible";
+    } else if (validBortleScale >= 4) {
+      return "Moderate light pollution (Bortle 4-5): Milky Way visible overhead";
+    } else if (validBortleScale >= 2) {
+      return "Low light pollution (Bortle 2-3): Good dark sky";
+    } else {
+      return "Excellent dark sky (Bortle 1): Pristine night sky";
+    }
+  };
+  
   return (
-    <div className="relative">
+    <div className="relative" title={getBortleDescription()}>
       <Lightbulb 
         className="h-4 w-4 text-primary" 
         style={{
@@ -44,7 +59,7 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale
           stroke: "currentColor"
         }}
       />
-      <span className="sr-only">Light pollution level: {validBortleScale}</span>
+      <span className="sr-only">Light pollution level: {validBortleScale.toFixed(1)}</span>
     </div>
   );
 };
