@@ -1,28 +1,60 @@
 
-import { useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 
-export const useSIQSAdvancedSettings = () => {
-  const { getCachedData } = useLocationDataCache();
-  
-  // Get settings from cache if available, otherwise use defaults
-  return useMemo(() => {
-    try {
-      // First, check for specific location settings in cache
-      const cachedSettings = getCachedData('siqs_settings', 30 * 24 * 60 * 60 * 1000); // 30 day cache
+interface LocationData {
+  seeingConditions?: number;
+  bortleScale?: number;
+}
+
+export default function useSIQSAdvancedSettings(latitude: number, longitude: number) {
+  const [seeingConditions, setSeeingConditions] = useState<number>(2.5);
+  const [bortleScale, setBortleScale] = useState<number>(4);
+  const { getCachedData, setCachedData } = useLocationDataCache();
+
+  useEffect(() => {
+    const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    const cachedData = getCachedData(cacheKey) as LocationData | null;
+
+    if (cachedData) {
+      if (typeof cachedData.seeingConditions === 'number') {
+        setSeeingConditions(cachedData.seeingConditions);
+      }
       
-      // Use cached settings or defaults with improved defaults based on average conditions
-      return {
-        seeingConditions: cachedSettings?.seeingConditions ?? 2.5, // Better default based on average global seeing conditions
-        bortleScale: cachedSettings?.bortleScale ?? 4.5  // More accurate default for suburban areas
-      };
-    } catch (error) {
-      console.error("Error retrieving SIQS settings:", error);
-      // Fallback to defaults
-      return {
-        seeingConditions: 2.5,
-        bortleScale: 4.5
-      };
+      if (typeof cachedData.bortleScale === 'number') {
+        setBortleScale(cachedData.bortleScale);
+      }
     }
-  }, [getCachedData]);
-};
+  }, [latitude, longitude, getCachedData]);
+
+  const updateSeeingConditions = useCallback((value: number) => {
+    setSeeingConditions(value);
+    
+    const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    const cachedData = getCachedData(cacheKey) as LocationData | null;
+    
+    setCachedData(cacheKey, {
+      ...cachedData,
+      seeingConditions: value
+    });
+  }, [latitude, longitude, getCachedData, setCachedData]);
+
+  const updateBortleScale = useCallback((value: number) => {
+    setBortleScale(value);
+    
+    const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    const cachedData = getCachedData(cacheKey) as LocationData | null;
+    
+    setCachedData(cacheKey, {
+      ...cachedData,
+      bortleScale: value
+    });
+  }, [latitude, longitude, getCachedData, setCachedData]);
+
+  return {
+    seeingConditions,
+    bortleScale,
+    updateSeeingConditions,
+    updateBortleScale
+  };
+}

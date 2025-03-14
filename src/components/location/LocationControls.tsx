@@ -5,7 +5,7 @@ import { Locate } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapSelector from "@/components/MapSelector";
 import { useToast } from "@/hooks/use-toast";
-import { getLocationNameFromCoordinates } from "@/lib/api";
+import { getLocationNameFromCoordinates } from "@/services/geocoding";
 import { findClosestKnownLocation } from "@/utils/locationUtils";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 

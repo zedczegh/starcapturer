@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import MapDisplay from "./MapDisplay";
 import { useLocationDataCache } from "@/hooks/useLocationData";
-import { getLocationNameFromCoordinates } from "@/lib/api";
+import { getLocationNameFromCoordinates } from "@/services/geocoding";
 import { findClosestKnownLocation } from "@/utils/locationUtils";
 
 interface LocationMapProps {
@@ -14,6 +14,13 @@ interface LocationMapProps {
   onLocationUpdate?: (location: { name: string; latitude: number; longitude: number }) => void;
   editable?: boolean;
   showInfoPanel?: boolean;
+}
+
+// Define CachedLocationData interface for type safety
+interface CachedLocationData {
+  name?: string;
+  formattedName?: string;
+  bortleScale?: number;
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ 
@@ -58,9 +65,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
     try {
       // Check cache first
       const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = getCachedData(cacheKey) as CachedLocationData | null;
       
-      if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
+      if (cachedData && typeof cachedData === 'object' && cachedData.name && !cachedData.name.includes("°")) {
         setLocationLoading(false);
         return cachedData.name;
       }

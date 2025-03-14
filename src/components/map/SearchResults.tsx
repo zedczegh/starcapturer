@@ -1,9 +1,9 @@
 
-import React, { memo } from "react";
+import React from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MapPin, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import MapMarker from "./MapMarker";
-import { Location } from "../MapSelector";
-import { Loader2 } from "lucide-react";
+import { Location } from "@/services/geocoding/types";
 
 interface SearchResultsProps {
   searchResults: Location[];
@@ -12,92 +12,62 @@ interface SearchResultsProps {
   isLoading: boolean;
 }
 
-// Using memo to prevent unnecessary re-renders
-const SearchResults: React.FC<SearchResultsProps> = memo(({
+const SearchResults: React.FC<SearchResultsProps> = ({
   searchResults,
   handleSelectLocation,
   searchTerm,
-  isLoading,
+  isLoading
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
-  if (isLoading && searchResults.length === 0) {
+  if (isLoading) {
     return (
-      <div className="px-3 py-6 text-sm flex items-center justify-center">
-        <Loader2 className="h-5 w-5 mr-2 animate-spin text-primary" />
-        <span>{t("Searching locations...", "搜索位置中...")}</span>
+      <div className="p-6 flex justify-center items-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (searchResults.length === 0 && searchTerm.length > 0 && !isLoading) {
+  if (searchResults.length === 0 && searchTerm.length > 0) {
     return (
-      <div className="px-3 py-6 text-sm text-center text-muted-foreground border-t border-border/30">
-        {t("No locations found", "未找到位置")}
-        <div className="mt-1 text-xs text-muted-foreground">
-          {t("Try a different spelling or location", "尝试不同的拼写或位置")}
-        </div>
+      <div className="p-6 text-center text-muted-foreground">
+        <p>{t("No locations found", "未找到位置")}</p>
+        <p className="text-sm mt-1">
+          {t("Try a different search term", "尝试使用不同的搜索词")}
+        </p>
       </div>
     );
   }
 
-  if (searchResults.length === 0) {
-    return null;
+  if (searchTerm.length === 0) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        <p>{t("Start typing to search", "开始输入以搜索")}</p>
+      </div>
+    );
   }
-
-  // Improved language filtering with multi-word search support
-  const filteredResults = searchResults.filter(result => {
-    const name = result.name || '';
-    const details = result.placeDetails || '';
-    
-    // For Chinese language mode
-    if (language === 'zh') {
-      // Keep results with Chinese characters in name or details
-      const hasChinese = /[\u4e00-\u9fa5]/.test(name) || /[\u4e00-\u9fa5]/.test(details);
-      
-      // Also accept if the name is in Chinese pinyin but details have Chinese characters
-      const hasChineseInDetails = /[\u4e00-\u9fa5]/.test(details);
-      
-      return hasChinese || hasChineseInDetails;
-    } 
-    // For English mode
-    else {
-      // Exclude results with significant Chinese character presence
-      const nameChineseRatio = (name.match(/[\u4e00-\u9fa5]/g) || []).length / name.length;
-      const detailsChineseRatio = (details.match(/[\u4e00-\u9fa5]/g) || []).length / (details.length || 1);
-      
-      // Accept if name is mostly non-Chinese or if details are mostly non-Chinese
-      return nameChineseRatio < 0.3 || detailsChineseRatio < 0.3;
-    }
-  });
-
-  // If filtering removed all results, show a subset of the original results
-  // that best matches the current language
-  const resultsToShow = filteredResults.length > 0 ? filteredResults : 
-    searchResults.slice(0, 3).map(result => {
-      // For English mode, attempt to remove Chinese characters from display
-      if (language === 'en') {
-        const name = result.name.replace(/[\u4e00-\u9fa5]/g, '').trim() || result.name;
-        const placeDetails = result.placeDetails?.replace(/[\u4e00-\u9fa5]/g, '').trim() || result.placeDetails;
-        return { ...result, name, placeDetails };
-      }
-      return result;
-    });
 
   return (
-    <ul className="py-1 max-h-[60vh] overflow-y-auto divide-y divide-border/20">
-      {resultsToShow.map((result, index) => (
-        <MapMarker
-          key={`${result.name}-${index}`}
-          name={result.name}
-          placeDetails={result.placeDetails}
-          onClick={() => handleSelectLocation(result)}
-        />
-      ))}
-    </ul>
+    <ScrollArea className="max-h-[300px] overflow-auto">
+      <div className="py-1">
+        {searchResults.map((location, index) => (
+          <div
+            key={`${location.name}-${index}`}
+            className="px-3 py-2 hover:bg-slate-800/40 transition-colors cursor-pointer flex items-start gap-2"
+            onClick={() => handleSelectLocation(location)}
+          >
+            <MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium leading-tight">{location.name}</p>
+              {location.placeDetails && (
+                <p className="text-xs text-muted-foreground mt-0.5">{location.placeDetails}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </ScrollArea>
   );
-});
-
-SearchResults.displayName = "SearchResults";
+};
 
 export default SearchResults;
