@@ -1,7 +1,15 @@
+
 /**
  * Database of locations with accurate Bortle scale values
  * Data sourced from astronomical observations and light pollution maps
  */
+
+import { asiaLocations } from './regions/asiaLocations';
+import { americasLocations } from './regions/americasLocations';
+import { europeAfricaLocations } from './regions/europeAfricaLocations';
+import { oceaniaLocations } from './regions/oceaniaLocations';
+import { middleEastLocations } from './regions/middleEastLocations';
+import { polarLocations } from './regions/polarLocations';
 
 export interface LocationEntry {
   name: string;

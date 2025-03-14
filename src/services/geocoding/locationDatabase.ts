@@ -45,7 +45,7 @@ export function findMatchingLocations(query: string, limit: number = 5, language
   
   // Prioritize Chinese locations for Chinese language and queries
   if (language === 'zh' || hasChineseChars) {
-    combinedResults.sort((a, b) => {
+    combined.sort((a, b) => {
       const aHasChinese = containsChineseCharacters(a.name);
       const bHasChinese = containsChineseCharacters(b.name);
       
@@ -62,9 +62,6 @@ export function findMatchingLocations(query: string, limit: number = 5, language
   
   return uniqueResults.slice(0, limit);
 }
-
-// Function variable declaration for type safety
-let combinedResults = [] as Location[];
 
 /**
  * Find Chinese locations matching the query
