@@ -112,7 +112,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
   // Standalone mode
   return <div className="relative w-full" ref={containerRef}>
       <div className="relative">
-        <Input type="text" placeholder={t("Search for a location...", "搜索位置...")} value={searchTerm} onChange={handleSearchInputChange} className="w-full pr-10 hover-card transition-colors focus:placeholder-transparent bg-slate-300 rounded" />
+        <Input type="text" placeholder={t("Search for a location...", "搜索位置...")} value={searchTerm} onChange={handleSearchInputChange} className="w-full pr-10 hover-card transition-colors focus:placeholder-transparent rounded-lg bg-slate-800" />
         {searchTerm ? <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={clearSearch}>
             <X className="h-4 w-4" />
           </Button> : <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
