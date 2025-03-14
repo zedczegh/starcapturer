@@ -7,7 +7,7 @@ import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
 import { prefetchLocationData } from "@/lib/queryPrefetcher";
 import { useQueryClient } from "@tanstack/react-query";
-import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { identifyRemoteRegion, getRemoteCityBortleScale } from "@/services/geocoding/remoteRegionResolver";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 
 // Lazy-loaded components for better performance
@@ -70,6 +70,21 @@ const LocationDetails = () => {
   useEffect(() => {
     const updateBortleScaleData = async () => {
       if (!locationData || isLoading) return;
+      
+      // First check for specific city Bortle scale in remote regions
+      const specificCityBortle = locationData.latitude && locationData.longitude ? 
+        getRemoteCityBortleScale(locationData.latitude, locationData.longitude) : null;
+      
+      if (specificCityBortle !== null) {
+        console.log(`Specific city detected in remote region. Using precise Bortle scale: ${specificCityBortle}`);
+        if (specificCityBortle !== locationData.bortleScale) {
+          setLocationData({
+            ...locationData,
+            bortleScale: specificCityBortle
+          });
+        }
+        return;
+      }
       
       const isRemoteRegion = locationData.latitude && locationData.longitude ? 
         identifyRemoteRegion(locationData.latitude, locationData.longitude) : false;

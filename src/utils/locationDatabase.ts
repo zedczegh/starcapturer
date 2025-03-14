@@ -21,22 +21,62 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Kashgar City", coordinates: [39.4700, 75.9800], bortleScale: 7.2, radius: 20, type: 'urban' },
   { name: "Turpan City", coordinates: [42.9480, 89.1849], bortleScale: 6.5, radius: 15, type: 'urban' },
   { name: "Hami City", coordinates: [42.8278, 93.5147], bortleScale: 6.3, radius: 15, type: 'urban' },
+  { name: "Aksu City", coordinates: [41.7276, 82.9835], bortleScale: 6.8, radius: 15, type: 'urban' },
+  { name: "Yining City", coordinates: [43.9978, 81.3304], bortleScale: 6.5, radius: 15, type: 'urban' },
+  { name: "Korla City", coordinates: [41.7257, 86.1742], bortleScale: 6.7, radius: 15, type: 'urban' },
   
   // Updated data for Tibet and western regions
   { name: "Lhasa City", coordinates: [29.6500, 91.1000], bortleScale: 6.8, radius: 20, type: 'urban' },
   { name: "Shigatse City", coordinates: [29.2667, 88.8833], bortleScale: 6.2, radius: 15, type: 'urban' },
+  { name: "Chamdo City", coordinates: [31.1480, 97.1700], bortleScale: 5.8, radius: 12, type: 'urban' },
+  { name: "Nyingchi City", coordinates: [29.6490, 94.3613], bortleScale: 5.5, radius: 12, type: 'urban' },
+  { name: "Lhoka City", coordinates: [29.2367, 91.7612], bortleScale: 5.8, radius: 12, type: 'urban' },
+  { name: "Nagqu City", coordinates: [31.4680, 92.0510], bortleScale: 5.5, radius: 10, type: 'urban' },
+  
+  // Updated data for Qinghai
   { name: "Xining City", coordinates: [36.6167, 101.7667], bortleScale: 7.0, radius: 22, type: 'urban' },
   { name: "Golmud City", coordinates: [36.4167, 94.9000], bortleScale: 6.2, radius: 15, type: 'urban' },
+  { name: "Delingha City", coordinates: [37.3700, 100.6300], bortleScale: 5.8, radius: 10, type: 'urban' },
+  { name: "Yushu City", coordinates: [33.0091, 97.0088], bortleScale: 5.5, radius: 10, type: 'urban' },
+  
+  // Updated data for Gansu
+  { name: "Lanzhou City", coordinates: [36.0617, 103.8348], bortleScale: 7.2, radius: 20, type: 'urban' },
+  { name: "Jiayuguan City", coordinates: [39.7732, 98.2890], bortleScale: 6.5, radius: 15, type: 'urban' },
+  { name: "Dunhuang City", coordinates: [39.9990, 94.6694], bortleScale: 6.0, radius: 12, type: 'urban' },
+  { name: "Hezuo City", coordinates: [34.5953, 102.9066], bortleScale: 6.3, radius: 12, type: 'urban' },
   
   // Updated data for Inner Mongolia
   { name: "Hohhot City", coordinates: [40.8414, 111.7500], bortleScale: 7.3, radius: 25, type: 'urban' },
   { name: "Baotou City", coordinates: [40.6562, 109.8345], bortleScale: 7.4, radius: 25, type: 'urban' },
   { name: "Ordos City", coordinates: [39.6080, 109.7813], bortleScale: 6.8, radius: 20, type: 'urban' },
+  { name: "Chifeng City", coordinates: [42.2682, 118.9582], bortleScale: 6.9, radius: 20, type: 'urban' },
+  { name: "Tongliao City", coordinates: [43.6172, 122.2633], bortleScale: 6.7, radius: 18, type: 'urban' },
+  { name: "Hulunbuir City", coordinates: [49.2122, 119.7656], bortleScale: 6.5, radius: 18, type: 'urban' },
   
   // Updated data for Northeastern China
   { name: "Harbin City", coordinates: [45.8038, 126.5350], bortleScale: 7.6, radius: 30, type: 'urban' },
   { name: "Changchun City", coordinates: [43.8800, 125.3228], bortleScale: 7.5, radius: 28, type: 'urban' },
   { name: "Shenyang City", coordinates: [41.8057, 123.4315], bortleScale: 7.7, radius: 30, type: 'urban' },
+  { name: "Qiqihar City", coordinates: [47.3523, 123.9181], bortleScale: 6.5, radius: 18, type: 'urban' },
+  { name: "Jilin City", coordinates: [43.8384, 126.5836], bortleScale: 6.8, radius: 20, type: 'urban' },
+  { name: "Dandong City", coordinates: [39.9989, 124.3340], bortleScale: 7.0, radius: 20, type: 'urban' },
+  { name: "Mudanjiang City", coordinates: [44.5861, 129.6008], bortleScale: 6.5, radius: 18, type: 'urban' },
+  
+  // Western Sichuan
+  { name: "Kangding City", coordinates: [30.0576, 101.9644], bortleScale: 6.0, radius: 15, type: 'urban' },
+  { name: "Aba City", coordinates: [31.9977, 102.2262], bortleScale: 5.8, radius: 12, type: 'urban' },
+  { name: "Garze City", coordinates: [31.6225, 100.0028], bortleScale: 5.5, radius: 12, type: 'urban' },
+  
+  // Yunnan remote areas
+  { name: "Shangri-La City", coordinates: [27.8360, 99.7072], bortleScale: 5.5, radius: 15, type: 'urban' },
+  { name: "Dali City", coordinates: [25.6001, 100.2681], bortleScale: 6.8, radius: 18, type: 'urban' },
+  { name: "Lijiang City", coordinates: [26.8553, 100.2271], bortleScale: 6.5, radius: 18, type: 'urban' },
+  { name: "Tengchong City", coordinates: [25.0207, 98.4956], bortleScale: 5.8, radius: 12, type: 'urban' },
+  
+  // Guizhou remote areas
+  { name: "Kaili City", coordinates: [26.5682, 107.9803], bortleScale: 6.3, radius: 15, type: 'urban' },
+  { name: "Duyun City", coordinates: [26.2593, 107.5127], bortleScale: 6.0, radius: 12, type: 'urban' },
+  { name: "Xingyi City", coordinates: [25.0920, 104.8948], bortleScale: 6.2, radius: 15, type: 'urban' },
   
   // Notable suburban areas in China (subset of the more comprehensive database)
   { name: "Songjiang District", coordinates: [31.0303, 121.2277], bortleScale: 7.1, radius: 15, type: 'suburban' },
@@ -56,6 +96,10 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Dabancheng District", coordinates: [43.3600, 88.3100], bortleScale: 6.0, radius: 12, type: 'suburban' },
   { name: "Doilungdêqên District", coordinates: [29.6708, 90.9647], bortleScale: 6.3, radius: 10, type: 'suburban' },
   { name: "Dagzê District", coordinates: [29.6667, 91.3667], bortleScale: 5.9, radius: 8, type: 'suburban' },
+  { name: "Chengbei District", coordinates: [36.6502, 101.7660], bortleScale: 6.8, radius: 10, type: 'suburban' },
+  { name: "Huangzhong District", coordinates: [36.4998, 101.5706], bortleScale: 6.2, radius: 12, type: 'suburban' },
+  { name: "Saihan District", coordinates: [40.8068, 111.5019], bortleScale: 7.0, radius: 10, type: 'suburban' },
+  { name: "Daowai District", coordinates: [45.7825, 126.6568], bortleScale: 7.4, radius: 10, type: 'suburban' },
   
   // Key mountain regions in China for quick access
   { name: "Huangshan Mountains", coordinates: [30.1300, 118.1650], bortleScale: 3.5, radius: 25, type: 'natural' },
@@ -76,11 +120,8 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Zhengzhou", coordinates: [34.7533, 113.6653], bortleScale: 7.3, type: 'urban', radius: 25 },
   { name: "Xuhui District", coordinates: [31.1889, 121.4361], bortleScale: 8.2, type: 'urban', radius: 20 },
   { name: "Nanming District", coordinates: [26.5676, 106.7144], bortleScale: 6.5, type: 'urban', radius: 15 },
-  { name: "Duyun", coordinates: [26.2592, 107.5113], bortleScale: 6.2, type: 'urban', radius: 15 },
   { name: "Guilin", coordinates: [25.2736, 110.2902], bortleScale: 6.5, type: 'urban', radius: 15 },
   { name: "Yangshuo", coordinates: [24.7781, 110.4960], bortleScale: 5.5, type: 'rural', radius: 15 },
-  { name: "Lijiang", coordinates: [26.8721, 100.2281], bortleScale: 5.5, type: 'rural', radius: 15 },
-  { name: "Dali", coordinates: [25.6064, 100.2677], bortleScale: 5.5, type: 'rural', radius: 15 },
   { name: "Kunming", coordinates: [25.0389, 102.7183], bortleScale: 7.2, type: 'urban', radius: 25 },
   { name: "Huangshan", coordinates: [29.7147, 118.3380], bortleScale: 5.5, type: 'rural', radius: 15 },
   
@@ -99,10 +140,7 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Banff National Park", coordinates: [51.4968, -115.9281], bortleScale: 2, type: 'natural', radius: 30 },
   { name: "Australian Outback", coordinates: [-25.3450, 131.0369], bortleScale: 1, type: 'natural', radius: 100 },
   { name: "Taklamakan Desert Center", coordinates: [38.8600, 83.5000], bortleScale: 1.2, type: 'natural', radius: 100 },
-  { name: "Zhangjiajie", coordinates: [29.1174, 110.4794], bortleScale: 4, type: 'natural', radius: 20 },
-  { name: "Jiuzhaigou", coordinates: [33.2600, 103.9165], bortleScale: 3, type: 'natural', radius: 30 },
   { name: "Qinghai Lake", coordinates: [36.8977, 100.1802], bortleScale: 2, type: 'natural', radius: 40 },
-  { name: "Dunhuang", coordinates: [40.1413, 94.6618], bortleScale: 4.5, type: 'urban', radius: 15 },
 ];
 
 // Update spatial index to include mountain regions in China
@@ -144,6 +182,18 @@ export const spatialIndex = {
     loc.coordinates[0] > 27 && loc.coordinates[0] < 33 && 
     loc.coordinates[1] > 85 && loc.coordinates[1] < 95
   ),
+  xinjiang: quickLocationDatabase.filter(loc => 
+    loc.coordinates[0] > 35 && loc.coordinates[0] < 48 && 
+    loc.coordinates[1] > 75 && loc.coordinates[1] < 95
+  ),
+  qinghai: quickLocationDatabase.filter(loc => 
+    loc.coordinates[0] > 32 && loc.coordinates[0] < 39 && 
+    loc.coordinates[1] > 90 && loc.coordinates[1] < 103
+  ),
+  gansu: quickLocationDatabase.filter(loc => 
+    loc.coordinates[0] > 35 && loc.coordinates[0] < 43 && 
+    loc.coordinates[1] > 92 && loc.coordinates[1] < 106
+  ),
   innerMongolia: quickLocationDatabase.filter(loc => 
     loc.coordinates[0] > 39 && loc.coordinates[0] < 46 && 
     loc.coordinates[1] > 108 && loc.coordinates[1] < 123
@@ -151,6 +201,18 @@ export const spatialIndex = {
   northeastChina: quickLocationDatabase.filter(loc => 
     loc.coordinates[0] > 40 && loc.coordinates[0] < 48 && 
     loc.coordinates[1] > 120 && loc.coordinates[1] < 135
+  ),
+  westernSichuan: quickLocationDatabase.filter(loc => 
+    loc.coordinates[0] > 28 && loc.coordinates[0] < 34 && 
+    loc.coordinates[1] > 97 && loc.coordinates[1] < 103
+  ),
+  yunnan: quickLocationDatabase.filter(loc => 
+    loc.coordinates[0] > 22 && loc.coordinates[0] < 29 && 
+    loc.coordinates[1] > 97 && loc.coordinates[1] < 106
+  ),
+  guizhou: quickLocationDatabase.filter(loc => 
+    loc.coordinates[0] > 24 && loc.coordinates[0] < 29 && 
+    loc.coordinates[1] > 104 && loc.coordinates[1] < 110
   ),
   other: quickLocationDatabase.filter(loc => 
     !((loc.coordinates[0] > 30 && loc.coordinates[1] > 90 && loc.coordinates[1] < 130) || 

@@ -6,7 +6,7 @@ import { fetchWeatherData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { useLightPollutionData } from "./useLightPollutionData";
 import { hasProperty } from "@/types/weather-utils";
-import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { identifyRemoteRegion, getRemoteCityBortleScale } from "@/services/geocoding/remoteRegionResolver";
 import { useBortleUpdater } from "./location/useBortleUpdater";
 
 /**
@@ -52,40 +52,49 @@ export const useLocationUpdate = (
           };
         }
         
-        // Check if we're in a remote region that needs special handling
-        const isRemoteRegion = identifyRemoteRegion(newLocation.latitude, newLocation.longitude);
+        // First check for specific city Bortle scale in remote regions
+        let bortleScale: number | null = getRemoteCityBortleScale(
+          newLocation.latitude, 
+          newLocation.longitude
+        );
         
-        // For remote regions, always get fresh Bortle scale data
-        let bortleScale: number | null;
-        if (isRemoteRegion) {
-          console.log("Remote region detected, fetching fresh Bortle data");
-          bortleScale = await updateBortleScale(
-            newLocation.latitude, 
-            newLocation.longitude, 
-            newLocation.name, 
-            null // Force refresh for remote regions
-          );
-          console.log("Updated Bortle scale for remote region:", bortleScale);
-        } else {
-          // For other regions, reuse existing if available
-          bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : null;
+        // If not a specific city, check if we're in a remote region that needs special handling
+        if (bortleScale === null) {
+          const isRemoteRegion = identifyRemoteRegion(newLocation.latitude, newLocation.longitude);
           
-          // If no existing value, get a new one
-          if (bortleScale === null || bortleScale === undefined) {
-            try {
-              const { fetchLightPollutionData } = await import("@/lib/api");
-              const bortleData = await fetchLightPollutionData(
-                newLocation.latitude, 
-                newLocation.longitude
-              );
-              if (bortleData?.bortleScale) {
-                bortleScale = bortleData.bortleScale;
+          // For remote regions, always get fresh Bortle scale data
+          if (isRemoteRegion) {
+            console.log("Remote region detected, fetching fresh Bortle data");
+            bortleScale = await updateBortleScale(
+              newLocation.latitude, 
+              newLocation.longitude, 
+              newLocation.name, 
+              null // Force refresh for remote regions
+            );
+            console.log("Updated Bortle scale for remote region:", bortleScale);
+          } else {
+            // For other regions, reuse existing if available
+            bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : null;
+            
+            // If no existing value, get a new one
+            if (bortleScale === null || bortleScale === undefined) {
+              try {
+                const { fetchLightPollutionData } = await import("@/lib/api");
+                const bortleData = await fetchLightPollutionData(
+                  newLocation.latitude, 
+                  newLocation.longitude
+                );
+                if (bortleData?.bortleScale) {
+                  bortleScale = bortleData.bortleScale;
+                }
+              } catch (error) {
+                console.error("Error fetching light pollution data:", error);
+                // Continue with existing bortle scale
               }
-            } catch (error) {
-              console.error("Error fetching light pollution data:", error);
-              // Continue with existing bortle scale
             }
           }
+        } else {
+          console.log("Using specific city Bortle scale:", bortleScale);
         }
         
         // Calculate new SIQS score

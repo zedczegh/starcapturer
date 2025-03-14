@@ -2,7 +2,7 @@
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 import { LocationCacheService } from "@/components/location/map/LocationNameService";
 import { Language } from "@/services/geocoding/types";
-import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { identifyRemoteRegion, enhanceRemoteLocationName } from "@/services/geocoding/remoteRegionResolver";
 
 /**
  * Optimized function to update location names with improved geocoding
@@ -48,6 +48,12 @@ export async function updateLocationName(
         }
       } catch (error) {
         console.error("Error updating location name for remote region:", error);
+        
+        // If API fails, try to enhance the existing name
+        if (currentName && !currentName.includes('°')) {
+          return enhanceRemoteLocationName(latitude, longitude, currentName, language);
+        }
+        
         return currentName;
       }
     }
@@ -75,6 +81,9 @@ export async function updateLocationName(
       } catch (error) {
         console.error("Error updating location name:", error);
       }
+    } else if (isRemoteRegion) {
+      // Even for non-empty names, if in remote regions, ensure they have proper context
+      return enhanceRemoteLocationName(latitude, longitude, currentName, language);
     }
     
     // Return existing name if we couldn't get a better one

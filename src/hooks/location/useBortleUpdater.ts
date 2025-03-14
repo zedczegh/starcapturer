@@ -1,6 +1,6 @@
 
 import { useCallback } from "react";
-import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { identifyRemoteRegion, getRemoteCityBortleScale } from "@/services/geocoding/remoteRegionResolver";
 import { fetchLightPollutionData } from "@/lib/api";
 
 /**
@@ -22,12 +22,18 @@ export function useBortleUpdater() {
         return existingBortleScale;
       }
       
+      // First check for specific urban areas in remote regions
+      const specificCityBortle = getRemoteCityBortleScale(latitude, longitude);
+      if (specificCityBortle !== null) {
+        console.log(`Specific urban area detected: ${locationName}. Using precise Bortle value: ${specificCityBortle}`);
+        return specificCityBortle;
+      }
+      
       // Determine if we're in a remote region (Tibet, Xinjiang, etc.)
-      const remoteRegion = identifyRemoteRegion(latitude, longitude);
+      const isRemoteRegion = identifyRemoteRegion(latitude, longitude);
       
       // For remote regions, always fetch fresh data to ensure accuracy
-      // This is crucial for places like Lhasa where we need up-to-date values
-      if (remoteRegion) {
+      if (isRemoteRegion) {
         console.log(`Remote region detected: ${locationName}. Fetching fresh Bortle data.`);
         const pollution = await fetchLightPollutionData(latitude, longitude);
         
@@ -42,7 +48,7 @@ export function useBortleUpdater() {
           existingBortleScale !== undefined && 
           existingBortleScale >= 1 && 
           existingBortleScale <= 9 &&
-          !remoteRegion) {
+          !isRemoteRegion) {
         return existingBortleScale;
       }
       
