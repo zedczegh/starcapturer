@@ -1,7 +1,10 @@
-import React, { useCallback, useMemo, memo } from "react";
+
+import React, { useCallback, useMemo, memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils";
+import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -41,6 +44,8 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isPrefetching, setIsPrefetching] = useState(false);
   
   // Memoize calculations to prevent unnecessary re-renders
   const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
@@ -65,6 +70,14 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     };
   }, [latitude, longitude, locationName]);
   
+  // Prefetch data when user hovers over the card
+  const handleMouseEnter = useCallback(() => {
+    if ((latitude && longitude) && !isPrefetching) {
+      setIsPrefetching(true);
+      prefetchSIQSDetails(queryClient, latitude, longitude);
+    }
+  }, [latitude, longitude, queryClient, isPrefetching]);
+  
   const handleClick = useCallback(() => {
     if (locationId) {
       navigate(`/location/${locationId}`);
@@ -72,6 +85,11 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     }
     
     if (preparedLocationData) {
+      // Prefetch one last time before navigation
+      if (latitude && longitude) {
+        prefetchSIQSDetails(queryClient, latitude, longitude);
+      }
+      
       navigate(`/location/${preparedLocationData.id}`, {
         state: preparedLocationData
       });
@@ -88,12 +106,13 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         longitude: 116.4074
       }
     });
-  }, [navigate, locationId, preparedLocationData]);
+  }, [navigate, locationId, preparedLocationData, latitude, longitude, queryClient]);
   
   return (
     <div 
       className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
@@ -123,7 +142,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         "{recommendation}"
       </p>
       
-      {/* Enhanced call-to-action button */}
+      {/* Enhanced call-to-action button with preload indication */}
       <div className="mt-4 text-center">
         <button 
           className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 

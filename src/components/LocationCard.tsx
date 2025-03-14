@@ -1,12 +1,14 @@
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { siqsToColor } from "@/lib/calculateSIQS";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 
 interface LocationCardProps {
   id: string;
@@ -30,6 +32,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
   className,
 }) => {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
     year: "numeric",
@@ -48,8 +51,16 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const displayName = name && !name.includes("Location at") ? name : 
     t("Location near coordinates", "坐标附近的位置");
   
+  // Prefetch data when user hovers over the card
+  const handleMouseEnter = useCallback(() => {
+    prefetchSIQSDetails(queryClient, latitude, longitude);
+  }, [latitude, longitude, queryClient]);
+  
   return (
-    <Link to={`/location/${id}`}>
+    <Link 
+      to={`/location/${id}`}
+      onMouseEnter={handleMouseEnter}
+    >
       <Card 
         className={cn(
           "h-full overflow-hidden transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg", 
