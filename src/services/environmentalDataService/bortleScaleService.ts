@@ -58,8 +58,7 @@ export const getBortleScaleData = async (
     
     const lightPollutionData = await fetchLightPollutionData(
       latitude, 
-      longitude,
-      controller.signal
+      longitude
     );
     
     clearTimeout(timeoutId);

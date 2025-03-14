@@ -21,7 +21,7 @@ import {
 import { isImagingImpossible, siqsToColor } from './siqs/utils';
 
 // Re-export types and utility functions for backward compatibility
-export type { SIQSFactors, SIQSFactor, SIQSResult } from './siqs/types';
+export type { SIQSFactors, SIQSResult } from './siqs/types';
 export { siqsToColor } from './siqs/utils';
 
 /**
@@ -108,8 +108,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   // Determine if conditions are viable (SIQS >= 4.0)
   const isViable = finalScore >= 4.0;
   
-  // Create factors array
-  const factors = [
+  // Create factors array for the result
+  const factorsList = [
     {
       name: "Cloud Cover",
       score: cloudScore,
@@ -139,7 +139,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   
   // Add AQI factor if available
   if (aqi !== undefined) {
-    factors.push({
+    factorsList.push({
       name: "Air Quality",
       score: aqiScore,
       description: getAQIDescription(aqi)
@@ -149,6 +149,6 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   return {
     score: finalScore,
     isViable,
-    factors
+    factors: factorsList
   };
 }
