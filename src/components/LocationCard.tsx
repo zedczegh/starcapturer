@@ -56,10 +56,19 @@ const LocationCard: React.FC<LocationCardProps> = ({
     prefetchSIQSDetails(queryClient, latitude, longitude);
   }, [latitude, longitude, queryClient]);
   
+  // Create a link with both the ID and the state to ensure consistent navigation
   return (
     <Link 
       to={`/location/${id}`}
       onMouseEnter={handleMouseEnter}
+      state={{
+        id,
+        name,
+        latitude,
+        longitude,
+        timestamp
+      }}
+      data-testid="location-card"
     >
       <Card 
         className={cn(

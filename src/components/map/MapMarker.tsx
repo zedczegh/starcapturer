@@ -23,6 +23,7 @@ const MapMarker: React.FC<MapMarkerProps> = ({ name, placeDetails, onClick }) =>
     <li
       className="cursor-pointer hover:bg-primary/10 active:bg-primary/20 transition-colors px-4 py-3 rounded-md"
       onClick={handleClick}
+      data-testid="map-marker"
     >
       <div className="flex items-start">
         <MapPin className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-primary" />

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
+import { v4 as uuidv4 } from "uuid";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -55,20 +56,20 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     scoreOn10Scale: siqsScore / 10
   }), [siqsScore, language]);
   
-  // Pre-generate the locationData object for faster navigation
+  // Generate a uuid for location ID instead of using name to avoid inconsistencies
   const preparedLocationData = useMemo(() => {
-    if (!latitude || !longitude || !locationName) return null;
+    if (!latitude || !longitude) return null;
     
-    // Use a more deterministic ID format for better caching
-    const generatedId = `${locationName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    // Use UUID for more reliable IDs that don't depend on location names
+    const generatedId = uuidv4();
     return {
       id: generatedId,
-      name: locationName,
+      name: locationName || t("Current Location", "当前位置"),
       latitude: latitude,
       longitude: longitude,
       timestamp: new Date().toISOString()
     };
-  }, [latitude, longitude, locationName]);
+  }, [latitude, longitude, locationName, t]);
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {
@@ -79,31 +80,35 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   }, [latitude, longitude, queryClient, isPrefetching]);
   
   const handleClick = useCallback(() => {
+    // Use existing ID if provided
     if (locationId) {
       navigate(`/location/${locationId}`);
       return;
     }
     
+    // Use prepared data if available
     if (preparedLocationData) {
       // Prefetch one last time before navigation
       if (latitude && longitude) {
         prefetchSIQSDetails(queryClient, latitude, longitude);
       }
       
+      // Always use the state approach for consistent navigation
       navigate(`/location/${preparedLocationData.id}`, {
         state: preparedLocationData
       });
       return;
     }
     
-    // Fallback to Beijing data with unique ID
-    const fallbackId = `beijing-${Date.now()}`;
+    // Fallback with UUID for reliability
+    const fallbackId = uuidv4();
     navigate(`/location/${fallbackId}`, {
       state: {
         id: fallbackId,
         name: "Beijing",
         latitude: 39.9042,
-        longitude: 116.4074
+        longitude: 116.4074,
+        timestamp: new Date().toISOString()
       }
     });
   }, [navigate, locationId, preparedLocationData, latitude, longitude, queryClient]);
@@ -113,6 +118,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
+      data-testid="siqs-score-card"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
@@ -149,6 +155,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
                     transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
                     border border-[#9b87f5]/30 animate-pulse hover:animate-none"
           onClick={handleClick}
+          data-testid="siqs-details-button"
         >
           {language === 'en' 
             ? "Click for more details about the current SIQS" 

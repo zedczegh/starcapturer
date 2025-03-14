@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
+import { v4 as uuidv4 } from "uuid";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -98,7 +99,8 @@ export const useSIQSCalculation = (
         return;
       }
       
-      const locationId = `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now().toString()}`;
+      // Generate a stable, unique ID using UUID
+      const locationId = uuidv4();
       
       const locationData = {
         id: locationId,
@@ -121,7 +123,7 @@ export const useSIQSCalculation = (
         replace: false
       });
       
-      // Also save to localStorage as a backup
+      // Also save to localStorage as a backup with UUID as key
       try {
         localStorage.setItem(`location_${locationId}`, JSON.stringify(locationData));
       } catch (e) {

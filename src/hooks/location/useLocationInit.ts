@@ -29,7 +29,8 @@ export const useLocationInit = (
       }
 
       try {
-        if (initialState) {
+        // First priority: use initialState passed from the router
+        if (initialState && initialState.latitude && initialState.longitude) {
           console.log("Setting location data from state:", initialState);
           
           // Check if weatherData is missing or has zeros for critical values
@@ -60,6 +61,7 @@ export const useLocationInit = (
           // If weatherData needs to be updated, trigger it immediately
           if (needsWeatherUpdate && initialState.latitude && initialState.longitude) {
             try {
+              console.log("Updating weather data for location:", initialState.name);
               const freshWeatherData = await fetchWeatherData({
                 latitude: initialState.latitude,
                 longitude: initialState.longitude
@@ -101,8 +103,9 @@ export const useLocationInit = (
             
             return () => clearTimeout(redirectTimer);
           }
-        } else {
-          // Try to load data from localStorage if available
+        } else if (id) {
+          // Second priority: try to load data from localStorage if available
+          console.log("Trying to load location data from localStorage for ID:", id);
           const savedLocationData = localStorage.getItem(`location_${id}`);
           if (savedLocationData) {
             const parsedData = JSON.parse(savedLocationData);
@@ -123,6 +126,7 @@ export const useLocationInit = (
             // If weatherData needs to be updated, trigger it immediately
             if (needsWeatherUpdate && parsedData.latitude && parsedData.longitude) {
               try {
+                console.log("Updating weather data for stored location:", parsedData.name);
                 const freshWeatherData = await fetchWeatherData({
                   latitude: parsedData.latitude,
                   longitude: parsedData.longitude
@@ -139,9 +143,7 @@ export const useLocationInit = (
                   
                   // Update localStorage
                   try {
-                    if (id) {
-                      localStorage.setItem(`location_${id}`, JSON.stringify(updatedData));
-                    }
+                    localStorage.setItem(`location_${id}`, JSON.stringify(updatedData));
                   } catch (e) {
                     console.error("Failed to save updated data to localStorage", e);
                   }
@@ -151,7 +153,7 @@ export const useLocationInit = (
               }
             }
           } else {
-            console.error("Location data is missing", { params: id, locationState: initialState });
+            console.error("Location data not found in localStorage", { id });
             
             toast({
               title: t("Error", "错误"),
@@ -164,6 +166,19 @@ export const useLocationInit = (
               navigate("/");
             }, 2000);
           }
+        } else {
+          console.error("No way to initialize location data", { params: id, locationState: initialState });
+          
+          toast({
+            title: t("Error", "错误"),
+            description: t("Cannot load location details", "无法加载位置详情"),
+            variant: "destructive"
+          });
+          
+          // Redirect after showing the error
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
         }
       } finally {
         setIsLoading(false);

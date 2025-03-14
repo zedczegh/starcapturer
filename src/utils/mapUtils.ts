@@ -40,6 +40,17 @@ export const calculateDistance = (
 };
 
 /**
+ * Normalize coordinates to ensure they're within standard ranges
+ * This can help when comparing locations internationally
+ */
+export const normalizeCoordinates = (coords: { latitude: number, longitude: number }) => {
+  return {
+    latitude: Math.max(-90, Math.min(90, coords.latitude)),
+    longitude: ((coords.longitude + 180) % 360 + 360) % 360 - 180
+  };
+};
+
+/**
  * Convert WGS-84 coordinates to GCJ-02 (Chinese coordinate system)
  * This is a simplified implementation - for production use a more precise algorithm
  * NOTE: This is a critical function for maps in China
@@ -72,6 +83,19 @@ export const generateGaodeMapUrl = (
   const encodedName = encodeURIComponent(name);
   
   return `https://uri.amap.com/marker?position=${gcjLng},${gcjLat}&name=${encodedName}`;
+};
+
+/**
+ * Get a URL for directions to a location using Google Maps
+ * This works better for international users
+ */
+export const generateGoogleMapUrl = (
+  lat: number, 
+  lng: number, 
+  name: string
+): string => {
+  const encodedName = encodeURIComponent(name);
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${encodedName}`;
 };
 
 /**
