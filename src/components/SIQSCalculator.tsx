@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -28,8 +29,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
-  const { seeingConditions, bortleScale } = useSIQSAdvancedSettings();
-  
   const {
     userLocation,
     locationName,
@@ -44,13 +43,20 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   } = useLocationSelectorState({
     language,
     noAutoLocationRequest,
-    bortleScale,
+    bortleScale: 4, // Default value
     setBortleScale: () => {}, // No-op function since we don't allow changing bortleScale anymore
     setStatusMessage,
     setShowAdvancedSettings: () => {}, // No-op function since we don't use this anymore
     getCachedData,
     setCachedData
   });
+
+  // Parse latitude and longitude for hook usage
+  const parsedLatitude = parseFloat(latitude) || 0;
+  const parsedLongitude = parseFloat(longitude) || 0;
+  
+  // Pass the parsed coordinates to the hook
+  const { seeingConditions, bortleScale } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
 
   const {
     isCalculating,
