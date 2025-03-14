@@ -1,12 +1,13 @@
-import { calculateDistance } from "@/data/locationDatabase";
+import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 
-// Import the correct location database from the utils file
-import { quickLocationDatabase } from "./locationDatabase";
+// Import the correct location database
+import { locationDatabase } from "@/data/locationDatabase";
 
 /**
  * Find the closest known location from our database
  * Using spatial indexing for faster lookups and more accurate results
+ * With improved error handling
  */
 export function findClosestKnownLocation(latitude: number, longitude: number): {
   name: string;
@@ -14,7 +15,7 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
   distance: number;
   type: string;
 } {
-  if (!quickLocationDatabase || !quickLocationDatabase.length) {
+  if (!locationDatabase || !locationDatabase.length) {
     return { name: "Unknown", bortleScale: 4, distance: 999, type: 'unknown' };
   }
 
@@ -29,34 +30,45 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
     // Fall back to legacy database if enhanced database fails
   }
 
-  // Find closest location in the legacy database
-  let closestLocation = quickLocationDatabase[0];
-  let shortestDistance = calculateDistance(
-    latitude, longitude, 
-    quickLocationDatabase[0].coordinates[0], 
-    quickLocationDatabase[0].coordinates[1]
-  );
-
-  for (let i = 1; i < quickLocationDatabase.length; i++) {
-    const location = quickLocationDatabase[i];
-    const distance = calculateDistance(
+  try {
+    // Find closest location in the database
+    let closestLocation = locationDatabase[0];
+    let shortestDistance = calculateDistance(
       latitude, longitude, 
-      location.coordinates[0], 
-      location.coordinates[1]
+      locationDatabase[0].coordinates[0], 
+      locationDatabase[0].coordinates[1]
     );
 
-    if (distance < shortestDistance) {
-      shortestDistance = distance;
-      closestLocation = location;
-    }
-  }
+    for (let i = 1; i < locationDatabase.length; i++) {
+      const location = locationDatabase[i];
+      const distance = calculateDistance(
+        latitude, longitude, 
+        location.coordinates[0], 
+        location.coordinates[1]
+      );
 
-  return {
-    name: closestLocation.name,
-    bortleScale: closestLocation.bortleScale,
-    distance: shortestDistance,
-    type: closestLocation.type || 'unknown'
-  };
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        closestLocation = location;
+      }
+    }
+
+    return {
+      name: closestLocation.name,
+      bortleScale: closestLocation.bortleScale,
+      distance: shortestDistance,
+      type: closestLocation.type || 'unknown'
+    };
+  } catch (error) {
+    console.error("Error finding closest location:", error);
+    // Fallback with default values
+    return {
+      name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      bortleScale: 4,
+      distance: 999,
+      type: 'unknown'
+    };
+  }
 }
 
 /**
@@ -77,12 +89,16 @@ export function estimateBortleScaleByLocation(
       // Fall back to database lookup if interpolation fails
     }
     
-    // Try to find closest known location
-    const closestLocation = findClosestKnownLocation(latitude, longitude);
-    
-    // If location is close enough, use its Bortle scale
-    if (closestLocation.distance <= 100) {
-      return closestLocation.bortleScale;
+    try {
+      // Try to find closest known location
+      const closestLocation = findClosestKnownLocation(latitude, longitude);
+      
+      // If location is close enough, use its Bortle scale
+      if (closestLocation.distance <= 100) {
+        return closestLocation.bortleScale;
+      }
+    } catch (error) {
+      console.error("Error finding closest location for Bortle scale:", error);
     }
   }
   
@@ -91,7 +107,7 @@ export function estimateBortleScaleByLocation(
     const lowercaseName = locationName.toLowerCase();
     
     // First check for specific location names that are in our database
-    for (const location of quickLocationDatabase) {
+    for (const location of locationDatabase) {
       if (lowercaseName.includes(location.name.toLowerCase())) {
         return location.bortleScale;
       }

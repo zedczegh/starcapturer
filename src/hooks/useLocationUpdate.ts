@@ -23,12 +23,26 @@ export const useLocationUpdate = (
       
       try {
         // Get new weather data for the updated location
-        const newWeatherData = await fetchWeatherData({
-          latitude: newLocation.latitude,
-          longitude: newLocation.longitude,
-        });
-        
-        if (!newWeatherData) throw new Error("Failed to fetch weather data");
+        let newWeatherData;
+        try {
+          newWeatherData = await fetchWeatherData({
+            latitude: newLocation.latitude,
+            longitude: newLocation.longitude,
+          });
+        } catch (error) {
+          console.error("Error fetching weather data:", error);
+          // If weather API fails, use default weather data
+          newWeatherData = {
+            temperature: 20,
+            humidity: 50,
+            cloudCover: 30,
+            windSpeed: 5,
+            precipitation: 0,
+            weatherCondition: "Clear",
+            time: new Date().toISOString(),
+            aqi: 50
+          };
+        }
         
         // Reuse existing Bortle scale or get a new one
         let bortleScale = hasProperty(locationData, 'bortleScale') ? locationData.bortleScale : 4;

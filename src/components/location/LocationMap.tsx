@@ -35,6 +35,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [updateRetries, setUpdateRetries] = useState(0);
   
   // Create cache service
   const { setCachedData, getCachedData } = useLocationDataCache();
@@ -58,6 +59,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
+    // Reset error state if map loads successfully
+    setMapError(null);
   }, []);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
@@ -69,16 +72,37 @@ const LocationMap: React.FC<LocationMapProps> = ({
     
     setPosition([validLat, validLng]);
     
-    setLocationLoading(true);
-    const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
-    setLocationLoading(false);
-    
-    onLocationUpdate({
-      name: locationName,
-      latitude: validLat,
-      longitude: validLng
-    });
-  }, [editable, onLocationUpdate, language, cacheService]);
+    try {
+      setLocationLoading(true);
+      setUpdateRetries(prev => prev + 1);
+
+      const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
+      
+      if (onLocationUpdate) {
+        onLocationUpdate({
+          name: locationName,
+          latitude: validLat,
+          longitude: validLng
+        });
+      }
+
+      // Reset retry count if successful
+      setUpdateRetries(0);
+    } catch (error) {
+      console.error("Error getting location name:", error);
+      // Use fallback location name if geocoding fails
+      if (onLocationUpdate && updateRetries >= 2) {
+        const fallbackName = t("Location", "位置") + ` ${validLat.toFixed(4)}, ${validLng.toFixed(4)}`;
+        onLocationUpdate({
+          name: fallbackName,
+          latitude: validLat,
+          longitude: validLng
+        });
+      }
+    } finally {
+      setLocationLoading(false);
+    }
+  }, [editable, onLocationUpdate, language, cacheService, t, updateRetries]);
 
   // Handle map initialization error
   useEffect(() => {

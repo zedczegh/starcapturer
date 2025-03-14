@@ -33,6 +33,7 @@ export { calculateDistance, deg2rad } from './utils/distanceCalculator';
 
 /**
  * Find the closest location to given coordinates
+ * With improved error handling to ensure valid output
  */
 export function findClosestLocation(latitude: number, longitude: number): {
   name: string;
@@ -40,9 +41,37 @@ export function findClosestLocation(latitude: number, longitude: number): {
   distance: number;
   type?: string;
 } {
-  // Delegate to the implementation in locationFinder.ts
-  const { findClosestLocationImpl } = require('./utils/locationFinder');
-  return findClosestLocationImpl(latitude, longitude, locationDatabase);
+  // Ensure database has content
+  if (!locationDatabase || locationDatabase.length === 0) {
+    return {
+      name: `Unknown Location`,
+      bortleScale: 5,
+      distance: 0
+    };
+  }
+
+  // Validate input coordinates
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    return {
+      name: `Unknown Location`,
+      bortleScale: 5,
+      distance: 0
+    };
+  }
+
+  try {
+    // Delegate to the implementation in locationFinder.ts
+    const { findClosestLocationImpl } = require('./utils/locationFinder');
+    return findClosestLocationImpl(latitude, longitude, locationDatabase);
+  } catch (error) {
+    console.error("Error finding closest location:", error);
+    // Fallback if implementation fails
+    return {
+      name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      bortleScale: 5,
+      distance: 0
+    };
+  }
 }
 
 /**
@@ -53,8 +82,18 @@ export function getLocationInfo(latitude: number, longitude: number): {
   bortleScale: number;
   formattedName: string;
 } {
-  const { getLocationInfoImpl } = require('./utils/locationFinder');
-  return getLocationInfoImpl(latitude, longitude, locationDatabase);
+  try {
+    const { getLocationInfoImpl } = require('./utils/locationFinder');
+    return getLocationInfoImpl(latitude, longitude, locationDatabase);
+  } catch (error) {
+    console.error("Error getting location info:", error);
+    // Fallback if implementation fails
+    return {
+      name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      bortleScale: 5,
+      formattedName: `Unknown Location`
+    };
+  }
 }
 
 // Keep these functions here as they are core to the API
