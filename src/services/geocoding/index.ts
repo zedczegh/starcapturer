@@ -1,12 +1,11 @@
 
 import { searchLocations } from './search';
-import { reverseGeocode, getLocationNameFromCoordinates } from './reverseGeocoding';
+import { getLocationNameFromCoordinates } from './reverseGeocoding';
 import { Location, Language } from './types';
 
 // Export the main API
 export {
   searchLocations,
-  reverseGeocode,
   getLocationNameFromCoordinates
 };
 
