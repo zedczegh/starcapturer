@@ -5,12 +5,14 @@
  */
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number | null } | null> {
   try {
+    console.log("Fetching light pollution data for", latitude, longitude);
+    
     // First try to get accurate data from our expanded location database
     const { findClosestLocation } = await import('../../data/locationDatabase');
     
     // Get the closest location with accurate Bortle scale
     const locationInfo = findClosestLocation(latitude, longitude);
-    console.log("Light pollution data for", latitude, longitude, ":", locationInfo);
+    console.log("Light pollution data from primary database:", locationInfo);
     
     if (locationInfo && typeof locationInfo.bortleScale === 'number') {
       // Only return the value if it's valid (1-9)
@@ -19,7 +21,7 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
       }
     }
 
-    console.log("No reliable Bortle scale data found in primary database");
+    console.log("Trying secondary database for Bortle scale data");
     
     // Try another approach with our known locations database
     const { findClosestKnownLocation } = await import('../../utils/locationUtils');
@@ -29,13 +31,13 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
         typeof knownLocation.bortleScale === 'number' && 
         knownLocation.bortleScale >= 1 && 
         knownLocation.bortleScale <= 9 && 
-        knownLocation.distance < 100) {
-      console.log("Using known location database for Bortle scale:", knownLocation.bortleScale);
+        knownLocation.distance < 50) { // Reduced from 100 to 50 for more accuracy
+      console.log("Found in secondary database with distance:", knownLocation.distance, "km");
       return { bortleScale: knownLocation.bortleScale };
     }
     
     // If we get here, we need to be clear that we don't have reliable data
-    console.log("Could not determine Bortle scale for this location");
+    console.log("Could not determine reliable Bortle scale for this location");
     return { bortleScale: null };
     
   } catch (error) {
