@@ -23,7 +23,7 @@ export interface LocationCacheService {
  * @param address The address object returned from API
  * @param language Current language 
  */
-function formatLocationAddress(address: any, language: Language): string {
+export function formatLocationAddress(address: any, language: Language): string {
   if (!address) return "";
   
   // For English: town, county, state, country, zip code

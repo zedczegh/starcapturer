@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { validateCoordinates, formatCoordinates } from '@/utils/coordinates';
-import LocationNameService from './LocationNameService';
+import * as LocationNameService from './LocationNameService';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // Fix for the default marker icon in Leaflet
@@ -36,7 +36,8 @@ const LazyMapComponent = ({
   isInteractive = true,
   mapHeight = '400px',
   zoom = 12,
-  showPopup = true
+  showPopup = true,
+  onMapReady = () => {}
 }) => {
   // Validate coordinates to ensure they're within valid ranges
   const validCoordinates = validateCoordinates({ latitude, longitude });
@@ -50,11 +51,29 @@ const LazyMapComponent = ({
   // Handle map ready event
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
+    onMapReady();
     
     // Get location name if callback is provided
     if (onLocationNameUpdate) {
-      const locationService = new LocationNameService();
-      locationService.getLocationName(validCoordinates.latitude, validCoordinates.longitude, language)
+      const locationService = LocationNameService;
+      locationService.getLocationNameForCoordinates(validCoordinates.latitude, validCoordinates.longitude, language, {
+        setCachedData: (key, data) => {
+          try {
+            localStorage.setItem(key, JSON.stringify(data));
+          } catch (e) {
+            console.error("Error caching location data:", e);
+          }
+        },
+        getCachedData: (key) => {
+          try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+          } catch (e) {
+            console.error("Error retrieving cached location data:", e);
+            return null;
+          }
+        }
+      })
         .then(name => {
           setLocationName(name);
           onLocationNameUpdate(name);
@@ -66,7 +85,7 @@ const LazyMapComponent = ({
           onLocationNameUpdate(fallbackName);
         });
     }
-  }, [validCoordinates.latitude, validCoordinates.longitude, language, onLocationNameUpdate]);
+  }, [validCoordinates.latitude, validCoordinates.longitude, language, onLocationNameUpdate, onMapReady]);
   
   return (
     <div style={{ position: 'relative', height: mapHeight, width: '100%' }}>

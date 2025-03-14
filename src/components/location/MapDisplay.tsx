@@ -36,12 +36,12 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
-          position={position}
-          locationName={locationName}
-          editable={editable}
+          latitude={position[0]}
+          longitude={position[1]}
+          onLocationNameUpdate={(name) => console.log("Location name updated:", name)}
+          isInteractive={editable}
           onMapReady={onMapReady}
-          onMapClick={onMapClick}
-          showInfoPanel={showInfoPanel}
+          showPopup={showInfoPanel}
         />
       </Suspense>
     </div>

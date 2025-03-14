@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -24,7 +24,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   hideRecommendedPoints = false,
   noAutoLocationRequest = false
 }) => {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const { setCachedData, getCachedData } = useLocationDataCache();
   
   const {
@@ -44,7 +44,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setCachedData
   });
   
-  const locationSelectorProps = useMemo(() => ({
+  // Use extracted hook for location selection state
+  const locationSelectorProps = {
     language: language as Language,
     noAutoLocationRequest,
     bortleScale: localBortleScale,
@@ -53,7 +54,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setShowAdvancedSettings: () => {},
     getCachedData,
     setCachedData
-  }), [language, noAutoLocationRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
+  };
 
   const {
     userLocation,
@@ -61,8 +62,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     latitude,
     longitude,
     setLocationName,
-    setLatitude,
-    setLongitude,
     handleUseCurrentLocation,
     handleLocationSelect,
     handleRecommendedPointSelect
@@ -80,7 +79,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     if (bortleScale !== undefined) {
       setLocalBortleScale(bortleScale);
     }
-  }, [bortleScale]);
+  }, [bortleScale, setLocalBortleScale]);
 
   const {
     isCalculating,
@@ -108,7 +107,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setCalculationInProgress(isCalculating);
   }, [isCalculating, setCalculationInProgress]);
   
-  // Memoize the SIQS calculation for better performance
+  // Calculate SIQS when inputs change
   const calculateSIQS = useCallback(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
@@ -134,7 +133,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage, setCalculationInProgress]);
   
-  // Debounced SIQS calculation when inputs change
+  // Debounced SIQS calculation
   useEffect(() => {
     if (!isMounted || !locationName) return;
     
@@ -154,8 +153,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       {siqsScore !== null && (
         <SIQSScore 
           siqsScore={siqsScore} 
-          latitude={parseFloat(latitude)}
-          longitude={parseFloat(longitude)}
+          latitude={parsedLatitude}
+          longitude={parsedLongitude}
           locationName={locationName}
         />
       )}

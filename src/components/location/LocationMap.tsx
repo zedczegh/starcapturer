@@ -43,18 +43,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
     getCachedData: (key) => getCachedData(key)
   };
 
-  // Handle potential invalid coordinates with safer defaults
-  const validLatitude = isFinite(latitude) ? latitude : 0;
-  const validLongitude = isFinite(longitude) ? longitude : 0;
-  const validName = name || t("Unknown Location", "未知位置");
-
   // Update position when props change
   useEffect(() => {
     if (isFinite(latitude) && isFinite(longitude) && 
-       (validLatitude !== position[0] || validLongitude !== position[1])) {
-      setPosition([validLatitude, validLongitude]);
+       (latitude !== position[0] || longitude !== position[1])) {
+      setPosition([latitude, longitude]);
     }
-  }, [validLatitude, validLongitude, position]);
+  }, [latitude, longitude, position]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
@@ -92,6 +87,11 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return () => clearTimeout(timeoutId);
   }, [isLoading, t, mapError]);
 
+  // Validate and default props
+  const validLatitude = isFinite(latitude) ? latitude : 0;
+  const validLongitude = isFinite(longitude) ? longitude : 0;
+  const validName = name || t("Unknown Location", "未知位置");
+
   return (
     <div className="aspect-video w-full h-[300px] relative">
       {(isLoading || locationLoading) && (
@@ -108,7 +108,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
       )}
       
       <MapDisplay 
-        position={position}
+        position={[validLatitude, validLongitude]}
         locationName={validName}
         editable={editable}
         onMapReady={handleMapReady}
