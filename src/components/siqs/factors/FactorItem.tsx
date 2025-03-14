@@ -1,7 +1,7 @@
 
 import React, { useMemo, memo } from "react";
 import { Progress } from "@/components/ui/progress";
-import { getScoreColorClass } from "../SIQSSummaryScore";
+import { getScoreColorClass } from "../utils/scoreUtils";
 import { 
   getTranslatedFactorName, 
   getTranslatedDescription, 
