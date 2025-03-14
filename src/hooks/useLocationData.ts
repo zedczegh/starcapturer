@@ -1,125 +1,111 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
-import useLocationCache from "./location/useLocationCache";
-import { useGeolocation } from "./location/useGeolocation";
-import { getBortleScaleForLocation } from "./location/useBortleScale";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { getLocationFromCoordinates, validateCoordinates } from "@/services/locationService";
-import { Language } from "@/services/geocoding/types";
+import { useState, useEffect, useCallback } from 'react';
 
-// Re-export the location cache hook with a more descriptive name
-export const useLocationDataCache = useLocationCache;
-export { estimateBortleScale } from "./location/useBortleScale";
-
-export const useCurrentLocation = (language: Language, noAutoLocationRequest: boolean = false) => {
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [locationName, setLocationName] = useState("");
-  const [formattedLocationName, setFormattedLocationName] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-  const [bortleScale, setBortleScale] = useState<number | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const { setCachedData, getCachedData } = useLocationDataCache();
-  const { toast } = useToast();
-  const { t } = useLanguage();
-
-  const geo = useGeolocation({ 
-    enableHighAccuracy: true, 
-    timeout: 15000,
-    maximumAge: 30000, // Reduced from 60000 to get more recent data
-    language 
-  });
-
+/**
+ * Optimized location data cache hook with improved memory usage and performance
+ */
+export const useLocationDataCache = () => {
+  // Use a global cache for better performance
+  const globalCache = useState<Map<string, { data: any; timestamp: number }>>(
+    () => new Map()
+  )[0];
+  
+  // Clear expired cache items periodically 
   useEffect(() => {
-    if (geo.error) {
-      setStatusMessage(geo.error);
-    }
-  }, [geo.error]);
-
-  useEffect(() => {
-    if (geo.coords) {
-      const lat = geo.coords.latitude;
-      const lng = geo.coords.longitude;
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const expiryTime = 24 * 60 * 60 * 1000; // 24 hours
       
-      handleLocationFound(lat, lng);
+      for (const [key, item] of globalCache.entries()) {
+        if (now - item.timestamp > expiryTime) {
+          globalCache.delete(key);
+        }
+      }
+    }, 60 * 60 * 1000); // Run cleanup hourly
+    
+    return () => clearInterval(intervalId);
+  }, [globalCache]);
+  
+  // Efficient cache retrieval function
+  const getCachedData = useCallback((key: string, maxAge: number = 30 * 60 * 1000) => {
+    const cachedItem = globalCache.get(key);
+    
+    if (!cachedItem) {
+      // Try localStorage as fallback
+      try {
+        const storedItem = localStorage.getItem(key);
+        if (storedItem) {
+          const parsedData = JSON.parse(storedItem);
+          // Add to memory cache for faster future access
+          globalCache.set(key, { data: parsedData, timestamp: Date.now() });
+          return parsedData;
+        }
+      } catch (e) {
+        console.error("Error retrieving from localStorage:", e);
+      }
+      return null;
     }
-  }, [geo.coords]);
-
-  const handleLocationFound = useCallback(async (lat: number, lng: number) => {
+    
+    // Check if data is expired
+    if (Date.now() - cachedItem.timestamp > maxAge) {
+      return null;
+    }
+    
+    return cachedItem.data;
+  }, [globalCache]);
+  
+  // Cache data with current timestamp
+  const setCachedData = useCallback((key: string, data: any) => {
+    const timestamp = Date.now();
+    
+    // Update memory cache
+    globalCache.set(key, { data, timestamp });
+    
+    // Also store in localStorage for persistence
     try {
-      // Validate coordinates
-      const { latitude: validLat, longitude: validLng } = validateCoordinates({ latitude: lat, longitude: lng });
-      
-      setLatitude(validLat.toFixed(6));
-      setLongitude(validLng.toFixed(6));
-      setUserLocation({ latitude: validLat, longitude: validLng });
-      
-      // Set Bortle scale to null until we get reliable data
-      setBortleScale(null);
-      
-      // Get location information
-      const locationInfo = await getLocationFromCoordinates(validLat, validLng, language);
-      
-      setLocationName(locationInfo.name);
-      setFormattedLocationName(locationInfo.formattedName);
-      
-      // Get fresh Bortle scale data - don't rely on the one from locationInfo
-      const bortleScaleValue = await getBortleScaleForLocation(
-        validLat, 
-        validLng, 
-        locationInfo.name,
-        setCachedData
-      );
-      
-      setBortleScale(bortleScaleValue);
-      
-      const locationMessage = language === 'en' 
-        ? `Location found: ${locationInfo.formattedName}` 
-        : `位置已找到：${locationInfo.formattedName}`;
-        
-      const bortleMessage = bortleScaleValue === null
-        ? (language === 'en' 
-            ? " (Light pollution level unknown)" 
-            : " (光污染水平未知)")
-        : "";
-        
-      setStatusMessage(locationMessage + bortleMessage);
-    } catch (error) {
-      console.error("Error getting location:", error);
-      setStatusMessage(
-        language === 'en'
-          ? "Could not determine exact location. Using approximate coordinates."
-          : "无法确定确切位置。使用近似坐标。"
-      );
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error("Error storing in localStorage:", e);
     }
-  }, [language, setCachedData]);
-
-  const handleUseCurrentLocation = useCallback(() => {
-    if (geo.loading) return;
-    
-    // Reset Bortle scale to ensure we don't display stale data
-    setBortleScale(null);
-    
-    setStatusMessage(language === 'en' ? "Waiting for permission and location data..." : "等待位置权限和数据...");
-    geo.getPosition();
-  }, [geo, language]);
-
-  return {
-    loading: geo.loading,
-    userLocation,
-    locationName,
-    formattedLocationName,
-    latitude,
-    longitude,
-    bortleScale, // Now correctly returns null when unknown
-    statusMessage,
-    setLocationName,
-    setLatitude,
-    setLongitude,
-    setBortleScale,
-    setStatusMessage,
-    handleUseCurrentLocation,
-    handleLocationFound
-  };
+  }, [globalCache]);
+  
+  // Clear cache items
+  const clearCache = useCallback((keys?: string[]) => {
+    if (keys && Array.isArray(keys)) {
+      // Clear specific keys
+      for (const key of keys) {
+        globalCache.delete(key);
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.error("Error removing from localStorage:", e);
+        }
+      }
+    } else {
+      // Clear all cache
+      globalCache.clear();
+      
+      try {
+        // Only clear our app-specific keys
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('weather-') || 
+            key.startsWith('bortle-') || 
+            key.startsWith('forecast-') || 
+            key.startsWith('location_')
+          )) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        console.error("Error clearing localStorage:", e);
+      }
+    }
+  }, [globalCache]);
+  
+  return { getCachedData, setCachedData, clearCache };
 };
+
+// Export any other necessary functions
+export * from './location/useLocationCache';

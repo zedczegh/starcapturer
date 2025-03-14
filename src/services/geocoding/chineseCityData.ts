@@ -1,3 +1,4 @@
+
 import { Location } from './types';
 import { majorChineseCities } from './data/majorCities';
 import { specialChineseDistricts } from './data/specialDistricts';
@@ -5,6 +6,7 @@ import { suburbanChineseDistricts } from './data/suburbanDistricts';
 import { westernChineseCities } from './data/westernCities';
 import { northeasternChineseCities } from './data/northeasternCities';
 import { centralChineseCities } from './data/centralChineseCities';
+import { northwesternChineseCities } from './data/northwesternCities';
 
 /**
  * Combined database of all Chinese city alternatives
@@ -15,7 +17,8 @@ export const chineseCityAlternatives = {
   ...suburbanChineseDistricts,
   ...westernChineseCities,
   ...northeasternChineseCities,
-  ...centralChineseCities
+  ...centralChineseCities,
+  ...northwesternChineseCities
 };
 
 /**

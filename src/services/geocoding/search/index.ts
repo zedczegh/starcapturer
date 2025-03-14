@@ -7,9 +7,10 @@ import { handleSpecialCases } from './specialCases';
 import { fetchAndProcessExternalResults } from './externalSearch';
 import { findMatchingLocations } from '../locationDatabase';
 import { containsChineseCharacters } from '../matching';
+import { searchChineseRegions } from './chineseRegionSearch';
 
 /**
- * Optimized version of location search with better caching and error handling
+ * Optimized location search with better caching and error handling
  * @param query Search query string
  * @param language Language for the search results
  * @returns Promise resolving to an array of matching locations
@@ -38,6 +39,14 @@ export async function searchLocations(
     
     // Method 1: Handle Chinese language searches
     if (hasChineseChars || language === 'zh') {
+      // Try the optimized Chinese regions search first
+      results = await searchChineseRegions(lowercaseQuery, language);
+      if (results.length > 0) {
+        searchCache.cacheSearchResults(lowercaseQuery, language, results);
+        return results;
+      }
+      
+      // Fall back to traditional Chinese search if needed
       results = await handleChineseSearch(lowercaseQuery, language);
       if (results.length > 0) {
         searchCache.cacheSearchResults(lowercaseQuery, language, results);
@@ -80,3 +89,4 @@ export * from './westernCities';
 export * from './chineseSearch';
 export * from './specialCases';
 export * from './externalSearch';
+export * from './chineseRegionSearch';
