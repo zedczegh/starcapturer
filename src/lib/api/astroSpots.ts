@@ -54,43 +54,155 @@ export async function getSharedAstroSpots(
   latitude: number,
   longitude: number,
   limit = 50,
-  radius = 100  // km
+  radius = 5000  // km - increased to support our distance slider
 ): Promise<SharedAstroSpot[]> {
   try {
     // Mock implementation until we have a real backend
+    // This creates a more diverse set of mock data with various distances and SIQS scores
     const mockSpots: SharedAstroSpot[] = [
       {
         id: '1',
         name: 'Dark Sky Reserve',
-        latitude: latitude + 0.1,
-        longitude: longitude + 0.1,
+        latitude: latitude + 0.9,
+        longitude: longitude + 0.9,
         description: 'Excellent dark sky site with minimal light pollution. Great for deep sky objects.',
         bortleScale: 2,
         date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         username: 'AstroEnthusiast',
-        likes: 42
+        likes: 42,
+        siqs: 8.7,
+        isViable: true,
+        photoUrl: '/images/astro1.jpg',
+        photographer: 'Maria Chen'
       },
       {
         id: '2',
         name: 'Mountain Lookout',
-        latitude: latitude - 0.15,
-        longitude: longitude - 0.05,
+        latitude: latitude - 1.5,
+        longitude: longitude - 0.5,
         description: 'High elevation site with clear horizons. Perfect for planets and lunar observation.',
         bortleScale: 3,
         date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
         username: 'StarGazer',
-        likes: 28
+        likes: 28,
+        siqs: 7.9,
+        isViable: true,
+        photoUrl: '/images/astro2.jpg',
+        photographer: 'Liu Wei'
       },
       {
         id: '3',
         name: 'Coastal Viewing Point',
-        latitude: latitude + 0.2,
-        longitude: longitude - 0.2,
+        latitude: latitude + 2.2,
+        longitude: longitude - 2.2,
         description: 'Open view of the western horizon over the water. Good for sunset and early evening viewing.',
         bortleScale: 4,
         date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         username: 'MilkyWayHunter',
-        likes: 15
+        likes: 15,
+        siqs: 6.8,
+        isViable: true
+      },
+      {
+        id: '4',
+        name: 'Desert Observatory',
+        latitude: latitude + 6.1,
+        longitude: longitude - 3.8,
+        description: 'Remote desert location with extremely dark skies. No light pollution for hundreds of kilometers.',
+        bortleScale: 1,
+        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'DeepSkyObserver',
+        likes: 89,
+        siqs: 9.5,
+        isViable: true,
+        photoUrl: '/images/astro3.jpg',
+        photographer: 'James Wong'
+      },
+      {
+        id: '5',
+        name: 'Alpine Peak',
+        latitude: latitude - 4.2,
+        longitude: longitude + 5.1,
+        description: 'High altitude alpine location above the cloud line. Breathtaking views of the night sky.',
+        bortleScale: 2,
+        date: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'SkyClimber',
+        likes: 63,
+        siqs: 8.2,
+        isViable: true,
+        photoUrl: '/images/astro4.jpg',
+        photographer: 'Zhang Min'
+      },
+      {
+        id: '6',
+        name: 'Island Retreat',
+        latitude: latitude + 10.5,
+        longitude: longitude + 8.3,
+        description: 'Remote island with pristine dark skies and tropical climate. Perfect for astrophotography all year round.',
+        bortleScale: 2,
+        date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'OceanStar',
+        likes: 51,
+        siqs: 8.9,
+        isViable: true
+      },
+      {
+        id: '7',
+        name: 'National Park Clearing',
+        latitude: latitude - 7.8,
+        longitude: longitude - 6.2,
+        description: 'Natural clearing in a protected national park. No artificial lights and minimal air pollution.',
+        bortleScale: 3,
+        date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'WildernessAstronomer',
+        likes: 37,
+        siqs: 7.6,
+        isViable: true,
+        photoUrl: '/images/astro5.jpg',
+        photographer: 'Chen Xiao'
+      },
+      {
+        id: '8',
+        name: 'Highland Plateau',
+        latitude: latitude + 15.3,
+        longitude: longitude - 12.7,
+        description: 'Vast highland plateau with unobstructed 360-degree views. Excellent for panoramic Milky Way shots.',
+        bortleScale: 2,
+        date: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'PanoAstro',
+        likes: 72,
+        siqs: 8.4,
+        isViable: true
+      },
+      {
+        id: '9',
+        name: 'Ancient Observatory Site',
+        latitude: latitude - 20.5,
+        longitude: longitude + 18.9,
+        description: 'Historic stargazing location used by ancient astronomers. Still maintains excellent dark sky conditions.',
+        bortleScale: 3,
+        date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'TimeWatcher',
+        likes: 94,
+        siqs: 7.8,
+        isViable: true,
+        photoUrl: '/images/astro6.jpg',
+        photographer: 'Li Hong'
+      },
+      {
+        id: '10',
+        name: 'Volcanic Crater',
+        latitude: latitude + 25.8,
+        longitude: longitude + 22.1,
+        description: 'Dormant volcanic crater with high elevation and minimal atmospheric disturbance.',
+        bortleScale: 2,
+        date: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
+        username: 'FireSky',
+        likes: 83,
+        siqs: 8.6,
+        isViable: true,
+        photoUrl: '/images/astro7.jpg',
+        photographer: 'Wang Jie'
       }
     ];
     
