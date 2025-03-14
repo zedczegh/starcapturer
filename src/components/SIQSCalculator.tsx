@@ -10,6 +10,7 @@ import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
 import StatusMessage from "./siqs/StatusMessage";
 import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState";
 import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
+import { Language } from "@/services/geocoding/types";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -41,7 +42,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     handleLocationSelect,
     handleRecommendedPointSelect
   } = useLocationSelectorState({
-    language,
+    language: language as Language,
     noAutoLocationRequest,
     bortleScale: 4, // Default value
     setBortleScale: () => {}, // No-op function since we don't allow changing bortleScale anymore
@@ -88,7 +89,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           seeingConditions,
           undefined,
           setStatusMessage,
-          language
+          language as Language
         )
         .finally(() => {
           setCalculationInProgress(false);

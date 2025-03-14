@@ -2,12 +2,11 @@
 // Import required functions and constants from matchingUtils
 import { containsChineseCharacters, findBestMatches } from './matchingUtils';
 import { Location, Language } from './types';
-import { chineseCityAlternatives } from './chineseCityData'; // Import from chineseCityData
+import { chineseCityAlternatives, checkAlternativeSpellings } from './chineseCityData'; // Import from chineseCityData
 import { locationDatabase } from '@/data/locationDatabase';
 
 // Re-export what matchingUtils.ts needs
-export { chineseCityAlternatives };
-export { checkAlternativeSpellings } from './chineseCityData'; // Re-export from chineseCityData
+export { chineseCityAlternatives, checkAlternativeSpellings };
 
 /**
  * Find locations in our internal database that match the search query
@@ -42,7 +41,7 @@ export function findMatchingLocations(query: string, limit: number = 5, language
   const matchingLocations = findBestMatches(dbLocations, query, language);
   
   // Combine results, but prioritize our manual entries (especially for Chinese queries)
-  const combinedResults = [...results, ...matchingLocations];
+  const combined = [...results, ...matchingLocations];
   
   // Prioritize Chinese locations for Chinese language and queries
   if (language === 'zh' || hasChineseChars) {
@@ -57,12 +56,15 @@ export function findMatchingLocations(query: string, limit: number = 5, language
   }
   
   // Remove duplicates based on name
-  const uniqueResults = combinedResults.filter((location, index, self) =>
+  const uniqueResults = combined.filter((location, index, self) =>
     index === self.findIndex(l => l.name === location.name)
   );
   
   return uniqueResults.slice(0, limit);
 }
+
+// Function variable declaration for type safety
+let combinedResults = [] as Location[];
 
 /**
  * Find Chinese locations matching the query

@@ -6,12 +6,13 @@ import { useGeolocation } from "./location/useGeolocation";
 import { getBortleScaleForLocation } from "./location/useBortleScale";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getLocationFromCoordinates, validateCoordinates } from "@/services/locationService";
+import { Language } from "@/services/geocoding/types";
 
 // Re-export the location cache hook with a more descriptive name
 export const useLocationDataCache = useLocationCache;
 export { estimateBortleScale } from "./location/useBortleScale";
 
-export const useCurrentLocation = (language: string, noAutoLocationRequest: boolean = false) => {
+export const useCurrentLocation = (language: Language, noAutoLocationRequest: boolean = false) => {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationName, setLocationName] = useState("");
   const [formattedLocationName, setFormattedLocationName] = useState("");

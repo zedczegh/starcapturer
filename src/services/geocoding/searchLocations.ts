@@ -2,7 +2,53 @@
 import { Location, Language } from './types';
 import { findBestMatches, containsChineseCharacters } from './matchingUtils';
 import { findMatchingLocations } from './locationDatabase';
-import { checkAlternativeSpellings } from './chineseCityData'; // Import directly from chineseCityData
+import { checkAlternativeSpellings } from './chineseCityData';
+
+// Additional western cities to include in search results
+const additionalWesternCities: Record<string, Location> = {
+  'new york': {
+    name: 'New York City, USA',
+    placeDetails: 'Major city in United States',
+    latitude: 40.7128,
+    longitude: -74.0060
+  },
+  'london': {
+    name: 'London, United Kingdom',
+    placeDetails: 'Capital city of United Kingdom',
+    latitude: 51.5074,
+    longitude: -0.1278
+  },
+  'paris': {
+    name: 'Paris, France',
+    placeDetails: 'Capital city of France',
+    latitude: 48.8566,
+    longitude: 2.3522
+  },
+  'sydney': {
+    name: 'Sydney, Australia',
+    placeDetails: 'Major city in Australia',
+    latitude: -33.8688,
+    longitude: 151.2093
+  },
+  'los angeles': {
+    name: 'Los Angeles, USA',
+    placeDetails: 'Major city in California, United States',
+    latitude: 34.0522,
+    longitude: -118.2437
+  },
+  'new castle': {
+    name: 'Newcastle upon Tyne, United Kingdom',
+    placeDetails: 'City in Northern England',
+    latitude: 54.9783,
+    longitude: -1.6178
+  },
+  'newcastle': {
+    name: 'Newcastle upon Tyne, United Kingdom',
+    placeDetails: 'City in Northern England',
+    latitude: 54.9783,
+    longitude: -1.6178
+  }
+};
 
 /**
  * Search for locations matching the given query
@@ -22,6 +68,14 @@ export async function searchLocations(
     // Normalize query for comparison
     const lowercaseQuery = query.toLowerCase().trim();
     const hasChineseChars = containsChineseCharacters(lowercaseQuery);
+    
+    // Check for well-known western cities when in English mode
+    if (language === 'en' && !hasChineseChars) {
+      const westernCityMatches = checkWesternCities(lowercaseQuery);
+      if (westernCityMatches.length > 0) {
+        return westernCityMatches;
+      }
+    }
     
     // Immediately check for specific Chinese locations and alternative spellings
     if (hasChineseChars || language === 'zh') {
@@ -57,6 +111,31 @@ export async function searchLocations(
     // Return a fallback based on internal database
     return findMatchingLocations(query, 5, language);
   }
+}
+
+/**
+ * Check for well-known western cities
+ */
+function checkWesternCities(query: string): Location[] {
+  const results: Location[] = [];
+  
+  // First, check for exact matches
+  if (additionalWesternCities[query]) {
+    results.push(additionalWesternCities[query]);
+    return results;
+  }
+  
+  // Then, check for partial matches
+  for (const [key, city] of Object.entries(additionalWesternCities)) {
+    if (key.includes(query) || query.includes(key) || 
+        // Check for word matches in multi-word queries and city names
+        key.split(' ').some(word => query.includes(word)) || 
+        query.split(' ').some(word => key.includes(word))) {
+      results.push(city);
+    }
+  }
+  
+  return results;
 }
 
 /**
@@ -131,7 +210,11 @@ async function fetchAndProcessExternalResults(
     name: item.display_name,
     latitude: parseFloat(item.lat),
     longitude: parseFloat(item.lon),
-    placeDetails: item.type && item.class ? `${item.type} in ${item.class}` : undefined
+    placeDetails: item.type && item.class 
+      ? language === 'en' 
+        ? `${item.type} in ${item.class}` 
+        : `${item.class}中的${item.type}`
+      : undefined
   }));
   
   // Find the best matches for the query, considering the language

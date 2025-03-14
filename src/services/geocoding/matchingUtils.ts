@@ -1,6 +1,13 @@
-
 import { Location } from './types';
 import { chineseCityAlternatives } from './chineseCityData';  // Import from chineseCityData
+
+interface CityData {
+  name: string;
+  chinese: string;
+  alternatives: string[];
+  coordinates: [number, number];
+  placeDetails?: string;
+}
 
 // Chinese pinyin-specific matching
 // Map common pinyin syllables to possible variations when typing quickly
@@ -287,13 +294,7 @@ export function checkAlternativeSpellings(query: string): Location[] {
   
   // Special case handling for specific Chinese locations
   // Cast chineseCityAlternatives to the correct type to avoid TypeScript errors
-  const cityData = chineseCityAlternatives as Record<string, {
-    name: string;
-    chinese: string;
-    alternatives: string[];
-    coordinates: [number, number];
-    placeDetails?: string;
-  }>;
+  const cityData = chineseCityAlternatives as Record<string, CityData>;
   
   if (queryLower.includes('徐汇') || queryLower.includes('xu hui') || queryLower === 'xuhui') {
     const city = cityData['xuhui'];

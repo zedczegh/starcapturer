@@ -26,7 +26,7 @@ export interface LocationCacheService {
 export async function getLocationNameForCoordinates(
   lat: number, 
   lng: number, 
-  language: Language, // Changed type to Language
+  language: Language, 
   cacheService: LocationCacheService
 ): Promise<string> {
   try {
