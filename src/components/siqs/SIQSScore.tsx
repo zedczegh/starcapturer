@@ -1,8 +1,7 @@
-
 import React, { useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getRecommendationMessage } from "../SIQSSummary";
+import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -12,27 +11,8 @@ interface SIQSScoreProps {
   locationName?: string;
 }
 
-// Color caching for performance
-const scoreColorCache: Record<number, string> = {};
+// Score class cache
 const scoreClassCache: Record<number, string> = {};
-
-const getScoreColor = (score: number): string => {
-  // Round to nearest integer for caching
-  const roundedScore = Math.round(score);
-  
-  if (scoreColorCache[roundedScore] !== undefined) {
-    return scoreColorCache[roundedScore];
-  }
-  
-  let result = 'text-red-400';
-  if (score >= 80) result = 'text-green-400';
-  else if (score >= 60) result = 'text-green-300';
-  else if (score >= 40) result = 'text-yellow-300';
-  else if (score >= 20) result = 'text-orange-300';
-  
-  scoreColorCache[roundedScore] = result;
-  return result;
-};
 
 const getScoreClass = (score: number): string => {
   // Round to nearest integer for caching
@@ -64,7 +44,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   
   // Memoize calculations to prevent unnecessary re-renders
   const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
-    scoreColor: getScoreColor(siqsScore),
+    scoreColor: getScoreColorClass(siqsScore / 10),
     scoreClass: getScoreClass(siqsScore),
     recommendation: getRecommendationMessage(siqsScore / 10, language),
     scoreOn10Scale: siqsScore / 10

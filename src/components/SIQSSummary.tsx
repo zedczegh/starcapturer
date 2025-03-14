@@ -6,7 +6,7 @@ import SIQSSummaryScore, { getRecommendationMessage } from "./siqs/SIQSSummarySc
 import SIQSFactorsList from "./siqs/SIQSFactorsList";
 
 // Export this for other components to use
-export { getRecommendationMessage } from "./siqs/SIQSSummaryScore";
+export { getRecommendationMessage } from "./siqs/utils/scoreUtils";
 
 interface SIQSSummaryProps {
   siqsData: {
