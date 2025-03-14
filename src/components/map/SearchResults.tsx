@@ -33,6 +33,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     return (
       <div className="px-3 py-6 text-sm text-center text-muted-foreground border-t border-border/30">
         {t("No locations found", "未找到位置")}
+        <div className="mt-1 text-xs text-muted-foreground">
+          {t("Try a different spelling or location", "尝试不同的拼写或位置")}
+        </div>
       </div>
     );
   }

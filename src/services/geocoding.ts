@@ -15,7 +15,15 @@ const commonLocations: Location[] = [
   { name: "Lhasa", placeDetails: "Tibet, China", latitude: 29.6500, longitude: 91.1000 },
   { name: "Urumqi", placeDetails: "Xinjiang, China", latitude: 43.8256, longitude: 87.6168 },
   { name: "Harbin", placeDetails: "Heilongjiang, China", latitude: 45.8038, longitude: 126.5340 },
-  { name: "Nanning", placeDetails: "Guangxi, China", latitude: 22.8170, longitude: 108.3665 }
+  { name: "Nanning", placeDetails: "Guangxi, China", latitude: 22.8170, longitude: 108.3665 },
+  { name: "Guiyang", placeDetails: "Guizhou, China", latitude: 26.5833, longitude: 106.7167 },
+  { name: "Hohhot", placeDetails: "Inner Mongolia, China", latitude: 40.8424, longitude: 111.7496 },
+  { name: "Kunming", placeDetails: "Yunnan, China", latitude: 24.8801, longitude: 102.8329 },
+  { name: "Wuhan", placeDetails: "Hubei, China", latitude: 30.5928, longitude: 114.3055 },
+  { name: "Changsha", placeDetails: "Hunan, China", latitude: 28.2282, longitude: 112.9388 },
+  { name: "Nanjing", placeDetails: "Jiangsu, China", latitude: 32.0617, longitude: 118.7778 },
+  { name: "Hangzhou", placeDetails: "Zhejiang, China", latitude: 30.2741, longitude: 120.1551 },
+  { name: "Chongqing", placeDetails: "Chongqing, China", latitude: 29.4316, longitude: 106.9123 }
 ];
 
 // Additional international locations
@@ -37,8 +45,82 @@ const internationalLocations: Location[] = [
   { name: "香港", placeDetails: "香港特别行政区", latitude: 22.3193, longitude: 114.1694 },
   { name: "广州", placeDetails: "广东省, 中国", latitude: 23.1291, longitude: 113.2644 },
   { name: "深圳", placeDetails: "广东省, 中国", latitude: 22.5431, longitude: 114.0579 },
-  { name: "南宁", placeDetails: "广西壮族自治区, 中国", latitude: 22.8170, longitude: 108.3665 }
+  { name: "南宁", placeDetails: "广西壮族自治区, 中国", latitude: 22.8170, longitude: 108.3665 },
+  { name: "贵阳", placeDetails: "贵州省, 中国", latitude: 26.5833, longitude: 106.7167 },
+  { name: "呼和浩特", placeDetails: "内蒙古自治区, 中国", latitude: 40.8424, longitude: 111.7496 },
+  { name: "昆明", placeDetails: "云南省, 中国", latitude: 24.8801, longitude: 102.8329 },
+  { name: "武汉", placeDetails: "湖北省, 中国", latitude: 30.5928, longitude: 114.3055 },
+  { name: "长沙", placeDetails: "湖南省, 中国", latitude: 28.2282, longitude: 112.9388 },
+  { name: "南京", placeDetails: "江苏省, 中国", latitude: 32.0617, longitude: 118.7778 },
+  { name: "杭州", placeDetails: "浙江省, 中国", latitude: 30.2741, longitude: 120.1551 },
+  { name: "重庆", placeDetails: "重庆市, 中国", latitude: 29.4316, longitude: 106.9123 }
 ];
+
+// Additional Chinese cities with alternative spellings
+const chineseCityAlternatives: Record<string, { 
+  name: string, 
+  chinese: string, 
+  alternatives: string[], 
+  placeDetails: string,
+  coordinates: [number, number]
+}> = {
+  "nanning": {
+    name: "Nanning",
+    chinese: "南宁",
+    alternatives: ["naning", "nanling", "namning"],
+    placeDetails: "Guangxi, China",
+    coordinates: [22.8170, 108.3665]
+  },
+  "guiyang": {
+    name: "Guiyang",
+    chinese: "贵阳",
+    alternatives: ["guiyang", "kuiyang", "gwiyang"],
+    placeDetails: "Guizhou, China",
+    coordinates: [26.5833, 106.7167]
+  },
+  "hohhot": {
+    name: "Hohhot",
+    chinese: "呼和浩特",
+    alternatives: ["huhehaote", "huhehot", "huhehaot", "hohhot", "huhhot", "huhe"],
+    placeDetails: "Inner Mongolia, China",
+    coordinates: [40.8424, 111.7496]
+  },
+  "kunming": {
+    name: "Kunming",
+    chinese: "昆明",
+    alternatives: ["kumming", "cunming", "kunming"],
+    placeDetails: "Yunnan, China",
+    coordinates: [24.8801, 102.8329]
+  },
+  "beijing": {
+    name: "Beijing",
+    chinese: "北京",
+    alternatives: ["beiging", "peiking", "peking"],
+    placeDetails: "Beijing, China",
+    coordinates: [39.9042, 116.4074]
+  },
+  "shanghai": {
+    name: "Shanghai",
+    chinese: "上海",
+    alternatives: ["shangai", "shanghi"],
+    placeDetails: "Shanghai, China",
+    coordinates: [31.2304, 121.4737]
+  },
+  "chengdu": {
+    name: "Chengdu",
+    chinese: "成都",
+    alternatives: ["chengtu", "chendu"],
+    placeDetails: "Sichuan, China",
+    coordinates: [30.5728, 104.0668]
+  },
+  "chongqing": {
+    name: "Chongqing",
+    chinese: "重庆",
+    alternatives: ["chungking", "chongching", "chongqin"],
+    placeDetails: "Chongqing, China",
+    coordinates: [29.4316, 106.9123]
+  }
+};
 
 // Match score function to improve search relevance
 function getMatchScore(location: string, query: string): number {
@@ -105,6 +187,35 @@ function soundex(s: string): string {
   return (output + '000').slice(0, 4);
 }
 
+// Check for alternative spellings and transliterations of Chinese cities
+function checkAlternativeSpellings(query: string): Location[] {
+  const results: Location[] = [];
+  const queryLower = query.toLowerCase().trim();
+  
+  // Check each city's alternatives
+  for (const [key, city] of Object.entries(chineseCityAlternatives)) {
+    // Check if query matches any alternative spelling
+    const matchesAlternative = city.alternatives.some(alt => 
+      alt.includes(queryLower) || queryLower.includes(alt)
+    );
+    
+    // Also check if it's close to the city name or Chinese name
+    const matchesName = key.includes(queryLower) || queryLower.includes(key);
+    const matchesChinese = city.chinese.includes(queryLower) || queryLower.includes(city.chinese);
+    
+    if (matchesAlternative || matchesName || matchesChinese) {
+      results.push({ 
+        name: city.name, 
+        placeDetails: city.placeDetails, 
+        latitude: city.coordinates[0], 
+        longitude: city.coordinates[1] 
+      });
+    }
+  }
+  
+  return results;
+}
+
 /**
  * Search for locations based on a query string
  */
@@ -115,6 +226,15 @@ export async function searchLocations(query: string): Promise<Location[]> {
   
   const lowercaseQuery = query.toLowerCase().trim();
   const allResults: Array<Location & { score: number }> = [];
+  
+  // Check for alternative spellings and transliterations of Chinese cities
+  const alternativeMatches = checkAlternativeSpellings(lowercaseQuery);
+  alternativeMatches.forEach(match => {
+    allResults.push({
+      ...match,
+      score: 95 // Very high score for alternative spelling matches
+    });
+  });
   
   // First search our database of locations
   locationDatabase.forEach(location => {
@@ -158,7 +278,15 @@ export async function searchLocations(query: string): Promise<Location[]> {
       '香港': 'Hong Kong',
       '广州': 'Guangzhou',
       '深圳': 'Shenzhen',
-      '南宁': 'Nanning'
+      '南宁': 'Nanning',
+      '贵阳': 'Guiyang',
+      '呼和浩特': 'Hohhot',
+      '昆明': 'Kunming',
+      '武汉': 'Wuhan',
+      '长沙': 'Changsha',
+      '南京': 'Nanjing',
+      '杭州': 'Hangzhou',
+      '重庆': 'Chongqing'
     };
     
     const englishToChinese: Record<string, string> = {
@@ -167,7 +295,15 @@ export async function searchLocations(query: string): Promise<Location[]> {
       'hong kong': '香港',
       'guangzhou': '广州',
       'shenzhen': '深圳',
-      'nanning': '南宁'
+      'nanning': '南宁',
+      'guiyang': '贵阳',
+      'hohhot': '呼和浩特',
+      'kunming': '昆明',
+      'wuhan': '武汉',
+      'changsha': '长沙',
+      'nanjing': '南京',
+      'hangzhou': '杭州',
+      'chongqing': '重庆'
     };
     
     // Check if query is a Chinese name we know
