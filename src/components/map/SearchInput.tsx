@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, X } from "lucide-react";
@@ -12,6 +12,7 @@ interface SearchInputProps {
   clearSearch: () => void;
   className?: string;
   autoFocus?: boolean;
+  onFocus?: () => void;
 }
 
 const SearchInput: React.FC<SearchInputProps> = ({
@@ -20,21 +21,32 @@ const SearchInput: React.FC<SearchInputProps> = ({
   isLoading,
   clearSearch,
   className = "",
-  autoFocus = false
+  autoFocus = false,
+  onFocus
 }) => {
   const { t } = useLanguage();
+  const inputRef = useRef<HTMLInputElement>(null);
   
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
+
+  // Auto-focus the input when requested
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
   
   return (
     <div className={`relative ${className}`}>
       <Input 
+        ref={inputRef}
         type="text" 
         placeholder={t("Search for a location...", "搜索位置...")} 
         value={searchTerm} 
         onChange={handleSearchInputChange} 
+        onFocus={onFocus}
         className="w-full pr-10 hover-card transition-colors focus:placeholder-transparent rounded-lg bg-slate-800" 
         autoFocus={autoFocus}
       />

@@ -1,8 +1,9 @@
 import { Location, Language } from './types';
-import { findBestMatches, containsChineseCharacters } from './matchingUtils';
+import { findBestMatches, containsChineseCharacters } from './matching';
 import { findMatchingLocations } from './locationDatabase';
 import { checkAlternativeSpellings } from './chineseCityData';
 import { findSmallTownMatches } from './smallTownsDatabase';
+import { searchCache } from '../caching/searchCache';
 
 // Enhanced western cities database with improved search terms
 const westernCities: Record<string, Location> = {
@@ -68,7 +69,7 @@ const searchAliases: Record<string, string[]> = {
   'newcastle': ['new castle', 'newcastle upon tyne'],
   'california': ['ca', 'calif', 'cali'],
   'ca': ['california', 'calif', 'cali'],
-  'cali': ['california', 'ca', 'calif'],
+  'cali': ['california', 'ca', 'cali'],
   'calif': ['california', 'ca', 'cali'],
   'new york': ['ny', 'nyc'],
   'ny': ['new york', 'nyc'],
@@ -90,9 +91,17 @@ export async function searchLocations(
     return [];
   }
 
+  // Normalize query for comparison
+  const lowercaseQuery = query.toLowerCase().trim();
+  
+  // Try to get results from cache first
+  const cachedResults = searchCache.getCachedResults(lowercaseQuery, language);
+  if (cachedResults && cachedResults.length > 0) {
+    console.log('Using cached search results for:', lowercaseQuery);
+    return cachedResults;
+  }
+
   try {
-    // Normalize query for comparison
-    const lowercaseQuery = query.toLowerCase().trim();
     const hasChineseChars = containsChineseCharacters(lowercaseQuery);
     
     // Handle English language searches efficiently
@@ -105,8 +114,11 @@ export async function searchLocations(
         // If we have both a major city match and small town matches with the same name,
         // combine them with the major city first
         if (smallTownResults.length > 0) {
-          return [westernCities[lowercaseQuery], ...smallTownResults];
+          const results = [westernCities[lowercaseQuery], ...smallTownResults];
+          searchCache.cacheSearchResults(lowercaseQuery, language, results);
+          return results;
         }
+        searchCache.cacheSearchResults(lowercaseQuery, language, [westernCities[lowercaseQuery]]);
         return [westernCities[lowercaseQuery]];
       }
       
@@ -115,19 +127,24 @@ export async function searchLocations(
       if (aliasMatch) {
         // Combine with small town results if available
         if (smallTownResults.length > 0) {
-          return [westernCities[aliasMatch], ...smallTownResults];
+          const results = [westernCities[aliasMatch], ...smallTownResults];
+          searchCache.cacheSearchResults(lowercaseQuery, language, results);
+          return results;
         }
+        searchCache.cacheSearchResults(lowercaseQuery, language, [westernCities[aliasMatch]]);
         return [westernCities[aliasMatch]];
       }
       
       // If we have small town matches, return them now
       if (smallTownResults.length > 0) {
+        searchCache.cacheSearchResults(lowercaseQuery, language, smallTownResults);
         return smallTownResults;
       }
       
       // Check for partial matches with western cities database
       const westernMatches = findPartialMatches(lowercaseQuery);
       if (westernMatches.length > 0) {
+        searchCache.cacheSearchResults(lowercaseQuery, language, westernMatches);
         return westernMatches;
       }
     }
@@ -137,6 +154,7 @@ export async function searchLocations(
       // Check for Chinese location matches
       const chineseResults = await handleChineseSearch(lowercaseQuery, language);
       if (chineseResults.length > 0) {
+        searchCache.cacheSearchResults(lowercaseQuery, language, chineseResults);
         return chineseResults;
       }
     }
@@ -144,16 +162,21 @@ export async function searchLocations(
     // Handle special case searches
     const specialCaseResult = handleSpecialCases(lowercaseQuery, language);
     if (specialCaseResult.length > 0) {
+      searchCache.cacheSearchResults(lowercaseQuery, language, specialCaseResult);
       return specialCaseResult;
     }
     
     // Fall back to external API search
-    return await fetchAndProcessExternalResults(lowercaseQuery, language, hasChineseChars);
+    const externalResults = await fetchAndProcessExternalResults(lowercaseQuery, language, hasChineseChars);
+    searchCache.cacheSearchResults(lowercaseQuery, language, externalResults);
+    return externalResults;
   } catch (error) {
     console.error("Error searching for locations:", error);
     
     // Return a fallback from internal database
-    return findMatchingLocations(query, 5, language);
+    const fallbackResults = findMatchingLocations(query, 5, language);
+    searchCache.cacheSearchResults(lowercaseQuery, language, fallbackResults);
+    return fallbackResults;
   }
 }
 

@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import useDebounce from "@/hooks/useDebounce";
 import { searchLocations, Location } from "@/services/geocoding";
-import SearchResults from "./map/SearchResults";
+import { searchCache } from "@/services/caching/searchCache";
 import SearchInput from "./map/SearchInput";
+
+// Lazy load the search results component to improve initial loading speed
+const SearchResults = lazy(() => import("./map/SearchResults"));
+
+// Priority search terms that should trigger immediate search
+const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newcastle', 'new york', 'ny', 'denmark'];
 
 interface MapSelectorProps {
   onSelectLocation: (location: Location) => void;
   children?: React.ReactNode;
 }
-
-// Priority search terms for immediate results
-const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newcastle', 'new york', 'ny', 'denmark'];
 
 const MapSelector: React.FC<MapSelectorProps> = ({
   onSelectLocation,
@@ -25,24 +29,25 @@ const MapSelector: React.FC<MapSelectorProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const previousSearchCache = useRef<{[key: string]: Location[]}>({});
-
-  // Check if search term needs immediate results
-  const isPrioritySearchTerm = useCallback((term: string): boolean => {
-    const normalizedTerm = term.toLowerCase().trim();
-    return PRIORITY_SEARCH_TERMS.includes(normalizedTerm) || 
-           normalizedTerm.startsWith('califo') ||
-           normalizedTerm.startsWith('new ca');
+  
+  // Use memo to avoid recreating this function on every render
+  const isPrioritySearchTerm = useMemo(() => {
+    return (term: string): boolean => {
+      const normalizedTerm = term.toLowerCase().trim();
+      return PRIORITY_SEARCH_TERMS.includes(normalizedTerm) || 
+             normalizedTerm.startsWith('califo') ||
+             normalizedTerm.startsWith('new ca');
+    };
   }, []);
 
   // Effect for immediate search on priority terms
   useEffect(() => {
     if (searchTerm.length > 0) {
-      const cacheKey = `${searchTerm.toLowerCase()}-${language}`;
+      // Try cache first for fast response
+      const cachedResults = searchCache.getCachedResults(searchTerm.toLowerCase(), language);
       
-      // Use cache if available for faster response
-      if (previousSearchCache.current[cacheKey]) {
-        setSearchResults(previousSearchCache.current[cacheKey]);
+      if (cachedResults && cachedResults.length > 0) {
+        setSearchResults(cachedResults);
         setShowResults(true);
         return;
       }
@@ -75,9 +80,10 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     
     setIsLoading(true);
     
-    const cacheKey = `${query.toLowerCase()}-${language}`;
-    if (previousSearchCache.current[cacheKey]) {
-      setSearchResults(previousSearchCache.current[cacheKey]);
+    // Check cache first
+    const cachedResults = searchCache.getCachedResults(query.toLowerCase(), language);
+    if (cachedResults && cachedResults.length > 0) {
+      setSearchResults(cachedResults);
       setIsLoading(false);
       setShowResults(true);
       return;
@@ -85,16 +91,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     
     try {
       const results = await searchLocations(query, language);
-      
-      // Store in cache for future quick access
-      previousSearchCache.current[cacheKey] = results;
-      
-      // Keep cache size reasonable
-      const cacheKeys = Object.keys(previousSearchCache.current);
-      if (cacheKeys.length > 30) {
-        delete previousSearchCache.current[cacheKeys[0]];
-      }
-      
       setSearchResults(results);
       setShowResults(true);
     } catch (error) {
@@ -108,25 +104,25 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     }
   };
 
-  const handleSelectLocation = (location: Location) => {
+  const handleSelectLocation = useCallback((location: Location) => {
     onSelectLocation(location);
     setSearchTerm("");
     setSearchResults([]);
     setShowResults(false);
-  };
+  }, [onSelectLocation]);
 
-  const handleSearchInputChange = (value: string) => {
+  const handleSearchInputChange = useCallback((value: string) => {
     setSearchTerm(value);
     if (value.length > 0) {
       setShowResults(true);
     }
-  };
+  }, []);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchTerm("");
     setSearchResults([]);
     setShowResults(false);
-  };
+  }, []);
 
   // Handle clicks outside the search component
   useEffect(() => {
@@ -169,12 +165,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({
               />
             </div>
             
-            <SearchResults 
-              searchResults={searchResults} 
-              handleSelectLocation={handleSelectLocation} 
-              searchTerm={searchTerm} 
-              isLoading={isLoading} 
-            />
+            <Suspense fallback={<div className="p-6 text-center">Loading results...</div>}>
+              <SearchResults 
+                searchResults={searchResults} 
+                handleSelectLocation={handleSelectLocation} 
+                searchTerm={searchTerm} 
+                isLoading={isLoading} 
+              />
+            </Suspense>
           </div>
         )}
       </div>
@@ -188,16 +186,19 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         setSearchTerm={handleSearchInputChange}
         isLoading={isLoading}
         clearSearch={clearSearch}
+        onFocus={() => setShowResults(true)}
       />
 
       {showResults && (
         <div className="fixed md:absolute z-[9999] mt-1 w-[calc(100vw-2rem)] md:w-full left-4 md:left-0 rounded-md bg-background border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
-          <SearchResults 
-            searchResults={searchResults} 
-            handleSelectLocation={handleSelectLocation} 
-            searchTerm={searchTerm} 
-            isLoading={isLoading} 
-          />
+          <Suspense fallback={<div className="p-6 text-center">Loading results...</div>}>
+            <SearchResults 
+              searchResults={searchResults} 
+              handleSelectLocation={handleSelectLocation} 
+              searchTerm={searchTerm} 
+              isLoading={isLoading} 
+            />
+          </Suspense>
         </div>
       )}
     </div>
