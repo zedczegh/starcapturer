@@ -56,6 +56,58 @@ export const estimateBortleScale = (locationName: string): number => {
 };
 
 /**
+ * Get Bortle scale for a location based on coordinates and name
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @param locationName Optional location name for fallback estimation
+ * @param setCachedData Optional function to cache the results
+ * @returns Promise resolving to a Bortle scale value
+ */
+export const getBortleScaleForLocation = async (
+  latitude: number, 
+  longitude: number, 
+  locationName?: string,
+  setCachedData?: (key: string, data: any) => void
+): Promise<number> => {
+  try {
+    // First try to find the closest known city
+    const closestCity = findClosestCity(latitude, longitude);
+    
+    if (closestCity.distance < 50) {
+      // If we're close to a known city, use its Bortle scale
+      const bortleValue = closestCity.bortleScale;
+      
+      // Cache the result if caching function provided
+      if (setCachedData) {
+        setCachedData(`bortleScale-${latitude.toFixed(2)}-${longitude.toFixed(2)}`, bortleValue);
+      }
+      
+      return bortleValue;
+    } else {
+      // Otherwise use interpolation for more accurate estimate
+      const interpolatedScale = interpolateBortleScale(latitude, longitude);
+      
+      // Cache the result if caching function provided
+      if (setCachedData) {
+        setCachedData(`bortleScale-${latitude.toFixed(2)}-${longitude.toFixed(2)}`, interpolatedScale);
+      }
+      
+      return interpolatedScale;
+    }
+  } catch (err) {
+    console.error("Error determining Bortle scale:", err);
+    
+    // Fall back to location name estimation if available
+    if (locationName) {
+      return estimateBortleScale(locationName);
+    }
+    
+    // Default fallback
+    return 5;
+  }
+};
+
+/**
  * Hook to get the Bortle scale for a location
  */
 export const useBortleScale = (latitude?: number, longitude?: number) => {
