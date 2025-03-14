@@ -19,6 +19,69 @@ export interface LocationCacheService {
 }
 
 /**
+ * Format location name according to language-specific patterns
+ * @param address The address object returned from API
+ * @param language Current language 
+ */
+function formatLocationAddress(address: any, language: Language): string {
+  if (!address) return "";
+  
+  // For English: town, county, state, country, zip code
+  // For Chinese: 区，市，省，国家，邮编
+  let formattedParts = [];
+  
+  if (language === 'en') {
+    // English format
+    if (address.village || address.town || address.hamlet || address.suburb) {
+      formattedParts.push(address.village || address.town || address.hamlet || address.suburb);
+    }
+    if (address.city) {
+      formattedParts.push(address.city);
+    }
+    if (address.county) {
+      formattedParts.push(address.county);
+    }
+    if (address.state) {
+      formattedParts.push(address.state);
+    }
+    if (address.country) {
+      formattedParts.push(address.country);
+    }
+    if (address.postcode) {
+      formattedParts.push(address.postcode);
+    }
+  } else {
+    // Chinese format
+    if (address.suburb || address.village || address.hamlet) {
+      formattedParts.push(address.suburb || address.village || address.hamlet);
+    }
+    if (address.town) {
+      formattedParts.push(address.town);
+    }
+    if (address.city) {
+      formattedParts.push(address.city);
+    }
+    if (address.county) {
+      formattedParts.push(address.county);
+    }
+    if (address.state) {
+      formattedParts.push(address.state);
+    }
+    if (address.country) {
+      formattedParts.push(address.country);
+    }
+    if (address.postcode) {
+      formattedParts.push(address.postcode);
+    }
+  }
+  
+  // Remove duplicates while preserving order
+  const uniqueParts = [...new Set(formattedParts)];
+  
+  return uniqueParts.join(language === 'en' ? ', ' : '，');
+}
+
+/**
  * Get a proper location name from coordinates using multiple sources
  * @param lat Latitude
  * @param lng Longitude
@@ -55,29 +118,74 @@ export async function getLocationNameForCoordinates(
     
     // Try external API for reverse geocoding first
     try {
-      const locationName = await fetchLocationNameFromAPI(lat, lng, language);
-      if (locationName && !locationName.includes("°")) {
-        // Try to get the name in the other language too
-        const otherLanguage = language === 'en' ? 'zh' : 'en';
-        const otherLanguageName = await fetchLocationNameFromAPI(lat, lng, otherLanguage).catch(() => null);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${language}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
         
-        // Cache both language versions
-        const cacheData: CachedLocationData = {
-          name: locationName,
-          formattedName: locationName,
-          timestamp: Date.now()
-        };
+        // Format the address based on our desired pattern
+        let locationName = "";
         
-        if (language === 'en') {
-          cacheData.nameInEnglish = locationName;
-          if (otherLanguageName) cacheData.nameInChinese = otherLanguageName;
-        } else {
-          cacheData.nameInChinese = locationName;
-          if (otherLanguageName) cacheData.nameInEnglish = otherLanguageName;
+        if (data.address) {
+          locationName = formatLocationAddress(data.address, language);
         }
         
-        cacheService.setCachedData(cacheKey, cacheData);
-        return locationName;
+        // If formatting didn't work or no structured address, fall back to display_name
+        if (!locationName && data.display_name) {
+          const parts = data.display_name.split(',');
+          locationName = parts.slice(0, Math.min(4, parts.length)).join(language === 'en' ? ', ' : '，');
+        }
+        
+        // Last fallback to name field
+        if (!locationName && data.name) {
+          locationName = data.name;
+        }
+        
+        if (locationName && !locationName.includes("°")) {
+          // Try to get the name in the other language too
+          const otherLanguage = language === 'en' ? 'zh' : 'en';
+          let otherLanguageName = null;
+          
+          try {
+            const otherResponse = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${otherLanguage}`
+            );
+            
+            if (otherResponse.ok) {
+              const otherData = await otherResponse.json();
+              if (otherData.address) {
+                otherLanguageName = formatLocationAddress(otherData.address, otherLanguage);
+              }
+              
+              if (!otherLanguageName && otherData.display_name) {
+                const parts = otherData.display_name.split(',');
+                otherLanguageName = parts.slice(0, Math.min(4, parts.length)).join(otherLanguage === 'en' ? ', ' : '，');
+              }
+            }
+          } catch (error) {
+            console.error("Error getting other language name:", error);
+          }
+          
+          // Cache both language versions
+          const cacheData: CachedLocationData = {
+            name: locationName,
+            formattedName: locationName,
+            timestamp: Date.now()
+          };
+          
+          if (language === 'en') {
+            cacheData.nameInEnglish = locationName;
+            if (otherLanguageName) cacheData.nameInChinese = otherLanguageName;
+          } else {
+            cacheData.nameInChinese = locationName;
+            if (otherLanguageName) cacheData.nameInEnglish = otherLanguageName;
+          }
+          
+          cacheService.setCachedData(cacheKey, cacheData);
+          return locationName;
+        }
       }
     } catch (apiError) {
       console.error("Error getting location name from API:", apiError);

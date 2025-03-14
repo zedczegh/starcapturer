@@ -3,6 +3,68 @@ import { normalizeLongitude } from './coordinates';
 import { Language } from '@/services/geocoding/types';
 
 /**
+ * Format location address based on language-specific patterns
+ * @param address Address object from geocoding service
+ * @param language Preferred language
+ * @returns Formatted address string
+ */
+function formatAddress(address: any, language: Language): string {
+  if (!address) return "";
+  
+  const parts = [];
+  
+  if (language === 'en') {
+    // English format: town, county, state, country, zip code
+    if (address.village || address.town || address.hamlet || address.suburb) {
+      parts.push(address.village || address.town || address.hamlet || address.suburb);
+    }
+    if (address.city) {
+      parts.push(address.city);
+    }
+    if (address.county) {
+      parts.push(address.county);
+    }
+    if (address.state) {
+      parts.push(address.state);
+    }
+    if (address.country) {
+      parts.push(address.country);
+    }
+    if (address.postcode) {
+      parts.push(address.postcode);
+    }
+  } else {
+    // Chinese format: 区，市，省，国家，邮编
+    if (address.suburb || address.village || address.hamlet) {
+      parts.push(address.suburb || address.village || address.hamlet);
+    }
+    if (address.town) {
+      parts.push(address.town);
+    }
+    if (address.city) {
+      parts.push(address.city);
+    }
+    if (address.county) {
+      parts.push(address.county);
+    }
+    if (address.state) {
+      parts.push(address.state);
+    }
+    if (address.country) {
+      parts.push(address.country);
+    }
+    if (address.postcode) {
+      parts.push(address.postcode);
+    }
+  }
+  
+  // Remove duplicates while preserving order
+  const uniqueParts = [...new Set(parts)];
+  
+  return uniqueParts.join(language === 'en' ? ', ' : '，');
+}
+
+/**
  * Enhanced function to get location name from coordinates
  * Now with better name resolution for places beyond Beijing and Hong Kong
  */
@@ -27,12 +89,23 @@ export async function getLocationNameFromCoordinates(
       
       if (response.ok) {
         const data = await response.json();
+        
+        // Format address in the structured pattern
+        if (data.address) {
+          const formattedAddress = formatAddress(data.address, language);
+          if (formattedAddress) {
+            return formattedAddress;
+          }
+        }
+        
+        // Fallbacks if structured formatting didn't work
         if (data.display_name) {
-          // Extract the most relevant part (city or region)
           const parts = data.display_name.split(',');
-          const cityOrRegion = parts.length > 1 ? parts[0].trim() : data.display_name;
-          
-          return cityOrRegion;
+          return parts.slice(0, Math.min(4, parts.length)).join(language === 'en' ? ', ' : '，');
+        }
+        
+        if (data.name) {
+          return data.name;
         }
       }
     } catch (error) {
