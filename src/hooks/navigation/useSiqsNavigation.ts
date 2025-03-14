@@ -1,7 +1,6 @@
 
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
 
 export const useSiqsNavigation = (
   locationId: string | null,
@@ -16,11 +15,18 @@ export const useSiqsNavigation = (
     
     setIsLoading(true);
     
-    // Ensure we have valid Beijing data with the correct name
+    // Create a clean copy of the Beijing data with explicit properties
     const beijingLocation = {
-      ...beijingData,
-      name: "北京", // Explicitly set the name to ensure it's correct
-      id: `beijing-${Date.now()}`
+      id: `beijing-${Date.now()}`,
+      name: "北京", // Ensure the name is explicitly "北京"
+      latitude: beijingData?.latitude || 39.9042,
+      longitude: beijingData?.longitude || 116.4074,
+      bortleScale: beijingData?.bortleScale || 8,
+      seeingConditions: beijingData?.seeingConditions || 3,
+      // Copy other properties if they exist
+      weatherData: beijingData?.weatherData || null,
+      moonPhase: beijingData?.moonPhase || 0.5,
+      timestamp: new Date().toISOString()
     };
     
     // Navigate to home with Beijing data

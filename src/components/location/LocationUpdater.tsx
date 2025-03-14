@@ -1,10 +1,9 @@
 
-import React, { memo } from "react";
+import React, { memo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/location/LocationMap";
-import LocationControls from "@/components/location/LocationControls";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -33,6 +32,17 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const fallbackLongitude = 0;
   const fallbackName = t("Unnamed Location", "未命名位置");
 
+  // Memoized location update handler
+  const handleLocationUpdate = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
+    console.log('Location update received:', location);
+    try {
+      await onLocationUpdate(location);
+    } catch (error) {
+      console.error('Error updating location:', error);
+      setStatusMessage(t('Failed to update location', '更新位置失败'));
+    }
+  }, [onLocationUpdate, setStatusMessage, t]);
+
   return (
     <Card className="shadow-xl overflow-hidden bg-cosmic-900/80 border-cosmic-600/20 hover:shadow-2xl transition-all duration-300">
       <CardHeader className="pb-2 bg-cosmic-800/50 border-b border-cosmic-600/10">
@@ -46,15 +56,9 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
           latitude={hasValidCoordinates ? locationData.latitude : fallbackLatitude}
           longitude={hasValidCoordinates ? locationData.longitude : fallbackLongitude}
           name={hasValidCoordinates && locationData.name ? locationData.name : fallbackName}
-          onLocationUpdate={onLocationUpdate}
+          onLocationUpdate={handleLocationUpdate}
           editable={true}
           showInfoPanel={false}
-        />
-        <LocationControls
-          onLocationUpdate={onLocationUpdate}
-          gettingUserLocation={gettingUserLocation}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
         />
       </CardContent>
     </Card>

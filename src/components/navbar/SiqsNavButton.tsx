@@ -1,5 +1,5 @@
 
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
@@ -19,6 +19,11 @@ const SiqsNavButton: React.FC<SiqsNavButtonProps> = ({
 }) => {
   const { t } = useLanguage();
   const { handleSIQSClick } = useSiqsNavigation(locationId, beijingData, isLoading, setIsLoading);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('SiqsNavButton beijingData:', beijingData);
+  }, [beijingData]);
 
   return (
     <Button

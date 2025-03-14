@@ -54,9 +54,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           scrollWheelZoom={true}
           whenReady={handleMapReady}
           attributionControl={false}
-          // Add performance optimizations
-          preferCanvas={true}
-          renderer={L.canvas()}
+          // Remove preferCanvas and renderer props that caused the error
         >
           <TileLayer
             url={tileServerUrl}
