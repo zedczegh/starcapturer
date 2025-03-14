@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MapMarker from "./MapMarker";
 import { Location } from "../MapSelector";
@@ -12,7 +12,8 @@ interface SearchResultsProps {
   isLoading: boolean;
 }
 
-const SearchResults: React.FC<SearchResultsProps> = ({
+// Using memo to prevent unnecessary re-renders
+const SearchResults: React.FC<SearchResultsProps> = memo(({
   searchResults,
   handleSelectLocation,
   searchTerm,
@@ -20,7 +21,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   const { t, language } = useLanguage();
 
-  if (isLoading) {
+  if (isLoading && searchResults.length === 0) {
     return (
       <div className="px-3 py-6 text-sm flex items-center justify-center">
         <Loader2 className="h-5 w-5 mr-2 animate-spin text-primary" />
@@ -95,6 +96,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       ))}
     </ul>
   );
-};
+});
+
+SearchResults.displayName = "SearchResults";
 
 export default SearchResults;

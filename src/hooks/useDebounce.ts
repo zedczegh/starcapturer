@@ -13,11 +13,12 @@ function useDebounce<T>(value: T, delay: number = 500): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
-    // For very short inputs (1-2 characters), use a shorter delay
+    // For very short inputs (1-3 characters), use a shorter delay
     // to make the search feel more responsive
     const adjustedDelay = typeof value === 'string' && 
-                          (value as string).length <= 2 ? 
-                          Math.min(delay, 50) : delay;
+                          (value as string).length <= 3 ? 
+                          Math.min(delay, 25) : // Further reduced from 50ms to 25ms
+                          Math.min(delay, 100); // Reduced general delay to 100ms max
     
     // Update the debounced value after the specified delay
     const timer = setTimeout(() => {

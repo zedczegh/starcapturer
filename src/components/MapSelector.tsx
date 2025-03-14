@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,30 +26,62 @@ const MapSelector: React.FC<MapSelectorProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 100); // Further reduced debounce time
+  const debouncedSearchTerm = useDebounce(searchTerm, 50);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousSearchCache = useRef<{[key: string]: Location[]}>({});
+
+  useEffect(() => {
+    if (searchTerm.length > 0) {
+      const cacheKey = `${searchTerm.toLowerCase()}-${language}`;
+      if (previousSearchCache.current[cacheKey]) {
+        setSearchResults(previousSearchCache.current[cacheKey]);
+        setShowResults(true);
+        return;
+      }
+      
+      setIsLoading(true);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchTerm, language]);
 
   useEffect(() => {
     if (debouncedSearchTerm.length > 0) {
       handleSearch(debouncedSearchTerm);
     } else if (debouncedSearchTerm.length === 0) {
       setSearchResults([]);
+      setIsLoading(false);
     }
-  }, [debouncedSearchTerm, language]); // Added language as dependency
+  }, [debouncedSearchTerm, language]);
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
+      setIsLoading(false);
       return;
     }
     
-    setIsLoading(true);
+    const cacheKey = `${query.toLowerCase()}-${language}`;
+    if (previousSearchCache.current[cacheKey]) {
+      setSearchResults(previousSearchCache.current[cacheKey]);
+      setIsLoading(false);
+      setShowResults(true);
+      return;
+    }
+    
     try {
-      // Pass language parameter to improve search relevance
       const results = await searchLocations(query, language);
+      
+      previousSearchCache.current[cacheKey] = results;
+      
+      const cacheKeys = Object.keys(previousSearchCache.current);
+      if (cacheKeys.length > 50) {
+        delete previousSearchCache.current[cacheKeys[0]];
+      }
+      
       setSearchResults(results);
       setShowResults(true);
     } catch (error) {
@@ -98,7 +129,16 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     };
   }, []);
 
-  // Force refresh search results when language changes
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      const timerId = setTimeout(() => {
+        handleSearch(searchTerm);
+      }, 25);
+      
+      return () => clearTimeout(timerId);
+    }
+  }, [searchTerm]);
+
   useEffect(() => {
     if (searchTerm.length > 0) {
       handleSearch(searchTerm);
