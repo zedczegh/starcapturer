@@ -16,6 +16,12 @@ interface LocationControlsProps {
   setStatusMessage: (message: string | null) => void;
 }
 
+interface CachedLocationData {
+  name?: string;
+  formattedName?: string;
+  bortleScale?: number;
+}
+
 const LocationControls: React.FC<LocationControlsProps> = ({
   onLocationUpdate,
   gettingUserLocation,
@@ -57,7 +63,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   const getProperLocationName = async (latitude: number, longitude: number): Promise<string> => {
     try {
       const cacheKey = `loc-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = getCachedData(cacheKey) as CachedLocationData | null;
       
       if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
         return cachedData.name;

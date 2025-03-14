@@ -59,16 +59,17 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
       const cachedData = getCachedData(cacheKey, 24 * 60 * 60 * 1000); // 24 hour cache
       
       if (cachedData) {
-        setLocationName(cachedData.name || "");
-        setFormattedLocationName(cachedData.formattedName || cachedData.name || "");
-        setBortleScale(cachedData.bortleScale || 4);
+        const data = cachedData as { name?: string; formattedName?: string; bortleScale?: number };
+        setLocationName(data.name || "");
+        setFormattedLocationName(data.formattedName || data.name || "");
+        setBortleScale(data.bortleScale || 4);
         
         // Only show status message if we have a name
-        if (cachedData.name) {
+        if (data.name) {
           setStatusMessage(
             language === 'en' 
-              ? `Location found: ${cachedData.formattedName || cachedData.name}` 
-              : `位置已找到：${cachedData.formattedName || cachedData.name}`
+              ? `Location found: ${data.formattedName || data.name}` 
+              : `位置已找到：${data.formattedName || data.name}`
           );
         }
         return;

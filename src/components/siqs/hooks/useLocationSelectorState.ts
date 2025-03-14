@@ -3,6 +3,12 @@ import { useState, useCallback } from "react";
 import { fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScale } from "@/hooks/useLocationData";
 
+interface CachedLocationData {
+  name?: string;
+  formattedName?: string;
+  bortleScale?: number;
+}
+
 interface UseLocationSelectorStateProps {
   language: string;
   noAutoLocationRequest: boolean;
@@ -10,8 +16,8 @@ interface UseLocationSelectorStateProps {
   setBortleScale: (scale: number) => void;
   setStatusMessage: (message: string | null) => void;
   setShowAdvancedSettings: (show: boolean) => void;
-  getCachedData: any;
-  setCachedData: any;
+  getCachedData: (key: string, maxAge?: number) => CachedLocationData | null;
+  setCachedData: (key: string, data: CachedLocationData) => void;
 }
 
 export const useLocationSelectorState = ({
