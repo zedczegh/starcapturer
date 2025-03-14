@@ -4,10 +4,17 @@ import { containsChineseCharacters } from './pinyinUtils';
 
 /**
  * Enhanced match score function with improved Chinese characters support
+ * and prioritization of known locations in our database
  */
 export function getMatchScore(location: string, query: string, language: string = 'en'): number {
   const locationLower = location.toLowerCase();
   const queryLower = query.toLowerCase().trim();
+  
+  // Special case for Beijing to ensure consistent results
+  if ((queryLower === 'beijing' || queryLower === '北京') && 
+      (locationLower === 'beijing' || locationLower === '北京')) {
+    return 105; // Extra high score to ensure it's always prioritized
+  }
   
   // Detect if query contains Chinese characters
   const hasChineseQuery = containsChineseCharacters(queryLower);

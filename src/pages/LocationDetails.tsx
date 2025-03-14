@@ -30,6 +30,22 @@ const LocationDetails = () => {
     navigate 
   });
 
+  // Handle back navigation to ensure clean return to home page
+  useEffect(() => {
+    const handleBackNavigation = (e: PopStateEvent) => {
+      // If user clicks back button, navigate directly to home
+      if (!e.state || !e.state.usr) {
+        navigate("/", { replace: true });
+      }
+    };
+
+    window.addEventListener('popstate', handleBackNavigation);
+    
+    return () => {
+      window.removeEventListener('popstate', handleBackNavigation);
+    };
+  }, [navigate]);
+
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
     locationData,
