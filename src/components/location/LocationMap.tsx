@@ -4,8 +4,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import MapDisplay from "./MapDisplay";
 import { useLocationDataCache } from "@/hooks/useLocationData";
-import { getLocationNameFromCoordinates } from "@/services/geocoding";
-import { findClosestKnownLocation } from "@/utils/locationUtils";
+import { 
+  getLocationNameForCoordinates, 
+  normalizeLongitude,
+  type LocationCacheService
+} from "./map/LocationNameService";
 
 interface LocationMapProps {
   latitude: number;
@@ -14,13 +17,6 @@ interface LocationMapProps {
   onLocationUpdate?: (location: { name: string; latitude: number; longitude: number }) => void;
   editable?: boolean;
   showInfoPanel?: boolean;
-}
-
-// Define CachedLocationData interface for type safety
-interface CachedLocationData {
-  name?: string;
-  formattedName?: string;
-  bortleScale?: number;
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ 
@@ -39,7 +35,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  
+  // Create cache service
   const { setCachedData, getCachedData } = useLocationDataCache();
+  const cacheService: LocationCacheService = {
+    setCachedData: (key, data) => setCachedData(key, data),
+    getCachedData: (key) => getCachedData(key)
+  };
 
   // Handle potential invalid coordinates with safer defaults
   const validLatitude = isFinite(latitude) ? latitude : 0;
@@ -54,84 +56,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
     }
   }, [validLatitude, validLongitude, position]);
 
-  // Function to normalize longitude to -180 to 180 range
-  const normalizeLongitude = useCallback((lng: number): number => {
-    return ((lng + 180) % 360 + 360) % 360 - 180;
-  }, []);
-
-  // Enhanced function to get a proper location name with administrative hierarchy
-  const getLocationNameForCoordinates = useCallback(async (lat: number, lng: number): Promise<string> => {
-    setLocationLoading(true);
-    try {
-      // Check cache first
-      const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
-      const cachedData = getCachedData(cacheKey) as CachedLocationData | null;
-      
-      if (cachedData && typeof cachedData === 'object' && cachedData.name && !cachedData.name.includes("°")) {
-        setLocationLoading(false);
-        return cachedData.name;
-      }
-      
-      // Try external API for reverse geocoding first
-      try {
-        const locationName = await getLocationNameFromCoordinates(lat, lng, language);
-        if (locationName && !locationName.includes("°")) {
-          // Cache this data
-          setCachedData(cacheKey, {
-            name: locationName,
-            formattedName: locationName
-          });
-          
-          setLocationLoading(false);
-          return locationName;
-        }
-      } catch (apiError) {
-        console.error("Error getting location name from API:", apiError);
-      }
-      
-      // Try from database as fallback
-      const closestLocation = findClosestKnownLocation(lat, lng);
-      
-      // Use closest known location
-      if (closestLocation.distance <= 20) {
-        const locationName = closestLocation.name;
-        setCachedData(cacheKey, {
-          name: locationName,
-          bortleScale: closestLocation.bortleScale
-        });
-        setLocationLoading(false);
-        return locationName;
-      }
-      
-      if (closestLocation.distance <= 100) {
-        const distanceText = language === 'en' ? 
-          `Near ${closestLocation.name}` : 
-          `${closestLocation.name}附近`;
-        setCachedData(cacheKey, {
-          name: distanceText,
-          bortleScale: closestLocation.bortleScale
-        });
-        setLocationLoading(false);
-        return distanceText;
-      }
-      
-      // Last resort
-      const formattedName = t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
-                            `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
-      setCachedData(cacheKey, {
-        name: formattedName,
-        bortleScale: 4
-      });
-      setLocationLoading(false);
-      return formattedName;
-    } catch (error) {
-      console.error("Error getting location name for coordinates:", error);
-      setLocationLoading(false);
-      return t(`Location at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`, 
-              `位置在 ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`);
-    }
-  }, [language, t, getCachedData, setCachedData]);
-
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
   }, []);
@@ -145,14 +69,16 @@ const LocationMap: React.FC<LocationMapProps> = ({
     
     setPosition([validLat, validLng]);
     
-    const locationName = await getLocationNameForCoordinates(validLat, validLng);
+    setLocationLoading(true);
+    const locationName = await getLocationNameForCoordinates(validLat, validLng, language, cacheService);
+    setLocationLoading(false);
     
     onLocationUpdate({
       name: locationName,
       latitude: validLat,
       longitude: validLng
     });
-  }, [editable, onLocationUpdate, normalizeLongitude, getLocationNameForCoordinates]);
+  }, [editable, onLocationUpdate, language, cacheService]);
 
   // Handle map initialization error
   useEffect(() => {
