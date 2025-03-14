@@ -48,7 +48,8 @@ export async function shareAstroSpot(spotData: Omit<SharedAstroSpot, 'id' | 'dat
 }
 
 /**
- * Gets nearby shared astronomy spots
+ * Gets real locations within the search radius around the given coordinates
+ * These are sampling points across various geographic locations
  */
 export async function getSharedAstroSpots(
   latitude: number,
@@ -57,169 +58,78 @@ export async function getSharedAstroSpots(
   radius = 100  // km
 ): Promise<SharedAstroSpot[]> {
   try {
-    // Mock implementation until we have a real backend
-    const mockSpots: SharedAstroSpot[] = [
-      {
-        id: '1',
-        name: 'Dark Sky Reserve',
-        latitude: latitude + 0.1,
-        longitude: longitude + 0.1,
-        description: 'Excellent dark sky site with minimal light pollution. Great for deep sky objects.',
-        bortleScale: 2,
-        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'AstroEnthusiast',
-        likes: 42,
-        siqs: 8.7,
-        photoUrl: 'https://images.unsplash.com/photo-1533814105051-a3b23d6bf538?q=80&w=1000',
-        photographer: 'StarHunter',
-        isViable: true
-      },
-      {
-        id: '2',
-        name: 'Mountain Lookout',
-        latitude: latitude - 0.15,
-        longitude: longitude - 0.05,
-        description: 'High elevation site with clear horizons. Perfect for planets and lunar observation.',
-        bortleScale: 3,
-        date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'StarGazer',
-        likes: 28,
-        siqs: 7.5,
-        photoUrl: 'https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?q=80&w=1000',
-        photographer: 'GalaxyGlimpser',
-        isViable: true
-      },
-      {
-        id: '3',
-        name: 'Coastal Viewing Point',
-        latitude: latitude + 0.2,
-        longitude: longitude - 0.2,
-        description: 'Open view of the western horizon over the water. Good for sunset and early evening viewing.',
-        bortleScale: 4,
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'MilkyWayHunter',
-        likes: 15,
-        siqs: 6.3,
-        photoUrl: 'https://images.unsplash.com/photo-1518406432532-9cbef5697723?q=80&w=1000',
-        photographer: 'NightSkyWatcher',
-        isViable: true
-      },
-      {
-        id: '4',
-        name: 'Desert Observatory',
-        latitude: latitude - 0.3,
-        longitude: longitude + 0.3,
-        description: 'Remote desert location with exceptional atmospheric stability. Ideal for planetary imaging.',
-        bortleScale: 2,
-        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'CosmicExplorer',
-        likes: 36,
-        siqs: 9.1,
-        photoUrl: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1000',
-        photographer: 'AstroVoyager',
-        isViable: true
-      },
-      {
-        id: '5',
-        name: 'National Park Clearing',
-        latitude: latitude + 0.45,
-        longitude: longitude - 0.35,
-        description: 'Protected dark sky area inside national park. No artificial lights for miles around.',
-        bortleScale: 1,
-        date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'DarkSkyHunter',
-        likes: 50,
-        siqs: 9.5,
-        photoUrl: 'https://images.unsplash.com/photo-1516331138075-f3adc1e149cd?q=80&w=1000',
-        photographer: 'CosmicCaptures',
-        isViable: true
-      },
-      {
-        id: '6',
-        name: 'Lake Shore Site',
-        latitude: latitude - 0.5,
-        longitude: longitude - 0.5,
-        description: 'Peaceful lakeside viewing area with low light pollution and good southern horizon.',
-        bortleScale: 3,
-        date: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'AstronomyAddict',
-        likes: 22,
-        siqs: 7.8,
-        photoUrl: 'https://images.unsplash.com/photo-1542012514-dcf83de10c1b?q=80&w=1000',
-        photographer: 'StellarScenes',
-        isViable: true
-      },
-      {
-        id: '7',
-        name: 'Highland Observation Spot',
-        latitude: latitude + 0.65,
-        longitude: longitude + 0.4,
-        description: 'High altitude location with excellent seeing conditions and minimal atmospheric disturbance.',
-        bortleScale: 2,
-        date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'GalacticViewer',
-        likes: 33,
-        siqs: 8.9,
-        photoUrl: 'https://images.unsplash.com/photo-1543345780-0b14511518b1?q=80&w=1000',
-        photographer: 'AstroVista',
-        isViable: true
-      },
-      {
-        id: '8',
-        name: 'Countryside Observatory',
-        latitude: latitude - 0.75,
-        longitude: longitude + 0.6,
-        description: 'Rural location with friendly local astronomy club and regular star parties.',
-        bortleScale: 3,
-        date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'StarTracker',
-        likes: 27,
-        siqs: 7.2,
-        photoUrl: 'https://images.unsplash.com/photo-1543722530-d2c3201371e7?q=80&w=1000',
-        photographer: 'NightTimeImager',
-        isViable: true
-      },
-      {
-        id: '9',
-        name: 'Forest Clearing',
-        latitude: latitude + 0.85,
-        longitude: longitude - 0.7,
-        description: 'Natural clearing in dense forest, protected from city lights and great for nightscape photography.',
-        bortleScale: 2,
-        date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'NebulaNomad',
-        likes: 31,
-        siqs: 8.3,
-        photoUrl: 'https://images.unsplash.com/photo-1456428199391-a3b1cb5e93ab?q=80&w=1000',
-        photographer: 'DeepSkyDreamer',
-        isViable: true
-      },
-      {
-        id: '10',
-        name: 'Mountain Peak',
-        latitude: latitude - 0.9,
-        longitude: longitude - 0.9,
-        description: 'The highest accessible point in the region with 360-degree views and crystal clear skies.',
-        bortleScale: 1,
-        date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        username: 'SkyObserver',
-        likes: 48,
-        siqs: 9.7,
-        photoUrl: 'https://images.unsplash.com/photo-1493514789931-586cb221d7a7?q=80&w=1000',
-        photographer: 'AstralExplorer',
-        isViable: true
-      }
+    // Real sampling points distributed across different geographical regions
+    // Based on known good viewing locations for astronomy
+    const realLocations = [
+      // Dark sky preserves and astronomy spots in various regions
+      { name: "Zhangbei Grassland Observatory", latitude: 41.1582, longitude: 114.7022, bortleScale: 3 },
+      { name: "Wudalianchi Dark Sky Park", latitude: 48.7205, longitude: 126.1987, bortleScale: 2 },
+      { name: "Nagchu Highland", latitude: 31.4769, longitude: 92.0510, bortleScale: 1 },
+      { name: "Arxan Dark Sky", latitude: 47.1893, longitude: 120.4103, bortleScale: 2 },
+      { name: "Qilian Mountains", latitude: 38.1917, longitude: 99.7953, bortleScale: 2 },
+      { name: "Kanas Lake Viewpoint", latitude: 48.7303, longitude: 87.0244, bortleScale: 1 },
+      { name: "Changbai Mountain", latitude: 41.9806, longitude: 128.0854, bortleScale: 3 },
+      { name: "Dunhuang Desert", latitude: 40.1425, longitude: 94.6617, bortleScale: 1 },
+      { name: "Ngari Observatory", latitude: 32.3157, longitude: 80.0701, bortleScale: 1 },
+      { name: "Qinghai Lake Viewing Point", latitude: 36.8257, longitude: 100.1893, bortleScale: 2 },
+      { name: "Lugu Lake Hills", latitude: 27.7048, longitude: 100.7985, bortleScale: 3 },
+      { name: "Jade Dragon Mountain", latitude: 27.1014, longitude: 100.1772, bortleScale: 2 },
+      { name: "Xishuangbanna Tropical Sky", latitude: 22.0112, longitude: 100.7927, bortleScale: 3 },
+      { name: "Altay Mountains", latitude: 47.8456, longitude: 88.1427, bortleScale: 1 },
+      { name: "Namtso Lake", latitude: 30.7081, longitude: 90.5516, bortleScale: 1 },
+      // Add low to mid-elevation locations
+      { name: "Wuyuan Rural Viewpoint", latitude: 29.2483, longitude: 117.8614, bortleScale: 4 },
+      { name: "Lushan Mountain", latitude: 29.5657, longitude: 115.9875, bortleScale: 3 },
+      { name: "Xinglong Observatory", latitude: 40.3958, longitude: 117.5777, bortleScale: 3 },
+      { name: "Mount Emei", latitude: 29.5249, longitude: 103.3323, bortleScale: 3 },
+      { name: "Zhangjiajie Heights", latitude: 29.1324, longitude: 110.4793, bortleScale: 3 },
+      { name: "Yellow Mountain", latitude: 30.1314, longitude: 118.1631, bortleScale: 3 },
+      { name: "Daocheng Yading", latitude: 29.0254, longitude: 100.3035, bortleScale: 2 },
+      { name: "Mount Tai", latitude: 36.2610, longitude: 117.1097, bortleScale: 4 },
+      // Additional locations with varying bortle scales
+      { name: "Taihu Lake Observatory", latitude: 31.1897, longitude: 120.1390, bortleScale: 5 },
+      { name: "Hainan Tropical Island", latitude: 19.2097, longitude: 109.7540, bortleScale: 4 },
+      { name: "Xisha Islands", latitude: 16.8338, longitude: 112.3377, bortleScale: 2 },
+      { name: "Dinghu Mountain", latitude: 23.1723, longitude: 112.5511, bortleScale: 4 },
+      { name: "Wuyi Mountains", latitude: 27.7559, longitude: 117.6746, bortleScale: 3 },
+      { name: "Dahinggan Mountains", latitude: 50.2434, longitude: 124.1954, bortleScale: 2 },
+      { name: "Western Desert View", latitude: 39.4547, longitude: 75.9792, bortleScale: 1 },
+      { name: "Inner Mongolia Grassland", latitude: 44.0833, longitude: 113.9427, bortleScale: 2 },
+      { name: "Lhasa Mountains", latitude: 29.6500, longitude: 91.1000, bortleScale: 3 },
+      { name: "Yamdrok Lake", latitude: 29.3620, longitude: 90.9722, bortleScale: 2 },
+      { name: "Mount Kailash", latitude: 31.0793, longitude: 81.3119, bortleScale: 1 },
+      { name: "Taklamakan Desert Edge", latitude: 40.2018, longitude: 83.5498, bortleScale: 1 },
+      { name: "Taklimakan Desert", latitude: 38.8604, longitude: 83.4784, bortleScale: 1 },
+      { name: "Daxing'anling Forest", latitude: 51.6731, longitude: 124.3336, bortleScale: 2 },
+      { name: "Guilin Hills", latitude: 25.2736, longitude: 110.2900, bortleScale: 4 },
+      { name: "Yading Nature Reserve", latitude: 28.4845, longitude: 100.3327, bortleScale: 2 },
+      { name: "Nujiang Canyon", latitude: 27.7300, longitude: 98.8500, bortleScale: 3 },
+      { name: "Xiata Forest Viewpoint", latitude: 43.5998, longitude: 85.6143, bortleScale: 2 },
+      // International locations for users traveling
+      { name: "Mauna Kea", latitude: 19.8208, longitude: -155.4680, bortleScale: 1 },
+      { name: "Atacama Desert", latitude: -23.4500, longitude: -68.2000, bortleScale: 1 },
+      { name: "Namibian Desert", latitude: -24.7270, longitude: 15.3350, bortleScale: 1 },
+      { name: "Australian Outback", latitude: -25.3444, longitude: 131.0369, bortleScale: 1 },
+      { name: "Death Valley", latitude: 36.5323, longitude: -116.9325, bortleScale: 2 },
+      { name: "La Palma Observatory", latitude: 28.7636, longitude: -17.8947, bortleScale: 2 },
+      { name: "Pic du Midi", latitude: 42.9372, longitude: 0.1419, bortleScale: 2 },
+      { name: "NamibRand Dark Sky Reserve", latitude: -25.0400, longitude: 16.0200, bortleScale: 1 },
+      { name: "Aoraki Mackenzie", latitude: -43.7340, longitude: 170.0966, bortleScale: 1 },
+      { name: "Cherry Springs State Park", latitude: 41.6626, longitude: -77.8223, bortleScale: 2 }
     ];
     
-    // Add distance calculation
-    const spotsWithDistance = mockSpots.map(spot => ({
-      ...spot,
-      distance: calculateDistance(latitude, longitude, spot.latitude, spot.longitude)
+    // Calculate distance for each location and filter by radius
+    const locationsWithDistance = realLocations.map(location => ({
+      ...location,
+      id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
+      description: `Astronomical observation location with Bortle ${location.bortleScale}`,
+      date: new Date().toISOString(),
+      distance: calculateDistance(latitude, longitude, location.latitude, location.longitude)
     }));
     
-    // Filter by radius and sort by distance
-    return spotsWithDistance
-      .filter(spot => spot.distance <= radius)
+    // Filter by distance and sort by closest
+    return locationsWithDistance
+      .filter(location => location.distance !== undefined && location.distance <= radius)
       .sort((a, b) => (a.distance || 0) - (b.distance || 0))
       .slice(0, limit);
   } catch (error) {
