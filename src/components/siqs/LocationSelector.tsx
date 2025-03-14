@@ -29,7 +29,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     locationName;
   
   return (
-    <div className="flex flex-col space-y-3">
+    <div className="flex flex-col space-y-3 relative z-10">
       <Button 
         variant={locationName ? "default" : "outline"}
         type="button" 
@@ -51,7 +51,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         )}
       </Button>
       
-      <div className="relative mt-2">
+      <div className="relative mt-2 z-20">
         <MapSelector onSelectLocation={onSelectLocation} />
       </div>
     </div>

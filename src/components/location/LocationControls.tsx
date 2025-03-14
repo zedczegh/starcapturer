@@ -163,7 +163,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   };
 
   return (
-    <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30">
+    <div className="p-4 border-t border-cosmic-600/10 bg-cosmic-800/30 relative z-10">
       <Button 
         variant="outline" 
         className="w-full mb-4 flex items-center justify-center gap-2 sci-fi-btn bg-cosmic-800/70 border-primary/30 text-primary-foreground hover:bg-primary/20" 
@@ -175,7 +175,9 @@ const LocationControls: React.FC<LocationControlsProps> = ({
           ? t("Retrieving location data...", "获取位置数据中...") 
           : t("Use my current location", "使用我的当前位置")}
       </Button>
-      <MapSelector onSelectLocation={handleLocationSearch} />
+      <div className="relative z-30">
+        <MapSelector onSelectLocation={handleLocationSearch} />
+      </div>
     </div>
   );
 };

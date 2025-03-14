@@ -17,50 +17,175 @@ const commonLocations: Location[] = [
   { name: "Harbin", placeDetails: "Heilongjiang, China", latitude: 45.8038, longitude: 126.5340 }
 ];
 
+// Additional international locations
+const internationalLocations: Location[] = [
+  { name: "New York", placeDetails: "New York, NY, USA", latitude: 40.7128, longitude: -74.0060 },
+  { name: "Los Angeles", placeDetails: "Los Angeles, CA, USA", latitude: 34.0522, longitude: -118.2437 },
+  { name: "Chicago", placeDetails: "Chicago, IL, USA", latitude: 41.8781, longitude: -87.6298 },
+  { name: "London", placeDetails: "London, United Kingdom", latitude: 51.5074, longitude: -0.1278 },
+  { name: "Paris", placeDetails: "Paris, France", latitude: 48.8566, longitude: 2.3522 },
+  { name: "Tokyo", placeDetails: "Tokyo, Japan", latitude: 35.6762, longitude: 139.6503 },
+  { name: "Sydney", placeDetails: "Sydney, Australia", latitude: -33.8688, longitude: 151.2093 },
+  { name: "Dubai", placeDetails: "Dubai, UAE", latitude: 25.2048, longitude: 55.2708 },
+  { name: "Door County", placeDetails: "Door County, WI, USA", latitude: 45.0153, longitude: -87.2454 },
+  { name: "Yellowstone", placeDetails: "Yellowstone National Park, WY, USA", latitude: 44.4280, longitude: -110.5885 },
+  { name: "Yosemite", placeDetails: "Yosemite National Park, CA, USA", latitude: 37.8651, longitude: -119.5383 },
+  { name: "Grand Canyon", placeDetails: "Grand Canyon, AZ, USA", latitude: 36.1069, longitude: -112.1129 },
+  { name: "北京", placeDetails: "北京市, 中国", latitude: 39.9042, longitude: 116.4074 },
+  { name: "上海", placeDetails: "上海市, 中国", latitude: 31.2304, longitude: 121.4737 },
+  { name: "香港", placeDetails: "香港特别行政区", latitude: 22.3193, longitude: 114.1694 },
+  { name: "广州", placeDetails: "广东省, 中国", latitude: 23.1291, longitude: 113.2644 },
+  { name: "深圳", placeDetails: "广东省, 中国", latitude: 22.5431, longitude: 114.0579 }
+];
+
+// Match score function to improve search relevance
+function getMatchScore(location: string, query: string): number {
+  const locationLower = location.toLowerCase();
+  const queryLower = query.toLowerCase();
+  
+  // Exact match gives highest score
+  if (locationLower === queryLower) return 100;
+  
+  // Starting with the query is very good
+  if (locationLower.startsWith(queryLower)) return 80;
+  
+  // Word boundary match is good (e.g. "New York" matches "York")
+  const words = locationLower.split(/\s+/);
+  for (const word of words) {
+    if (word === queryLower) return 70;
+    if (word.startsWith(queryLower)) return 60;
+  }
+  
+  // Contains the query is decent
+  if (locationLower.includes(queryLower)) return 50;
+  
+  // Partial match for each word
+  for (const word of words) {
+    if (word.includes(queryLower)) return 30;
+  }
+  
+  // Fuzzy match (if the query is at least 4 chars and more than 60% of the chars match)
+  if (queryLower.length >= 4) {
+    const commonChars = queryLower.split('').filter(char => locationLower.includes(char)).length;
+    const matchPercentage = commonChars / queryLower.length;
+    if (matchPercentage > 0.6) return 20;
+  }
+  
+  return 0; // No match
+}
+
 /**
  * Search for locations based on a query string
  */
 export async function searchLocations(query: string): Promise<Location[]> {
-  const lowercaseQuery = query.toLowerCase();
+  if (!query || query.trim().length < 2) {
+    return [];
+  }
+  
+  const lowercaseQuery = query.toLowerCase().trim();
+  const allResults: Array<Location & { score: number }> = [];
   
   // First search our database of locations
-  const matchingLocations = locationDatabase
-    .filter(location => 
-      location.name.toLowerCase().includes(lowercaseQuery)
-    )
-    .map(location => ({
-      name: location.name,
-      placeDetails: `${location.name}, Bortle Scale: ${location.bortleScale.toFixed(1)}`,
-      latitude: location.coordinates[0],
-      longitude: location.coordinates[1]
-    }));
+  locationDatabase.forEach(location => {
+    const score = getMatchScore(location.name, lowercaseQuery);
+    if (score > 0) {
+      allResults.push({
+        name: location.name,
+        placeDetails: `${location.name}, Bortle Scale: ${location.bortleScale.toFixed(1)}`,
+        latitude: location.coordinates[0],
+        longitude: location.coordinates[1],
+        score
+      });
+    }
+  });
   
-  if (matchingLocations.length >= 3) {
-    return matchingLocations.slice(0, 8);
-  }
+  // Also search common locations
+  const allLocations = [...commonLocations, ...internationalLocations];
+  allLocations.forEach(location => {
+    // Check both name and placeDetails for matches
+    const nameScore = getMatchScore(location.name, lowercaseQuery);
+    const detailScore = location.placeDetails ? getMatchScore(location.placeDetails, lowercaseQuery) : 0;
+    const score = Math.max(nameScore, detailScore);
+    
+    if (score > 0) {
+      // Only add if not already in results
+      if (!allResults.some(r => r.name === location.name)) {
+        allResults.push({
+          ...location,
+          score
+        });
+      }
+    }
+  });
   
-  // If we don't have enough matches, add common locations
-  const filteredCommonLocations = commonLocations.filter(location => 
-    location.name.toLowerCase().includes(lowercaseQuery) && 
-    !matchingLocations.some(match => match.name === location.name)
-  );
-  
-  const combinedResults = [...matchingLocations, ...filteredCommonLocations];
-  if (combinedResults.length >= 3) {
-    return combinedResults.slice(0, 8);
-  }
-  
-  // If we still don't have enough, create a generic location
-  if (combinedResults.length < 3) {
-    const generatedLocation: Location = {
-      name: query,
-      placeDetails: `Searched location: ${query}`,
-      latitude: 30 + Math.random() * 20,
-      longitude: 100 + Math.random() * 20
+  // Special case for English/Chinese location matching
+  // If no results and query might be in Chinese or English, try some direct mappings
+  if (allResults.length === 0) {
+    const chineseToEnglish: Record<string, string> = {
+      '北京': 'Beijing',
+      '上海': 'Shanghai',
+      '香港': 'Hong Kong',
+      '广州': 'Guangzhou',
+      '深圳': 'Shenzhen'
     };
     
-    return [...combinedResults, generatedLocation].slice(0, 8);
+    const englishToChinese: Record<string, string> = {
+      'beijing': '北京',
+      'shanghai': '上海',
+      'hong kong': '香港',
+      'guangzhou': '广州',
+      'shenzhen': '深圳'
+    };
+    
+    // Check if query is a Chinese name we know
+    if (chineseToEnglish[lowercaseQuery]) {
+      const englishName = chineseToEnglish[lowercaseQuery];
+      const matchedLocation = allLocations.find(l => 
+        l.name.toLowerCase() === englishName.toLowerCase()
+      );
+      
+      if (matchedLocation) {
+        allResults.push({
+          ...matchedLocation,
+          score: 90
+        });
+      }
+    }
+    
+    // Check if query is an English name with a Chinese equivalent
+    if (englishToChinese[lowercaseQuery]) {
+      const chineseName = englishToChinese[lowercaseQuery];
+      const matchedLocation = allLocations.find(l => 
+        l.name === chineseName
+      );
+      
+      if (matchedLocation) {
+        allResults.push({
+          ...matchedLocation,
+          score: 90
+        });
+      }
+    }
   }
   
-  return combinedResults.slice(0, 8);
+  // If still no results, create a generic suggestion
+  if (allResults.length === 0) {
+    // Try to make an intelligent guess about what this might be
+    // Format like "Query, Region" if possible
+    allResults.push({
+      name: query,
+      placeDetails: `Search result for: ${query}`,
+      latitude: 30 + Math.random() * 20,
+      longitude: 100 + Math.random() * 20,
+      score: 10
+    });
+  }
+  
+  // Sort by score (highest first) and return top results
+  return allResults
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(({ name, latitude, longitude, placeDetails }) => ({
+      name, latitude, longitude, placeDetails
+    }));
 }
