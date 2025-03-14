@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,15 +5,8 @@ import { Loader2, Search, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import useDebounce from "@/hooks/useDebounce";
-import { searchLocations } from "@/services/geocoding";
+import { searchLocations, Location } from "@/services/geocoding";
 import SearchResults from "./map/SearchResults";
-
-export interface Location {
-  name: string;
-  latitude: number;
-  longitude: number;
-  placeDetails?: string;
-}
 
 interface MapSelectorProps {
   onSelectLocation: (location: Location) => void;

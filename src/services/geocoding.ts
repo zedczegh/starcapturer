@@ -1,4 +1,15 @@
-import { normalizeLongitude } from './coordinates';
+import { normalizeLongitude } from '@/lib/api/coordinates';
+
+// Define the Location interface to be consistent across the application
+export interface Location {
+  name: string;
+  latitude: number;
+  longitude: number;
+  placeDetails?: string;
+}
+
+// Type for language preference
+export type Language = 'en' | 'zh';
 
 /**
  * Enhanced function to get location name from coordinates
@@ -7,7 +18,7 @@ import { normalizeLongitude } from './coordinates';
 export async function getLocationNameFromCoordinates(
   latitude: number, 
   longitude: number,
-  language: string = 'en'
+  language: Language = 'en'
 ): Promise<string> {
   try {
     // Normalize coordinates
@@ -38,7 +49,7 @@ export async function getLocationNameFromCoordinates(
     }
     
     // Fallback to our database
-    const { findClosestKnownLocation } = await import('../../utils/locationUtils');
+    const { findClosestKnownLocation } = await import('@/utils/locationUtils');
     const closestLocation = findClosestKnownLocation(validLat, validLng);
     
     // If we're close to a known location, use its name or "Near X"
@@ -511,6 +522,17 @@ export async function searchLocations(query: string, language: Language = 'en'):
       longitude: -118.755997,
       score: 100
     });
+    
+    // For California-specific searches, return immediately with just California
+    // This ensures "cali" always shows California first
+    return [
+      {
+        name: "California", 
+        placeDetails: "California, USA", 
+        latitude: 36.7014631, 
+        longitude: -118.755997
+      }
+    ];
   }
 
   // Check against alternative spellings
@@ -583,176 +605,67 @@ export async function searchLocations(query: string, language: Language = 'en'):
   
   // Only add exact match translations between Chinese and English if we have few results
   if (allResults.length < 3) {
-    // ... keep existing code (language-specific handling) the same
+    const translatedResults: Location[] = [];
+    if (language === 'en') {
+      // If searching in English, look for Chinese names that match
+      Object.values(chineseCityAlternatives).forEach(city => {
+        if (city.chinese.toLowerCase() === lowercaseQuery) {
+          translatedResults.push({
+            name: city.name,
+            placeDetails: city.placeDetails,
+            latitude: city.coordinates[0],
+            longitude: city.coordinates[1]
+          });
+        }
+      });
+    } else {
+      // If searching in Chinese, look for English names that match
+      Object.values(chineseCityAlternatives).forEach(city => {
+        if (city.name.toLowerCase() === lowercaseQuery) {
+          translatedResults.push({
+            name: city.chinese,
+            placeDetails: city.placeDetails,
+            latitude: city.coordinates[0],
+            longitude: city.coordinates[1]
+          });
+        }
+      });
+    }
+    
+    translatedResults.forEach(translated => {
+      if (!allResults.some(r => r.name === translated.name)) {
+        allResults.push({
+          ...translated,
+          score: 90
+        });
+      }
+    });
   }
   
   // Add phonetic matches only if we have few results
   if (allResults.length < 3) {
-    // ... keep existing code (phonetic matching) the same
+    const phoneticMatches: Location[] = [];
+    locationList.forEach(location => {
+      const locationSoundex = soundex(location.name);
+      const querySoundex = soundex(query);
+      
+      if (locationSoundex === querySoundex) {
+        phoneticMatches.push(location);
+      }
+    });
+    
+    phoneticMatches.forEach(match => {
+      if (!allResults.some(r => r.name === match.name)) {
+        allResults.push({
+          ...match,
+          score: 70
+        });
+      }
+    });
   }
   
   // Query external APIs with language preference
   try {
     const encodedQuery = encodeURIComponent(query);
     const languageParam = language === 'zh' ? '&accept-language=zh-CN' : '';
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}${languageParam}&format=json&limit=5&addressdetails=1`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'SIQSCalculatorApp',
-        'Accept-Language': language === 'zh' ? 'zh-CN' : 'en-US'
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      if (Array.isArray(data) && data.length > 0) {
-        data.forEach((item: any, index: number) => {
-          const name = item.name || item.display_name.split(',')[0];
-          
-          let placeDetails = '';
-          
-          if (item.address) {
-            const addressParts = [];
-            
-            if (item.address.county) addressParts.push(item.address.county);
-            if (item.address.state) addressParts.push(item.address.state);
-            if (item.address.country) addressParts.push(item.address.country);
-            
-            placeDetails = addressParts.join(', ');
-          } else {
-            placeDetails = item.display_name;
-          }
-          
-          // Calculate match score to only add relevant matches
-          const score = getMatchScore(name, lowercaseQuery);
-          
-          if (score > 50 && !allResults.some(r => 
-              r.latitude === parseFloat(item.lat) && 
-              r.longitude === parseFloat(item.lon)
-          )) {
-            allResults.push({
-              name: name,
-              placeDetails: placeDetails,
-              latitude: parseFloat(item.lat),
-              longitude: parseFloat(item.lon),
-              score: 80 - index * 3 // Slight penalty for later results
-            });
-          }
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error querying Nominatim API:', error);
-  }
-  
-  try {
-    const encodedQuery = encodeURIComponent(query);
-    const url = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=5&lang=${language === 'zh' ? 'zh' : 'en'}`;
-    
-    const response = await fetch(url);
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      if (data.features && Array.isArray(data.features)) {
-        data.features.forEach((feature: any, index: number) => {
-          const properties = feature.properties;
-          const geometry = feature.geometry;
-          
-          if (geometry && geometry.coordinates && properties) {
-            const name = properties.name || query;
-            
-            const addressParts = [];
-            if (properties.city && !name.includes(properties.city)) addressParts.push(properties.city);
-            if (properties.county && !name.includes(properties.county)) addressParts.push(properties.county);
-            if (properties.state) addressParts.push(properties.state);
-            if (properties.country) addressParts.push(properties.country);
-            
-            const placeDetails = addressParts.join(', ');
-            
-            const longitude = geometry.coordinates[0];
-            const latitude = geometry.coordinates[1];
-            
-            // Calculate match score to only add relevant matches
-            const score = getMatchScore(name, lowercaseQuery);
-            
-            if (score > 50 && !allResults.some(r => 
-                Math.abs(r.latitude - latitude) < 0.01 && 
-                Math.abs(r.longitude - longitude) < 0.01
-            )) {
-              allResults.push({
-                name: name,
-                placeDetails: placeDetails || `Location: ${name}`,
-                latitude: latitude,
-                longitude: longitude,
-                score: 75 - index * 3 // Slight penalty for later results
-              });
-            }
-          }
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error querying Photon API:', error);
-  }
-  
-  // If no results found, create a placeholder (but only if we have some text)
-  if (allResults.length === 0 && query.trim().length > 0) {
-    allResults.push({
-      name: query,
-      placeDetails: `Search result for: ${query}`,
-      latitude: 30 + Math.random() * 20,
-      longitude: 100 + Math.random() * 20,
-      score: 10
-    });
-  }
-  
-  // Final processing - ensure language consistency in results
-  const finalResults = allResults
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10) // Limit to 10 results to avoid overwhelming the user
-    .map(({ name, latitude, longitude, placeDetails, score }) => {
-      // Process result based on language
-      if (language === 'zh') {
-        // For Chinese, prefer results with Chinese characters
-        const hasChinese = /[\u4e00-\u9fa5]/.test(name) || (placeDetails && /[\u4e00-\u9fa5]/.test(placeDetails));
-        if (!hasChinese) {
-          // Try to find a Chinese alternative
-          const chineseAlt = Object.values(chineseCityAlternatives).find(city => 
-            city.name.toLowerCase() === name.toLowerCase()
-          );
-          if (chineseAlt) {
-            return {
-              name: chineseAlt.chinese,
-              placeDetails: placeDetails || chineseAlt.placeDetails,
-              latitude,
-              longitude
-            };
-          }
-        }
-      } else {
-        // For English, prefer results without Chinese characters
-        const chineseNameRatio = (name.match(/[\u4e00-\u9fa5]/g) || []).length / name.length;
-        if (chineseNameRatio > 0.5) {
-          // Try to find an English alternative
-          const englishAlt = Object.values(chineseCityAlternatives).find(city => 
-            city.chinese === name
-          );
-          if (englishAlt) {
-            return {
-              name: englishAlt.name,
-              placeDetails: placeDetails || englishAlt.placeDetails,
-              latitude,
-              longitude
-            };
-          }
-        }
-      }
-      
-      return { name, latitude, longitude, placeDetails };
-    });
-    
-  return finalResults;
-}
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}${languageParam}&

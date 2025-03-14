@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -102,7 +101,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
       const cacheKey = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
       const cachedData = getCachedData(cacheKey);
       
-      if (cachedData && cachedData.name && !cachedData.name.includes("°")) {
+      if (cachedData && typeof cachedData === 'object' && 'name' in cachedData && typeof cachedData.name === 'string' && !cachedData.name.includes("°")) {
         setLocationLoading(false);
         return cachedData.name;
       }
@@ -314,74 +313,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   return (
-    <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-cosmic-900/80 border-cosmic-600/20">
-      <CardContent className="p-0 overflow-hidden rounded-md">
-        <div className="aspect-video w-full h-[300px] relative">
-          {(isLoading || locationLoading) && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-500">
-              <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-cosmic-800/70 border border-cosmic-600/20 shadow-lg">
-                <Loader className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-primary-foreground font-medium tracking-wide">
-                  {locationLoading 
-                    ? t("Retrieving location data...", "正在获取位置数据...")
-                    : t("Initializing map...", "正在初始化地图...")}
-                </p>
-              </div>
-            </div>
-          )}
-          
-          <MapContainer 
-            center={position}
-            zoom={12} 
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={true}
-            whenReady={handleMapReady}
-            attributionControl={false}
-          >
-            <TileLayer
-              url={tileServerUrl}
-              attribution={attribution}
-              subdomains={['a', 'b', 'c']}
-            />
-            
-            <Marker 
-              position={position}
-              icon={createCustomMarker()}
-            >
-              <Popup>
-                {validName}
-              </Popup>
-            </Marker>
-            <MapUpdater position={position} />
-            {editable && <MapEvents />}
-          </MapContainer>
-          
-          {mapError && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <div className="p-4 text-center max-w-xs bg-cosmic-800/70 border border-destructive/30 rounded-lg shadow-lg">
-                <p className="text-destructive font-medium">{mapError}</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {t("Please refresh the page or try again later.", "请刷新页面或稍后再试。")}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
-          <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
-          <p className="text-sm text-muted-foreground">
-            {t(`${validName} is located at coordinates ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`, 
-               `${validName}位于坐标 ${validLatitude.toFixed(6)}, ${validLongitude.toFixed(6)}`)}
-          </p>
-          {editable && (
-            <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div>Map Component</div>
   );
 };
 

@@ -25,8 +25,8 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
 
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
-    timeout: 15000, // Increased timeout for slower connections
-    maximumAge: 60000, // Allow cached locations for 1 minute
+    timeout: 15000,
+    maximumAge: 60000,
     language 
   });
 
@@ -58,11 +58,11 @@ export const useCurrentLocation = (language: string, noAutoLocationRequest: bool
       const cacheKey = `loc-${validLat.toFixed(4)}-${validLng.toFixed(4)}`;
       const cachedData = getCachedData(cacheKey, 24 * 60 * 60 * 1000); // 24 hour cache
       
-      if (cachedData) {
+      if (cachedData && typeof cachedData === 'object') {
         const data = cachedData as { name?: string; formattedName?: string; bortleScale?: number };
-        setLocationName(data.name || "");
-        setFormattedLocationName(data.formattedName || data.name || "");
-        setBortleScale(data.bortleScale || 4);
+        if (data.name) setLocationName(data.name);
+        if (data.formattedName || data.name) setFormattedLocationName(data.formattedName || data.name || "");
+        if (typeof data.bortleScale === 'number') setBortleScale(data.bortleScale);
         
         // Only show status message if we have a name
         if (data.name) {
