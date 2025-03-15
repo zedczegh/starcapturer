@@ -1,3 +1,4 @@
+
 /**
  * Converts and formats temperature for display
  * @param temperature Temperature in Celsius
@@ -61,6 +62,48 @@ export const formatDistance = (distance: number, language: string = 'en'): strin
     } else {
       return `${Math.round(distance)} 公里`;
     }
+  }
+};
+
+/**
+ * Formats a distance specifically for location cards
+ * @param distance Distance in kilometers
+ * @param language Language code ('en' for miles, 'zh' for km)
+ * @returns Formatted location distance string
+ */
+export const formatLocationDistance = (distance: number, language: string = 'en'): string => {
+  if (language === 'en') {
+    // Convert to miles for English
+    const miles = distance * 0.621371;
+    return miles < 1 
+      ? `${(miles * 5280).toFixed(0)} ft away` 
+      : miles < 10 
+        ? `${miles.toFixed(1)} miles away` 
+        : `${Math.round(miles)} miles away`;
+  } else {
+    // Format for Chinese
+    return distance < 1 
+      ? `${(distance * 1000).toFixed(0)} 米距离` 
+      : distance < 10 
+        ? `${distance.toFixed(1)} 公里距离` 
+        : `${Math.round(distance)} 公里距离`;
+  }
+};
+
+/**
+ * Format distances for the distance slider component
+ * @param distance Distance in kilometers
+ * @param language Language code ('en' for miles, 'zh' for km)
+ * @returns Formatted slider distance string
+ */
+export const formatSliderDistance = (distance: number, language: string = 'en'): string => {
+  if (language === 'en') {
+    // Convert to miles for English with appropriate formatting
+    const miles = distance * 0.621371;
+    return miles < 100 ? `${Math.round(miles)} mi` : `${(miles / 1000).toFixed(1)}k mi`;
+  } else {
+    // Format for Chinese
+    return distance < 100 ? `${Math.round(distance)} 公里` : `${(distance / 1000).toFixed(1)}k 公里`;
   }
 };
 
