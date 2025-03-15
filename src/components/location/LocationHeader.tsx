@@ -37,44 +37,18 @@ const LocationHeader: React.FC<LocationHeaderProps> = ({
     }
   }, [latitude, longitude, language]);
   
-  // Extract region name from full location name - improved for better readability
-  const regionName = useMemo(() => {
-    if (!name || name.length < 10) return name;
+  // Extract region name from full location name for consistent display
+  const displayName = useMemo(() => {
+    if (!name) return "";
     
     const parts = name.split(/,|，/);
     if (parts.length <= 1) return name;
     
-    // Try to get province/state/region level (higher administrative division)
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i].trim();
-      // Check for province/state identifiers in various languages
-      if (part.includes("Province") || 
-          part.includes("State") || 
-          part.includes("District") ||
-          part.includes("Region") ||
-          part.includes("County") ||
-          part.includes("Territory") ||
-          part.includes("Oblast") ||
-          part.includes("Prefecture") ||
-          part.includes("省") || 
-          part.includes("自治区") || 
-          part.includes("特区") ||
-          part.includes("特別行政区") ||
-          part.includes("道") ||
-          part.includes("府") ||
-          part.includes("県") ||
-          part.includes("州")) {
-        return part;
-      }
-    }
-    
-    // If no specific region marker found, and we have enough parts,
-    // use the second element which is often the city/region
+    // For consistency with homepage, use the second part (usually the region/province/state)
     if (parts.length >= 2) {
       return parts[1].trim();
     }
     
-    // Fall back to the full name if we couldn't extract a meaningful part
     return name;
   }, [name]);
   
@@ -83,7 +57,7 @@ const LocationHeader: React.FC<LocationHeaderProps> = ({
       <div>
         <h1 className="text-2xl font-bold flex items-center">
           <MapPin className="h-5 w-5 text-primary mr-2" />
-          {regionName}
+          {displayName}
         </h1>
         <div className="flex flex-col sm:flex-row sm:items-center text-sm text-muted-foreground mt-1">
           <span>{formattedCoords}</span>

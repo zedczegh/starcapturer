@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MapPin, Star } from "lucide-react";
@@ -19,6 +19,23 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
+  
+  // Extract region name for consistent display with homepage
+  const displayName = useMemo(() => {
+    const nameToParse = language === 'en' ? location.name : (location.chineseName || location.name);
+    
+    if (!nameToParse) return t("Unknown Location", "未知位置");
+    
+    const parts = nameToParse.split(/,|，/);
+    if (parts.length <= 1) return nameToParse;
+    
+    // For consistency with homepage, use the second part (usually the region/province/state)
+    if (parts.length >= 2) {
+      return parts[1].trim();
+    }
+    
+    return nameToParse;
+  }, [location, language, t]);
   
   // Animation variants
   const cardVariants = {
@@ -55,11 +72,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       }
     });
   };
-
-  // Get the appropriate name based on language
-  const displayName = language === 'en' ? 
-    location.name : 
-    (location.chineseName || location.name);
 
   return (
     <motion.div

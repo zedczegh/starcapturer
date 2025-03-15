@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar, Navigation, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -62,6 +61,33 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, getPosition]);
   
+  // Format location name for consistent display
+  const formattedLocationName = useMemo(() => {
+    if (!coords) return t("Unknown Location", "未知位置");
+    
+    // Try to get location name from localStorage recent locations
+    try {
+      const recentLocations = localStorage.getItem("astrospot_recent_locations");
+      if (recentLocations) {
+        const locations = JSON.parse(recentLocations);
+        if (locations.length > 0 && locations[0].name) {
+          const parts = locations[0].name.split(/,|，/);
+          // Return the region/state/province part (usually second part) for consistency
+          if (parts.length >= 2) {
+            return parts[1].trim();
+          }
+          return locations[0].name;
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing recent locations:", error);
+    }
+    
+    // Fallback to region approximation
+    // This is a simple approximation - you might want to use proper geocoding for a production app
+    return t("Current Region", "当前区域");
+  }, [coords, t]);
+  
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -107,10 +133,20 @@ const PhotoPointsNearby: React.FC = () => {
     );
   };
   
-  // Format coordinates for display
-  const formatCoordinates = (lat: number, lng: number): string => {
-    return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
-  };
+  // Format coordinates for display based on language
+  const formattedCoords = useMemo(() => {
+    if (!coords) return "";
+    
+    if (language === "en") {
+      // Format for English: decimal degrees with N/S, E/W indicators
+      const latDir = coords.latitude >= 0 ? "N" : "S";
+      const lngDir = coords.longitude >= 0 ? "E" : "W";
+      return `${Math.abs(coords.latitude).toFixed(4)}° ${latDir}, ${Math.abs(coords.longitude).toFixed(4)}° ${lngDir}`;
+    } else {
+      // Format for Chinese: decimal degrees without indicators
+      return `${coords.latitude.toFixed(4)}°, ${coords.longitude.toFixed(4)}°`;
+    }
+  }, [coords, language]);
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900">
@@ -139,10 +175,10 @@ const PhotoPointsNearby: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-medium">
-                  {t("Your Location", "您的位置")}
+                  {formattedLocationName}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {formatCoordinates(coords.latitude, coords.longitude)}
+                  {formattedCoords}
                 </p>
               </div>
             </motion.div>

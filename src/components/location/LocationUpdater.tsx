@@ -1,7 +1,7 @@
 
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin } from "lucide-react";
+import { MapPin, Navigation } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/location/LocationMap";
 
@@ -20,7 +20,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   setGettingUserLocation,
   setStatusMessage
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Safely check if locationData has required properties
   const hasValidCoordinates = locationData && 
@@ -31,6 +31,21 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const fallbackLatitude = 0;
   const fallbackLongitude = 0;
   const fallbackName = t("Unnamed Location", "未命名位置");
+  
+  // Extract region name from full location name for consistent display
+  const displayName = useMemo(() => {
+    if (!locationData || !locationData.name) return "";
+    
+    const parts = locationData.name.split(/,|，/);
+    if (parts.length <= 1) return locationData.name;
+    
+    // For consistency with homepage, use the second part (usually the region/province/state)
+    if (parts.length >= 2) {
+      return parts[1].trim();
+    }
+    
+    return locationData.name;
+  }, [locationData]);
 
   // Memoized location update handler
   const handleLocationUpdate = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
@@ -46,9 +61,17 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   return (
     <Card className="shadow-xl overflow-hidden bg-cosmic-900/80 border-cosmic-600/20 hover:shadow-2xl transition-all duration-300">
       <CardHeader className="pb-2 bg-cosmic-800/50 border-b border-cosmic-600/10">
-        <CardTitle className="text-xl flex items-center">
-          <MapPin className="mr-2 h-5 w-5 text-primary" />
-          {t("Location", "位置")}
+        <CardTitle className="text-xl flex items-center justify-between">
+          <div className="flex items-center">
+            <MapPin className="mr-2 h-5 w-5 text-primary" />
+            {t("Location", "位置")}
+          </div>
+          {displayName && (
+            <div className="flex items-center text-sm bg-primary/10 px-2 py-1 rounded">
+              <Navigation className="h-3.5 w-3.5 text-primary mr-1.5" />
+              <span>{displayName}</span>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
