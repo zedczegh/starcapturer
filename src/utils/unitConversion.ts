@@ -115,11 +115,11 @@ export const formatSliderDistance = (kilometers: number, language: 'en' | 'zh'):
 
 /**
  * Format a distance with additional "away" text for location cards
- * @param distance Distance in kilometers
+ * @param distance Distance in kilometers (or undefined)
  * @param language 'en' for English (miles) or 'zh' for Chinese (kilometers)
  * @returns Formatted distance string with "away" text
  */
-export const formatLocationDistance = (distance?: number, language: 'en' | 'zh'): string => {
+export const formatLocationDistance = (distance: number | undefined, language: 'en' | 'zh'): string => {
   if (distance === undefined) return language === 'en' ? "Unknown distance" : "未知距离";
   
   if (language === 'en') {

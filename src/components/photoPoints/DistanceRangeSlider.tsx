@@ -55,7 +55,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
             key={value}
             size="sm"
             variant={distance === value ? "default" : "outline"}
-            className={`flex-1 ${distance === value ? "bg-primary" : ""}`}
+            className={`flex-1 transition-all hover:scale-105 ${distance === value ? "bg-primary" : ""}`}
             onClick={() => setDistance(value)}
           >
             <Icon className="h-4 w-4 mr-2" />

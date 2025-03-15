@@ -22,6 +22,10 @@ export interface SharedAstroSpot {
   siqs?: number;
   distance?: number;
   isViable?: boolean;
+  photographer?: string;
+  photoUrl?: string;
+  targets?: string[];
+  timestamp?: string;
 }
 
 export async function getAstroSpots(): Promise<AstroSpot[]> {

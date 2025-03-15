@@ -92,7 +92,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           recommendedPoints.map((point) => (
             <div 
               key={point.id}
-              className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
+              className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 hover:scale-102 transition-all duration-300"
               onClick={() => {
                 handleSelectPoint(point);
               }}

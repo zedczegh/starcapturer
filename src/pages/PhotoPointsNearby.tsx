@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar, Navigation, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,6 +12,7 @@ import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import { toast } from "sonner";
+import { formatLocationDistance } from "@/utils/unitConversion";
 
 const PhotoPointsNearby: React.FC = () => {
   const { t, language } = useLanguage();
@@ -106,6 +107,11 @@ const PhotoPointsNearby: React.FC = () => {
     );
   };
   
+  // Format coordinates for display
+  const formatCoordinates = (lat: number, lng: number): string => {
+    return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900">
       <NavBar />
@@ -116,12 +122,31 @@ const PhotoPointsNearby: React.FC = () => {
             <MapPin className="h-8 w-8 text-primary mr-3" />
             {t("Photo Points Nearby", "附近拍摄点")}
           </h1>
-          <Link to="/share">
-            <Button>
-              <MapPin className="h-4 w-4 mr-2" />
-              {t("Share New Location", "分享新位置")}
-            </Button>
-          </Link>
+          
+          {/* User's Current Location Display */}
+          {coords && (
+            <motion.div 
+              className="bg-background/20 backdrop-blur-sm p-3 rounded-lg border border-primary/20 flex items-center cursor-pointer hover:bg-primary/10 hover:scale-105 hover:border-primary/30 transition-all duration-300"
+              onClick={handleViewCurrentLocation}
+              whileHover={{ y: -3 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="relative mr-3">
+                <Compass className="h-7 w-7 text-primary" />
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">
+                  {t("Your Location", "您的位置")}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {formatCoordinates(coords.latitude, coords.longitude)}
+                </p>
+              </div>
+            </motion.div>
+          )}
         </div>
         
         {/* Distance Range Slider */}
@@ -280,7 +305,7 @@ const PhotoPointsNearby: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={loadMoreLocations}
-              className="group"
+              className="group transition-all hover:bg-primary hover:text-white"
             >
               {t("Load More Locations", "加载更多位置")}
               <Plane className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />

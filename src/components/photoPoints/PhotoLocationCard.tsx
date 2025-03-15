@@ -71,7 +71,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     >
       <div 
         onClick={handleCardClick}
-        className="glassmorphism p-4 rounded-lg hover:bg-background/50 transition-colors flex flex-col h-full cursor-pointer"
+        className="glassmorphism p-4 rounded-lg hover:bg-background/50 hover:scale-102 transition-all duration-300 flex flex-col h-full cursor-pointer"
       >
         <div className="flex items-start justify-between mb-2">
           <h2 className="font-semibold text-lg">{displayName}</h2>
