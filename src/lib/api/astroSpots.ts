@@ -1,6 +1,7 @@
+
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 
-const ASTROSPOTS_API_URL = process.env.NEXT_PUBLIC_ASTROSPOTS_API_URL || "http://localhost:3001";
+const ASTROSPOTS_API_URL = import.meta.env.VITE_ASTROSPOTS_API_URL || "http://localhost:3001";
 
 export interface AstroSpot {
   id: string;
@@ -13,7 +14,8 @@ export interface AstroSpot {
 export interface SharedAstroSpot {
   id: string;
   name: string;
-  chineseName?: string;  // Add this property to fix TypeScript errors
+  chineseName?: string;
+  description?: string;
   latitude: number;
   longitude: number;
   bortleScale?: number;

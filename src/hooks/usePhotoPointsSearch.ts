@@ -33,7 +33,37 @@ export const usePhotoPointsSearch = ({
   const [isUserInGoodLocation, setIsUserInGoodLocation] = useState(false);
   
   // SIQS threshold (20% better than current location is considered significant)
+  // Lower threshold for mountain areas to ensure they're included
   const SIQS_IMPROVEMENT_THRESHOLD = 1.2;
+  const SIQS_MOUNTAIN_THRESHOLD = 1.1;
+  
+  // Check if a location is in a mountainous area based on name or type
+  const isMountainousLocation = (location: SharedAstroSpot): boolean => {
+    if (!location.name) return false;
+    
+    const nameLC = location.name.toLowerCase();
+    const chineseNameLC = location.chineseName?.toLowerCase() || '';
+    
+    // Check English name
+    if (nameLC.includes('mountain') || 
+        nameLC.includes('mount ') || 
+        nameLC.includes(' mt.') || 
+        nameLC.includes('peak') || 
+        nameLC.includes('hills') ||
+        nameLC.includes('range')) {
+      return true;
+    }
+    
+    // Check Chinese name
+    if (chineseNameLC.includes('山') || 
+        chineseNameLC.includes('岭') || 
+        chineseNameLC.includes('峰') ||
+        chineseNameLC.includes('高原')) {
+      return true;
+    }
+    
+    return false;
+  };
   
   // Load all nearby potential locations
   useEffect(() => {
@@ -157,6 +187,13 @@ export const usePhotoPointsSearch = ({
             bortleScale = pollutionData?.bortleScale || 5;
           }
           
+          // Special handling for mountainous areas - they might be better than estimated
+          // Remote mountains often have better darkness than generic Bortle estimates
+          if (isMountainousLocation(location) && bortleScale > 3) {
+            // Reduce Bortle scale for mountains - they're usually darker than estimation
+            bortleScale = Math.max(2, bortleScale - 1);
+          }
+          
           if (weatherData) {
             // Calculate SIQS
             const siqsResult = calculateSIQS({
@@ -174,7 +211,8 @@ export const usePhotoPointsSearch = ({
             return {
               ...location,
               siqs: siqsResult.score,
-              isViable: siqsResult.isViable
+              isViable: siqsResult.isViable,
+              bortleScale: bortleScale // Save the potentially adjusted bortleScale
             };
           }
         } catch (err) {
@@ -193,7 +231,7 @@ export const usePhotoPointsSearch = ({
     applyFilters(validLocations, calculatedUserSiqs);
   };
   
-  // Filter locations based on distance and SIQS
+  // Filter locations based on distance, SIQS, and type
   const applyFilters = (locations: SharedAstroSpot[], userSiqs: number | null) => {
     if (!userLocation || locations.length === 0) return;
     
@@ -205,19 +243,36 @@ export const usePhotoPointsSearch = ({
     // If user has a good SIQS, only show locations that are significantly better
     let betterLocations = withinDistance;
     if (userSiqs !== null) {
-      betterLocations = withinDistance.filter(location => 
-        location.siqs !== undefined && 
-        location.siqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD
-      );
+      betterLocations = withinDistance.filter(location => {
+        if (!location.siqs) return false;
+        
+        // Use a lower improvement threshold for mountain areas
+        const isMountain = isMountainousLocation(location);
+        const threshold = isMountain ? SIQS_MOUNTAIN_THRESHOLD : SIQS_IMPROVEMENT_THRESHOLD;
+        
+        return location.siqs > userSiqs * threshold;
+      });
     }
     
-    // Sort by SIQS first, then by distance if SIQS is similar
+    // Sort by a weighted combination of SIQS and distance
     const sortedLocations = betterLocations.sort((a, b) => {
+      // First prioritize by cloud cover (the most important factor)
+      // We estimate this from the SIQS score difference
+      const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
+      
       // If SIQS difference is significant, sort by SIQS
-      if ((b.siqs || 0) - (a.siqs || 0) > 1) {
-        return (b.siqs || 0) - (a.siqs || 0);
-      } 
-      // Otherwise, sort by distance
+      if (Math.abs(siqsDiff) > 1.5) {
+        return siqsDiff;
+      }
+      
+      // For similar SIQS, mountains get priority over urban areas
+      const aIsMountain = isMountainousLocation(a);
+      const bIsMountain = isMountainousLocation(b);
+      
+      if (aIsMountain && !bIsMountain) return -1;
+      if (!aIsMountain && bIsMountain) return 1;
+      
+      // If mountains status is the same, sort by distance
       return (a.distance || 0) - (b.distance || 0);
     });
     

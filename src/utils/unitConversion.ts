@@ -97,3 +97,43 @@ export const formatDistance = (kilometers: number, language: 'en' | 'zh'): strin
     }
   }
 };
+
+/**
+ * Format a distance with proper units for the DistanceRangeSlider component
+ * @param kilometers Distance in kilometers
+ * @param language 'en' for English (miles) or 'zh' for Chinese (kilometers)
+ * @returns Formatted distance string with units
+ */
+export const formatSliderDistance = (kilometers: number, language: 'en' | 'zh'): string => {
+  if (language === 'en') {
+    const miles = kmToMiles(kilometers);
+    return `${Math.round(miles).toLocaleString()} mi`;
+  } else {
+    return `${kilometers.toLocaleString()} km`;
+  }
+};
+
+/**
+ * Format a distance with additional "away" text for location cards
+ * @param distance Distance in kilometers
+ * @param language 'en' for English (miles) or 'zh' for Chinese (kilometers)
+ * @returns Formatted distance string with "away" text
+ */
+export const formatLocationDistance = (distance?: number, language: 'en' | 'zh'): string => {
+  if (distance === undefined) return language === 'en' ? "Unknown distance" : "未知距离";
+  
+  if (language === 'en') {
+    const miles = kmToMiles(distance);
+    if (miles < 1) 
+      return `${Math.round(miles * 1760)} yards away`;
+    if (miles < 100) 
+      return `${miles.toFixed(1)} miles away`;
+    return `${Math.round(miles).toLocaleString()} miles away`;
+  } else {
+    if (distance < 1) 
+      return `距离 ${Math.round(distance * 1000)} 米`;
+    if (distance < 100) 
+      return `距离 ${distance.toFixed(1)} 公里`;
+    return `距离 ${Math.round(distance).toLocaleString()} 公里`;
+  }
+};

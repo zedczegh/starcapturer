@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getRecommendedPhotoPoints, SharedAstroSpot } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatLocationDistance } from "@/utils/unitConversion";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -50,27 +51,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       description: t(`Selected ${language === 'en' ? point.name : (point.chineseName || point.name)}`, 
                     `已选择 ${language === 'en' ? point.name : (point.chineseName || point.name)}`),
     });
-  };
-
-  const formatDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
-    
-    if (language === 'en') {
-      // Convert to miles for English users
-      const miles = distance * 0.621371;
-      if (miles < 1) 
-        return `${Math.round(miles * 1760)} yards away`;
-      if (miles < 100) 
-        return `${miles.toFixed(1)} miles away`;
-      return `${Math.round(miles).toLocaleString()} miles away`;
-    } else {
-      // Use kilometers for Chinese users
-      if (distance < 1) 
-        return `距离 ${Math.round(distance * 1000)} 米`;
-      if (distance < 100) 
-        return `距离 ${distance.toFixed(1)} 公里`;
-      return `距离 ${Math.round(distance).toLocaleString()} 公里`;
-    }
   };
   
   const handleViewDetails = (point: SharedAstroSpot) => {
@@ -131,7 +111,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 <div className="flex items-center">
                   <MapPin className="h-3 w-3 text-muted-foreground mr-1" />
                   <span className="text-xs text-muted-foreground">
-                    {formatDistance(point.distance)}
+                    {formatLocationDistance(point.distance, language)}
                   </span>
                 </div>
                 <Button 

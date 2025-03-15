@@ -6,6 +6,7 @@ import { MapPin, Star } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getScoreColorClass } from "@/components/siqs/utils/scoreUtils";
+import { formatLocationDistance } from "@/utils/unitConversion";
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -37,28 +38,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const scoreAnimationClass = location.siqs && location.siqs > 7 
     ? "animate-pulse" 
     : "";
-  
-  // Format distance for display with unit conversion
-  const formatDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
-    
-    if (language === 'en') {
-      // Convert to miles for English users
-      const miles = distance * 0.621371;
-      if (miles < 1) 
-        return `${Math.round(miles * 1760)} yards away`;
-      if (miles < 100) 
-        return `${miles.toFixed(1)} miles away`;
-      return `${Math.round(miles).toLocaleString()} miles away`;
-    } else {
-      // Use kilometers for Chinese users
-      if (distance < 1) 
-        return `距离 ${Math.round(distance * 1000)} 米`;
-      if (distance < 100) 
-        return `距离 ${distance.toFixed(1)} 公里`;
-      return `距离 ${Math.round(distance).toLocaleString()} 公里`;
-    }
-  };
   
   // Get score color based on SIQS
   const scoreColorClass = location.siqs ? getScoreColorClass(location.siqs) : "text-muted-foreground";
@@ -107,7 +86,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         <div className="flex items-center mt-auto pt-3">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
           <span className="text-xs text-muted-foreground">
-            {formatDistance(location.distance)}
+            {formatLocationDistance(location.distance, language)}
           </span>
         </div>
       </div>
