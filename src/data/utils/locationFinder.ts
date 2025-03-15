@@ -1,3 +1,4 @@
+
 /**
  * Implementation of location finding algorithms
  */
@@ -6,7 +7,7 @@ import { calculateDistance } from "./distanceCalculator";
 
 /**
  * Find the closest location to given coordinates
- * Enhanced algorithm with terrain type weighting, multi-point interpolation and special handling for mountainous areas
+ * Enhanced algorithm with terrain type weighting and multi-point interpolation
  */
 export function findClosestLocationImpl(
   latitude: number, 
@@ -36,40 +37,9 @@ export function findClosestLocationImpl(
   // First pass: Find locations within their defined radius (most accurate)
   let locationsWithinRadius: Array<{location: LocationEntry, distance: number}> = [];
   
-  // Special array for mountain and dark site locations
-  let mountainsAndDarkSites: Array<{location: LocationEntry, distance: number}> = [];
-  
   for (const location of locationDatabase) {
     const [locLat, locLng] = location.coordinates;
     const distance = calculateDistance(latitude, longitude, locLat, locLng);
-    
-    // Special handling for mountains and dark sites - identify them even at greater distances
-    if (location.type === 'natural' && 
-        (location.name.toLowerCase().includes('mountain') || 
-         location.name.toLowerCase().includes('mountains') ||
-         location.name.toLowerCase().includes('peak') ||
-         location.name.toLowerCase().includes('range'))) {
-      
-      // Use larger effective radius for mountains to ensure they're identified
-      const effectiveRadius = location.radius * 2.0;
-      
-      if (distance <= effectiveRadius) {
-        mountainsAndDarkSites.push({
-          location,
-          distance
-        });
-      }
-    } else if (location.type === 'dark-site') {
-      // Special handling for dark sites with larger effective radius
-      const effectiveRadius = location.radius * 2.0;
-      
-      if (distance <= effectiveRadius) {
-        mountainsAndDarkSites.push({
-          location,
-          distance
-        });
-      }
-    }
     
     // Special handling for Tibetan cities and other remote urban areas
     // Increase the effective radius for these areas to better reflect their light pollution spread
@@ -101,27 +71,6 @@ export function findClosestLocationImpl(
         type: location.type
       };
     }
-  }
-  
-  // Prioritize mountains and dark sites if we found any within reasonable range
-  // This helps ensure we don't miss good astrophotography locations
-  if (mountainsAndDarkSites.length > 0) {
-    // Sort by distance to find the closest mountain/dark site
-    mountainsAndDarkSites.sort((a, b) => a.distance - b.distance);
-    const closest = mountainsAndDarkSites[0];
-    
-    // If this mountain is very close or has very dark skies, prioritize it
-    if (closest.distance < 50 || closest.location.bortleScale <= 3) {
-      return {
-        name: closest.location.name,
-        bortleScale: closest.location.bortleScale,
-        distance: closest.distance,
-        type: closest.location.type
-      };
-    }
-    
-    // Also add these to the general locations within radius for weighted calculation
-    locationsWithinRadius = [...locationsWithinRadius, ...mountainsAndDarkSites];
   }
   
   // If we have locations within their defined radius, use weighted average of them
@@ -171,16 +120,14 @@ export function findClosestLocationImpl(
         weight *= isRemoteRegion ? 2.0 : 1.7;
       }
       
-      // Mountains and dark sites get lower weights - they block light less effectively
-      // This better represents how dark these areas actually are
+      // Mountains still get some weight but less than urban areas
+      // Remote mountains should have darker skies
       if (item.location.type === 'natural' && 
           (item.location.name.toLowerCase().includes('mountain') || 
           item.location.name.toLowerCase().includes('mountains') ||
           item.location.name.toLowerCase().includes('peak') ||
           item.location.name.toLowerCase().includes('range'))) {
-        weight *= 0.7; // Reduced weight for mountains to better preserve their darkness
-      } else if (item.location.type === 'dark-site') {
-        weight *= 0.6; // Even lower weight for designated dark sites
+        weight *= 0.8; // Reduced weight for mountains
       }
       
       totalWeight += weight;
@@ -221,13 +168,6 @@ export function findClosestLocationImpl(
       (latitude > 40 && latitude < 50 && longitude > 120 && longitude < 135) // Northeast
     );
     
-    // Special handling for mountainous terrain - check elevation profile
-    const isPotentialMountainousArea = 
-      (latitude > 25 && latitude < 40 && longitude > 95 && longitude < 103) || // Sichuan mountains
-      (latitude > 28 && latitude < 32 && longitude > 88 && longitude < 95) || // Himalayas
-      (latitude > 38 && latitude < 43 && longitude > 80 && longitude < 95) || // Tian Shan
-      (latitude > 43 && latitude < 47 && longitude > 83 && longitude < 90); // Altai
-    
     for (const loc of sortedLocations) {
       // Base weight - inverse square of distance for sharper falloff with distance
       const weight = 1 / Math.pow(Math.max(1, loc.distance), 1.8);
@@ -252,18 +192,9 @@ export function findClosestLocationImpl(
         } else {
           modifiedWeight *= loc.distance < 30 ? 1.8 : 0.9;
         }
-      } else if (loc.type === 'natural') {
-        // If in a known mountainous area, boost natural areas
-        if (isPotentialMountainousArea) {
-          // Natural areas in mountainous regions have less light pollution
-          modifiedWeight *= 0.65; // Lower weight means less contribution to bortle
-        } else {
-          // Natural areas have less influence on increasing light pollution
-          modifiedWeight *= 0.7;
-        }
-      } else if (loc.type === 'dark-site') {
-        // Dark sites maintain their darkness better
-        modifiedWeight *= 0.6;
+      } else if (loc.type === 'natural' || loc.type === 'dark-site') {
+        // Natural areas have less influence on increasing light pollution
+        modifiedWeight *= 0.7;
       }
       
       totalWeight += modifiedWeight;
@@ -272,14 +203,8 @@ export function findClosestLocationImpl(
     
     const estimatedBortle = totalWeight > 0 ? weightedBortleSum / totalWeight : 5;
     
-    // If we're in a known mountainous region with no close urban areas, 
-    // the Bortle scale is likely better than calculated
+    // Adjust the calculated Bortle scale for remote regions
     let finalBortle = estimatedBortle;
-    if (isPotentialMountainousArea && closestLocation.distance > 100 && 
-        closestLocation.type !== 'urban' && closestLocation.type !== 'suburban') {
-      // Apply a ceiling to estimated Bortle in mountainous regions
-      finalBortle = Math.min(finalBortle, 3.5);
-    }
     
     // Apply a floor value for urban areas in remote regions
     if (isRemoteRegion && closestLocation.type === 'urban' && closestLocation.distance < 100) {

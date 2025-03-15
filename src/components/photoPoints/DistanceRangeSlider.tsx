@@ -3,8 +3,6 @@ import React from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Car, TrainFront, Plane } from "lucide-react";
-import { formatSliderDistance } from "@/utils/unitConversion";
 
 interface DistanceRangeSliderProps {
   distance: number;
@@ -15,18 +13,29 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   distance,
   setDistance,
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   
-  // Predefined distance values with transport modes
-  const distanceOptions = [
-    { value: 500, icon: Car, label: t("Driving", "驾车") },
-    { value: 1000, icon: TrainFront, label: t("Train", "火车") },
-    { value: 5000, icon: Plane, label: t("Flying", "飞行") }
-  ];
+  // Predefined distance values in km
+  const distanceOptions = [500, 1000, 5000];
+  
+  // Find the closest preset to current value
+  const getClosestPreset = (value: number) => {
+    return distanceOptions.reduce((prev, curr) => 
+      Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+    );
+  };
   
   // Handle slider change
   const handleSliderChange = (value: number[]) => {
     setDistance(value[0]);
+  };
+  
+  // Format distance for display
+  const formatDistance = (dist: number) => {
+    if (dist >= 1000) {
+      return `${dist / 1000}k km`;
+    }
+    return `${dist} km`;
   };
 
   return (
@@ -36,7 +45,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           {t("Search Radius", "搜索半径")}
         </h3>
         <span className="text-sm font-bold bg-background/40 px-2 py-1 rounded-full">
-          {formatSliderDistance(distance, language)}
+          {formatDistance(distance)}
         </span>
       </div>
       
@@ -50,19 +59,15 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
       />
       
       <div className="flex justify-between gap-2">
-        {distanceOptions.map(({ value, icon: Icon, label }) => (
+        {distanceOptions.map((option) => (
           <Button
-            key={value}
+            key={option}
             size="sm"
-            variant={distance === value ? "default" : "outline"}
-            className={`flex-1 transition-all hover:scale-105 ${distance === value ? "bg-primary" : ""}`}
-            onClick={() => setDistance(value)}
+            variant={distance === option ? "default" : "outline"}
+            className={`flex-1 ${distance === option ? "bg-primary" : ""}`}
+            onClick={() => setDistance(option)}
           >
-            <Icon className="h-4 w-4 mr-2" />
-            <span className="hidden md:inline">{label}</span>
-            <span className="ml-1">
-              {formatSliderDistance(value, language)}
-            </span>
+            {formatDistance(option)}
           </Button>
         ))}
       </div>

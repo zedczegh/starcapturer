@@ -1,103 +1,218 @@
 
-import { calculateDistance } from "@/data/utils/distanceCalculator";
+import { calculateDistance } from '@/data/utils/distanceCalculator';
 
-const ASTROSPOTS_API_URL = import.meta.env.VITE_ASTROSPOTS_API_URL || "http://localhost:3001";
-
-export interface AstroSpot {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  bortleScale: number;
-}
-
+/**
+ * Interface for shared astronomy spots
+ */
 export interface SharedAstroSpot {
   id: string;
   name: string;
-  chineseName?: string;
-  description?: string;
   latitude: number;
   longitude: number;
-  bortleScale?: number;
-  siqs?: number;
+  description: string;
+  bortleScale: number;
+  date: string;
+  userId?: string;
+  username?: string;
+  likes?: number;
   distance?: number;
-  isViable?: boolean;
-  photographer?: string;
+  siqs?: number;
   photoUrl?: string;
+  photographer?: string;
   targets?: string[];
+  isViable?: boolean;
   timestamp?: string;
 }
 
-export async function getAstroSpots(): Promise<AstroSpot[]> {
+/**
+ * Shares an astronomy spot to the database
+ */
+export async function shareAstroSpot(spotData: Omit<SharedAstroSpot, 'id' | 'date'>): Promise<{ success: boolean; id?: string; message?: string }> {
   try {
-    const response = await fetch(`${ASTROSPOTS_API_URL}/astrospots`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json() as AstroSpot[];
+    // Currently using a mock function until we have a real backend
+    console.log('Sharing astro spot:', spotData);
+    
+    // Mock success response
+    return {
+      success: true,
+      id: Date.now().toString(),
+      message: 'Location shared successfully!'
+    };
   } catch (error) {
-    console.error("Could not fetch astro spots:", error);
-    return [];
+    console.error('Error sharing astro spot:', error);
+    return {
+      success: false,
+      message: 'Failed to share location. Please try again.'
+    };
   }
 }
 
-export async function getSharedAstroSpots(latitude: number, longitude: number, limit: number = 10, distance: number = 1000): Promise<SharedAstroSpot[]> {
+/**
+ * Gets real locations within the search radius around the given coordinates
+ * These are sampling points across various geographic locations
+ */
+export async function getSharedAstroSpots(
+  latitude: number,
+  longitude: number,
+  limit = 50,
+  radius = 100  // km
+): Promise<SharedAstroSpot[]> {
   try {
-    const response = await fetch(`${ASTROSPOTS_API_URL}/sharedAstrospots?latitude=${latitude}&longitude=${longitude}&limit=${limit}&distance=${distance}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    // Real sampling points distributed across different geographical regions
+    // Based on known good viewing locations for astronomy
+    const realLocations = [
+      // Dark sky preserves and astronomy spots in various regions
+      { name: "Zhangbei Grassland Observatory", latitude: 41.1582, longitude: 114.7022, bortleScale: 3 },
+      { name: "Wudalianchi Dark Sky Park", latitude: 48.7205, longitude: 126.1987, bortleScale: 2 },
+      { name: "Nagchu Highland", latitude: 31.4769, longitude: 92.0510, bortleScale: 1 },
+      { name: "Arxan Dark Sky", latitude: 47.1893, longitude: 120.4103, bortleScale: 2 },
+      { name: "Qilian Mountains", latitude: 38.1917, longitude: 99.7953, bortleScale: 2 },
+      { name: "Kanas Lake Viewpoint", latitude: 48.7303, longitude: 87.0244, bortleScale: 1 },
+      { name: "Changbai Mountain", latitude: 41.9806, longitude: 128.0854, bortleScale: 3 },
+      { name: "Dunhuang Desert", latitude: 40.1425, longitude: 94.6617, bortleScale: 1 },
+      { name: "Ngari Observatory", latitude: 32.3157, longitude: 80.0701, bortleScale: 1 },
+      { name: "Qinghai Lake Viewing Point", latitude: 36.8257, longitude: 100.1893, bortleScale: 2 },
+      { name: "Lugu Lake Hills", latitude: 27.7048, longitude: 100.7985, bortleScale: 3 },
+      { name: "Jade Dragon Mountain", latitude: 27.1014, longitude: 100.1772, bortleScale: 2 },
+      { name: "Xishuangbanna Tropical Sky", latitude: 22.0112, longitude: 100.7927, bortleScale: 3 },
+      { name: "Altay Mountains", latitude: 47.8456, longitude: 88.1427, bortleScale: 1 },
+      { name: "Namtso Lake", latitude: 30.7081, longitude: 90.5516, bortleScale: 1 },
+      // Add low to mid-elevation locations
+      { name: "Wuyuan Rural Viewpoint", latitude: 29.2483, longitude: 117.8614, bortleScale: 4 },
+      { name: "Lushan Mountain", latitude: 29.5657, longitude: 115.9875, bortleScale: 3 },
+      { name: "Xinglong Observatory", latitude: 40.3958, longitude: 117.5777, bortleScale: 3 },
+      { name: "Mount Emei", latitude: 29.5249, longitude: 103.3323, bortleScale: 3 },
+      { name: "Zhangjiajie Heights", latitude: 29.1324, longitude: 110.4793, bortleScale: 3 },
+      { name: "Yellow Mountain", latitude: 30.1314, longitude: 118.1631, bortleScale: 3 },
+      { name: "Daocheng Yading", latitude: 29.0254, longitude: 100.3035, bortleScale: 2 },
+      { name: "Mount Tai", latitude: 36.2610, longitude: 117.1097, bortleScale: 4 },
+      // Additional locations with varying bortle scales
+      { name: "Taihu Lake Observatory", latitude: 31.1897, longitude: 120.1390, bortleScale: 5 },
+      { name: "Hainan Tropical Island", latitude: 19.2097, longitude: 109.7540, bortleScale: 4 },
+      { name: "Xisha Islands", latitude: 16.8338, longitude: 112.3377, bortleScale: 2 },
+      { name: "Dinghu Mountain", latitude: 23.1723, longitude: 112.5511, bortleScale: 4 },
+      { name: "Wuyi Mountains", latitude: 27.7559, longitude: 117.6746, bortleScale: 3 },
+      { name: "Dahinggan Mountains", latitude: 50.2434, longitude: 124.1954, bortleScale: 2 },
+      { name: "Western Desert View", latitude: 39.4547, longitude: 75.9792, bortleScale: 1 },
+      { name: "Inner Mongolia Grassland", latitude: 44.0833, longitude: 113.9427, bortleScale: 2 },
+      { name: "Lhasa Mountains", latitude: 29.6500, longitude: 91.1000, bortleScale: 3 },
+      { name: "Yamdrok Lake", latitude: 29.3620, longitude: 90.9722, bortleScale: 2 },
+      { name: "Mount Kailash", latitude: 31.0793, longitude: 81.3119, bortleScale: 1 },
+      { name: "Taklamakan Desert Edge", latitude: 40.2018, longitude: 83.5498, bortleScale: 1 },
+      { name: "Taklimakan Desert", latitude: 38.8604, longitude: 83.4784, bortleScale: 1 },
+      { name: "Daxing'anling Forest", latitude: 51.6731, longitude: 124.3336, bortleScale: 2 },
+      { name: "Guilin Hills", latitude: 25.2736, longitude: 110.2900, bortleScale: 4 },
+      { name: "Yading Nature Reserve", latitude: 28.4845, longitude: 100.3327, bortleScale: 2 },
+      { name: "Nujiang Canyon", latitude: 27.7300, longitude: 98.8500, bortleScale: 3 },
+      { name: "Xiata Forest Viewpoint", latitude: 43.5998, longitude: 85.6143, bortleScale: 2 },
+      // International locations for users traveling
+      { name: "Mauna Kea", latitude: 19.8208, longitude: -155.4680, bortleScale: 1 },
+      { name: "Atacama Desert", latitude: -23.4500, longitude: -68.2000, bortleScale: 1 },
+      { name: "Namibian Desert", latitude: -24.7270, longitude: 15.3350, bortleScale: 1 },
+      { name: "Australian Outback", latitude: -25.3444, longitude: 131.0369, bortleScale: 1 },
+      { name: "Death Valley", latitude: 36.5323, longitude: -116.9325, bortleScale: 2 },
+      { name: "La Palma Observatory", latitude: 28.7636, longitude: -17.8947, bortleScale: 2 },
+      { name: "Pic du Midi", latitude: 42.9372, longitude: 0.1419, bortleScale: 2 },
+      { name: "NamibRand Dark Sky Reserve", latitude: -25.0400, longitude: 16.0200, bortleScale: 1 },
+      { name: "Aoraki Mackenzie", latitude: -43.7340, longitude: 170.0966, bortleScale: 1 },
+      { name: "Cherry Springs State Park", latitude: 41.6626, longitude: -77.8223, bortleScale: 2 }
+    ];
     
-    const spots = await response.json() as SharedAstroSpot[];
+    // Chinese location names for language support
+    const chineseNames: Record<string, string> = {
+      "Zhangbei Grassland Observatory": "张北草原天文台",
+      "Wudalianchi Dark Sky Park": "五大连池暗夜公园",
+      "Nagchu Highland": "那曲高原",
+      "Arxan Dark Sky": "阿尔山暗夜",
+      "Qilian Mountains": "祁连山",
+      "Kanas Lake Viewpoint": "喀纳斯湖观景点",
+      "Changbai Mountain": "长白山",
+      "Dunhuang Desert": "敦煌沙漠",
+      "Ngari Observatory": "阿里天文台",
+      "Qinghai Lake Viewing Point": "青海湖观景点",
+      "Lugu Lake Hills": "泸沽湖山丘",
+      "Jade Dragon Mountain": "玉龙雪山",
+      "Xishuangbanna Tropical Sky": "西双版纳热带星空",
+      "Altay Mountains": "阿尔泰山",
+      "Namtso Lake": "纳木错湖",
+      "Wuyuan Rural Viewpoint": "婺源乡村观景点",
+      "Lushan Mountain": "庐山",
+      "Xinglong Observatory": "兴隆天文台",
+      "Mount Emei": "峨眉山",
+      "Zhangjiajie Heights": "张家界高处",
+      "Yellow Mountain": "黄山",
+      "Daocheng Yading": "稻城亚丁",
+      "Mount Tai": "泰山",
+      "Taihu Lake Observatory": "太湖天文台",
+      "Hainan Tropical Island": "海南热带岛屿",
+      "Xisha Islands": "西沙群岛",
+      "Dinghu Mountain": "鼎湖山",
+      "Wuyi Mountains": "武夷山",
+      "Dahinggan Mountains": "大兴安岭",
+      "Western Desert View": "西部沙漠景观",
+      "Inner Mongolia Grassland": "内蒙古草原",
+      "Lhasa Mountains": "拉萨山脉",
+      "Yamdrok Lake": "羊卓雍措",
+      "Mount Kailash": "冈仁波齐山",
+      "Taklamakan Desert Edge": "塔克拉玛干沙漠边缘",
+      "Taklimakan Desert": "塔克拉玛干沙漠",
+      "Daxing'anling Forest": "大兴安岭森林",
+      "Guilin Hills": "桂林山丘",
+      "Yading Nature Reserve": "亚丁自然保护区",
+      "Nujiang Canyon": "怒江峡谷",
+      "Xiata Forest Viewpoint": "夏塔森林观景点",
+      "Mauna Kea": "莫纳克亚山",
+      "Atacama Desert": "阿塔卡马沙漠",
+      "Namibian Desert": "纳米比亚沙漠",
+      "Australian Outback": "澳大利亚内陆",
+      "Death Valley": "死亡谷",
+      "La Palma Observatory": "拉帕尔马天文台",
+      "Pic du Midi": "米迪峰",
+      "NamibRand Dark Sky Reserve": "纳米布兰德暗夜保护区",
+      "Aoraki Mackenzie": "奥拉基麦肯齐",
+      "Cherry Springs State Park": "樱泉州立公园"
+    };
     
-    // Calculate actual distance for each spot
-    return spots.map(spot => ({
-      ...spot,
-      distance: calculateDistance(latitude, longitude, spot.latitude, spot.longitude)
-    }));
-  } catch (error) {
-    console.error("Could not fetch shared astro spots:", error);
-    return [];
-  }
-}
-
-export async function getRecommendedPhotoPoints(latitude: number, longitude: number): Promise<SharedAstroSpot[]> {
-   try {
-    const response = await fetch(`${ASTROSPOTS_API_URL}/sharedAstrospots/recommend?latitude=${latitude}&longitude=${longitude}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const spots = await response.json() as SharedAstroSpot[];
-    
-    // Calculate actual distance for each spot
-    return spots.map(spot => ({
-      ...spot,
-      distance: calculateDistance(latitude, longitude, spot.latitude, spot.longitude)
-    }));
-  } catch (error) {
-    console.error("Could not fetch shared astro spots:", error);
-    return [];
-  }
-}
-
-export async function shareAstroSpot(astroSpot: Omit<SharedAstroSpot, 'id'>): Promise<SharedAstroSpot | null> {
-  try {
-    const response = await fetch(`${ASTROSPOTS_API_URL}/sharedAstrospots`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(astroSpot),
+    // Calculate distance for each location and filter by radius
+    const locationsWithDistance = realLocations.map(location => {
+      const distance = calculateDistance(latitude, longitude, location.latitude, location.longitude);
+      return {
+        ...location,
+        id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
+        description: `Astronomical observation location with Bortle ${location.bortleScale}`,
+        date: new Date().toISOString(),
+        distance,
+        chineseName: chineseNames[location.name] || location.name
+      };
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json() as SharedAstroSpot;
+    
+    // Filter by distance and sort by closest
+    return locationsWithDistance
+      .filter(location => location.distance !== undefined && location.distance <= radius)
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0))
+      .slice(0, limit);
   } catch (error) {
-    console.error("Could not share astro spot:", error);
-    return null;
+    console.error('Error fetching shared spots:', error);
+    return [];
   }
+}
+
+/**
+ * Gets recommended photo spots for a location
+ */
+export async function getRecommendedPhotoPoints(
+  latitude: number,
+  longitude: number,
+  limit = 5
+): Promise<SharedAstroSpot[]> {
+  // For now, this is similar to getSharedAstroSpots but with a smaller limit
+  return getSharedAstroSpots(latitude, longitude, limit);
+}
+
+/**
+ * Generates a URL for directions to a location
+ */
+export function generateBaiduMapsUrl(latitude: number, longitude: number, name: string): string {
+  const encodedName = encodeURIComponent(name);
+  return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }

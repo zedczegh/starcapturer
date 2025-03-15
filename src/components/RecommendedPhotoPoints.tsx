@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { getRecommendedPhotoPoints, SharedAstroSpot } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatLocationDistance } from "@/utils/unitConversion";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -52,6 +51,16 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                     `已选择 ${language === 'en' ? point.name : (point.chineseName || point.name)}`),
     });
   };
+
+  const formatDistance = (distance?: number) => {
+    if (distance === undefined) return t("Unknown distance", "未知距离");
+    
+    if (distance < 1) 
+      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+    if (distance < 100) 
+      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
+  };
   
   const handleViewDetails = (point: SharedAstroSpot) => {
     navigate(`/location/${point.id}`, {
@@ -92,7 +101,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           recommendedPoints.map((point) => (
             <div 
               key={point.id}
-              className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 hover:scale-102 transition-all duration-300"
+              className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
               onClick={() => {
                 handleSelectPoint(point);
               }}
@@ -111,7 +120,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 <div className="flex items-center">
                   <MapPin className="h-3 w-3 text-muted-foreground mr-1" />
                   <span className="text-xs text-muted-foreground">
-                    {formatLocationDistance(point.distance, language)}
+                    {formatDistance(point.distance)}
                   </span>
                 </div>
                 <Button 

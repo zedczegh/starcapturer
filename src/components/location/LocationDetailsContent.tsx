@@ -11,14 +11,12 @@ interface LocationDetailsContentProps {
   locationData: any;
   setLocationData: (data: any) => void;
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
-  disableAutoRefresh?: boolean;
 }
 
 const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   locationData,
   setLocationData,
-  onLocationUpdate,
-  disableAutoRefresh = false
+  onLocationUpdate
 }) => {
   const {
     forecastData,
@@ -33,7 +31,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshAll,
     handleRefreshForecast,
     handleRefreshLongRangeForecast
-  } = useLocationDetails(locationData, setLocationData, disableAutoRefresh);
+  } = useLocationDetails(locationData, setLocationData);
 
   // Log updates for debugging
   useEffect(() => {

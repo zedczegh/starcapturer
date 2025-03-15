@@ -1,20 +1,20 @@
 
-import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
+import React, { memo } from "react";
+import { motion } from "framer-motion";
 import NavBar from "@/components/NavBar";
+import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import LocationDetailsContent from "@/components/location/LocationDetailsContent";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LocationDetailsViewportProps {
   locationData: any;
   setLocationData: (data: any) => void;
   statusMessage: string | null;
-  messageType: "info" | "error" | "success" | "warning" | null;
+  messageType: 'info' | 'success' | 'error';
   setStatusMessage: (message: string | null) => void;
   handleUpdateLocation: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
 }
 
-const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
+const LocationDetailsViewport = memo<LocationDetailsViewportProps>(({
   locationData,
   setLocationData,
   statusMessage,
@@ -22,62 +22,31 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   setStatusMessage,
   handleUpdateLocation
 }) => {
-  const { language, t } = useLanguage();
-  const [showStatusMessage, setShowStatusMessage] = useState(false);
-  
-  // Show status message if provided (without auto-refresh)
-  useEffect(() => {
-    if (statusMessage) {
-      const timer = setTimeout(() => {
-        setShowStatusMessage(true);
-      }, 300);
-      
-      // Auto-hide success messages after 5 seconds
-      if (messageType === "success") {
-        const hideTimer = setTimeout(() => {
-          setShowStatusMessage(false);
-          setStatusMessage(null);
-        }, 5000);
-        return () => {
-          clearTimeout(timer);
-          clearTimeout(hideTimer);
-        };
-      }
-      
-      return () => clearTimeout(timer);
-    } else {
-      setShowStatusMessage(false);
-    }
-  }, [statusMessage, messageType, setStatusMessage]);
-  
-  // Show toast for status messages
-  useEffect(() => {
-    if (statusMessage && messageType) {
-      if (messageType === "error") {
-        toast.error(statusMessage);
-      } else if (messageType === "success") {
-        toast.success(statusMessage);
-      } else if (messageType === "warning") {
-        toast.warning(statusMessage);
-      } else {
-        toast.info(statusMessage);
-      }
-    }
-  }, [statusMessage, messageType]);
-  
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <motion.div 
+      className="min-h-screen overflow-x-hidden sci-fi-scrollbar pb-16 md:pb-0"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+    >
       <NavBar />
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        <LocationDetailsContent 
+      <main className="container mx-auto px-4 pt-24 pb-16">
+        <LocationStatusMessage 
+          message={statusMessage}
+          type={messageType}
+          onClear={() => setStatusMessage(null)}
+        />
+        
+        <LocationDetailsContent
           locationData={locationData}
           setLocationData={setLocationData}
           onLocationUpdate={handleUpdateLocation}
-          disableAutoRefresh={true}
         />
       </main>
-    </div>
+    </motion.div>
   );
-};
+});
+
+LocationDetailsViewport.displayName = 'LocationDetailsViewport';
 
 export default LocationDetailsViewport;
