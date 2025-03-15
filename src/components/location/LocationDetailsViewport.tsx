@@ -25,7 +25,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { language, t } = useLanguage();
   const [showStatusMessage, setShowStatusMessage] = useState(false);
   
-  // Show status message if provided (debounced for better user experience)
+  // Show status message if provided (without auto-refresh)
   useEffect(() => {
     if (statusMessage) {
       const timer = setTimeout(() => {
@@ -73,6 +73,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
           locationData={locationData}
           setLocationData={setLocationData}
           onLocationUpdate={handleUpdateLocation}
+          disableAutoRefresh={true} // Disable auto-refresh
         />
       </main>
     </div>

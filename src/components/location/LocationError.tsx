@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
@@ -9,14 +9,27 @@ import { AlertCircle } from "lucide-react";
 interface LocationErrorProps {
   message?: string;
   autoRedirect?: boolean;
+  redirectDelay?: number;
 }
 
 const LocationError: React.FC<LocationErrorProps> = ({ 
   message,
-  autoRedirect = false // Disabled auto-redirect by default
+  autoRedirect = false,
+  redirectDelay = 5000
 }) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  
+  // Handle auto-redirect if enabled
+  useEffect(() => {
+    if (autoRedirect) {
+      const timer = setTimeout(() => {
+        navigate("/");
+      }, redirectDelay);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [autoRedirect, navigate, redirectDelay]);
   
   return (
     <div className="min-h-screen flex flex-col">

@@ -1,10 +1,71 @@
-
 /**
- * Unit conversion utilities for the app
+ * Converts and formats temperature for display
+ * @param temperature Temperature in Celsius
+ * @param language Language code ('en' for Fahrenheit, 'zh' for Celsius)
+ * @returns Formatted temperature string with appropriate unit
  */
+export const formatTemperature = (temperature: number, language: string = 'en'): string => {
+  if (language === 'en') {
+    // Convert to Fahrenheit for English
+    const fahrenheit = (temperature * 9/5) + 32;
+    return `${Math.round(fahrenheit)}°F`;
+  } else {
+    // Keep Celsius for Chinese
+    return `${Math.round(temperature)}°C`;
+  }
+};
 
 /**
- * Convert kilometers to miles
+ * Converts and formats wind speed for display
+ * @param windSpeed Wind speed in m/s
+ * @param language Language code ('en' for mph, 'zh' for km/h)
+ * @returns Formatted wind speed string with appropriate unit
+ */
+export const formatWindSpeed = (windSpeed: number, language: string = 'en'): string => {
+  if (language === 'en') {
+    // Convert to mph for English
+    const mph = windSpeed * 2.237;
+    return `${Math.round(mph)} mph`;
+  } else {
+    // Convert to km/h for Chinese
+    const kmh = windSpeed * 3.6;
+    return `${Math.round(kmh)} km/h`;
+  }
+};
+
+/**
+ * Converts and formats distance for display
+ * @param distance Distance in kilometers
+ * @param language Language code ('en' for miles, 'zh' for km)
+ * @returns Formatted distance string with appropriate unit
+ */
+export const formatDistance = (distance: number, language: string = 'en'): string => {
+  if (language === 'en') {
+    // Convert to miles for English
+    const miles = distance * 0.621371;
+    
+    // Format based on distance size
+    if (miles < 0.1) {
+      return `${Math.round(miles * 5280)} ft`;
+    } else if (miles < 10) {
+      return `${miles.toFixed(1)} mi`;
+    } else {
+      return `${Math.round(miles)} mi`;
+    }
+  } else {
+    // Format km for Chinese
+    if (distance < 0.1) {
+      return `${Math.round(distance * 1000)} 米`;
+    } else if (distance < 10) {
+      return `${distance.toFixed(1)} 公里`;
+    } else {
+      return `${Math.round(distance)} 公里`;
+    }
+  }
+};
+
+/**
+ * Converts kilometers to miles
  * @param km Distance in kilometers
  * @returns Distance in miles
  */
@@ -13,7 +74,7 @@ export const kmToMiles = (km: number): number => {
 };
 
 /**
- * Convert miles to kilometers
+ * Converts miles to kilometers
  * @param miles Distance in miles
  * @returns Distance in kilometers
  */
@@ -22,118 +83,24 @@ export const milesToKm = (miles: number): number => {
 };
 
 /**
- * Convert meters to feet
- * @param meters Distance in meters
- * @returns Distance in feet
+ * Gets the appropriate distance unit based on language
+ * @param language Language code ('en' for miles, 'zh' for km)
+ * @returns Distance unit string
  */
-export const metersToFeet = (meters: number): number => {
-  return meters * 3.28084;
+export const getDistanceUnit = (language: string = 'en'): string => {
+  return language === 'en' ? 'mi' : '公里';
 };
 
 /**
- * Convert feet to meters
- * @param feet Distance in feet
- * @returns Distance in meters
+ * Formats a value according to the current language
+ * @param value The numeric value to format
+ * @param language Language code ('en' or 'zh')
+ * @returns Formatted string
  */
-export const feetToMeters = (feet: number): number => {
-  return feet / 3.28084;
-};
-
-/**
- * Convert Celsius to Fahrenheit
- * @param celsius Temperature in Celsius
- * @returns Temperature in Fahrenheit
- */
-export const celsiusToFahrenheit = (celsius: number): number => {
-  return (celsius * 9/5) + 32;
-};
-
-/**
- * Convert Fahrenheit to Celsius
- * @param fahrenheit Temperature in Fahrenheit
- * @returns Temperature in Celsius
- */
-export const fahrenheitToCelsius = (fahrenheit: number): number => {
-  return (fahrenheit - 32) * 5/9;
-};
-
-/**
- * Format a temperature based on the language/unit system
- * @param celsius Temperature in Celsius
- * @param language 'en' for English (Fahrenheit) or 'zh' for Chinese (Celsius)
- * @returns Formatted temperature string with units
- */
-export const formatTemperature = (celsius: number, language: 'en' | 'zh'): string => {
+export const formatNumber = (value: number, language: string = 'en'): string => {
   if (language === 'en') {
-    const fahrenheit = celsiusToFahrenheit(celsius);
-    return `${Math.round(fahrenheit)}°F`;
-  }
-  return `${Math.round(celsius)}°C`;
-};
-
-/**
- * Format a distance value based on the language/unit system
- * @param kilometers Distance in kilometers
- * @param language 'en' for English (miles) or 'zh' for Chinese (kilometers)
- * @returns Formatted distance string with units
- */
-export const formatDistance = (kilometers: number, language: 'en' | 'zh'): string => {
-  if (language === 'en') {
-    const miles = kmToMiles(kilometers);
-    if (miles < 0.1) {
-      return `${Math.round(miles * 1760)} yards`;
-    } else if (miles < 10) {
-      return `${miles.toFixed(1)} miles`;
-    } else {
-      return `${Math.round(miles).toLocaleString()} miles`;
-    }
+    return new Intl.NumberFormat('en-US').format(value);
   } else {
-    if (kilometers < 1) {
-      return `${Math.round(kilometers * 1000)} 米`;
-    } else if (kilometers < 10) {
-      return `${kilometers.toFixed(1)} 公里`;
-    } else {
-      return `${Math.round(kilometers).toLocaleString()} 公里`;
-    }
-  }
-};
-
-/**
- * Format a distance with proper units for the DistanceRangeSlider component
- * @param kilometers Distance in kilometers
- * @param language 'en' for English (miles) or 'zh' for Chinese (kilometers)
- * @returns Formatted distance string with units
- */
-export const formatSliderDistance = (kilometers: number, language: 'en' | 'zh'): string => {
-  if (language === 'en') {
-    const miles = kmToMiles(kilometers);
-    return `${Math.round(miles).toLocaleString()} mi`;
-  } else {
-    return `${kilometers.toLocaleString()} km`;
-  }
-};
-
-/**
- * Format a distance with additional "away" text for location cards
- * @param distance Distance in kilometers (or undefined)
- * @param language 'en' for English (miles) or 'zh' for Chinese (kilometers)
- * @returns Formatted distance string with "away" text
- */
-export const formatLocationDistance = (distance: number | undefined, language: 'en' | 'zh'): string => {
-  if (distance === undefined) return language === 'en' ? "Unknown distance" : "未知距离";
-  
-  if (language === 'en') {
-    const miles = kmToMiles(distance);
-    if (miles < 1) 
-      return `${Math.round(miles * 1760)} yards away`;
-    if (miles < 100) 
-      return `${miles.toFixed(1)} miles away`;
-    return `${Math.round(miles).toLocaleString()} miles away`;
-  } else {
-    if (distance < 1) 
-      return `距离 ${Math.round(distance * 1000)} 米`;
-    if (distance < 100) 
-      return `距离 ${distance.toFixed(1)} 公里`;
-    return `距离 ${Math.round(distance).toLocaleString()} 公里`;
+    return new Intl.NumberFormat('zh-CN').format(value);
   }
 };

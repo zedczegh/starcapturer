@@ -2,7 +2,7 @@
 import React from "react";
 import { Thermometer, Droplets, Wind, Sparkles } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatTemperature } from "@/utils/unitConversion";
+import { formatTemperature, formatWindSpeed } from "@/utils/unitConversion";
 
 interface PrimaryConditionsProps {
   temperature: number;
@@ -24,10 +24,8 @@ const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
   // Use the provided language prop if available, otherwise use context
   const language = propLanguage || contextLanguage;
   
-  // Format wind speed based on language/unit system
-  const formattedWindSpeed = language === 'en' 
-    ? `${Math.round(windSpeed * 2.237)} mph` // Convert m/s to mph
-    : `${Math.round(windSpeed * 3.6)} km/h`; // Convert m/s to km/h
+  // Format wind speed based on language/unit system using the utility function
+  const formattedWindSpeed = formatWindSpeed(windSpeed, language);
   
   return (
     <div className="grid grid-cols-2 gap-4">

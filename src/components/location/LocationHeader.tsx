@@ -37,36 +37,45 @@ const LocationHeader: React.FC<LocationHeaderProps> = ({
     }
   }, [latitude, longitude, language]);
   
-  // Extract region name from full location name
+  // Extract region name from full location name - improved for better readability
   const regionName = useMemo(() => {
-    // If name is short, just use it
-    if (!name || name.length < 15) return name;
+    if (!name || name.length < 10) return name;
     
-    // Try to extract just the region/province/state
     const parts = name.split(/,|，/);
-    if (parts.length === 1) return name;
+    if (parts.length <= 1) return name;
     
-    // For Chinese locations, try to extract province/state level
-    for (const part of parts) {
-      const trimmedPart = part.trim();
-      if (trimmedPart.includes("Province") || 
-          trimmedPart.includes("District") ||
-          trimmedPart.includes("State") ||
-          trimmedPart.includes("県") ||
-          trimmedPart.includes("省") ||
-          trimmedPart.includes("自治区") ||
-          trimmedPart.includes("地区")) {
-        return trimmedPart;
+    // Try to get province/state/region level (higher administrative division)
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      // Check for province/state identifiers in various languages
+      if (part.includes("Province") || 
+          part.includes("State") || 
+          part.includes("District") ||
+          part.includes("Region") ||
+          part.includes("County") ||
+          part.includes("Territory") ||
+          part.includes("Oblast") ||
+          part.includes("Prefecture") ||
+          part.includes("省") || 
+          part.includes("自治区") || 
+          part.includes("特区") ||
+          part.includes("特別行政区") ||
+          part.includes("道") ||
+          part.includes("府") ||
+          part.includes("県") ||
+          part.includes("州")) {
+        return part;
       }
     }
     
-    // If no specific region found, use the first part
+    // If no specific region marker found, and we have enough parts,
+    // use the second element which is often the city/region
     if (parts.length >= 2) {
-      const firstTwoParts = parts.slice(0, 2).map(p => p.trim()).join(", ");
-      return firstTwoParts;
+      return parts[1].trim();
     }
     
-    return parts[0].trim();
+    // Fall back to the full name if we couldn't extract a meaningful part
+    return name;
   }, [name]);
   
   return (
