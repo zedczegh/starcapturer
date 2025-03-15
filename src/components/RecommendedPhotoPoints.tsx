@@ -55,11 +55,22 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
+    if (language === 'en') {
+      // Convert to miles for English users
+      const miles = distance * 0.621371;
+      if (miles < 1) 
+        return `${Math.round(miles * 1760)} yards away`;
+      if (miles < 100) 
+        return `${miles.toFixed(1)} miles away`;
+      return `${Math.round(miles).toLocaleString()} miles away`;
+    } else {
+      // Use kilometers for Chinese users
+      if (distance < 1) 
+        return `距离 ${Math.round(distance * 1000)} 米`;
+      if (distance < 100) 
+        return `距离 ${distance.toFixed(1)} 公里`;
+      return `距离 ${Math.round(distance).toLocaleString()} 公里`;
+    }
   };
   
   const handleViewDetails = (point: SharedAstroSpot) => {
