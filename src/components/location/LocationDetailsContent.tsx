@@ -33,7 +33,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshAll,
     handleRefreshForecast,
     handleRefreshLongRangeForecast
-  } = useLocationDetails(locationData, setLocationData, { disableAutoRefresh });
+  } = useLocationDetails(locationData, setLocationData);
 
   // Log updates for debugging
   useEffect(() => {
@@ -70,7 +70,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           setStatusMessage={setStatusMessage}
           onRefreshForecast={handleRefreshForecast}
           onRefreshLongRange={handleRefreshLongRangeForecast}
-          disableAutoRefresh={disableAutoRefresh}
         />
       </Suspense>
     </>
