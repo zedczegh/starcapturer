@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar, Navigation } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar, Navigation, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -153,7 +154,7 @@ const PhotoPointsNearby: React.FC = () => {
               transition={{ duration: 0.3 }}
             >
               <div className="relative mr-3">
-                <Compass className="h-7 w-7 text-primary" />
+                <Navigation className="h-7 w-7 text-primary" />
                 <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
               </div>
               <div>

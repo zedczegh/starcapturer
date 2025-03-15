@@ -26,6 +26,7 @@ export function findClosestLocationImpl(
     };
   }
 
+  // Enhanced location finding strategy
   return findClosestLocationStrategy(latitude, longitude, locationDatabase);
 }
 
@@ -43,5 +44,13 @@ export function getLocationInfoImpl(
   formattedName: string;
 } {
   const result = findClosestLocationImpl(latitude, longitude, locationDatabase);
+  
+  // Apply improved name formatting with smarter formatting
   return getLocationNameFormatting(result);
 }
+
+/**
+ * Exports for use in the application
+ */
+export const findClosestLocation = findClosestLocationImpl;
+export const getLocationInfo = getLocationInfoImpl;

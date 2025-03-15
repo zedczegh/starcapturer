@@ -33,7 +33,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshAll,
     handleRefreshForecast,
     handleRefreshLongRangeForecast
-  } = useLocationDetails(locationData, setLocationData);
+  } = useLocationDetails(locationData, setLocationData, disableAutoRefresh);
 
   // Log updates for debugging
   useEffect(() => {

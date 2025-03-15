@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isMountainousLocation, calculateLocationScore } from "./locationTypeUtils";
 
@@ -42,7 +42,7 @@ export function useLocationFiltering(
     }
     
     // Sort by a weighted combination of SIQS and distance with improved algorithm
-    const sortedLocations = betterLocations.sort((a, b) => {
+    const sortedLocations = [...betterLocations].sort((a, b) => {
       // First prioritize by cloud cover (the most important factor)
       // We estimate this from the SIQS score difference
       const siqsDiff = (b.siqs || 0) - (a.siqs || 0);

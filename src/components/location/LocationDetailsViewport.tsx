@@ -73,7 +73,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
           locationData={locationData}
           setLocationData={setLocationData}
           onLocationUpdate={handleUpdateLocation}
-          disableAutoRefresh={true} // Disable auto-refresh
+          disableAutoRefresh={true}
         />
       </main>
     </div>
