@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
 import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
+import { formatTemperature } from "@/utils/unitConversion";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -70,9 +71,10 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         : normalizedMoonPhase,
       weatherCondition: language === 'zh' && weatherData.condition
         ? getWeatherConditionInChinese(weatherData.condition)
-        : weatherData.condition
+        : weatherData.condition,
+      temperature: formatTemperature(weatherData.temperature, language) 
     };
-  }, [language, seeingConditions, moonPhase, weatherData.condition]);
+  }, [language, seeingConditions, moonPhase, weatherData.condition, weatherData.temperature]);
 
   return (
     <Card className={`glassmorphism border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden ${language === 'zh' ? 'zh-card' : ''}`}>
@@ -88,6 +90,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             humidity={weatherData.humidity}
             windSpeed={weatherData.windSpeed}
             seeingConditions={translatedData.seeingConditions}
+            language={language}
           />
           
           <SecondaryConditions

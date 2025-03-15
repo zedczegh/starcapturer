@@ -47,7 +47,14 @@ export async function getSharedAstroSpots(latitude: number, longitude: number, l
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return await response.json() as SharedAstroSpot[];
+    
+    const spots = await response.json() as SharedAstroSpot[];
+    
+    // Calculate actual distance for each spot
+    return spots.map(spot => ({
+      ...spot,
+      distance: calculateDistance(latitude, longitude, spot.latitude, spot.longitude)
+    }));
   } catch (error) {
     console.error("Could not fetch shared astro spots:", error);
     return [];
@@ -60,7 +67,14 @@ export async function getRecommendedPhotoPoints(latitude: number, longitude: num
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return await response.json() as SharedAstroSpot[];
+    
+    const spots = await response.json() as SharedAstroSpot[];
+    
+    // Calculate actual distance for each spot
+    return spots.map(spot => ({
+      ...spot,
+      distance: calculateDistance(latitude, longitude, spot.latitude, spot.longitude)
+    }));
   } catch (error) {
     console.error("Could not fetch shared astro spots:", error);
     return [];

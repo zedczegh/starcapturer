@@ -1,58 +1,77 @@
 
-import React, { memo } from "react";
-import ConditionItem from "./ConditionItem";
+import React from "react";
+import { Thermometer, Droplets, Wind, Sparkles } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { 
-  DynamicHumidityIcon, 
-  DynamicTemperatureIcon,
-  DynamicWindIcon,
-  DynamicSeeingIcon
-} from "./DynamicIcons";
+import { formatTemperature } from "@/utils/unitConversion";
 
 interface PrimaryConditionsProps {
   temperature: number;
   humidity: number;
   windSpeed: number;
   seeingConditions: string;
+  language?: 'en' | 'zh';
 }
 
-const PrimaryConditions = memo<PrimaryConditionsProps>(({
+const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
   temperature,
   humidity,
   windSpeed,
-  seeingConditions
+  seeingConditions,
+  language: propLanguage
 }) => {
-  const { t } = useLanguage();
+  const { language: contextLanguage, t } = useLanguage();
+  
+  // Use the provided language prop if available, otherwise use context
+  const language = propLanguage || contextLanguage;
+  
+  // Format wind speed based on language/unit system
+  const formattedWindSpeed = language === 'en' 
+    ? `${Math.round(windSpeed * 2.237)} mph` // Convert m/s to mph
+    : `${Math.round(windSpeed * 3.6)} km/h`; // Convert m/s to km/h
   
   return (
-    <div className="space-y-6">
-      <ConditionItem
-        icon={<DynamicTemperatureIcon temperature={temperature} />}
-        label={t("Temperature", "温度")}
-        value={`${temperature.toFixed(1)}°C`}
-      />
+    <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-col items-center p-2 bg-cosmic-900/20 rounded-lg">
+        <Thermometer className="h-5 w-5 text-red-400 mb-1" />
+        <span className="text-xs text-muted-foreground">
+          {t("Temperature", "温度")}
+        </span>
+        <span className="text-lg font-semibold">
+          {formatTemperature(temperature, language)}
+        </span>
+      </div>
       
-      <ConditionItem
-        icon={<DynamicHumidityIcon humidity={humidity} />}
-        label={t("Humidity", "湿度")}
-        value={`${humidity}%`}
-      />
+      <div className="flex flex-col items-center p-2 bg-cosmic-900/20 rounded-lg">
+        <Droplets className="h-5 w-5 text-blue-400 mb-1" />
+        <span className="text-xs text-muted-foreground">
+          {t("Humidity", "湿度")}
+        </span>
+        <span className="text-lg font-semibold">
+          {Math.round(humidity)}%
+        </span>
+      </div>
       
-      <ConditionItem
-        icon={<DynamicWindIcon windSpeed={windSpeed} />}
-        label={t("Wind Speed", "风速")}
-        value={`${windSpeed} ${t("km/h", "公里/小时")}`}
-      />
+      <div className="flex flex-col items-center p-2 bg-cosmic-900/20 rounded-lg">
+        <Wind className="h-5 w-5 text-cyan-400 mb-1" />
+        <span className="text-xs text-muted-foreground">
+          {t("Wind", "风速")}
+        </span>
+        <span className="text-lg font-semibold">
+          {formattedWindSpeed}
+        </span>
+      </div>
       
-      <ConditionItem
-        icon={<DynamicSeeingIcon seeingConditions={seeingConditions} />}
-        label={t("Seeing Conditions", "视宁度")}
-        value={seeingConditions}
-      />
+      <div className="flex flex-col items-center p-2 bg-cosmic-900/20 rounded-lg">
+        <Sparkles className="h-5 w-5 text-yellow-400 mb-1" />
+        <span className="text-xs text-muted-foreground">
+          {t("Seeing", "视宁度")}
+        </span>
+        <span className="text-lg font-semibold">
+          {seeingConditions}
+        </span>
+      </div>
     </div>
   );
-});
-
-PrimaryConditions.displayName = 'PrimaryConditions';
+};
 
 export default PrimaryConditions;

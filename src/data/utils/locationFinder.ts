@@ -1,4 +1,3 @@
-
 /**
  * Implementation of location finding algorithms
  */
@@ -49,10 +48,19 @@ export function findClosestLocationImpl(
         (location.name.toLowerCase().includes('mountain') || 
          location.name.toLowerCase().includes('mountains') ||
          location.name.toLowerCase().includes('peak') ||
-         location.name.toLowerCase().includes('range') ||
-         location.type === 'dark-site')) {
+         location.name.toLowerCase().includes('range'))) {
       
-      // Use larger effective radius for mountains and dark sites to ensure they're identified
+      // Use larger effective radius for mountains to ensure they're identified
+      const effectiveRadius = location.radius * 2.0;
+      
+      if (distance <= effectiveRadius) {
+        mountainsAndDarkSites.push({
+          location,
+          distance
+        });
+      }
+    } else if (location.type === 'dark-site') {
+      // Special handling for dark sites with larger effective radius
       const effectiveRadius = location.radius * 2.0;
       
       if (distance <= effectiveRadius) {

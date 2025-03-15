@@ -7,6 +7,7 @@ import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData } from "@/lib/api";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
+import { getLocationInfo } from "@/data/locationDatabase";
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -31,11 +32,54 @@ export const usePhotoPointsSearch = ({
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [hasMoreLocations, setHasMoreLocations] = useState(false);
   const [isUserInGoodLocation, setIsUserInGoodLocation] = useState(false);
+  const [userRegionName, setUserRegionName] = useState<string>("");
   
   // SIQS threshold (20% better than current location is considered significant)
   // Lower threshold for mountain areas to ensure they're included
   const SIQS_IMPROVEMENT_THRESHOLD = 1.2;
   const SIQS_MOUNTAIN_THRESHOLD = 1.1;
+  
+  // Update user region name when location changes
+  useEffect(() => {
+    if (userLocation) {
+      try {
+        // Get higher-level location name (state/province)
+        const locationInfo = getLocationInfo(userLocation.latitude, userLocation.longitude);
+        
+        // Extract just the region name
+        let regionName = "";
+        if (locationInfo.name) {
+          // For Chinese locations, try to extract province/state level
+          const nameParts = locationInfo.name.split(',');
+          if (nameParts.length > 1) {
+            // Try to get province/state level name
+            const provincePart = nameParts.find(part => 
+              part.trim().includes("Province") || 
+              part.trim().includes("State") || 
+              part.trim().includes("District") ||
+              part.trim().includes("省") || 
+              part.trim().includes("自治区") ||
+              part.trim().includes("市")
+            );
+            
+            if (provincePart) {
+              regionName = provincePart.trim();
+            } else {
+              // If no province found, use the second part (usually city or county)
+              regionName = nameParts[1].trim();
+            }
+          } else {
+            regionName = locationInfo.name;
+          }
+        }
+        
+        setUserRegionName(regionName || (language === 'en' ? "Current Region" : "当前区域"));
+      } catch (error) {
+        console.error("Error setting user region name:", error);
+        setUserRegionName(language === 'en' ? "Current Region" : "当前区域");
+      }
+    }
+  }, [userLocation, language]);
   
   // Check if a location is in a mountainous area based on name or type
   const isMountainousLocation = (location: SharedAstroSpot): boolean => {
@@ -48,9 +92,13 @@ export const usePhotoPointsSearch = ({
     if (nameLC.includes('mountain') || 
         nameLC.includes('mount ') || 
         nameLC.includes(' mt.') || 
+        nameLC.includes('mt ') ||
         nameLC.includes('peak') || 
         nameLC.includes('hills') ||
-        nameLC.includes('range')) {
+        nameLC.includes('range') ||
+        nameLC.includes('ridge') ||
+        nameLC.includes('highland') ||
+        nameLC.includes('plateau')) {
       return true;
     }
     
@@ -58,8 +106,22 @@ export const usePhotoPointsSearch = ({
     if (chineseNameLC.includes('山') || 
         chineseNameLC.includes('岭') || 
         chineseNameLC.includes('峰') ||
-        chineseNameLC.includes('高原')) {
+        chineseNameLC.includes('高原') ||
+        chineseNameLC.includes('坪') ||
+        chineseNameLC.includes('岗')) {
       return true;
+    }
+    
+    // Check description for mountain references
+    if (location.description) {
+      const descriptionLC = location.description.toLowerCase();
+      if (descriptionLC.includes('mountain') || 
+          descriptionLC.includes('elevation') ||
+          descriptionLC.includes('altitude') ||
+          descriptionLC.includes('高山') ||
+          descriptionLC.includes('海拔')) {
+        return true;
+      }
     }
     
     return false;
@@ -162,7 +224,7 @@ export const usePhotoPointsSearch = ({
       setIsUserInGoodLocation(userHasGoodSiqs);
     }
     
-    // Calculate SIQS for each location
+    // Calculate SIQS for each location with improved mountain detection
     const locationsWithSiqs = await Promise.all(
       enhancedLocations.map(async (location) => {
         try {
@@ -189,13 +251,18 @@ export const usePhotoPointsSearch = ({
           
           // Special handling for mountainous areas - they might be better than estimated
           // Remote mountains often have better darkness than generic Bortle estimates
-          if (isMountainousLocation(location) && bortleScale > 3) {
-            // Reduce Bortle scale for mountains - they're usually darker than estimation
-            bortleScale = Math.max(2, bortleScale - 1);
+          const isMountain = isMountainousLocation(location);
+          if (isMountain) {
+            // For mountains, use even better Bortle scale reduction
+            // Higher elevation typically means clearer, darker skies
+            if (bortleScale > 3) {
+              // Reduce Bortle scale for mountains - they're usually darker than estimation
+              bortleScale = Math.max(2, bortleScale - 1.5);
+            }
           }
           
           if (weatherData) {
-            // Calculate SIQS
+            // Calculate SIQS with improved algorithm
             const siqsResult = calculateSIQS({
               cloudCover: weatherData.cloudCover,
               bortleScale: bortleScale,
@@ -208,9 +275,16 @@ export const usePhotoPointsSearch = ({
               aqi: weatherData.aqi
             });
             
+            // If it's a mountain location, give a slight SIQS boost
+            // Mountains often have clearer air and better seeing conditions
+            let adjustedScore = siqsResult.score;
+            if (isMountain && adjustedScore > 0) {
+              adjustedScore = Math.min(10, adjustedScore * 1.15);
+            }
+            
             return {
               ...location,
-              siqs: siqsResult.score,
+              siqs: adjustedScore,
               isViable: siqsResult.isViable,
               bortleScale: bortleScale // Save the potentially adjusted bortleScale
             };
@@ -254,14 +328,14 @@ export const usePhotoPointsSearch = ({
       });
     }
     
-    // Sort by a weighted combination of SIQS and distance
+    // Sort by a weighted combination of SIQS and distance with improved algorithm
     const sortedLocations = betterLocations.sort((a, b) => {
       // First prioritize by cloud cover (the most important factor)
       // We estimate this from the SIQS score difference
       const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
       
-      // If SIQS difference is significant, sort by SIQS
-      if (Math.abs(siqsDiff) > 1.5) {
+      // For significant SIQS difference, prioritize better SIQS
+      if (Math.abs(siqsDiff) > 1.0) {
         return siqsDiff;
       }
       
@@ -272,8 +346,16 @@ export const usePhotoPointsSearch = ({
       if (aIsMountain && !bIsMountain) return -1;
       if (!aIsMountain && bIsMountain) return 1;
       
-      // If mountains status is the same, sort by distance
-      return (a.distance || 0) - (b.distance || 0);
+      // For locations with similar SIQS and the same mountain status
+      // Use a weighted score that considers both SIQS and distance
+      const aDistance = a.distance || 0;
+      const bDistance = b.distance || 0;
+      
+      // Give more weight to SIQS than distance
+      const aScore = (a.siqs || 0) * 3 - (aDistance / 500);
+      const bScore = (b.siqs || 0) * 3 - (bDistance / 500);
+      
+      return bScore - aScore;
     });
     
     setFilteredLocations(sortedLocations);
@@ -310,6 +392,7 @@ export const usePhotoPointsSearch = ({
     displayedLocations,
     hasMoreLocations,
     loadMoreLocations,
-    isUserInGoodLocation
+    isUserInGoodLocation,
+    userRegionName
   };
 };
