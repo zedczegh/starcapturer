@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { fetchWeatherData } from "@/lib/api";
@@ -20,11 +20,50 @@ export const useLocationUpdate = (
   const { t } = useLanguage();
   const { updateLightPollutionData } = useLightPollutionData();
   const { updateBortleScale } = useBortleUpdater();
+  const updateInProgressRef = useRef(false);
+  const lastLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
+  
+  // Check if the location is significantly different from the last one (> 500m)
+  const isSignificantLocationChange = (
+    newLat: number, 
+    newLng: number
+  ): boolean => {
+    if (!lastLocationRef.current) return true;
+    
+    const { latitude: lastLat, longitude: lastLng } = lastLocationRef.current;
+    
+    // Quick distance approximation (good enough for this purpose)
+    const latDiff = Math.abs(newLat - lastLat);
+    const lngDiff = Math.abs(newLng - lastLng);
+    
+    // ~111km per degree of latitude, ~111km * cos(lat) per degree of longitude
+    // 0.005 degrees ≈ 500m
+    return latDiff > 0.005 || lngDiff > 0.005;
+  };
 
   const handleLocationUpdate = useCallback(
     async (newLocation: { name: string; latitude: number; longitude: number }) => {
       if (!newLocation) return;
       
+      // Prevent multiple simultaneous updates
+      if (updateInProgressRef.current) {
+        console.log("Update already in progress, skipping");
+        return;
+      }
+      
+      // Skip if the location isn't significantly different
+      if (!isSignificantLocationChange(newLocation.latitude, newLocation.longitude)) {
+        console.log("Location change too small, skipping update");
+        return locationData;
+      }
+      
+      // Update the last location reference
+      lastLocationRef.current = {
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude
+      };
+      
+      updateInProgressRef.current = true;
       setLoading(true);
       
       try {
@@ -136,6 +175,10 @@ export const useLocationUpdate = (
         throw error;
       } finally {
         setLoading(false);
+        // Add a delay before allowing another update
+        setTimeout(() => {
+          updateInProgressRef.current = false;
+        }, 1000);
       }
     },
     [locationData, setLocationData, t, updateBortleScale]

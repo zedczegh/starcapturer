@@ -1,9 +1,10 @@
 
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationMap from "@/components/location/LocationMap";
+import { toast } from "sonner";
 
 interface LocationUpdaterProps {
   locationData: any;
@@ -21,6 +22,8 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   setStatusMessage
 }) => {
   const { t } = useLanguage();
+  const updateInProgressRef = useRef(false);
+  const locationUpdateTimeoutRef = useRef<number | null>(null);
 
   // Safely check if locationData has required properties
   const hasValidCoordinates = locationData && 
@@ -32,14 +35,47 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const fallbackLongitude = 0;
   const fallbackName = t("Unnamed Location", "未命名位置");
 
-  // Memoized location update handler
+  // Cleanup function for timeouts
+  useEffect(() => {
+    return () => {
+      if (locationUpdateTimeoutRef.current) {
+        clearTimeout(locationUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Memoized location update handler with debouncing and throttling
   const handleLocationUpdate = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
+    if (updateInProgressRef.current) {
+      console.log('Update already in progress, queuing request');
+      
+      // If we have a pending timeout, clear it
+      if (locationUpdateTimeoutRef.current) {
+        clearTimeout(locationUpdateTimeoutRef.current);
+      }
+      
+      // Queue the update for later
+      locationUpdateTimeoutRef.current = window.setTimeout(() => {
+        handleLocationUpdate(location);
+      }, 1000);
+      
+      return;
+    }
+    
     console.log('Location update received:', location);
+    updateInProgressRef.current = true;
+    
     try {
       await onLocationUpdate(location);
     } catch (error) {
       console.error('Error updating location:', error);
       setStatusMessage(t('Failed to update location', '更新位置失败'));
+      toast.error(t('Failed to update location', '更新位置失败'));
+    } finally {
+      // Allow next update after a small delay to prevent rapid consecutive updates
+      setTimeout(() => {
+        updateInProgressRef.current = false;
+      }, 500);
     }
   }, [onLocationUpdate, setStatusMessage, t]);
 

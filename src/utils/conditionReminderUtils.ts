@@ -58,7 +58,7 @@ export function getHumidityAdvice(humidity: number, language: Language): string 
   if (humidity > 70) {
     return language === 'en'
       ? "High humidity increases risk of dew formation. Consider using dew heaters for your optics."
-      : "高湿度增加了露水形成的风险。考虑为您的光学设备使用露水加热器。";
+      : "高湿度增加了露水形成的风险。考虑为主镜使用加热带。";
   }
   
   return language === 'en'
