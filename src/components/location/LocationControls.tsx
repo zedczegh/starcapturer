@@ -28,6 +28,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   const { setCachedData, getCachedData } = useLocationDataCache();
   const [isMounted, setIsMounted] = useState(false);
   const [lastTranslationRequest, setLastTranslationRequest] = useState<string | null>(null);
+  const [isProcessingLanguageChange, setIsProcessingLanguageChange] = useState(false);
 
   // Avoid unnecessary effect runs on initial mount
   useEffect(() => {
@@ -38,12 +39,12 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   // Create a debounced translation request key
   const translationRequestKey = useMemo(() => {
     if (!currentLocation) return null;
-    return `${currentLocation.latitude}-${currentLocation.longitude}-${language}`;
+    return `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}-${language}`;
   }, [currentLocation, language]);
 
   // Update location name when language changes, only for non-special locations
   useEffect(() => {
-    if (!isMounted || !currentLocation || !translationRequestKey) return;
+    if (!isMounted || !currentLocation || !translationRequestKey || isProcessingLanguageChange) return;
     
     // Skip if we've already processed this exact request
     if (translationRequestKey === lastTranslationRequest) return;
@@ -53,6 +54,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     
     const updateLocationNameOnLanguageChange = async () => {
       try {
+        setIsProcessingLanguageChange(true);
         const locationName = await getLocationNameForCoordinates(
           currentLocation.latitude,
           currentLocation.longitude,
@@ -73,13 +75,15 @@ const LocationControls: React.FC<LocationControlsProps> = ({
         setLastTranslationRequest(translationRequestKey);
       } catch (error) {
         console.error("Error updating location name on language change:", error);
+      } finally {
+        setIsProcessingLanguageChange(false);
       }
     };
     
     updateLocationNameOnLanguageChange();
-  }, [translationRequestKey, currentLocation, onLocationUpdate, setCachedData, getCachedData, isMounted, language, lastTranslationRequest]);
+  }, [translationRequestKey, currentLocation, onLocationUpdate, setCachedData, getCachedData, isMounted, language, lastTranslationRequest, isProcessingLanguageChange]);
 
-  // Memoize the location search handler
+  // Handle the location search
   const handleLocationSearch = useCallback((selectedLocation: { 
     name: string; 
     latitude: number; 
@@ -111,7 +115,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     }
   }, [onLocationUpdate, t, setStatusMessage, toast]);
 
-  // Memoize the get current location handler
+  // Get the current location
   const handleGetCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setStatusMessage(t("Geolocation is not supported by your browser.", "您的浏览器不支持地理定位。"));
@@ -148,7 +152,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
           });
           
           // Reset last translation request when getting current location
-          setLastTranslationRequest(`${latitude}-${longitude}-${language}`);
+          setLastTranslationRequest(`${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`);
           
           setStatusMessage(t("Using your current location.", "使用您的当前位置。"));
           

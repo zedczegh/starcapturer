@@ -2,10 +2,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Star } from "lucide-react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { MapPin, Star, Telescope } from "lucide-react";
+import { SharedAstroSpot } from "@/types/weather";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getScoreColorClass } from "@/components/siqs/utils/scoreUtils";
+import { Button } from "@/components/ui/button";
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -80,12 +81,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       className="h-full"
     >
       <div 
+        className="glassmorphism p-5 rounded-xl hover:bg-cosmic-800/50 transition-all duration-300 flex flex-col h-full cursor-pointer border border-cosmic-600/20 hover:border-primary/30 group"
         onClick={handleCardClick}
-        className="glassmorphism p-4 rounded-lg hover:bg-background/50 transition-colors flex flex-col h-full cursor-pointer"
       >
-        <div className="flex items-start justify-between mb-2">
-          <h2 className="font-semibold text-lg">{displayName}</h2>
-          <div className={`flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded ${scoreAnimationClass}`}>
+        <div className="flex items-start justify-between mb-3">
+          <h2 className="font-semibold text-lg group-hover:text-primary transition-colors">{displayName}</h2>
+          <div className={`flex items-center gap-1 bg-cosmic-800/70 border border-cosmic-600/20 px-2 py-1 rounded-full ${scoreAnimationClass}`}>
             <Star className={`h-3.5 w-3.5 fill-current ${scoreColorClass}`} />
             <span className={`font-medium text-sm ${scoreColorClass}`}>
               {location.siqs?.toFixed(1) || "N/A"}
@@ -93,11 +94,28 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center mt-auto pt-3">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-xs text-muted-foreground">
-            {formatDistance(location.distance)}
-          </span>
+        <div className="flex flex-1 items-center mt-1 mb-3">
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {t("Bortle Scale", "波特尔尺度")}: {location.bortleScale || "N/A"}
+          </p>
+        </div>
+        
+        <div className="flex items-center justify-between pt-3 border-t border-cosmic-600/10">
+          <div className="flex items-center">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
+            <span className="text-xs text-muted-foreground">
+              {formatDistance(location.distance)}
+            </span>
+          </div>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs px-2 text-primary hover:text-primary-focus hover:bg-cosmic-800/70"
+          >
+            <Telescope className="h-3 w-3 mr-1" />
+            {t("View", "查看")}
+          </Button>
         </div>
       </div>
     </motion.div>

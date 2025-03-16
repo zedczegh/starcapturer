@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Plane, Radar } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,6 +11,7 @@ import { useGeolocation } from "@/hooks/location/useGeolocation";
 import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
+import CopyLocationButton from "@/components/location/CopyLocationButton";
 import { toast } from "sonner";
 
 const PhotoPointsNearby: React.FC = () => {
@@ -38,7 +39,7 @@ const PhotoPointsNearby: React.FC = () => {
   } = usePhotoPointsSearch({
     userLocation: coords,
     currentSiqs,
-    maxInitialResults: 5
+    maxInitialResults: 6 // Increased to fill the grid nicely
   });
   
   // Get current location SIQS from localStorage on mount
@@ -110,22 +111,35 @@ const PhotoPointsNearby: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900">
       <NavBar />
       
-      <div className="container mx-auto px-4 pt-24 pb-12">
-        <div className="flex items-center justify-between mb-8">
+      <div className="container mx-auto px-4 pt-24 pb-16">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold flex items-center">
-            <MapPin className="h-8 w-8 text-primary mr-3" />
+            <Target className="h-8 w-8 text-primary mr-3" />
             {t("Photo Points Nearby", "附近拍摄点")}
           </h1>
-          <Link to="/share">
-            <Button>
-              <MapPin className="h-4 w-4 mr-2" />
-              {t("Share New Location", "分享新位置")}
-            </Button>
-          </Link>
+          
+          <div className="flex items-center gap-3">
+            {coords && (
+              <CopyLocationButton 
+                latitude={coords.latitude} 
+                longitude={coords.longitude}
+                name={t("Current Location", "当前位置")}
+                variant="outline"
+                className="border-primary/40 hover:bg-cosmic-800/50"
+              />
+            )}
+            
+            <Link to="/share">
+              <Button className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20">
+                <MapPin className="h-4 w-4 mr-2" />
+                {t("Share New Location", "分享新位置")}
+              </Button>
+            </Link>
+          </div>
         </div>
         
         {/* Distance Range Slider */}
-        <div className="mb-8">
+        <div className="mb-8 glassmorphism p-4 rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
           <DistanceRangeSlider 
             distance={searchDistance} 
             setDistance={setSearchDistance} 
@@ -135,16 +149,19 @@ const PhotoPointsNearby: React.FC = () => {
         {/* Searching State */}
         {searching && (
           <motion.div 
-            className="flex justify-center py-12 flex-col items-center"
+            className="flex justify-center py-16 flex-col items-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <Radar className="h-16 w-16 text-primary animate-pulse mb-4" />
-            <h2 className="text-xl font-medium text-center">
-              {t("Searching for ideal photo points nearby...", "正在搜索附近的理想拍摄点...")}
+            <div className="relative">
+              <Globe className="h-20 w-20 text-primary animate-pulse" />
+              <Rocket className="h-8 w-8 text-primary-focus absolute -top-1 -right-1 animate-ping" style={{animationDuration: "3s"}} />
+            </div>
+            <h2 className="text-2xl font-medium text-center mt-6 mb-2">
+              {t("Scanning for ideal photo points...", "正在扫描理想拍摄点...")}
             </h2>
-            <p className="text-muted-foreground mt-2 text-center">
+            <p className="text-muted-foreground mt-2 text-center max-w-md">
               {t("Calculating real-time SIQS scores based on weather and light pollution data", 
                  "正在根据天气和光污染数据计算实时SIQS评分")}
             </p>
@@ -153,19 +170,22 @@ const PhotoPointsNearby: React.FC = () => {
         
         {/* Loading State (but not searching) */}
         {loading && !searching && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-16 w-16 text-primary animate-spin" />
           </div>
         )}
         
         {/* Geolocation Loading */}
         {geoLoading && !coords && (
-          <div className="flex justify-center py-12 flex-col items-center">
-            <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
-            <h2 className="text-xl font-medium text-center">
-              {t("Getting your location...", "正在获取您的位置...")}
+          <div className="flex justify-center py-16 flex-col items-center">
+            <div className="relative">
+              <Target className="h-16 w-16 text-primary animate-pulse mb-4" />
+              <div className="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping" style={{animationDuration: "2s"}}></div>
+            </div>
+            <h2 className="text-xl font-medium text-center mt-6">
+              {t("Locating your position...", "正在定位您的位置...")}
             </h2>
-            <p className="text-muted-foreground mt-2 text-center">
+            <p className="text-muted-foreground mt-2 text-center max-w-md">
               {t("We need your location to find the best photo spots near you", 
                  "我们需要您的位置来找到您附近最好的拍摄点")}
             </p>
@@ -174,7 +194,7 @@ const PhotoPointsNearby: React.FC = () => {
         
         {/* Geolocation Error */}
         {geoError && !coords && (
-          <div className="text-center py-16 glassmorphism rounded-lg">
+          <div className="text-center py-16 glassmorphism rounded-xl bg-cosmic-800/30 border border-destructive/30">
             <AlertCircle className="h-16 w-16 text-destructive/70 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold mb-2">
               {t("Location Access Required", "需要位置访问权限")}
@@ -185,7 +205,11 @@ const PhotoPointsNearby: React.FC = () => {
                 "我们需要您的位置来显示附近的拍摄点。请允许位置访问并重试。"
               )}
             </p>
-            <Button size="lg" onClick={getPosition}>
+            <Button 
+              size="lg" 
+              onClick={getPosition}
+              className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
+            >
               {t("Try Again", "重试")}
             </Button>
           </div>
@@ -194,7 +218,7 @@ const PhotoPointsNearby: React.FC = () => {
         {/* User is in a good location */}
         {!loading && !geoLoading && coords && isUserInGoodLocation && (
           <motion.div 
-            className="text-center py-16 glassmorphism rounded-lg"
+            className="text-center py-16 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -216,26 +240,31 @@ const PhotoPointsNearby: React.FC = () => {
               <span className="text-green-400">{currentSiqs?.toFixed(1)}</span>
             </p>
             
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="mr-4"
-              onClick={handleViewCurrentLocation}
-            >
-              {t("View Details", "查看详情")}
-            </Button>
-            <Button 
-              size="lg"
-              onClick={handleShareCurrentLocation}
-            >
-              {t("Share This Spot", "分享此位置")}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50"
+                onClick={handleViewCurrentLocation}
+              >
+                <Telescope className="h-5 w-5 mr-2" />
+                {t("View Details", "查看详情")}
+              </Button>
+              
+              <CopyLocationButton 
+                latitude={coords.latitude} 
+                longitude={coords.longitude}
+                name={t("Current Location", "当前位置")}
+                size="lg"
+                className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
+              />
+            </div>
           </motion.div>
         )}
         
         {/* No locations found */}
         {!loading && !searching && !geoLoading && coords && displayedLocations.length === 0 && !isUserInGoodLocation && (
-          <div className="text-center py-16 glassmorphism rounded-lg">
+          <div className="text-center py-16 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
             <MapPin className="h-16 w-16 text-primary/50 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold mb-2">
               {t("No Better Photo Points Found Nearby", "附近未找到更好的拍摄点")}
@@ -246,13 +275,16 @@ const PhotoPointsNearby: React.FC = () => {
                 "在您的搜索半径内，我们未能找到条件明显更好的位置。"
               )}
             </p>
-            <Button 
-              size="lg"
-              onClick={handleShareCurrentLocation}
-            >
-              <MapPin className="h-5 w-5 mr-2" />
-              {t("Share Your Spot", "分享您的拍摄点")}
-            </Button>
+            
+            <div className="flex flex-wrap justify-center gap-4">
+              <CopyLocationButton 
+                latitude={coords.latitude} 
+                longitude={coords.longitude}
+                name={t("Current Location", "当前位置")}
+                size="lg"
+                className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
+              />
+            </div>
           </div>
         )}
         
@@ -280,10 +312,10 @@ const PhotoPointsNearby: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={loadMoreLocations}
-              className="group"
+              className="group sci-fi-btn border-primary/40 hover:bg-cosmic-800/50"
             >
               {t("Load More Locations", "加载更多位置")}
-              <Plane className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <Rocket className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </div>
         )}
