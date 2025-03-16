@@ -85,7 +85,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         onClick={handleCardClick}
       >
         <div className="flex items-start justify-between mb-3">
-          <h2 className="font-semibold text-lg group-hover:text-primary transition-colors">{displayName}</h2>
+          <h2 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">{displayName}</h2>
           <div className={`flex items-center gap-1 bg-cosmic-800/70 border border-cosmic-600/20 px-2 py-1 rounded-full ${scoreAnimationClass}`}>
             <Star className={`h-3.5 w-3.5 fill-current ${scoreColorClass}`} />
             <span className={`font-medium text-sm ${scoreColorClass}`}>

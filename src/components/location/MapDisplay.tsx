@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo, Suspense, lazy } from "react";
+import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 
@@ -25,6 +25,18 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
 }) => {
   const { t } = useLanguage();
 
+  // Memoize position to prevent unnecessary rerenders
+  const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
+  
+  // Format location name for display
+  const displayName = useMemo(() => {
+    // If the name is too long, truncate it for the map display
+    if (locationName && locationName.length > 50) {
+      return locationName.substring(0, 47) + '...';
+    }
+    return locationName;
+  }, [locationName]);
+
   return (
     <div className="z-0 h-full w-full">
       <Suspense fallback={
@@ -36,8 +48,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
-          position={position}
-          locationName={locationName}
+          position={memoizedPosition}
+          locationName={displayName}
           editable={editable}
           onMapReady={onMapReady}
           onMapClick={onMapClick}

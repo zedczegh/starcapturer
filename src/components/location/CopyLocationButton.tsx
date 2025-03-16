@@ -55,6 +55,26 @@ const CopyLocationButton: React.FC<CopyLocationButtonProps> = ({
       });
   };
 
+  // For icon only button
+  if (size === "icon") {
+    return (
+      <Button
+        variant={variant}
+        size={size}
+        onClick={handleCopyLocation}
+        className={`${className} transition-all duration-300`}
+        disabled={copied}
+        title={t("Copy Location", "复制位置")}
+      >
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-green-400" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
+      </Button>
+    );
+  }
+
   return (
     <Button
       variant={variant}

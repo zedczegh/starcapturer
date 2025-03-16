@@ -1,11 +1,12 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
 
 export const useLocationDetails = (locationData: any, setLocationData: (data: any) => void) => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const initialLoadCompleteRef = useRef(false);
   
   const { 
     forecastData, 
@@ -23,6 +24,22 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     handleRefreshAll: refreshWeather,
     updateLightPollutionData
   } = useWeatherUpdater();
+
+  // Auto-refresh data on initial mount
+  useEffect(() => {
+    // Only run once and only if we have locationData
+    if (!initialLoadCompleteRef.current && locationData && 
+        locationData.latitude && locationData.longitude) {
+      
+      // Set a slight delay to ensure all components are mounted
+      const timer = setTimeout(() => {
+        handleRefreshAll();
+        initialLoadCompleteRef.current = true;
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [locationData]);
 
   // Memoized wrapper functions
   const handleRefreshForecast = useCallback(() => {

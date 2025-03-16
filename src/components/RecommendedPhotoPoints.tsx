@@ -3,9 +3,11 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { getRecommendedPhotoPoints, SharedAstroSpot } from "@/lib/api";
+import { getRecommendedPhotoPoints } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SharedAstroSpot } from "@/types/weather";
+import CopyLocationButton from "@/components/location/CopyLocationButton";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -86,11 +88,23 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           {t("Recommended Photo Points", "推荐拍摄点")}
           {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
         </h3>
-        <Link to="/photo-points">
-          <Button variant="link" size="sm" className="text-primary">
-            {t("View All Points", "查看所有拍摄点")}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {userLocation && (
+            <CopyLocationButton 
+              latitude={userLocation.latitude} 
+              longitude={userLocation.longitude}
+              name={t("Current Location", "当前位置")}
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:text-primary-focus hover:bg-cosmic-800/70 px-2 h-7 text-xs"
+            />
+          )}
+          <Link to="/photo-points">
+            <Button variant="link" size="sm" className="text-primary px-2 h-7 text-xs">
+              {t("View All", "查看所有")}
+            </Button>
+          </Link>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 gap-3">
@@ -110,7 +124,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               }}
             >
               <div className="flex items-center justify-between mb-1">
-                <h4 className="font-medium text-sm">
+                <h4 className="font-medium text-sm line-clamp-1">
                   {language === 'en' ? point.name : (point.chineseName || point.name)}
                 </h4>
                 <div className="flex items-center">
