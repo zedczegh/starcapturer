@@ -45,6 +45,7 @@ export interface ForecastItem {
 export interface SharedAstroSpot {
   id: string;
   name: string;
+  chineseName?: string; // Added optional chineseName property
   latitude: number;
   longitude: number;
   description: string;
@@ -55,4 +56,5 @@ export interface SharedAstroSpot {
   siqs: number;
   isViable: boolean;
   timestamp: string;
+  distance?: number; // Added optional distance property
 }

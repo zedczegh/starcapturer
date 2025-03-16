@@ -46,9 +46,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 
   const handleSelectPoint = (point: SharedAstroSpot) => {
     onSelectPoint(point);
+    const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
+    
     toast.success(t("Photo Point Selected", "已选择拍摄点"), {
-      description: t(`Selected ${language === 'en' ? point.name : (point.chineseName || point.name)}`, 
-                    `已选择 ${language === 'en' ? point.name : (point.chineseName || point.name)}`),
+      description: t(`Selected ${pointName}`, `已选择 ${pointName}`),
     });
   };
 
@@ -63,10 +64,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   };
   
   const handleViewDetails = (point: SharedAstroSpot) => {
+    const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
+    
     navigate(`/location/${point.id}`, {
       state: {
         id: point.id,
-        name: language === 'en' ? point.name : (point.chineseName || point.name),
+        name: pointName,
         latitude: point.latitude,
         longitude: point.longitude,
         bortleScale: point.bortleScale,
