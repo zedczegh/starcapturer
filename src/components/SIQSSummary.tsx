@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import SIQSSummaryScore, { getRecommendationMessage } from "./siqs/SIQSSummaryScore";
 import SIQSFactorsList from "./siqs/SIQSFactorsList";
+import ConditionReminders from "./siqs/ConditionReminders";
 
 // Export this for other components to use
 export { getRecommendationMessage } from "./siqs/utils/scoreUtils";
@@ -18,9 +19,21 @@ interface SIQSSummaryProps {
       description: string;
     }>;
   };
+  weatherData?: {
+    temperature: number;
+    humidity: number;
+    windSpeed: number;
+  };
+  moonPhase?: string | number;
+  bortleScale?: number | null;
 }
 
-const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsData }) => {
+const SIQSSummary: React.FC<SIQSSummaryProps> = ({ 
+  siqsData,
+  weatherData,
+  moonPhase,
+  bortleScale
+}) => {
   const { t } = useLanguage();
   
   if (!siqsData) {
@@ -46,6 +59,15 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsData }) => {
         </h3>
         
         <SIQSFactorsList factors={siqsData.factors} />
+
+        {weatherData && moonPhase !== undefined && (
+          <ConditionReminders 
+            factors={siqsData.factors || []}
+            weatherData={weatherData}
+            moonPhase={moonPhase}
+            bortleScale={bortleScale || null}
+          />
+        )}
       </CardContent>
     </Card>
   );

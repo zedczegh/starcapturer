@@ -90,6 +90,13 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
             isViable: locationData.siqsResult?.isViable || false,
             factors: locationData.siqsResult?.factors || []
           }}
+          weatherData={{
+            temperature: weatherData.temperature,
+            humidity: weatherData.humidity,
+            windSpeed: weatherData.windSpeed
+          }}
+          moonPhase={moonPhaseString}
+          bortleScale={bortleScale}
         />
       </div>
       
