@@ -1,39 +1,20 @@
 
-import React, { useState, useCallback, useEffect } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import LocationDetailsHeader from "./LocationDetailsHeader";
-import LocationContentGrid from "./LocationContentGrid";
-import LocationStatusMessage from "./LocationStatusMessage";
-import { handleLocationChange } from "@/hooks/location/useLocationInit";
-import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
-import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
-import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
-import WeatherAlerts from "@/components/weather/WeatherAlerts";
+import React, { memo } from "react";
+import { motion } from "framer-motion";
+import NavBar from "@/components/NavBar";
+import LocationStatusMessage from "@/components/location/LocationStatusMessage";
+import LocationDetailsContent from "@/components/location/LocationDetailsContent";
 
 interface LocationDetailsViewportProps {
   locationData: any;
-  setLocationData: React.Dispatch<React.SetStateAction<any>>;
+  setLocationData: (data: any) => void;
   statusMessage: string | null;
-  messageType: "info" | "error" | "success" | null;
-  setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
-  handleUpdateLocation: (updatedData: any) => void;
+  messageType: 'info' | 'success' | 'error';
+  setStatusMessage: (message: string | null) => void;
+  handleUpdateLocation: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
 }
 
-// Type for LocationDetailsHeader props to ensure type safety
-interface LocationHeaderProps {
-  name?: string;
-  timestamp?: string;
-  onRefresh: () => void;
-  loading?: boolean;
-}
-
-// Type for LocationStatusMessage props to ensure type safety
-interface StatusMessageProps {
-  message: string | null;
-  type?: "info" | "error" | "success" | null;
-}
-
-const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
+const LocationDetailsViewport = memo<LocationDetailsViewportProps>(({
   locationData,
   setLocationData,
   statusMessage,
@@ -41,126 +22,31 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   setStatusMessage,
   handleUpdateLocation
 }) => {
-  const [gettingUserLocation, setGettingUserLocation] = useState(false);
-  const { language, t } = useLanguage();
-  const { loading, handleRefreshAll } = useWeatherUpdater();
-  
-  const {
-    forecastData,
-    longRangeForecast,
-    forecastLoading,
-    longRangeLoading,
-    weatherAlerts,
-    handleRefreshForecast,
-    handleRefreshLongRangeForecast
-  } = useForecastManager(locationData);
-
-  // Auto-refresh data when the component mounts
-  useEffect(() => {
-    const refreshData = async () => {
-      const lastUpdate = new Date(locationData.timestamp).getTime();
-      const now = new Date().getTime();
-      const minutesSinceLastUpdate = (now - lastUpdate) / (1000 * 60);
-      
-      // Refresh if data is older than 30 minutes
-      if (minutesSinceLastUpdate > 30) {
-        handleRefreshAll(
-          locationData,
-          setLocationData,
-          () => {
-            handleRefreshForecast(locationData.latitude, locationData.longitude);
-            handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-          },
-          setStatusMessage
-        );
-      }
-    };
-    
-    if (locationData && !loading) {
-      refreshData();
-    }
-  }, []);
-
-  const handleLocationUpdate = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
-    setGettingUserLocation(true);
-    setStatusMessage(t("Getting new location...", "获取新位置中..."));
-
-    try {
-      const updatedLocation = await handleLocationChange(
-        location.latitude,
-        location.longitude,
-        location.name,
-        language
-      );
-
-      if (updatedLocation) {
-        handleUpdateLocation(updatedLocation);
-        setStatusMessage(t("Location updated", "位置已更新"));
-        
-        // Refresh forecast data for the new location
-        handleRefreshForecast(location.latitude, location.longitude);
-        handleRefreshLongRangeForecast(location.latitude, location.longitude);
-        
-        // Clear status message after 3 seconds
-        setTimeout(() => setStatusMessage(null), 3000);
-      }
-    } catch (error) {
-      console.error("Error updating location:", error);
-      setStatusMessage(t("Error updating location", "更新位置时出错"));
-    } finally {
-      setGettingUserLocation(false);
-    }
-  }, [setStatusMessage, t, handleUpdateLocation, language, handleRefreshForecast, handleRefreshLongRangeForecast]);
-
   return (
-    <div className="min-h-screen bg-cosmic-950">
-      <LocationDetailsHeader 
-        name={locationData?.name}
-        timestamp={locationData?.timestamp}
-        onRefresh={() => 
-          handleRefreshAll(
-            locationData, 
-            setLocationData, 
-            () => {
-              handleRefreshForecast(locationData.latitude, locationData.longitude);
-              handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-            },
-            setStatusMessage
-          )
-        } 
-        loading={loading}
-      />
-      
-      <LocationStatusMessage 
-        message={statusMessage} 
-        type={messageType} 
-      />
-      
-      {weatherAlerts && weatherAlerts.length > 0 && (
-        <WeatherAlerts 
-          alerts={weatherAlerts}
-          formatTime={formatTime}
-          formatDate={formatDate}
+    <motion.div 
+      className="min-h-screen overflow-x-hidden sci-fi-scrollbar pb-16 md:pb-0"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+    >
+      <NavBar />
+      <main className="container mx-auto px-4 pt-24 pb-16">
+        <LocationStatusMessage 
+          message={statusMessage}
+          type={messageType}
+          onClear={() => setStatusMessage(null)}
         />
-      )}
-      
-      <div className="container mx-auto px-4 pb-24 pt-4">
-        <LocationContentGrid
+        
+        <LocationDetailsContent
           locationData={locationData}
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={handleLocationUpdate}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
-          onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
-          onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
+          setLocationData={setLocationData}
+          onLocationUpdate={handleUpdateLocation}
         />
-      </div>
-    </div>
+      </main>
+    </motion.div>
   );
-};
+});
+
+LocationDetailsViewport.displayName = 'LocationDetailsViewport';
 
 export default LocationDetailsViewport;

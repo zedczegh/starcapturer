@@ -31,31 +31,11 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       setLoading(true);
       try {
-        // Fetch the recommended points and convert them to the correct type
         const points = await getRecommendedPhotoPoints(
           userLocation.latitude,
           userLocation.longitude
         );
-        
-        // Convert the API response to match our SharedAstroSpot type
-        const convertedPoints: SharedAstroSpot[] = points.map(point => ({
-          id: point.id,
-          name: point.name,
-          chineseName: point.chineseName,
-          latitude: point.latitude,
-          longitude: point.longitude,
-          description: point.description,
-          bortleScale: point.bortleScale,
-          photoUrl: point.photoUrl,
-          photographer: point.photographer,
-          targets: point.targets,
-          siqs: point.siqs || 0, // Default to 0 if not provided
-          isViable: point.isViable || false, // Default to false if not provided
-          timestamp: point.timestamp || new Date().toISOString(),
-          distance: point.distance
-        }));
-        
-        setRecommendedPoints(convertedPoints);
+        setRecommendedPoints(points);
       } catch (error) {
         console.error("Error fetching recommended points:", error);
       } finally {

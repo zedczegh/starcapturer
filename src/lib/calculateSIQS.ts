@@ -1,3 +1,4 @@
+
 // SIQS = Stellar Imaging Quality Score
 import { SIQSFactors, SIQSResult } from './siqs/types';
 import { 
@@ -31,31 +32,6 @@ type FactorData = {
 };
 
 /**
- * Determines if a time is within astronomical night hours (6 PM to 6 AM)
- * @param dateTime The time to check
- * @returns boolean indicating if it's night time
- */
-function isNightTime(dateTime: Date): boolean {
-  const hour = dateTime.getHours();
-  return hour >= 18 || hour < 6;
-}
-
-/**
- * Filters forecast data to include only nighttime hours
- * @param forecast Array of forecast items with time property
- * @returns Array of nighttime forecast items
- */
-function filterNightTimeForecast(forecast: any[]): any[] {
-  if (!forecast || !Array.isArray(forecast) || forecast.length === 0) return [];
-  
-  return forecast.filter(item => {
-    if (!item.time) return false;
-    const itemTime = new Date(item.time);
-    return isNightTime(itemTime);
-  });
-}
-
-/**
  * Calculate the Stellar Imaging Quality Score based on various factors
  * @param factors Environmental and geographical factors
  * @returns SIQS score from 0-10 (higher is better)
@@ -74,20 +50,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     aqi
   } = factors;
   
-  // Filter nightForecast to only include nighttime hours (6 PM to 6 AM)
-  const tonightForecast = filterNightTimeForecast(nightForecast);
-  
-  // If we have no nighttime forecast and it's currently daytime, we'll still
-  // use current conditions but apply a more optimistic approach
-  const now = new Date();
-  const isCurrentlyNightTime = isNightTime(now);
-  
   // Check if conditions make imaging impossible first (fast path)
-  // Only apply this check to the current weather if it's nighttime now
-  // Otherwise, we'll rely more on the forecast for tonight
-  if (isCurrentlyNightTime && 
-      isImagingImpossible(cloudCover, precipitation, weatherCondition, aqi) && 
-      tonightForecast.length === 0) {
+  if (isImagingImpossible(cloudCover, precipitation, weatherCondition, aqi)) {
     return {
       score: 0,
       isViable: false,
@@ -101,17 +65,17 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     };
   }
   
-  // Prioritize tonight's forecast if available
-  const actualCloudCover = tonightForecast.length > 0 
-    ? tonightForecast.reduce((sum, item) => sum + item.cloudCover, 0) / tonightForecast.length
-    : isCurrentlyNightTime ? cloudCover : Math.min(cloudCover, 40); // Be more optimistic during day
+  // Use night forecast if available, otherwise use current conditions
+  const actualCloudCover = nightForecast.length > 0 
+    ? nightForecast.reduce((sum, item) => sum + item.cloudCover, 0) / nightForecast.length
+    : cloudCover;
     
-  const actualWindSpeed = tonightForecast.length > 0
-    ? tonightForecast.reduce((sum, item) => sum + item.windSpeed, 0) / tonightForecast.length
+  const actualWindSpeed = nightForecast.length > 0
+    ? nightForecast.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecast.length
     : windSpeed;
     
-  const actualHumidity = tonightForecast.length > 0
-    ? tonightForecast.reduce((sum, item) => sum + item.humidity, 0) / tonightForecast.length
+  const actualHumidity = nightForecast.length > 0
+    ? nightForecast.reduce((sum, item) => sum + item.humidity, 0) / nightForecast.length
     : humidity;
     
   // Calculate individual factor scores (0-100 scale)
