@@ -70,14 +70,16 @@ export const useSIQSCalculation = (
           days: 3
         });
         
-        if (forecastData) {
+        if (forecastData && forecastData.hourly) {
           // Extract future forecasts and filter for night hours (6 PM to 6 AM)
-          const futureForecasts = extractFutureForecasts(forecastData, 24);
+          const futureForecasts = extractFutureForecasts(forecastData, 48); // Get 48 hours to capture tonight + tomorrow night
           nightForecast = futureForecasts.filter(item => {
             const date = new Date(item.time);
             const hour = date.getHours();
             return hour >= 18 || hour < 6;
           });
+          
+          console.log("Night forecast items: ", nightForecast.length);
         }
       } catch (error) {
         console.error("Error fetching forecast data for SIQS calculation:", error);

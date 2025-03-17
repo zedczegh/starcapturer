@@ -36,10 +36,12 @@ export const useLocationDataManager = ({
                    "已为新位置重新计算SIQS评分。"));
       setMessageType('success');
       setTimeout(() => setStatusMessage(null), 3000);
+      return Promise.resolve();
     } catch (error) {
       setStatusMessage(t("Failed to update location and recalculate SIQS score. Please try again.", 
                    "无法更新位置并重新计算SIQS评分。请重试。"));
-      setMessageType('error');                   
+      setMessageType('error');
+      return Promise.reject(error);                   
     }
   }, [handleLocationUpdate, t]);
 

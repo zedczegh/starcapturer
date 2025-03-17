@@ -26,6 +26,7 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
 
+  // Make sure navbar appears on all pages, including details page
   return (
     <>
       <NavHeader scrolled={scrolled}>

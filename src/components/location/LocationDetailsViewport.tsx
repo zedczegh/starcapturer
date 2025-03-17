@@ -15,7 +15,7 @@ interface LocationDetailsViewportProps {
   statusMessage: string | null;
   messageType: "info" | "error" | "success" | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
-  handleUpdateLocation: (updatedData: any) => void;
+  handleUpdateLocation: (updatedData: any) => Promise<void>;
 }
 
 const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
