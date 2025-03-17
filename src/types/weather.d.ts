@@ -50,8 +50,8 @@ export interface SharedAstroSpot {
   longitude: number;
   description: string;
   bortleScale: number;
-  photographer?: string; // Made optional to match the API definition
-  photoUrl: string;
+  photographer?: string;
+  photoUrl?: string; // Made optional to match the API definition
   targets: string[];
   siqs: number;
   isViable: boolean;

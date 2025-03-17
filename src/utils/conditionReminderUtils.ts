@@ -92,3 +92,84 @@ export function getLightPollutionAdvice(bortleScale: number | null, language: La
     ? "Moderate light pollution. Some filters may improve contrast for certain targets."
     : "中等光污染。某些滤镜可能会提高特定目标的对比度。";
 }
+
+/**
+ * Get extreme weather alerts based on conditions
+ */
+export function getExtremeWeatherAlerts(
+  weatherCode: number | undefined, 
+  windSpeed: number, 
+  precipitation: number, 
+  language: Language
+): { message: string, severity: 'warning' | 'severe', icon: string } | null {
+  // Check for severe weather codes
+  if (weatherCode) {
+    // Thunderstorms
+    if ([95, 96, 99].includes(weatherCode)) {
+      return {
+        message: language === 'en' 
+          ? "Thunderstorm detected. Equipment may be damaged by lightning. Avoid observation." 
+          : "检测到雷暴。设备可能因闪电而损坏。避免观测。",
+        severity: 'severe',
+        icon: 'thunderstorm'
+      };
+    }
+    
+    // Sandstorms and heavy dust
+    if ([6, 7, 8].includes(weatherCode)) {
+      return {
+        message: language === 'en' 
+          ? "Dust/sand storm conditions. Equipment may be damaged. Avoid observation." 
+          : "沙尘暴条件。设备可能受损。避免观测。",
+        severity: 'severe',
+        icon: 'wind'
+      };
+    }
+    
+    // Heavy snow
+    if ([71, 73, 75, 77].includes(weatherCode)) {
+      return {
+        message: language === 'en' 
+          ? "Heavy snow conditions. Protect equipment from moisture damage." 
+          : "大雪条件。保护设备免受水分损害。",
+        severity: 'warning',
+        icon: 'snow'
+      };
+    }
+    
+    // Freezing rain
+    if ([66, 67].includes(weatherCode)) {
+      return {
+        message: language === 'en' 
+          ? "Freezing rain detected. Equipment may be damaged by ice formation." 
+          : "检测到冻雨。设备可能因结冰而损坏。",
+        severity: 'warning',
+        icon: 'sleet'
+      };
+    }
+  }
+  
+  // Check for extreme winds
+  if (windSpeed > 60) {
+    return {
+      message: language === 'en' 
+        ? "Dangerously high winds. Equipment stability compromised. Cancel observation." 
+        : "危险的高风速。设备稳定性受损。建议取消观测。",
+      severity: 'severe',
+      icon: 'wind'
+    };
+  }
+  
+  // Check for heavy rain
+  if (precipitation > 15) {
+    return {
+      message: language === 'en' 
+        ? "Heavy rainfall detected. Protect equipment from water damage." 
+        : "检测到大雨。保护设备免受水损伤。",
+      severity: 'warning',
+      icon: 'rain'
+    };
+  }
+  
+  return null;
+}

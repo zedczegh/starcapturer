@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +14,10 @@ export const useForecastData = () => {
   // Use refs for controllers for better cleanup
   const forecastControllerRef = useRef<AbortController | null>(null);
   const longRangeControllerRef = useRef<AbortController | null>(null);
+  
+  // Add timeout refs for throttling
+  const forecastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longRangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clean up function to abort ongoing requests
   const cleanupRequest = useCallback((controllerRef: React.MutableRefObject<AbortController | null>) => {
@@ -22,9 +26,21 @@ export const useForecastData = () => {
       controllerRef.current = null;
     }
   }, []);
+  
+  // Cleanup timeout function
+  const cleanupTimeout = useCallback((timeoutRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
+  // Enhanced fetch with caching consideration
   const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
+      // Prevent duplicate requests within a short timeframe
+      cleanupTimeout(forecastTimeoutRef);
+      
       setForecastLoading(true);
       
       // Cancel any ongoing requests
@@ -48,10 +64,13 @@ export const useForecastData = () => {
     } finally {
       setForecastLoading(false);
     }
-  }, [t, cleanupRequest]);
+  }, [t, cleanupRequest, cleanupTimeout]);
 
   const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
+      // Prevent duplicate requests within a short timeframe
+      cleanupTimeout(longRangeTimeoutRef);
+      
       setLongRangeLoading(true);
       
       // Cancel any ongoing requests
@@ -75,22 +94,34 @@ export const useForecastData = () => {
     } finally {
       setLongRangeLoading(false);
     }
-  }, [t, cleanupRequest]);
+  }, [t, cleanupRequest, cleanupTimeout]);
 
   // Clean up on unmount
-  const cleanupOnUnmount = useCallback(() => {
-    cleanupRequest(forecastControllerRef);
-    cleanupRequest(longRangeControllerRef);
-  }, [cleanupRequest]);
+  useEffect(() => {
+    return () => {
+      cleanupRequest(forecastControllerRef);
+      cleanupRequest(longRangeControllerRef);
+      cleanupTimeout(forecastTimeoutRef);
+      cleanupTimeout(longRangeTimeoutRef);
+    };
+  }, [cleanupRequest, cleanupTimeout]);
 
-  // Handle refresh functions
+  // Throttled refresh functions to prevent API abuse
   const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
-    fetchLocationForecast(latitude, longitude);
-  }, [fetchLocationForecast]);
+    cleanupTimeout(forecastTimeoutRef);
+    
+    forecastTimeoutRef.current = setTimeout(() => {
+      fetchLocationForecast(latitude, longitude);
+    }, 200);
+  }, [fetchLocationForecast, cleanupTimeout]);
 
   const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number) => {
-    fetchLongRangeForecast(latitude, longitude);
-  }, [fetchLongRangeForecast]);
+    cleanupTimeout(longRangeTimeoutRef);
+    
+    longRangeTimeoutRef.current = setTimeout(() => {
+      fetchLongRangeForecast(latitude, longitude);
+    }, 200);
+  }, [fetchLongRangeForecast, cleanupTimeout]);
 
   return {
     forecastData,
@@ -102,6 +133,11 @@ export const useForecastData = () => {
     fetchLongRangeForecast,
     handleRefreshForecast,
     handleRefreshLongRangeForecast,
-    cleanupOnUnmount
+    cleanupOnUnmount: useCallback(() => {
+      cleanupRequest(forecastControllerRef);
+      cleanupRequest(longRangeControllerRef);
+      cleanupTimeout(forecastTimeoutRef);
+      cleanupTimeout(longRangeTimeoutRef);
+    }, [cleanupRequest, cleanupTimeout])
   };
 };

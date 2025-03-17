@@ -34,6 +34,34 @@ export const formatDate = (isoTime: string): string => {
 };
 
 /**
+ * Format time with memoization 
+ */
+export const formatTime = (isoTime: string): string => {
+  try {
+    const date = new Date(isoTime);
+    if (isNaN(date.getTime())) return "--:--";
+    
+    const localeString = navigator.language || 'en-US';
+    const formatterKey = `${localeString}_time`;
+    
+    if (!dateFormatters.has(formatterKey)) {
+      dateFormatters.set(
+        formatterKey,
+        new Intl.DateTimeFormat(localeString, { 
+          hour: '2-digit', 
+          minute: '2-digit'
+        })
+      );
+    }
+    
+    return dateFormatters.get(formatterKey)!.format(date);
+  } catch (error) {
+    console.error("Error formatting time:", error);
+    return "--:--";
+  }
+};
+
+/**
  * Convert cloud cover to readable condition text
  */
 export const formatCondition = (cloudCover: number, t: (en: string, zh: string) => string): string => {
@@ -110,7 +138,7 @@ export const generateFallbackForecasts = (): any[] => {
   
   for (let i = 0; i < 8; i++) {
     const forecastTime = new Date(now);
-    forecastTime.setHours(now.getHours() + (i * 3));
+    forecastTime.setHours(now.getHours() + i);
     
     forecasts.push({
       time: forecastTime.toISOString(),
@@ -124,3 +152,125 @@ export const generateFallbackForecasts = (): any[] => {
   
   return forecasts;
 };
+
+/**
+ * Extract future forecasts from weather data
+ * Only shows forecast data after the current time
+ */
+export function extractFutureForecasts(forecastData: any, maxHours: number = 24): any[] {
+  if (!forecastData || 
+      !forecastData.hourly || 
+      !Array.isArray(forecastData.hourly.time) || 
+      forecastData.hourly.time.length === 0) {
+    return generateFallbackForecasts();
+  }
+  
+  try {
+    const result = [];
+    const now = new Date();
+    
+    // Find the starting index for future data
+    let startIndex = 0;
+    for (let i = 0; i < forecastData.hourly.time.length; i++) {
+      const forecastTime = new Date(forecastData.hourly.time[i]);
+      if (forecastTime > now) {
+        startIndex = i;
+        break;
+      }
+    }
+    
+    // Get the next maxHours hours of data from the current time
+    for (let i = startIndex; i < Math.min(startIndex + maxHours, forecastData.hourly.time.length); i++) {
+      if (i < forecastData.hourly.time.length) {
+        result.push({
+          time: forecastData.hourly.time[i] || new Date().toISOString(),
+          temperature: forecastData.hourly.temperature_2m?.[i] ?? 22,
+          humidity: forecastData.hourly.relative_humidity_2m?.[i] ?? 60,
+          cloudCover: forecastData.hourly.cloud_cover?.[i] ?? 30,
+          windSpeed: forecastData.hourly.wind_speed_10m?.[i] ?? 5,
+          precipitation: forecastData.hourly.precipitation?.[i] ?? 0,
+          weatherCode: forecastData.hourly.weather_code?.[i] ?? 0
+        });
+      }
+    }
+    
+    if (result.length > 0) {
+      return result;
+    }
+  } catch (error) {
+    console.error("Error processing forecast data:", error);
+  }
+  
+  return generateFallbackForecasts();
+}
+
+/**
+ * Detect extreme weather conditions from forecasts
+ */
+export function detectExtremeWeatherConditions(forecasts: any[], t: (en: string, zh: string) => string): any[] {
+  const alerts = [];
+  
+  // Check for dangerous weather codes
+  const dangerousCodes = [95, 96, 99]; // Thunderstorms and hail
+  const severeCodes = [71, 73, 75, 77, 85, 86]; // Heavy snow, blizzards
+  const desertStormCodes = [48, 56, 57, 66, 67]; // Sandstorms and dust storms
+  
+  for (const forecast of forecasts) {
+    const { weatherCode, windSpeed, precipitation } = forecast;
+    
+    // Check severe thunderstorms
+    if (dangerousCodes.includes(weatherCode)) {
+      alerts.push({
+        type: "severe",
+        message: t("Thunderstorm with possible hail detected", "检测到雷暴可能伴有冰雹"),
+        time: forecast.time,
+        icon: "thunderstorm"
+      });
+    }
+    
+    // Check heavy snow conditions
+    if (severeCodes.includes(weatherCode)) {
+      alerts.push({
+        type: "warning",
+        message: t("Heavy snow or blizzard conditions expected", "预计有大雪或暴风雪"),
+        time: forecast.time,
+        icon: "snow"
+      });
+    }
+    
+    // Check dust/sandstorms
+    if (desertStormCodes.includes(weatherCode)) {
+      alerts.push({
+        type: "warning",
+        message: t("Fog or freezing conditions expected", "预计有雾或结冰情况"),
+        time: forecast.time,
+        icon: "fog"
+      });
+    }
+    
+    // Check extreme wind
+    if (windSpeed > 60) {
+      alerts.push({
+        type: "severe",
+        message: t("Dangerous wind conditions detected", "检测到危险的风力条件"),
+        time: forecast.time,
+        icon: "wind"
+      });
+    }
+    
+    // Check heavy rain
+    if (precipitation > 10) {
+      alerts.push({
+        type: "warning",
+        message: t("Heavy rainfall expected", "预计有大雨"),
+        time: forecast.time,
+        icon: "rain"
+      });
+    }
+  }
+  
+  // Return unique alerts (avoid duplicates)
+  return alerts.filter((alert, index, self) => 
+    index === self.findIndex(a => a.message === alert.message)
+  );
+}

@@ -1,7 +1,8 @@
+
 import React, { useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   DynamicHumidityIcon 
 } from "@/components/weather/DynamicIcons";
 import { getSIQSRating, formatCondition } from "@/components/forecast/ForecastUtils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ForecastTableProps {
   forecastData: any;
@@ -63,7 +65,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     
     for (let i = 0; i < 8; i++) {
       const forecastTime = new Date(now);
-      forecastTime.setHours(now.getHours() + (i * 3));
+      forecastTime.setHours(now.getHours() + i);
       
       forecasts.push({
         time: forecastTime.toISOString(),
@@ -78,6 +80,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     return forecasts;
   }, []);
 
+  // Filter forecasts to only show future data
   const forecasts = useMemo(() => {
     const isForecastDataValid = forecastData && 
                             forecastData.hourly && 
@@ -90,7 +93,20 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     
     try {
       const result = [];
-      for (let i = 0; i < Math.min(forecastData.hourly.time.length, 24); i += 3) {
+      const now = new Date();
+      
+      // Find the starting index for future data
+      let startIndex = 0;
+      for (let i = 0; i < forecastData.hourly.time.length; i++) {
+        const forecastTime = new Date(forecastData.hourly.time[i]);
+        if (forecastTime > now) {
+          startIndex = i;
+          break;
+        }
+      }
+      
+      // Get the next 24 hours of data from the current time
+      for (let i = startIndex; i < Math.min(startIndex + 24, forecastData.hourly.time.length); i++) {
         if (i < forecastData.hourly.time.length) {
           result.push({
             time: forecastData.hourly.time[i] || new Date().toISOString(),
@@ -119,6 +135,75 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     if (cloudCover < 20) return "bg-green-500/10 animate-pulse";
     return "";
   }, []);
+  
+  // Check for extreme weather conditions
+  const extremeWeatherAlerts = useMemo(() => {
+    const alerts = [];
+    
+    // Check for dangerous weather codes
+    const dangerousCodes = [95, 96, 99]; // Thunderstorms and hail
+    const severeCodes = [71, 73, 75, 77, 85, 86]; // Heavy snow, blizzards
+    const desertStormCodes = [48, 56, 57, 66, 67]; // Sandstorms and dust storms
+    
+    for (const forecast of forecasts) {
+      const { weatherCode, windSpeed, precipitation } = forecast;
+      
+      // Check severe thunderstorms
+      if (dangerousCodes.includes(weatherCode)) {
+        alerts.push({
+          type: "severe",
+          message: t("Thunderstorm with possible hail detected", "检测到雷暴可能伴有冰雹"),
+          time: forecast.time,
+          icon: "thunderstorm"
+        });
+      }
+      
+      // Check heavy snow conditions
+      if (severeCodes.includes(weatherCode)) {
+        alerts.push({
+          type: "warning",
+          message: t("Heavy snow or blizzard conditions expected", "预计有大雪或暴风雪"),
+          time: forecast.time,
+          icon: "snow"
+        });
+      }
+      
+      // Check dust/sandstorms
+      if (desertStormCodes.includes(weatherCode)) {
+        alerts.push({
+          type: "warning",
+          message: t("Fog or freezing conditions expected", "预计有雾或结冰情况"),
+          time: forecast.time,
+          icon: "fog"
+        });
+      }
+      
+      // Check extreme wind
+      if (windSpeed > 60) {
+        alerts.push({
+          type: "severe",
+          message: t("Dangerous wind conditions detected", "检测到危险的风力条件"),
+          time: forecast.time,
+          icon: "wind"
+        });
+      }
+      
+      // Check heavy rain
+      if (precipitation > 10) {
+        alerts.push({
+          type: "warning",
+          message: t("Heavy rainfall expected", "预计有大雨"),
+          time: forecast.time,
+          icon: "rain"
+        });
+      }
+    }
+    
+    // Return unique alerts (avoid duplicates)
+    return alerts.filter((alert, index, self) => 
+      index === self.findIndex(a => a.message === alert.message)
+    );
+  }, [forecasts, t]);
 
   if (isLoading) {
     return (
@@ -151,6 +236,27 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
           )}
         </div>
       </CardHeader>
+      
+      {extremeWeatherAlerts.length > 0 && (
+        <div className="px-4 pt-3">
+          {extremeWeatherAlerts.map((alert, index) => (
+            <Alert 
+              key={index} 
+              variant={alert.type === "severe" ? "destructive" : "warning"}
+              className="mb-2 animate-pulse border border-amber-500/50 bg-amber-500/10"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              <AlertDescription className="flex items-center">
+                <span>{alert.message}</span>
+                <span className="ml-2 text-xs opacity-80">
+                  {formatTime(alert.time)} {formatDate(alert.time)}
+                </span>
+              </AlertDescription>
+            </Alert>
+          ))}
+        </div>
+      )}
+      
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
