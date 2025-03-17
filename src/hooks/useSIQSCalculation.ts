@@ -5,6 +5,8 @@ import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 import { v4 as uuidv4 } from "uuid";
+import { fetchForecastData } from "@/lib/api";
+import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -59,6 +61,29 @@ export const useSIQSCalculation = (
       
       setWeatherData(data);
       
+      // Fetch forecast data to get night conditions
+      let nightForecast: any[] = [];
+      try {
+        const forecastData = await fetchForecastData({
+          latitude: lat,
+          longitude: lng,
+          days: 3
+        });
+        
+        if (forecastData) {
+          // Extract future forecasts and filter for night hours (6 PM to 6 AM)
+          const futureForecasts = extractFutureForecasts(forecastData, 24);
+          nightForecast = futureForecasts.filter(item => {
+            const date = new Date(item.time);
+            const hour = date.getHours();
+            return hour >= 18 || hour < 6;
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching forecast data for SIQS calculation:", error);
+        // Continue with current weather if forecast fails
+      }
+      
       // Get Bortle scale data
       const actualBortleScale = await getBortleScaleData(
         lat,
@@ -90,7 +115,8 @@ export const useSIQSCalculation = (
         moonPhase: freshMoonPhase,
         precipitation: data.precipitation,
         weatherCondition: data.weatherCondition,
-        aqi: data.aqi
+        aqi: data.aqi,
+        nightForecast
       });
       
       if (displayOnly) {

@@ -6,6 +6,9 @@ import { calculateMoonPhase } from "@/utils/siqsValidation";
 import { fetchWeatherData } from "@/lib/api";
 import { NavigateFunction } from "react-router-dom";
 
+// Re-export handleLocationChange from the dedicated module
+export { handleLocationChange } from "./locationChangeHandler";
+
 /**
  * Hook to initialize location data from state or localStorage
  */

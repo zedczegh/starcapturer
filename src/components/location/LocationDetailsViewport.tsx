@@ -1,20 +1,24 @@
 
-import React, { memo } from "react";
-import { motion } from "framer-motion";
-import NavBar from "@/components/NavBar";
-import LocationStatusMessage from "@/components/location/LocationStatusMessage";
-import LocationDetailsContent from "@/components/location/LocationDetailsContent";
+import React, { useState, useCallback, useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import LocationDetailsHeader from "./LocationDetailsHeader";
+import LocationContentGrid from "./LocationContentGrid";
+import LocationStatusMessage from "./LocationStatusMessage";
+import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
+import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
+import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
+import WeatherAlerts from "@/components/weather/WeatherAlerts";
 
 interface LocationDetailsViewportProps {
   locationData: any;
-  setLocationData: (data: any) => void;
+  setLocationData: React.Dispatch<React.SetStateAction<any>>;
   statusMessage: string | null;
-  messageType: 'info' | 'success' | 'error';
-  setStatusMessage: (message: string | null) => void;
-  handleUpdateLocation: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
+  messageType: "info" | "error" | "success" | null;
+  setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
+  handleUpdateLocation: (updatedData: any) => void;
 }
 
-const LocationDetailsViewport = memo<LocationDetailsViewportProps>(({
+const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   locationData,
   setLocationData,
   statusMessage,
@@ -22,31 +26,97 @@ const LocationDetailsViewport = memo<LocationDetailsViewportProps>(({
   setStatusMessage,
   handleUpdateLocation
 }) => {
-  return (
-    <motion.div 
-      className="min-h-screen overflow-x-hidden sci-fi-scrollbar pb-16 md:pb-0"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.15 }}
-    >
-      <NavBar />
-      <main className="container mx-auto px-4 pt-24 pb-16">
-        <LocationStatusMessage 
-          message={statusMessage}
-          type={messageType}
-          onClear={() => setStatusMessage(null)}
-        />
-        
-        <LocationDetailsContent
-          locationData={locationData}
-          setLocationData={setLocationData}
-          onLocationUpdate={handleUpdateLocation}
-        />
-      </main>
-    </motion.div>
-  );
-});
+  const [gettingUserLocation, setGettingUserLocation] = useState(false);
+  const { language, t } = useLanguage();
+  const { loading, handleRefreshAll } = useWeatherUpdater();
+  
+  const {
+    forecastData,
+    longRangeForecast,
+    forecastLoading,
+    longRangeLoading,
+    weatherAlerts,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast
+  } = useForecastManager(locationData);
 
-LocationDetailsViewport.displayName = 'LocationDetailsViewport';
+  // Auto-refresh data when the component mounts
+  useEffect(() => {
+    const refreshData = async () => {
+      const lastUpdate = new Date(locationData.timestamp).getTime();
+      const now = new Date().getTime();
+      const minutesSinceLastUpdate = (now - lastUpdate) / (1000 * 60);
+      
+      // Refresh if data is older than 30 minutes
+      if (minutesSinceLastUpdate > 30) {
+        handleRefreshAll(
+          locationData,
+          setLocationData,
+          () => {
+            handleRefreshForecast(locationData.latitude, locationData.longitude);
+            handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+          },
+          setStatusMessage
+        );
+      }
+    };
+    
+    if (locationData && !loading) {
+      refreshData();
+    }
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    await handleRefreshAll(
+      locationData, 
+      setLocationData, 
+      () => {
+        handleRefreshForecast(locationData.latitude, locationData.longitude);
+        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+      },
+      setStatusMessage
+    );
+  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage]);
+
+  return (
+    <div className="min-h-screen bg-cosmic-950">
+      <LocationDetailsHeader 
+        name={locationData?.name}
+        timestamp={locationData?.timestamp}
+        onRefresh={handleRefresh}
+        loading={loading}
+      />
+      
+      <LocationStatusMessage 
+        message={statusMessage} 
+        type={messageType} 
+      />
+      
+      {weatherAlerts && weatherAlerts.length > 0 && (
+        <WeatherAlerts 
+          alerts={weatherAlerts}
+          formatTime={formatTime}
+          formatDate={formatDate}
+        />
+      )}
+      
+      <div className="container mx-auto px-4 pb-24 pt-4">
+        <LocationContentGrid
+          locationData={locationData}
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          gettingUserLocation={gettingUserLocation}
+          onLocationUpdate={handleUpdateLocation}
+          setGettingUserLocation={setGettingUserLocation}
+          setStatusMessage={setStatusMessage}
+          onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
+          onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default LocationDetailsViewport;

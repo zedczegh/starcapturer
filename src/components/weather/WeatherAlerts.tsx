@@ -35,7 +35,7 @@ const WeatherAlerts: React.FC<WeatherAlertsProps> = ({ alerts, formatTime, forma
           transition={{ duration: 0.3, delay: index * 0.1 }}
         >
           <Alert 
-            variant={alert.type === "severe" ? "destructive" : "warning"}
+            variant={alert.type === "severe" ? "destructive" : "default"}
             className={`border ${alert.type === "severe" ? 
               'border-red-500/50 bg-red-500/10 animate-pulse' : 
               'border-amber-500/50 bg-amber-500/10'}`}
