@@ -53,8 +53,8 @@ export interface SharedAstroSpot {
   photographer?: string;
   photoUrl?: string;
   targets?: string[];
-  siqs: number;
-  isViable: boolean;
+  siqs?: number;
+  isViable?: boolean;
   timestamp: string;
   distance?: number;
 }

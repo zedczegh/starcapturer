@@ -19,6 +19,20 @@ interface LocationDetailsViewportProps {
   handleUpdateLocation: (updatedData: any) => void;
 }
 
+// Type for LocationDetailsHeader props to ensure type safety
+interface LocationHeaderProps {
+  name?: string;
+  timestamp?: string;
+  onRefresh: () => void;
+  loading?: boolean;
+}
+
+// Type for LocationStatusMessage props to ensure type safety
+interface StatusMessageProps {
+  message: string | null;
+  type?: "info" | "error" | "success" | null;
+}
+
 const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   locationData,
   setLocationData,
@@ -101,7 +115,8 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   return (
     <div className="min-h-screen bg-cosmic-950">
       <LocationDetailsHeader 
-        locationData={locationData} 
+        name={locationData?.name}
+        timestamp={locationData?.timestamp}
         onRefresh={() => 
           handleRefreshAll(
             locationData, 
@@ -113,12 +128,12 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             setStatusMessage
           )
         } 
-        refreshing={loading}
+        loading={loading}
       />
       
       <LocationStatusMessage 
         message={statusMessage} 
-        messageType={messageType} 
+        type={messageType} 
       />
       
       {weatherAlerts && weatherAlerts.length > 0 && (
