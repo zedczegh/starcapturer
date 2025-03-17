@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin } from "lucide-react";
