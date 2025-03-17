@@ -3,12 +3,14 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
 
 export const useForecastData = () => {
   const [forecastData, setForecastData] = useState<any>(null);
   const [longRangeForecast, setLongRangeForecast] = useState<any>(null);
   const [forecastLoading, setForecastLoading] = useState<boolean>(false);
   const [longRangeLoading, setLongRangeLoading] = useState<boolean>(false);
+  const [nightForecast, setNightForecast] = useState<any[]>([]);
   const { t } = useLanguage();
 
   // Use refs for controllers for better cleanup
@@ -35,6 +37,20 @@ export const useForecastData = () => {
     }
   }, []);
 
+  // Process forecast data to extract nighttime forecast (6 PM to 6 AM)
+  const processNightForecast = useCallback((data: any) => {
+    if (!data || !data.hourly) return [];
+    
+    const futureForecasts = extractFutureForecasts(data, 24);
+    
+    // Filter for nighttime hours (6 PM to 6 AM)
+    return futureForecasts.filter(item => {
+      const date = new Date(item.time);
+      const hour = date.getHours();
+      return hour >= 18 || hour < 6;
+    });
+  }, []);
+
   // Enhanced fetch with caching consideration
   const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
@@ -56,6 +72,11 @@ export const useForecastData = () => {
       }, forecastControllerRef.current.signal);
       
       setForecastData(data);
+      
+      // Process and set night forecast data
+      const nightData = processNightForecast(data);
+      setNightForecast(nightData);
+      
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
         console.error("Error fetching forecast data:", error);
@@ -64,7 +85,7 @@ export const useForecastData = () => {
     } finally {
       setForecastLoading(false);
     }
-  }, [t, cleanupRequest, cleanupTimeout]);
+  }, [t, cleanupRequest, cleanupTimeout, processNightForecast]);
 
   const fetchLongRangeForecast = useCallback(async (latitude: number, longitude: number) => {
     try {
@@ -128,6 +149,7 @@ export const useForecastData = () => {
     longRangeForecast,
     forecastLoading,
     longRangeLoading,
+    nightForecast,
     setForecastData,
     fetchLocationForecast,
     fetchLongRangeForecast,
