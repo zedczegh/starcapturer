@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsHeader from "./LocationDetailsHeader";
 import LocationContentGrid from "./LocationContentGrid";
 import LocationStatusMessage from "./LocationStatusMessage";
+import { handleLocationChange } from "@/hooks/location/useLocationInit";
 import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
 import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
 import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
@@ -16,6 +17,20 @@ interface LocationDetailsViewportProps {
   messageType: "info" | "error" | "success" | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
   handleUpdateLocation: (updatedData: any) => void;
+}
+
+// Type for LocationDetailsHeader props to ensure type safety
+interface LocationHeaderProps {
+  name?: string;
+  timestamp?: string;
+  onRefresh: () => void;
+  loading?: boolean;
+}
+
+// Type for LocationStatusMessage props to ensure type safety
+interface StatusMessageProps {
+  message: string | null;
+  type?: "info" | "error" | "success" | null;
 }
 
 const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
@@ -66,24 +81,53 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, []);
 
-  const handleRefresh = useCallback(async () => {
-    await handleRefreshAll(
-      locationData, 
-      setLocationData, 
-      () => {
-        handleRefreshForecast(locationData.latitude, locationData.longitude);
-        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-      },
-      setStatusMessage
-    );
-  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage]);
+  const handleLocationUpdate = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
+    setGettingUserLocation(true);
+    setStatusMessage(t("Getting new location...", "获取新位置中..."));
+
+    try {
+      const updatedLocation = await handleLocationChange(
+        location.latitude,
+        location.longitude,
+        location.name,
+        language
+      );
+
+      if (updatedLocation) {
+        handleUpdateLocation(updatedLocation);
+        setStatusMessage(t("Location updated", "位置已更新"));
+        
+        // Refresh forecast data for the new location
+        handleRefreshForecast(location.latitude, location.longitude);
+        handleRefreshLongRangeForecast(location.latitude, location.longitude);
+        
+        // Clear status message after 3 seconds
+        setTimeout(() => setStatusMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error("Error updating location:", error);
+      setStatusMessage(t("Error updating location", "更新位置时出错"));
+    } finally {
+      setGettingUserLocation(false);
+    }
+  }, [setStatusMessage, t, handleUpdateLocation, language, handleRefreshForecast, handleRefreshLongRangeForecast]);
 
   return (
     <div className="min-h-screen bg-cosmic-950">
       <LocationDetailsHeader 
         name={locationData?.name}
         timestamp={locationData?.timestamp}
-        onRefresh={handleRefresh}
+        onRefresh={() => 
+          handleRefreshAll(
+            locationData, 
+            setLocationData, 
+            () => {
+              handleRefreshForecast(locationData.latitude, locationData.longitude);
+              handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+            },
+            setStatusMessage
+          )
+        } 
         loading={loading}
       />
       
@@ -108,7 +152,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
           forecastLoading={forecastLoading}
           longRangeLoading={longRangeLoading}
           gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={handleUpdateLocation}
+          onLocationUpdate={handleLocationUpdate}
           setGettingUserLocation={setGettingUserLocation}
           setStatusMessage={setStatusMessage}
           onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
