@@ -121,8 +121,13 @@ export const useSIQSCalculation = (
         nightForecast
       });
       
+      // Ensure SIQS score is on a 10-point scale
+      const normalizedScore = siqsResult.score;
+      
       if (displayOnly) {
-        setSiqsScore(siqsResult.score * 10);
+        // For display on home page, we use a 0-100 scale for the progress bar visual
+        // but store the actual 0-10 value for consistency
+        setSiqsScore(normalizedScore * 10);
         setIsCalculating(false);
         return;
       }
@@ -138,7 +143,10 @@ export const useSIQSCalculation = (
         bortleScale: validBortleScale,
         seeingConditions,
         weatherData: data,
-        siqsResult,
+        siqsResult: {
+          ...siqsResult,
+          score: normalizedScore // Ensure the score is on a 0-10 scale
+        },
         moonPhase: freshMoonPhase,
         timestamp: new Date().toISOString(),
       };

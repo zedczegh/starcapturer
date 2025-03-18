@@ -1,60 +1,46 @@
-
 export interface WeatherData {
+  temperature: number;
+  humidity: number;
   cloudCover: number;
   windSpeed: number;
-  humidity: number;
-  temperature?: number;
-  precipitation?: number;
-  weatherCondition?: string;
-  aqi?: number;
-  condition?: string;
-  time?: string;
+  precipitation: number;
+  weatherCondition: string;
+  aqi: number;
 }
 
-export interface ForecastData {
-  hourly: {
-    time: string[];
-    temperature: number[];
-    cloudCover: number[];
-    precipitation: number[];
-    windSpeed: number[];
-    humidity: number[];
-    weatherCode?: number[];
-  };
-  daily?: {
-    time: string[];
-    temperatureMax: number[];
-    temperatureMin: number[];
-    cloudCover: number[];
-    precipitationProbability: number[];
-    windSpeed: number[];
-  };
+export interface SIQSResult {
+  score: number;
+  isViable: boolean;
+  factors?: Array<{
+    name: string;
+    score: number;
+    description: string;
+  }>;
+}
+
+export interface SharedAstroSpot {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  chineseName?: string;
+  bortleScale?: number;
 }
 
 export interface ForecastItem {
   time: string;
   temperature: number;
   cloudCover: number;
-  precipitation: number;
   windSpeed: number;
   humidity: number;
-  weatherCode?: number;
-  siqsScore?: number;
+  precipitation: number;
+  weatherCondition: string;
 }
 
-export interface SharedAstroSpot {
-  id: string;
-  name: string;
-  chineseName?: string;
-  latitude: number;
-  longitude: number;
+export interface WeatherAlert {
+  event: string;
   description: string;
-  bortleScale: number;
-  photographer?: string;
-  photoUrl?: string;
-  targets?: string[];
-  siqs?: number;
-  isViable?: boolean;
-  timestamp: string;
-  distance?: number;
+  effective: string;
+  expires: string;
 }

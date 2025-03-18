@@ -67,6 +67,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     return null;
   }
   
+  // Ensure the score is converted to the 10-point scale for consistency
+  // This ensures it matches the display on the home page
+  const scoreOn10Scale = siqsData.score <= 10 ? siqsData.score : siqsData.score / 10;
+  
   // Generate condition reminders
   const reminders: { condition: string; threshold: string; advice: string }[] = [];
   
@@ -172,9 +176,9 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
       <CardContent className="p-4">
         {/* Score Display */}
         <div className="flex items-center justify-center mb-4">
-          <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(siqsData.score)}`}>
-            <div className="text-4xl font-bold mb-1">{siqsData.score.toFixed(1)}</div>
-            <div className="text-sm font-medium">{getScoreLabel(siqsData.score)}</div>
+          <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(scoreOn10Scale)}`}>
+            <div className="text-4xl font-bold mb-1">{scoreOn10Scale.toFixed(1)}</div>
+            <div className="text-sm font-medium">{getScoreLabel(scoreOn10Scale)}</div>
           </div>
         </div>
         
@@ -182,7 +186,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
         <div className="mb-6 space-y-4">
           {/* Main Recommendation */}
           <p className="text-center text-muted-foreground">
-            {getRecommendationMessage(siqsData.score, language)}
+            {getRecommendationMessage(scoreOn10Scale, language)}
           </p>
           
           {/* Reminders Section - Only show if we have reminders */}

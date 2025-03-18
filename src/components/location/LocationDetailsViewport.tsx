@@ -80,40 +80,44 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
 
   return (
     <div className="min-h-screen bg-cosmic-950">
-      <LocationDetailsHeader 
-        name={locationData?.name}
-        timestamp={locationData?.timestamp}
-        onRefresh={handleRefresh}
-        loading={loading}
-      />
-      
-      <LocationStatusMessage 
-        message={statusMessage} 
-        type={messageType} 
-      />
-      
-      {weatherAlerts && weatherAlerts.length > 0 && (
-        <WeatherAlerts 
-          alerts={weatherAlerts}
-          formatTime={formatTime}
-          formatDate={formatDate}
+      {/* Add top padding to create space for the navbar */}
+      <div className="pt-20 md:pt-24">
+        <LocationDetailsHeader 
+          name={locationData?.name}
+          timestamp={locationData?.timestamp}
+          onRefresh={handleRefresh}
+          loading={loading}
+          className="container mx-auto px-4 text-center"
         />
-      )}
-      
-      <div className="container mx-auto px-4 pb-24 pt-4">
-        <LocationContentGrid
-          locationData={locationData}
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={handleUpdateLocation}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
-          onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
-          onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
+        
+        <LocationStatusMessage 
+          message={statusMessage} 
+          type={messageType} 
         />
+        
+        {weatherAlerts && weatherAlerts.length > 0 && (
+          <WeatherAlerts 
+            alerts={weatherAlerts}
+            formatTime={formatTime}
+            formatDate={formatDate}
+          />
+        )}
+        
+        <div className="container mx-auto px-4 pb-24 pt-4">
+          <LocationContentGrid
+            locationData={locationData}
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            gettingUserLocation={gettingUserLocation}
+            onLocationUpdate={handleUpdateLocation}
+            setGettingUserLocation={setGettingUserLocation}
+            setStatusMessage={setStatusMessage}
+            onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
+            onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
+          />
+        </div>
       </div>
     </div>
   );

@@ -26,7 +26,7 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
 
-  // Make sure navbar appears on all pages, including details page
+  // Always render the navbar, regardless of route
   return (
     <>
       <NavHeader scrolled={scrolled}>
