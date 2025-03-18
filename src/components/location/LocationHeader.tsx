@@ -2,9 +2,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2, RefreshCw } from "lucide-react";
+import { Share2, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import BackButton from "@/components/navigation/BackButton";
 
 interface LocationHeaderProps {
   name: string;
@@ -40,19 +41,18 @@ const LocationHeader = ({
 
   return (
     <div className="mb-8">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate(-1)}
-        className="mb-4"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        {t("Back", "返回")}
-      </Button>
+      <div className="flex justify-center mb-4">
+        <BackButton 
+          destination="/"
+          replace={true}
+          className="mx-auto"
+        />
+      </div>
       
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold">{name || t("Unnamed Location", "未命名位置")}</h1>
+        <h1 className="text-3xl font-bold text-center md:text-left">{name || t("Unnamed Location", "未命名位置")}</h1>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-center md:justify-end">
           {onRefresh && (
             <Button 
               variant="outline"
@@ -74,7 +74,7 @@ const LocationHeader = ({
         </div>
       </div>
       
-      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-4">
+      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-4 justify-center md:justify-start">
         <div>
           {t("Latitude", "纬度")}: {latitude}
         </div>

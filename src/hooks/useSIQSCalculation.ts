@@ -8,6 +8,12 @@ import { v4 as uuidv4 } from "uuid";
 import { fetchForecastData } from "@/lib/api";
 import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
 
+// Ensure SIQS score is always on a 0-10 scale
+const normalizeScore = (score: number): number => {
+  if (score <= 10) return score;
+  return score / 10;
+};
+
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
   getCachedData: (key: string, maxAge?: number) => any
@@ -122,7 +128,7 @@ export const useSIQSCalculation = (
       });
       
       // Ensure SIQS score is consistently on a 0-10 scale
-      const normalizedScore = siqsResult.score;
+      const normalizedScore = normalizeScore(siqsResult.score);
       
       if (displayOnly) {
         // For consistency, always store the 0-10 scale value

@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo, memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -5,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { v4 as uuidv4 } from "uuid";
+import { ArrowLeft } from "lucide-react";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -120,6 +122,13 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     });
   }, [navigate, locationId, preparedLocationData, latitude, longitude, queryClient]);
   
+  // Handle back navigation
+  const handleBackClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate("/", { replace: true });
+  }, [navigate]);
+  
   // Calculate the width for the progress bar (always on 0-100 scale)
   const progressWidth = useMemo(() => {
     return siqsScore > 10 ? siqsScore : siqsScore * 10;
@@ -161,7 +170,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </p>
       
       {/* Enhanced call-to-action button with preload indication */}
-      <div className="mt-4 text-center">
+      <div className="mt-4 text-center flex flex-col space-y-2">
         <button 
           className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
                     transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
@@ -173,6 +182,19 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
             ? "Click for more details about the current SIQS" 
             : "点击获取更多关于当前SIQS的详细信息"}
         </button>
+        
+        {/* Back button - only show on details page */}
+        {window.location.pathname.startsWith('/location/') && (
+          <button
+            className="text-sm px-4 py-1.5 bg-cosmic-800 hover:bg-cosmic-700 text-white font-medium rounded-lg
+                     transition-all shadow-md flex items-center justify-center gap-1 mt-2"
+            onClick={handleBackClick}
+            data-testid="back-to-home-button"
+          >
+            <ArrowLeft size={14} />
+            {language === 'en' ? "Back to Home" : "返回主页"}
+          </button>
+        )}
       </div>
     </div>
   );

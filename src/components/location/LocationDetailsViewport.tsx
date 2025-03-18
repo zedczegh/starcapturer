@@ -8,6 +8,7 @@ import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
 import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
 import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
+import NavBar from "@/components/NavBar";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -80,9 +81,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
 
   return (
     <div className="min-h-screen bg-cosmic-950">
+      {/* The navbar is now part of the App.tsx and is rendered automatically for all routes */}
+      
       {/* Add top padding to create space for the navbar */}
       <div className="pt-24 md:pt-28">
-        <div className="container mx-auto px-4 text-center mb-8">
+        <div className="container mx-auto px-4 text-center my-8">
           <LocationDetailsHeader 
             name={locationData?.name}
             timestamp={locationData?.timestamp}

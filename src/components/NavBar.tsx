@@ -26,7 +26,7 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
 
-  // Higher z-index for the navbar to ensure it's visible
+  // Use a higher z-index to ensure the navbar is visible on all pages
   return (
     <>
       <NavHeader scrolled={scrolled}>
