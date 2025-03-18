@@ -85,17 +85,17 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       
       {/* Add top padding to create space for the navbar */}
       <div className="pt-24 md:pt-28">
+        {/* Back button positioned in the top-left corner */}
+        <div className="fixed top-24 left-4 md:top-28 md:left-8 z-50">
+          <BackButton 
+            destination="/"
+            replace={true}
+            variant="secondary"
+            size="sm"
+          />
+        </div>
+        
         <div className="container mx-auto px-4 mt-4 mb-6">
-          {/* Back button positioned in the top-left */}
-          <div className="absolute top-24 left-4 md:top-28 md:left-8 z-10">
-            <BackButton 
-              destination="/"
-              replace={true}
-              variant="secondary"
-              size="sm"
-            />
-          </div>
-          
           <div className="text-center my-8 pt-6">
             <LocationDetailsHeader 
               name={locationData?.name}

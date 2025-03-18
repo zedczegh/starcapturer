@@ -3,6 +3,7 @@ import React, { memo, lazy, Suspense, useEffect } from "react";
 import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
+import { calculateSIQS } from "@/lib/calculateSIQS";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
@@ -33,11 +34,43 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
 
+  // Ensure SIQS result is populated immediately
+  useEffect(() => {
+    // Check if locationData has all required information but siqsResult is missing or has score of 0
+    if (locationData?.weatherData && 
+        ((!locationData.siqsResult || locationData.siqsResult.score === 0) &&
+         locationData.bortleScale)) {
+      console.log("SIQS score missing or zero, calculating fresh score");
+      
+      // Calculate SIQS score from existing data without requiring a refresh
+      const freshSIQSResult = calculateSIQS({
+        cloudCover: locationData.weatherData.cloudCover,
+        bortleScale: locationData.bortleScale || 4,
+        seeingConditions: locationData.seeingConditions || 3,
+        windSpeed: locationData.weatherData.windSpeed,
+        humidity: locationData.weatherData.humidity,
+        moonPhase: locationData.moonPhase || 0,
+        aqi: locationData.weatherData.aqi,
+        weatherCondition: locationData.weatherData.weatherCondition || "",
+        precipitation: locationData.weatherData.precipitation || 0
+      });
+      
+      // Update locationData with the fresh SIQS result
+      setLocationData({
+        ...locationData,
+        siqsResult: freshSIQSResult
+      });
+      
+      console.log("Fresh SIQS score calculated:", freshSIQSResult.score);
+    }
+  }, [locationData, setLocationData]);
+
   // Log updates for debugging
   useEffect(() => {
-    console.debug("LocationDetailsContent updated with location:", 
-      locationData?.name, locationData?.latitude, locationData?.longitude);
-  }, [locationData?.name, locationData?.latitude, locationData?.longitude]);
+    console.log("LocationDetailsContent updated with location:", 
+      locationData?.name, locationData?.latitude, locationData?.longitude, 
+      "SIQS score:", locationData?.siqsResult?.score);
+  }, [locationData?.name, locationData?.latitude, locationData?.longitude, locationData?.siqsResult?.score]);
 
   return (
     <>
