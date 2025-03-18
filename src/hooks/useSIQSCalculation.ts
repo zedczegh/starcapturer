@@ -121,13 +121,12 @@ export const useSIQSCalculation = (
         nightForecast
       });
       
-      // Ensure SIQS score is on a 10-point scale
+      // Ensure SIQS score is consistently on a 0-10 scale
       const normalizedScore = siqsResult.score;
       
       if (displayOnly) {
-        // For display on home page, we use a 0-100 scale for the progress bar visual
-        // but store the actual 0-10 value for consistency
-        setSiqsScore(normalizedScore * 10);
+        // For consistency, always store the 0-10 scale value
+        setSiqsScore(normalizedScore);
         setIsCalculating(false);
         return;
       }

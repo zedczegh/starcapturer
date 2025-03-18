@@ -1,3 +1,4 @@
+
 export interface WeatherData {
   temperature: number;
   humidity: number;
@@ -26,6 +27,13 @@ export interface SharedAstroSpot {
   timestamp: string;
   chineseName?: string;
   bortleScale?: number;
+  siqs?: number;
+  isViable?: boolean;
+  distance?: number;
+  description?: string;
+  photoUrl?: string;
+  photographer?: string;
+  targets?: string[];
 }
 
 export interface ForecastItem {

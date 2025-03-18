@@ -81,14 +81,16 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   return (
     <div className="min-h-screen bg-cosmic-950">
       {/* Add top padding to create space for the navbar */}
-      <div className="pt-20 md:pt-24">
-        <LocationDetailsHeader 
-          name={locationData?.name}
-          timestamp={locationData?.timestamp}
-          onRefresh={handleRefresh}
-          loading={loading}
-          className="container mx-auto px-4 text-center"
-        />
+      <div className="pt-24 md:pt-28">
+        <div className="container mx-auto px-4 text-center mb-8">
+          <LocationDetailsHeader 
+            name={locationData?.name}
+            timestamp={locationData?.timestamp}
+            onRefresh={handleRefresh}
+            loading={loading}
+            className="mx-auto"
+          />
+        </div>
         
         <LocationStatusMessage 
           message={statusMessage} 

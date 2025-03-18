@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin } from "lucide-react";
@@ -40,18 +41,14 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         const convertedPoints: SharedAstroSpot[] = points.map(point => ({
           id: point.id,
           name: point.name,
-          chineseName: point.chineseName,
+          chineseName: point.chineseName || point.name,
           latitude: point.latitude,
           longitude: point.longitude,
-          description: point.description,
           bortleScale: point.bortleScale,
-          photoUrl: point.photoUrl,
-          photographer: point.photographer,
-          targets: point.targets,
-          siqs: point.siqs || 0, // Default to 0 if not provided
-          isViable: point.isViable || false, // Default to false if not provided
-          timestamp: point.timestamp || new Date().toISOString(),
-          distance: point.distance
+          siqs: point.siqs || 0,
+          isViable: point.isViable || false,
+          distance: point.distance || 0,
+          timestamp: point.timestamp || new Date().toISOString()
         }));
         
         setRecommendedPoints(convertedPoints);

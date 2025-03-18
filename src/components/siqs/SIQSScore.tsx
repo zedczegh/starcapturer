@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -48,13 +47,21 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const queryClient = useQueryClient();
   const [isPrefetching, setIsPrefetching] = useState(false);
   
+  // Always ensure the score is on a 0-10 scale for display
+  const normalizedScore = useMemo(() => {
+    // If siqsScore is already in 0-10 range, use it as is
+    if (siqsScore <= 10) return siqsScore;
+    // Otherwise convert from 0-100 to 0-10
+    return siqsScore / 10;
+  }, [siqsScore]);
+  
   // Memoize calculations to prevent unnecessary re-renders
   const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
-    scoreColor: getScoreColorClass(siqsScore / 10),
-    scoreClass: getScoreClass(siqsScore),
-    recommendation: getRecommendationMessage(siqsScore / 10, language),
-    scoreOn10Scale: siqsScore / 10
-  }), [siqsScore, language]);
+    scoreColor: getScoreColorClass(normalizedScore),
+    scoreClass: getScoreClass(siqsScore > 10 ? siqsScore : siqsScore * 10), // For progress bar
+    recommendation: getRecommendationMessage(normalizedScore, language),
+    scoreOn10Scale: normalizedScore
+  }), [normalizedScore, siqsScore, language]);
   
   // Generate a uuid for location ID instead of using name to avoid inconsistencies
   const preparedLocationData = useMemo(() => {
@@ -113,6 +120,11 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     });
   }, [navigate, locationId, preparedLocationData, latitude, longitude, queryClient]);
   
+  // Calculate the width for the progress bar (always on 0-100 scale)
+  const progressWidth = useMemo(() => {
+    return siqsScore > 10 ? siqsScore : siqsScore * 10;
+  }, [siqsScore]);
+  
   return (
     <div 
       className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
@@ -134,7 +146,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
         <div 
           className={`h-full ${scoreClass}`} 
-          style={{ width: `${siqsScore}%`, transition: 'width 0.5s ease-in-out' }}
+          style={{ width: `${progressWidth}%`, transition: 'width 0.5s ease-in-out' }}
         />
       </div>
       

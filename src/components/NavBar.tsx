@@ -26,7 +26,7 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
 
-  // Always render the navbar, regardless of route
+  // Higher z-index for the navbar to ensure it's visible
   return (
     <>
       <NavHeader scrolled={scrolled}>
