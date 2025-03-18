@@ -41,11 +41,12 @@ const LocationHeader = ({
 
   return (
     <div className="mb-8">
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-start mb-4">
         <BackButton 
           destination="/"
-          replace={true}
-          className="mx-auto"
+          className="ml-0 mr-auto" 
+          variant="secondary"
+          size="sm"
         />
       </div>
       

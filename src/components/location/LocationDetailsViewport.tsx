@@ -8,7 +8,7 @@ import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
 import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
 import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
-import NavBar from "@/components/NavBar";
+import BackButton from "@/components/navigation/BackButton";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -81,18 +81,30 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
 
   return (
     <div className="min-h-screen bg-cosmic-950">
-      {/* The navbar is now part of the App.tsx and is rendered automatically for all routes */}
+      {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
       
       {/* Add top padding to create space for the navbar */}
       <div className="pt-24 md:pt-28">
-        <div className="container mx-auto px-4 text-center my-8">
-          <LocationDetailsHeader 
-            name={locationData?.name}
-            timestamp={locationData?.timestamp}
-            onRefresh={handleRefresh}
-            loading={loading}
-            className="mx-auto"
-          />
+        <div className="container mx-auto px-4 mt-4 mb-6">
+          {/* Back button positioned in the top-left */}
+          <div className="absolute top-24 left-4 md:top-28 md:left-8 z-10">
+            <BackButton 
+              destination="/"
+              replace={true}
+              variant="secondary"
+              size="sm"
+            />
+          </div>
+          
+          <div className="text-center my-8 pt-6">
+            <LocationDetailsHeader 
+              name={locationData?.name}
+              timestamp={locationData?.timestamp}
+              onRefresh={handleRefresh}
+              loading={loading}
+              className="mx-auto"
+            />
+          </div>
         </div>
         
         <LocationStatusMessage 

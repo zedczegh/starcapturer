@@ -49,7 +49,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const queryClient = useQueryClient();
   const [isPrefetching, setIsPrefetching] = useState(false);
   
-  // Always ensure the score is on a 0-10 scale for display
+  // ALWAYS normalize the score to a 0-10 scale for display
   const normalizedScore = useMemo(() => {
     // If siqsScore is already in 0-10 range, use it as is
     if (siqsScore <= 10) return siqsScore;
@@ -70,7 +70,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     if (!latitude || !longitude) return null;
     
     // Use UUID for more reliable IDs that don't depend on location names
-    const generatedId = uuidv4();
+    const generatedId = locationId || uuidv4();
     return {
       id: generatedId,
       name: locationName || t("Current Location", "当前位置"),
@@ -78,7 +78,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       longitude: longitude,
       timestamp: new Date().toISOString()
     };
-  }, [latitude, longitude, locationName, t]);
+  }, [latitude, longitude, locationName, locationId, t]);
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {
@@ -133,6 +133,11 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const progressWidth = useMemo(() => {
     return siqsScore > 10 ? siqsScore : siqsScore * 10;
   }, [siqsScore]);
+
+  // Determine if we're on the location details page
+  const isOnDetailsPage = useMemo(() => {
+    return window.location.pathname.startsWith('/location/');
+  }, []);
   
   return (
     <div 
@@ -171,23 +176,25 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       
       {/* Enhanced call-to-action button with preload indication */}
       <div className="mt-4 text-center flex flex-col space-y-2">
-        <button 
-          className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
-                    transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
-                    border border-[#9b87f5]/30 animate-pulse hover:animate-none"
-          onClick={handleClick}
-          data-testid="siqs-details-button"
-        >
-          {language === 'en' 
-            ? "Click for more details about the current SIQS" 
-            : "点击获取更多关于当前SIQS的详细信息"}
-        </button>
+        {!isOnDetailsPage && (
+          <button 
+            className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
+                      transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
+                      border border-[#9b87f5]/30 animate-pulse hover:animate-none"
+            onClick={handleClick}
+            data-testid="siqs-details-button"
+          >
+            {language === 'en' 
+              ? "Click for more details about the current SIQS" 
+              : "点击获取更多关于当前SIQS的详细信息"}
+          </button>
+        )}
         
         {/* Back button - only show on details page */}
-        {window.location.pathname.startsWith('/location/') && (
+        {isOnDetailsPage && (
           <button
             className="text-sm px-4 py-1.5 bg-cosmic-800 hover:bg-cosmic-700 text-white font-medium rounded-lg
-                     transition-all shadow-md flex items-center justify-center gap-1 mt-2"
+                      transition-all shadow-md flex items-center justify-center gap-1 mt-2"
             onClick={handleBackClick}
             data-testid="back-to-home-button"
           >

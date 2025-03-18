@@ -24,7 +24,7 @@ export interface SharedAstroSpot {
   name: string;
   latitude: number;
   longitude: number;
-  timestamp: string;
+  timestamp: string;  // Making this required in all cases
   chineseName?: string;
   bortleScale?: number;
   siqs?: number;
