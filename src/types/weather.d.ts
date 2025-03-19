@@ -1,54 +1,50 @@
 
-export interface WeatherData {
-  temperature: number;
-  humidity: number;
-  cloudCover: number;
-  windSpeed: number;
-  precipitation: number;
-  weatherCondition: string;
-  aqi: number;
-}
+declare module "@/types/weather" {
+  export interface WeatherData {
+    temperature: number;
+    humidity: number;
+    cloudCover: number;
+    windSpeed: number;
+    precipitation: number;
+    time: string;
+    condition: string;
+    aqi?: number;
+    weatherCondition?: string | number;
+  }
 
-export interface SIQSResult {
-  score: number;
-  isViable: boolean;
-  factors?: Array<{
+  export interface LocationData {
+    id: string;
     name: string;
+    latitude: number;
+    longitude: number;
+    bortleScale: number;
+    seeingConditions: number;
+    weatherData: WeatherData;
+    siqsResult?: SIQSData;
+    moonPhase?: number;
+    timestamp: string;
+  }
+
+  export interface SIQSData {
     score: number;
-    description: string;
-  }>;
-}
+    isViable: boolean;
+    factors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+  }
 
-export interface SharedAstroSpot {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  timestamp: string;  // Making this required in all cases
-  chineseName?: string;
-  bortleScale?: number;
-  siqs?: number;
-  isViable?: boolean;
-  distance?: number;
-  description?: string;
-  photoUrl?: string;
-  photographer?: string;
-  targets?: string[];
-}
-
-export interface ForecastItem {
-  time: string;
-  temperature: number;
-  cloudCover: number;
-  windSpeed: number;
-  humidity: number;
-  precipitation: number;
-  weatherCondition: string;
-}
-
-export interface WeatherAlert {
-  event: string;
-  description: string;
-  effective: string;
-  expires: string;
+  export interface SharedAstroSpot {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    bortleScale: number;
+    description?: string;
+    imageURL?: string;
+    rating?: number;
+    timestamp: string;
+    chineseName?: string;
+  }
 }

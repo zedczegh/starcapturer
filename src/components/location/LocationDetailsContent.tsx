@@ -4,6 +4,7 @@ import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { calculateSIQS } from "@/lib/calculateSIQS";
+import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
@@ -34,35 +35,36 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
 
-  // Calculate SIQS immediately on component mount and when relevant data changes
+  // Calculate SIQS immediately when forecast data changes
   useEffect(() => {
     // Only proceed if we have the necessary data
-    if (locationData?.weatherData && locationData.bortleScale) {
-      console.log("Checking if SIQS calculation is needed");
+    if (locationData?.weatherData && locationData.bortleScale && forecastData?.hourly) {
+      console.log("Calculating SIQS based on nighttime forecast data");
       
-      // Get night forecast if available (for more accurate SIQS)
-      let nightForecast = [];
-      if (forecastData && forecastData.hourly) {
-        // Extract night hours (6 PM to 8 AM)
-        const hourlyItems = [];
-        for (let i = 0; i < forecastData.hourly.time.length; i++) {
-          const date = new Date(forecastData.hourly.time[i]);
-          const hour = date.getHours();
-          if (hour >= 18 || hour < 8) {
-            hourlyItems.push({
-              time: forecastData.hourly.time[i],
-              cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
-              windSpeed: forecastData.hourly.wind_speed_10m?.[i] || 0,
-              humidity: forecastData.hourly.relative_humidity_2m?.[i] || 0,
-              precipitation: forecastData.hourly.precipitation?.[i] || 0,
-              weatherCondition: forecastData.hourly.weather_code?.[i] || 0
-            });
-          }
+      // Extract night forecast (6 PM to 8 AM)
+      const nightForecast = [];
+      for (let i = 0; i < forecastData.hourly.time.length; i++) {
+        const date = new Date(forecastData.hourly.time[i]);
+        const hour = date.getHours();
+        if (hour >= 18 || hour < 8) {
+          nightForecast.push({
+            time: forecastData.hourly.time[i],
+            cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
+            windSpeed: forecastData.hourly.wind_speed_10m?.[i] || 0,
+            humidity: forecastData.hourly.relative_humidity_2m?.[i] || 0,
+            precipitation: forecastData.hourly.precipitation?.[i] || 0,
+            weatherCondition: forecastData.hourly.weather_code?.[i] || 0
+          });
         }
-        nightForecast = hourlyItems;
       }
       
-      // Calculate fresh SIQS score
+      // Skip calculation if no night forecast data
+      if (nightForecast.length === 0) {
+        console.log("No nighttime forecast data available");
+        return;
+      }
+      
+      // Calculate fresh SIQS score with nighttime forecast
       const freshSIQSResult = calculateSIQS({
         cloudCover: locationData.weatherData.cloudCover,
         bortleScale: locationData.bortleScale,
@@ -76,25 +78,15 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         nightForecast: nightForecast
       });
       
-      // Only update if we have a different score or missing score
-      if (!locationData.siqsResult || 
-          Math.abs(locationData.siqsResult.score - freshSIQSResult.score) > 0.1) {
-        console.log("Updating SIQS score from", 
-          locationData.siqsResult?.score, "to", freshSIQSResult.score);
-        
-        setLocationData({
-          ...locationData,
-          siqsResult: freshSIQSResult
-        });
-      }
+      console.log("SIQS analysis based on nighttime conditions:", freshSIQSResult.score);
+      
+      // Always update the SIQS result when forecast data changes
+      setLocationData({
+        ...locationData,
+        siqsResult: freshSIQSResult
+      });
     }
-  }, [
-    locationData?.weatherData, 
-    locationData?.bortleScale, 
-    forecastData, 
-    setLocationData, 
-    locationData
-  ]);
+  }, [forecastData, locationData, setLocationData]);
 
   // Log updates for debugging
   useEffect(() => {

@@ -201,6 +201,52 @@ export function extractFutureForecasts(forecastData: any, maxHours: number = 24)
 }
 
 /**
+ * Extract only the nighttime forecasts (6PM-8AM)
+ * Used specifically for SIQS analysis
+ */
+export function extractNighttimeForecasts(forecastData: any, maxDays: number = 3): any[] {
+  if (!forecastData || 
+      !forecastData.hourly || 
+      !Array.isArray(forecastData.hourly.time) || 
+      forecastData.hourly.time.length === 0) {
+    return [];
+  }
+  
+  try {
+    const result = [];
+    const now = new Date();
+    const maxHours = maxDays * 24;
+    
+    // Loop through the forecast data
+    for (let i = 0; i < Math.min(maxHours, forecastData.hourly.time.length); i++) {
+      const forecastTime = new Date(forecastData.hourly.time[i]);
+      
+      // Skip past forecasts
+      if (forecastTime <= now) continue;
+      
+      // Check if it's nighttime (6PM-8AM)
+      const hour = forecastTime.getHours();
+      if (hour >= 18 || hour < 8) {
+        result.push({
+          time: forecastData.hourly.time[i],
+          temperature: forecastData.hourly.temperature_2m?.[i] ?? 22,
+          humidity: forecastData.hourly.relative_humidity_2m?.[i] ?? 60,
+          cloudCover: forecastData.hourly.cloud_cover?.[i] ?? 30,
+          windSpeed: forecastData.hourly.wind_speed_10m?.[i] ?? 5,
+          precipitation: forecastData.hourly.precipitation?.[i] ?? 0,
+          weatherCode: forecastData.hourly.weather_code?.[i] ?? 0
+        });
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error processing nighttime forecast data:", error);
+    return [];
+  }
+}
+
+/**
  * Detect extreme weather conditions from forecasts
  */
 export function detectExtremeWeatherConditions(forecasts: any[], t: (en: string, zh: string) => string): any[] {

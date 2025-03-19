@@ -67,9 +67,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     return null;
   }
   
-  // Ensure the score is converted to the 10-point scale for consistency
-  // This ensures it matches the display on the home page
+  // Ensure the score is always on a 0-10 scale
   const scoreOn10Scale = siqsData.score <= 10 ? siqsData.score : siqsData.score / 10;
+  
+  // Log for debugging
+  console.log("SIQSSummary rendering with score:", siqsData.score, "converted to:", scoreOn10Scale);
   
   // Generate condition reminders
   const reminders: { condition: string; threshold: string; advice: string }[] = [];
