@@ -8,6 +8,7 @@ import { useLightPollutionData } from "./useLightPollutionData";
 import { hasProperty } from "@/types/weather-utils";
 import { useBortleUpdater } from "./location/useBortleUpdater";
 import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
+import { extractNightForecasts, hasHighCloudCover } from "@/components/forecast/ForecastUtils";
 
 /**
  * Hook for handling location updates with improved handling for Chinese regions
@@ -62,6 +63,17 @@ export const useLocationUpdate = (
         latitude: newLocation.latitude,
         longitude: newLocation.longitude
       };
+      
+      // Save this location to localStorage for persistence
+      try {
+        localStorage.setItem('latest_siqs_location', JSON.stringify({
+          name: newLocation.name,
+          latitude: newLocation.latitude,
+          longitude: newLocation.longitude
+        }));
+      } catch (error) {
+        console.error("Error saving location to localStorage:", error);
+      }
       
       updateInProgressRef.current = true;
       setLoading(true);
@@ -139,6 +151,11 @@ export const useLocationUpdate = (
         // Calculate new SIQS score
         const seeingConditions = hasProperty(locationData, 'seeingConditions') ? locationData.seeingConditions : 3;
         
+        // Use existing forecast data if available
+        const nightForecast = locationData?.forecastData?.hourly ? 
+          extractNightForecasts(locationData.forecastData.hourly) : 
+          undefined;
+        
         const siqsResult = calculateSIQS({
           cloudCover: newWeatherData.cloudCover,
           bortleScale: bortleScale !== null ? bortleScale : 4,
@@ -148,7 +165,8 @@ export const useLocationUpdate = (
           moonPhase: locationData.moonPhase,
           aqi: newWeatherData.aqi,
           weatherCondition: newWeatherData.weatherCondition,
-          precipitation: newWeatherData.precipitation
+          precipitation: newWeatherData.precipitation,
+          nightForecast: nightForecast
         });
         
         // Update location data with new information

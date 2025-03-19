@@ -30,19 +30,36 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [calculationInProgress, setCalculationInProgress] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
+  const [shouldAutoRequest, setShouldAutoRequest] = useState(!noAutoLocationRequest);
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
+  // Check if we have saved location data in localStorage
+  useEffect(() => {
+    try {
+      const savedLocationString = localStorage.getItem('latest_siqs_location');
+      if (savedLocationString) {
+        const savedLocation = JSON.parse(savedLocationString);
+        // If we have valid saved location, don't auto-request new location
+        if (savedLocation && savedLocation.name && savedLocation.latitude && savedLocation.longitude) {
+          setShouldAutoRequest(false);
+        }
+      }
+    } catch (e) {
+      console.error("Error checking saved location:", e);
+    }
+  }, []);
+  
   const locationSelectorProps = useMemo(() => ({
     language: language as Language,
-    noAutoLocationRequest,
+    noAutoLocationRequest: noAutoLocationRequest || !shouldAutoRequest,
     bortleScale: localBortleScale,
     setBortleScale: setLocalBortleScale,
     setStatusMessage,
     setShowAdvancedSettings: () => {}, // This is now handled differently
     getCachedData,
     setCachedData
-  }), [language, noAutoLocationRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
+  }), [language, noAutoLocationRequest, shouldAutoRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
 
   const {
     userLocation,
@@ -120,6 +137,22 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setCalculationInProgress(isCalculating);
   }, [isCalculating]);
   
+  // Save current location to localStorage when it changes
+  useEffect(() => {
+    if (locationName && latitude && longitude) {
+      try {
+        const locationToSave = {
+          name: locationName,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude)
+        };
+        localStorage.setItem('latest_siqs_location', JSON.stringify(locationToSave));
+      } catch (e) {
+        console.error("Error saving location to localStorage:", e);
+      }
+    }
+  }, [locationName, latitude, longitude]);
+  
   // Memoize the SIQS calculation for better performance
   const calculateSIQS = useCallback(() => {
     const lat = parseFloat(latitude);
@@ -178,6 +211,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           loading={loading || calculationInProgress} 
           handleUseCurrentLocation={handleUseCurrentLocation}
           onSelectLocation={handleLocationSelect}
+          noAutoLocationRequest={noAutoLocationRequest || !shouldAutoRequest}
         />
         
         {!hideRecommendedPoints && (

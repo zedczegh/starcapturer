@@ -10,33 +10,28 @@ interface LocationSelectorProps {
   loading: boolean;
   handleUseCurrentLocation: () => void;
   onSelectLocation: (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => void;
+  noAutoLocationRequest?: boolean;
 }
 
 const LocationSelector: React.FC<LocationSelectorProps> = ({
   locationName,
   loading,
   handleUseCurrentLocation,
-  onSelectLocation
+  onSelectLocation,
+  noAutoLocationRequest = false
 }) => {
   const { t } = useLanguage();
   const autoLocationTriggered = useRef(false);
   
-  // Auto-trigger location request when component mounts if no location exists
+  // Auto-trigger location request only on first mount and if no location exists
   useEffect(() => {
-    // Only auto-trigger if we don't have a location yet and haven't triggered before
-    if (!locationName && !loading && !autoLocationTriggered.current) {
+    // Only auto-trigger if we don't have a location yet, haven't triggered before,
+    // and auto-location is not disabled
+    if (!locationName && !loading && !autoLocationTriggered.current && !noAutoLocationRequest) {
       autoLocationTriggered.current = true;
       handleUseCurrentLocation();
     }
-  }, [locationName, loading, handleUseCurrentLocation]);
-  
-  // Reset the auto-trigger flag when locationName changes to empty
-  // This allows re-triggering when user clears their location
-  useEffect(() => {
-    if (!locationName) {
-      autoLocationTriggered.current = false;
-    }
-  }, [locationName]);
+  }, [locationName, loading, handleUseCurrentLocation, noAutoLocationRequest]);
   
   // Check if locationName is just coordinates or a proper name
   const isCoordinateOnly = locationName && locationName.includes("°");

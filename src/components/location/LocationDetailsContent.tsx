@@ -4,7 +4,7 @@ import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
+import { extractFutureForecasts, extractNightForecasts } from "@/components/forecast/ForecastUtils";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
@@ -39,30 +39,18 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   useEffect(() => {
     // Only proceed if we have the necessary data
     if (locationData?.weatherData && locationData.bortleScale && forecastData?.hourly) {
-      console.log("Calculating SIQS based on nighttime forecast data");
+      console.log("Using nighttime forecast data for SIQS calculation");
       
-      // Extract night forecast (6 PM to 8 AM)
-      const nightForecast = [];
-      for (let i = 0; i < forecastData.hourly.time.length; i++) {
-        const date = new Date(forecastData.hourly.time[i]);
-        const hour = date.getHours();
-        if (hour >= 18 || hour < 8) {
-          nightForecast.push({
-            time: forecastData.hourly.time[i],
-            cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
-            windSpeed: forecastData.hourly.wind_speed_10m?.[i] || 0,
-            humidity: forecastData.hourly.relative_humidity_2m?.[i] || 0,
-            precipitation: forecastData.hourly.precipitation?.[i] || 0,
-            weatherCondition: forecastData.hourly.weather_code?.[i] || 0
-          });
-        }
-      }
+      // Extract night forecasts (6 PM to 8 AM)
+      const nightForecast = extractNightForecasts(forecastData.hourly);
       
       // Skip calculation if no night forecast data
       if (nightForecast.length === 0) {
         console.log("No nighttime forecast data available");
         return;
       }
+      
+      console.log("Night forecast items: ", nightForecast.length);
       
       // Calculate fresh SIQS score with nighttime forecast
       const freshSIQSResult = calculateSIQS({

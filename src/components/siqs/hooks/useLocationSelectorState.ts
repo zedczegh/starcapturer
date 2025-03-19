@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScale } from "@/hooks/location/useBortleScale";
 
@@ -34,6 +34,48 @@ export const useLocationSelectorState = ({
   const [locationName, setLocationName] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [hasTriedStoredLocation, setHasTriedStoredLocation] = useState(false);
+  
+  // Try to restore previous location when component initializes
+  useEffect(() => {
+    if (hasTriedStoredLocation || locationName || latitude || longitude) {
+      return; // Already initialized or tried
+    }
+    
+    try {
+      const storedLocationStr = localStorage.getItem('latest_siqs_location');
+      if (storedLocationStr) {
+        const storedLocation = JSON.parse(storedLocationStr);
+        if (storedLocation && storedLocation.name && 
+            typeof storedLocation.latitude === 'number' &&
+            typeof storedLocation.longitude === 'number') {
+          
+          // Restore the saved location
+          setLocationName(storedLocation.name);
+          setLatitude(storedLocation.latitude.toString());
+          setLongitude(storedLocation.longitude.toString());
+          setShowAdvancedSettings(true);
+          
+          // Update Bortle scale based on the restored location
+          if (bortleScale === null) {
+            fetchLightPollutionData(storedLocation.latitude, storedLocation.longitude)
+              .then(data => {
+                if (data && data.bortleScale !== undefined) {
+                  setBortleScale(data.bortleScale);
+                }
+              })
+              .catch(error => {
+                console.error("Error fetching Bortle scale for restored location:", error);
+              });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error restoring location:", error);
+    } finally {
+      setHasTriedStoredLocation(true);
+    }
+  }, [hasTriedStoredLocation, locationName, latitude, longitude, bortleScale, setBortleScale, setShowAdvancedSettings]);
   
   // Get the current location from the browser
   const handleUseCurrentLocation = useCallback(() => {
@@ -51,6 +93,17 @@ export const useLocationSelectorState = ({
           
           // Reset Bortle scale to null until we get fresh data
           setBortleScale(null);
+          
+          // Save this as the latest location
+          try {
+            localStorage.setItem('latest_siqs_location', JSON.stringify({
+              name: language === 'en' ? "Current Location" : "当前位置",
+              latitude,
+              longitude
+            }));
+          } catch (error) {
+            console.error("Error saving location to localStorage:", error);
+          }
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -82,6 +135,17 @@ export const useLocationSelectorState = ({
     
     // Reset Bortle scale until we get fresh data
     setBortleScale(null);
+    
+    // Save as latest location
+    try {
+      localStorage.setItem('latest_siqs_location', JSON.stringify({
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude
+      }));
+    } catch (error) {
+      console.error("Error saving selected location to localStorage:", error);
+    }
     
     const cacheKey = `loc-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
     const cachedData = getCachedData(cacheKey);
@@ -153,6 +217,17 @@ export const useLocationSelectorState = ({
     setLocationName(point.name);
     setLatitude(point.latitude.toFixed(6));
     setLongitude(point.longitude.toFixed(6));
+    
+    // Save as latest location
+    try {
+      localStorage.setItem('latest_siqs_location', JSON.stringify({
+        name: point.name,
+        latitude: point.latitude,
+        longitude: point.longitude
+      }));
+    } catch (error) {
+      console.error("Error saving recommended location to localStorage:", error);
+    }
     
     // Reset Bortle scale until we get fresh data
     setBortleScale(null);

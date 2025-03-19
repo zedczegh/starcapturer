@@ -46,5 +46,10 @@ declare module "@/types/weather" {
     rating?: number;
     timestamp: string;
     chineseName?: string;
+    siqs?: {
+      score: number;
+      isViable: boolean;
+    };
+    distance?: number;
   }
 }

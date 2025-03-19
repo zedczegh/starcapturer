@@ -1,38 +1,10 @@
 
-import React from "react";
-import { NightForecastUtils } from "./NightForecastUtils";
-
 /**
- * Utility functions for processing and displaying forecast data
+ * Utility functions for extracting and processing night forecast data
+ * This file contains optimized functions for working with forecast data during nighttime hours
  */
 
-// Extract future forecast data, filtering out past times
-export const extractFutureForecasts = (hourlyData: any) => {
-  if (!hourlyData || !hourlyData.time) return [];
-  
-  const now = new Date();
-  const futureForecasts = [];
-  
-  for (let i = 0; i < hourlyData.time.length; i++) {
-    const forecastTime = new Date(hourlyData.time[i]);
-    
-    if (forecastTime > now) {
-      futureForecasts.push({
-        time: hourlyData.time[i],
-        temperature: hourlyData.temperature_2m?.[i],
-        precipitation: hourlyData.precipitation?.[i] || 0,
-        cloudCover: hourlyData.cloud_cover?.[i] || 0,
-        windSpeed: hourlyData.wind_speed_10m?.[i] || 0,
-        humidity: hourlyData.relative_humidity_2m?.[i] || 0,
-        weatherCode: hourlyData.weather_code?.[i]
-      });
-    }
-  }
-  
-  return futureForecasts;
-};
-
-// Extract nighttime forecasts (6 PM to 8 AM)
+// Extract nighttime forecasts between 6 PM and 8 AM
 export const extractNightForecasts = (hourlyData: any) => {
   const nightForecast = [];
   
@@ -65,34 +37,6 @@ export const extractNightForecasts = (hourlyData: any) => {
   return nightForecast;
 };
 
-// Group forecasts by date for better presentation
-export const groupForecastsByDate = (forecasts: any[]) => {
-  const grouped: Record<string, any[]> = {};
-  
-  forecasts.forEach(forecast => {
-    const date = new Date(forecast.time);
-    const dateString = date.toLocaleDateString();
-    
-    if (!grouped[dateString]) {
-      grouped[dateString] = [];
-    }
-    
-    grouped[dateString].push({
-      ...forecast,
-      hour: date.getHours()
-    });
-  });
-  
-  return grouped;
-};
-
-// Check if a forecast is during nighttime (6 PM to 8 AM)
-export const isNightForecast = (forecastTime: string) => {
-  const date = new Date(forecastTime);
-  const hour = date.getHours();
-  return hour >= 18 || hour < 8;
-};
-
 // Calculate average cloud cover from nighttime forecasts
 export const calculateAverageCloudCover = (nightForecasts: any[]) => {
   if (!nightForecasts || nightForecasts.length === 0) {
@@ -120,4 +64,13 @@ export const hasHighCloudCover = (nightForecasts: any[], threshold: number = 40)
   }
   
   return nightForecasts.some(forecast => (forecast.cloudCover || 0) > threshold);
+};
+
+// Get an array of cloud cover values for each nighttime hour
+export const getNightCloudCoverValues = (nightForecasts: any[]) => {
+  if (!nightForecasts || nightForecasts.length === 0) {
+    return [];
+  }
+  
+  return nightForecasts.map(forecast => forecast.cloudCover || 0);
 };
