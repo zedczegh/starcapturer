@@ -76,6 +76,7 @@ export const formatCondition = (cloudCover: number, t: (en: string, zh: string) 
 
 /**
  * Calculate SIQS rating based on weather conditions
+ * This is aligned with the main calculateSIQS function
  */
 export const getSIQSRating = (
   cloudCover: number, 
@@ -92,21 +93,16 @@ export const getSIQSRating = (
     return { score: 0, quality: t("Bad", "很差"), color: "bg-red-500" };
   }
   
-  // Optimized SIQS calculation with better performance
-  // Cloud factor is more important (60% weight)
-  const cloudFactor = (100 - cloudCover * 2.5) / 100; // Scale 0-40% to 0-100%
-  
-  // Wind factor - max acceptable is 30mph/48kmh
+  // Calculate factor scores (same as in calculateSIQS)
+  const cloudFactor = (100 - cloudCover * 2.5) / 100; // 0-40 to 0-100, then to 0-1
   const windFactor = Math.max(0, Math.min(1, (30 - windSpeed) / 30));
-  
-  // Humidity factor - lower is better
   const humidityFactor = Math.max(0, Math.min(1, (90 - humidity) / 90));
   
-  // Calculate weighted score
+  // Apply same weights as in calculateSIQS for consistency
   const score = (cloudFactor * 0.6 + windFactor * 0.2 + humidityFactor * 0.2) * 10;
   const roundedScore = Math.round(score * 10) / 10;
   
-  // Determine quality rating and color
+  // Determine quality rating and color - matching SIQS display in other components
   let quality, color;
   
   if (roundedScore >= 8) {

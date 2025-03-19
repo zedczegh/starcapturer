@@ -32,13 +32,13 @@ type FactorData = {
 };
 
 /**
- * Determines if a time is within astronomical night hours (6 PM to 6 AM)
+ * Determines if a time is within astronomical night hours (6 PM to 8 AM)
  * @param dateTime The time to check
  * @returns boolean indicating if it's night time
  */
 function isNightTime(dateTime: Date): boolean {
   const hour = dateTime.getHours();
-  return hour >= 18 || hour < 6;
+  return hour >= 18 || hour < 8;
 }
 
 /**
@@ -75,7 +75,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     aqi
   } = factors;
   
-  // Filter nightForecast to only include nighttime hours (6 PM to 6 AM)
+  // Filter nightForecast to only include nighttime hours (6 PM to 8 AM)
   const tonightForecast = filterNightTimeForecast(nightForecast);
   
   // If we have no nighttime forecast and it's currently daytime, we'll still

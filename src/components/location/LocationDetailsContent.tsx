@@ -34,36 +34,67 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
 
-  // Ensure SIQS result is populated immediately
+  // Calculate SIQS immediately on component mount and when relevant data changes
   useEffect(() => {
-    // Check if locationData has all required information but siqsResult is missing or has score of 0
-    if (locationData?.weatherData && 
-        ((!locationData.siqsResult || locationData.siqsResult.score === 0) &&
-         locationData.bortleScale)) {
-      console.log("SIQS score missing or zero, calculating fresh score");
+    // Only proceed if we have the necessary data
+    if (locationData?.weatherData && locationData.bortleScale) {
+      console.log("Checking if SIQS calculation is needed");
       
-      // Calculate SIQS score from existing data without requiring a refresh
+      // Get night forecast if available (for more accurate SIQS)
+      let nightForecast = [];
+      if (forecastData && forecastData.hourly) {
+        // Extract night hours (6 PM to 8 AM)
+        const hourlyItems = [];
+        for (let i = 0; i < forecastData.hourly.time.length; i++) {
+          const date = new Date(forecastData.hourly.time[i]);
+          const hour = date.getHours();
+          if (hour >= 18 || hour < 8) {
+            hourlyItems.push({
+              time: forecastData.hourly.time[i],
+              cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
+              windSpeed: forecastData.hourly.wind_speed_10m?.[i] || 0,
+              humidity: forecastData.hourly.relative_humidity_2m?.[i] || 0,
+              precipitation: forecastData.hourly.precipitation?.[i] || 0,
+              weatherCondition: forecastData.hourly.weather_code?.[i] || 0
+            });
+          }
+        }
+        nightForecast = hourlyItems;
+      }
+      
+      // Calculate fresh SIQS score
       const freshSIQSResult = calculateSIQS({
         cloudCover: locationData.weatherData.cloudCover,
-        bortleScale: locationData.bortleScale || 4,
+        bortleScale: locationData.bortleScale,
         seeingConditions: locationData.seeingConditions || 3,
         windSpeed: locationData.weatherData.windSpeed,
         humidity: locationData.weatherData.humidity,
         moonPhase: locationData.moonPhase || 0,
         aqi: locationData.weatherData.aqi,
         weatherCondition: locationData.weatherData.weatherCondition || "",
-        precipitation: locationData.weatherData.precipitation || 0
+        precipitation: locationData.weatherData.precipitation || 0,
+        nightForecast: nightForecast
       });
       
-      // Update locationData with the fresh SIQS result
-      setLocationData({
-        ...locationData,
-        siqsResult: freshSIQSResult
-      });
-      
-      console.log("Fresh SIQS score calculated:", freshSIQSResult.score);
+      // Only update if we have a different score or missing score
+      if (!locationData.siqsResult || 
+          Math.abs(locationData.siqsResult.score - freshSIQSResult.score) > 0.1) {
+        console.log("Updating SIQS score from", 
+          locationData.siqsResult?.score, "to", freshSIQSResult.score);
+        
+        setLocationData({
+          ...locationData,
+          siqsResult: freshSIQSResult
+        });
+      }
     }
-  }, [locationData, setLocationData]);
+  }, [
+    locationData?.weatherData, 
+    locationData?.bortleScale, 
+    forecastData, 
+    setLocationData, 
+    locationData
+  ]);
 
   // Log updates for debugging
   useEffect(() => {
