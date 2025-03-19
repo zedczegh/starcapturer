@@ -41,7 +41,7 @@ export const useForecastData = () => {
   const processNightForecast = useCallback((data: any) => {
     if (!data || !data.hourly) return [];
     
-    const futureForecasts = extractFutureForecasts(data, 24);
+    const futureForecasts = extractFutureForecasts(data);
     
     // Filter for nighttime hours (6 PM to 6 AM)
     return futureForecasts.filter(item => {

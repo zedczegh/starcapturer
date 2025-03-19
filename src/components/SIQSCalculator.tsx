@@ -12,6 +12,7 @@ import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState"
 import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
 import { Language } from "@/services/geocoding/types";
 import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
+import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -34,20 +35,21 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
-  // Check if we have saved location data in localStorage
+  // Check if we have saved location data in localStorage on first mount
   useEffect(() => {
-    try {
-      const savedLocationString = localStorage.getItem('latest_siqs_location');
-      if (savedLocationString) {
-        const savedLocation = JSON.parse(savedLocationString);
-        // If we have valid saved location, don't auto-request new location
-        if (savedLocation && savedLocation.name && savedLocation.latitude && savedLocation.longitude) {
-          setShouldAutoRequest(false);
-        }
+    if (!isMounted) {
+      const savedLocation = getSavedLocation();
+      if (savedLocation) {
+        console.log("Found saved location:", savedLocation.name);
+        setShouldAutoRequest(false);
       }
-    } catch (e) {
-      console.error("Error checking saved location:", e);
     }
+  }, [isMounted]);
+  
+  // Track component mount state to avoid unnecessary effects
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
   }, []);
   
   const locationSelectorProps = useMemo(() => ({
@@ -73,12 +75,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     handleLocationSelect,
     handleRecommendedPointSelect
   } = useLocationSelectorState(locationSelectorProps);
-
-  // Track component mount state to avoid unnecessary effects
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
 
   // Parse latitude and longitude for hook usage
   const parsedLatitude = parseFloat(latitude) || 0;
@@ -139,19 +135,32 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   // Save current location to localStorage when it changes
   useEffect(() => {
-    if (locationName && latitude && longitude) {
-      try {
-        const locationToSave = {
-          name: locationName,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude)
-        };
-        localStorage.setItem('latest_siqs_location', JSON.stringify(locationToSave));
-      } catch (e) {
-        console.error("Error saving location to localStorage:", e);
+    if (!isMounted || !locationName || !latitude || !longitude) return;
+    
+    // Use the utility function to save location
+    saveLocation({
+      name: locationName,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      bortleScale: localBortleScale || undefined
+    });
+  }, [locationName, latitude, longitude, localBortleScale, isMounted]);
+  
+  // Restore saved location on first mount
+  useEffect(() => {
+    if (!isMounted || noAutoLocationRequest) return;
+    
+    const savedLocation = getSavedLocation();
+    if (savedLocation && !locationName) {
+      setLocationName(savedLocation.name);
+      setLatitude(savedLocation.latitude.toString());
+      setLongitude(savedLocation.longitude.toString());
+      if (savedLocation.bortleScale) {
+        setLocalBortleScale(savedLocation.bortleScale);
       }
+      console.log("Restored saved location:", savedLocation.name);
     }
-  }, [locationName, latitude, longitude]);
+  }, [isMounted, noAutoLocationRequest, locationName, setLocationName, setLatitude, setLongitude]);
   
   // Memoize the SIQS calculation for better performance
   const calculateSIQS = useCallback(() => {

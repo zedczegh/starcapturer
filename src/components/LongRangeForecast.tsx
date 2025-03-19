@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DynamicCloudCoverIcon, DynamicWindIcon, DynamicHumidityIcon } from "@/components/weather/DynamicIcons";
 import ForecastRow from "./forecast/ForecastRow";
-import { generateFallbackForecasts } from "./forecast/ForecastUtils";
+import { generateFallbackForecasts } from "@/components/forecast/ForecastUtils";
 
 interface LongRangeForecastProps {
   forecastData: any;
@@ -88,7 +88,7 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({
               className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
               title={t("Refresh Extended Forecast", "刷新延长预报")}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 hover:animate-spin transition-all duration-700" />
             </Button>
           )}
         </div>
@@ -126,7 +126,12 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({
           </Table>
           
           <div className="text-xs text-muted-foreground p-3 text-center bg-cosmic-800/20 border-t border-cosmic-700/20">
-            {t("Astronomical scores are estimates based on weather conditions only.", "天文评分仅基于天气条件的估计。")}
+            <div className="mb-1">
+              {t("Astro scores are estimates based on average weather conditions.", "天文评分仅基于平均天气条件的估计。")}
+            </div>
+            <div>
+              {t("Scores are 0.0 when cloud cover is 40% or higher.", "云层覆盖率达到40%或更高时，评分为0.0。")}
+            </div>
           </div>
         </div>
       </CardContent>

@@ -1,9 +1,10 @@
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, Loader2 } from "lucide-react";
 import MapSelector from "../MapSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 interface LocationSelectorProps {
   locationName: string;
@@ -22,14 +23,25 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 }) => {
   const { t } = useLanguage();
   const autoLocationTriggered = useRef(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   
-  // Auto-trigger location request only on first mount and if no location exists
+  // Auto-trigger location request only once on first mount and if no location exists
   useEffect(() => {
-    // Only auto-trigger if we don't have a location yet, haven't triggered before,
-    // and auto-location is not disabled
+    // Only auto-trigger if:
+    // 1. We don't have a location yet
+    // 2. We haven't triggered an auto-location request before
+    // 3. Auto-location is not disabled
+    // 4. Not in a loading state
     if (!locationName && !loading && !autoLocationTriggered.current && !noAutoLocationRequest) {
+      console.log("Auto-triggering location request on first mount");
       autoLocationTriggered.current = true;
-      handleUseCurrentLocation();
+      
+      // Add a small delay to ensure everything is initialized
+      const timer = setTimeout(() => {
+        handleUseCurrentLocation();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [locationName, loading, handleUseCurrentLocation, noAutoLocationRequest]);
   
@@ -41,6 +53,21 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     t("Your current location", "您的当前位置") : 
     locationName;
   
+  const handleOpenMap = () => {
+    setIsMapOpen(true);
+  };
+  
+  const handleLocationSelected = (location: any) => {
+    onSelectLocation(location);
+    setIsMapOpen(false);
+    
+    // Show success toast
+    toast.success(
+      t("Location selected: ", "已选择位置：") + location.name,
+      { duration: 2000 }
+    );
+  };
+  
   return (
     <div className="flex flex-col space-y-3 relative z-10">
       <Button 
@@ -48,7 +75,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         type="button" 
         onClick={handleUseCurrentLocation}
         disabled={loading}
-        className={`w-full hover-card transition-colors ${locationName ? 'bg-primary' : 'hover:bg-primary/10'}`}
+        className={`w-full transition-all duration-300 ${
+          locationName 
+            ? 'bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg hover:translate-y-[-1px]'
+            : 'hover:bg-primary/10'
+        }`}
         data-location-button="true"
       >
         {loading ? (
@@ -57,7 +88,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
           <MapPin className="mr-2 h-4 w-4" />
         )}
         {locationName ? (
-          <span className="truncate max-w-[90%]">
+          <span className="truncate max-w-[90%] font-medium">
             {displayName}
           </span>
         ) : (
@@ -66,8 +97,20 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       </Button>
       
       <div className="relative mt-2" style={{ zIndex: 20 }}>
-        <MapSelector onSelectLocation={onSelectLocation} />
+        <MapSelector 
+          onSelectLocation={handleLocationSelected}
+          isOpen={isMapOpen}
+        />
       </div>
+      
+      <Button
+        variant="secondary"
+        type="button"
+        onClick={handleOpenMap}
+        className="w-full transition-all duration-300 border border-cosmic-700/40 hover:border-cosmic-700/70 bg-cosmic-800/40 hover:bg-cosmic-800/60"
+      >
+        {t("Select on Map", "在地图上选择")}
+      </Button>
     </div>
   );
 };

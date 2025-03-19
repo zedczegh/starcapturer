@@ -41,30 +41,47 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
 
-  // Auto-refresh data when the component mounts
+  // Auto-refresh data only once when the component mounts
   useEffect(() => {
+    let isMounted = true;
     const refreshData = async () => {
+      if (!isMounted) return;
+      
       const lastUpdate = new Date(locationData.timestamp).getTime();
       const now = new Date().getTime();
       const minutesSinceLastUpdate = (now - lastUpdate) / (1000 * 60);
       
       // Refresh if data is older than 30 minutes
-      if (minutesSinceLastUpdate > 30) {
+      if (minutesSinceLastUpdate > 30 && !loading) {
         handleRefreshAll(
           locationData,
           setLocationData,
           () => {
-            handleRefreshForecast(locationData.latitude, locationData.longitude);
-            handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+            if (isMounted) {
+              handleRefreshForecast(locationData.latitude, locationData.longitude);
+              handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+            }
           },
           setStatusMessage
         );
       }
     };
     
-    if (locationData && !loading) {
-      refreshData();
+    if (locationData) {
+      // Add a slight delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        refreshData();
+      }, 1000);
+      
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+      };
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleRefresh = useCallback(async () => {
@@ -80,7 +97,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage]);
 
   return (
-    <div className="min-h-screen bg-cosmic-950">
+    <div className="min-h-screen bg-cosmic-950 animate-fade-in">
       {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
       
       {/* Add top padding to create space for the navbar */}
@@ -92,6 +109,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             replace={true}
             variant="secondary"
             size="sm"
+            className="hover:bg-primary/20 transition-colors duration-300"
           />
         </div>
         
@@ -102,7 +120,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
               timestamp={locationData?.timestamp}
               onRefresh={handleRefresh}
               loading={loading}
-              className="mx-auto"
+              className="mx-auto transition-all hover:scale-[1.01] duration-300"
             />
           </div>
         </div>
@@ -113,11 +131,13 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         />
         
         {weatherAlerts && weatherAlerts.length > 0 && (
-          <WeatherAlerts 
-            alerts={weatherAlerts}
-            formatTime={formatTime}
-            formatDate={formatDate}
-          />
+          <div className="container mx-auto px-4 mb-6 animate-fade-in">
+            <WeatherAlerts 
+              alerts={weatherAlerts}
+              formatTime={formatTime}
+              formatDate={formatDate}
+            />
+          </div>
         )}
         
         <div className="container mx-auto px-4 pb-24 pt-4">

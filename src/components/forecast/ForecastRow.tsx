@@ -7,7 +7,7 @@ import {
   DynamicWindIcon, 
   DynamicHumidityIcon 
 } from "@/components/weather/DynamicIcons";
-import { formatDate, getSIQSRating } from "./ForecastUtils";
+import { formatDate, getSIQSRating } from "@/components/forecast/ForecastUtils";
 
 interface ForecastRowProps {
   forecast: any;
@@ -33,7 +33,9 @@ const ForecastRow: React.FC<ForecastRowProps> = ({ forecast, index }) => {
   const weatherClass = getWeatherClass();
   
   return (
-    <TableRow className={`transition-colors ${index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} hover:bg-cosmic-700/20`}>
+    <TableRow 
+      className={`transition-colors ${index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} hover:bg-cosmic-700/20`}
+    >
       <TableCell className="font-medium border-b border-cosmic-700/20">
         {formatDate(forecast.date)}
       </TableCell>
@@ -71,7 +73,7 @@ const ForecastRow: React.FC<ForecastRowProps> = ({ forecast, index }) => {
       </TableCell>
       
       <TableCell className="text-center border-b border-cosmic-700/20">
-        <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px]`}>
+        <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px] animate-fade-in`}>
           {siqs.score.toFixed(1)}
         </div>
       </TableCell>

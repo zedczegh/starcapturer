@@ -18,11 +18,19 @@ const Index = () => {
     
     // Check if we need to restore previous location
     try {
-      // Mark as restored immediately to prevent multiple attempts
-      setHasRestoredLocation(true);
+      // Check localStorage for saved location
+      const savedLocationString = localStorage.getItem('latest_siqs_location');
       
-      // The actual restoration happens in the SIQSCalculator component
-      // This is just to track that we've checked for restoration
+      if (savedLocationString) {
+        // We have a saved location, parse it and mark as restored
+        const savedLocation = JSON.parse(savedLocationString);
+        
+        if (savedLocation && savedLocation.name) {
+          // Mark as restored to prevent auto-triggering current location
+          setHasRestoredLocation(true);
+          console.log("Found saved location, disabling auto location request");
+        }
+      }
     } catch (error) {
       console.error("Error checking for location restoration:", error);
     }

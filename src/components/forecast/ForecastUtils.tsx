@@ -1,13 +1,12 @@
 
 import React from "react";
-import { NightForecastUtils } from "./NightForecastUtils";
 
 /**
  * Utility functions for processing and displaying forecast data
  */
 
 // Extract future forecast data, filtering out past times
-export const extractFutureForecasts = (hourlyData: any) => {
+export const extractFutureForecasts = (hourlyData: any, limit?: number) => {
   if (!hourlyData || !hourlyData.time) return [];
   
   const now = new Date();
@@ -26,6 +25,9 @@ export const extractFutureForecasts = (hourlyData: any) => {
         humidity: hourlyData.relative_humidity_2m?.[i] || 0,
         weatherCode: hourlyData.weather_code?.[i]
       });
+      
+      // Limit the number of forecasts if specified
+      if (limit && futureForecasts.length >= limit) break;
     }
   }
   
@@ -120,4 +122,190 @@ export const hasHighCloudCover = (nightForecasts: any[], threshold: number = 40)
   }
   
   return nightForecasts.some(forecast => (forecast.cloudCover || 0) > threshold);
+};
+
+// Format time for display
+export const formatTime = (isoTime: string) => {
+  try {
+    const date = new Date(isoTime);
+    if (isNaN(date.getTime())) return "--:--";
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (error) {
+    console.error("Error formatting time:", error);
+    return "--:--";
+  }
+};
+
+// Format date for display
+export const formatDate = (isoTime: string) => {
+  try {
+    const date = new Date(isoTime);
+    if (isNaN(date.getTime())) return "--/--";
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "--/--";
+  }
+};
+
+// Generate fallback forecasts when API data is not available
+export const generateFallbackForecasts = () => {
+  const now = new Date();
+  const forecasts = [];
+  
+  for (let i = 0; i < 15; i++) {
+    const forecastDate = new Date(now);
+    forecastDate.setDate(now.getDate() + i);
+    
+    forecasts.push({
+      date: forecastDate.toISOString(),
+      temperature_max: 25 + Math.round(Math.random() * 10 - 5),
+      temperature_min: 15 + Math.round(Math.random() * 10 - 5),
+      humidity: 60 + Math.round(Math.random() * 30),
+      cloudCover: Math.round(Math.random() * 100),
+      windSpeed: 5 + Math.round(Math.random() * 15),
+      precipitation: Math.random() * 0.5,
+      precipitation_probability: Math.round(Math.random() * 100)
+    });
+  }
+  
+  return forecasts;
+};
+
+// Calculate SIQS rating based on weather conditions
+export const getSIQSRating = (cloudCover: number, windSpeed: number, humidity: number, t: any) => {
+  let score = 10;
+  let colorClass = "bg-green-500";
+  
+  // Cloud cover has the biggest impact (0-5 points)
+  if (cloudCover >= 40) {
+    score = 0; // Auto fail with cloud cover >= 40%
+  } else if (cloudCover >= 30) {
+    score -= 4;
+  } else if (cloudCover >= 20) {
+    score -= 2.5;
+  } else if (cloudCover >= 10) {
+    score -= 1;
+  }
+  
+  // Only apply other factors if we haven't already failed
+  if (score > 0) {
+    // Wind speed (0-3 points)
+    if (windSpeed >= 25) {
+      score -= 3;
+    } else if (windSpeed >= 15) {
+      score -= 2;
+    } else if (windSpeed >= 8) {
+      score -= 1;
+    }
+    
+    // Humidity (0-2 points)
+    if (humidity >= 90) {
+      score -= 2;
+    } else if (humidity >= 75) {
+      score -= 1;
+    }
+  }
+  
+  // Ensure score stays in range 0-10
+  score = Math.max(0, Math.min(10, score));
+  
+  // Determine color class based on score
+  if (score <= 3) {
+    colorClass = "bg-red-500";
+  } else if (score <= 5) {
+    colorClass = "bg-orange-500";
+  } else if (score <= 7) {
+    colorClass = "bg-yellow-500";
+  } else if (score <= 9) {
+    colorClass = "bg-green-500";
+  } else {
+    colorClass = "bg-teal-500";
+  }
+  
+  return { score, color: colorClass };
+};
+
+// Format condition text based on cloud cover
+export const formatCondition = (cloudCover: number, t: any) => {
+  if (cloudCover >= 80) {
+    return t("Overcast", "阴天");
+  } else if (cloudCover >= 50) {
+    return t("Cloudy", "多云");
+  } else if (cloudCover >= 25) {
+    return t("Partly Cloudy", "局部多云");
+  } else if (cloudCover > 10) {
+    return t("Mostly Clear", "大部分晴朗");
+  } else {
+    return t("Clear", "晴朗");
+  }
+};
+
+// Detect extreme weather conditions for alerts
+export const detectExtremeWeatherConditions = (forecasts: any[], t: any) => {
+  const alerts = [];
+  
+  // Check for dangerous weather codes
+  const dangerousCodes = [95, 96, 99]; // Thunderstorms and hail
+  const severeCodes = [71, 73, 75, 77, 85, 86]; // Heavy snow, blizzards
+  const fogCodes = [48, 56, 57, 66, 67]; // Fog and freezing fog
+  
+  for (const forecast of forecasts) {
+    const { weatherCode, windSpeed, precipitation } = forecast;
+    
+    // Check severe thunderstorms
+    if (dangerousCodes.includes(weatherCode)) {
+      alerts.push({
+        type: "severe",
+        message: t("Thunderstorm with possible hail detected", "检测到雷暴可能伴有冰雹"),
+        time: forecast.time,
+        icon: "thunderstorm"
+      });
+    }
+    
+    // Check heavy snow conditions
+    if (severeCodes.includes(weatherCode)) {
+      alerts.push({
+        type: "warning",
+        message: t("Heavy snow or blizzard conditions expected", "预计有大雪或暴风雪"),
+        time: forecast.time,
+        icon: "snow"
+      });
+    }
+    
+    // Check fog conditions
+    if (fogCodes.includes(weatherCode)) {
+      alerts.push({
+        type: "warning",
+        message: t("Fog or freezing conditions expected", "预计有雾或结冰情况"),
+        time: forecast.time,
+        icon: "fog"
+      });
+    }
+    
+    // Check extreme wind
+    if (windSpeed > 60) {
+      alerts.push({
+        type: "severe",
+        message: t("Dangerous wind conditions detected", "检测到危险的风力条件"),
+        time: forecast.time,
+        icon: "wind"
+      });
+    }
+    
+    // Check heavy rain
+    if (precipitation > 10) {
+      alerts.push({
+        type: "warning",
+        message: t("Heavy rainfall expected", "预计有大雨"),
+        time: forecast.time,
+        icon: "rain"
+      });
+    }
+  }
+  
+  // Return unique alerts (avoid duplicates)
+  return alerts.filter((alert, index, self) => 
+    index === self.findIndex(a => a.message === alert.message)
+  );
 };

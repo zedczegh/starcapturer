@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
@@ -78,7 +77,7 @@ export const useSIQSCalculation = (
         
         if (forecastData && forecastData.hourly) {
           // Extract future forecasts and filter for night hours (6 PM to 6 AM)
-          const futureForecasts = extractFutureForecasts(forecastData, 48); // Get 48 hours to capture tonight + tomorrow night
+          const futureForecasts = extractFutureForecasts(forecastData.hourly);
           nightForecast = futureForecasts.filter(item => {
             const date = new Date(item.time);
             const hour = date.getHours();

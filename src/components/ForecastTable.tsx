@@ -14,7 +14,7 @@ import {
   DynamicWindIcon, 
   DynamicHumidityIcon 
 } from "@/components/weather/DynamicIcons";
-import { getSIQSRating, formatCondition } from "@/components/forecast/ForecastUtils";
+import { getSIQSRating, formatCondition, formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ForecastTableProps {
@@ -29,28 +29,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
   onRefresh
 }) => {
   const { t } = useLanguage();
-  
-  const formatTime = useCallback((isoTime: string) => {
-    try {
-      const date = new Date(isoTime);
-      if (isNaN(date.getTime())) return "--:--";
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return "--:--";
-    }
-  }, []);
-  
-  const formatDate = useCallback((isoTime: string) => {
-    try {
-      const date = new Date(isoTime);
-      if (isNaN(date.getTime())) return "--/--";
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "--/--";
-    }
-  }, []);
 
   const handleRefresh = useCallback(() => {
     if (onRefresh) {
@@ -231,14 +209,14 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
               className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
               title={t("Refresh Forecast", "刷新预报")}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 hover:animate-spin transition-all duration-700" />
             </Button>
           )}
         </div>
       </CardHeader>
       
       {extremeWeatherAlerts.length > 0 && (
-        <div className="px-4 pt-3">
+        <div className="px-4 pt-3 animate-fade-in">
           {extremeWeatherAlerts.map((alert, index) => (
             <Alert 
               key={index} 
@@ -287,15 +265,29 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
               {forecasts.map((forecast, index) => {
                 const siqs = getSIQSRating(forecast.cloudCover, forecast.windSpeed, forecast.humidity, t);
                 const weatherClass = getWeatherClass(forecast.precipitation, forecast.cloudCover);
+                const isNighttime = (() => {
+                  const date = new Date(forecast.time);
+                  const hour = date.getHours();
+                  return hour >= 18 || hour < 8;
+                })();
                 
                 return (
                   <TableRow 
                     key={index} 
-                    className={`transition-colors ${index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} hover:bg-cosmic-700/20`}
+                    className={`transition-colors ${index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} 
+                              hover:bg-cosmic-700/20 ${isNighttime ? 'bg-blue-900/5' : ''}`}
                   >
                     <TableCell className="font-medium border-b border-cosmic-700/20">
-                      <div>{formatTime(forecast.time)}</div>
-                      <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
+                      <div className="flex items-center">
+                        {isNighttime && (
+                          <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2 opacity-60" 
+                                title={t("Night hours (6PM-8AM)", "夜间时段 (18:00-08:00)")}></span>
+                        )}
+                        <div>
+                          <div className="font-medium">{formatTime(forecast.time)}</div>
+                          <div className="text-xs text-muted-foreground">{formatDate(forecast.time)}</div>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell className="text-center border-b border-cosmic-700/20">
                       <div className="flex items-center justify-center">
@@ -312,7 +304,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                           precipitation={forecast.precipitation} 
                           className="mr-1 h-4 w-4" 
                         />
-                        <span>{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</span>
+                        <span className={forecast.cloudCover >= 40 ? 'text-red-400' : ''}>{isNaN(forecast.cloudCover) ? "--" : forecast.cloudCover}%</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center border-b border-cosmic-700/20">
@@ -334,8 +326,10 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                       </div>
                     </TableCell>
                     <TableCell className="text-center border-b border-cosmic-700/20">
-                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px]`}>
-                        {siqs.score.toFixed(1)}
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px] ${
+                        isNighttime ? 'animate-pulse' : ''
+                      }`}>
+                        {forecast.cloudCover >= 40 ? '0.0' : siqs.score.toFixed(1)}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -344,8 +338,12 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
             </TableBody>
           </Table>
           
-          <div className="p-2 text-xs text-center text-muted-foreground">
-            {t("Scores below 4.0 are not recommended for astrophotography.", "评分低于4.0不推荐进行天文摄影。")}
+          <div className="p-3 text-xs text-center text-muted-foreground bg-cosmic-800/20 border-t border-cosmic-700/20">
+            <div className="flex items-center justify-center mb-1 space-x-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-blue-400 opacity-60"></span>
+              <span>{t("Night hours (6PM-8AM) - optimal for astrophotography", "夜间时段 (18:00-08:00) - 天文摄影的最佳时间")}</span>
+            </div>
+            <div>{t("Scores are 0.0 when cloud cover is 40% or higher.", "云层覆盖率达到40%或更高时，评分为0.0。")}</div>
           </div>
         </div>
       </CardContent>
