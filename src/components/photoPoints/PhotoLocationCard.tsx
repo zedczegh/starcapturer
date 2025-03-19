@@ -1,124 +1,118 @@
 
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { MapPin, Star, Telescope } from "lucide-react";
-import { SharedAstroSpot } from "@/types/weather";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { getScoreColorClass } from "@/components/siqs/utils/scoreUtils";
+import React, { useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MapPin, Navigation } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/types/weather';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
-  index: number;
+  onSelect?: (location: SharedAstroSpot) => void;
+  className?: string;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
-  location,
-  index
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ 
+  location, 
+  onSelect,
+  className = ""
 }) => {
-  const { language, t } = useLanguage();
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   
-  // Animation variants
-  const cardVariants = {
-    hidden: { opacity: 0, y: 50 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.1,
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    })
-  };
-  
-  // Add animation for high SIQS scores
-  const scoreAnimationClass = location.siqs && location.siqs > 7 
-    ? "animate-pulse" 
-    : "";
-  
-  // Format distance for display
-  const formatDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
+  const formattedDistance = useMemo(() => {
+    if (typeof location.distance !== 'number') return '';
     
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
-  };
+    return location.distance < 1 
+      ? `${Math.round(location.distance * 1000)}m` 
+      : `${location.distance.toFixed(1)}km`;
+  }, [location.distance]);
   
-  // Get score color based on SIQS
-  const scoreColorClass = location.siqs ? getScoreColorClass(location.siqs) : "text-muted-foreground";
+  // Get SIQS score as a number
+  const siqsScore = useMemo(() => {
+    return location.siqs?.score || 0;
+  }, [location.siqs]);
   
-  // Handle navigation to location details
-  const handleCardClick = () => {
+  // Determine if location is viable for astrophotography
+  const isViable = useMemo(() => {
+    return location.siqs?.isViable || siqsScore > 4.0;
+  }, [location.siqs, siqsScore]);
+  
+  // Get color class based on SIQS score
+  const getScoreColorClass = useCallback((score: number) => {
+    if (score >= 8) return 'text-green-400';
+    if (score >= 6) return 'text-lime-400';
+    if (score >= 4) return 'text-yellow-400';
+    if (score >= 2) return 'text-orange-400';
+    return 'text-red-400';
+  }, []);
+  
+  const scoreColorClass = useMemo(() => getScoreColorClass(siqsScore), [getScoreColorClass, siqsScore]);
+  
+  // Navigate to location details page
+  const handleSelect = useCallback(() => {
+    if (onSelect) {
+      onSelect(location);
+      return;
+    }
+    
     navigate(`/location/${location.id}`, {
       state: {
         id: location.id,
-        name: language === 'en' ? location.name : (location.chineseName || location.name),
-        latitude: location.latitude,
+        name: location.name,
+        latitude: location.latitude, 
         longitude: location.longitude,
         bortleScale: location.bortleScale,
-        timestamp: new Date().toISOString()
+        timestamp: location.timestamp || new Date().toISOString()
       }
     });
-  };
-
-  // Get the appropriate name based on language
-  const displayName = language === 'en' ? 
-    location.name : 
-    (location.chineseName || location.name);
-
+  }, [location, navigate, onSelect]);
+  
   return (
-    <motion.div
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
-      custom={index}
-      className="h-full"
-    >
-      <div 
-        className="glassmorphism p-5 rounded-xl hover:bg-cosmic-800/50 transition-all duration-300 flex flex-col h-full cursor-pointer border border-cosmic-600/20 hover:border-primary/30 group"
-        onClick={handleCardClick}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <h2 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">{displayName}</h2>
-          <div className={`flex items-center gap-1 bg-cosmic-800/70 border border-cosmic-600/20 px-2 py-1 rounded-full ${scoreAnimationClass}`}>
-            <Star className={`h-3.5 w-3.5 fill-current ${scoreColorClass}`} />
-            <span className={`font-medium text-sm ${scoreColorClass}`}>
-              {location.siqs?.toFixed(1) || "N/A"}
-            </span>
+    <Card className={`overflow-hidden transition-all duration-300 hover:shadow-lg border border-cosmic-800/50 
+      hover:border-cosmic-700/80 bg-cosmic-900/60 backdrop-blur-sm ${className} 
+      ${isViable ? 'animate-subtle-glow' : ''}`}>
+      <CardHeader className="p-4 pb-0">
+        <CardTitle className="flex justify-between items-center gap-2">
+          <span className="truncate text-base">{location.name}</span>
+          {location.distance !== undefined && (
+            <span className="text-sm text-muted-foreground whitespace-nowrap">{formattedDistance}</span>
+          )}
+        </CardTitle>
+        <CardDescription className="flex items-center gap-1">
+          <MapPin className="h-3 w-3" />
+          <span className="text-xs opacity-70">
+            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+          </span>
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="p-4 pb-0">
+        <div className="flex justify-between text-sm">
+          <div>
+            <p className="text-muted-foreground">{t("Bortle Scale", "伯特尔等级")}</p>
+            <p className="font-medium">{location.bortleScale}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">{t("SIQS Score", "SIQS评分")}</p>
+            <p className={`font-medium ${scoreColorClass}`}>{siqsScore.toFixed(1)}</p>
           </div>
         </div>
-        
-        <div className="flex flex-1 items-center mt-1 mb-3">
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {t("Bortle Scale", "波特尔尺度")}: {location.bortleScale || "N/A"}
-          </p>
-        </div>
-        
-        <div className="flex items-center justify-between pt-3 border-t border-cosmic-600/10">
-          <div className="flex items-center">
-            <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-            <span className="text-xs text-muted-foreground">
-              {formatDistance(location.distance)}
-            </span>
-          </div>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs px-2 text-primary hover:text-primary-focus hover:bg-cosmic-800/70"
-          >
-            <Telescope className="h-3 w-3 mr-1" />
-            {t("View", "查看")}
-          </Button>
-        </div>
-      </div>
-    </motion.div>
+      </CardContent>
+      
+      <CardFooter className="p-4 pt-3">
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          className="w-full bg-cosmic-800/70 hover:bg-cosmic-700/80 border border-cosmic-700/40"
+          onClick={handleSelect}
+        >
+          <Navigation className="h-3 w-3 mr-2" />
+          {t("View Location", "查看位置")}
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 

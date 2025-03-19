@@ -109,6 +109,18 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     }
   }, [forecastData, calculateNighttimeSIQS]);
 
+  // Recalculate SIQS when location is updated
+  useEffect(() => {
+    // Delay slightly to ensure all data is loaded
+    const timer = setTimeout(() => {
+      if (locationData?.weatherData && locationData.bortleScale && forecastData?.hourly) {
+        calculateNighttimeSIQS();
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [locationData?.latitude, locationData?.longitude, locationData?.name]);
+
   // Log updates for debugging
   useEffect(() => {
     console.log("LocationDetailsContent updated with location:", 

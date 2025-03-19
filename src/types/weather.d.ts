@@ -1,55 +1,65 @@
 
-declare module "@/types/weather" {
-  export interface WeatherData {
-    temperature: number;
-    humidity: number;
-    cloudCover: number;
-    windSpeed: number;
-    precipitation: number;
-    time: string;
-    condition: string;
-    aqi?: number;
-    weatherCondition?: string | number;
-  }
+// Define types for weather data and related services
 
-  export interface LocationData {
-    id: string;
+export interface WeatherData {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation?: number;
+  time?: string;
+  condition?: string;
+  aqi?: number | null;
+  weatherCondition?: string;
+}
+
+export interface ForecastItem {
+  date: string;
+  time?: string;
+  temperature_min: number;
+  temperature_max: number;
+  temperature?: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation?: number;
+  condition?: string;
+  moonPhase?: number;
+  moonIllumination?: number;
+}
+
+export interface SIQSScoreData {
+  score: number;
+  isViable: boolean;
+  factors?: Array<{
     name: string;
-    latitude: number;
-    longitude: number;
-    bortleScale: number;
-    seeingConditions: number;
-    weatherData: WeatherData;
-    siqsResult?: SIQSData;
-    moonPhase?: number;
-    timestamp: string;
-  }
-
-  export interface SIQSData {
     score: number;
-    isViable: boolean;
-    factors?: Array<{
-      name: string;
-      score: number;
-      description: string;
-    }>;
-  }
+    description: string;
+  }>;
+}
 
-  export interface SharedAstroSpot {
-    id: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    bortleScale: number;
-    description?: string;
-    imageURL?: string;
-    rating?: number;
-    timestamp: string;
-    chineseName?: string;
-    siqs?: {
-      score: number;
-      isViable: boolean;
-    };
-    distance?: number;
-  }
+export interface SharedAstroSpot {
+  id: string;
+  name: string;
+  chineseName?: string;
+  latitude: number;
+  longitude: number;
+  bortleScale: number;
+  siqs: SIQSScoreData;
+  isViable: boolean;
+  distance?: number;
+  timestamp: string;
+}
+
+export interface LocationData {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  bortleScale?: number;
+  seeingConditions?: number;
+  moonPhase?: number;
+  weatherData?: WeatherData;
+  siqsResult?: SIQSScoreData;
 }

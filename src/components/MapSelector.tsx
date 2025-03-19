@@ -16,19 +16,35 @@ const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newc
 interface MapSelectorProps {
   onSelectLocation: (location: Location) => void;
   children?: React.ReactNode;
+  isOpen?: boolean;
 }
 
 const MapSelector: React.FC<MapSelectorProps> = ({
   onSelectLocation,
-  children
+  children,
+  isOpen: externalIsOpen
 }) => {
   const { t, language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showResults, setShowResults] = useState(false);
+  const [internalShowResults, setInternalShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Control visibility based on both internal state and external prop
+  const showResults = externalIsOpen !== undefined ? externalIsOpen : internalShowResults;
+  
+  // Effect to handle external isOpen prop changes
+  useEffect(() => {
+    if (externalIsOpen !== undefined) {
+      if (externalIsOpen && !internalShowResults) {
+        setInternalShowResults(true);
+      } else if (!externalIsOpen && internalShowResults) {
+        setInternalShowResults(false);
+      }
+    }
+  }, [externalIsOpen, internalShowResults]);
   
   // Use memo to avoid recreating this function on every render
   const isPrioritySearchTerm = useMemo(() => {
@@ -48,7 +64,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
       
       if (cachedResults && cachedResults.length > 0) {
         setSearchResults(cachedResults);
-        setShowResults(true);
+        setInternalShowResults(true);
         return;
       }
       
@@ -85,14 +101,14 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     if (cachedResults && cachedResults.length > 0) {
       setSearchResults(cachedResults);
       setIsLoading(false);
-      setShowResults(true);
+      setInternalShowResults(true);
       return;
     }
     
     try {
       const results = await searchLocations(query, language);
       setSearchResults(results);
-      setShowResults(true);
+      setInternalShowResults(true);
     } catch (error) {
       console.error("Location search error:", error);
       toast.error(t("Search Error", "搜索错误"), {
@@ -108,27 +124,27 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     onSelectLocation(location);
     setSearchTerm("");
     setSearchResults([]);
-    setShowResults(false);
+    setInternalShowResults(false);
   }, [onSelectLocation]);
 
   const handleSearchInputChange = useCallback((value: string) => {
     setSearchTerm(value);
     if (value.length > 0) {
-      setShowResults(true);
+      setInternalShowResults(true);
     }
   }, []);
 
   const clearSearch = useCallback(() => {
     setSearchTerm("");
     setSearchResults([]);
-    setShowResults(false);
+    setInternalShowResults(false);
   }, []);
 
   // Handle clicks outside the search component
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowResults(false);
+        setInternalShowResults(false);
       }
     };
     
@@ -149,7 +165,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
   if (children) {
     return (
       <div className="relative" ref={containerRef}>
-        <div onClick={() => setShowResults(true)}>
+        <div onClick={() => setInternalShowResults(true)}>
           {children}
         </div>
         
@@ -186,7 +202,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
         setSearchTerm={handleSearchInputChange}
         isLoading={isLoading}
         clearSearch={clearSearch}
-        onFocus={() => setShowResults(true)}
+        onFocus={() => setInternalShowResults(true)}
       />
 
       {showResults && (

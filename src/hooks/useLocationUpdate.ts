@@ -2,13 +2,14 @@
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { fetchWeatherData } from "@/lib/api";
+import { fetchWeatherData, fetchForecastData } from "@/lib/api";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { useLightPollutionData } from "./useLightPollutionData";
 import { hasProperty } from "@/types/weather-utils";
 import { useBortleUpdater } from "./location/useBortleUpdater";
 import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
 import { extractNightForecasts, hasHighCloudCover } from "@/components/forecast/ForecastUtils";
+import { saveLocation } from "@/utils/locationStorage";
 
 /**
  * Hook for handling location updates with improved handling for Chinese regions
@@ -65,15 +66,11 @@ export const useLocationUpdate = (
       };
       
       // Save this location to localStorage for persistence
-      try {
-        localStorage.setItem('latest_siqs_location', JSON.stringify({
-          name: newLocation.name,
-          latitude: newLocation.latitude,
-          longitude: newLocation.longitude
-        }));
-      } catch (error) {
-        console.error("Error saving location to localStorage:", error);
-      }
+      saveLocation({
+        name: newLocation.name,
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude
+      });
       
       updateInProgressRef.current = true;
       setLoading(true);
@@ -101,6 +98,23 @@ export const useLocationUpdate = (
             time: new Date().toISOString(),
             aqi: 50
           };
+        }
+        
+        // Fetch forecast data for the new location to get night conditions
+        let nightForecast = [];
+        try {
+          const forecastData = await fetchForecastData({
+            latitude: newLocation.latitude,
+            longitude: newLocation.longitude,
+            days: 3
+          });
+          
+          if (forecastData && forecastData.hourly) {
+            nightForecast = extractNightForecasts(forecastData.hourly);
+            console.log("Fetched night forecast for new location:", nightForecast.length, "items");
+          }
+        } catch (error) {
+          console.error("Error fetching forecast data for location update:", error);
         }
         
         // First check for specific city Bortle scale in our comprehensive database
@@ -151,23 +165,41 @@ export const useLocationUpdate = (
         // Calculate new SIQS score
         const seeingConditions = hasProperty(locationData, 'seeingConditions') ? locationData.seeingConditions : 3;
         
-        // Use existing forecast data if available
-        const nightForecast = locationData?.forecastData?.hourly ? 
-          extractNightForecasts(locationData.forecastData.hourly) : 
-          undefined;
+        // Check if any night forecast has cloud cover over 40%
+        const hasHighClouds = nightForecast.length > 0 ? 
+          hasHighCloudCover(nightForecast, 40) : false;
         
-        const siqsResult = calculateSIQS({
-          cloudCover: newWeatherData.cloudCover,
-          bortleScale: bortleScale !== null ? bortleScale : 4,
-          seeingConditions: seeingConditions,
-          windSpeed: newWeatherData.windSpeed,
-          humidity: newWeatherData.humidity,
-          moonPhase: locationData.moonPhase,
-          aqi: newWeatherData.aqi,
-          weatherCondition: newWeatherData.weatherCondition,
-          precipitation: newWeatherData.precipitation,
-          nightForecast: nightForecast
-        });
+        let siqsResult;
+        
+        if (hasHighClouds) {
+          // If cloud cover is over 40% during night, set SIQS to 0 and not viable
+          console.log("Cloud cover over 40% detected in nighttime - setting SIQS to 0");
+          siqsResult = {
+            score: 0,
+            isViable: false,
+            factors: [
+              {
+                name: "cloudCover",
+                score: 0,
+                description: "Cloud cover exceeds 40% during night hours, making astrophotography not viable"
+              }
+            ]
+          };
+        } else {
+          // Calculate SIQS using nighttime forecast if available
+          siqsResult = calculateSIQS({
+            cloudCover: newWeatherData.cloudCover,
+            bortleScale: bortleScale !== null ? bortleScale : 4,
+            seeingConditions: seeingConditions,
+            windSpeed: newWeatherData.windSpeed,
+            humidity: newWeatherData.humidity,
+            moonPhase: locationData.moonPhase,
+            aqi: newWeatherData.aqi,
+            weatherCondition: newWeatherData.weatherCondition,
+            precipitation: newWeatherData.precipitation,
+            nightForecast: nightForecast
+          });
+        }
         
         // Update location data with new information
         const updatedLocationData = {
@@ -178,7 +210,8 @@ export const useLocationUpdate = (
           weatherData: newWeatherData,
           bortleScale,
           siqsResult,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          forecastData: { hourly: nightForecast }
         };
         
         setLocationData(updatedLocationData);
