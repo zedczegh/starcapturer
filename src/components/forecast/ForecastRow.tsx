@@ -8,7 +8,6 @@ import {
   DynamicHumidityIcon 
 } from "@/components/weather/DynamicIcons";
 import { formatDate, getSIQSRating } from "@/components/forecast/ForecastUtils";
-import { motion } from "framer-motion";
 
 interface ForecastRowProps {
   forecast: any;
@@ -33,24 +32,9 @@ const ForecastRow: React.FC<ForecastRowProps> = ({ forecast, index }) => {
   
   const weatherClass = getWeatherClass();
   
-  // Determine if it's nighttime based on isAstroHour property
-  const isNighttime = forecast.isAstroHour === true;
-  
-  // Determine if the day is good for astronomy
-  const isGoodForAstro = siqs.score >= 7.0;
-  
   return (
-    <motion.tr
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`transition-all duration-300 ${
-        index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'
-      } hover:bg-cosmic-700/20 ${
-        isNighttime ? 'border-l-2 border-indigo-500/50' : ''
-      } ${
-        isGoodForAstro ? 'border-r-2 border-green-500/50' : ''
-      }`}
+    <TableRow 
+      className={`transition-colors ${index % 2 === 0 ? 'bg-cosmic-700/5' : 'bg-cosmic-700/10'} hover:bg-cosmic-700/20`}
     >
       <TableCell className="font-medium border-b border-cosmic-700/20">
         {formatDate(forecast.date)}
@@ -58,21 +42,8 @@ const ForecastRow: React.FC<ForecastRowProps> = ({ forecast, index }) => {
       
       <TableCell className="text-center border-b border-cosmic-700/20">
         <div className="flex flex-col items-center">
-          <motion.span 
-            initial={{ scale: 0.9 }} 
-            animate={{ scale: 1 }}
-            className="text-amber-400"
-          >
-            {Math.round(forecast.temperature_max)}°
-          </motion.span>
-          <motion.span 
-            initial={{ scale: 0.9 }} 
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1 }}
-            className="text-blue-400 text-xs"
-          >
-            {Math.round(forecast.temperature_min)}°
-          </motion.span>
+          <span className="text-amber-400">{Math.round(forecast.temperature_max)}°</span>
+          <span className="text-blue-400 text-xs">{Math.round(forecast.temperature_min)}°</span>
         </div>
       </TableCell>
       
@@ -102,14 +73,11 @@ const ForecastRow: React.FC<ForecastRowProps> = ({ forecast, index }) => {
       </TableCell>
       
       <TableCell className="text-center border-b border-cosmic-700/20">
-        <motion.div 
-          whileHover={{ scale: 1.1 }}
-          className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px] animate-fade-in`}
-        >
+        <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px] animate-fade-in`}>
           {siqs.score.toFixed(1)}
-        </motion.div>
+        </div>
       </TableCell>
-    </motion.tr>
+    </TableRow>
   );
 };
 

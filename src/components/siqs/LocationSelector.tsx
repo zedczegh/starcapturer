@@ -96,11 +96,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         )}
       </Button>
       
-      {/* Map selector */}
-      <MapSelector 
-        onSelectLocation={handleLocationSelected}
-        isOpen={isMapOpen}
-      />
+      <div className="relative mt-2" style={{ zIndex: 20 }}>
+        <MapSelector 
+          onSelectLocation={handleLocationSelected}
+          isOpen={isMapOpen}
+        />
+      </div>
       
       <Button
         variant="secondary"
