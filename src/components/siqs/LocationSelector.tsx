@@ -5,17 +5,32 @@ import { MapPinIcon, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { GeocodeResult } from "@/services/geocoding/types";
 import MapSelector from "@/components/MapSelector";
 
+// Define interface for geocoding results
+interface GeocodingResult {
+  name: string;
+  latitude: number;
+  longitude: number;
+  placeId?: string | null;
+  country?: string | null;
+  formattedAddress?: string | null;
+}
+
 interface LocationSelectorProps {
-  onSelectLocation: (location: GeocodeResult) => void;
+  onSelectLocation: (location: GeocodingResult) => void;
   buttonClass?: string;
+  loading?: boolean;
+  handleUseCurrentLocation?: () => void;
+  noAutoLocationRequest?: boolean;
 }
 
 const LocationSelector: React.FC<LocationSelectorProps> = ({ 
   onSelectLocation,
-  buttonClass = "w-full"
+  buttonClass = "w-full",
+  loading = false,
+  handleUseCurrentLocation,
+  noAutoLocationRequest = false
 }) => {
   const { t, language } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -63,11 +78,15 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       <Button 
         className={`${buttonClass} flex items-center justify-center gap-2 transition-all hover:scale-[1.01] bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] hover:shadow-lg active:scale-[0.99]`} 
         onClick={handleOpenDialog}
+        disabled={loading}
       >
         <Search size={16} />
         <span>
           {t("Search for a Location", "搜索位置")}
         </span>
+        {loading && (
+          <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-dotted border-white" />
+        )}
       </Button>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -92,7 +111,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
           <div className="flex-1 min-h-[500px] overflow-hidden">
             <MapSelector 
               onSelectLocation={handleMapSelection} 
-              onClose={handleCloseDialog}
               searchQuery={searchQuery}
             />
           </div>

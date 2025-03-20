@@ -176,9 +176,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         lng, 
         locationName, 
         true, 
-        localBortleScale, 
+        localBortleScale || bortleScale || 4, 
         seeingConditions,
-        undefined,
+        setLoading,
         setStatusMessage,
         language as Language
       )
@@ -186,7 +186,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         setCalculationInProgress(false);
       });
     }
-  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
+  }, [latitude, longitude, locationName, localBortleScale, bortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage, setLoading]);
   
   // Debounced SIQS calculation when inputs change
   useEffect(() => {
@@ -216,11 +216,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       
       <div className="space-y-4">
         <LocationSelector 
-          locationName={locationName} 
           loading={loading || calculationInProgress} 
           handleUseCurrentLocation={handleUseCurrentLocation}
           onSelectLocation={handleLocationSelect}
-          noAutoLocationRequest={noAutoLocationRequest || !shouldAutoRequest}
         />
         
         {!hideRecommendedPoints && (

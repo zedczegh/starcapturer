@@ -39,7 +39,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         );
         
         // Convert the API response to match our SharedAstroSpot type
-        const convertedPoints: SharedAstroSpot[] = points.map(point => ({
+        const convertedPoints: SharedAstroSpot[] = points.map((point: any) => ({
           id: point.id,
           name: point.name,
           chineseName: point.chineseName || point.name,
