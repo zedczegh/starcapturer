@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/types/weather";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
+import { getSafeScore, formatSIQSScore } from "@/utils/geoUtils";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -145,7 +146,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 </h4>
                 <div className="flex items-center">
                   <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
-                  <span className="text-xs font-medium">{point.siqs?.toFixed(1) || "N/A"}</span>
+                  <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
                 </div>
               </div>
               

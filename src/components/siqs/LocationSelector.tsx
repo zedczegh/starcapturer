@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Search } from "lucide-react";
 import MapSelector from "../MapSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -102,19 +102,19 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         onClick={handleOpenMap}
         className="w-full transition-all duration-300 border border-cosmic-700/40 hover:border-cosmic-700/70 bg-cosmic-800/40 hover:bg-cosmic-800/60"
       >
-        {t("Select on Map", "在地图上选择")}
+        <Search className="h-4 w-4 mr-2" />
+        {t("Search for a Location", "搜索位置")}
       </Button>
       
       {isMapOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-cosmic-900 rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-4 border-b border-cosmic-700">
-              <h3 className="text-lg font-medium">{t("Select Location on Map", "在地图上选择位置")}</h3>
+              <h3 className="text-lg font-medium">{t("Search for a Location", "搜索位置")}</h3>
             </div>
             <div className="h-[60vh]">
               <MapSelector 
                 onSelectLocation={handleLocationSelected}
-                isOpen={true}
                 onClose={() => setIsMapOpen(false)}
               />
             </div>

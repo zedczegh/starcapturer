@@ -54,6 +54,45 @@
   }
 }
 
+@keyframes glowPulse {
+  0% {
+    box-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+  }
+}
+
+@keyframes starTwinkle {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes radialBreathing {
+  0% {
+    background-size: 100% 100%;
+  }
+  50% {
+    background-size: 120% 120%;
+  }
+  100% {
+    background-size: 100% 100%;
+  }
+}
+
 .night-row {
   background-color: rgba(13, 23, 42, 0.3);
   border-left: 2px solid #8B5CF6;
@@ -80,7 +119,50 @@
   animation: fadeScale 0.5s ease-out;
 }
 
+.animate-glow {
+  animation: glowPulse 2s infinite ease-in-out;
+}
+
+.animate-twinkle {
+  animation: starTwinkle 3s infinite ease-in-out;
+}
+
+.animate-radial-breathing {
+  animation: radialBreathing 4s infinite ease-in-out;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(13, 23, 42, 0) 70%);
+}
+
+/* Shadow effects */
+.shadow-glow {
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.shadow-glow-light {
+  box-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+}
+
+.shadow-glow-strong {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.7);
+}
+
 /* Transitions */
 .transition-all {
   transition: all 0.3s ease;
+}
+
+/* Hover effects */
+.hover-scale {
+  transition: transform 0.2s ease-out;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
+}
+
+.pulse-glow {
+  animation: glowPulse 2s infinite ease-in-out;
 }

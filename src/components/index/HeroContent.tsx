@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Star, Telescope, Rocket, Satellite } from "lucide-react";
+import { Star, Telescope, Rocket, Satellite, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
@@ -56,8 +56,8 @@ const HeroContent: React.FC = () => {
             <span className="group-hover:text-primary-foreground transition-colors">{t("Calculate SIQS", "计算SIQS")}</span>
           </a>
           <Link to="/about" className="sci-fi-btn group text-primary-foreground/70 flex items-center space-x-2">
-            <Rocket className="h-4 w-4 group-hover:text-primary transition-colors" />
-            <span className="group-hover:text-primary transition-colors">{t("Learn More", "了解更多")}</span>
+            <Search className="h-4 w-4 group-hover:text-primary transition-colors" />
+            <span className="group-hover:text-primary transition-colors">{t("Search for a Location", "搜索位置")}</span>
           </Link>
         </motion.div>
       </div>

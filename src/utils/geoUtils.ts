@@ -59,3 +59,28 @@ export const sortLocationsByDistance = (
     }))
     .sort((a, b) => a.distance - b.distance);
 };
+
+/**
+ * Get a safe SIQS score value from potentially complex SIQS data
+ * @param siqs SIQS value that could be a number or an object
+ * @returns Numeric SIQS score or 0 if unavailable
+ */
+export const getSafeScore = (siqs?: number | { score: number; isViable: boolean }): number => {
+  if (siqs === undefined) return 0;
+  if (typeof siqs === 'number') return siqs;
+  return siqs.score;
+};
+
+/**
+ * Format a SIQS score to a fixed decimal place
+ * @param siqs SIQS value that could be a number or an object
+ * @param decimals Number of decimal places
+ * @returns Formatted string or 'N/A' if unavailable
+ */
+export const formatSIQSScore = (
+  siqs?: number | { score: number; isViable: boolean }, 
+  decimals: number = 1
+): string => {
+  const score = getSafeScore(siqs);
+  return score ? score.toFixed(decimals) : 'N/A';
+};

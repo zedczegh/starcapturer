@@ -46,10 +46,11 @@ declare module "@/types/weather" {
     rating?: number;
     timestamp: string;
     chineseName?: string;
-    siqs?: {
+    siqs?: number | {
       score: number;
       isViable: boolean;
-    } | number; // Allow for both object and number format
+    };
     distance?: number;
+    isViable?: boolean;
   }
 }

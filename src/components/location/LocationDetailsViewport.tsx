@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsHeader from "./LocationDetailsHeader";
 import LocationContentGrid from "./LocationContentGrid";
@@ -30,6 +30,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const { language, t } = useLanguage();
   const { loading, handleRefreshAll } = useWeatherUpdater();
+  const initialRefreshDone = useRef(false);
   
   const {
     forecastData,
@@ -41,48 +42,21 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
 
-  // Auto-refresh data only once when the component mounts
+  // Automatically click refresh once when the page loads
   useEffect(() => {
-    let isMounted = true;
-    const refreshData = async () => {
-      if (!isMounted) return;
+    // Only run once after component mounts
+    if (!initialRefreshDone.current && locationData && !loading) {
+      initialRefreshDone.current = true;
       
-      const lastUpdate = new Date(locationData.timestamp).getTime();
-      const now = new Date().getTime();
-      const minutesSinceLastUpdate = (now - lastUpdate) / (1000 * 60);
-      
-      // Refresh if data is older than 30 minutes
-      if (minutesSinceLastUpdate > 30 && !loading) {
-        handleRefreshAll(
-          locationData,
-          setLocationData,
-          () => {
-            if (isMounted) {
-              handleRefreshForecast(locationData.latitude, locationData.longitude);
-              handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-            }
-          },
-          setStatusMessage
-        );
-      }
-    };
-    
-    if (locationData) {
-      // Add a slight delay to ensure component is fully mounted
+      // Set a small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
-        refreshData();
-      }, 1000);
+        console.log("Auto-refreshing location details on page load");
+        handleRefresh();
+      }, 800);
       
-      return () => {
-        isMounted = false;
-        clearTimeout(timer);
-      };
+      return () => clearTimeout(timer);
     }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  }, [locationData, loading]);
 
   const handleRefresh = useCallback(async () => {
     await handleRefreshAll(
