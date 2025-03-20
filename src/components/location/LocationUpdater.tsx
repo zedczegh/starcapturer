@@ -21,7 +21,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   setGettingUserLocation,
   setStatusMessage
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const updateInProgressRef = useRef(false);
   const locationUpdateTimeoutRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<{lat: number, lng: number} | null>(null);
@@ -94,7 +94,18 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         lng: location.longitude
       };
       
+      // Show a loading message in Chinese or English
+      setStatusMessage(language === 'zh' ? 
+        '正在更新位置并刷新数据...' : 
+        'Updating location and refreshing data...');
+      
       await onLocationUpdate(location);
+      
+      // Show a success toast message in Chinese or English
+      toast.success(language === 'zh' ? 
+        '位置已更新并数据已刷新' : 
+        'Location updated and data refreshed');
+      
     } catch (error) {
       console.error('Error updating location:', error);
       setStatusMessage(t('Failed to update location', '更新位置失败'));
@@ -105,7 +116,7 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         updateInProgressRef.current = false;
       }, 500);
     }
-  }, [onLocationUpdate, setStatusMessage, t]);
+  }, [onLocationUpdate, setStatusMessage, t, language]);
 
   return (
     <Card className="shadow-xl overflow-hidden bg-cosmic-900/80 border-cosmic-600/20 hover:shadow-2xl transition-all duration-300">

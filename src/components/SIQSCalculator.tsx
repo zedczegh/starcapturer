@@ -32,6 +32,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [isMounted, setIsMounted] = useState(false);
   const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
   const [shouldAutoRequest, setShouldAutoRequest] = useState(!noAutoLocationRequest);
+  const [animateIn, setAnimateIn] = useState(false); // Added for animation control
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
@@ -49,6 +50,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   // Track component mount state to avoid unnecessary effects
   useEffect(() => {
     setIsMounted(true);
+    // Trigger animation after a small delay
+    setTimeout(() => {
+      setAnimateIn(true);
+    }, 100);
     return () => setIsMounted(false);
   }, []);
   
@@ -159,6 +164,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         setLocalBortleScale(savedLocation.bortleScale);
       }
       console.log("Restored saved location:", savedLocation.name);
+      
+      // Trigger auto-refresh when location is restored
+      const timer = setTimeout(() => {
+        calculateSIQS();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [isMounted, noAutoLocationRequest, locationName, setLocationName, setLatitude, setLongitude]);
   
@@ -188,7 +200,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [latitude, longitude, locationName, localBortleScale, bortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage, setLoading]);
   
-  // Debounced SIQS calculation when inputs change
+  // Auto-refresh SIQS when any location is selected or updated
   useEffect(() => {
     if (!isMounted || !locationName) return;
     
@@ -199,8 +211,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
   
+  // Animation classes based on component state
+  const containerAnimationClass = animateIn 
+    ? "transform translate-y-0 opacity-100 transition-all duration-700"
+    : "transform translate-y-8 opacity-0 transition-all duration-700";
+  
   return (
-    <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}>
+    <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300 ${containerAnimationClass}`}>
       <SIQSCalculatorHeader />
       
       <StatusMessage message={statusMessage} loading={calculationInProgress} />

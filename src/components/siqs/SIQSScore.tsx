@@ -152,14 +152,14 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   
   return (
     <div 
-      className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
+      className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98] animate-fade-in"
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       data-testid="siqs-score-card"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
-          {t("Estimated SIQS Score", "预估SIQS评分")}
+          {t("Estimated SIQS", "预估SIQS")}
         </h3>
         <div className="flex items-center">
           <span className={`text-2xl font-bold ${scoreColor}`}>
@@ -191,7 +191,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           <button 
             className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
                       transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
-                      border border-[#9b87f5]/30 animate-pulse hover:animate-none"
+                      border border-[#9b87f5]/30"
             onClick={handleClick}
             data-testid="siqs-details-button"
           >

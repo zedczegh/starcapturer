@@ -54,7 +54,6 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, tra
   const avgHumidity = nighttimeHours.reduce((sum, hour) => sum + hour.humidity, 0) / nighttimeHours.length;
   const avgPrecipitation = nighttimeHours.reduce((sum, hour) => sum + (hour.precipitation || 0), 0) / nighttimeHours.length;
   
-  // Import the SIQS calculation directly instead of using require
   // Prepare SIQS factors
   const siqsFactors = {
     cloudCover: avgCloudCover,

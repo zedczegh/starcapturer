@@ -85,7 +85,10 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
           {t("Search for a Location", "搜索位置")}
         </span>
         {loading && (
-          <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-dotted border-white" />
+          <span className="ml-2 flex items-center">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-dotted border-white" />
+            {language === 'zh' && <span className="ml-1 text-xs">加载中</span>}
+          </span>
         )}
       </Button>
       
@@ -110,8 +113,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
           
           <div className="flex-1 min-h-[500px] overflow-hidden">
             <MapSelector 
-              onSelectLocation={handleMapSelection} 
-              searchQuery={searchQuery}
+              onSelectLocation={handleMapSelection}
             />
           </div>
         </DialogContent>

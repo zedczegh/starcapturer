@@ -39,6 +39,23 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   // Auto-refresh on initial load
   useAutoRefreshOnLoad(handleRefreshAll);
 
+  // Handle location update with auto-refresh
+  const handleLocationUpdateWithRefresh = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
+    try {
+      // First update the location data
+      await onLocationUpdate(location);
+      
+      // Then automatically refresh all data
+      console.log("Location updated, automatically refreshing data...");
+      setTimeout(() => {
+        handleRefreshAll();
+      }, 500);
+      
+    } catch (error) {
+      console.error("Error during location update and refresh:", error);
+    }
+  }, [onLocationUpdate, handleRefreshAll]);
+
   // Calculate SIQS with focus on nighttime conditions
   const updateSIQSWithNighttimeData = useCallback(() => {
     // Only proceed if we have the necessary data
@@ -105,7 +122,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           forecastLoading={forecastLoading}
           longRangeLoading={longRangeLoading}
           gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={onLocationUpdate}
+          onLocationUpdate={handleLocationUpdateWithRefresh}
           setGettingUserLocation={setGettingUserLocation}
           setStatusMessage={setStatusMessage}
           onRefreshForecast={handleRefreshForecast}
