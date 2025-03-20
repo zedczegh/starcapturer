@@ -7,6 +7,7 @@ import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowLeft } from "lucide-react";
+import { getProgressColor } from "./utils/progressColor";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -58,12 +59,22 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   }, [siqsScore]);
   
   // Memoize calculations to prevent unnecessary re-renders
-  const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
+  const { scoreColor, scoreClass, recommendation, scoreOn10Scale, progressBarColor } = useMemo(() => ({
     scoreColor: getScoreColorClass(normalizedScore),
     scoreClass: getScoreClass(siqsScore > 10 ? siqsScore : siqsScore * 10), // For progress bar
     recommendation: getRecommendationMessage(normalizedScore, language),
-    scoreOn10Scale: normalizedScore
+    scoreOn10Scale: normalizedScore,
+    progressBarColor: getProgressBarColor(normalizedScore)
   }), [normalizedScore, siqsScore, language]);
+  
+  // Get progress bar color based on score according to About SIQS page
+  function getProgressBarColor(score: number): string {
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
+    if (score >= 4) return "bg-yellow-400";
+    if (score >= 2) return "bg-orange-400";
+    return "bg-red-500";
+  }
   
   // Generate a uuid for location ID instead of using name to avoid inconsistencies
   const preparedLocationData = useMemo(() => {
@@ -159,7 +170,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </div>
       <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
         <div 
-          className={`h-full ${scoreClass}`} 
+          className={`h-full ${progressBarColor}`} 
           style={{ width: `${progressWidth}%`, transition: 'width 0.5s ease-in-out' }}
         />
       </div>

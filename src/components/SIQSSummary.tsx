@@ -57,6 +57,15 @@ export const getRecommendationMessage = (score: number, language: 'en' | 'zh'): 
   }
 };
 
+// Get the appropriate progress bar color matching the About SIQS page
+const getProgressBarColor = (score: number): string => {
+  if (score >= 8) return "bg-green-500";
+  if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
+  if (score >= 4) return "bg-yellow-400";
+  if (score >= 2) return "bg-orange-400";
+  return "bg-red-500";
+};
+
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ 
   siqsData,
   weatherData,
@@ -183,10 +192,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
 
   // Get appropriate score label
   const getScoreLabel = (score: number) => {
-    if (score < 3) return t("Poor", "较差");
-    if (score < 5) return t("Fair", "一般");
-    if (score < 7) return t("Good", "良好");
-    if (score < 9) return t("Very Good", "很好");
+    if (score < 2) return t("Poor", "较差");
+    if (score < 4) return t("Fair", "一般");
+    if (score < 6) return t("Good", "良好");
+    if (score < 8) return t("Very Good", "很好");
     return t("Excellent", "极佳");
   };
   
@@ -207,6 +216,23 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
           <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(scoreOn10Scale)} transition-all duration-300 hover:scale-105`}>
             <div className="text-4xl font-bold mb-1">{scoreOn10Scale.toFixed(1)}</div>
             <div className="text-sm font-medium">{getScoreLabel(scoreOn10Scale)}</div>
+          </div>
+        </div>
+        
+        {/* Progress bar that matches About SIQS page colors */}
+        <div className="w-full mb-4">
+          <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${getProgressBarColor(scoreOn10Scale)}`} 
+              style={{ width: `${scoreOn10Scale * 10}%`, transition: 'width 0.5s ease-in-out' }}
+            />
+          </div>
+          <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+            <span>{t("Poor", "差")}</span>
+            <span>{t("Fair", "一般")}</span>
+            <span>{t("Good", "良好")}</span>
+            <span>{t("Very Good", "很好")}</span>
+            <span>{t("Excellent", "极佳")}</span>
           </div>
         </div>
         

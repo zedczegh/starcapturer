@@ -4,7 +4,7 @@ import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { calculateNighttimeSIQS, useAutoRefreshOnLoad } from "@/utils/nighttimeSIQS";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
@@ -35,6 +35,9 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshForecast,
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
+
+  // Auto-refresh on initial load
+  useAutoRefreshOnLoad(handleRefreshAll);
 
   // Calculate SIQS with focus on nighttime conditions
   const updateSIQSWithNighttimeData = useCallback(() => {

@@ -1,7 +1,9 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
+import UsefulLinksSection from "@/components/UsefulLinksSection";
 
 const AboutSIQS = () => {
   const { t } = useLanguage();
@@ -222,6 +224,9 @@ const AboutSIQS = () => {
             </Card>
           </div>
         </div>
+        
+        {/* Add the Useful Links section */}
+        <UsefulLinksSection />
       </main>
     </div>
   );
