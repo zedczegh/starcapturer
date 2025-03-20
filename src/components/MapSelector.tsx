@@ -16,28 +16,19 @@ const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newc
 interface MapSelectorProps {
   onSelectLocation: (location: Location) => void;
   children?: React.ReactNode;
-  searchQuery?: string; // Make this optional
 }
 
 const MapSelector: React.FC<MapSelectorProps> = ({
   onSelectLocation,
-  children,
-  searchQuery: initialSearchQuery
+  children
 }) => {
   const { t, language } = useLanguage();
-  const [searchTerm, setSearchTerm] = useState(initialSearchQuery || "");
+  const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Update searchTerm when initialSearchQuery changes
-  useEffect(() => {
-    if (initialSearchQuery) {
-      setSearchTerm(initialSearchQuery);
-    }
-  }, [initialSearchQuery]);
   
   // Use memo to avoid recreating this function on every render
   const isPrioritySearchTerm = useMemo(() => {

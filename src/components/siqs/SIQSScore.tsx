@@ -7,7 +7,6 @@ import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowLeft } from "lucide-react";
-import { getProgressColor } from "./utils/progressColor";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -59,22 +58,12 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   }, [siqsScore]);
   
   // Memoize calculations to prevent unnecessary re-renders
-  const { scoreColor, scoreClass, recommendation, scoreOn10Scale, progressBarColor } = useMemo(() => ({
+  const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
     scoreColor: getScoreColorClass(normalizedScore),
     scoreClass: getScoreClass(siqsScore > 10 ? siqsScore : siqsScore * 10), // For progress bar
     recommendation: getRecommendationMessage(normalizedScore, language),
-    scoreOn10Scale: normalizedScore,
-    progressBarColor: getProgressBarColor(normalizedScore)
+    scoreOn10Scale: normalizedScore
   }), [normalizedScore, siqsScore, language]);
-  
-  // Get progress bar color based on score according to About SIQS page
-  function getProgressBarColor(score: number): string {
-    if (score >= 8) return "bg-green-500";
-    if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
-    if (score >= 4) return "bg-yellow-400";
-    if (score >= 2) return "bg-orange-400";
-    return "bg-red-500";
-  }
   
   // Generate a uuid for location ID instead of using name to avoid inconsistencies
   const preparedLocationData = useMemo(() => {
@@ -152,14 +141,14 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   
   return (
     <div 
-      className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98] animate-fade-in"
+      className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       data-testid="siqs-score-card"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
-          {t("Estimated SIQS", "预估SIQS")}
+          {t("Estimated SIQS Score", "预估SIQS评分")}
         </h3>
         <div className="flex items-center">
           <span className={`text-2xl font-bold ${scoreColor}`}>
@@ -170,7 +159,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </div>
       <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
         <div 
-          className={`h-full ${progressBarColor}`} 
+          className={`h-full ${scoreClass}`} 
           style={{ width: `${progressWidth}%`, transition: 'width 0.5s ease-in-out' }}
         />
       </div>
@@ -191,7 +180,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           <button 
             className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
                       transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
-                      border border-[#9b87f5]/30"
+                      border border-[#9b87f5]/30 animate-pulse hover:animate-none"
             onClick={handleClick}
             data-testid="siqs-details-button"
           >

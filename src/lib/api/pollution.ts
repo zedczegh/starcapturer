@@ -1,12 +1,11 @@
 
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 import { getCityBortleScale, isInChina, getChineseRegion } from "@/utils/chinaBortleData";
-import { isInNorthernChina, getNorthernChinaBortleScale } from "@/utils/northernChinaBortleData";
 
 /**
  * Fetches light pollution data based on coordinates
  * Prioritizes our internal database over network requests or estimates
- * With improved handling for all Chinese regions including northern provinces
+ * With improved handling for all Chinese regions
  */
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number | null } | null> {
   try {
@@ -21,15 +20,6 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
     if (specificCityBortle !== null) {
       console.log("Using specific city Bortle scale:", specificCityBortle);
       return { bortleScale: specificCityBortle };
-    }
-    
-    // Check for northern China rural locations
-    if (isInNorthernChina(latitude, longitude)) {
-      const northernChinaBortle = getNorthernChinaBortleScale(latitude, longitude);
-      if (northernChinaBortle !== null) {
-        console.log("Using northern China rural Bortle scale:", northernChinaBortle);
-        return { bortleScale: northernChinaBortle };
-      }
     }
     
     // Try to get data from our enhanced light pollution database
@@ -150,11 +140,9 @@ function estimateDefaultBortleScale(latitude: number, longitude: number): number
       case 'Inner Mongolia':
         return 4; // Inner Mongolia is generally dark except cities
       case 'Heilongjiang':
-        return 3; // Updated with better data for northern rural areas
       case 'Jilin':
-        return 3.5; // Updated with better data for northern rural areas
       case 'Liaoning':
-        return 4.5; // Updated with better data for northern rural areas
+        return 5; // Northeast China has moderate development
       default:
         // Eastern China generally has high light pollution
         if (longitude > 105) {

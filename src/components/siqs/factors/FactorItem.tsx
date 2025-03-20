@@ -4,7 +4,8 @@ import { Progress } from "@/components/ui/progress";
 import { getScoreColorClass } from "../utils/scoreUtils";
 import { 
   getTranslatedFactorName, 
-  getTranslatedDescription
+  getTranslatedDescription, 
+  getProgressColor 
 } from "../utils/factorTranslations";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -25,7 +26,7 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
     // Convert score from 0-100 to 0-10 scale
     const scoreOn10Scale = factor.score / 10;
     const colorClass = getScoreColorClass(scoreOn10Scale);
-    const progressColor = getProgressBarColor(scoreOn10Scale);
+    const progressColor = getProgressColor(scoreOn10Scale);
     const translatedName = getTranslatedFactorName(factor.name, language);
     const translatedDescription = getTranslatedDescription(factor.description, language);
     
@@ -37,15 +38,6 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
       translatedDescription
     };
   }, [factor.score, factor.name, factor.description, language]);
-  
-  // Get progress bar color based on score according to About SIQS page
-  function getProgressBarColor(score: number): string {
-    if (score >= 8) return "bg-green-500";
-    if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
-    if (score >= 4) return "bg-yellow-400";
-    if (score >= 2) return "bg-orange-400";
-    return "bg-red-500";
-  }
   
   // Memoize the animation delay style
   const animationStyle = useMemo(() => ({
@@ -71,16 +63,9 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
       
       <Progress 
         value={factor.score} 
-        className="h-2 bg-cosmic-700/40 animate-enter overflow-hidden"
-        style={{
-          background: 'rgba(30, 41, 59, 0.4)'
-        }}
-      >
-        <div 
-          className={`h-full ${memoizedValues.progressColor}`}
-          style={{ width: `${factor.score}%` }}
-        />
-      </Progress>
+        className="h-2 bg-cosmic-700/40 animate-enter"
+        style={progressStyle}
+      />
       
       <p className="text-xs text-muted-foreground mt-2">
         {memoizedValues.translatedDescription}

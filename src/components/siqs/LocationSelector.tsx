@@ -1,125 +1,137 @@
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPinIcon, Search } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import MapSelector from "@/components/MapSelector";
-
-// Define interface for geocoding results
-interface GeocodingResult {
-  name: string;
-  latitude: number;
-  longitude: number;
-  placeId?: string | null;
-  country?: string | null;
-  formattedAddress?: string | null;
-}
+import { MapPin, Loader2, Search } from "lucide-react";
+import MapSelector from "../MapSelector";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 interface LocationSelectorProps {
-  onSelectLocation: (location: GeocodingResult) => void;
-  buttonClass?: string;
-  loading?: boolean;
-  handleUseCurrentLocation?: () => void;
+  locationName: string;
+  loading: boolean;
+  handleUseCurrentLocation: () => void;
+  onSelectLocation: (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => void;
   noAutoLocationRequest?: boolean;
 }
 
-const LocationSelector: React.FC<LocationSelectorProps> = ({ 
-  onSelectLocation,
-  buttonClass = "w-full",
-  loading = false,
+const LocationSelector: React.FC<LocationSelectorProps> = ({
+  locationName,
+  loading,
   handleUseCurrentLocation,
+  onSelectLocation,
   noAutoLocationRequest = false
 }) => {
-  const { t, language } = useLanguage();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLanguage();
+  const autoLocationTriggered = useRef(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   
-  const handleOpenDialog = useCallback(() => {
-    setIsDialogOpen(true);
-  }, []);
-  
-  const handleCloseDialog = useCallback(() => {
-    setIsDialogOpen(false);
-    setSearchQuery("");
-  }, []);
-  
-  // Focus the search input when the dialog opens
+  // Auto-trigger location request only once on first mount and if no location exists
   useEffect(() => {
-    if (isDialogOpen && searchInputRef.current) {
-      // Use a timeout to allow the dialog animation to complete
-      const timeoutId = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+    // Only auto-trigger if:
+    // 1. We don't have a location yet
+    // 2. We haven't triggered an auto-location request before
+    // 3. Auto-location is not disabled
+    // 4. Not in a loading state
+    if (!locationName && !loading && !autoLocationTriggered.current && !noAutoLocationRequest) {
+      console.log("Auto-triggering location request on first mount");
+      autoLocationTriggered.current = true;
       
-      return () => clearTimeout(timeoutId);
+      // Add a small delay to ensure everything is initialized
+      const timer = setTimeout(() => {
+        handleUseCurrentLocation();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
-  }, [isDialogOpen]);
+  }, [locationName, loading, handleUseCurrentLocation, noAutoLocationRequest]);
   
-  // Handle location selection from the map
-  const handleMapSelection = useCallback((selectedLocation: any) => {
-    if (selectedLocation && selectedLocation.latitude && selectedLocation.longitude) {
-      onSelectLocation({
-        name: selectedLocation.name || selectedLocation.displayName || "Selected Location",
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
-        placeId: selectedLocation.placeId || null,
-        country: selectedLocation.country || null,
-        formattedAddress: selectedLocation.displayName || null
-      });
-      handleCloseDialog();
-    }
-  }, [onSelectLocation, handleCloseDialog]);
+  // Check if locationName is just coordinates or a proper name
+  const isCoordinateOnly = locationName && locationName.includes("°");
+  
+  // Format nicer display name for coordinates
+  const displayName = isCoordinateOnly ? 
+    t("Your current location", "您的当前位置") : 
+    locationName;
+  
+  const handleOpenMap = () => {
+    setIsMapOpen(true);
+  };
+  
+  const handleLocationSelected = (location: any) => {
+    onSelectLocation(location);
+    setIsMapOpen(false);
+    
+    // Show success toast
+    toast.success(
+      t("Location selected: ", "已选择位置：") + location.name,
+      { duration: 2000 }
+    );
+  };
   
   return (
-    <>
+    <div className="flex flex-col space-y-3 relative z-10">
       <Button 
-        className={`${buttonClass} flex items-center justify-center gap-2 transition-all hover:scale-[1.01] bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] hover:shadow-lg active:scale-[0.99]`} 
-        onClick={handleOpenDialog}
+        variant={locationName ? "default" : "outline"}
+        type="button" 
+        onClick={handleUseCurrentLocation}
         disabled={loading}
+        className={`w-full transition-all duration-300 ${
+          locationName 
+            ? 'bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg hover:translate-y-[-1px]'
+            : 'hover:bg-primary/10'
+        }`}
+        data-location-button="true"
       >
-        <Search size={16} />
-        <span>
-          {t("Search for a Location", "搜索位置")}
-        </span>
-        {loading && (
-          <span className="ml-2 flex items-center">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-dotted border-white" />
-            {language === 'zh' && <span className="ml-1 text-xs">加载中</span>}
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />
+        ) : (
+          <MapPin className="mr-2 h-4 w-4" />
+        )}
+        {locationName ? (
+          <span className="truncate max-w-[90%] font-medium">
+            {displayName}
           </span>
+        ) : (
+          t("Use My Location", "使用我的位置")
         )}
       </Button>
       
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[90vw] md:max-w-[80vw] lg:max-w-[1200px] max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              {t("Search or Select Location", "搜索或选择位置")}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="mb-4 relative">
-            <Input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("Search by location name...", "按位置名称搜索...")}
-              className="pr-10 shadow-sm"
-            />
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+      <Button
+        variant="secondary"
+        type="button"
+        onClick={handleOpenMap}
+        className="w-full transition-all duration-300 border border-cosmic-700/40 hover:border-cosmic-700/70 bg-cosmic-800/40 hover:bg-cosmic-800/60"
+      >
+        <Search className="h-4 w-4 mr-2" />
+        {t("Search for a Location", "搜索位置")}
+      </Button>
+      
+      {isMapOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-cosmic-900 rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b border-cosmic-700">
+              <h3 className="text-lg font-medium">{t("Search for a Location", "搜索位置")}</h3>
+            </div>
+            <div className="h-[60vh]">
+              <MapSelector 
+                onSelectLocation={handleLocationSelected}
+                onClose={() => setIsMapOpen(false)}
+              />
+            </div>
+            <div className="p-4 border-t border-cosmic-700 flex justify-end">
+              <Button 
+                variant="outline"
+                onClick={() => setIsMapOpen(false)}
+                className="mr-2"
+              >
+                {t("Cancel", "取消")}
+              </Button>
+            </div>
           </div>
-          
-          <div className="flex-1 min-h-[500px] overflow-hidden">
-            <MapSelector 
-              onSelectLocation={handleMapSelection}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default LocationSelector;
+export default React.memo(LocationSelector);
