@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { InfoIcon, AlertCircle } from "lucide-react";
@@ -11,6 +11,7 @@ import {
   getHumidityAdvice,
   getLightPollutionAdvice
 } from "@/utils/conditionReminderUtils";
+import { getAverageForecastSIQS } from "@/utils/nighttimeSIQS";
 
 interface SIQSSummaryProps {
   siqsData: {
@@ -29,6 +30,7 @@ interface SIQSSummaryProps {
   };
   moonPhase?: string | number;
   bortleScale?: number | null;
+  forecastData?: any;
 }
 
 export const getRecommendationMessage = (score: number, language: 'en' | 'zh'): string => {
@@ -59,19 +61,39 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
   siqsData,
   weatherData,
   moonPhase,
-  bortleScale
+  bortleScale,
+  forecastData
 }) => {
   const { t, language } = useLanguage();
+  const [displayScore, setDisplayScore] = useState<number | null>(null);
+  
+  // Use forecast data for SIQS if available
+  useEffect(() => {
+    if (forecastData?.daily?.time) {
+      // Try to get SIQS from forecast rows first
+      try {
+        const averageSIQS = getAverageForecastSIQS(forecastData.daily);
+        if (averageSIQS > 0) {
+          console.log("Using average forecast SIQS:", averageSIQS);
+          setDisplayScore(averageSIQS);
+          return;
+        }
+      } catch (error) {
+        console.error("Error getting average forecast SIQS:", error);
+      }
+    }
+    
+    // Fall back to siqsData if forecast parsing fails
+    if (siqsData && siqsData.score !== undefined) {
+      // Ensure the score is always on a 0-10 scale
+      const normalizedScore = siqsData.score <= 10 ? siqsData.score : siqsData.score / 10;
+      setDisplayScore(normalizedScore);
+    }
+  }, [forecastData, siqsData]);
   
   if (!siqsData) {
     return null;
   }
-  
-  // Ensure the score is always on a 0-10 scale
-  const scoreOn10Scale = siqsData.score <= 10 ? siqsData.score : siqsData.score / 10;
-  
-  // Log for debugging
-  console.log("SIQSSummary rendering with score:", siqsData.score, "converted to:", scoreOn10Scale);
   
   // Generate condition reminders
   const reminders: { condition: string; threshold: string; advice: string }[] = [];
@@ -168,6 +190,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     return t("Excellent", "极佳");
   };
   
+  // Use displayScore (which comes from forecast data if available) or fall back to original
+  const scoreOn10Scale = displayScore !== null ? displayScore : 
+    (siqsData.score <= 10 ? siqsData.score : siqsData.score / 10);
+  
   return (
     <Card className="shadow-md border-cosmic-700/30 hover:border-cosmic-600/60 transition-all duration-300">
       <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
@@ -178,47 +204,44 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
       <CardContent className="p-4">
         {/* Score Display */}
         <div className="flex items-center justify-center mb-4">
-          <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(scoreOn10Scale)}`}>
+          <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(scoreOn10Scale)} transition-all duration-300 hover:scale-105`}>
             <div className="text-4xl font-bold mb-1">{scoreOn10Scale.toFixed(1)}</div>
             <div className="text-sm font-medium">{getScoreLabel(scoreOn10Scale)}</div>
           </div>
         </div>
         
-        {/* Recommendation and Reminders Section */}
-        <div className="mb-6 space-y-4">
-          {/* Main Recommendation */}
-          <p className="text-center text-muted-foreground">
-            {getRecommendationMessage(scoreOn10Scale, language)}
-          </p>
-          
-          {/* Reminders Section - Only show if we have reminders */}
-          {reminders.length > 0 && (
-            <div className="mt-4 p-4 rounded-lg bg-background/30 border border-border/40">
-              <h3 className="font-medium mb-3 flex items-center gap-2 text-primary">
-                <AlertCircle size={16} />
-                {t("Observing Reminders", "观测提醒")}
-              </h3>
-              
-              <div className="space-y-3 text-sm">
-                {reminders.map((reminder, index) => (
-                  <div key={`reminder-${index}`} className="pb-2 border-b border-cosmic-700/20 last:border-0 last:pb-0">
-                    <div className="flex justify-between mb-1">
-                      <span className="font-medium text-cosmic-100">{reminder.condition}</span>
-                      <span className="text-muted-foreground">{reminder.threshold}</span>
-                    </div>
-                    <p className="text-muted-foreground">{reminder.advice}</p>
-                  </div>
-                ))}
-              </div>
+        {/* Recommendation message */}
+        <p className="text-center mb-4 italic text-sm">
+          {getRecommendationMessage(scoreOn10Scale, language as 'en' | 'zh')}
+        </p>
+        
+        {/* Factors list */}
+        {siqsData.factors && siqsData.factors.length > 0 && (
+          <SIQSFactorsList factors={siqsData.factors} />
+        )}
+        
+        {/* Reminders Section */}
+        {reminders.length > 0 && (
+          <div className="mt-4 bg-cosmic-800/20 rounded-lg p-3">
+            <div className="flex items-center text-sm text-amber-400 mb-2">
+              <AlertCircle size={16} className="mr-1" />
+              <span>{t("Viewing Condition Reminders", "观测条件提示")}</span>
             </div>
-          )}
-        </div>
-        
-        <h3 className="font-medium mb-2 mt-4 text-gradient-blue">
-          {t("Contributing Factors", "贡献因素")}
-        </h3>
-        
-        <SIQSFactorsList factors={siqsData.factors} />
+            <ul className="space-y-2 text-sm">
+              {reminders.map((reminder, index) => (
+                <li key={index} className="flex flex-col">
+                  <span className="flex items-center">
+                    <InfoIcon size={12} className="mr-1 text-blue-400" />
+                    <span className="font-medium">{reminder.condition}</span>
+                    <span className="mx-1 text-muted-foreground">|</span>
+                    <span className="text-yellow-400">{reminder.threshold}</span>
+                  </span>
+                  <p className="ml-4 text-gray-300 text-xs">{reminder.advice}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

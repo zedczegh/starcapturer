@@ -49,7 +49,7 @@ declare module "@/types/weather" {
     siqs?: {
       score: number;
       isViable: boolean;
-    };
+    } | number; // Allow for both object and number format
     distance?: number;
   }
 }

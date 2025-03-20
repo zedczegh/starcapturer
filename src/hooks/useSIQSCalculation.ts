@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
@@ -5,7 +6,7 @@ import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 import { v4 as uuidv4 } from "uuid";
 import { fetchForecastData } from "@/lib/api";
-import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
+import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 
 // Ensure SIQS score is always on a 0-10 scale
 const normalizeScore = (score: number): number => {
@@ -21,6 +22,7 @@ export const useSIQSCalculation = (
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
+  const [forecastData, setForecastData] = useState<any>(null);
   
   // Pre-compute moon phase for better performance - refreshed on component mount
   const currentMoonPhase = useMemo(() => calculateMoonPhase(), []);
@@ -67,7 +69,7 @@ export const useSIQSCalculation = (
       setWeatherData(data);
       
       // Fetch forecast data to get night conditions
-      let nightForecast: any[] = [];
+      let forecastResult: any = null;
       try {
         const forecastData = await fetchForecastData({
           latitude: lat,
@@ -76,15 +78,8 @@ export const useSIQSCalculation = (
         });
         
         if (forecastData && forecastData.hourly) {
-          // Extract future forecasts and filter for night hours (6 PM to 6 AM)
-          const futureForecasts = extractFutureForecasts(forecastData.hourly);
-          nightForecast = futureForecasts.filter(item => {
-            const date = new Date(item.time);
-            const hour = date.getHours();
-            return hour >= 18 || hour < 6;
-          });
-          
-          console.log("Night forecast items: ", nightForecast.length);
+          setForecastData(forecastData);
+          forecastResult = forecastData;
         }
       } catch (error) {
         console.error("Error fetching forecast data for SIQS calculation:", error);
@@ -112,19 +107,38 @@ export const useSIQSCalculation = (
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
       
-      // Calculate SIQS
-      const siqsResult = calculateSIQS({
-        cloudCover: data.cloudCover,
-        bortleScale: validBortleScale,
-        seeingConditions,
-        windSpeed: data.windSpeed,
-        humidity: data.humidity,
-        moonPhase: freshMoonPhase,
-        precipitation: data.precipitation,
-        weatherCondition: data.weatherCondition,
-        aqi: data.aqi,
-        nightForecast
-      });
+      // First try to calculate SIQS using nighttime forecast data
+      let siqsResult;
+      if (forecastResult) {
+        const locationWithWeather = {
+          weatherData: data,
+          bortleScale: validBortleScale,
+          seeingConditions,
+          moonPhase: freshMoonPhase
+        };
+        
+        const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastResult, null);
+        if (nighttimeSIQS) {
+          siqsResult = nighttimeSIQS;
+          console.log("Using nighttime forecast for SIQS calculation:", siqsResult.score);
+        }
+      }
+      
+      // Fall back to standard calculation if nighttime calculation failed
+      if (!siqsResult) {
+        console.log("Falling back to standard SIQS calculation");
+        siqsResult = calculateSIQS({
+          cloudCover: data.cloudCover,
+          bortleScale: validBortleScale,
+          seeingConditions,
+          windSpeed: data.windSpeed,
+          humidity: data.humidity,
+          moonPhase: freshMoonPhase,
+          precipitation: data.precipitation,
+          weatherCondition: data.weatherCondition,
+          aqi: data.aqi
+        });
+      }
       
       // Ensure SIQS score is consistently on a 0-10 scale
       const normalizedScore = normalizeScore(siqsResult.score);
@@ -166,6 +180,12 @@ export const useSIQSCalculation = (
       // Also save to localStorage as a backup with UUID as key
       try {
         localStorage.setItem(`location_${locationId}`, JSON.stringify(locationData));
+        localStorage.setItem('latest_siqs_location', JSON.stringify({
+          name,
+          latitude: lat,
+          longitude: lng,
+          bortleScale: validBortleScale
+        }));
       } catch (e) {
         console.error("Failed to save to localStorage", e);
       }
@@ -190,6 +210,7 @@ export const useSIQSCalculation = (
     isCalculating,
     weatherData,
     siqsScore,
+    forecastData,
     currentMoonPhase,
     setSiqsScore,
     validateInputs,

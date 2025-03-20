@@ -97,6 +97,7 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           }}
           moonPhase={moonPhaseString}
           bortleScale={bortleScale}
+          forecastData={forecastData} // Pass forecast data for better SIQS estimation
         />
       </div>
       

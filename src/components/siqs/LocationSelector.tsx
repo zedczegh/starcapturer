@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, Loader2 } from "lucide-react";
 import MapSelector from "../MapSelector";
@@ -96,13 +96,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         )}
       </Button>
       
-      <div className="relative mt-2" style={{ zIndex: 20 }}>
-        <MapSelector 
-          onSelectLocation={handleLocationSelected}
-          isOpen={isMapOpen}
-        />
-      </div>
-      
       <Button
         variant="secondary"
         type="button"
@@ -111,6 +104,32 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       >
         {t("Select on Map", "在地图上选择")}
       </Button>
+      
+      {isMapOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-cosmic-900 rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b border-cosmic-700">
+              <h3 className="text-lg font-medium">{t("Select Location on Map", "在地图上选择位置")}</h3>
+            </div>
+            <div className="h-[60vh]">
+              <MapSelector 
+                onSelectLocation={handleLocationSelected}
+                isOpen={true}
+                onClose={() => setIsMapOpen(false)}
+              />
+            </div>
+            <div className="p-4 border-t border-cosmic-700 flex justify-end">
+              <Button 
+                variant="outline"
+                onClick={() => setIsMapOpen(false)}
+                className="mr-2"
+              >
+                {t("Cancel", "取消")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
