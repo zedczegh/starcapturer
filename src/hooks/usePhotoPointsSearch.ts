@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -59,7 +58,9 @@ export const usePhotoPointsSearch = ({
             userLocation.longitude,
             location.latitude,
             location.longitude
-          )
+          ),
+          // Ensure all required properties exist
+          timestamp: location.timestamp || location.date || new Date().toISOString()
         }));
         
         setAllLocations(locationsWithDistance);

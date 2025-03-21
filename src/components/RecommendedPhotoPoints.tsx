@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { getRecommendedPhotoPoints } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from "@/types/weather";
+import { SharedAstroSpot } from "@/lib/api/astroSpots"; // Import from astroSpots instead of types/weather
 import CopyLocationButton from "@/components/location/CopyLocationButton";
 import { getSafeScore, formatSIQSScore } from "@/utils/geoUtils";
 
@@ -49,6 +49,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           siqs: point.siqs || 0,
           isViable: point.isViable || false,
           distance: point.distance || 0,
+          description: point.description || "",
+          date: point.date || new Date().toISOString(),
           timestamp: point.timestamp || new Date().toISOString()
         }));
         
@@ -103,7 +105,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Telescope className="h-5 w-5 text-primary" />
           {t("Recommended Photo Points", "推荐拍摄点")}
-          {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+          {loading && (
+            <div className="flex items-center">
+              <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              {language === 'zh' && <span className="text-sm ml-1">加载中</span>}
+            </div>
+          )}
         </h3>
         <div className="flex items-center gap-2">
           {userLocation && (

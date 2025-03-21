@@ -1,4 +1,3 @@
-
 import { calculateDistance } from '@/data/utils/distanceCalculator';
 
 /**
@@ -21,7 +20,8 @@ export interface SharedAstroSpot {
   photographer?: string;
   targets?: string[];
   isViable?: boolean;
-  timestamp?: string;
+  timestamp: string; // Changed from optional to required
+  chineseName?: string; // Added to match usage in RecommendedPhotoPoints.tsx
 }
 
 /**
@@ -143,7 +143,7 @@ export async function getSharedAstroSpots(
       "Yellow Mountain": "黄山",
       "Daocheng Yading": "稻城亚丁",
       "Mount Tai": "泰山",
-      "Taihu Lake Observatory": "太湖天文台",
+      "Taihu Lake Observatory": "太湖���文台",
       "Hainan Tropical Island": "海南热带岛屿",
       "Xisha Islands": "西沙群岛",
       "Dinghu Mountain": "鼎湖山",

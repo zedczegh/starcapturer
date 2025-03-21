@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from "@/types/weather";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
 import NavBar from "@/components/NavBar";
@@ -14,18 +13,18 @@ import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
 import { toast } from "sonner";
 
-// Current location display component
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
   loading: boolean 
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         {t("Getting location...", "正在获取位置...")}
+        {language === 'zh' && <span>加载中</span>}
       </div>
     );
   }
@@ -60,14 +59,12 @@ const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const [locationName, setLocationName] = useState<string | null>(null);
   
-  // Get user's location
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
     enableHighAccuracy: true,
     timeout: 10000,
     language
   });
   
-  // Fetch photo points using custom hook
   const {
     loading,
     searching,
@@ -83,10 +80,8 @@ const PhotoPointsNearby: React.FC = () => {
     maxInitialResults: 6
   });
   
-  // Get location name based on coordinates
   useEffect(() => {
     if (coords && !locationName) {
-      // Try to get a cached name from recent locations
       try {
         const recentLocations = localStorage.getItem("astrospot_recent_locations");
         if (recentLocations) {
@@ -101,7 +96,6 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, locationName]);
   
-  // Get current location SIQS from localStorage on mount
   useEffect(() => {
     try {
       const recentLocations = localStorage.getItem("astrospot_recent_locations");
@@ -109,7 +103,6 @@ const PhotoPointsNearby: React.FC = () => {
         const locations = JSON.parse(recentLocations);
         if (locations.length > 0 && locations[0].siqs !== undefined) {
           setCurrentSiqs(locations[0].siqs);
-          // Set location name if available
           if (locations[0].name && !locationName) {
             setLocationName(locations[0].name);
           }
@@ -119,13 +112,11 @@ const PhotoPointsNearby: React.FC = () => {
       console.error("Error getting recent locations:", error);
     }
     
-    // Get user location if not already available
     if (!coords) {
       getPosition();
     }
   }, [coords, getPosition, locationName]);
   
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -137,7 +128,6 @@ const PhotoPointsNearby: React.FC = () => {
     }
   };
   
-  // Handle navigation to current location details
   const handleViewCurrentLocation = () => {
     if (!coords) return;
     
@@ -188,7 +178,6 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         </div>
         
-        {/* Distance Range Slider */}
         <div className="mb-8 glassmorphism p-4 rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
           <DistanceRangeSlider 
             distance={searchDistance} 
@@ -196,7 +185,6 @@ const PhotoPointsNearby: React.FC = () => {
           />
         </div>
         
-        {/* Searching State */}
         {searching && (
           <motion.div 
             className="flex justify-center py-12 flex-col items-center"
@@ -218,14 +206,12 @@ const PhotoPointsNearby: React.FC = () => {
           </motion.div>
         )}
         
-        {/* Loading State (but not searching) */}
         {loading && !searching && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
           </div>
         )}
         
-        {/* Geolocation Loading */}
         {geoLoading && !coords && (
           <div className="flex justify-center py-12 flex-col items-center">
             <div className="relative">
@@ -242,7 +228,6 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {/* Geolocation Error */}
         {geoError && !coords && (
           <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-destructive/30">
             <AlertCircle className="h-12 w-12 text-destructive/70 mx-auto mb-4" />
@@ -265,7 +250,6 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {/* User is in a good location */}
         {!loading && !geoLoading && coords && isUserInGoodLocation && (
           <motion.div 
             className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30"
@@ -312,7 +296,6 @@ const PhotoPointsNearby: React.FC = () => {
           </motion.div>
         )}
         
-        {/* No locations found */}
         {!loading && !searching && !geoLoading && coords && displayedLocations.length === 0 && !isUserInGoodLocation && (
           <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
             <MapPin className="h-12 w-12 text-primary/50 mx-auto mb-4" />
@@ -348,7 +331,6 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {/* Location grid */}
         {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && !isUserInGoodLocation && (
           <motion.div
             variants={containerVariants}
@@ -366,7 +348,6 @@ const PhotoPointsNearby: React.FC = () => {
           </motion.div>
         )}
         
-        {/* Load more button */}
         {!loading && !searching && hasMoreLocations && displayedLocations.length > 0 && !isUserInGoodLocation && (
           <div className="flex justify-center mt-8">
             <Button 

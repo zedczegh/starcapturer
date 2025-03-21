@@ -13,6 +13,7 @@ import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
 import { Language } from "@/services/geocoding/types";
 import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
 import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
+import { motion } from "framer-motion";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -199,22 +200,55 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
   
+  // Animation variants for the components
+  const animationVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 24 
+      }
+    }
+  };
+  
   return (
-    <div className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}>
+    <motion.div 
+      className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}
+      initial="hidden"
+      animate="visible"
+      variants={animationVariants}
+    >
       <SIQSCalculatorHeader />
       
-      <StatusMessage message={statusMessage} loading={calculationInProgress} />
+      <motion.div 
+        variants={animationVariants}
+        transition={{ delay: 0.1 }}
+      >
+        <StatusMessage message={statusMessage} loading={calculationInProgress} />
+      </motion.div>
       
       {siqsScore !== null && (
-        <SIQSScore 
-          siqsScore={siqsScore} 
-          latitude={parseFloat(latitude)}
-          longitude={parseFloat(longitude)}
-          locationName={locationName}
-        />
+        <motion.div 
+          variants={animationVariants}
+          transition={{ delay: 0.2 }}
+        >
+          <SIQSScore 
+            siqsScore={siqsScore} 
+            latitude={parseFloat(latitude)}
+            longitude={parseFloat(longitude)}
+            locationName={locationName}
+          />
+        </motion.div>
       )}
       
-      <div className="space-y-4">
+      <motion.div 
+        className="space-y-4"
+        variants={animationVariants}
+        transition={{ delay: 0.3 }}
+      >
         <LocationSelector 
           locationName={locationName} 
           loading={loading || calculationInProgress} 
@@ -224,13 +258,18 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         />
         
         {!hideRecommendedPoints && (
-          <RecommendedPhotoPoints 
-            onSelectPoint={handleRecommendedPointSelect}
-            userLocation={userLocation}
-          />
+          <motion.div 
+            variants={animationVariants}
+            transition={{ delay: 0.4 }}
+          >
+            <RecommendedPhotoPoints 
+              onSelectPoint={handleRecommendedPointSelect}
+              userLocation={userLocation}
+            />
+          </motion.div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

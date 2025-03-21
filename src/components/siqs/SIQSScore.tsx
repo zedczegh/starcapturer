@@ -1,189 +1,92 @@
-import React, { useCallback, useMemo, memo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+
+import React, { useMemo } from "react";
+import { Progress } from "../ui/progress";
+import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils";
-import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
-import { v4 as uuidv4 } from "uuid";
-import { ArrowLeft } from "lucide-react";
-import { getScoreClass } from "./utils/progressColor";
+import { motion } from "framer-motion";
 
 interface SIQSScoreProps {
   siqsScore: number;
-  locationId?: string;
-  latitude?: number;
-  longitude?: number;
-  locationName?: string;
+  locationName: string;
+  latitude: number;
+  longitude: number;
 }
 
 const SIQSScore: React.FC<SIQSScoreProps> = ({ 
   siqsScore, 
-  locationId,
+  locationName,
   latitude,
-  longitude,
-  locationName
+  longitude
 }) => {
-  const { language, t } = useLanguage();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [isPrefetching, setIsPrefetching] = useState(false);
+  const { t } = useLanguage();
   
-  // ALWAYS normalize the score to a 0-10 scale for display
-  const normalizedScore = useMemo(() => {
-    // If siqsScore is already in 0-10 range, use it as is
-    if (siqsScore <= 10) return siqsScore;
-    // Otherwise convert from 0-100 to 0-10
-    return siqsScore / 10;
-  }, [siqsScore]);
-  
-  // Memoize calculations to prevent unnecessary re-renders
-  const { scoreColor, scoreClass, recommendation, scoreOn10Scale } = useMemo(() => ({
-    scoreColor: getScoreColorClass(normalizedScore),
-    scoreClass: getScoreClass(siqsScore > 10 ? siqsScore : siqsScore * 10), // For progress bar
-    recommendation: getRecommendationMessage(normalizedScore, language),
-    scoreOn10Scale: normalizedScore
-  }), [normalizedScore, siqsScore, language]);
-  
-  // Generate a uuid for location ID instead of using name to avoid inconsistencies
-  const preparedLocationData = useMemo(() => {
-    if (!latitude || !longitude) return null;
+  // Create memoized values to prevent unnecessary re-renders
+  const memoizedValues = useMemo(() => {
+    // Round score to 1 decimal place
+    const displayScore = Math.round(siqsScore * 10) / 10;
     
-    // Use UUID for more reliable IDs that don't depend on location names
-    const generatedId = locationId || uuidv4();
+    // Determine score interpretation
+    let interpretation;
+    if (displayScore >= 8) interpretation = t("Excellent", "优秀");
+    else if (displayScore >= 6) interpretation = t("Good", "良好");
+    else if (displayScore >= 4) interpretation = t("Average", "一般");
+    else if (displayScore >= 2) interpretation = t("Poor", "较差");
+    else interpretation = t("Bad", "很差");
+    
+    // Get appropriate color classes
+    const progressColor = getProgressColor(displayScore);
+    const colorClass = getProgressColorClass(displayScore);
+    const textColorClass = getProgressTextColorClass(displayScore);
+    
     return {
-      id: generatedId,
-      name: locationName || t("Current Location", "当前位置"),
-      latitude: latitude,
-      longitude: longitude,
-      timestamp: new Date().toISOString()
+      displayScore,
+      interpretation,
+      progressColor,
+      colorClass,
+      textColorClass
     };
-  }, [latitude, longitude, locationName, locationId, t]);
+  }, [siqsScore, t]);
   
-  // Prefetch data when user hovers over the card
-  const handleMouseEnter = useCallback(() => {
-    if ((latitude && longitude) && !isPrefetching) {
-      setIsPrefetching(true);
-      prefetchSIQSDetails(queryClient, latitude, longitude);
-    }
-  }, [latitude, longitude, queryClient, isPrefetching]);
-  
-  const handleClick = useCallback(() => {
-    // Use existing ID if provided
-    if (locationId) {
-      navigate(`/location/${locationId}`);
-      return;
-    }
-    
-    // Use prepared data if available
-    if (preparedLocationData) {
-      // Prefetch one last time before navigation
-      if (latitude && longitude) {
-        prefetchSIQSDetails(queryClient, latitude, longitude);
-      }
-      
-      // Always use the state approach for consistent navigation
-      navigate(`/location/${preparedLocationData.id}`, {
-        state: preparedLocationData
-      });
-      return;
-    }
-    
-    // Fallback with UUID for reliability
-    const fallbackId = uuidv4();
-    navigate(`/location/${fallbackId}`, {
-      state: {
-        id: fallbackId,
-        name: "Beijing",
-        latitude: 39.9042,
-        longitude: 116.4074,
-        timestamp: new Date().toISOString()
-      }
-    });
-  }, [navigate, locationId, preparedLocationData, latitude, longitude, queryClient]);
-  
-  // Handle back navigation
-  const handleBackClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigate("/", { replace: true });
-  }, [navigate]);
-  
-  // Calculate the width for the progress bar (always on 0-100 scale)
-  const progressWidth = useMemo(() => {
-    return siqsScore > 10 ? siqsScore : siqsScore * 10;
-  }, [siqsScore]);
-
-  // Determine if we're on the location details page
-  const isOnDetailsPage = useMemo(() => {
-    return window.location.pathname.startsWith('/location/');
-  }, []);
+  // Custom style for progress bar
+  const progressStyle = useMemo(() => ({
+    '--progress-background': memoizedValues.progressColor,
+  } as React.CSSProperties), [memoizedValues.progressColor]);
   
   return (
-    <div 
-      className="mb-6 p-4 glass-card hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]" 
-      onClick={handleClick}
-      onMouseEnter={handleMouseEnter}
-      data-testid="siqs-score-card"
+    <motion.div 
+      className="mb-6 pb-6 border-b border-cosmic-700/30"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-medium">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-medium">
           {t("Estimated SIQS", "预估SIQS")}
         </h3>
-        <div className="flex items-center">
-          <span className={`text-2xl font-bold ${scoreColor}`}>
-            {scoreOn10Scale.toFixed(1)}
-          </span>
-          <span className="text-lg text-muted-foreground">/10</span>
-        </div>
-      </div>
-      <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
-        <div 
-          className={`h-full ${scoreClass}`} 
-          style={{ width: `${progressWidth}%`, transition: 'width 0.5s ease-in-out' }}
-        />
+        <span className={`text-xl font-bold px-2 py-1 rounded ${memoizedValues.textColorClass}`}>
+          {memoizedValues.displayScore.toFixed(1)}
+        </span>
       </div>
       
-      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-        <span>{t("Poor", "差")}</span>
-        <span>{t("Average", "一般")}</span>
-        <span>{t("Excellent", "优秀")}</span>
-      </div>
+      <Progress
+        value={siqsScore * 10}
+        className="h-3 my-2 bg-cosmic-800/50"
+        style={progressStyle}
+      />
       
-      <p className="text-sm mt-3 font-medium italic text-center">
-        "{recommendation}"
-      </p>
-      
-      {/* Enhanced call-to-action button with preload indication */}
-      <div className="mt-4 text-center flex flex-col space-y-2">
-        {!isOnDetailsPage && (
-          <button 
-            className="text-sm px-4 py-2 bg-[#8B5CF6]/80 hover:bg-[#8B5CF6] text-white font-medium rounded-lg 
-                      transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 
-                      border border-[#9b87f5]/30 animate-pulse hover:animate-none"
-            onClick={handleClick}
-            data-testid="siqs-details-button"
-          >
-            {language === 'en' 
-              ? "Click for more details about the current SIQS" 
-              : "点击获取更多关于当前SIQS的详细信息"}
-          </button>
-        )}
-        
-        {/* Back button - only show on details page */}
-        {isOnDetailsPage && (
-          <button
-            className="text-sm px-4 py-1.5 bg-cosmic-800 hover:bg-cosmic-700 text-white font-medium rounded-lg
-                      transition-all shadow-md flex items-center justify-center gap-1 mt-2"
-            onClick={handleBackClick}
-            data-testid="back-to-home-button"
-          >
-            <ArrowLeft size={14} />
-            {language === 'en' ? "Back to Home" : "返回主页"}
-          </button>
-        )}
+      <div className="flex justify-between items-center mt-2">
+        <span className="text-sm text-muted-foreground">
+          {t("Poor", "较差")}
+        </span>
+        <span className={`text-sm font-medium ${memoizedValues.textColorClass}`}>
+          {memoizedValues.interpretation}
+        </span>
+        <span className="text-sm text-muted-foreground">
+          {t("Excellent", "优秀")}
+        </span>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-export default memo(SIQSScore);
+export default SIQSScore;

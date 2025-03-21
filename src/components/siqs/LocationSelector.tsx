@@ -14,6 +14,12 @@ interface LocationSelectorProps {
   noAutoLocationRequest?: boolean;
 }
 
+// Define a proper interface for MapSelector props to match with our usage
+interface MapSelectorProps {
+  onSelectLocation: (location: any) => void;
+  onClose: () => void;
+}
+
 const LocationSelector: React.FC<LocationSelectorProps> = ({
   locationName,
   loading,
@@ -83,7 +89,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         data-location-button="true"
       >
         {loading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />
+          <div className="flex items-center">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />
+            {/* Add loading text in Chinese if needed */}
+            {t === "zh" && <span>加载中</span>}
+          </div>
         ) : (
           <MapPin className="mr-2 h-4 w-4" />
         )}
