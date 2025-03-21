@@ -12,6 +12,7 @@ import {
   getLightPollutionAdvice
 } from "@/utils/conditionReminderUtils";
 import { getAverageForecastSIQS } from "@/utils/nighttimeSIQS";
+import { getProgressColorClass } from "./siqs/utils/progressColor";
 
 interface SIQSSummaryProps {
   siqsData: {
@@ -194,6 +195,9 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
   const scoreOn10Scale = displayScore !== null ? displayScore : 
     (siqsData.score <= 10 ? siqsData.score : siqsData.score / 10);
   
+  // Get the progress bar color class
+  const progressClass = getProgressColorClass(scoreOn10Scale);
+  
   return (
     <Card className="shadow-md border-cosmic-700/30 hover:border-cosmic-600/60 transition-all duration-300">
       <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
@@ -214,6 +218,25 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
         <p className="text-center mb-4 italic text-sm">
           {getRecommendationMessage(scoreOn10Scale, language as 'en' | 'zh')}
         </p>
+        
+        {/* Bar visualization */}
+        <div className="mb-6">
+          <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
+            <div 
+              className={progressClass}
+              style={{ 
+                width: `${scoreOn10Scale * 10}%`, 
+                height: '100%',
+                transition: 'width 0.5s ease-in-out'
+              }}
+            />
+          </div>
+          <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+            <span>{t("Poor", "差")}</span>
+            <span>{t("Average", "一般")}</span>
+            <span>{t("Excellent", "优秀")}</span>
+          </div>
+        </div>
         
         {/* Factors list */}
         {siqsData.factors && siqsData.factors.length > 0 && (

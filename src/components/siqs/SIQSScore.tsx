@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,6 +6,7 @@ import { getRecommendationMessage, getScoreColorClass } from "./utils/scoreUtils
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowLeft } from "lucide-react";
+import { getScoreClass } from "./utils/progressColor";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -15,27 +15,6 @@ interface SIQSScoreProps {
   longitude?: number;
   locationName?: string;
 }
-
-// Score class cache
-const scoreClassCache: Record<number, string> = {};
-
-const getScoreClass = (score: number): string => {
-  // Round to nearest integer for caching
-  const roundedScore = Math.round(score);
-  
-  if (scoreClassCache[roundedScore] !== undefined) {
-    return scoreClassCache[roundedScore];
-  }
-  
-  let result = 'score-bad';
-  if (score >= 80) result = 'score-excellent';
-  else if (score >= 60) result = 'score-good';
-  else if (score >= 40) result = 'score-average';
-  else if (score >= 20) result = 'score-poor';
-  
-  scoreClassCache[roundedScore] = result;
-  return result;
-};
 
 const SIQSScore: React.FC<SIQSScoreProps> = ({ 
   siqsScore, 
@@ -148,7 +127,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium">
-          {t("Estimated SIQS Score", "预估SIQS评分")}
+          {t("Estimated SIQS", "预估SIQS")}
         </h3>
         <div className="flex items-center">
           <span className={`text-2xl font-bold ${scoreColor}`}>

@@ -4,6 +4,7 @@ import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import { determineWeatherCondition } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Lazy load the forecast tabs to improve initial load time
 const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
@@ -35,6 +36,8 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   onRefreshForecast,
   onRefreshLongRange
 }) => {
+  const { language } = useLanguage();
+  
   // Memoize the weather data to prevent unnecessary re-calculations
   const weatherData = useMemo(() => ({
     temperature: locationData?.weatherData?.temperature || 0,
@@ -74,6 +77,11 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return value;
   }, [locationData.bortleScale]);
 
+  // Loading indicator text based on language
+  const loadingText = useMemo(() => {
+    return language === 'en' ? "Loading..." : "加载中...";
+  }, [language]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
@@ -112,7 +120,11 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           />
         </div>
         
-        <Suspense fallback={<div className="animate-pulse h-64 bg-slate-800/20 rounded-lg"></div>}>
+        <Suspense fallback={
+          <div className="animate-pulse h-64 bg-slate-800/20 rounded-lg flex items-center justify-center">
+            <span className="text-cosmic-400">{loadingText}</span>
+          </div>
+        }>
           <ForecastTabs 
             forecastData={forecastData}
             longRangeForecast={longRangeForecast}

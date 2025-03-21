@@ -4,9 +4,9 @@ import { Progress } from "@/components/ui/progress";
 import { getScoreColorClass } from "../utils/scoreUtils";
 import { 
   getTranslatedFactorName, 
-  getTranslatedDescription, 
-  getProgressColor 
+  getTranslatedDescription 
 } from "../utils/factorTranslations";
+import { getProgressColor } from "../utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FactorItemProps {

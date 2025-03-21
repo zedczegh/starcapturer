@@ -1,10 +1,403 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExternalLink } from "lucide-react";
 
 const AboutSIQS = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Organize resources by category for better presentation
+  const resources = {
+    software: [
+      { 
+        category: "NINA", 
+        subcategory: "教程", 
+        name: "NINA精细测量回差并设置电调参数", 
+        url: "https://istarshooter.com/article/detail/73" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "软件", 
+        name: "PixInsight", 
+        url: "https://www.pixinsight.com/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "PixInsight Workflows-chaoticnebula", 
+        url: "https://chaoticnebula.com/pixinsight-lrgb-workflow/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "Cosmic Photons – Astrophotography", 
+        url: "https://cosmicphotons.com/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "Astronomy Software - The Backyard Astronomy Space", 
+        url: "https://www.backyardastro.org/forum/17-astronomy-software/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "AstroProcessing: NSG, PMM apps", 
+        url: "https://www.astroprocessing.com/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "PixInsight-Scripts / Toolbox", 
+        url: "https://gitlab.com/pixinsight-scripts/toolbox" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "New Foraxx script for PixInsight", 
+        url: "https://www.astroworldcreations.com/news/new-foraxx-script-for-pixinsight" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "pixinsight scripts — Seti Astro", 
+        url: "https://www.setiastro.com/pjsr-scripts" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "PixInsight Toolbox", 
+        url: "https://www.ideviceapps.de/pixinsight-toolbox.html" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "GHS拉伸", 
+        url: "https://github.com/mikec1485/GHS" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "RC三件套", 
+        url: "https://www.rc-astro.com/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "插件", 
+        name: "Herbert Walter PixInsight Scripts", 
+        url: "https://www.skypixels.at/pixinsight_scripts.html" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "教程", 
+        name: "Adam Block Studios", 
+        url: "https://www.adamblockstudios.com/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "教程", 
+        name: "肥尔腩多的主站", 
+        url: "https://fernandoyang.pt/" 
+      },
+      { 
+        category: "PixInsight", 
+        subcategory: "教程", 
+        name: "深空之王PixInsight教程", 
+        url: "https://space.bilibili.com/244743682/lists/467029?type=season" 
+      }
+    ],
+    maps: [
+      { 
+        category: "地图", 
+        subcategory: "卫星", 
+        name: "satellitemap卫星地图", 
+        url: "https://satellitemap.space/?constellation=starlink" 
+      },
+      { 
+        category: "地图", 
+        subcategory: "星图", 
+        name: "China-VO SkyView", 
+        url: "https://nadc.china-vo.org/skyview/" 
+      },
+      { 
+        category: "地图", 
+        subcategory: "星图", 
+        name: "虚拟天文馆在线地图", 
+        url: "https://stellarium-web.org/" 
+      },
+      { 
+        category: "地图", 
+        subcategory: "星图", 
+        name: "Online Star Maps", 
+        url: "https://theskylive.com/planetarium?obj=2024pt5#ra|15.79058679773252|dec|73.00498667294666|fov|80" 
+      }
+    ],
+    weather: [
+      { 
+        category: "气象", 
+        subcategory: "气象", 
+        name: "windy", 
+        url: "https://www.windy.com" 
+      },
+      { 
+        category: "气象", 
+        subcategory: "气象", 
+        name: "中央气象台台风网", 
+        url: "http://typhoon.nmc.cn/web.html" 
+      }
+    ],
+    data: [
+      { 
+        category: "数据", 
+        subcategory: "工具", 
+        name: "计算SNR信噪比", 
+        url: "https://deepskydetail.shinyapps.io/Calculate_SNR/" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "工具", 
+        name: "天文工具网", 
+        url: "https://astronomy.tools/" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "光污染", 
+        name: "darkskymap-光污染地图", 
+        url: "https://www.darkskymap.com/map" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "光污染", 
+        name: "光污染地图", 
+        url: "https://www.lightpollutionmap.info/" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "拍摄数据", 
+        name: "Open datasets – Erellaz", 
+        url: "https://erellaz.com/moana/open-datasets/" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "气象", 
+        name: "历史天气查询", 
+        url: "https://lishi.tianqi.com/" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "气象", 
+        name: "OpenWeatherMap", 
+        url: "https://openweathermap.org/api" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "数据库", 
+        name: "国内外主要天文数据中心", 
+        url: "https://astro.bnu.edu.cn/Computational_Astronomy/html/7ziyuan/1canshu/canshu.htm" 
+      },
+      { 
+        category: "数据", 
+        subcategory: "数据库", 
+        name: "国家天文科学数据中心", 
+        url: "https://nadc.china-vo.org/data/" 
+      }
+    ],
+    forums: [
+      { 
+        category: "天文论坛", 
+        subcategory: "论坛", 
+        name: "牧夫网", 
+        url: "https://bbs.imufu.cn/" 
+      },
+      { 
+        category: "天文论坛", 
+        subcategory: "论坛", 
+        name: "PixInsight官方社区", 
+        url: "https://pixinsight.com/forum/index.php" 
+      }
+    ],
+    observatories: [
+      { 
+        category: "天文台", 
+        subcategory: "租赁", 
+        name: "Telescope Live天文台租赁", 
+        url: "https://app.telescope.live/login" 
+      }
+    ],
+    beginners: [
+      { 
+        category: "新手", 
+        subcategory: "教程", 
+        name: "QHYCCD天文摄影小站", 
+        url: "https://www.bilibili.com/opus/679310616214634529?spm_id_from=333.999.0.0" 
+      },
+      { 
+        category: "新手", 
+        subcategory: "教程", 
+        name: "拉近几十亿公里！普通人用天文望远镜能拍到什么？", 
+        url: "https://www.bilibili.com/video/BV1y84y147YW/?spm_id_from=333.1387.favlist.content.click" 
+      }
+    ],
+    hardware: [
+      { 
+        category: "硬件", 
+        subcategory: "冷冻相机", 
+        name: "QHYCCD", 
+        url: "https://www.qhyccd.cn/" 
+      },
+      { 
+        category: "硬件", 
+        subcategory: "冷冻相机", 
+        name: "图谱天文", 
+        url: "https://www.touptek-astro.com.cn/" 
+      },
+      { 
+        category: "硬件", 
+        subcategory: "冷冻相机", 
+        name: "fkzwo", 
+        url: "https://www.zwoastro.cn/" 
+      },
+      { 
+        category: "硬件", 
+        subcategory: "望远镜", 
+        name: "锐星光学", 
+        url: "https://www.sharpstar-optics.com/" 
+      },
+      { 
+        category: "硬件", 
+        subcategory: "望远镜", 
+        name: "裕众光学", 
+        url: "http://www.sky-rover.cn/projectlist.asp?LarCode=%D4%CB%B6%AF-%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5&Midcode=%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5" 
+      },
+      { 
+        category: "硬件", 
+        subcategory: "望远镜", 
+        name: "Sky-Watcher", 
+        url: "https://www.skywatcher.com/" 
+      }
+    ],
+    games: [
+      { 
+        category: "游戏", 
+        subcategory: "模拟器", 
+        name: "SPACEX 国际空间站对接模拟器", 
+        url: "https://iss-sim.spacex.com/" 
+      }
+    ],
+    resources: [
+      { 
+        category: "资源", 
+        subcategory: "地图", 
+        name: "虚拟天文馆", 
+        url: "https://stellarium.org/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "资源", 
+        name: "siril后期软件", 
+        url: "https://siril.org/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "资源", 
+        name: "siril教程", 
+        url: "https://siril.org/tutorials/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "DIY", 
+        name: "带充电宝功能的便携显示器", 
+        url: "https://github.com/peng-zhihui/PocketLCD" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "测评", 
+        name: "滤镜比较", 
+        url: "https://www.researchgate.net/profile/James-Thompson-32" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "教程", 
+        name: "PC移动热点", 
+        url: "https://blog.csdn.net/qq_36349997/article/details/140780453" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "开源项目", 
+        name: "QHYCCD-QUARCS", 
+        url: "https://github.com/QHYCCD-QUARCS" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "欣赏", 
+        name: "ESA/Hubble图片", 
+        url: "https://esahubble.org/images/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "欣赏", 
+        name: "喷气推进实验室", 
+        url: "https://www.spitzer.caltech.edu/images" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "欣赏", 
+        name: "高分辨率成像科学实验", 
+        url: "https://www.uahirise.org/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "欣赏", 
+        name: "In-The-Sky.org", 
+        url: "https://in-the-sky.org/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "资源", 
+        name: "Nighttime Imaging 'N' Astronomy", 
+        url: "https://nighttime-imaging.eu/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "资源", 
+        name: "TheSky Astronomy Software", 
+        url: "https://www.bisque.com/product-category/software/" 
+      },
+      { 
+        category: "资源", 
+        subcategory: "资源", 
+        name: "Astroberry Server", 
+        url: "https://www.astroberry.io/" 
+      }
+    ]
+  };
+  
+  // Function to get translated category name
+  const getTranslatedCategory = (category: string): string => {
+    switch (category) {
+      case 'software': return language === 'en' ? "Software & Tools" : "软件和工具";
+      case 'maps': return language === 'en' ? "Maps & Charts" : "地图和星图";
+      case 'weather': return language === 'en' ? "Weather Resources" : "气象资源";
+      case 'data': return language === 'en' ? "Data Resources" : "数据资源";
+      case 'forums': return language === 'en' ? "Forums & Communities" : "论坛和社区";
+      case 'observatories': return language === 'en' ? "Observatories" : "天文台";
+      case 'beginners': return language === 'en' ? "Beginner Guides" : "新手指南";
+      case 'hardware': return language === 'en' ? "Hardware" : "硬件";
+      case 'games': return language === 'en' ? "Simulations & Games" : "模拟和游戏";
+      case 'resources': return language === 'en' ? "Other Resources" : "其他资源";
+      default: return category;
+    }
+  };
+  
+  // Function to get translated name if available
+  const getTranslatedResourceName = (resource: any): string => {
+    // For simplicity, we're not implementing full translations for all resources
+    // Just returning the original name
+    return resource.name;
+  };
   
   return (
     <div className="min-h-screen">
@@ -221,6 +614,54 @@ const AboutSIQS = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+        
+        {/* Useful Links Section */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">
+            {t("Useful Astrophotography Resources", "天文摄影资源")}
+          </h2>
+          
+          <Tabs defaultValue="software" className="w-full">
+            <TabsList className="grid grid-cols-2 md:grid-cols-5 mb-6">
+              <TabsTrigger value="software">{t("Software & Tools", "软件与工具")}</TabsTrigger>
+              <TabsTrigger value="hardware">{t("Hardware", "硬件")}</TabsTrigger>
+              <TabsTrigger value="data">{t("Data Resources", "数据资源")}</TabsTrigger>
+              <TabsTrigger value="maps">{t("Maps & Charts", "地图与星图")}</TabsTrigger>
+              <TabsTrigger value="resources">{t("Other Resources", "其他资源")}</TabsTrigger>
+            </TabsList>
+            
+            {Object.entries(resources).map(([category, items]) => (
+              <TabsContent key={category} value={category} className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{getTranslatedCategory(category)}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {items.map((resource, index) => (
+                        <a 
+                          key={index} 
+                          href={resource.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="p-3 bg-cosmic-800/20 rounded-lg hover:bg-cosmic-700/30 transition-colors group flex flex-col"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-primary">{resource.subcategory}</span>
+                            <ExternalLink size={14} className="text-cosmic-400 group-hover:text-primary transition-colors" />
+                          </div>
+                          <h3 className="font-medium group-hover:text-primary transition-colors">
+                            {getTranslatedResourceName(resource)}
+                          </h3>
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
       </main>
     </div>
