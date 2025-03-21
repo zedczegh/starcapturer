@@ -13,6 +13,7 @@ import {
 } from "@/utils/conditionReminderUtils";
 import { getAverageForecastSIQS } from "@/utils/nighttimeSIQS";
 import { getProgressColorClass } from "./siqs/utils/progressColor";
+import { motion } from "framer-motion";
 
 interface SIQSSummaryProps {
   siqsData: {
@@ -175,11 +176,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
 
   // Determine score color class
   const getScoreColorClass = (score: number) => {
-    if (score < 3) return "bg-red-500/10 text-red-400";
-    if (score < 5) return "bg-orange-500/10 text-orange-400";
-    if (score < 7) return "bg-yellow-500/10 text-yellow-400";
-    if (score < 9) return "bg-green-500/10 text-green-400";
-    return "bg-blue-500/10 text-blue-400";
+    if (score < 3) return "bg-red-500/10 text-red-400 border-red-500/30";
+    if (score < 5) return "bg-orange-500/10 text-orange-400 border-orange-500/30";
+    if (score < 7) return "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
+    if (score < 9) return "bg-green-500/10 text-green-400 border-green-500/30";
+    return "bg-blue-500/10 text-blue-400 border-blue-500/30";
   };
 
   // Get appropriate score label
@@ -198,75 +199,123 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
   // Get the progress bar color class
   const progressClass = getProgressColorClass(scoreOn10Scale);
   
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        staggerChildren: 0.1, 
+        delayChildren: 0.1,
+        duration: 0.4
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+  
   return (
-    <Card className="shadow-md border-cosmic-700/30 hover:border-cosmic-600/60 transition-all duration-300">
-      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-        <h2 className="text-xl font-semibold text-gradient-blue">
-          {t("SIQS Analysis", "SIQS分析")}
-        </h2>
-      </CardHeader>
-      <CardContent className="p-4">
-        {/* Score Display */}
-        <div className="flex items-center justify-center mb-4">
-          <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(scoreOn10Scale)} transition-all duration-300 hover:scale-105`}>
-            <div className="text-4xl font-bold mb-1">{scoreOn10Scale.toFixed(1)}</div>
-            <div className="text-sm font-medium">{getScoreLabel(scoreOn10Scale)}</div>
-          </div>
-        </div>
-        
-        {/* Recommendation message */}
-        <p className="text-center mb-4 italic text-sm">
-          {getRecommendationMessage(scoreOn10Scale, language as 'en' | 'zh')}
-        </p>
-        
-        {/* Bar visualization */}
-        <div className="mb-6">
-          <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden">
-            <div 
-              className={progressClass}
-              style={{ 
-                width: `${scoreOn10Scale * 10}%`, 
-                height: '100%',
-                transition: 'width 0.5s ease-in-out'
-              }}
-            />
-          </div>
-          <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-            <span>{t("Poor", "差")}</span>
-            <span>{t("Average", "一般")}</span>
-            <span>{t("Excellent", "优秀")}</span>
-          </div>
-        </div>
-        
-        {/* Factors list */}
-        {siqsData.factors && siqsData.factors.length > 0 && (
-          <SIQSFactorsList factors={siqsData.factors} />
-        )}
-        
-        {/* Reminders Section */}
-        {reminders.length > 0 && (
-          <div className="mt-4 bg-cosmic-800/20 rounded-lg p-3">
-            <div className="flex items-center text-sm text-amber-400 mb-2">
-              <AlertCircle size={16} className="mr-1" />
-              <span>{t("Viewing Condition Reminders", "观测条件提示")}</span>
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <Card className="shadow-md border-cosmic-700/30 hover:border-cosmic-600/60 transition-all duration-300 backdrop-blur-sm">
+        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
+          <h2 className="text-xl font-semibold text-gradient-blue">
+            {t("SIQS Analysis", "SIQS分析")}
+          </h2>
+        </CardHeader>
+        <CardContent className="p-4 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
+          {/* Score Display */}
+          <motion.div 
+            className="flex items-center justify-center mb-4"
+            variants={itemVariants}
+          >
+            <div className={`flex flex-col items-center px-8 py-4 rounded-lg ${getScoreColorClass(scoreOn10Scale)} border transition-all duration-300 hover:scale-105 shadow-lg`}>
+              <div className="text-4xl font-bold mb-1">{scoreOn10Scale.toFixed(1)}</div>
+              <div className="text-sm font-medium">{getScoreLabel(scoreOn10Scale)}</div>
             </div>
-            <ul className="space-y-2 text-sm">
-              {reminders.map((reminder, index) => (
-                <li key={index} className="flex flex-col">
-                  <span className="flex items-center">
-                    <InfoIcon size={12} className="mr-1 text-blue-400" />
-                    <span className="font-medium">{reminder.condition}</span>
-                    <span className="mx-1 text-muted-foreground">|</span>
-                    <span className="text-yellow-400">{reminder.threshold}</span>
-                  </span>
-                  <p className="ml-4 text-gray-300 text-xs">{reminder.advice}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          </motion.div>
+          
+          {/* Recommendation message */}
+          <motion.p 
+            className="text-center mb-4 italic text-sm"
+            variants={itemVariants}
+          >
+            {getRecommendationMessage(scoreOn10Scale, language as 'en' | 'zh')}
+          </motion.p>
+          
+          {/* Bar visualization */}
+          <motion.div 
+            className="mb-6"
+            variants={itemVariants}
+          >
+            <div className="w-full h-3 bg-cosmic-800/50 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className={`${progressClass} h-full transition-all duration-500 ease-out shadow-lg`}
+                style={{ 
+                  width: `${scoreOn10Scale * 10}%`, 
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+              <span>{t("Poor", "差")}</span>
+              <span>{t("Average", "一般")}</span>
+              <span>{t("Excellent", "优秀")}</span>
+            </div>
+          </motion.div>
+          
+          {/* Factors list */}
+          <motion.div variants={itemVariants}>
+            {siqsData.factors && siqsData.factors.length > 0 && (
+              <SIQSFactorsList factors={siqsData.factors} />
+            )}
+          </motion.div>
+          
+          {/* Reminders Section */}
+          {reminders.length > 0 && (
+            <motion.div 
+              className="mt-4 bg-cosmic-800/30 rounded-lg p-3 border border-cosmic-700/30 shadow-inner"
+              variants={itemVariants}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="flex items-center text-sm text-amber-400 mb-2">
+                <AlertCircle size={16} className="mr-1" />
+                <span>{t("Viewing Condition Reminders", "观测条件提示")}</span>
+              </div>
+              <ul className="space-y-2 text-sm">
+                {reminders.map((reminder, index) => (
+                  <motion.li 
+                    key={index} 
+                    className="flex flex-col p-2 rounded bg-cosmic-800/40 hover:bg-cosmic-800/50 transition-colors"
+                    initial={{ opacity: 0, x: -5 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * index + 0.4 }}
+                  >
+                    <span className="flex items-center">
+                      <InfoIcon size={12} className="mr-1 text-blue-400" />
+                      <span className="font-medium">{reminder.condition}</span>
+                      <span className="mx-1 text-muted-foreground">|</span>
+                      <span className="text-yellow-400">{reminder.threshold}</span>
+                    </span>
+                    <p className="ml-4 text-gray-300 text-xs mt-1">{reminder.advice}</p>
+                  </motion.li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

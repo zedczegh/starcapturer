@@ -8,6 +8,7 @@ import {
 } from "../utils/factorTranslations";
 import { getProgressColor } from "../utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { motion } from "framer-motion";
 
 interface FactorItemProps {
   factor: {
@@ -46,13 +47,16 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   
   // Memoize the progress custom style
   const progressStyle = useMemo(() => ({
-    '--progress-background': memoizedValues.progressColor,
+    backgroundColor: memoizedValues.progressColor,
   } as React.CSSProperties), [memoizedValues.progressColor]);
   
   return (
-    <div 
-      className="p-3 rounded-lg bg-cosmic-800/40 hover:bg-cosmic-800/50 transition-colors border border-cosmic-600/20 shadow-md animate-fade-in-up"
-      style={animationStyle}
+    <motion.div 
+      className="p-3 rounded-lg bg-cosmic-800/40 hover:bg-cosmic-800/60 transition-colors border border-cosmic-600/20 shadow-md"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
     >
       <div className="flex items-center justify-between mb-1">
         <h4 className="font-medium">{memoizedValues.translatedName}</h4>
@@ -63,14 +67,14 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
       
       <Progress 
         value={factor.score} 
-        className="h-2 bg-cosmic-700/40 animate-enter"
+        className="h-2 bg-cosmic-700/40"
         style={progressStyle}
       />
       
       <p className="text-xs text-muted-foreground mt-2">
         {memoizedValues.translatedDescription}
       </p>
-    </div>
+    </motion.div>
   );
 };
 

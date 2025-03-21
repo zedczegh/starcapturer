@@ -1,5 +1,5 @@
 
-import React, { memo, lazy, Suspense, useEffect, useCallback } from "react";
+import React, { memo, lazy, Suspense, useEffect, useCallback, useRef } from "react";
 import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
@@ -21,6 +21,9 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   onLocationUpdate
 }) => {
   const { t } = useLanguage();
+  const lastLocationRef = useRef<string>('');
+  const refreshTimerRef = useRef<number | null>(null);
+  
   const {
     forecastData,
     longRangeForecast,
@@ -63,6 +66,35 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       updateSIQSWithNighttimeData();
     }
   }, [forecastData, updateSIQSWithNighttimeData]);
+  
+  // Auto-refresh when page is opened or location is updated
+  useEffect(() => {
+    // Create a location signature to detect changes
+    const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
+    
+    // If location has changed or component just mounted, refresh data
+    if (locationSignature !== lastLocationRef.current) {
+      lastLocationRef.current = locationSignature;
+      
+      // Clear any existing timer
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+      
+      // Set a small delay before refreshing to allow component to fully mount
+      refreshTimerRef.current = window.setTimeout(() => {
+        console.log("Auto-refreshing data after location update");
+        handleRefreshAll();
+      }, 500);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [locationData?.latitude, locationData?.longitude, handleRefreshAll]);
 
   // Log updates for debugging
   useEffect(() => {

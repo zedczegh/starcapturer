@@ -23,9 +23,10 @@ const Progress = React.forwardRef<
       className="h-full w-full flex-1 transition-all duration-700 ease-in-out"
       style={{ 
         transform: `translateX(-${100 - (value || 0)}%)`,
-        backgroundColor: style && style['--progress-background'] ? 
-          style['--progress-background'] as string : 
-          'var(--primary)'
+        backgroundColor: style?.backgroundColor || 
+          (style && '--progress-background' in style ? 
+            style['--progress-background'] as string : 
+            'var(--primary)')
       }}
     />
   </ProgressPrimitive.Root>

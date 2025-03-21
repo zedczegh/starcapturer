@@ -1,6 +1,6 @@
 
 import React, { useMemo } from "react";
-import { Progress } from "../ui/progress";
+import { Progress } from "@/components/ui/progress";
 import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -49,7 +49,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   
   // Custom style for progress bar
   const progressStyle = useMemo(() => ({
-    '--progress-background': memoizedValues.progressColor,
+    backgroundColor: memoizedValues.progressColor,
   } as React.CSSProperties), [memoizedValues.progressColor]);
   
   return (

@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy, useEffect } from "react";
+import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import PageLoader from "@/components/loaders/PageLoader";
@@ -9,6 +9,7 @@ import { prefetchLocationData } from "@/lib/queryPrefetcher";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 import { isInChina } from "@/utils/chinaBortleData";
+import { toast } from "sonner";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -21,6 +22,7 @@ const LocationDetails = () => {
   const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { updateBortleScale } = useBortleUpdater();
+  const initialLoadCompleteRef = useRef(false);
   
   const {
     locationData, 
@@ -50,6 +52,28 @@ const LocationDetails = () => {
       window.removeEventListener('popstate', handleBackNavigation);
     };
   }, [navigate]);
+
+  // Auto-refresh data on mount
+  useEffect(() => {
+    // Ensure this runs only once after the initial data is loaded
+    if (locationData && !isLoading && !initialLoadCompleteRef.current) {
+      initialLoadCompleteRef.current = true;
+      
+      // Notify user that data is being refreshed
+      toast.info("Refreshing location data...", {
+        id: "location-refresh",
+        duration: 2000
+      });
+
+      // Delay before refreshing to ensure components are mounted
+      const timer = setTimeout(() => {
+        console.log("Auto-refreshing on page load");
+        // The handleRefreshAll is called in LocationDetailsContent through useEffect
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [locationData, isLoading]);
 
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
