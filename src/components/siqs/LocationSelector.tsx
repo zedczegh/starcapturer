@@ -14,12 +14,6 @@ interface LocationSelectorProps {
   noAutoLocationRequest?: boolean;
 }
 
-// Define a proper interface for MapSelector props to match with our usage
-interface MapSelectorProps {
-  onSelectLocation: (location: any) => void;
-  onClose: () => void;
-}
-
 const LocationSelector: React.FC<LocationSelectorProps> = ({
   locationName,
   loading,
@@ -27,7 +21,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   onSelectLocation,
   noAutoLocationRequest = false
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const autoLocationTriggered = useRef(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   
@@ -74,6 +68,10 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     );
   };
   
+  const handleCloseMap = () => {
+    setIsMapOpen(false);
+  };
+  
   return (
     <div className="flex flex-col space-y-3 relative z-10">
       <Button 
@@ -91,8 +89,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         {loading ? (
           <div className="flex items-center">
             <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />
-            {/* Add loading text in Chinese if needed */}
-            {t === "zh" && <span>加载中</span>}
+            {language === "zh" && <span>加载中</span>}
           </div>
         ) : (
           <MapPin className="mr-2 h-4 w-4" />
@@ -125,13 +122,13 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
             <div className="h-[60vh]">
               <MapSelector 
                 onSelectLocation={handleLocationSelected}
-                onClose={() => setIsMapOpen(false)}
+                onClose={handleCloseMap}
               />
             </div>
             <div className="p-4 border-t border-cosmic-700 flex justify-end">
               <Button 
                 variant="outline"
-                onClick={() => setIsMapOpen(false)}
+                onClick={handleCloseMap}
                 className="mr-2"
               >
                 {t("Cancel", "取消")}

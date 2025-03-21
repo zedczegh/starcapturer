@@ -20,8 +20,8 @@ export interface SharedAstroSpot {
   photographer?: string;
   targets?: string[];
   isViable?: boolean;
-  timestamp: string; // Changed from optional to required
-  chineseName?: string; // Added to match usage in RecommendedPhotoPoints.tsx
+  timestamp: string;
+  chineseName?: string;
 }
 
 /**
@@ -181,6 +181,7 @@ export async function getSharedAstroSpots(
         id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
         description: `Astronomical observation location with Bortle ${location.bortleScale}`,
         date: new Date().toISOString(),
+        timestamp: new Date().toISOString(), // Add the required timestamp
         distance,
         chineseName: chineseNames[location.name] || location.name
       };
@@ -216,3 +217,4 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number, name: 
   const encodedName = encodeURIComponent(name);
   return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }
+
