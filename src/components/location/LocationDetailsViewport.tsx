@@ -30,6 +30,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const { language, t } = useLanguage();
   const { loading, handleRefreshAll } = useWeatherUpdater();
+  const containerRef = useRef<HTMLDivElement>(null);
   const initialRefreshDone = useRef(false);
   
   const {
@@ -42,6 +43,23 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
 
+  // Handle forced refresh from parent component
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const handleForceRefresh = () => {
+      console.log("Force refresh triggered from parent component");
+      handleRefresh();
+    };
+    
+    container.addEventListener('forceRefresh', handleForceRefresh);
+    
+    return () => {
+      container.removeEventListener('forceRefresh', handleForceRefresh);
+    };
+  }, [locationData]);
+
   // Automatically click refresh once when the page loads
   useEffect(() => {
     // Only run once after component mounts
@@ -52,7 +70,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       const timer = setTimeout(() => {
         console.log("Auto-refreshing location details on page load");
         handleRefresh();
-      }, 800);
+      }, 500);
       
       return () => clearTimeout(timer);
     }
@@ -71,7 +89,9 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage]);
 
   return (
-    <div className="min-h-screen bg-cosmic-950 animate-fade-in">
+    <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 
+         ref={containerRef} 
+         data-refresh-trigger>
       {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
       
       {/* Add top padding to create space for the navbar */}
@@ -83,7 +103,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             replace={true}
             variant="secondary"
             size="sm"
-            className="hover:bg-primary/20 transition-colors duration-300"
+            className="hover:bg-primary/20 transition-colors duration-300 hover:opacity-90"
           />
         </div>
         
@@ -114,7 +134,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
           </div>
         )}
         
-        <div className="container mx-auto px-4 pb-24 pt-4">
+        <div className="container mx-auto px-4 pb-24 pt-4 backdrop-blur-sm bg-cosmic-950/50 rounded-lg shadow-lg">
           <LocationContentGrid
             locationData={locationData}
             forecastData={forecastData}

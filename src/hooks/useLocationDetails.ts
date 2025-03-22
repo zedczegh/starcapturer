@@ -2,11 +2,13 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
+import { clearForecastCache } from "./siqs/forecastFetcher";
 
 export const useLocationDetails = (locationData: any, setLocationData: (data: any) => void) => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const initialLoadCompleteRef = useRef(false);
+  const lastLocationRef = useRef<string | null>(null);
   
   const { 
     forecastData, 
@@ -15,7 +17,8 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     longRangeLoading,
     setForecastData,
     handleRefreshForecast: refreshForecast,
-    handleRefreshLongRangeForecast: refreshLongRange
+    handleRefreshLongRangeForecast: refreshLongRange,
+    weatherAlerts
   } = useForecastManager(locationData);
   
   const {
@@ -25,6 +28,21 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     updateLightPollutionData
   } = useWeatherUpdater();
 
+  // Check if location has changed to reset cache and trigger a fresh update
+  useEffect(() => {
+    if (!locationData) return;
+    
+    const currentLocation = `${locationData.latitude?.toFixed(4)}-${locationData.longitude?.toFixed(4)}`;
+    
+    if (lastLocationRef.current && lastLocationRef.current !== currentLocation) {
+      console.log("Location changed, clearing forecast cache");
+      clearForecastCache(); // Clear cache when location changes
+      initialLoadCompleteRef.current = false; // Reset to trigger a refresh
+    }
+    
+    lastLocationRef.current = currentLocation;
+  }, [locationData?.latitude, locationData?.longitude]);
+
   // Auto-refresh data on initial mount
   useEffect(() => {
     // Only run once and only if we have locationData
@@ -33,9 +51,10 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
       
       // Set a slight delay to ensure all components are mounted
       const timer = setTimeout(() => {
+        console.log("Auto-refreshing on initial load");
         handleRefreshAll();
         initialLoadCompleteRef.current = true;
-      }, 500);
+      }, 300); // Reduced delay for faster response
       
       return () => clearTimeout(timer);
     }
@@ -44,6 +63,9 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   // Memoized wrapper functions
   const handleRefreshForecast = useCallback(() => {
     if (!locationData) return;
+    
+    // Clear the cache for this specific location to force a fresh fetch
+    clearForecastCache(locationData.latitude, locationData.longitude);
     refreshForecast(locationData.latitude, locationData.longitude);
   }, [locationData, refreshForecast]);
 
@@ -78,6 +100,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     handleRefreshForecast,
     handleRefreshLongRangeForecast,
     setLoading,
-    setForecastData
+    setForecastData,
+    weatherAlerts
   };
 };

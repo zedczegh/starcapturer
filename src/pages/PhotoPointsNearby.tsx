@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation } from "lucide-react";
@@ -12,6 +13,7 @@ import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
 import { toast } from "sonner";
+import { DEEP_SPACE_BG } from "@/assets";
 
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
@@ -47,7 +49,7 @@ const CurrentLocationDisplay = ({ coords, loading }: {
         name={t("Current Location", "当前位置")}
         variant="ghost"
         size="icon"
-        className="h-5 w-5 rounded-full hover:bg-cosmic-700/50 ml-1 p-0"
+        className="h-5 w-5 rounded-full hover:bg-cosmic-700/50 hover:opacity-90 ml-1 p-0 transition-all duration-300"
       />
     </motion.div>
   );
@@ -138,16 +140,17 @@ const PhotoPointsNearby: React.FC = () => {
         name: locationName || t("Current Location", "当前位置"),
         latitude: coords.latitude,
         longitude: coords.longitude,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true // Add flag to indicate we're coming from PhotoPoints
       }
     });
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900">
+    <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-[url('/src/assets/deep-space-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
       <NavBar />
       
-      <div className="container mx-auto px-4 pt-24 pb-16">
+      <div className="container mx-auto px-4 pt-24 pb-16 backdrop-blur-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -161,7 +164,7 @@ const PhotoPointsNearby: React.FC = () => {
             {coords && (
               <Button 
                 variant="outline" 
-                className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 text-sm h-9"
+                className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 text-sm h-9 transition-all duration-300"
                 onClick={handleViewCurrentLocation}
               >
                 <Telescope className="h-4 w-4 mr-2" />
@@ -170,7 +173,7 @@ const PhotoPointsNearby: React.FC = () => {
             )}
             
             <Link to="/share">
-              <Button className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20 text-sm h-9">
+              <Button className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20 hover:opacity-90 text-sm h-9 transition-all duration-300">
                 <MapPin className="h-4 w-4 mr-2" />
                 {t("Share Location", "分享位置")}
               </Button>
@@ -353,7 +356,7 @@ const PhotoPointsNearby: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={loadMoreLocations}
-              className="group sci-fi-btn border-primary/40 hover:bg-cosmic-800/50"
+              className="group sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 transition-all duration-300"
             >
               {t("Load More Locations", "加载更多位置")}
               <Rocket className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />

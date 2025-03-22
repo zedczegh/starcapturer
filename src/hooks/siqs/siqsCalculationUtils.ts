@@ -22,7 +22,7 @@ export async function calculateSIQSWithWeatherData(
   forecastData: any | null
 ): Promise<any> {
   // First try to calculate SIQS using nighttime forecast data
-  if (forecastData) {
+  if (forecastData && forecastData.hourly) {
     try {
       const locationWithWeather = {
         weatherData,
@@ -54,4 +54,26 @@ export async function calculateSIQSWithWeatherData(
     weatherCondition: weatherData.weatherCondition,
     aqi: weatherData.aqi
   });
+}
+
+/**
+ * Get descriptive text for SIQS score
+ */
+export function getSIQSDescription(score: number): string {
+  if (score >= 8) return "Excellent";
+  if (score >= 6) return "Good";  
+  if (score >= 4) return "Average";
+  if (score >= 2) return "Poor";
+  return "Bad";
+}
+
+/**
+ * Get CSS color class for SIQS score
+ */
+export function getSIQSColorClass(score: number): string {
+  if (score >= 8) return "bg-green-500/80";
+  if (score >= 6) return "bg-blue-500/80";
+  if (score >= 4) return "bg-yellow-500/80";
+  if (score >= 2) return "bg-orange-500/80";
+  return "bg-red-500/80";
 }

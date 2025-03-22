@@ -50,7 +50,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const handleViewDetails = () => {
     navigate(`/location/${location.id}`, {
       state: {
-        ...location
+        ...location,
+        fromPhotoPoints: true // Add flag to indicate we're coming from PhotoPoints
       }
     });
   };
@@ -110,7 +111,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="text-primary hover:text-primary-focus hover:bg-cosmic-800/70"
+            className="text-primary hover:text-primary-focus hover:bg-cosmic-800/70 hover:opacity-90 transition-all duration-300"
             onClick={handleViewDetails}
           >
             <Eye className="h-4 w-4 mr-1.5" />
@@ -121,7 +122,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary hover:text-primary-focus hover:bg-cosmic-800/70"
+              className="text-primary hover:text-primary-focus hover:bg-cosmic-800/70 hover:opacity-90 transition-all duration-300"
               onClick={() => onSelect(location)}
             >
               {t("Select", "选择")}

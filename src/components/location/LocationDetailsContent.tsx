@@ -24,6 +24,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const lastLocationRef = useRef<string>('');
   const refreshTimerRef = useRef<number | null>(null);
   const autoRefreshAttemptedRef = useRef<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const {
     forecastData,
@@ -61,6 +62,25 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     }
   }, [forecastData, locationData, setLocationData, t]);
 
+  // Listen for parent component requesting a refresh
+  useEffect(() => {
+    const handleForceRefresh = () => {
+      console.log("Force refresh request received from parent");
+      handleRefreshAll();
+    };
+    
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('forceRefresh', handleForceRefresh);
+    }
+    
+    return () => {
+      if (container) {
+        container.removeEventListener('forceRefresh', handleForceRefresh);
+      }
+    };
+  }, [handleRefreshAll]);
+
   // Calculate SIQS immediately when forecast data changes
   useEffect(() => {
     if (forecastData && forecastData.hourly) {
@@ -72,9 +92,13 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   useEffect(() => {
     // Create a location signature to detect changes
     const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
+    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
     
-    // If location has changed or component just mounted, refresh data
-    if ((locationSignature !== lastLocationRef.current) || !autoRefreshAttemptedRef.current) {
+    // If location has changed or coming from PhotoPoints, refresh data
+    if (locationSignature !== lastLocationRef.current || 
+        fromPhotoPoints || 
+        !autoRefreshAttemptedRef.current) {
+      
       lastLocationRef.current = locationSignature;
       autoRefreshAttemptedRef.current = true;
       
@@ -87,6 +111,14 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       refreshTimerRef.current = window.setTimeout(() => {
         console.log("Auto-refreshing data after location update or page load");
         handleRefreshAll();
+        
+        // Reset the fromPhotoPoints flag after refreshing
+        if (fromPhotoPoints && locationData) {
+          setLocationData({
+            ...locationData,
+            fromPhotoPoints: false
+          });
+        }
       }, 300); // Reduced from 500ms for faster refresh
     }
     
@@ -96,10 +128,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         window.clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [locationData?.latitude, locationData?.longitude, handleRefreshAll]);
+  }, [locationData, handleRefreshAll, setLocationData]);
 
   return (
-    <div className="transition-all duration-300 animate-fade-in">
+    <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 

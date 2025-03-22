@@ -10,16 +10,18 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
   const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
   
   try {
-    // Try to use cached data from sessionStorage if it's fresh (less than 30 minutes old)
+    // Try to use cached data from sessionStorage if it's fresh (less than 15 minutes old - reduced from 30 min for fresher data)
     const cachedData = sessionStorage.getItem(cacheKey);
     if (cachedData) {
       const { data, timestamp } = JSON.parse(cachedData);
       const cacheAge = Date.now() - timestamp;
       
-      // Use cache if it's less than 30 minutes old
-      if (cacheAge < 30 * 60 * 1000) {
+      // Use cache if it's less than 15 minutes old
+      if (cacheAge < 15 * 60 * 1000) {
         console.log("Using cached forecast data");
         return data;
+      } else {
+        console.log("Cache is stale, fetching fresh forecast data");
       }
     }
     
@@ -38,6 +40,9 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
           data: forecastData,
           timestamp: Date.now()
         }));
+        
+        // Store reference to last fetched location for faster lookup
+        sessionStorage.setItem('last_forecast_location', `${lat.toFixed(4)}-${lng.toFixed(4)}`);
       } catch (e) {
         console.error("Failed to cache forecast data:", e);
       }
@@ -48,5 +53,29 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
   } catch (error) {
     console.error("Error fetching forecast data for SIQS calculation:", error);
     return null; // Continue with current weather if forecast fails
+  }
+}
+
+/**
+ * Clear forecast cache for specific location or all locations
+ */
+export function clearForecastCache(lat?: number, lng?: number): void {
+  try {
+    if (lat !== undefined && lng !== undefined) {
+      // Clear specific location
+      const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+      sessionStorage.removeItem(cacheKey);
+    } else {
+      // Clear all forecast cache entries
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('forecast-')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      // Also clear the last location reference
+      sessionStorage.removeItem('last_forecast_location');
+    }
+  } catch (error) {
+    console.error("Error clearing forecast cache:", error);
   }
 }
