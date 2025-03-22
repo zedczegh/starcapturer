@@ -78,7 +78,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       
       <Progress
         value={siqsScore * 10}
-        className="h-3 my-2 bg-cosmic-800/50"
+        className="h-3 my-2 bg-cosmic-800/40"
         style={progressStyle}
       />
       
@@ -105,10 +105,11 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
             siqsResult: {
               score: memoizedValues.displayScore
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            fromCalculator: true // Add a flag to indicate source
           }}
         >
-          <Button size="sm" className="bg-primary/90 hover:bg-primary text-primary-foreground">
+          <Button size="sm" className="bg-primary/80 hover:bg-primary/90 text-primary-foreground transition-all duration-300 hover:shadow-md">
             {t("See More Details", "查看更多详情")}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>

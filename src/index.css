@@ -70,8 +70,26 @@
     background-color: var(--red-500);
   }
   
-  /* Glass card styling */
+  /* Glass card styling with enhanced transparency */
   .glass-card {
     @apply bg-cosmic-800/30 backdrop-blur-sm border border-cosmic-700/30 rounded-lg;
+  }
+  
+  /* Add glassmorphism utility classes */
+  .glassmorphism {
+    @apply bg-cosmic-800/40 backdrop-blur-sm border border-cosmic-700/30;
+  }
+  
+  .glassmorphism-strong {
+    @apply bg-cosmic-800/60 backdrop-blur-md border border-cosmic-700/40;
+  }
+  
+  .glassmorphism-light {
+    @apply bg-cosmic-800/20 backdrop-blur-sm border border-cosmic-700/20;
+  }
+  
+  /* Cosmic glow styles for better visual effects */
+  .bg-cosmic-glow {
+    background: radial-gradient(circle, rgba(138, 43, 226, 0.3), rgba(25, 25, 112, 0.1));
   }
 }

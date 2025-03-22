@@ -4,11 +4,12 @@ import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 
 /**
  * Ensure SIQS score is always on a 0-10 scale
+ * Optimized for better precision
  */
 export const normalizeScore = (score: number): number => {
-  if (score <= 0) return 0;
-  if (score <= 10) return score;
-  return score / 10;
+  if (score < 0) return 0;
+  if (score <= 10) return Math.max(0, Math.min(10, score)); // Ensure it's within 0-10 range
+  return Math.round((score / 10) * 10) / 10; // Round to 1 decimal place if it's over 10
 };
 
 /**
@@ -76,4 +77,19 @@ export function getSIQSColorClass(score: number): string {
   if (score >= 4) return "bg-yellow-500/80";
   if (score >= 2) return "bg-orange-500/80";
   return "bg-red-500/80";
+}
+
+/**
+ * Determine if viewing conditions are good for astrophotography
+ */
+export function isGoodViewingCondition(score: number): boolean {
+  return score >= 6.0;
+}
+
+/**
+ * Format SIQS score for display with consistent decimal places
+ */
+export function formatSIQSScoreForDisplay(score: number): string {
+  // Always show one decimal place
+  return score.toFixed(1);
 }

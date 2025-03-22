@@ -35,7 +35,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
-  // Check if we have saved location data in localStorage on first mount
   useEffect(() => {
     if (!isMounted) {
       const savedLocation = getSavedLocation();
@@ -46,7 +45,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [isMounted]);
   
-  // Track component mount state to avoid unnecessary effects
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
@@ -58,7 +56,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     bortleScale: localBortleScale,
     setBortleScale: setLocalBortleScale,
     setStatusMessage,
-    setShowAdvancedSettings: () => {}, // This is now handled differently
+    setShowAdvancedSettings: () => {},
     getCachedData,
     setCachedData
   }), [language, noAutoLocationRequest, shouldAutoRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
@@ -76,14 +74,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     handleRecommendedPointSelect
   } = useLocationSelectorState(locationSelectorProps);
 
-  // Parse latitude and longitude for hook usage
   const parsedLatitude = parseFloat(latitude) || 0;
   const parsedLongitude = parseFloat(longitude) || 0;
   
-  // Pass the parsed coordinates to the hook
   const { seeingConditions, bortleScale } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
 
-  // Update local Bortle scale when hook value changes
   useEffect(() => {
     if (bortleScale !== undefined) {
       setLocalBortleScale(bortleScale);
@@ -96,11 +91,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation
   } = useSIQSCalculation(setCachedData, getCachedData);
   
-  // Update location name when language changes
   useEffect(() => {
     if (!isMounted || !latitude || !longitude || !locationName) return;
     
-    // Skip special locations
     if (locationName === "北京" || locationName === "Beijing") return;
     
     const updateLocationNameForLanguage = async () => {
@@ -128,16 +121,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     updateLocationNameForLanguage();
   }, [language, latitude, longitude, locationName, setCachedData, getCachedData, setLocationName, isMounted]);
   
-  // Track calculation state for loading indicator
   useEffect(() => {
     setCalculationInProgress(isCalculating);
   }, [isCalculating]);
   
-  // Save current location to localStorage when it changes
   useEffect(() => {
     if (!isMounted || !locationName || !latitude || !longitude) return;
     
-    // Use the utility function to save location
     saveLocation({
       name: locationName,
       latitude: parseFloat(latitude),
@@ -146,7 +136,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     });
   }, [locationName, latitude, longitude, localBortleScale, isMounted]);
   
-  // Restore saved location on first mount
   useEffect(() => {
     if (!isMounted || noAutoLocationRequest) return;
     
@@ -162,7 +151,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [isMounted, noAutoLocationRequest, locationName, setLocationName, setLatitude, setLongitude]);
   
-  // Memoize the SIQS calculation for better performance
   const calculateSIQS = useCallback(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
@@ -188,7 +176,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
   
-  // Debounced SIQS calculation when inputs change
   useEffect(() => {
     if (!isMounted || !locationName) return;
     
@@ -199,7 +186,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
   
-  // Animation variants for the components
   const animationVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -215,7 +201,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   return (
     <motion.div 
-      className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300`}
+      className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300 bg-cosmic-800/60 backdrop-blur-sm`}
       initial="hidden"
       animate="visible"
       variants={animationVariants}
@@ -264,6 +250,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             <RecommendedPhotoPoints 
               onSelectPoint={handleRecommendedPointSelect}
               userLocation={userLocation}
+              hideEmptyMessage={true}
             />
           </motion.div>
         )}

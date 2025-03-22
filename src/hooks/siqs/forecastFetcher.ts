@@ -2,7 +2,7 @@
 import { fetchForecastData } from "@/lib/api";
 
 /**
- * Optimized forecast data fetcher with caching
+ * Optimized forecast data fetcher with enhanced caching
  * Fetch forecast data for a given location
  */
 export async function fetchForecastForLocation(lat: number, lng: number): Promise<any | null> {
@@ -10,14 +10,14 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
   const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
   
   try {
-    // Try to use cached data from sessionStorage if it's fresh (less than 15 minutes old - reduced from 30 min for fresher data)
+    // Try to use cached data from sessionStorage if it's fresh (less than 10 minutes old - reduced for fresher data)
     const cachedData = sessionStorage.getItem(cacheKey);
     if (cachedData) {
       const { data, timestamp } = JSON.parse(cachedData);
       const cacheAge = Date.now() - timestamp;
       
-      // Use cache if it's less than 15 minutes old
-      if (cacheAge < 15 * 60 * 1000) {
+      // Use cache if it's less than 10 minutes old
+      if (cacheAge < 10 * 60 * 1000) {
         console.log("Using cached forecast data");
         return data;
       } else {
@@ -65,17 +65,45 @@ export function clearForecastCache(lat?: number, lng?: number): void {
       // Clear specific location
       const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
       sessionStorage.removeItem(cacheKey);
+      console.log(`Cleared forecast cache for location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     } else {
       // Clear all forecast cache entries
+      let cacheCleared = 0;
       Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('forecast-')) {
           sessionStorage.removeItem(key);
+          cacheCleared++;
         }
       });
       // Also clear the last location reference
       sessionStorage.removeItem('last_forecast_location');
+      console.log(`Cleared ${cacheCleared} forecast cache entries`);
     }
   } catch (error) {
     console.error("Error clearing forecast cache:", error);
+  }
+}
+
+/**
+ * Get cached forecast data without network request
+ */
+export function getCachedForecast(lat: number, lng: number): any | null {
+  try {
+    const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+    const cachedData = sessionStorage.getItem(cacheKey);
+    
+    if (cachedData) {
+      const { data, timestamp } = JSON.parse(cachedData);
+      const cacheAge = Date.now() - timestamp;
+      
+      // Consider cache valid if less than 30 minutes old
+      if (cacheAge < 30 * 60 * 1000) {
+        return data;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Error retrieving cached forecast:", error);
+    return null;
   }
 }

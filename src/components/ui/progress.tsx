@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> {
   className?: string;
   style?: React.CSSProperties;
-  colorClass?: string; // New prop for Tailwind color classes
+  colorClass?: string; // For Tailwind color classes
 }
 
 const Progress = React.forwardRef<
@@ -17,7 +17,7 @@ const Progress = React.forwardRef<
   <ProgressPrimitive.Root
     ref={ref}
     className={cn(
-      "relative h-4 w-full overflow-hidden rounded-full bg-secondary/60 backdrop-blur-sm",
+      "relative h-4 w-full overflow-hidden rounded-full bg-secondary/40 backdrop-blur-sm",
       className
     )}
     {...props}

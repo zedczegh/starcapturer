@@ -14,12 +14,14 @@ interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
   className?: string;
   userLocation?: { latitude: number; longitude: number } | null;
+  hideEmptyMessage?: boolean;
 }
 
 const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({ 
   onSelectPoint,
   className,
-  userLocation
+  userLocation,
+  hideEmptyMessage = false
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
@@ -94,7 +96,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         latitude: point.latitude,
         longitude: point.longitude,
         bortleScale: point.bortleScale,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true // Add a flag to indicate source
       }
     });
   };
@@ -124,7 +127,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             />
           )}
           <Link to="/photo-points">
-            <Button variant="link" size="sm" className="text-primary px-2 h-7 text-xs">
+            <Button variant="link" size="sm" className="text-primary hover:opacity-80 transition-opacity px-2 h-7 text-xs">
               {t("View All", "查看所有")}
             </Button>
           </Link>
@@ -133,11 +136,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       <div className="grid grid-cols-1 gap-3">
         {recommendedPoints.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            {loading 
-              ? t("Searching for photo points...", "正在搜索拍摄点...")
-              : t("No photo points found near your location.", "在您附近未找到拍摄点。")}
-          </div>
+          !hideEmptyMessage && (
+            <div className="text-center py-6 text-muted-foreground">
+              {loading 
+                ? t("Searching for photo points...", "正在搜索拍摄点...")
+                : t("No photo points found near your location.", "在您附近未找到拍摄点。")}
+            </div>
+          )
         ) : (
           recommendedPoints.map((point) => (
             <div 
@@ -167,7 +172,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="h-6 text-xs px-2 text-primary hover:text-primary-focus"
+                  className="h-6 text-xs px-2 text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleViewDetails(point);
