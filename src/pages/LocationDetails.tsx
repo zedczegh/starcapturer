@@ -53,7 +53,7 @@ const LocationDetails = () => {
     };
   }, [navigate]);
 
-  // Auto-refresh data on mount
+  // Enhanced auto-refresh data on mount with better performance
   useEffect(() => {
     // Ensure this runs only once after the initial data is loaded
     if (locationData && !isLoading && !initialLoadCompleteRef.current) {
@@ -65,11 +65,11 @@ const LocationDetails = () => {
         duration: 2000
       });
 
-      // Delay before refreshing to ensure components are mounted
+      // Reduced delay before refreshing for better performance
       const timer = setTimeout(() => {
         console.log("Auto-refreshing on page load");
         // The handleRefreshAll is called in LocationDetailsContent through useEffect
-      }, 800);
+      }, 300); // Reduced from 800ms for faster refresh
       
       return () => clearTimeout(timer);
     }

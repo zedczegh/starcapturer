@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarRange, Calendar } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,6 +28,12 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("hourly");
   
+  // Memoize tab labels to prevent unnecessary re-renders
+  const tabLabels = useMemo(() => ({
+    hourly: isMobile ? t("Hourly", "小时") : t("Hourly Forecast", "小时预报"),
+    extended: isMobile ? t("15-Day", "15天") : t("15-Day Forecast", "15天预报")
+  }), [isMobile, t]);
+  
   const handleRefreshForecast = useCallback(() => {
     onRefreshForecast();
   }, [onRefreshForecast]);
@@ -36,10 +42,11 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
     onRefreshLongRange();
   }, [onRefreshLongRange]);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
-  };
+  }, []);
   
+  // Only respond to device size changes
   useEffect(() => {
     setActiveTab(activeTab);
   }, [isMobile, activeTab]);
@@ -57,14 +64,14 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
           className="flex items-center gap-2 data-[state=active]:bg-primary/20"
         >
           <Calendar className="h-4 w-4" />
-          {isMobile ? t("Hourly", "小时") : t("Hourly Forecast", "小时预报")}
+          {tabLabels.hourly}
         </TabsTrigger>
         <TabsTrigger 
           value="extended" 
           className="flex items-center gap-2 data-[state=active]:bg-primary/20"
         >
           <CalendarRange className="h-4 w-4" />
-          {isMobile ? t("15-Day", "15天") : t("15-Day Forecast", "15天预报")}
+          {tabLabels.extended}
         </TabsTrigger>
       </TabsList>
       

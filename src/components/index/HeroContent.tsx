@@ -10,7 +10,7 @@ const HeroContent: React.FC = () => {
   const { t } = useLanguage();
   
   return (
-    <div className="container mx-auto px-4 pt-10 pb-36 relative z-10">
+    <div className="container mx-auto px-4 pt-10 pb-24 relative z-10">
       <div className="max-w-2xl mx-auto text-center">
         <Badge variant="outline" className="mb-6 py-1.5 px-6 border-primary/30 bg-primary/10 text-primary pulse-glow">
           <Star className="h-3.5 w-3.5 mr-1" />

@@ -6,12 +6,13 @@ import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
  * Ensure SIQS score is always on a 0-10 scale
  */
 export const normalizeScore = (score: number): number => {
+  if (score <= 0) return 0;
   if (score <= 10) return score;
   return score / 10;
 };
 
 /**
- * Calculate SIQS with weather data
+ * Optimized function to calculate SIQS with weather data
  */
 export async function calculateSIQSWithWeatherData(
   weatherData: any,
@@ -22,17 +23,21 @@ export async function calculateSIQSWithWeatherData(
 ): Promise<any> {
   // First try to calculate SIQS using nighttime forecast data
   if (forecastData) {
-    const locationWithWeather = {
-      weatherData,
-      bortleScale,
-      seeingConditions,
-      moonPhase
-    };
-    
-    const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
-    if (nighttimeSIQS) {
-      console.log("Using nighttime forecast for SIQS calculation:", nighttimeSIQS.score);
-      return nighttimeSIQS;
+    try {
+      const locationWithWeather = {
+        weatherData,
+        bortleScale,
+        seeingConditions,
+        moonPhase
+      };
+      
+      const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
+      if (nighttimeSIQS) {
+        console.log("Using nighttime forecast for SIQS calculation:", nighttimeSIQS.score);
+        return nighttimeSIQS;
+      }
+    } catch (error) {
+      console.error("Error calculating nighttime SIQS:", error);
     }
   }
   

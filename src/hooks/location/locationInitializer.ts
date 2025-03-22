@@ -2,13 +2,13 @@
 import { calculateMoonPhase } from "@/utils/siqsValidation";
 import { fetchWeatherData } from "@/lib/api";
 import { NavigateFunction } from "react-router-dom";
-import { Toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface InitializeLocationDataParams {
   id: string | undefined;
   initialState: any;
   navigate: NavigateFunction;
-  toast: Toast;
+  toast: any; // Fixed the type to avoid the import error
   t: (en: string, zh: string) => string;
   language: string;
   setLocationData: (data: any) => void;
@@ -112,7 +112,7 @@ export async function initializeLocationData({
 async function loadFromLocalStorage(
   id: string,
   setLocationData: (data: any) => void,
-  toast: Toast,
+  toast: any,
   t: (en: string, zh: string) => string,
   navigate: NavigateFunction,
   language: string
@@ -175,7 +175,7 @@ async function loadFromLocalStorage(
  * Show error toast and redirect to home page
  */
 function showErrorAndRedirect(
-  toast: Toast, 
+  toast: any, 
   t: (en: string, zh: string) => string, 
   navigate: NavigateFunction,
   errorEn: string,

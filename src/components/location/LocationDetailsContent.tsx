@@ -23,6 +23,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const { t } = useLanguage();
   const lastLocationRef = useRef<string>('');
   const refreshTimerRef = useRef<number | null>(null);
+  const autoRefreshAttemptedRef = useRef<boolean>(false);
   
   const {
     forecastData,
@@ -67,14 +68,15 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     }
   }, [forecastData, updateSIQSWithNighttimeData]);
   
-  // Auto-refresh when page is opened or location is updated
+  // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
     // Create a location signature to detect changes
     const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
     
     // If location has changed or component just mounted, refresh data
-    if (locationSignature !== lastLocationRef.current) {
+    if ((locationSignature !== lastLocationRef.current) || !autoRefreshAttemptedRef.current) {
       lastLocationRef.current = locationSignature;
+      autoRefreshAttemptedRef.current = true;
       
       // Clear any existing timer
       if (refreshTimerRef.current) {
@@ -83,9 +85,9 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       
       // Set a small delay before refreshing to allow component to fully mount
       refreshTimerRef.current = window.setTimeout(() => {
-        console.log("Auto-refreshing data after location update");
+        console.log("Auto-refreshing data after location update or page load");
         handleRefreshAll();
-      }, 500);
+      }, 300); // Reduced from 500ms for faster refresh
     }
     
     // Cleanup on unmount
@@ -95,13 +97,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       }
     };
   }, [locationData?.latitude, locationData?.longitude, handleRefreshAll]);
-
-  // Log updates for debugging
-  useEffect(() => {
-    console.log("LocationDetailsContent updated with location:", 
-      locationData?.name, locationData?.latitude, locationData?.longitude, 
-      "SIQS score:", locationData?.siqsResult?.score);
-  }, [locationData?.name, locationData?.latitude, locationData?.longitude, locationData?.siqsResult?.score]);
 
   return (
     <div className="transition-all duration-300 animate-fade-in">
