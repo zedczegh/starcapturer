@@ -35,6 +35,14 @@ const Index = () => {
       console.error("Error checking for location restoration:", error);
     }
     
+    // Scroll directly to calculator section on load
+    const calculatorSection = document.getElementById('calculator');
+    if (calculatorSection) {
+      setTimeout(() => {
+        calculatorSection.scrollIntoView({ behavior: 'smooth' });
+      }, 200);
+    }
+    
     // Scroll to section if hash is present in URL
     const hash = window.location.hash;
     if (hash) {
@@ -48,7 +56,7 @@ const Index = () => {
   }, [queryClient]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-cosmic-950">
       <HeroSection />
       <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
       <ScienceSection />

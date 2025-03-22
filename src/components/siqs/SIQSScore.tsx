@@ -4,6 +4,9 @@ import { Progress } from "@/components/ui/progress";
 import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -52,9 +55,14 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     backgroundColor: memoizedValues.progressColor,
   } as React.CSSProperties), [memoizedValues.progressColor]);
   
+  // Create a URL-friendly location ID
+  const locationId = useMemo(() => {
+    return `temp-${Date.now().toString()}`;
+  }, []);
+  
   return (
     <motion.div 
-      className="mb-6 pb-6 border-b border-cosmic-700/30"
+      className="mb-4 pb-4 border-b border-cosmic-700/30"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -84,6 +92,27 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         <span className="text-sm text-muted-foreground">
           {t("Excellent", "优秀")}
         </span>
+      </div>
+      
+      <div className="mt-6 flex justify-end">
+        <Link 
+          to={`/location/${locationId}`}
+          state={{
+            id: locationId,
+            name: locationName,
+            latitude: latitude,
+            longitude: longitude,
+            siqsResult: {
+              score: memoizedValues.displayScore
+            },
+            timestamp: new Date().toISOString()
+          }}
+        >
+          <Button size="sm" className="bg-primary/90 hover:bg-primary text-primary-foreground">
+            {t("See More Details", "查看更多详情")}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
       </div>
     </motion.div>
   );

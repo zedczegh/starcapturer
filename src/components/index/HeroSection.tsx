@@ -6,11 +6,11 @@ import NavBar from "@/components/NavBar";
 
 const HeroSection: React.FC = () => {
   return (
-    <div className="relative overflow-hidden pt-20">
+    <div className="relative overflow-hidden pt-16 pb-8">
       <StarryBackground />
       <NavBar />
       <HeroContent />
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-cosmic-900 to-transparent z-10"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-cosmic-900 to-transparent z-10"></div>
     </div>
   );
 };

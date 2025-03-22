@@ -69,7 +69,7 @@ const StarryBackground: React.FC = () => {
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-cosmic-900/80 z-10" />
         <img 
-          src="https://images.unsplash.com/photo-1470813740244-df37b8c1edcb" 
+          src="https://images.unsplash.com/photo-1527066579998-dbbae57f45ce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1932&q=80" 
           alt="Night sky" 
           className="absolute inset-0 w-full h-full object-cover"
         />

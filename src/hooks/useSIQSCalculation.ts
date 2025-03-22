@@ -5,14 +5,17 @@ import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 import { v4 as uuidv4 } from "uuid";
-import { fetchForecastData } from "@/lib/api";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { fetchForecastData } from "@/lib/api";
 
-// Ensure SIQS score is always on a 0-10 scale
-const normalizeScore = (score: number): number => {
-  if (score <= 10) return score;
-  return score / 10;
-};
+// Extract forecast fetching logic
+import { fetchForecastForLocation } from "./siqs/forecastFetcher";
+
+// Extract scoring and normalization logic
+import { 
+  normalizeScore, 
+  calculateSIQSWithWeatherData 
+} from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -69,21 +72,9 @@ export const useSIQSCalculation = (
       setWeatherData(data);
       
       // Fetch forecast data to get night conditions
-      let forecastResult: any = null;
-      try {
-        const forecastData = await fetchForecastData({
-          latitude: lat,
-          longitude: lng,
-          days: 3
-        });
-        
-        if (forecastData && forecastData.hourly) {
-          setForecastData(forecastData);
-          forecastResult = forecastData;
-        }
-      } catch (error) {
-        console.error("Error fetching forecast data for SIQS calculation:", error);
-        // Continue with current weather if forecast fails
+      const forecastResult = await fetchForecastForLocation(lat, lng);
+      if (forecastResult) {
+        setForecastData(forecastResult);
       }
       
       // Get Bortle scale data
@@ -107,38 +98,14 @@ export const useSIQSCalculation = (
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
       
-      // First try to calculate SIQS using nighttime forecast data
-      let siqsResult;
-      if (forecastResult) {
-        const locationWithWeather = {
-          weatherData: data,
-          bortleScale: validBortleScale,
-          seeingConditions,
-          moonPhase: freshMoonPhase
-        };
-        
-        const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastResult, null);
-        if (nighttimeSIQS) {
-          siqsResult = nighttimeSIQS;
-          console.log("Using nighttime forecast for SIQS calculation:", siqsResult.score);
-        }
-      }
-      
-      // Fall back to standard calculation if nighttime calculation failed
-      if (!siqsResult) {
-        console.log("Falling back to standard SIQS calculation");
-        siqsResult = calculateSIQS({
-          cloudCover: data.cloudCover,
-          bortleScale: validBortleScale,
-          seeingConditions,
-          windSpeed: data.windSpeed,
-          humidity: data.humidity,
-          moonPhase: freshMoonPhase,
-          precipitation: data.precipitation,
-          weatherCondition: data.weatherCondition,
-          aqi: data.aqi
-        });
-      }
+      // Calculate SIQS score using utility function
+      const siqsResult = await calculateSIQSWithWeatherData(
+        data,
+        validBortleScale,
+        seeingConditions,
+        freshMoonPhase,
+        forecastResult
+      );
       
       // Ensure SIQS score is consistently on a 0-10 scale
       const normalizedScore = normalizeScore(siqsResult.score);
