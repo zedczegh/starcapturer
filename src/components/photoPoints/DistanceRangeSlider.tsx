@@ -9,19 +9,27 @@ interface DistanceRangeSliderProps {
   setDistance: (distance: number) => void;
   loading?: boolean;
   maxDistance?: number;
+  onAfterChange?: () => void;
 }
 
 const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({ 
   distance, 
   setDistance,
   loading = false,
-  maxDistance = 10000 // Default to 10,000 km
+  maxDistance = 10000, // Default to 10,000 km
+  onAfterChange
 }) => {
   const { t } = useLanguage();
   
   const handleChange = (values: number[]) => {
     if (values.length > 0) {
       setDistance(values[0]);
+    }
+  };
+
+  const handleAfterChange = () => {
+    if (onAfterChange) {
+      onAfterChange();
     }
   };
   
@@ -33,8 +41,9 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   };
   
   // Create logarithmic-like steps for better UX with large range
+  // Added more steps for finer control
   const distanceSteps = [
-    100, 200, 500, 1000, 2000, 3000, 5000, 7500, 10000
+    100, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000
   ];
   
   // Find the closest step for the slider value display
@@ -77,6 +86,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
         max={maxDistance}
         step={100}
         onValueChange={handleChange}
+        onValueCommit={handleAfterChange}
         disabled={loading}
         className="cursor-pointer"
       />

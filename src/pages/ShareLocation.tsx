@@ -207,8 +207,8 @@ const ShareLocation: React.FC = () => {
                       <div className="mt-2">
                         <LightPollutionIndicator 
                           bortleScale={bortleScale} 
-                          siqs={siqs} 
-                          compact
+                          showDescription={true}
+                          compact={true}
                         />
                       </div>
                     )}

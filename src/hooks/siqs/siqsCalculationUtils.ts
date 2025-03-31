@@ -69,14 +69,30 @@ export function getSIQSDescription(score: number): string {
 }
 
 /**
+ * Get translated SIQS description
+ */
+export function getTranslatedSIQSDescription(score: number, language: 'en' | 'zh' = 'en'): string {
+  if (language === 'en') {
+    return getSIQSDescription(score);
+  }
+  
+  // Chinese translations
+  if (score >= 8) return "极佳";
+  if (score >= 6) return "良好";  
+  if (score >= 4) return "一般";
+  if (score >= 2) return "较差";
+  return "糟糕";
+}
+
+/**
  * Get CSS color class for SIQS score
  */
 export function getSIQSColorClass(score: number): string {
-  if (score >= 8) return "bg-green-500/80";
-  if (score >= 6) return "bg-blue-500/80";
-  if (score >= 4) return "bg-yellow-500/80";
-  if (score >= 2) return "bg-orange-500/80";
-  return "bg-red-500/80";
+  if (score >= 8) return "bg-green-500/80 border-green-400/50";
+  if (score >= 6) return "bg-blue-500/80 border-blue-400/50";
+  if (score >= 4) return "bg-yellow-500/80 border-yellow-400/50";
+  if (score >= 2) return "bg-orange-500/80 border-orange-400/50";
+  return "bg-red-500/80 border-red-400/50";
 }
 
 /**
@@ -90,6 +106,9 @@ export function isGoodViewingCondition(score: number): boolean {
  * Format SIQS score for display with consistent decimal places
  */
 export function formatSIQSScoreForDisplay(score: number): string {
+  // Handle undefined or null
+  if (score === undefined || score === null) return "0.0";
+  
   // Always show one decimal place
   return score.toFixed(1);
 }

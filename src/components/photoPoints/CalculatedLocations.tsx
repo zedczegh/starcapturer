@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Calculator, Loader2, Target } from "lucide-react";
+import { Calculator, Loader2, Target, RefreshCw } from "lucide-react";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,15 @@ interface CalculatedLocationsProps {
   loading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
+  onRefresh?: () => void;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
   locations, 
   loading, 
   hasMore, 
-  onLoadMore 
+  onLoadMore,
+  onRefresh
 }) => {
   const { t } = useLanguage();
   
@@ -63,6 +65,17 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
             )}
           </p>
         </div>
+        
+        {onRefresh && (
+          <Button 
+            variant="outline" 
+            onClick={onRefresh}
+            className="mt-4 group border-primary/40 hover:bg-cosmic-800/50"
+          >
+            <RefreshCw className="mr-2 h-4 w-4 group-hover:animate-spin" />
+            {t("Refresh Recommendations", "刷新推荐")}
+          </Button>
+        )}
       </div>
     );
   }
@@ -77,9 +90,10 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       >
         {locations.map((location, index) => (
           <PhotoLocationCard
-            key={location.id}
+            key={location.id || `calc-loc-${index}`}
             location={location}
             index={index}
+            showRealTimeSiqs={true}
           />
         ))}
       </motion.div>
@@ -93,6 +107,20 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
           >
             {t("Load More Locations", "加载更多位置")}
             <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+      )}
+      
+      {onRefresh && (
+        <div className="flex justify-center mt-4">
+          <Button 
+            variant="ghost" 
+            onClick={onRefresh}
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-primary"
+          >
+            <RefreshCw className="mr-1.5 h-3 w-3" />
+            {t("Refresh with new SIQS data", "使用新的SIQS数据刷新")}
           </Button>
         </div>
       )}

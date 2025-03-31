@@ -124,3 +124,40 @@ export function getBortleScaleColor(bortleScale: number): { text: string; bg: st
   
   return result;
 }
+
+/**
+ * Get the appropriate CSS color class for a Bortle scale value in cosmic theme mode
+ * Used for dark backgrounds in the cosmic theme
+ * @param bortleScale - Bortle scale value (1-9)
+ * @returns Color class string
+ */
+export function getBortleScaleColorClass(bortleScale: number): string {
+  if (bortleScale <= 1.5) return "bg-indigo-500/80";
+  if (bortleScale <= 2.5) return "bg-blue-500/80";
+  if (bortleScale <= 3.5) return "bg-cyan-500/80";
+  if (bortleScale <= 4.5) return "bg-teal-500/80";
+  if (bortleScale <= 5.5) return "bg-green-500/80";
+  if (bortleScale <= 6.5) return "bg-yellow-500/80";
+  if (bortleScale <= 7.5) return "bg-orange-500/80";
+  if (bortleScale <= 8.5) return "bg-red-500/80";
+  return "bg-rose-500/80";
+}
+
+/**
+ * Get Bortle scale quality assessment
+ * @param bortleScale - Bortle scale value (1-9)
+ * @returns String describing quality from "Excellent" to "Poor"
+ */
+export function getBortleScaleQuality(bortleScale: number, language: 'en' | 'zh' = 'en'): string {
+  if (language === 'en') {
+    if (bortleScale <= 2) return "Excellent";
+    if (bortleScale <= 4) return "Good";
+    if (bortleScale <= 6) return "Moderate";
+    return "Poor";
+  } else {
+    if (bortleScale <= 2) return "极佳";
+    if (bortleScale <= 4) return "良好";
+    if (bortleScale <= 6) return "一般";
+    return "较差";
+  }
+}
