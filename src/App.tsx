@@ -6,7 +6,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense, useMemo } from "react";
-import { HelmetProvider } from "react-helmet-async";
+import { HelmetProvider } from "react-helmet-async"; // Add HelmetProvider import
 
 // Improve performance by prefetching popular locations
 import { prefetchPopularLocations } from "./lib/queryPrefetcher";
@@ -59,14 +59,11 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Create helmet context once to prevent re-creation
-const helmetContext = {};
-
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <HelmetProvider context={helmetContext}>
+        <HelmetProvider> {/* Add HelmetProvider here */}
           <TooltipProvider>
             <BrowserRouter>
               <div className="sci-fi-scrollbar">
