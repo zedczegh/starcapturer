@@ -51,9 +51,10 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
     }
     
     // Safe invalidate size with check if map is still valid
+    // Add a slight delay to ensure the map container is ready
     const timer = setTimeout(() => {
       try {
-        if (map && !map._isDestroyed && isMountedRef.current) {
+        if (map && !map._isDestroyed && isMountedRef.current && map.getContainer()) {
           map.invalidateSize({
             animate: false,
             pan: false

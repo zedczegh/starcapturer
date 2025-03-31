@@ -21,6 +21,7 @@ export function useMapReset() {
         mapInstanceRef.current.off();
         // Remove the map instance
         mapInstanceRef.current.remove();
+        console.log("Map instance successfully cleaned up");
       } catch (error) {
         console.error("Error cleaning up map instance:", error);
       } finally {
@@ -36,7 +37,7 @@ export function useMapReset() {
     unmountingRef.current = false;
     
     // Generate a new random ID on every mount
-    mapIdRef.current = `map-${Math.random().toString(36).substring(2, 11)}`;
+    mapIdRef.current = `map-${Math.random().toString(36).substring(2, 11)}-${Date.now()}`;
     setIsMapInitialized(false);
     
     return () => {
@@ -51,6 +52,7 @@ export function useMapReset() {
   // Register the map instance
   const registerMapInstance = useCallback((mapInstance: any) => {
     if (mapInstance && !mapInstanceRef.current && !unmountingRef.current) {
+      console.log("Registering new map instance");
       mapInstanceRef.current = mapInstance;
       setIsMapInitialized(true);
     }

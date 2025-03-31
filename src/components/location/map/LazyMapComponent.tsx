@@ -68,6 +68,8 @@ interface LazyMapComponentProps {
   className?: string;
   scrollWheelZoom?: boolean;
   attributionControl?: boolean;
+  mapId?: string;
+  onMapInstance?: (mapInstance: any) => void;
 }
 
 const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
@@ -79,10 +81,12 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   onMapMove,
   className = "",
   scrollWheelZoom = true,
-  attributionControl = true
+  attributionControl = true,
+  mapId,
+  onMapInstance
 }) => {
   const { language } = useLanguage();
-  const { mapId } = useMapReset();
+  const uniqueMapId = mapId || `map-${Math.random().toString(36).substring(2, 11)}`;
   
   // Create a MapCirclesComponent to handle all circles
   const CirclesComponent = React.useCallback(() => {
@@ -107,7 +111,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   }, [circles]);
   
   return (
-    <div id={mapId} className={`relative rounded-lg overflow-hidden ${className}`}>
+    <div id={uniqueMapId} className={`relative rounded-lg overflow-hidden ${className}`}>
       <Suspense fallback={
         <div className="animate-pulse flex items-center justify-center bg-cosmic-800/30 h-full w-full min-h-[200px]">
           <div className="text-center">
@@ -117,12 +121,13 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         </div>
       }>
         <MapContainer
-          key={mapId}
+          key={uniqueMapId}
           center={center}
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
           scrollWheelZoom={scrollWheelZoom}
           attributionControl={attributionControl}
+          whenCreated={onMapInstance}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

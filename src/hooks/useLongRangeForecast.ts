@@ -53,7 +53,7 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
 
         // Extract daily forecasts from weatherData, or use empty array if not available
         // We need to safely access this property that might not exist
-        const dailyForecasts = weatherData.daily || [];
+        const dailyForecasts = weatherData.forecast?.daily || [];
         
         // Ensure the data is an array
         const forecastsArray = Array.isArray(dailyForecasts) ? dailyForecasts : [];

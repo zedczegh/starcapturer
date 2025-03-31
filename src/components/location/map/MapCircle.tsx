@@ -31,8 +31,8 @@ const MapCircle: React.FC<MapCircleProps> = ({
     // Set mounted flag to true
     isMountedRef.current = true;
     
-    // Only proceed if the map is available
-    if (!map) return;
+    // Only proceed if the map is available and ready
+    if (!map || !map.getContainer()) return;
     
     // Remove any existing circle to prevent duplicates
     if (circleRef.current) {
@@ -44,23 +44,28 @@ const MapCircle: React.FC<MapCircleProps> = ({
       circleRef.current = null;
     }
     
-    // Create a new circle with the provided props
-    try {
-      // Create a new circle with the provided props
-      circleRef.current = L.circle(center, {
-        radius,
-        color,
-        fillColor,
-        weight,
-        opacity,
-        fillOpacity
-      }).addTo(map);
-    } catch (error) {
-      console.error("Error creating circle:", error);
-    }
+    // Create a new circle with delay to ensure map is ready
+    const timer = setTimeout(() => {
+      if (!isMountedRef.current || !map) return;
+      
+      try {
+        // Create a new circle with the provided props
+        circleRef.current = L.circle(center, {
+          radius,
+          color,
+          fillColor,
+          weight,
+          opacity,
+          fillOpacity
+        }).addTo(map);
+      } catch (error) {
+        console.error("Error creating circle:", error);
+      }
+    }, 100);
     
     // Clean up on unmount or before recreation
     return () => {
+      clearTimeout(timer);
       isMountedRef.current = false;
       if (circleRef.current) {
         try {

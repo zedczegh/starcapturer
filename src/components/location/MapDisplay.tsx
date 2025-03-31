@@ -150,7 +150,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
-          id={mapId}
+          mapId={mapId}
           center={memoizedPosition}
           zoom={10}
           markers={markers}
