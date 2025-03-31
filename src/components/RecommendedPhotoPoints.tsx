@@ -11,6 +11,7 @@ import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
 import { findLocationsWithinRadius } from "@/services/locationSearchService";
 import { batchCalculateSiqs } from "@/services/realTimeSiqsService";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
+import { motion } from "framer-motion";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -38,7 +39,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       setLoading(true);
       try {
-        const radius = 200;
+        // Use appropriate search radius
+        const radius = 200; // 200km is a more appropriate searching radius
         const points = await findLocationsWithinRadius(
           userLocation.latitude,
           userLocation.longitude,
@@ -55,7 +57,26 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
           }
           
-          filteredPoints.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+          // Sort by distance first, then by SIQS
+          filteredPoints.sort((a, b) => {
+            // First compare by certification status
+            const aIsCertified = a.isDarkSkyReserve || a.certification;
+            const bIsCertified = b.isDarkSkyReserve || b.certification;
+            
+            if (aIsCertified && !bIsCertified) return -1;
+            if (!aIsCertified && bIsCertified) return 1;
+            
+            // If both have the same certification status, compare by distance
+            const distanceA = a.distance || Infinity;
+            const distanceB = b.distance || Infinity;
+            
+            if (distanceA !== distanceB) {
+              return distanceA - distanceB;
+            }
+            
+            // If distances are equal, compare by SIQS
+            return (b.siqs || 0) - (a.siqs || 0);
+          });
           
           setRecommendedPoints(filteredPoints.slice(0, 5));
         } else {
@@ -100,9 +121,30 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     navigate(`/location/${point.id}`, { state: locationData });
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
+    <motion.div 
+      className={`space-y-4 ${className}`}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div className="flex items-center justify-between" variants={itemVariants}>
         <h3 className="text-lg font-semibold flex items-center gap-2">
           {preferCertified ? (
             <>
@@ -139,27 +181,31 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             </Button>
           </Link>
         </div>
-      </div>
+      </motion.div>
       
       <div className="grid grid-cols-1 gap-3">
         {recommendedPoints.length === 0 ? (
           !hideEmptyMessage && loading && (
-            <div className="text-center py-6 text-muted-foreground">
+            <motion.div 
+              className="text-center py-6 text-muted-foreground glassmorphism-light rounded-lg"
+              variants={itemVariants}
+            >
               {t("Searching for photo points...", "正在搜索拍摄点...")}
-            </div>
+            </motion.div>
           )
         ) : (
-          recommendedPoints.map((point) => (
-            <PhotoPointCard 
-              key={point.id}
-              point={point}
-              onSelect={handleSelectPoint}
-              onViewDetails={handleViewDetails}
-            />
+          recommendedPoints.map((point, index) => (
+            <motion.div key={point.id} variants={itemVariants}>
+              <PhotoPointCard 
+                point={point}
+                onSelect={handleSelectPoint}
+                onViewDetails={handleViewDetails}
+              />
+            </motion.div>
           ))
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

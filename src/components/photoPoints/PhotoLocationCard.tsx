@@ -2,14 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Award, Clock, Loader2 } from 'lucide-react';
+import { MapPin, Star, Award, Clock, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
 import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { refreshSiqsData } from '@/services/realTimeSiqsService';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -17,7 +17,11 @@ interface PhotoLocationCardProps {
   showRealTimeSiqs?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs = false }) => {
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ 
+  location, 
+  index, 
+  showRealTimeSiqs = false 
+}) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
@@ -60,7 +64,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
       const fetchSiqs = async () => {
         setLoadingSiqs(true);
         try {
-          const result = await calculateRealTimeSiqs(
+          const result = await refreshSiqsData(
             location.latitude,
             location.longitude,
             location.bortleScale || 5
@@ -113,18 +117,26 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
       y: 0,
       transition: { 
         duration: 0.4,
-        delay: index * 0.1
+        delay: index * 0.05
       }
+    },
+    hover: {
+      scale: 1.02,
+      boxShadow: "0 10px 20px rgba(0, 0, 0, 0.2)",
+      transition: { duration: 0.2 }
     }
   };
   
   return (
     <motion.div
       variants={cardVariants}
-      className="glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30"
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      className="bg-cosmic-800/30 backdrop-blur-md p-4 rounded-lg border border-cosmic-600/30 shadow-lg overflow-hidden"
     >
       <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-medium line-clamp-1">{displayName}</h3>
+        <h3 className="text-lg font-medium line-clamp-1 text-gradient">{displayName}</h3>
         
         <div className="flex items-center">
           {(location.isDarkSkyReserve || location.certification) && (
@@ -170,9 +182,10 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
           variant="ghost"
           size="sm"
           onClick={handleViewDetails}
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-xs"
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-xs flex items-center gap-1"
         >
           {t("View Details", "查看详情")}
+          <ArrowRight className="h-3 w-3 ml-1" />
         </Button>
       </div>
     </motion.div>

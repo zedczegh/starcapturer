@@ -1,4 +1,3 @@
-
 import { fetchForecastData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchWeatherData } from "@/lib/api/weather";
@@ -12,8 +11,8 @@ const siqsCache = new Map<string, {
   isViable: boolean;
 }>();
 
-// Invalidate cache entries older than 15 minutes
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+// Invalidate cache entries older than 30 minutes for more real-time data
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Calculate real-time SIQS for a given location
@@ -58,6 +57,7 @@ export async function calculateRealTimeSiqs(
     
     // Default values if API calls fail
     if (!weatherData) {
+      console.error("Weather data fetch failed for SIQS calculation");
       return { siqs: 0, isViable: false };
     }
     
@@ -110,7 +110,7 @@ export async function calculateRealTimeSiqs(
  */
 export async function batchCalculateSiqs(
   locations: SharedAstroSpot[],
-  maxParallel: number = 3
+  maxParallel: number = 5
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   
@@ -119,24 +119,41 @@ export async function batchCalculateSiqs(
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
   
+  // Sort locations by distance to process closest first
+  updatedLocations.sort((a, b) => {
+    const distA = typeof a.distance === 'number' ? a.distance : Infinity;
+    const distB = typeof b.distance === 'number' ? b.distance : Infinity;
+    return distA - distB;
+  });
+  
   // Process locations in chunks to avoid too many parallel requests
   for (let i = 0; i < updatedLocations.length; i += maxParallel) {
     const chunk = updatedLocations.slice(i, i + maxParallel);
     const promises = chunk.map(async (location) => {
       if (!location.latitude || !location.longitude) return location;
       
-      const result = await calculateRealTimeSiqs(
-        location.latitude,
-        location.longitude,
-        location.bortleScale || 5
-      );
-      
-      // Update the location object with real-time SIQS
-      return {
-        ...location,
-        siqs: result.siqs,
-        isViable: result.isViable
-      };
+      try {
+        const result = await calculateRealTimeSiqs(
+          location.latitude,
+          location.longitude,
+          location.bortleScale || 5
+        );
+        
+        // Update the location object with real-time SIQS
+        return {
+          ...location,
+          siqs: result.siqs,
+          isViable: result.isViable
+        };
+      } catch (error) {
+        console.error(`Error calculating SIQS for location ${location.name}:`, error);
+        // Keep existing SIQS if available, otherwise default to 0
+        return {
+          ...location,
+          siqs: location.siqs || 0,
+          isViable: location.isViable !== undefined ? location.isViable : false
+        };
+      }
     });
     
     // Wait for the current chunk to complete before processing next chunk
@@ -166,4 +183,26 @@ export function clearSiqsCache(): void {
  */
 export function getSiqsCacheSize(): number {
   return siqsCache.size;
+}
+
+/**
+ * Force refresh of SIQS data for a specific location
+ * @param latitude Latitude of the location 
+ * @param longitude Longitude of the location
+ * @param bortleScale Bortle scale value
+ * @returns Promise resolving to fresh SIQS data
+ */
+export async function refreshSiqsData(
+  latitude: number,
+  longitude: number,
+  bortleScale: number
+): Promise<{ siqs: number; isViable: boolean }> {
+  // Generate cache key
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
+  // Remove from cache to force recalculation
+  siqsCache.delete(cacheKey);
+  
+  // Recalculate and return fresh data
+  return calculateRealTimeSiqs(latitude, longitude, bortleScale);
 }

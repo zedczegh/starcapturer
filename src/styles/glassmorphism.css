@@ -1,0 +1,46 @@
+
+/* Glassmorphism effects for UI components */
+
+.glassmorphism {
+  @apply backdrop-blur-lg bg-cosmic-800/30 border border-cosmic-600/30 shadow-lg;
+}
+
+.glassmorphism-light {
+  @apply backdrop-blur-md bg-cosmic-800/20 border border-cosmic-600/20 shadow-md;
+}
+
+.glassmorphism-dark {
+  @apply backdrop-blur-xl bg-cosmic-900/40 border border-cosmic-600/40 shadow-xl;
+}
+
+.text-gradient {
+  @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
+}
+
+.text-gradient-blue {
+  @apply bg-gradient-to-br from-blue-200 via-blue-300 to-blue-400 bg-clip-text text-transparent;
+}
+
+.hover-scale {
+  @apply transition-transform duration-200 hover:scale-105;
+}
+
+.hover-glow {
+  @apply transition-all duration-300;
+}
+
+.hover-glow:hover {
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:bg-cosmic-800/40 hover:border-cosmic-500/40;
+}
+
+.hover-backdrop-blur {
+  @apply transition-all duration-300;
+}
+
+.hover-backdrop-blur:hover {
+  backdrop-filter: blur(12px);
+}

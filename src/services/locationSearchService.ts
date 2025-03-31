@@ -1,3 +1,4 @@
+
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -8,6 +9,7 @@ import { calculateRealTimeSiqs, batchCalculateSiqs } from '@/services/realTimeSi
 import { getCachedLocationSearch, cacheLocationSearch } from '@/services/locationCacheService';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
+import { getCertifiedLocationsNearby } from './darkSkyLocationService';
 
 /**
  * Find all locations within a radius of a center point
@@ -40,7 +42,7 @@ export async function findLocationsWithinRadius(
     // If we're only looking for certified locations, we can also check the local database
     if (certifiedOnly) {
       // Find dark sky locations from our local database
-      const localDarkSkyLocations = findLocalDarkSkyLocations(latitude, longitude, radius);
+      const localDarkSkyLocations = getCertifiedLocationsNearby(latitude, longitude, radius);
       
       if (localDarkSkyLocations.length > 0) {
         console.log(`Found ${localDarkSkyLocations.length} local dark sky locations within radius`);
@@ -92,57 +94,9 @@ export async function findLocationsWithinRadius(
     // On API error, try to use local database as fallback
     if (certifiedOnly) {
       console.log("API error, using local dark sky database as fallback");
-      return findLocalDarkSkyLocations(latitude, longitude, radius);
+      return getCertifiedLocationsNearby(latitude, longitude, radius);
     }
     
-    return [];
-  }
-}
-
-/**
- * Find Dark Sky locations from local database within radius
- * @param latitude Center latitude
- * @param longitude Center longitude
- * @param radius Search radius in km
- * @returns Array of SharedAstroSpot
- */
-function findLocalDarkSkyLocations(
-  latitude: number,
-  longitude: number,
-  radius: number
-): SharedAstroSpot[] {
-  try {
-    // Filter dark sky locations from our database
-    const darkSkyEntries = locationDatabase.filter(loc => 
-      loc.type === 'dark-site' && 
-      calculateDistance(latitude, longitude, loc.coordinates[0], loc.coordinates[1]) <= radius
-    );
-    
-    // Convert to SharedAstroSpot format
-    return darkSkyEntries.map(entry => {
-      const distance = calculateDistance(
-        latitude, 
-        longitude, 
-        entry.coordinates[0], 
-        entry.coordinates[1]
-      );
-      
-      return {
-        id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
-        name: entry.name,
-        latitude: entry.coordinates[0],
-        longitude: entry.coordinates[1],
-        siqs: 10 - entry.bortleScale, // Convert Bortle to approximate SIQS
-        bortleScale: entry.bortleScale,
-        isDarkSkyReserve: true,
-        certification: 'International Dark Sky Association',
-        description: `${entry.name} is a certified dark sky location with Bortle scale ${entry.bortleScale}.`,
-        distance: distance,
-        timestamp: new Date().toISOString() // Add timestamp
-      };
-    });
-  } catch (error) {
-    console.error("Error finding local dark sky locations:", error);
     return [];
   }
 }
@@ -224,8 +178,26 @@ export async function findCertifiedLocations(
  * @returns Sorted array of locations
  */
 export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  return [...locations].sort((a, b) => {
-    // First prioritize certified locations
+  // First ensure that all locations have a distance property
+  const locationsWithDistance = locations.map(loc => {
+    return {
+      ...loc,
+      distance: typeof loc.distance === 'number' ? loc.distance : Infinity
+    };
+  });
+
+  // Sort by multiple criteria
+  return [...locationsWithDistance].sort((a, b) => {
+    // First, prioritize locations with distance (some may have Infinity)
+    if (a.distance !== Infinity && b.distance === Infinity) return -1;
+    if (a.distance === Infinity && b.distance !== Infinity) return 1;
+    
+    // If both have certified status, sort by distance
+    if ((a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
+      return a.distance - b.distance;
+    }
+    
+    // Then prioritize certified locations
     if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
       return -1;
     }
@@ -233,12 +205,14 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
       return 1;
     }
     
-    // Then sort by SIQS score (higher is better)
-    if (a.siqs !== b.siqs) {
-      return b.siqs - a.siqs;
+    // If equal certification status, sort by SIQS score (higher is better)
+    const aSiqs = typeof a.siqs === 'number' ? a.siqs : 0;
+    const bSiqs = typeof b.siqs === 'number' ? b.siqs : 0;
+    if (aSiqs !== bSiqs) {
+      return bSiqs - aSiqs;
     }
     
-    // If equal SIQS, sort by distance
-    return (a.distance || Infinity) - (b.distance || Infinity);
+    // Finally, sort by distance
+    return a.distance - b.distance;
   });
 }
