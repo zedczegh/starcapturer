@@ -1,27 +1,23 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation, Award, Search } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
-import { usePhotoPointsLocationSelector } from "@/hooks/usePhotoPointsLocationSelector";
+import { useGeolocation } from "@/hooks/location/useGeolocation";
 import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
-import DarkSkyLocationsSection from "@/components/photoPoints/DarkSkyLocationsSection";
-import DarkSkyToggle from "@/components/photoPoints/DarkSkyToggle";
 import { toast } from "sonner";
-import MapSelector from "@/components/MapSelector";
-import { Card } from "@/components/ui/card";
+import { DEEP_SPACE_BG } from "@/assets";
 
-const CurrentLocationDisplay = ({ coords, loading, name }: { 
-  coords: { latitude: number; longitude: number } | null; 
-  loading: boolean;
-  name?: string | null;
+const CurrentLocationDisplay = ({ coords, loading }: { 
+  coords: { latitude: number; longitude: number; name?: string } | null; 
+  loading: boolean 
 }) => {
   const { t, language } = useLanguage();
   
@@ -45,7 +41,7 @@ const CurrentLocationDisplay = ({ coords, loading, name }: {
     >
       <Navigation className="h-3.5 w-3.5 text-primary" />
       <span className="text-xs text-primary-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-40">
-        {name || `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`}
+        {coords.name || `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`}
       </span>
       <CopyLocationButton 
         latitude={coords.latitude} 
@@ -59,70 +55,17 @@ const CurrentLocationDisplay = ({ coords, loading, name }: {
   );
 };
 
-const LocationSelector = ({ onSelect, isLoading }: { 
-  onSelect: (location: { name: string; latitude: number; longitude: number }) => void;
-  isLoading: boolean;
-}) => {
-  const { t } = useLanguage();
-  const [isMapSelectorOpen, setIsMapSelectorOpen] = useState(false);
-
-  return (
-    <Card className="p-4 mb-4 bg-cosmic-800/30 border border-cosmic-600/30">
-      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-        <Target className="h-4 w-4 text-primary" />
-        {t("Select Location", "选择位置")}
-      </h3>
-      
-      <Button
-        variant="secondary"
-        disabled={isLoading}
-        onClick={() => setIsMapSelectorOpen(true)}
-        className="w-full mb-2 transition-all duration-300 bg-cosmic-800/60 hover:bg-cosmic-700/60"
-      >
-        <Search className="h-4 w-4 mr-2" />
-        {t("Search for a Location", "搜索位置")}
-      </Button>
-      
-      {isMapSelectorOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-cosmic-900 rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-cosmic-700">
-              <h3 className="text-lg font-medium">{t("Search for a Location", "搜索位置")}</h3>
-            </div>
-            <div className="p-4 h-[60vh]">
-              <MapSelector onSelectLocation={onSelect} />
-            </div>
-            <div className="p-4 border-t border-cosmic-700 flex justify-end">
-              <Button 
-                variant="outline"
-                onClick={() => setIsMapSelectorOpen(false)}
-              >
-                {t("Close", "关闭")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-};
-
 const PhotoPointsNearby: React.FC = () => {
   const { t, language } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const navigate = useNavigate();
-  const [showDarkSkyOnly, setShowDarkSkyOnly] = useState(false);
+  const [locationName, setLocationName] = useState<string | null>(null);
   
-  const {
-    locationName,
-    setLocationName,
-    activeLocation,
-    geoLoading,
-    geoError,
-    handleUseCurrentLocation,
-    handleLocationSelect,
-    isUsingGeolocation
-  } = usePhotoPointsLocationSelector();
+  const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
+    enableHighAccuracy: true,
+    timeout: 10000,
+    language
+  });
   
   const {
     loading,
@@ -134,17 +77,13 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreLocations,
     isUserInGoodLocation
   } = usePhotoPointsSearch({
-    userLocation: activeLocation,
+    userLocation: coords,
     currentSiqs,
     maxInitialResults: 6
   });
   
-  const filteredLocations = showDarkSkyOnly 
-    ? displayedLocations.filter(location => location.isDarkSkyReserve)
-    : displayedLocations;
-  
   useEffect(() => {
-    if (activeLocation && !locationName) {
+    if (coords && !locationName) {
       try {
         const recentLocations = localStorage.getItem("astrospot_recent_locations");
         if (recentLocations) {
@@ -157,7 +96,7 @@ const PhotoPointsNearby: React.FC = () => {
         console.error("Error getting location name:", error);
       }
     }
-  }, [activeLocation, locationName, setLocationName]);
+  }, [coords, locationName]);
   
   useEffect(() => {
     try {
@@ -175,10 +114,10 @@ const PhotoPointsNearby: React.FC = () => {
       console.error("Error getting recent locations:", error);
     }
     
-    if (!activeLocation && isUsingGeolocation) {
-      handleUseCurrentLocation();
+    if (!coords) {
+      getPosition();
     }
-  }, [activeLocation, isUsingGeolocation, handleUseCurrentLocation, locationName, setLocationName]);
+  }, [coords, getPosition, locationName]);
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -192,15 +131,15 @@ const PhotoPointsNearby: React.FC = () => {
   };
   
   const handleViewCurrentLocation = () => {
-    if (!activeLocation) return;
+    if (!coords) return;
     
     const locationId = `current-${Date.now()}`;
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
         name: locationName || t("Current Location", "当前位置"),
-        latitude: activeLocation.latitude,
-        longitude: activeLocation.longitude,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
         timestamp: new Date().toISOString(),
         fromPhotoPoints: true // Add flag to indicate we're coming from PhotoPoints
       }
@@ -218,15 +157,11 @@ const PhotoPointsNearby: React.FC = () => {
               <Target className="h-7 w-7 text-primary" />
               {t("Photo Points Nearby", "附近拍摄点")}
             </h1>
-            <CurrentLocationDisplay 
-              coords={activeLocation} 
-              loading={geoLoading} 
-              name={locationName} 
-            />
+            <CurrentLocationDisplay coords={coords ? { ...coords, name: locationName || undefined } : null} loading={geoLoading} />
           </div>
           
           <div className="flex items-center gap-3">
-            {activeLocation && (
+            {coords && (
               <Button 
                 variant="outline" 
                 className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 text-sm h-9 transition-all duration-300"
@@ -237,20 +172,6 @@ const PhotoPointsNearby: React.FC = () => {
               </Button>
             )}
             
-            <Button
-              variant="outline"
-              className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 text-sm h-9 transition-all duration-300"
-              onClick={handleUseCurrentLocation}
-              disabled={geoLoading}
-            >
-              {geoLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Navigation className="h-4 w-4 mr-2" />
-              )}
-              {t("Use My Location", "使用我的位置")}
-            </Button>
-            
             <Link to="/share">
               <Button className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20 hover:opacity-90 text-sm h-9 transition-all duration-300">
                 <MapPin className="h-4 w-4 mr-2" />
@@ -260,23 +181,12 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         </div>
         
-        {/* Location Selector Card */}
-        <LocationSelector 
-          onSelect={handleLocationSelect}
-          isLoading={loading || geoLoading}
-        />
-        
         <div className="mb-8 glassmorphism p-4 rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
           <DistanceRangeSlider 
             distance={searchDistance} 
             setDistance={setSearchDistance} 
           />
         </div>
-        
-        {/* Dark Sky Locations Section - Always show at the top if we have coords */}
-        {activeLocation && !loading && !searching && !geoLoading && (
-          <DarkSkyLocationsSection coordinates={activeLocation} />
-        )}
         
         {searching && (
           <motion.div 
@@ -305,7 +215,7 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {geoLoading && !activeLocation && (
+        {geoLoading && !coords && (
           <div className="flex justify-center py-12 flex-col items-center">
             <div className="relative">
               <Target className="h-12 w-12 text-primary animate-pulse mb-4" />
@@ -321,7 +231,7 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {geoError && !activeLocation && (
+        {geoError && !coords && (
           <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-destructive/30">
             <AlertCircle className="h-12 w-12 text-destructive/70 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">
@@ -329,13 +239,13 @@ const PhotoPointsNearby: React.FC = () => {
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-6 text-sm">
               {t(
-                "We need your location to show nearby photo points. Please allow location access and try again, or use the location selector above.",
-                "我们需要您的位置来显示附近的拍摄点。请允许位置访问并重试，或使用上方的位置选择器。"
+                "We need your location to show nearby photo points. Please allow location access and try again.",
+                "我们需要您的位置来显示附近的拍摄点。请允许位置访问并重试。"
               )}
             </p>
             <Button 
               size="lg" 
-              onClick={handleUseCurrentLocation}
+              onClick={getPosition}
               className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
             >
               {t("Try Again", "重试")}
@@ -343,7 +253,7 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {!loading && !geoLoading && activeLocation && isUserInGoodLocation && (
+        {!loading && !geoLoading && coords && isUserInGoodLocation && (
           <motion.div 
             className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30"
             initial={{ opacity: 0, y: 20 }}
@@ -379,8 +289,8 @@ const PhotoPointsNearby: React.FC = () => {
               </Button>
               
               <CopyLocationButton 
-                latitude={activeLocation.latitude} 
-                longitude={activeLocation.longitude}
+                latitude={coords.latitude} 
+                longitude={coords.longitude}
                 name={locationName || t("Current Location", "当前位置")}
                 size="default"
                 className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
@@ -389,7 +299,7 @@ const PhotoPointsNearby: React.FC = () => {
           </motion.div>
         )}
         
-        {!loading && !searching && !geoLoading && activeLocation && displayedLocations.length === 0 && !isUserInGoodLocation && (
+        {!loading && !searching && !geoLoading && coords && displayedLocations.length === 0 && !isUserInGoodLocation && (
           <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
             <MapPin className="h-12 w-12 text-primary/50 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">
@@ -414,8 +324,8 @@ const PhotoPointsNearby: React.FC = () => {
               </Button>
               
               <CopyLocationButton 
-                latitude={activeLocation.latitude} 
-                longitude={activeLocation.longitude}
+                latitude={coords.latitude} 
+                longitude={coords.longitude}
                 name={locationName || t("Current Location", "当前位置")}
                 size="default"
                 className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
@@ -424,35 +334,21 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
-        {!loading && !searching && !geoLoading && activeLocation && displayedLocations.length > 0 && !isUserInGoodLocation && (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-3">
-                <Telescope className="h-5 w-5 text-primary" />
-                {t("Nearby Photo Spots", "附近拍摄点")}
-              </h2>
-              
-              <DarkSkyToggle 
-                showDarkSkyOnly={showDarkSkyOnly}
-                onToggle={setShowDarkSkyOnly}
+        {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && !isUserInGoodLocation && (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {displayedLocations.map((location, index) => (
+              <PhotoLocationCard
+                key={location.id}
+                location={location}
+                index={index}
               />
-            </div>
-          
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
-              {filteredLocations.map((location, index) => (
-                <PhotoLocationCard
-                  key={location.id}
-                  location={location}
-                  index={index}
-                />
-              ))}
-            </motion.div>
-          </>
+            ))}
+          </motion.div>
         )}
         
         {!loading && !searching && hasMoreLocations && displayedLocations.length > 0 && !isUserInGoodLocation && (

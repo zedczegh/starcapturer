@@ -36,7 +36,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const [mapError, setMapError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [updateRetries, setUpdateRetries] = useState(0);
-  const [mapCount, setMapCount] = useState(0); // Used to reset map when needed
   
   // Create cache service
   const { setCachedData, getCachedData } = useLocationDataCache();
@@ -53,10 +52,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
   // Update position when props change
   useEffect(() => {
     if (isFinite(latitude) && isFinite(longitude) && 
-       (Math.abs(validLatitude - position[0]) > 0.0001 || Math.abs(validLongitude - position[1]) > 0.0001)) {
+       (validLatitude !== position[0] || validLongitude !== position[1])) {
       setPosition([validLatitude, validLongitude]);
-      // Force a map reset if coordinates change significantly
-      setMapCount(prev => prev + 1);
     }
   }, [validLatitude, validLongitude, position]);
 
@@ -119,9 +116,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
     return () => clearTimeout(timeoutId);
   }, [isLoading, t, mapError]);
 
-  // Key by mapCount to force a complete remount when needed
-  const mapKey = `map-${mapCount}`;
-
   return (
     <div className="aspect-video w-full h-[300px] relative">
       {(isLoading || locationLoading) && (
@@ -138,7 +132,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
       )}
       
       <MapDisplay 
-        key={mapKey}
         position={position}
         locationName={validName}
         editable={editable}

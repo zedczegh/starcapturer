@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Camera, Map, Award, Shield } from "lucide-react";
+import { Camera, Map, Award } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const PhotoPointsSection: React.FC = () => {
@@ -41,27 +41,6 @@ const PhotoPointsSection: React.FC = () => {
                 "现已收录来自世界各地的官方认证暗夜区域！"
               )}
             </p>
-          </div>
-          
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            <div className="flex items-center gap-1.5 bg-blue-900/20 border border-blue-800/20 px-3 py-1 rounded-full">
-              <Shield className="h-3.5 w-3.5 text-blue-400" />
-              <span className="text-xs text-blue-300">
-                {t("IDA Gold Tier", "IDA金级认证")}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-blue-900/20 border border-blue-800/20 px-3 py-1 rounded-full">
-              <Shield className="h-3.5 w-3.5 text-blue-400" />
-              <span className="text-xs text-blue-300">
-                {t("Dark Sky Parks", "暗夜公园")}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-blue-900/20 border border-blue-800/20 px-3 py-1 rounded-full">
-              <Shield className="h-3.5 w-3.5 text-blue-400" />
-              <span className="text-xs text-blue-300">
-                {t("Dark Sky Reserves", "暗夜保护区")}
-              </span>
-            </div>
           </div>
         </div>
         

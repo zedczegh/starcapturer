@@ -1,162 +1,147 @@
 
-import React, { lazy, Suspense, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { useLanguage } from '@/contexts/LanguageContext';
-import MapCircle from './MapCircle';
+import React, { useCallback, memo, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
 
-// Replace default Leaflet marker icons
-const defaultIcon = L.icon({
-  iconUrl: '/marker-icon.png',
-  shadowUrl: '/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-// Set default icon for all markers
-L.Marker.prototype.options.icon = defaultIcon;
-
-// Lazy load the actual map component to reduce initial load time
-const MapComponent = lazy(() => import('./MapComponents'));
-
-// MapResetComponent to handle cleanup and prevent "Map container is already initialized" error
-const MapResetComponent = ({ onMapClick, onMapMove }: { 
-  onMapClick?: (lat: number, lng: number) => void; 
-  onMapMove?: (lat: number, lng: number) => void; 
-}) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    // Register this map instance with any parent handlers
-    if (map) {
-      try {
-        const mapContainer = map.getContainer();
-        const resetEvent = new CustomEvent('map-initialized', { detail: { map } });
-        mapContainer.dispatchEvent(resetEvent);
-      } catch (error) {
-        console.error("Error dispatching map-initialized event:", error);
-      }
-    }
-  }, [map]);
-  
-  return <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />;
-};
-
-interface CircleOptions {
-  center: [number, number];
-  radius: number;
-  color: string;
-  fillColor: string;
-  weight?: number;
-  opacity?: number;
-  fillOpacity?: number;
+// Fix for default marker icons - only initialize once
+if (!L.Icon.Default.imagePath) {
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  });
 }
 
 interface LazyMapComponentProps {
-  center: [number, number];
-  zoom: number;
-  markers?: Array<{
-    position: [number, number];
-    content?: React.ReactNode;
-    color?: string;
-  }>;
-  circles?: CircleOptions[];
-  onMapClick?: (lat: number, lng: number) => void;
-  onMapMove?: (lat: number, lng: number) => void;
-  className?: string;
-  scrollWheelZoom?: boolean;
-  attributionControl?: boolean;
-  mapId?: string;
-  onMapInstance?: (mapInstance: any) => void;
+  position: [number, number];
+  locationName: string;
+  editable?: boolean;
+  onMapReady: () => void;
+  onMapClick: (lat: number, lng: number) => void;
+  showInfoPanel?: boolean;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
 }
 
 const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
-  center,
-  zoom,
-  markers,
-  circles,
+  position,
+  locationName,
+  editable = false,
+  onMapReady,
   onMapClick,
-  onMapMove,
-  className = "",
-  scrollWheelZoom = true,
-  attributionControl = true,
-  mapId,
-  onMapInstance
+  showInfoPanel = false,
+  isDarkSkyReserve = false,
+  certification = ''
 }) => {
-  const { language } = useLanguage();
-  const uniqueMapId = mapId || `map-${Math.random().toString(36).substring(2, 11)}-${Date.now()}`;
+  const { t } = useLanguage();
+
+  const handleMapReady = useCallback(() => {
+    onMapReady();
+  }, [onMapReady]);
+
+  // Use a China-friendly tile server
+  const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   
-  // Create a MapCirclesComponent to handle all circles
-  const CirclesComponent = React.useCallback(() => {
-    if (!circles || circles.length === 0) return null;
-    
-    return (
-      <>
-        {circles.map((circle, index) => (
-          <MapCircle
-            key={`circle-${index}-${uniqueMapId}`}
-            center={circle.center}
-            radius={circle.radius}
-            color={circle.color}
-            fillColor={circle.fillColor}
-            weight={circle.weight}
-            opacity={circle.opacity}
-            fillOpacity={circle.fillOpacity}
-          />
-        ))}
-      </>
-    );
-  }, [circles, uniqueMapId]);
-  
+  // Memoize marker icon to avoid recreating on each render
+  const markerIcon = useMemo(() => {
+    // Use a special icon for dark sky reserves
+    if (isDarkSkyReserve) {
+      return createCustomMarker('#3b82f6'); // Blue color for dark sky locations
+    }
+    return createCustomMarker(); // Default icon for regular locations
+  }, [isDarkSkyReserve]);
+
   return (
-    <div id={uniqueMapId} className={`relative rounded-lg overflow-hidden ${className}`}>
-      <Suspense fallback={
-        <div className="animate-pulse flex items-center justify-center bg-cosmic-800/30 h-full w-full min-h-[200px]">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-sm text-muted-foreground">{language === 'en' ? 'Loading map...' : '加载地图中...'}</p>
-          </div>
-        </div>
-      }>
-        <MapContainer
-          key={uniqueMapId}
-          center={center}
-          zoom={zoom}
-          className="w-full h-full min-h-[200px]"
-          scrollWheelZoom={scrollWheelZoom}
-          attributionControl={attributionControl}
-          whenCreated={onMapInstance}
+    <>
+      <MapStyles />
+      <div className="h-full w-full">
+        <MapContainer 
+          center={position}
+          zoom={12} 
+          style={{ height: "100%", width: "100%" }}
+          scrollWheelZoom={true}
+          whenReady={handleMapReady}
+          attributionControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            url={tileServerUrl}
+            attribution={attribution}
+            subdomains={['a', 'b', 'c']}
           />
           
-          {markers && markers.map((marker, index) => (
-            <Marker 
-              key={`marker-${index}-${uniqueMapId}`} 
-              position={marker.position}
-              icon={marker.color ? L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div style="background-color: ${marker.color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;"></div>`,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-              }) : defaultIcon}
-            >
-              {marker.content && <Popup>{marker.content}</Popup>}
-            </Marker>
-          ))}
+          {/* Add a circle for dark sky reserves to indicate the quality area */}
+          {isDarkSkyReserve && (
+            <Circle 
+              center={position} 
+              radius={10000} // 10km radius for dark sky area
+              pathOptions={{ 
+                fillColor: '#3b82f6', 
+                fillOpacity: 0.1, 
+                color: '#3b82f6', 
+                weight: 1 
+              }} 
+            />
+          )}
           
-          <CirclesComponent />
+          <Marker 
+            position={position}
+            icon={markerIcon}
+          >
+            <Popup>
+              <div className="text-sm">
+                <div className="font-medium">{locationName}</div>
+                {isDarkSkyReserve && certification && (
+                  <div className="text-blue-600 text-xs mt-1">
+                    {t("Certified Dark Sky Location", "认证暗夜位置")}
+                    <div className="font-bold">{certification}</div>
+                  </div>
+                )}
+                <div className="mt-1 text-gray-500">
+                  {position[0].toFixed(4)}, {position[1].toFixed(4)}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
           
-          <MapResetComponent onMapClick={onMapClick} onMapMove={onMapMove} />
+          <MapUpdater position={position} />
+          {editable && <MapEvents onMapClick={onMapClick} />}
         </MapContainer>
-      </Suspense>
-    </div>
+      </div>
+      
+      {showInfoPanel && (
+        <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
+          <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
+          <p className="text-sm text-muted-foreground">
+            {t(`${locationName} is located at coordinates ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`, 
+               `${locationName}位于坐标 ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`)}
+          </p>
+          
+          {/* Show dark sky certification in the info panel */}
+          {isDarkSkyReserve && certification && (
+            <div className="mt-2 text-sm">
+              <span className="text-blue-400 font-medium">
+                {t("Dark Sky Certification: ", "暗夜保护认证: ")}
+              </span>
+              <span className="text-blue-200">{certification}</span>
+            </div>
+          )}
+          
+          {editable && (
+            <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
+            </p>
+          )}
+        </div>
+      )}
+    </>
   );
 };
 
-export default LazyMapComponent;
+// Memoize the component to prevent unnecessary re-renders
+export default memo(LazyMapComponent);
