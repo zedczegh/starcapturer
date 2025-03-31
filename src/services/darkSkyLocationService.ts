@@ -78,9 +78,9 @@ export function convertToSharedAstroSpot(
     certification: 'International Dark Sky Association',
     description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
     distance: distance,
-    type: 'dark-sky',
+    // Remove type field as it's not in the SharedAstroSpot interface
+    // Add only the fields that are in the SharedAstroSpot interface
     cloudCover: 0, // Will be calculated by SIQS service
-    visibility: 0,  // Will be calculated by SIQS service
     timestamp: new Date().toISOString() // Add the required timestamp field
   };
 }

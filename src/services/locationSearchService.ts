@@ -1,4 +1,3 @@
-
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -139,7 +138,6 @@ function findLocalDarkSkyLocations(
         certification: 'International Dark Sky Association',
         description: `${entry.name} is a certified dark sky location with Bortle scale ${entry.bortleScale}.`,
         distance: distance,
-        type: 'dark-sky',
         timestamp: new Date().toISOString() // Add timestamp
       };
     });

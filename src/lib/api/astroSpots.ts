@@ -1,4 +1,3 @@
-
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -27,6 +26,8 @@ export interface SharedAstroSpot {
   isDarkSkyReserve?: boolean;
   certification?: string;
   photographer?: string;
+  cloudCover?: number;
+  visibility?: number;
 }
 
 /**
@@ -117,7 +118,9 @@ export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | 
       timestamp: new Date().toISOString(),
       isDarkSkyReserve: id.includes('reserve'),
       certification: id.includes('certified') ? "International Dark Sky Park" : undefined,
-      photographer: "John Doe"
+      photographer: "John Doe",
+      cloudCover: 0.5,
+      visibility: 10
     };
   } catch (error) {
     console.error('Error fetching shared astronomy spot:', error);
