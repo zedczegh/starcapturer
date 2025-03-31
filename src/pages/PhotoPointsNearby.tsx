@@ -13,6 +13,7 @@ import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 
+// Import react-helmet-async if not already installed
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({ language: 'en' });

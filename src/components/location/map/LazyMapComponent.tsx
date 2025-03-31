@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo, useMemo } from "react";
+import React, { useCallback, memo, useMemo, useRef, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -7,7 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
 
 // Fix for default marker icons - only initialize once
-if (!L.Icon.Default.imagePath) {
+if (typeof window !== 'undefined') {
+  // Only run this on the client side
   delete L.Icon.Default.prototype._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -38,8 +39,10 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   certification = ''
 }) => {
   const { t } = useLanguage();
+  const mapRef = useRef<L.Map | null>(null);
 
-  const handleMapReady = useCallback(() => {
+  const handleMapReady = useCallback((map: L.Map) => {
+    mapRef.current = map;
     onMapReady();
   }, [onMapReady]);
 
@@ -56,31 +59,25 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     return createCustomMarker(); // Default icon for regular locations
   }, [isDarkSkyReserve]);
 
-  // Create a circle for dark sky reserves if needed
-  const renderDarkSkyCircle = useCallback(() => {
-    if (!isDarkSkyReserve) return null;
+  // Create a circle for dark sky reserves using useEffect to ensure map is available
+  useEffect(() => {
+    if (!isDarkSkyReserve || !mapRef.current) return;
     
-    // We'll implement this using vanilla Leaflet to avoid the Circle import issue
-    React.useEffect(() => {
-      const map = document.querySelector('.leaflet-map-pane')?.parentElement;
-      if (!map) return;
-      
-      // Create a circular overlay for the dark sky region
-      const circle = L.circle(position, {
-        radius: 10000, // 10km radius
-        color: '#3b82f6',
-        fillColor: '#3b82f6',
-        fillOpacity: 0.1,
-        weight: 1
-      }).addTo(map as any);
-      
-      return () => {
+    // Create a circular overlay for the dark sky region
+    const circle = L.circle(position, {
+      radius: 10000, // 10km radius
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.1,
+      weight: 1
+    }).addTo(mapRef.current);
+    
+    return () => {
+      if (circle && mapRef.current) {
         circle.remove();
-      };
-    }, []);
-    
-    return null;
-  }, [isDarkSkyReserve, position]);
+      }
+    };
+  }, [isDarkSkyReserve, position, mapRef.current]);
 
   return (
     <>
@@ -91,16 +88,15 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           zoom={12} 
           style={{ height: "100%", width: "100%" }}
           scrollWheelZoom={true}
-          whenReady={handleMapReady}
+          whenReady={(map) => handleMapReady(map.target)}
           attributionControl={false}
+          ref={mapRef}
         >
           <TileLayer
             url={tileServerUrl}
             attribution={attribution}
             subdomains={['a', 'b', 'c']}
           />
-          
-          {renderDarkSkyCircle()}
           
           <Marker 
             position={position}

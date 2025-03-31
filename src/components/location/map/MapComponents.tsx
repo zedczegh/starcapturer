@@ -8,10 +8,12 @@ export function MapUpdater({ position }: { position: [number, number] }) {
   const map = useMap();
   
   React.useEffect(() => {
-    map.setView(position, map.getZoom(), {
-      animate: true,
-      duration: 1
-    });
+    if (map) {
+      map.setView(position, map.getZoom(), {
+        animate: true,
+        duration: 1
+      });
+    }
   }, [map, position]);
   
   return null;
@@ -22,6 +24,8 @@ export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: numbe
   const map = useMap();
   
   React.useEffect(() => {
+    if (!map) return;
+    
     const handleClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
     };
@@ -78,6 +82,8 @@ export function MapStyles() {
 
 // Create a custom marker icon
 export function createCustomMarker(color = '#f43f5e') {
+  if (typeof window === 'undefined') return null; // Return null during SSR
+  
   const markerHtmlStyles = `
     background-color: ${color};
     width: 2rem;
