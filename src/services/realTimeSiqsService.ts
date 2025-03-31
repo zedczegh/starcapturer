@@ -187,10 +187,7 @@ export function getSiqsCacheSize(): number {
 
 /**
  * Force refresh of SIQS data for a specific location
- * @param latitude Latitude of the location 
- * @param longitude Longitude of the location
- * @param bortleScale Bortle scale value
- * @returns Promise resolving to fresh SIQS data
+ * and update the cache
  */
 export async function refreshSiqsData(
   latitude: number,

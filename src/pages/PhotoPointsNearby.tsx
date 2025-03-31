@@ -31,7 +31,7 @@ const PhotoPointsNearby: React.FC = () => {
     hasMore,
     loadMore,
     refreshSiqsData
-  } = useRecommendedLocations(userLocation);
+  } = useRecommendedLocations(userLocation, 1000, 30); // Increase max results to 30
 
   // Process locations to separate certified and calculated
   const {
@@ -40,6 +40,8 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
+  
+  console.log(`Found ${certifiedCount} certified and ${calculatedCount} calculated locations`);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -123,7 +125,7 @@ const PhotoPointsNearby: React.FC = () => {
               <motion.div className="flex justify-center mb-8" variants={itemVariants}>
                 <Button
                   onClick={getPosition}
-                  className="flex items-center gap-2 bg-cosmic-800/80 hover:bg-cosmic-700/80 backdrop-blur-md border border-cosmic-700/30"
+                  className="flex items-center gap-2 glassmorphism bg-cosmic-800/30 hover:bg-cosmic-700/40 border border-cosmic-700/30"
                   disabled={locationLoading}
                 >
                   {locationLoading ? (
@@ -142,7 +144,7 @@ const PhotoPointsNearby: React.FC = () => {
                 className="flex flex-col md:flex-row justify-center items-center gap-4 mb-8"
                 variants={itemVariants}
               >
-                <div className="flex items-center gap-2 bg-cosmic-800/40 backdrop-blur-md border border-cosmic-700/20 px-4 py-2 rounded-lg">
+                <div className="flex items-center gap-2 glassmorphism-light px-4 py-2 rounded-lg">
                   <Locate className="h-4 w-4 text-blue-400" />
                   <span className="text-sm">
                     {t(
@@ -159,7 +161,7 @@ const PhotoPointsNearby: React.FC = () => {
                   }}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 bg-cosmic-800/40 hover:bg-cosmic-700/60 backdrop-blur-md border border-cosmic-600/30"
+                  className="flex items-center gap-2 glassmorphism-light hover:bg-cosmic-700/40 border border-cosmic-600/30"
                   disabled={locationLoading || loading}
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -171,7 +173,7 @@ const PhotoPointsNearby: React.FC = () => {
             {/* Distance filter */}
             {userLocation && (
               <motion.div 
-                className="max-w-xl mx-auto mb-8 bg-cosmic-800/30 backdrop-blur-md rounded-xl p-4 border border-cosmic-700/20"
+                className="max-w-xl mx-auto mb-8 glassmorphism rounded-xl p-4"
                 variants={itemVariants}
               >
                 <DistanceRangeSlider

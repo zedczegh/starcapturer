@@ -2,15 +2,15 @@
 /* Glassmorphism effects for UI components */
 
 .glassmorphism {
-  @apply backdrop-blur-lg bg-cosmic-800/30 border border-cosmic-600/30 shadow-lg;
+  @apply backdrop-blur-lg bg-cosmic-800/20 border border-cosmic-600/30 shadow-lg;
 }
 
 .glassmorphism-light {
-  @apply backdrop-blur-md bg-cosmic-800/20 border border-cosmic-600/20 shadow-md;
+  @apply backdrop-blur-md bg-cosmic-800/15 border border-cosmic-600/20 shadow-md;
 }
 
 .glassmorphism-dark {
-  @apply backdrop-blur-xl bg-cosmic-900/40 border border-cosmic-600/40 shadow-xl;
+  @apply backdrop-blur-xl bg-cosmic-900/30 border border-cosmic-600/40 shadow-xl;
 }
 
 .text-gradient {

@@ -71,27 +71,27 @@ export function DarkSkyOverlay({
       // Convert radius from km to meters
       const radiusMeters = radiusKm * 1000;
       
-      // Create a circular overlay for the dark sky region
+      // Create a circular overlay for the dark sky region with more translucency
       const newCircle = L.circle(position, {
         radius: radiusMeters,
         color: color,
         fillColor: color,
-        fillOpacity: 0.1,
-        weight: 2,
+        fillOpacity: 0.08, // More translucent
+        weight: 1.5,
         dashArray: '5, 5',
         className: 'dark-sky-overlay'
       }).addTo(map);
       
-      // Add a pulsing animation effect
+      // Add a subtler pulsing animation effect
       const pulseEffect = document.createElement('style');
       pulseEffect.innerHTML = `
         @keyframes pulse {
-          0% { stroke-opacity: 0.8; stroke-width: 2; }
-          50% { stroke-opacity: 0.3; stroke-width: 3; }
-          100% { stroke-opacity: 0.8; stroke-width: 2; }
+          0% { stroke-opacity: 0.5; stroke-width: 1.5; }
+          50% { stroke-opacity: 0.2; stroke-width: 2; }
+          100% { stroke-opacity: 0.5; stroke-width: 1.5; }
         }
         .dark-sky-overlay {
-          animation: pulse 3s infinite;
+          animation: pulse 4s infinite;
         }
       `;
       document.head.appendChild(pulseEffect);

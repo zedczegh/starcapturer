@@ -23,7 +23,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   // Format distance for display
   const formatDistance = (distance: number) => {
     if (distance >= 1000) {
-      return `${(distance / 1000).toFixed(1)}k km`;
+      return `${(distance / 1000).toFixed(1)} km`;
     }
     return `${distance} km`;
   };
@@ -54,8 +54,8 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
       />
       
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>100 km</span>
-        <span>10,000 km</span>
+        <span>{minValue} km</span>
+        <span>{maxValue} km</span>
       </div>
     </div>
   );
