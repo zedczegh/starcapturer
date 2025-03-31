@@ -100,8 +100,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
           scrollWheelZoom={scrollWheelZoom}
-          zoomControl={zoomControl}
-          attributionControl={attributionControl}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

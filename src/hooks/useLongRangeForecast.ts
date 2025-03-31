@@ -47,12 +47,12 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
         });
 
         // Check if weather data contains daily forecasts
-        if (!weatherData || !weatherData.daily_forecasts) {
+        if (!weatherData || !weatherData.dailyForecasts) {
           throw new Error('Failed to fetch forecast data');
         }
 
-        const dailyForecasts = Array.isArray(weatherData.daily_forecasts) 
-          ? weatherData.daily_forecasts 
+        const dailyForecasts = Array.isArray(weatherData.dailyForecasts) 
+          ? weatherData.dailyForecasts 
           : [];
 
         setForecast({

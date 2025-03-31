@@ -1,98 +1,71 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { SharedAstroSpot, getSharedAstroSpots } from '@/lib/api/astroSpots';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
+import { calculateDistance } from '@/data/utils/distanceCalculator';
 
-export function useDarkSkyLocations(coordinates?: { latitude: number; longitude: number }) {
-  const [loading, setLoading] = useState(true);
-  const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
-  const { language } = useLanguage();
-  const lastFetchedCoordinatesRef = useRef<string | null>(null);
-  const isMountedRef = useRef(true);
+interface UseDarkSkyLocationsResult {
+  darkSkyLocations: SharedAstroSpot[];
+  isDarkSkyLoading: boolean;
+}
 
-  // Create a unique signature for coordinates to prevent unnecessary fetches
-  const getCoordinateSignature = (coords?: { latitude: number; longitude: number }) => {
-    if (!coords) return null;
-    return `${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
-  };
+export function useDarkSkyLocations(
+  coordinates: { latitude: number; longitude: number } | null
+): UseDarkSkyLocationsResult {
+  const [darkSkyLocations, setDarkSkyLocations] = useState<SharedAstroSpot[]>([]);
+  const [isDarkSkyLoading, setIsDarkSkyLoading] = useState(true);
 
   useEffect(() => {
-    // Set mounted ref for cleanup
-    isMountedRef.current = true;
-    
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    if (!coordinates) {
+      setIsDarkSkyLoading(false);
+      return;
+    }
 
-  useEffect(() => {
     const fetchDarkSkyLocations = async () => {
-      if (!coordinates) {
-        setLoading(false);
-        return;
-      }
-
-      // Get coordinate signature
-      const coordSignature = getCoordinateSignature(coordinates);
-      
-      // Skip if we've already fetched this location
-      if (coordSignature === lastFetchedCoordinatesRef.current && locations.length > 0) {
-        setLoading(false);
-        return;
-      }
-      
-      // Update the last fetched coordinates
-      lastFetchedCoordinatesRef.current = coordSignature;
-
+      setIsDarkSkyLoading(true);
       try {
-        setLoading(true);
-        // Get locations within a larger radius to ensure we capture dark sky reserves
-        const allLocations = await getSharedAstroSpots(
-          coordinates.latitude, 
+        // Get dark sky locations from API
+        const locations = await getSharedAstroSpots(
+          coordinates.latitude,
           coordinates.longitude,
-          20, // Limit to 20 locations for better performance
-          10000 // 10000km radius to get worldwide dark sky locations
+          20,
+          5000 // Larger radius to find dark sky locations globally
         );
         
-        // Filter to only show dark sky reserves
-        const darkSkyLocations = allLocations.filter(loc => loc.isDarkSkyReserve);
+        // Filter only dark sky certified locations
+        const darkSkyOnly = locations.filter(location => location.isDarkSkyReserve);
         
-        // Sort by distance
-        const sortedLocations = darkSkyLocations.sort((a, b) => 
-          (a.distance || Infinity) - (b.distance || Infinity)
-        );
+        // Add distance calculation
+        const locationsWithDistance = darkSkyOnly.map(location => ({
+          ...location,
+          distance: calculateDistance(
+            coordinates.latitude,
+            coordinates.longitude,
+            location.latitude,
+            location.longitude
+          )
+        }));
         
-        // Only update state if component is still mounted
-        if (isMountedRef.current) {
-          setLocations(sortedLocations);
-        }
+        // Sort by SIQS score
+        const sortedLocations = locationsWithDistance.sort((a, b) => {
+          // Use safe number comparison
+          const scoreA = typeof a.siqs === 'number' ? a.siqs : 
+            (typeof a.siqs === 'object' ? a.siqs.score : 0);
+          const scoreB = typeof b.siqs === 'number' ? b.siqs : 
+            (typeof b.siqs === 'object' ? b.siqs.score : 0);
+          
+          return scoreB - scoreA;
+        });
+        
+        setDarkSkyLocations(sortedLocations);
       } catch (error) {
-        console.error('Error fetching dark sky locations:', error);
-        
-        if (isMountedRef.current) {
-          // Show error toast only if first attempt
-          if (locations.length === 0) {
-            toast.error(
-              language === 'en' 
-                ? 'Failed to load dark sky locations' 
-                : '加载暗夜区域失败',
-              { description: language === 'en' ? 'Please try again later' : '请稍后再试' }
-            );
-          }
-        }
+        console.error("Error fetching dark sky locations:", error);
       } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
+        setIsDarkSkyLoading(false);
       }
     };
 
     fetchDarkSkyLocations();
-  }, [coordinates, language, locations.length]);
+  }, [coordinates]);
 
-  return { 
-    darkSkyLocations: locations,
-    isDarkSkyLoading: loading 
-  };
+  return { darkSkyLocations, isDarkSkyLoading };
 }

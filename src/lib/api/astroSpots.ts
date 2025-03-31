@@ -1,6 +1,8 @@
 
 // This file contains functions and types related to shared astronomy spots
 
+export type DarkSkyCertificationType = 'goldtier' | 'park' | 'reserve' | 'sanctuary' | 'community';
+
 export interface SharedAstroSpot {
   id: string;
   name: string;
@@ -12,10 +14,7 @@ export interface SharedAstroSpot {
   rating?: number;
   timestamp: string;
   chineseName?: string;
-  siqs?: number | {
-    score: number;
-    isViable: boolean;
-  };
+  siqs?: number;
   distance?: number;
   isViable?: boolean;
   isDarkSkyReserve?: boolean;
@@ -68,4 +67,58 @@ export const getDarkSkyLocations = async (): Promise<SharedAstroSpot[]> => {
   ];
   
   return darkSkyLocations;
+};
+
+// Get shared astro spots based on proximity to a location
+export const getSharedAstroSpots = async (
+  latitude: number,
+  longitude: number,
+  limit: number = 10,
+  maxDistance: number = 1000
+): Promise<SharedAstroSpot[]> => {
+  // Combine dark sky locations with photo points for a complete list
+  const darkSkyLocations = await getDarkSkyLocations();
+  
+  // In a real implementation, this would fetch from a database or API
+  const sharedSpots: SharedAstroSpot[] = [
+    ...darkSkyLocations,
+    {
+      id: "ss-1",
+      name: "Joshua Tree National Park",
+      chineseName: "约书亚树国家公园",
+      latitude: 33.8734,
+      longitude: -115.9010,
+      bortleScale: 2,
+      siqs: 8.5,
+      isDarkSkyReserve: true,
+      certification: "International Dark Sky Park",
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: "ss-2",
+      name: "Mauna Kea",
+      chineseName: "莫纳克亚山",
+      latitude: 19.8207,
+      longitude: -155.4681,
+      bortleScale: 1,
+      siqs: 9.7,
+      isDarkSkyReserve: true,
+      certification: "Gold Tier Dark Sky Reserve",
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: "ss-3",
+      name: "Cherry Springs State Park",
+      chineseName: "樱泉州立公园",
+      latitude: 41.6626,
+      longitude: -77.8287,
+      bortleScale: 2,
+      siqs: 8.3,
+      isDarkSkyReserve: true,
+      certification: "Gold Tier Dark Sky Park",
+      timestamp: new Date().toISOString()
+    }
+  ];
+  
+  return sharedSpots;
 };
