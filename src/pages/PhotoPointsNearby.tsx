@@ -11,7 +11,6 @@ import { useGeolocation } from "@/hooks/location/useGeolocation";
 import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
-import { toast } from "sonner";
 import ViewToggle, { PhotoPointsViewMode } from "@/components/photoPoints/ViewToggle";
 import DarkSkyLocations from "@/components/photoPoints/DarkSkyLocations";
 import CalculatedLocations from "@/components/photoPoints/CalculatedLocations";
@@ -78,7 +77,8 @@ const PhotoPointsNearby: React.FC = () => {
     displayedLocations,
     hasMoreLocations,
     loadMoreLocations,
-    isUserInGoodLocation
+    isUserInGoodLocation,
+    totalLocationsCount
   } = usePhotoPointsSearch({
     userLocation: coords,
     currentSiqs,
@@ -89,7 +89,10 @@ const PhotoPointsNearby: React.FC = () => {
   const { 
     certifiedLocations, 
     calculatedLocations,
-    hasCertifiedLocations
+    hasCertifiedLocations,
+    hasCalculatedLocations,
+    certifiedCount,
+    calculatedCount
   } = useCertifiedLocations(displayedLocations);
   
   // Auto-switch to calculated view if no certified locations
@@ -147,7 +150,7 @@ const PhotoPointsNearby: React.FC = () => {
         latitude: coords.latitude,
         longitude: coords.longitude,
         timestamp: new Date().toISOString(),
-        fromPhotoPoints: true // Add flag to indicate we're coming from PhotoPoints
+        fromPhotoPoints: true
       }
     });
   };
@@ -201,6 +204,8 @@ const PhotoPointsNearby: React.FC = () => {
               <ViewToggle 
                 activeView={activeView} 
                 onViewChange={setActiveView} 
+                certifiedCount={certifiedCount}
+                calculatedCount={calculatedCount}
                 className="max-w-md mx-auto"
               />
             </div>
