@@ -3,10 +3,10 @@ import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
-import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
+import { getWeatherData } from "@/services/environmentalDataService";
+import { getBortleScaleData } from "@/services/environmentalDataService/bortleScaleService";
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
-import { fetchForecastData } from "@/lib/api";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";

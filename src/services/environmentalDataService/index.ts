@@ -1,6 +1,7 @@
 
 // Re-export services for environmental data
 export * from './weatherService';
+export * from './bortleScaleService';
 
 // Add centralized cache management
 let weatherCacheSize = 0;
