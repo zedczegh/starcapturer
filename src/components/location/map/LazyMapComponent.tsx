@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import MapCircle from './MapCircle';
+import { useMapReset } from '@/hooks/useMapReset';
 
 // Replace default Leaflet marker icons
 const defaultIcon = L.icon({
@@ -30,12 +31,14 @@ const MapResetComponent = ({ onMapClick, onMapMove }: {
   const map = useMap();
   
   useEffect(() => {
-    // Cleanup function to properly handle map disposal
+    // Register this map instance with any parent handlers
+    const mapContainer = map.getContainer();
+    const resetEvent = new CustomEvent('map-initialized', { detail: { map } });
+    mapContainer.dispatchEvent(resetEvent);
+    
+    // Clean up function to properly handle map disposal
     return () => {
-      // Only invalidate size if map is already initialized
-      if (map) {
-        map.invalidateSize();
-      }
+      // Do nothing here - cleanup is now handled by the parent component
     };
   }, [map]);
   
@@ -82,7 +85,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   attributionControl = true
 }) => {
   const { language } = useLanguage();
-  const [mapId] = useState(() => `map-${Math.random().toString(36).substring(2, 11)}`);
+  const { mapId } = useMapReset();
   
   // Create a MapCirclesComponent to handle all circles
   const CirclesComponent = React.useCallback(() => {

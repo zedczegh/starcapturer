@@ -26,26 +26,42 @@ const MapCircle: React.FC<MapCircleProps> = ({
   const map = useMap();
 
   useEffect(() => {
-    // Create circle on component mount
-    circleRef.current = L.circle(center, {
-      radius,
-      color,
-      fillColor,
-      weight,
-      opacity,
-      fillOpacity
-    }).addTo(map);
-
-    // Cleanup on unmount
-    return () => {
+    // Only create circle if it doesn't exist or properties have changed
+    const shouldRecreate = !circleRef.current || 
+      circleRef.current.getLatLng().lat !== center[0] || 
+      circleRef.current.getLatLng().lng !== center[1] || 
+      circleRef.current.getRadius() !== radius;
+    
+    if (shouldRecreate) {
+      // Remove existing circle if it exists
       if (circleRef.current) {
         circleRef.current.remove();
+      }
+      
+      // Create new circle and add it to the map
+      circleRef.current = L.circle(center, {
+        radius,
+        color,
+        fillColor,
+        weight,
+        opacity,
+        fillOpacity
+      }).addTo(map);
+    }
+
+    // Cleanup on unmount or before recreation
+    return () => {
+      if (circleRef.current) {
+        try {
+          circleRef.current.remove();
+          circleRef.current = null;
+        } catch (error) {
+          console.error("Error removing circle:", error);
+        }
       }
     };
   }, [center, radius, color, fillColor, weight, opacity, fillOpacity, map]);
 
-  // This component doesn't render anything directly,
-  // it just attaches and manages the Leaflet circle
   return null;
 };
 
