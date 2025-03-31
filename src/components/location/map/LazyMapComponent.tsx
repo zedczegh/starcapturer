@@ -1,6 +1,6 @@
 
 import React, { useCallback, memo, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -76,9 +76,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           
           {/* Add a circle for dark sky reserves to indicate the quality area */}
           {isDarkSkyReserve && (
-            <Circle 
+            <CircleMarker 
               center={position} 
-              radius={10000} // 10km radius for dark sky area
+              radius={30} // Visual radius for the marker
               pathOptions={{ 
                 fillColor: '#3b82f6', 
                 fillOpacity: 0.1, 

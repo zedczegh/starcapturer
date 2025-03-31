@@ -1,7 +1,17 @@
 
 import React, { useEffect } from "react";
-import { useMap, useMapEvents } from "react-leaflet";
+import { useMap, useMapEvents as useLeafletMapEvents } from "react-leaflet";
 import L from "leaflet";
+
+// Custom hook wrapping useMapEvents to handle error cases
+export function useMapEvents(handlers: { [key: string]: (e: any) => void }) {
+  try {
+    return useLeafletMapEvents(handlers);
+  } catch (error) {
+    console.error("Error using map events:", error);
+    return null;
+  }
+}
 
 // Update map view when center position changes
 export function MapUpdater({ position }: { position: [number, number] }) {
@@ -31,7 +41,7 @@ export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: numbe
 // Apply global map styles
 export function MapStyles() {
   return (
-    <style jsx global>{`
+    <style>{`
       .leaflet-container {
         height: 100%;
         width: 100%;
@@ -62,7 +72,7 @@ export function MapStyles() {
       }
       
       .leaflet-control-zoom a:hover {
-        background-color: rgba(30, 41, 59, 0.9) !important;
+        background-color: rgba(30, 41, 59,.9) !important;
       }
     `}</style>
   );

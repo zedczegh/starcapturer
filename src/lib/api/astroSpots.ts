@@ -61,7 +61,7 @@ export async function getSharedAstroSpots(
 ): Promise<SharedAstroSpot[]> {
   try {
     // Regular astronomy spots (keeping existing data)
-    const realLocations = [
+    const regularLocations = [
       // Dark sky preserves and astronomy spots in various regions
       { name: "Zhangbei Grassland Observatory", latitude: 41.1582, longitude: 114.7022, bortleScale: 3 },
       { name: "Wudalianchi Dark Sky Park", latitude: 48.7205, longitude: 126.1987, bortleScale: 2 },
@@ -133,7 +133,7 @@ export async function getSharedAstroSpots(
       { name: "Westhavelland Nature Park", latitude: 52.6962, longitude: 12.3749, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
       { name: "Exmoor National Park", latitude: 51.1187, longitude: -3.6531, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
       { name: "Galloway Forest Park", latitude: 55.1146, longitude: -4.6733, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
-      { name: "Moore's Reserve, Kielder", latitude: 55.2007, longitude: -2.5843, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
+      { name: "Kielder Moore's Reserve", latitude: 55.2007, longitude: -2.5843, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
       { name: "Kerry Dark Sky Reserve", latitude: 51.9433, longitude: -10.2694, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Reserve" },
       { name: "Mont-Mégantic", latitude: 45.4547, longitude: -71.1529, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
       
@@ -156,7 +156,7 @@ export async function getSharedAstroSpots(
     ];
     
     // Merge all locations
-    const allLocations = [...realLocations, ...darkSkyReserves];
+    const allLocations = [...regularLocations, ...darkSkyReserves];
     
     // Chinese location names for language support
     const chineseNames: Record<string, string> = {
@@ -183,7 +183,7 @@ export async function getSharedAstroSpots(
       "Yellow Mountain": "黄山",
       "Daocheng Yading": "稻城亚丁",
       "Mount Tai": "泰山",
-      "Taihu Lake Observatory": "太湖���文台",
+      "Taihu Lake Observatory": "太湖天文台",
       "Hainan Tropical Island": "海南热带岛屿",
       "Xisha Islands": "西沙群岛",
       "Dinghu Mountain": "鼎湖山",
@@ -220,7 +220,7 @@ export async function getSharedAstroSpots(
       "Westhavelland Nature Park": "西哈维尔兰自然公园",
       "Exmoor National Park": "埃克斯穆尔国家公园",
       "Galloway Forest Park": "盖洛韦森林公园",
-      "Moore's Reserve, Kielder": "基尔德摩尔保护区",
+      "Kielder Moore's Reserve": "基尔德摩尔保护区",
       "Kerry Dark Sky Reserve": "克里暗夜保护区",
       "Mont-Mégantic": "梅甘蒂克山保护区",
       "Flagstaff Dark Sky Community": "旗杆镇暗夜社区",
@@ -239,17 +239,30 @@ export async function getSharedAstroSpots(
     // Calculate distance for each location and filter by radius
     const locationsWithDistance = allLocations.map(location => {
       const distance = calculateDistance(latitude, longitude, location.latitude, location.longitude);
-      return {
-        ...location,
+      
+      // Create a base location object with standard properties
+      const baseLocation: SharedAstroSpot = {
         id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
-        description: location.isDarkSkyReserve 
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        description: 'isDarkSkyReserve' in location && location.isDarkSkyReserve
           ? `Certified dark sky location with ${location.certification} status. Bortle scale: ${location.bortleScale}.` 
           : `Astronomical observation location with Bortle ${location.bortleScale}`,
+        bortleScale: location.bortleScale,
         date: new Date().toISOString(),
-        timestamp: new Date().toISOString(), // Add the required timestamp
+        timestamp: new Date().toISOString(),
         distance,
         chineseName: chineseNames[location.name] || location.name
       };
+      
+      // Add dark sky specific properties if they exist
+      if ('isDarkSkyReserve' in location && location.isDarkSkyReserve) {
+        baseLocation.isDarkSkyReserve = location.isDarkSkyReserve;
+        baseLocation.certification = location.certification;
+      }
+      
+      return baseLocation;
     });
     
     // Filter by distance and sort by closest

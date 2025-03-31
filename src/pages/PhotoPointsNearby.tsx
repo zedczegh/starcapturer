@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,8 +12,9 @@ import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
+import DarkSkyLocationsSection from "@/components/photoPoints/DarkSkyLocationsSection";
+import DarkSkyToggle from "@/components/photoPoints/DarkSkyToggle";
 import { toast } from "sonner";
-import { DEEP_SPACE_BG } from "@/assets";
 
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
@@ -60,6 +61,7 @@ const PhotoPointsNearby: React.FC = () => {
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const navigate = useNavigate();
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [showDarkSkyOnly, setShowDarkSkyOnly] = useState(false);
   
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
     enableHighAccuracy: true,
@@ -81,6 +83,10 @@ const PhotoPointsNearby: React.FC = () => {
     currentSiqs,
     maxInitialResults: 6
   });
+  
+  const filteredLocations = showDarkSkyOnly 
+    ? displayedLocations.filter(location => location.isDarkSkyReserve)
+    : displayedLocations;
   
   useEffect(() => {
     if (coords && !locationName) {
@@ -187,6 +193,11 @@ const PhotoPointsNearby: React.FC = () => {
             setDistance={setSearchDistance} 
           />
         </div>
+        
+        {/* Dark Sky Locations Section - Always show at the top if we have coords */}
+        {coords && !loading && !searching && !geoLoading && (
+          <DarkSkyLocationsSection coordinates={coords} />
+        )}
         
         {searching && (
           <motion.div 
@@ -335,20 +346,34 @@ const PhotoPointsNearby: React.FC = () => {
         )}
         
         {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && !isUserInGoodLocation && (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {displayedLocations.map((location, index) => (
-              <PhotoLocationCard
-                key={location.id}
-                location={location}
-                index={index}
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-3">
+                <Telescope className="h-5 w-5 text-primary" />
+                {t("Nearby Photo Spots", "附近拍摄点")}
+              </h2>
+              
+              <DarkSkyToggle 
+                showDarkSkyOnly={showDarkSkyOnly}
+                onToggle={setShowDarkSkyOnly}
               />
-            ))}
-          </motion.div>
+            </div>
+          
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {filteredLocations.map((location, index) => (
+                <PhotoLocationCard
+                  key={location.id}
+                  location={location}
+                  index={index}
+                />
+              ))}
+            </motion.div>
+          </>
         )}
         
         {!loading && !searching && hasMoreLocations && displayedLocations.length > 0 && !isUserInGoodLocation && (
