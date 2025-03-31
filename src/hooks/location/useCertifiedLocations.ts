@@ -5,8 +5,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 /**
  * Hook to separate certified and calculated recommendation locations
  * Uses memoization for better performance
- * Enhanced to correctly identify certified locations from Dark Sky International
- * Now with proper updates when locations or radius changes
  */
 export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius?: number) {
   const [processedLocations, setProcessedLocations] = useState<{

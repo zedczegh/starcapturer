@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin, Award } from "lucide-react";
@@ -8,8 +7,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots"; 
 import CopyLocationButton from "@/components/location/CopyLocationButton";
-import { getSafeScore, formatSIQSScore } from "@/utils/geoUtils";
+import { formatSIQSScore } from "@/utils/geoUtils";
 import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
+import { findLocationsWithinRadius } from "@/services/locationSearchService";
+import { batchCalculateSiqs } from "@/services/realTimeSiqsService";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -37,38 +38,29 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       setLoading(true);
       try {
-        // Fetch the recommended points and convert them to the correct type
-        const points = await getRecommendedPhotoPoints(
+        const radius = 200;
+        const points = await findLocationsWithinRadius(
           userLocation.latitude,
-          userLocation.longitude
+          userLocation.longitude,
+          radius,
+          false
         );
         
-        // Convert the API response to match our SharedAstroSpot type
-        const convertedPoints: SharedAstroSpot[] = points.map(point => ({
-          id: point.id,
-          name: point.name,
-          chineseName: point.chineseName || point.name,
-          latitude: point.latitude,
-          longitude: point.longitude,
-          bortleScale: point.bortleScale,
-          siqs: point.siqs || 0,
-          isViable: point.isViable || false,
-          distance: point.distance || 0,
-          description: point.description || "",
-          date: point.date || new Date().toISOString(),
-          timestamp: point.timestamp || new Date().toISOString(),
-          isDarkSkyReserve: point.isDarkSkyReserve || false,
-          certification: point.certification
-        }));
-        
-        // Filter based on certified status if preferCertified is true
-        let filteredPoints = convertedPoints;
-        if (preferCertified) {
-          const certifiedPoints = convertedPoints.filter(p => p.isDarkSkyReserve || p.certification);
-          filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : convertedPoints;
+        if (points && points.length > 0) {
+          const pointsWithSiqs = await batchCalculateSiqs(points);
+          
+          let filteredPoints = pointsWithSiqs;
+          if (preferCertified) {
+            const certifiedPoints = filteredPoints.filter(p => p.isDarkSkyReserve || p.certification);
+            filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
+          }
+          
+          filteredPoints.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+          
+          setRecommendedPoints(filteredPoints.slice(0, 5));
+        } else {
+          setRecommendedPoints([]);
         }
-        
-        setRecommendedPoints(filteredPoints);
       } catch (error) {
         console.error("Error fetching recommended points:", error);
       } finally {
@@ -101,7 +93,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const handleViewDetails = (point: SharedAstroSpot) => {
     const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
     
-    // Create location data
     const locationData = {
       id: point.id,
       name: pointName,
@@ -109,15 +100,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       longitude: point.longitude,
       bortleScale: point.bortleScale,
       timestamp: new Date().toISOString(),
-      fromPhotoPoints: true, // Add a flag to indicate source
+      fromPhotoPoints: true,
       isDarkSkyReserve: point.isDarkSkyReserve,
       certification: point.certification
     };
     
-    // Save to localStorage to ensure proper refresh handling
     saveLocationFromPhotoPoints(locationData);
     
-    // Navigate to location details
     navigate(`/location/${point.id}`, { state: locationData });
   };
 

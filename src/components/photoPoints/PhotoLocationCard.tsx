@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Award, Clock } from 'lucide-react';
+import { MapPin, Star, Award, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -135,7 +135,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
           )}
           
           <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-            <Star className="h-3 w-3 mr-1 text-yellow-400" fill="#facc15" />
+            {loadingSiqs ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <Star className="h-3 w-3 mr-1 text-yellow-400" fill="#facc15" />
+            )}
             <span className="text-xs font-medium">
               {loadingSiqs ? '...' : formatSIQSScoreForDisplay(displaySiqs)}
             </span>

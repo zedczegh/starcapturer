@@ -16,6 +16,15 @@ import CalculatedLocations from "@/components/photoPoints/CalculatedLocations";
 import { useCertifiedLocations } from "@/hooks/location/useCertifiedLocations";
 import { toast } from "sonner";
 
+const handleExpandSearchRadius = (event: any, setSearchDistance: any, refreshLocations: any) => {
+  if (event.detail && event.detail.radius) {
+    setSearchDistance(event.detail.radius);
+    setTimeout(() => {
+      refreshLocations();
+    }, 100);
+  }
+};
+
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
   loading: boolean 

@@ -3,7 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { findBestViewingLocations, batchCalculateSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
+import { 
+  clearSiqsCache, 
+  batchCalculateSiqs 
+} from '@/services/realTimeSiqsService';
+import { 
+  findLocationsWithinRadius, 
+  findCertifiedLocations 
+} from '@/services/locationSearchService';
+import { clearLocationSearchCache } from '@/services/locationCacheService';
 
 /**
  * Hook to handle recommended locations with real-time SIQS data
@@ -43,35 +51,60 @@ export function useRecommendedLocations(initialUserLocation?: { latitude: number
       const currentPage = reset ? 1 : page;
       const limit = 9; // Number of items per page
       
-      // Clear SIQS cache when radius changes to ensure fresh data
+      // Clear caches when radius changes to ensure fresh data
       if (searchRadius !== parseInt(lastSearchParams.split('-')[2], 10)) {
         clearSiqsCache();
+        clearLocationSearchCache();
       }
       
-      // Use optimized algorithm for finding locations with best viewing conditions
-      const points = await findBestViewingLocations(
-        userLocation.latitude,
-        userLocation.longitude,
-        searchRadius,
-        limit * currentPage, // Get all results up to current page
-        showCertifiedOnly
-      );
+      // Find locations based on whether we're looking for certified only or all locations
+      let points: SharedAstroSpot[] = [];
+      
+      if (showCertifiedOnly) {
+        points = await findCertifiedLocations(
+          userLocation.latitude,
+          userLocation.longitude,
+          searchRadius
+        );
+      } else {
+        points = await findLocationsWithinRadius(
+          userLocation.latitude,
+          userLocation.longitude,
+          searchRadius,
+          false
+        );
+      }
+      
+      // Calculate real-time SIQS for locations that don't have it
+      const pointsNeedingSiqs = points.filter(point => point.siqs === undefined || point.siqs === null);
+      if (pointsNeedingSiqs.length > 0) {
+        const updatedPoints = await batchCalculateSiqs(pointsNeedingSiqs);
+        
+        // Merge updated points with existing ones
+        points = points.map(point => {
+          const updated = updatedPoints.find(p => p.id === point.id);
+          return updated || point;
+        });
+      }
       
       console.log(`Found ${points.length} locations within ${searchRadius}km radius`);
       
+      // Limit results based on page
+      const paginatedPoints = points.slice(0, limit * currentPage);
+      
       // Update state with fetched locations
       if (reset) {
-        setLocations(points);
+        setLocations(paginatedPoints);
         setPage(1);
       } else {
         // Avoid duplicates when loading more
         const existingIds = new Set(locations.map(loc => loc.id));
-        const newPoints = points.filter(point => !existingIds.has(point.id));
+        const newPoints = paginatedPoints.filter(point => !existingIds.has(point.id));
         setLocations(prev => [...prev, ...newPoints]);
       }
       
       // Determine if more locations might be available
-      setHasMore(points.length >= limit * currentPage);
+      setHasMore(points.length > paginatedPoints.length);
       
       // Update last search params
       setLastSearchParams(searchParams);
@@ -101,15 +134,15 @@ export function useRecommendedLocations(initialUserLocation?: { latitude: number
   const handleRadiusChange = useCallback((radius: number) => {
     console.log(`Radius changed to ${radius}km`);
     setSearchRadius(radius);
-    // Immediately load locations when radius changes
-    setPage(1); // Reset to page 1
+    // Reset to page 1
+    setPage(1);
   }, []);
 
   /**
    * Apply radius change and trigger reload
-   * This is a separate function that will be called after slider interaction ends
    */
   const applyRadiusChange = useCallback(() => {
+    // Force reload with new radius
     loadLocations(true);
   }, [loadLocations]);
 
@@ -119,7 +152,8 @@ export function useRecommendedLocations(initialUserLocation?: { latitude: number
   const toggleCertifiedOnly = useCallback(() => {
     setShowCertifiedOnly(prev => !prev);
     setPage(1); // Reset to page 1
-    loadLocations(true);
+    // Force reload
+    setTimeout(() => loadLocations(true), 0);
   }, [loadLocations]);
 
   /**

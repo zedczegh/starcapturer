@@ -3,10 +3,12 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateDistance } from "@/data/utils/distanceCalculator";
-import { fetchWeatherData } from "@/lib/api";
-import { fetchLightPollutionData } from "@/lib/api/pollution";
-import { findBestViewingLocations, getFallbackLocations, clearSiqsCache } from "@/services/realTimeSiqsService";
+import { 
+  findLocationsWithinRadius, 
+  findCalculatedLocations 
+} from "@/services/locationSearchService";
+import { clearSiqsCache } from '@/services/realTimeSiqsService';
+import { clearLocationSearchCache } from "@/services/locationCacheService";
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -14,7 +16,7 @@ interface UsePhotoPointsSearchProps {
   maxInitialResults?: number;
 }
 
-// Enhanced with higher max distance
+// Maximum search distance
 const MAX_SEARCH_DISTANCE = 10000; // 10,000 km
 
 export const usePhotoPointsSearch = ({
@@ -49,42 +51,44 @@ export const usePhotoPointsSearch = ({
     console.log(`Loading recommended locations with radius: ${searchDistance}km, reset: ${reset}`);
     
     try {
-      // Clear SIQS cache to ensure fresh calculations with radius change
+      // Clear caches to ensure fresh data when radius changes
       if (searchParams !== lastSearchParams) {
         clearSiqsCache();
+        clearLocationSearchCache();
       }
       
-      // Find best viewing locations with real-time SIQS
-      const recommendedLocations = await findBestViewingLocations(
+      // Find locations within radius
+      const locations = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
         searchDistance,
-        15 // Get up to 15 locations
+        false // Get all locations, not just certified
       );
       
-      if (recommendedLocations.length === 0 && searchDistance < MAX_SEARCH_DISTANCE) {
-        // If no locations found, try with maximum radius as fallback
-        console.log("No locations found, trying fallback search");
-        const fallbackLocations = await getFallbackLocations(
+      if (locations.length === 0) {
+        // If no locations found, try with calculated recommendations
+        console.log("No standard locations found, trying calculated search");
+        const calculatedLocations = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          MAX_SEARCH_DISTANCE
+          searchDistance,
+          true // Allow expanding the search radius
         );
         
-        if (fallbackLocations.length > 0) {
-          setAllLocations(fallbackLocations);
-          setFilteredLocations(fallbackLocations);
-          setDisplayedLocations(fallbackLocations.slice(0, maxInitialResults));
-          setHasMoreLocations(fallbackLocations.length > maxInitialResults);
+        if (calculatedLocations.length > 0) {
+          setAllLocations(calculatedLocations);
+          setFilteredLocations(calculatedLocations);
+          setDisplayedLocations(calculatedLocations.slice(0, maxInitialResults));
+          setHasMoreLocations(calculatedLocations.length > maxInitialResults);
           
           toast.info(
             language === "en" 
-              ? "Expanded search radius to find locations" 
-              : "扩大搜索半径以查找位置",
+              ? "Using calculated locations with good viewing conditions" 
+              : "使用计算出的良好观测条件位置",
             { 
               description: language === "en" 
-                ? "Showing the best available locations" 
-                : "显示最佳可用位置"
+                ? "These are areas likely to have clear skies" 
+                : "这些是可能有晴朗天空的区域"
             }
           );
         } else {
@@ -92,13 +96,24 @@ export const usePhotoPointsSearch = ({
           setFilteredLocations([]);
           setDisplayedLocations([]);
           setHasMoreLocations(false);
+          
+          toast.error(
+            language === "en" 
+              ? "No locations found within search radius" 
+              : "在搜索半径内未找到位置",
+            { 
+              description: language === "en" 
+                ? "Try increasing your search radius" 
+                : "尝试增加您的搜索半径"
+            }
+          );
         }
       } else {
         // Process normal results
-        setAllLocations(recommendedLocations);
-        setFilteredLocations(recommendedLocations);
-        setDisplayedLocations(recommendedLocations.slice(0, maxInitialResults));
-        setHasMoreLocations(recommendedLocations.length > maxInitialResults);
+        setAllLocations(locations);
+        setFilteredLocations(locations);
+        setDisplayedLocations(locations.slice(0, maxInitialResults));
+        setHasMoreLocations(locations.length > maxInitialResults);
       }
       
       // Update last search params
@@ -155,6 +170,9 @@ export const usePhotoPointsSearch = ({
     if (!userLocation) return;
     
     console.log("Refreshing locations with current parameters");
+    // Clear caches to ensure fresh data
+    clearSiqsCache();
+    clearLocationSearchCache();
     loadRecommendedLocations(true);
   }, [userLocation, loadRecommendedLocations]);
   
