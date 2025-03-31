@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef, memo } from "react";
+import React, { useEffect, useState, useRef, memo, useCallback } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
@@ -7,8 +7,10 @@ import L from "leaflet";
 export const MapUpdater = memo(({ position }: { position: [number, number] }) => {
   const map = useMap();
   const lastPositionRef = useRef<[number, number]>();
+  const updateTimeoutRef = useRef<number | null>(null);
   
-  useEffect(() => {
+  // Debounced map update to prevent excessive operations
+  const updateMapView = useCallback(() => {
     if (!map) return;
     
     // Check if position has changed significantly before updating
@@ -20,7 +22,8 @@ export const MapUpdater = memo(({ position }: { position: [number, number] }) =>
       try {
         map.setView(position, map.getZoom(), {
           animate: true,
-          duration: 1
+          duration: 1,
+          noMoveStart: true // Avoid triggering movestart events
         });
         lastPositionRef.current = position;
       } catch (error) {
@@ -29,24 +32,51 @@ export const MapUpdater = memo(({ position }: { position: [number, number] }) =>
     }
   }, [map, position]);
   
+  useEffect(() => {
+    if (!map) return;
+    
+    // Clear any existing timeout
+    if (updateTimeoutRef.current !== null) {
+      window.clearTimeout(updateTimeoutRef.current);
+    }
+    
+    // Set a small timeout to prevent multiple rapid updates
+    updateTimeoutRef.current = window.setTimeout(() => {
+      updateMapView();
+      updateTimeoutRef.current = null;
+    }, 50);
+    
+    return () => {
+      if (updateTimeoutRef.current !== null) {
+        window.clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, [map, position, updateMapView]);
+  
   return null;
 });
 
 // Handle map click events for editable maps - memoized for better performance
 export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
   const map = useMap();
+  const clickHandlerRef = useRef<(e: L.LeafletMouseEvent) => void>();
   
   useEffect(() => {
     if (!map) return;
     
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
+    // Create persistent click handler reference
+    if (!clickHandlerRef.current) {
+      clickHandlerRef.current = (e: L.LeafletMouseEvent) => {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      };
+    }
     
-    map.on('click', handleClick);
+    map.on('click', clickHandlerRef.current);
     
     return () => {
-      map.off('click', handleClick);
+      if (clickHandlerRef.current) {
+        map.off('click', clickHandlerRef.current);
+      }
     };
   }, [map, onMapClick]);
   
@@ -69,6 +99,7 @@ export const DarkSkyOverlay = memo(({
   const [circle, setCircle] = useState<L.Circle | null>(null);
   const styleElementRef = useRef<HTMLStyleElement | null>(null);
   const positionRef = useRef<[number, number]>(position);
+  const animationFrameRef = useRef<number | null>(null);
   
   // Only update when significant parameters change
   useEffect(() => {
@@ -79,7 +110,8 @@ export const DarkSkyOverlay = memo(({
       Math.abs(positionRef.current[0] - position[0]) > 0.0001 ||
       Math.abs(positionRef.current[1] - position[1]) > 0.0001;
       
-    if (!circle || positionChanged) {
+    // Use requestAnimationFrame for smooth rendering
+    const updateCircle = () => {
       try {
         // Remove previous circle if it exists
         if (circle) {
@@ -123,6 +155,16 @@ export const DarkSkyOverlay = memo(({
       } catch (error) {
         console.error("Error creating dark sky overlay:", error);
       }
+    };
+    
+    if (!circle || positionChanged) {
+      // Cancel any pending animation frame
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
+      
+      // Schedule update on next animation frame for better performance
+      animationFrameRef.current = window.requestAnimationFrame(updateCircle);
     }
     
     return () => {
@@ -132,6 +174,11 @@ export const DarkSkyOverlay = memo(({
         } catch (error) {
           console.error("Error removing circle overlay:", error);
         }
+      }
+      
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
       
       if (styleElementRef.current) {

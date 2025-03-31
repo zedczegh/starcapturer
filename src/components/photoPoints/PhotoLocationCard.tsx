@@ -1,207 +1,175 @@
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { memo } from "react";
+import { motion } from "framer-motion";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Award, Info } from "lucide-react";
+import { MapPin, ExternalLink, Star, Award, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatSIQSScore } from "@/utils/geoUtils";
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useNavigate } from 'react-router-dom';
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { formatSIQSScore } from "@/utils/geoUtils";
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
-  showRealTimeSiqs?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs = false }) => {
-  const { language, t } = useLanguage();
+// Enhanced card component for photo location display
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = memo(({ location, index }) => {
   const navigate = useNavigate();
-  const [isUpdatingSiqs, setIsUpdatingSiqs] = useState(false);
-  
-  // Update SIQS if needed
-  useEffect(() => {
-    if (showRealTimeSiqs && location.latitude && location.longitude && !isUpdatingSiqs) {
-      // Only fetch if we don't already have a valid SIQS score
-      const hasValidSiqs = typeof location.siqs === 'number' && location.siqs > 0;
-      if (!hasValidSiqs) {
-        const fetchRealTimeSiqs = async () => {
-          try {
-            setIsUpdatingSiqs(true);
-            const result = await calculateRealTimeSiqs(
-              location.latitude,
-              location.longitude,
-              location.bortleScale || 5
-            );
-            // No need to update state as this is handled by the parent component
-            setIsUpdatingSiqs(false);
-          } catch (error) {
-            console.error("Error fetching real-time SIQS:", error);
-            setIsUpdatingSiqs(false);
-          }
-        };
-        
-        fetchRealTimeSiqs();
-      }
-    }
-  }, [location, showRealTimeSiqs]);
-  
-  // Animation variants
-  const variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        duration: 0.3,
-        delay: index * 0.05 // Reduced delay for faster rendering
-      }
-    }
-  };
-  
-  // Get certification badge color and text
-  const getCertificationInfo = () => {
-    if (!location.certification) return { color: "blue", text: "Certified" };
-    
-    const cert = location.certification.toLowerCase();
-    
-    if (cert.includes('sanctuary')) {
-      return { 
-        color: "purple", 
-        text: "Sanctuary",
-        tooltip: t("Dark Sky Sanctuary - An exceptionally dark and remote location", 
-                  "暗夜保护区 - 特别黑暗和偏远的地点")
-      };
-    }
-    
-    if (cert.includes('reserve')) {
-      return { 
-        color: "blue", 
-        text: "Reserve",
-        tooltip: t("Dark Sky Reserve - A large area with an exceptional quality of starry nights", 
-                  "暗夜保护区 - 拥有优质星空的大面积区域")
-      };
-    }
-    
-    if (cert.includes('park')) {
-      return { 
-        color: "green", 
-        text: "Park",
-        tooltip: t("Dark Sky Park - A park or public land with exceptional starry skies", 
-                  "暗夜公园 - 拥有优质星空的公园或公共土地")
-      };
-    }
-    
-    if (cert.includes('community')) {
-      return { 
-        color: "amber", 
-        text: "Community",
-        tooltip: t("Dark Sky Community - A community dedicated to preserving dark skies", 
-                  "暗夜社区 - 致力于保护暗夜天空的社区")
-      };
-    }
-    
-    return { 
-      color: "blue", 
-      text: "Certified",
-      tooltip: t("Certified Dark Sky Location", "认证暗夜地点")
-    };
-  };
-  
-  const certInfo = getCertificationInfo();
-  const colorClasses = {
-    "blue": "bg-blue-500/30 text-blue-200 border-blue-500/30",
-    "purple": "bg-purple-500/30 text-purple-200 border-purple-500/30",
-    "green": "bg-green-500/30 text-green-200 border-green-500/30",
-    "amber": "bg-amber-500/30 text-amber-200 border-amber-500/30"
-  };
+  const { language, t } = useLanguage();
   
   const locationName = language === 'en' ? location.name : (location.chineseName || location.name);
   
+  // Format distance with appropriate units
+  const formatDistance = (distance?: number) => {
+    if (distance === undefined || distance === null) return t("Unknown distance", "未知距离");
+    
+    if (distance < 1) {
+      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+    }
+    
+    if (distance < 100) {
+      return t(`${distance.toFixed(1)} km away`, `距离 ${distance.toFixed(1)} 公里`);
+    }
+    
+    return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+  };
+  
+  // Handle view details click
   const handleViewDetails = () => {
+    // Prepare location data for storage and navigation
     const locationData = {
       id: location.id,
       name: locationName,
       latitude: location.latitude,
       longitude: location.longitude,
       bortleScale: location.bortleScale,
-      siqs: location.siqs, // Include current SIQS to maintain consistency
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: location.isDarkSkyReserve,
       certification: location.certification
     };
     
+    // Save location data to storage
     saveLocationFromPhotoPoints(locationData);
+    
+    // Navigate to location detail page
     navigate(`/location/${location.id}`, { state: locationData });
+  };
+  
+  // Get certification badge for the location
+  const getCertificationBadge = () => {
+    if (!location.certification && !location.isDarkSkyReserve) return null;
+    
+    let badgeText = "";
+    let badgeClass = "bg-blue-500/30 hover:bg-blue-500/40 text-blue-200 border-blue-500/30";
+    
+    if (location.isDarkSkyReserve) {
+      badgeText = t("Dark Sky Reserve", "暗夜保护区");
+      badgeClass = "bg-indigo-500/30 hover:bg-indigo-500/40 text-indigo-200 border-indigo-500/30";
+    } else if (location.certification) {
+      // Show specific certification type
+      const certType = location.certification.toLowerCase();
+      
+      if (certType.includes("sanctuary")) {
+        badgeText = t("Dark Sky Sanctuary", "暗夜保护区");
+        badgeClass = "bg-purple-500/30 hover:bg-purple-500/40 text-purple-200 border-purple-500/30";
+      } else if (certType.includes("park")) {
+        badgeText = t("Dark Sky Park", "暗夜公园");
+        badgeClass = "bg-green-500/30 hover:bg-green-500/40 text-green-200 border-green-500/30";
+      } else if (certType.includes("community")) {
+        badgeText = t("Dark Sky Community", "暗夜社区");
+        badgeClass = "bg-blue-500/30 hover:bg-blue-500/40 text-blue-200 border-blue-500/30";
+      } else if (certType.includes("urban")) {
+        badgeText = t("Urban Night Sky", "城市夜空");
+        badgeClass = "bg-cyan-500/30 hover:bg-cyan-500/40 text-cyan-200 border-cyan-500/30";
+      } else {
+        badgeText = t("Certified", "已认证");
+      }
+    }
+    
+    return badgeText ? (
+      <Badge variant="outline" className={`text-xs font-normal px-2 py-0 h-5 ${badgeClass}`}>
+        {badgeText}
+      </Badge>
+    ) : null;
+  };
+  
+  // Animate variants
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.3,
+        delay: index * 0.05, // Stagger effect
+        ease: "easeOut"
+      }
+    }
   };
   
   return (
     <motion.div
-      variants={variants}
+      variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="glassmorphism rounded-xl overflow-hidden hover:border-cosmic-500/40 transition-all duration-300"
+      className="glassmorphism rounded-lg overflow-hidden transition-all duration-300 hover:bg-cosmic-800/40 hover:translate-y-[-2px]"
     >
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold mb-1 pr-2">
-            {locationName}
-          </h3>
-          <div className="flex items-center gap-1">
-            <Star className="h-5 w-5 text-yellow-400" fill="#facc15" />
-            <span className="font-bold">{formatSIQSScore(location.siqs)}</span>
+          <div className="mr-2">
+            <h3 className="font-semibold text-lg mb-1">{locationName}</h3>
+            <div className="flex items-center gap-2 mb-2">
+              {getCertificationBadge()}
+              {location.siqs !== undefined && (
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 text-yellow-400 mr-1" fill="#facc15" />
+                  <span className="text-sm font-medium">{formatSIQSScore(location.siqs)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 mr-1" />
+              <span>{formatDistance(location.distance)}</span>
+            </div>
           </div>
         </div>
         
-        {(location.certification || location.isDarkSkyReserve) && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs mb-3 ${colorClasses[certInfo.color as keyof typeof colorClasses]}`}>
-                  <Award className="h-3 w-3 mr-1" fill="currentColor" fillOpacity={0.3} />
-                  <span>{certInfo.text}</span>
-                </div>
-              </TooltipTrigger>
-              {certInfo.tooltip && (
-                <TooltipContent side="top">
-                  <p>{certInfo.tooltip}</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        
-        <div className="flex items-center text-muted-foreground mb-3">
-          <MapPin className="h-4 w-4 mr-1" />
-          <span className="text-sm">
-            {location.distance ? (
-              location.distance > 1 ? 
-                `${Math.round(location.distance)} km` : 
-                `${Math.round(location.distance * 1000)} m`
-            ) : (
-              t("Distance unknown", "距离未知")
-            )}
-          </span>
+        <div className="flex justify-between items-center mt-4">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs bg-cosmic-800/40 hover:bg-cosmic-700/60 border-cosmic-700/30"
+            onClick={() => {
+              // Open in Google Maps
+              window.open(
+                `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`,
+                '_blank'
+              );
+            }}
+          >
+            <Navigation className="h-3.5 w-3.5 mr-1.5" />
+            {t("Directions", "导航")}
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="default"
+            className="text-xs"
+            onClick={handleViewDetails}
+          >
+            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+            {t("View Details", "查看详情")}
+          </Button>
         </div>
-        
-        <Button 
-          onClick={handleViewDetails}
-          className="w-full bg-cosmic-800/80 hover:bg-cosmic-700/80 border border-cosmic-600/30 hover:border-cosmic-500/50 transition-all duration-300"
-        >
-          {t("View Details", "查看详情")}
-        </Button>
       </div>
     </motion.div>
   );
-};
+});
 
 export default PhotoLocationCard;

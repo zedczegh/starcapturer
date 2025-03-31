@@ -10,29 +10,18 @@ import { MapPin, Loader2, RefreshCw, Locate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
+import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 
 // Lazy load components for better initial loading performance
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
-const useRecommendedLocations = lazy(() => 
-  import('@/hooks/photoPoints/useRecommendedLocations').then(mod => ({ 
-    default: mod.useRecommendedLocations 
-  }))
-);
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({ language: 'en' });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [searchRadius, setSearchRadius] = useState(1000);
-  const [locationsData, setLocationsData] = useState({
-    locations: [],
-    loading: true,
-    hasMore: false,
-    refreshSiqsData: () => {},
-    loadMore: () => {}
-  });
-
+  
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
@@ -45,53 +34,30 @@ const PhotoPointsNearby: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchRadius]);
 
-  // Dynamic import of the hook based on user location
-  useEffect(() => {
-    if (userLocation) {
-      const loadRecommendedLocations = async () => {
-        try {
-          // Dynamic import for code splitting
-          const { useRecommendedLocations } = await import('@/hooks/photoPoints/useRecommendedLocations');
-          const {
-            locations,
-            loading,
-            hasMore,
-            loadMore,
-            refreshSiqsData
-          } = useRecommendedLocations(userLocation, debouncedRadius, 30);
-          
-          setLocationsData({
-            locations,
-            loading,
-            hasMore,
-            loadMore,
-            refreshSiqsData
-          });
-        } catch (error) {
-          console.error("Error loading recommended locations:", error);
-          setLocationsData(prev => ({
-            ...prev,
-            loading: false
-          }));
-        }
-      };
-      
-      loadRecommendedLocations();
-    }
-  }, [userLocation, debouncedRadius]);
-
+  // Use the hook directly instead of dynamically importing it
+  const {
+    displayedLocations,
+    loading: locationsLoading,
+    hasMore,
+    loadMore,
+    refreshSiqsData,
+    totalLocationsCount,
+    setSearchRadius: setRecommendedSearchRadius
+  } = useRecommendedLocations(userLocation, debouncedRadius, 30);
+  
   // Process locations to separate certified and calculated
   const {
     certifiedLocations,
     calculatedLocations,
     certifiedCount,
     calculatedCount
-  } = useCertifiedLocations(locationsData.locations, debouncedRadius);
+  } = useCertifiedLocations(displayedLocations, debouncedRadius);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
     setSearchRadius(value);
-  }, []);
+    setRecommendedSearchRadius(value);
+  }, [setRecommendedSearchRadius]);
 
   // Listen for custom radius change events
   useEffect(() => {
@@ -202,14 +168,14 @@ const PhotoPointsNearby: React.FC = () => {
                 <Button
                   onClick={() => {
                     getPosition();
-                    locationsData.refreshSiqsData();
+                    refreshSiqsData();
                   }}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2 glassmorphism-light hover:bg-cosmic-700/40 border border-cosmic-600/30"
-                  disabled={locationLoading || locationsData.loading}
+                  disabled={locationLoading || locationsLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 ${locationsData.loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${locationsLoading ? 'animate-spin' : ''}`} />
                   {t("Refresh Data", "刷新数据")}
                 </Button>
               </motion.div>
@@ -238,7 +204,7 @@ const PhotoPointsNearby: React.FC = () => {
                 onViewChange={setActiveView}
                 certifiedCount={certifiedCount}
                 calculatedCount={calculatedCount}
-                loading={locationsData.loading}
+                loading={locationsLoading}
               />
             </motion.div>
             
@@ -252,15 +218,15 @@ const PhotoPointsNearby: React.FC = () => {
                 {activeView === 'certified' ? (
                   <DarkSkyLocations
                     locations={certifiedLocations}
-                    loading={locationsData.loading && !locationLoading}
+                    loading={locationsLoading || locationLoading}
                   />
                 ) : (
                   <CalculatedLocations
                     locations={calculatedLocations}
-                    loading={locationsData.loading && !locationLoading}
-                    hasMore={locationsData.hasMore}
-                    onLoadMore={locationsData.loadMore}
-                    onRefresh={locationsData.refreshSiqsData}
+                    loading={locationsLoading || locationLoading}
+                    hasMore={hasMore}
+                    onLoadMore={loadMore}
+                    onRefresh={refreshSiqsData}
                     searchRadius={debouncedRadius}
                   />
                 )}

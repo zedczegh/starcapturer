@@ -5,7 +5,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots'; 
 import { 
   findLocationsWithinRadius,
-  findCalculatedLocations 
+  findCalculatedLocations,
+  sortLocationsByQuality
 } from '@/services/locationSearchService';
 import { 
   calculateRealTimeSiqs, 
@@ -33,15 +34,15 @@ export function useRecommendedLocations(
   initialRadius: number = DEFAULT_RADIUS,
   maxResults: number = DEFAULT_MAX_RESULTS
 ) {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const [searchRadius, setSearchRadius] = useState(initialRadius);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const lastSearchParamsRef = useRef('');
-  const isInitialFetchRef = useRef(true);
+  const lastSearchParamsRef = useRef<string>('');
+  const isInitialFetchRef = useRef<boolean>(true);
   const fetchTimeoutRef = useRef<number | null>(null);
   
   // Helper to validate and set search radius
@@ -112,6 +113,7 @@ export function useRecommendedLocations(
     // Clear any pending fetch timeout
     if (fetchTimeoutRef.current !== null) {
       window.clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = null;
     }
     
     // Set a short delay before fetching to avoid multiple rapid fetches
@@ -142,11 +144,11 @@ export function useRecommendedLocations(
         // Only add calculated locations that aren't duplicates of certified ones
         // Use a more efficient algorithm to detect duplicates
         const certifiedCoords = new Set(
-          certifiedLocs.map(loc => `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`)
+          certifiedLocs.map(loc => `${loc.latitude.toFixed(3)},${loc.longitude.toFixed(3)}`)
         );
         
         calculatedLocs.forEach(calcLoc => {
-          const coordKey = `${calcLoc.latitude.toFixed(2)},${calcLoc.longitude.toFixed(2)}`;
+          const coordKey = `${calcLoc.latitude.toFixed(3)},${calcLoc.longitude.toFixed(3)}`;
           if (!certifiedCoords.has(coordKey)) {
             allLocations.push(calcLoc);
           }
@@ -201,6 +203,11 @@ export function useRecommendedLocations(
           language === 'en' ? 'Failed to load locations' : '加载位置失败',
           { description: language === 'en' ? 'Please try again' : '请重试' }
         );
+        
+        // Set empty state to prevent endless loading
+        setLocations([]);
+        setDisplayedLocations([]);
+        setHasMore(false);
       } finally {
         setLoading(false);
         fetchTimeoutRef.current = null;
