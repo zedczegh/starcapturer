@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
@@ -25,6 +25,24 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   searchRadius = 0
 }) => {
   const { t } = useLanguage();
+  
+  // Add event listener for expanding search radius
+  useEffect(() => {
+    const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
+      if (onRefresh) {
+        document.dispatchEvent(new CustomEvent('set-search-radius', { 
+          detail: { radius: e.detail.radius } 
+        }));
+        setTimeout(onRefresh, 100);
+      }
+    };
+    
+    document.addEventListener('expand-search-radius', handleExpandRadius as EventListener);
+    
+    return () => {
+      document.removeEventListener('expand-search-radius', handleExpandRadius as EventListener);
+    };
+  }, [onRefresh]);
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -91,9 +109,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
                 size="sm"
                 className="text-xs text-muted-foreground"
                 onClick={() => {
-                  // We can't directly access setSearchRadius here, so we use a custom event
-                  const event = new CustomEvent('expand-search-radius', { detail: { radius: Math.min(10000, searchRadius * 2) } });
-                  document.dispatchEvent(event);
+                  // Trigger custom event to expand search radius
+                  const newRadius = Math.min(10000, searchRadius * 2);
+                  document.dispatchEvent(new CustomEvent('expand-search-radius', { 
+                    detail: { radius: newRadius } 
+                  }));
                 }}
               >
                 <Search className="mr-1.5 h-3 w-3" />

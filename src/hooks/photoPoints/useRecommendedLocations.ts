@@ -136,14 +136,8 @@ export function useRecommendedLocations(initialUserLocation?: { latitude: number
     setSearchRadius(radius);
     // Reset to page 1
     setPage(1);
-  }, []);
-
-  /**
-   * Apply radius change and trigger reload
-   */
-  const applyRadiusChange = useCallback(() => {
-    // Force reload with new radius
-    loadLocations(true);
+    // Force reload with new radius immediately
+    setTimeout(() => loadLocations(true), 0);
   }, [loadLocations]);
 
   /**
@@ -204,7 +198,7 @@ export function useRecommendedLocations(initialUserLocation?: { latitude: number
     setUserLocation,
     searchRadius,
     setSearchRadius: handleRadiusChange,
-    applyRadiusChange,
+    applyRadiusChange: () => loadLocations(true), // Added for backward compatibility
     locations,
     loading,
     hasMore,

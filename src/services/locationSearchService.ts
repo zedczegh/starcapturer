@@ -24,11 +24,13 @@ export async function findLocationsWithinRadius(
 ): Promise<SharedAstroSpot[]> {
   try {
     // Check cache first
-    const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly}`;
     const cachedData = getCachedLocationSearch(latitude, longitude, radius);
     
     if (cachedData) {
-      return cachedData;
+      console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km`);
+      return certifiedOnly 
+        ? cachedData.filter(loc => loc.isDarkSkyReserve || loc.certification)
+        : cachedData;
     }
     
     console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
@@ -38,7 +40,8 @@ export async function findLocationsWithinRadius(
       latitude, 
       longitude, 
       radius,
-      certifiedOnly
+      certifiedOnly,
+      50 // Increased limit for better results
     );
     
     if (!points || points.length === 0) {
@@ -112,17 +115,12 @@ export async function findCertifiedLocations(
   radius: number
 ): Promise<SharedAstroSpot[]> {
   try {
-    // Get all locations including certified ones
-    const points = await findLocationsWithinRadius(latitude, longitude, radius, false);
+    // Get locations with certified flag for better performance
+    const points = await findLocationsWithinRadius(latitude, longitude, radius, true);
     
-    // Filter to get only certified locations
-    const certifiedPoints = points.filter(point => 
-      point.isDarkSkyReserve || point.certification
-    );
-    
-    if (certifiedPoints.length > 0) {
+    if (points.length > 0) {
       // Calculate SIQS scores for these locations
-      return await batchCalculateSiqs(certifiedPoints);
+      return await batchCalculateSiqs(points);
     }
     
     return [];
