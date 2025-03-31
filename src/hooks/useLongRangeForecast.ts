@@ -4,19 +4,21 @@ import { fetchWeatherData } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+interface DailyForecast {
+  time: string;
+  weatherCode: number;
+  temperatureMax: number;
+  temperatureMin: number;
+  sunrise: string;
+  sunset: string;
+  precipitation: number;
+  cloudCover: number;
+  windSpeed: number;
+  visibility: number;
+}
+
 interface LongRangeForecastData {
-  daily: {
-    time: string;
-    weatherCode: number;
-    temperatureMax: number;
-    temperatureMin: number;
-    sunrise: string;
-    sunset: string;
-    precipitation: number;
-    cloudCover: number;
-    windSpeed: number;
-    visibility: number;
-  }[];
+  daily: DailyForecast[];
   isLoading: boolean;
   error: string | null;
 }
@@ -48,8 +50,12 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
           throw new Error('Failed to fetch forecast data');
         }
 
+        const dailyForecasts = Array.isArray(weatherData.daily) 
+          ? weatherData.daily 
+          : [];
+
         setForecast({
-          daily: weatherData.daily.map(day => ({
+          daily: dailyForecasts.map(day => ({
             time: day.time,
             weatherCode: day.weatherCode,
             temperatureMax: day.temperatureMax,

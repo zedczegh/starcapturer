@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Loader2, Globe } from 'lucide-react';
+import { Award, Loader2, Globe, MapPin } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDarkSkyLocations } from '@/hooks/useDarkSkyLocations';
 import PhotoLocationCard from './PhotoLocationCard';
 import DarkSkyBadges from './DarkSkyBadges';
+import { Button } from '@/components/ui/button';
 
 interface DarkSkyLocationsSectionProps {
   coordinates: { latitude: number; longitude: number } | null;
@@ -14,6 +15,7 @@ interface DarkSkyLocationsSectionProps {
 const DarkSkyLocationsSection: React.FC<DarkSkyLocationsSectionProps> = ({ coordinates }) => {
   const { t } = useLanguage();
   const { darkSkyLocations, isDarkSkyLoading } = useDarkSkyLocations(coordinates);
+  const [showAll, setShowAll] = useState(false);
   
   if (!coordinates) return null;
   
@@ -31,6 +33,9 @@ const DarkSkyLocationsSection: React.FC<DarkSkyLocationsSectionProps> = ({ coord
   if (darkSkyLocations.length === 0) {
     return null;
   }
+
+  // Control how many locations to display based on showAll state
+  const displayLocations = showAll ? darkSkyLocations : darkSkyLocations.slice(0, 6);
   
   return (
     <motion.div
@@ -81,7 +86,7 @@ const DarkSkyLocationsSection: React.FC<DarkSkyLocationsSectionProps> = ({ coord
         }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {darkSkyLocations.slice(0, 6).map((location, index) => (
+        {displayLocations.map((location, index) => (
           <PhotoLocationCard
             key={location.id}
             location={location}
@@ -89,6 +94,28 @@ const DarkSkyLocationsSection: React.FC<DarkSkyLocationsSectionProps> = ({ coord
           />
         ))}
       </motion.div>
+      
+      {darkSkyLocations.length > 6 && (
+        <div className="flex justify-center mt-6">
+          <Button
+            variant="outline"
+            onClick={() => setShowAll(!showAll)}
+            className="group border-blue-600/30 hover:border-blue-500/50 hover:bg-blue-900/20"
+          >
+            {showAll ? (
+              <>
+                {t("Show Less", "显示更少")}
+                <MapPin className="ml-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
+              </>
+            ) : (
+              <>
+                {t("Show All Dark Sky Locations", "显示所有暗夜区域")}
+                <MapPin className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-1" />
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

@@ -2,9 +2,10 @@
 import React from 'react';
 import { Award, Shield, Star } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { DarkSkyCertificationType } from '@/lib/api/astroSpots';
 
 interface DarkSkyBadgeProps {
-  type: 'goldtier' | 'park' | 'reserve' | 'sanctuary' | 'community';
+  type: DarkSkyCertificationType;
 }
 
 const DarkSkyBadge: React.FC<DarkSkyBadgeProps> = ({ type }) => {
@@ -78,4 +79,4 @@ const DarkSkyBadges: React.FC = () => {
   );
 };
 
-export default DarkSkyBadges;
+export default React.memo(DarkSkyBadges);
