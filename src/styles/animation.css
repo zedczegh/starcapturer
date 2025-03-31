@@ -19,6 +19,17 @@
   }
 }
 
+@keyframes fadeSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes pulse {
   0% {
     opacity: 0.6;
@@ -93,6 +104,15 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .night-row {
   background-color: rgba(13, 23, 42, 0.3);
   border-left: 2px solid #8B5CF6;
@@ -105,6 +125,10 @@
 
 .animate-fade-slide-in {
   animation: fadeSlideIn 0.5s ease-in-out;
+}
+
+.animate-fade-slide-in-right {
+  animation: fadeSlideInRight 0.5s ease-in-out;
 }
 
 .animate-pulse {
@@ -130,6 +154,17 @@
 .animate-radial-breathing {
   animation: radialBreathing 4s infinite ease-in-out;
   background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(13, 23, 42, 0) 70%);
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }
 
 /* Shadow effects */
@@ -165,4 +200,76 @@
 
 .pulse-glow {
   animation: glowPulse 2s infinite ease-in-out;
+}
+
+/* Glassmorphism effect classes */
+.glass-card {
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* Score indicator styles */
+.score-indicator {
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.score-indicator::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  z-index: -1;
+  opacity: 0.5;
+  filter: blur(4px);
+}
+
+.score-indicator.excellent {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: rgb(34, 197, 94);
+}
+
+.score-indicator.excellent::after {
+  background-color: rgba(34, 197, 94, 0.3);
+}
+
+.score-indicator.good {
+  background-color: rgba(250, 204, 21, 0.2);
+  color: rgb(250, 204, 21);
+}
+
+.score-indicator.good::after {
+  background-color: rgba(250, 204, 21, 0.3);
+}
+
+.score-indicator.poor {
+  background-color: rgba(251, 146, 60, 0.2);
+  color: rgb(251, 146, 60);
+}
+
+.score-indicator.poor::after {
+  background-color: rgba(251, 146, 60, 0.3);
+}
+
+.score-indicator.bad {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: rgb(239, 68, 68);
+}
+
+.score-indicator.bad::after {
+  background-color: rgba(239, 68, 68, 0.3);
 }

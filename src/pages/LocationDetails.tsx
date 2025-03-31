@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -24,6 +25,7 @@ const LocationDetails = () => {
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { updateBortleScale } = useBortleUpdater();
   const { t } = useLanguage();
+  const siqsUpdateRequiredRef = useRef(true);
   
   const {
     locationData, 
@@ -50,11 +52,9 @@ const LocationDetails = () => {
   // Handle back navigation to ensure clean return to home page
   useEffect(() => {
     const handleBackNavigation = () => {
-      // We navigate directly to home rather than going back
       navigate("/", { replace: true });
     };
 
-    // Use the popstate event to detect browser back button
     window.addEventListener('popstate', handleBackNavigation);
     
     return () => {
@@ -75,8 +75,19 @@ const LocationDetails = () => {
     if (locationData && !isLoading && locationData.latitude && locationData.longitude) {
       prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
       
-      // Reset the SIQS update state when location changes
-      resetUpdateState();
+      // Reset the SIQS update state when location changes to force recalculation
+      if (siqsUpdateRequiredRef.current) {
+        resetUpdateState();
+        siqsUpdateRequiredRef.current = false;
+        
+        // Set a timer to allow for SIQS updates after a certain period
+        // This handles cases where forecast data might be delayed
+        const timer = setTimeout(() => {
+          siqsUpdateRequiredRef.current = true;
+        }, 60000); // Allow updates every minute
+        
+        return () => clearTimeout(timer);
+      }
     }
   }, [locationData, isLoading, queryClient, resetUpdateState]);
 
@@ -108,6 +119,9 @@ const LocationDetails = () => {
               ...locationData,
               bortleScale: newBortleScale
             });
+            
+            // Force SIQS update after Bortle scale changes
+            resetUpdateState();
           }
         } catch (error) {
           console.error("Failed to update Bortle scale:", error);
@@ -116,7 +130,16 @@ const LocationDetails = () => {
     };
     
     updateBortleScaleData();
-  }, [locationData, isLoading, setLocationData, updateBortleScale]);
+  }, [locationData, isLoading, setLocationData, updateBortleScale, resetUpdateState]);
+  
+  // Ensure SIQS is updated when coming from calculator
+  useEffect(() => {
+    if (locationData?.fromCalculator && siqsUpdateRequiredRef.current) {
+      console.log("Location from calculator, ensuring SIQS data is preserved");
+      resetUpdateState();
+      siqsUpdateRequiredRef.current = false;
+    }
+  }, [locationData, resetUpdateState]);
 
   if (isLoading) {
     return <PageLoader />;

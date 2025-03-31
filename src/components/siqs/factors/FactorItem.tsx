@@ -6,7 +6,7 @@ import {
   getTranslatedFactorName, 
   getTranslatedDescription 
 } from "../utils/factorTranslations";
-import { getProgressColor } from "../utils/progressColor";
+import { getProgressColorClass } from "../utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 
@@ -24,31 +24,21 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   
   // Memoize expensive calculations to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
-    // Convert score from 0-100 to 0-10 scale
-    const scoreOn10Scale = factor.score / 10;
+    // Convert score from 0-100 to 0-10 scale if needed
+    const scoreOn10Scale = factor.score > 10 ? factor.score / 10 : factor.score;
     const colorClass = getScoreColorClass(scoreOn10Scale);
-    const progressColor = getProgressColor(scoreOn10Scale);
+    const progressColorClass = getProgressColorClass(scoreOn10Scale);
     const translatedName = getTranslatedFactorName(factor.name, language);
     const translatedDescription = getTranslatedDescription(factor.description, language);
     
     return {
       scoreOn10Scale,
       colorClass,
-      progressColor,
+      progressColorClass,
       translatedName,
       translatedDescription
     };
   }, [factor.score, factor.name, factor.description, language]);
-  
-  // Memoize the animation delay style
-  const animationStyle = useMemo(() => ({
-    animationDelay: `${index * 100}ms`
-  }), [index]);
-  
-  // Memoize the progress custom style
-  const progressStyle = useMemo(() => ({
-    backgroundColor: memoizedValues.progressColor,
-  } as React.CSSProperties), [memoizedValues.progressColor]);
   
   return (
     <motion.div 
@@ -66,9 +56,9 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
       </div>
       
       <Progress 
-        value={factor.score} 
+        value={factor.score > 10 ? factor.score : factor.score * 10} 
         className="h-2 bg-cosmic-700/40"
-        style={progressStyle}
+        colorClass={memoizedValues.progressColorClass}
       />
       
       <p className="text-xs text-muted-foreground mt-2">

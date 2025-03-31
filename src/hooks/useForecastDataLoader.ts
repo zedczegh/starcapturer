@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { fetchForecastData } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,27 +13,43 @@ export const useForecastDataLoader = (
   setLocationData: (data: any) => void
 ) => {
   const { t } = useLanguage();
-  const loadingRef = useRef(false);
-  const lastLoadTimeRef = useRef<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const lastLoadTimeRef = useRef<Record<string, number>>({});
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Load forecast data for a location
-  const loadForecastData = useCallback(async () => {
-    if (!locationData?.latitude || !locationData?.longitude || loadingRef.current) {
+  const loadForecastData = useCallback(async (force = false) => {
+    if (!locationData?.latitude || !locationData?.longitude) {
       return;
     }
     
-    // Only refresh if it's been more than 10 minutes since the last load
+    // Create a location key for caching
+    const locationKey = `${locationData.latitude.toFixed(3)},${locationData.longitude.toFixed(3)}`;
+    
+    // Only refresh if it's been more than 15 minutes or force is true
     const now = Date.now();
-    if (lastLoadTimeRef.current && now - lastLoadTimeRef.current < 10 * 60 * 1000) {
-      console.log("Skipping forecast refresh - less than 10 minutes since last update");
+    if (!force && lastLoadTimeRef.current[locationKey] && 
+        now - lastLoadTimeRef.current[locationKey] < 15 * 60 * 1000) {
+      console.log("Skipping forecast refresh - less than 15 minutes since last update");
       return;
     }
     
-    loadingRef.current = true;
+    // Cancel any in-progress requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create a new abort controller for this request
+    abortControllerRef.current = new AbortController();
+    setIsLoading(true);
     
     try {
       console.log(`Loading forecast data for ${locationData.name}`);
-      const forecastData = await fetchForecastData(locationData.latitude, locationData.longitude);
+      const forecastData = await fetchForecastData(
+        locationData.latitude, 
+        locationData.longitude,
+        abortControllerRef.current.signal
+      );
       
       if (forecastData && forecastData.hourly) {
         console.log("Forecast data loaded successfully");
@@ -44,15 +60,21 @@ export const useForecastDataLoader = (
           forecastData
         });
         
-        lastLoadTimeRef.current = now;
+        // Update last load time
+        lastLoadTimeRef.current[locationKey] = now;
       } else {
         console.error("Failed to load forecast data - API returned no data");
+        toast.error(t("Failed to load forecast data", "加载预报数据失败"));
       }
-    } catch (error) {
-      console.error("Error loading forecast data:", error);
-      toast.error(t("Failed to load forecast data", "加载预报数据失败"));
+    } catch (error: any) {
+      // Don't show errors for aborted requests
+      if (error.name !== 'AbortError') {
+        console.error("Error loading forecast data:", error);
+        toast.error(t("Failed to load forecast data", "加载预报数据失败"));
+      }
     } finally {
-      loadingRef.current = false;
+      setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [locationData?.latitude, locationData?.longitude, locationData?.name, setLocationData, t]);
   
@@ -61,10 +83,17 @@ export const useForecastDataLoader = (
     if (locationData?.latitude && locationData?.longitude) {
       loadForecastData();
     }
+    
+    return () => {
+      // Cancel any pending requests when component unmounts
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [locationData?.latitude, locationData?.longitude, loadForecastData]);
   
   return {
     loadForecastData,
-    isLoading: loadingRef.current
+    isLoading
   };
 };

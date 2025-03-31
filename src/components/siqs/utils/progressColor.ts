@@ -20,7 +20,7 @@ export const getProgressColor = (score: number): string => {
  */
 export const getProgressColorClass = (score: number): string => {
   if (score >= 8) return "bg-green-500";
-  if (score >= 6) return "bg-gradient-to-r from-[#8A9A5B] to-[#606C38]";
+  if (score >= 6) return "bg-gradient-to-r from-green-500/90 to-yellow-500/90";
   if (score >= 4) return "bg-yellow-400";
   if (score >= 2) return "bg-orange-400";
   return "bg-red-500";
@@ -33,7 +33,7 @@ export const getProgressColorClass = (score: number): string => {
  */
 export const getProgressTextColorClass = (score: number): string => {
   if (score >= 8) return "text-green-500";
-  if (score >= 6) return "text-green-700";
+  if (score >= 6) return "text-green-600";
   if (score >= 4) return "text-yellow-500";
   if (score >= 2) return "text-orange-500";
   return "text-red-500";

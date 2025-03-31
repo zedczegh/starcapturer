@@ -10,7 +10,7 @@ const recommendationCache: Record<number, Record<string, string>> = {};
  * @param language Current UI language
  * @returns Appropriate recommendation message
  */
-export const getRecommendationMessage = (score: number, language: string): string => {
+export const getRecommendationMessage = (score: number, language: Language): string => {
   // Round to nearest 0.5 for caching purposes
   const roundedScore = Math.round(score * 2) / 2;
   
@@ -115,4 +115,22 @@ export const getScoreLabel = (score: number, language: Language): string => {
     else if (score >= 2) return "较差";
     else return "很差";
   }
+};
+
+/**
+ * Get quality level for a score as an object
+ * @param score SIQS score (0-10 scale)
+ * @returns Object with level and color information
+ */
+export const getQualityLevel = (score: number) => {
+  if (score >= 8) {
+    return { level: 'excellent', color: 'green' };
+  } else if (score >= 6) {
+    return { level: 'good', color: 'lime' };
+  } else if (score >= 4) {
+    return { level: 'average', color: 'yellow' };
+  } else if (score >= 2) {
+    return { level: 'poor', color: 'orange' };
+  }
+  return { level: 'bad', color: 'red' };
 };
