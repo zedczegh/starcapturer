@@ -1,14 +1,17 @@
 
-import React, { memo } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, ExternalLink, Star, Award, Navigation } from "lucide-react";
+import { MapPin, ExternalLink, Star, Navigation, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
 import { formatSIQSScore } from "@/utils/geoUtils";
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
+import { getWeatherData } from "@/services/environmentalDataService/weatherService";
+import LocationWeatherBadge from "./LocationWeatherBadge";
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -20,8 +23,112 @@ interface PhotoLocationCardProps {
 const PhotoLocationCard: React.FC<PhotoLocationCardProps> = memo(({ location, index, showRealTimeSiqs = false }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
+  const [isFetchingSiqs, setIsFetchingSiqs] = useState(false);
+  const [weatherInfo, setWeatherInfo] = useState<{
+    cloudCover?: number; 
+    temperature?: number;
+    condition?: string;
+    windSpeed?: number;
+    precipitation?: number;
+  }>(null);
   
   const locationName = language === 'en' ? location.name : (location.chineseName || location.name);
+  
+  // Fetch real-time SIQS data when requested
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchRealTimeSiqs = async () => {
+      if (!showRealTimeSiqs || !location.latitude || !location.longitude || location.siqs !== undefined) {
+        return;
+      }
+      
+      try {
+        setIsFetchingSiqs(true);
+        
+        // Generate a cache key for this location
+        const cacheKey = `weather-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+        
+        // Simple in-memory cache lookup function 
+        const getCachedData = (key: string) => {
+          const cached = sessionStorage.getItem(key);
+          if (cached) {
+            try {
+              const { data, timestamp } = JSON.parse(cached);
+              // Use cache if less than 30 minutes old
+              if (Date.now() - timestamp < 30 * 60 * 1000) {
+                return data;
+              }
+            } catch (e) {
+              console.error("Error parsing cached data", e);
+            }
+          }
+          return null;
+        };
+        
+        // Simple cache setter
+        const setCachedData = (key: string, data: any) => {
+          try {
+            sessionStorage.setItem(key, JSON.stringify({
+              data,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            console.error("Error caching data", e);
+          }
+        };
+        
+        // Get weather data with caching
+        const weatherData = await getWeatherData(
+          location.latitude,
+          location.longitude,
+          cacheKey,
+          getCachedData,
+          setCachedData,
+          true, // display only
+          language
+        );
+        
+        if (weatherData && isMounted) {
+          // Update weather info for display
+          setWeatherInfo({
+            cloudCover: weatherData.cloudCover,
+            temperature: weatherData.temperature,
+            condition: weatherData.condition,
+            windSpeed: weatherData.windSpeed,
+            precipitation: weatherData.precipitation
+          });
+          
+          // Calculate real-time SIQS if not already available
+          if (location.siqs === undefined) {
+            const siqsResult = await calculateRealTimeSiqs(
+              location.latitude,
+              location.longitude,
+              location.bortleScale || 5
+            );
+            
+            // Update location with SIQS data if component is still mounted
+            if (isMounted && siqsResult) {
+              location.siqs = siqsResult.siqs;
+              location.isViable = siqsResult.isViable;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching real-time SIQS:", error);
+      } finally {
+        if (isMounted) {
+          setIsFetchingSiqs(false);
+        }
+      }
+    };
+    
+    fetchRealTimeSiqs();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [showRealTimeSiqs, location, language]);
   
   // Format distance with appropriate units
   const formatDistance = (distance?: number) => {
@@ -100,13 +207,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = memo(({ location, in
   
   // Animate variants
   const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 }, // Reduced y-offset for smoother animation
     visible: { 
       opacity: 1, 
       y: 0,
       transition: { 
-        duration: 0.3,
-        delay: index * 0.05, // Stagger effect
+        duration: 0.25, // Faster transition
+        delay: Math.min(0.3, index * 0.03), // Cap maximum delay 
         ease: "easeOut"
       }
     }
@@ -123,14 +230,30 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = memo(({ location, in
         <div className="flex justify-between items-start mb-2">
           <div className="mr-2">
             <h3 className="font-semibold text-lg mb-1">{locationName}</h3>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               {getCertificationBadge()}
-              {location.siqs !== undefined && (
+              
+              {weatherInfo && (
+                <LocationWeatherBadge 
+                  cloudCover={weatherInfo.cloudCover}
+                  temperature={weatherInfo.temperature}
+                  weatherCondition={weatherInfo.condition}
+                  windSpeed={weatherInfo.windSpeed}
+                  precipitation={weatherInfo.precipitation}
+                />
+              )}
+              
+              {location.siqs !== undefined ? (
                 <div className="flex items-center">
                   <Star className="h-4 w-4 text-yellow-400 mr-1" fill="#facc15" />
                   <span className="text-sm font-medium">{formatSIQSScore(location.siqs)}</span>
                 </div>
-              )}
+              ) : showRealTimeSiqs && isFetchingSiqs ? (
+                <div className="flex items-center">
+                  <Loader2 className="h-3 w-3 text-muted-foreground animate-spin mr-1" />
+                  <span className="text-xs text-muted-foreground">{t("Calculating...", "计算中...")}</span>
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-end">

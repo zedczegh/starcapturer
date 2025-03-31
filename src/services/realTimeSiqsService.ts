@@ -37,7 +37,6 @@ export async function calculateRealTimeSiqs(
   // Check cache first
   const cachedData = siqsCache.get(cacheKey);
   if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-    console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
     return {
       siqs: cachedData.siqs,
       isViable: cachedData.isViable
@@ -46,7 +45,6 @@ export async function calculateRealTimeSiqs(
   
   // Check if this calculation is already in progress
   if (activeCalculations.has(cacheKey)) {
-    console.log(`SIQS calculation already in progress for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, waiting...`);
     // Wait for a short time and check cache again
     await new Promise(resolve => setTimeout(resolve, 1500));
     
@@ -65,23 +63,43 @@ export async function calculateRealTimeSiqs(
   
   // Mark this calculation as active
   activeCalculations.add(cacheKey);
-  console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
-    // Fetch weather data
-    const weatherData = await fetchWeatherData({
-      latitude,
-      longitude
-    });
+    // Try to get weather data from sessionStorage first
+    const weatherCacheKey = `weather-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    let weatherData = null;
     
-    // Fetch forecast data for nighttime calculation
-    const forecastData = await fetchForecastData({
-      latitude,
-      longitude,
-      days: 2
-    });
+    try {
+      const cachedWeather = sessionStorage.getItem(weatherCacheKey);
+      if (cachedWeather) {
+        const { data, timestamp } = JSON.parse(cachedWeather);
+        if (Date.now() - timestamp < 30 * 60 * 1000) {
+          weatherData = data;
+        }
+      }
+    } catch (e) {
+      console.error("Error retrieving cached weather data:", e);
+    }
     
-    // Default values if API calls fail
+    // Fetch weather data if not in cache
+    if (!weatherData) {
+      weatherData = await fetchWeatherData({
+        latitude,
+        longitude
+      });
+      
+      // Cache the weather data
+      try {
+        sessionStorage.setItem(weatherCacheKey, JSON.stringify({
+          data: weatherData,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.error("Error caching weather data:", e);
+      }
+    }
+    
+    // Return default values if API calls fail
     if (!weatherData) {
       console.error("Weather data fetch failed for SIQS calculation");
       return { siqs: 0, isViable: false };
@@ -99,7 +117,63 @@ export async function calculateRealTimeSiqs(
       }
     }
     
-    // Calculate SIQS using optimized method
+    // Fast path: If cloud cover > 70%, return poor SIQS without further calculation
+    if (weatherData.cloudCover > 70) {
+      const poorSiqs = Math.max(0, 3 - (weatherData.cloudCover - 70) / 10);
+      
+      // Store in cache
+      siqsCache.set(cacheKey, {
+        siqs: poorSiqs,
+        isViable: false,
+        timestamp: Date.now()
+      });
+      
+      return {
+        siqs: poorSiqs,
+        isViable: false
+      };
+    }
+    
+    // Try to use cached forecast data
+    let forecastData = null;
+    const forecastCacheKey = `forecast-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    
+    try {
+      const cachedForecast = sessionStorage.getItem(forecastCacheKey);
+      if (cachedForecast) {
+        const { data, timestamp } = JSON.parse(cachedForecast);
+        if (Date.now() - timestamp < 60 * 60 * 1000) { // 1 hour cache for forecast
+          forecastData = data;
+        }
+      }
+    } catch (e) {
+      console.error("Error retrieving cached forecast data:", e);
+    }
+    
+    // Fetch forecast if not in cache (only for locations with good potential)
+    if (!forecastData && weatherData.cloudCover < 40) {
+      try {
+        forecastData = await fetchForecastData({
+          latitude,
+          longitude,
+          days: 2
+        });
+        
+        // Cache the forecast data
+        try {
+          sessionStorage.setItem(forecastCacheKey, JSON.stringify({
+            data: forecastData,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.error("Error caching forecast data:", e);
+        }
+      } catch (err) {
+        console.error("Error fetching forecast data:", err);
+      }
+    }
+    
+    // Calculate SIQS
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherData,
       finalBortleScale,
@@ -107,8 +181,6 @@ export async function calculateRealTimeSiqs(
       0.5, // Default moon phase
       forecastData
     );
-    
-    console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
     
     // Store in cache
     siqsCache.set(cacheKey, {
@@ -131,8 +203,7 @@ export async function calculateRealTimeSiqs(
 }
 
 /**
- * Batch process multiple locations for SIQS calculation
- * with smart prioritization and parallelization
+ * Optimized batch processing for multiple locations with parallel processing
  * @param locations Array of locations to process
  * @param maxParallel Maximum number of parallel requests
  * @returns Promise resolving to locations with updated SIQS
@@ -143,55 +214,67 @@ export async function batchCalculateSiqs(
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   
-  console.log(`Batch calculating SIQS for ${locations.length} locations`);
-  
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
   
-  // Sort locations by distance to process closest first
-  updatedLocations.sort((a, b) => {
+  // First check which locations already have SIQS data
+  const locationsNeedingSiqs = updatedLocations.filter(
+    loc => loc.siqs === undefined && loc.latitude && loc.longitude
+  );
+  
+  if (locationsNeedingSiqs.length === 0) {
+    return updatedLocations;
+  }
+  
+  // Sort by distance, prioritizing closer locations
+  locationsNeedingSiqs.sort((a, b) => {
     const distA = typeof a.distance === 'number' ? a.distance : Infinity;
     const distB = typeof b.distance === 'number' ? b.distance : Infinity;
     return distA - distB;
   });
   
-  // Process locations in chunks to avoid too many parallel requests
-  for (let i = 0; i < updatedLocations.length; i += maxParallel) {
-    const chunk = updatedLocations.slice(i, i + maxParallel);
-    const promises = chunk.map(async (location) => {
-      if (!location.latitude || !location.longitude) return location;
-      
-      try {
-        const result = await calculateRealTimeSiqs(
-          location.latitude,
-          location.longitude,
-          location.bortleScale || 5
-        );
-        
-        // Update the location object with real-time SIQS
-        return {
-          ...location,
-          siqs: result.siqs,
-          isViable: result.isViable
-        };
-      } catch (error) {
-        console.error(`Error calculating SIQS for location ${location.name}:`, error);
-        // Keep existing SIQS if available, otherwise default to 0
-        return {
-          ...location,
-          siqs: location.siqs || 0,
-          isViable: location.isViable !== undefined ? location.isViable : false
-        };
-      }
-    });
+  // Process in batches
+  const batchSize = Math.min(maxParallel, 5); // Limit batch size
+  const batches = Math.ceil(locationsNeedingSiqs.length / batchSize);
+  
+  for (let i = 0; i < batches; i++) {
+    const startIdx = i * batchSize;
+    const endIdx = Math.min((i + 1) * batchSize, locationsNeedingSiqs.length);
+    const batch = locationsNeedingSiqs.slice(startIdx, endIdx);
     
-    // Wait for the current chunk to complete before processing next chunk
-    const results = await Promise.all(promises);
+    // Process this batch in parallel
+    await Promise.all(
+      batch.map(async location => {
+        try {
+          if (!location.latitude || !location.longitude) return;
+          
+          const result = await calculateRealTimeSiqs(
+            location.latitude,
+            location.longitude, 
+            location.bortleScale || 5
+          );
+          
+          // Find this location in the original array and update it
+          const locIndex = updatedLocations.findIndex(
+            loc => loc.id === location.id || 
+                  (loc.latitude === location.latitude && 
+                   loc.longitude === location.longitude)
+          );
+          
+          if (locIndex >= 0) {
+            updatedLocations[locIndex].siqs = result.siqs;
+            updatedLocations[locIndex].isViable = result.isViable;
+          }
+        } catch (error) {
+          console.error(`Error calculating SIQS for location ${location.name}:`, error);
+        }
+      })
+    );
     
-    // Update the locations array with the results
-    results.forEach((result, idx) => {
-      updatedLocations[i + idx] = result;
-    });
+    // Small delay between batches to avoid overwhelming the browser
+    if (i < batches - 1) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
   }
   
   return updatedLocations;
@@ -228,6 +311,13 @@ export async function refreshSiqsData(
   
   // Remove from cache to force recalculation
   siqsCache.delete(cacheKey);
+  
+  // Also clear related weather cache
+  try {
+    sessionStorage.removeItem(`weather-${latitude.toFixed(4)}-${longitude.toFixed(4)}`);
+  } catch (e) {
+    console.error("Error clearing weather cache:", e);
+  }
   
   // Recalculate and return fresh data
   return calculateRealTimeSiqs(latitude, longitude, bortleScale);

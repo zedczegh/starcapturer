@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
@@ -16,7 +16,8 @@ interface CalculatedLocationsProps {
   searchRadius?: number;
 }
 
-const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
+// Memoized component to prevent unnecessary re-renders
+const CalculatedLocations: React.FC<CalculatedLocationsProps> = memo(({ 
   locations, 
   loading, 
   hasMore, 
@@ -172,6 +173,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       )}
     </>
   );
-};
+});
 
 export default CalculatedLocations;
