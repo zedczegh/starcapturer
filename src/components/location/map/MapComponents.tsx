@@ -14,18 +14,18 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
     click: null as ((e: L.LeafletMouseEvent) => void) | null,
     moveend: null as (() => void) | null
   });
-  const isMapMountedRef = useRef(false);
+  const isMountedRef = useRef(false);
 
   // Handle map click events
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
-    if (onMapClick) {
+    if (onMapClick && isMountedRef.current) {
       onMapClick(e.latlng.lat, e.latlng.lng);
     }
   }, [onMapClick]);
 
   // Handle map move events
   const handleMapMove = useCallback(() => {
-    if (onMapMove && map) {
+    if (onMapMove && map && isMountedRef.current) {
       const center = map.getCenter();
       onMapMove(center.lat, center.lng);
     }
@@ -33,7 +33,9 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
 
   // Set up event listeners
   useEffect(() => {
-    if (!map || !isMapMountedRef.current) return;
+    isMountedRef.current = true;
+    
+    if (!map) return;
     
     // Store current handlers for cleanup
     eventHandlersRef.current.click = onMapClick ? handleMapClick : null;
@@ -47,35 +49,39 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
     if (onMapMove) {
       map.on('moveend', handleMapMove);
     }
-
-    // Safely invalidate map size after a delay to ensure the container is fully rendered
+    
+    // Safe invalidate size with check if map is still valid
     const timer = setTimeout(() => {
-      if (map && isMapMountedRef.current) {
-        try {
+      try {
+        if (map && !map._isDestroyed && isMountedRef.current) {
           map.invalidateSize({
             animate: false,
             pan: false
           });
-        } catch (error) {
-          console.error("Error invalidating map size:", error);
         }
+      } catch (error) {
+        console.error("Error invalidating map size:", error);
       }
     }, 250);
 
     return () => {
-      // Clear timeout
+      isMountedRef.current = false;
       clearTimeout(timer);
       
-      // Only remove listeners if map still exists
-      if (map && isMapMountedRef.current) {
-        // Remove event listeners using the stored handlers
-        if (eventHandlersRef.current.click) {
-          map.off('click', eventHandlersRef.current.click);
+      try {
+        // Only remove listeners if map still exists and is not being destroyed
+        if (map && !map._isDestroyed) {
+          // Remove event listeners using the stored handlers
+          if (eventHandlersRef.current.click) {
+            map.off('click', eventHandlersRef.current.click);
+          }
+          
+          if (eventHandlersRef.current.moveend) {
+            map.off('moveend', eventHandlersRef.current.moveend);
+          }
         }
-        
-        if (eventHandlersRef.current.moveend) {
-          map.off('moveend', eventHandlersRef.current.moveend);
-        }
+      } catch (error) {
+        console.error("Error cleaning up map event listeners:", error);
       }
       
       // Clear handlers
@@ -83,15 +89,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
       eventHandlersRef.current.moveend = null;
     };
   }, [map, handleMapClick, handleMapMove, onMapClick, onMapMove]);
-
-  // Track map mounted state
-  useEffect(() => {
-    isMapMountedRef.current = true;
-    
-    return () => {
-      isMapMountedRef.current = false;
-    };
-  }, []);
 
   return null;
 };

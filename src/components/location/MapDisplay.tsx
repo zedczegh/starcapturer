@@ -32,6 +32,13 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mapReadyHandledRef = useRef(false);
+  const { 
+    mapId, 
+    isMapInitialized, 
+    registerMapInstance, 
+    registerContainerRef,
+    cleanupMap 
+  } = useMapReset();
 
   // Memoize position to prevent unnecessary rerenders
   const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
@@ -84,8 +91,11 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         clearTimeout(mapReadyTimeoutRef.current);
         mapReadyTimeoutRef.current = null;
       }
+      
+      // Also clean up the map instance
+      cleanupMap();
     };
-  }, []);
+  }, [cleanupMap]);
 
   // Simulate map ready event after component mount with safety timeout
   useEffect(() => {
@@ -127,7 +137,10 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   }, [handleMapReady]);
 
   return (
-    <div className="z-0 h-full w-full" ref={containerRef}>
+    <div className="z-0 h-full w-full" ref={(el) => {
+      containerRef.current = el;
+      registerContainerRef(el);
+    }}>
       <Suspense fallback={
         <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
           <div className="flex flex-col items-center gap-3">
@@ -137,6 +150,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
+          id={mapId}
           center={memoizedPosition}
           zoom={10}
           markers={markers}
@@ -145,6 +159,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
           className="w-full h-full"
           scrollWheelZoom={true}
           attributionControl={true}
+          onMapInstance={registerMapInstance}
         />
       </Suspense>
     </div>
