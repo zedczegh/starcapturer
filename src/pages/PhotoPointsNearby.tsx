@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container } from '@/components/ui/container';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import PageTitle from '@/components/layout/PageTitle';
 import LocationSelector from '@/components/common/LocationSelector';
 import { SIQSLocation } from '@/utils/locationStorage';
 import { toast } from 'sonner';
-import GlobalMapSelector from '@/components/common/GlobalMapSelector';
+import { Button } from '@/components/ui/button';
+import { Map } from 'lucide-react';
 
 const PhotoPointsNearby = () => {
   const { t } = useLanguage();
@@ -39,6 +40,22 @@ const PhotoPointsNearby = () => {
     });
   };
 
+  // Function to open the global map selector
+  const openMapSelector = () => {
+    // Dispatch a custom event that will be caught by the GlobalMapSelector component
+    const event = new CustomEvent('open-global-map-selector', { 
+      detail: { 
+        onSelect: handleLocationSelect,
+        title: t("Select Location for Photo Points", "选择拍摄点位置"),
+        description: t(
+          "Choose a location to view nearby photo points",
+          "选择一个位置以查看附近的拍摄点"
+        )
+      } 
+    });
+    document.dispatchEvent(event);
+  };
+
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
       <Container className="pt-28 pb-20">
@@ -57,13 +74,26 @@ const PhotoPointsNearby = () => {
                 {t("Select a Location", "选择位置")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <LocationSelector 
                 onLocationSelect={handleLocationSelect}
-                buttonLabel={t("Open Map", "打开地图")}
+                buttonLabel={t("Search", "搜索")}
                 placeholder={t("Search for a city, landmark, or address...", "搜索城市、地标或地址...")}
                 includeCurrentLocation={true}
               />
+              
+              <div className="text-center">
+                <span className="px-3 text-muted-foreground">{t("or", "或")}</span>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-center space-x-2"
+                onClick={openMapSelector}
+              >
+                <Map className="h-4 w-4" />
+                <span>{t("Open Map", "打开地图")}</span>
+              </Button>
             </CardContent>
           </Card>
           
@@ -89,9 +119,6 @@ const PhotoPointsNearby = () => {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Map selector modal (hidden by default) */}
-        <GlobalMapSelector />
       </Container>
     </div>
   );

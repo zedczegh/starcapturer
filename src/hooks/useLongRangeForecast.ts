@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { fetchWeatherData } from '@/lib/api';
+import { fetchLongRangeForecastData } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -9,8 +9,8 @@ interface DailyForecast {
   weatherCode: number;
   temperatureMax: number;
   temperatureMin: number;
-  sunrise: string;
-  sunset: string;
+  sunrise?: string;
+  sunset?: string;
   precipitation: number;
   cloudCover: number;
   windSpeed: number;
@@ -41,9 +41,10 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
       try {
         setForecast(prev => ({ ...prev, isLoading: true, error: null }));
         
-        const weatherData = await fetchWeatherData({
+        const weatherData = await fetchLongRangeForecastData({
           latitude,
-          longitude
+          longitude,
+          days: 16
         });
 
         // Check if weather data is available
