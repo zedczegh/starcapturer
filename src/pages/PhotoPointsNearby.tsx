@@ -172,6 +172,11 @@ const PhotoPointsNearby: React.FC = () => {
       }
     });
   };
+
+  // Handle toggling between certified and calculated views
+  const handleViewChange = (view: PhotoPointsViewMode) => {
+    setActiveView(view);
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-cover bg-fixed bg-center bg-no-repeat">
@@ -247,8 +252,8 @@ const PhotoPointsNearby: React.FC = () => {
         
         <div className="mb-6">
           <DistanceRangeSlider 
-            value={searchDistance} 
-            onChange={setSearchDistance}
+            distance={searchDistance} 
+            setDistance={setSearchDistance}
             loading={searching}
           />
         </div>
@@ -256,7 +261,7 @@ const PhotoPointsNearby: React.FC = () => {
         <div className="mb-6">
           <ViewToggle 
             activeView={activeView} 
-            setActiveView={setActiveView}
+            onViewChange={handleViewChange}
             certifiedCount={certifiedCount}
             calculatedCount={calculatedCount}
             loading={loading || searching}
@@ -298,7 +303,7 @@ const PhotoPointsNearby: React.FC = () => {
               <div className="text-sm text-muted-foreground">
                 {hasCalculatedLocations && (
                   <span>
-                    {t("Showing", "显示")} {displayedLocations.length}/{calculatedCount} {t("locations", "个位置")}
+                    {t("Showing", "显示")} {calculatedLocations.length}/{calculatedCount} {t("locations", "个位置")}
                   </span>
                 )}
               </div>

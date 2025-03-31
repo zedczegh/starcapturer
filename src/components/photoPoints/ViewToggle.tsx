@@ -1,7 +1,7 @@
 
 import React, { memo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Award, Calculator } from "lucide-react";
+import { Award, Calculator, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ interface ViewToggleProps {
   className?: string;
   certifiedCount?: number;
   calculatedCount?: number;
+  loading?: boolean;
 }
 
 const ViewToggle: React.FC<ViewToggleProps> = memo(({
@@ -20,13 +21,14 @@ const ViewToggle: React.FC<ViewToggleProps> = memo(({
   onViewChange,
   className,
   certifiedCount,
-  calculatedCount
+  calculatedCount,
+  loading
 }) => {
   const { t } = useLanguage();
   
   // Handle toggle change with performance optimization
   const handleViewChange = (view: PhotoPointsViewMode) => () => {
-    if (view !== activeView) {
+    if (view !== activeView && !loading) {
       onViewChange(view);
     }
   };
@@ -41,8 +43,13 @@ const ViewToggle: React.FC<ViewToggleProps> = memo(({
           activeView === 'certified' ? "bg-cosmic-700/70" : "hover:bg-cosmic-700/40"
         )}
         onClick={handleViewChange('certified')}
+        disabled={loading}
       >
-        <Award className="h-4 w-4" />
+        {loading && activeView === 'certified' ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Award className="h-4 w-4" />
+        )}
         <span className="text-xs sm:text-sm truncate">
           {t("Certified Locations", "认证地点")}
           {certifiedCount !== undefined && (
@@ -59,8 +66,13 @@ const ViewToggle: React.FC<ViewToggleProps> = memo(({
           activeView === 'calculated' ? "bg-cosmic-700/70" : "hover:bg-cosmic-700/40"
         )}
         onClick={handleViewChange('calculated')}
+        disabled={loading}
       >
-        <Calculator className="h-4 w-4" />
+        {loading && activeView === 'calculated' ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Calculator className="h-4 w-4" />
+        )}
         <span className="text-xs sm:text-sm truncate">
           {t("Calculated Recommendations", "计算推荐")}
           {calculatedCount !== undefined && (

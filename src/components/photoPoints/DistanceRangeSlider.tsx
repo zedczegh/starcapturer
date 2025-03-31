@@ -8,11 +8,13 @@ import { motion } from "framer-motion";
 interface DistanceRangeSliderProps {
   distance: number;
   setDistance: (distance: number) => void;
+  loading?: boolean;
 }
 
 const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   distance,
   setDistance,
+  loading
 }) => {
   const { t } = useLanguage();
   
@@ -70,6 +72,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           step={100}
           onValueChange={handleSliderChange}
           className="mb-6"
+          disabled={loading}
         />
       </motion.div>
       
@@ -90,6 +93,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
                   : "hover:border-primary/50"
               }`}
               onClick={() => setDistance(option)}
+              disabled={loading}
             >
               {formatDistance(option)}
             </Button>
