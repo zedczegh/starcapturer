@@ -123,10 +123,10 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
           scrollWheelZoom={scrollWheelZoom}
-          // Pass options correctly for MapContainer
-          zoomControl={zoomControl}
-          attributionControl={attributionControl}
         >
+          {/* Add zoom control and attribution control separately */}
+          {zoomControl && <div className="leaflet-control-zoom-custom" />}
+          
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

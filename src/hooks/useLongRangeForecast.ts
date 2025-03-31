@@ -46,20 +46,19 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
           longitude
         });
 
-        // Check if weather data contains daily forecasts
+        // Check if weather data is available
         if (!weatherData) {
           throw new Error('Failed to fetch forecast data');
         }
 
         // Extract daily forecasts from weatherData
-        // Note: The API structure might have changed, ensure we're accessing the correct property
         const dailyForecasts = weatherData.daily || [];
         
         // Ensure the data is an array
         const forecastsArray = Array.isArray(dailyForecasts) ? dailyForecasts : [];
 
         setForecast({
-          daily: forecastsArray.map(day => ({
+          daily: forecastsArray.map((day: any) => ({
             time: day.time || new Date().toISOString(),
             weatherCode: day.weatherCode || 0,
             temperatureMax: day.temperatureMax || 25,

@@ -1,33 +1,32 @@
 
-import { useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 /**
- * Hook to help manage map component cleanup and prevent 
- * "Map container is already initialized" errors
+ * A hook to handle map resets and prevent the "Map container is already initialized" error
+ * Returns a unique mapId for each component instance and handles map initialization state
  */
 export function useMapReset() {
-  const mapIdRef = useRef<string>(`map-${Math.random().toString(36).substring(2, 11)}`);
-  const mapInitializedRef = useRef<boolean>(false);
+  // Create a unique ID for this map instance
+  const [mapId] = useState(() => `map-${Math.random().toString(36).substring(2, 11)}`);
+  const [isMapInitialized, setMapInitialized] = useState(false);
   
-  // Reset map ID when component mounts or remounts
+  // Get current route to detect navigation
+  const location = useLocation();
+  
+  // Reset map initialization state on route change
   useEffect(() => {
-    // Generate a new random ID on every mount
-    mapIdRef.current = `map-${Math.random().toString(36).substring(2, 11)}`;
-    mapInitializedRef.current = false;
+    setMapInitialized(false);
     
+    // Return cleanup function
     return () => {
-      // Reset on unmount
-      mapInitializedRef.current = false;
+      setMapInitialized(false);
     };
-  }, []);
-  
-  const setMapInitialized = (initialized: boolean) => {
-    mapInitializedRef.current = initialized;
-  };
+  }, [location.pathname]);
   
   return {
-    mapId: mapIdRef.current,
-    isMapInitialized: mapInitializedRef.current,
+    mapId,
+    isMapInitialized,
     setMapInitialized
   };
 }
