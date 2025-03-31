@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for managing location data in localStorage
  */
@@ -79,19 +78,20 @@ export const getSavedLocation = (): SIQSLocation | null => {
 };
 
 // Save location with flag to indicate it came from PhotoPoints page
-export const saveLocationFromPhotoPoints = (location: SIQSLocation): boolean => {
+export const saveLocationFromPhotoPoints = (locationData: any): void => {
+  if (!locationData?.id) return;
+  
   try {
-    const locationWithFlag = {
-      ...location,
+    // Make sure we add the fromPhotoPoints flag
+    const dataToSave = {
+      ...locationData,
       fromPhotoPoints: true,
-      lastRefreshed: null, // Force refresh on next load
-      timestamp: location.timestamp || new Date().toISOString()
+      timestamp: new Date().toISOString()
     };
     
-    return saveLocation(locationWithFlag);
+    localStorage.setItem(`location_${locationData.id}`, JSON.stringify(dataToSave));
   } catch (error) {
-    console.error("Error saving location from PhotoPoints:", error);
-    return false;
+    console.error('Error saving location with PhotoPoints flag:', error);
   }
 };
 

@@ -1,6 +1,6 @@
-// Define the common types used across geocoding services
 
-/** Location interface representing a geographic location with coordinates */
+export type Language = 'en' | 'zh';
+
 export interface Location {
   name: string;
   latitude: number;
@@ -8,16 +8,31 @@ export interface Location {
   placeDetails?: string;
 }
 
-/** Type for supported languages */
-export type Language = 'en' | 'zh';
-
-/**
- * Structure for Chinese city alternatives
- */
 export interface CityAlternative {
   name: string;
   chinese: string;
   alternatives: string[];
   coordinates: [number, number];
   placeDetails?: string;
+}
+
+export interface ChineseLocation {
+  areaCode: string;
+  provinceCode: string;
+  province: string;
+  cityCode: string;
+  city: string;
+  districtCode: string;
+  district: string;
+  nameEn: string;
+  pinyin: string;
+  longitude: number;
+  latitude: number;
+  bortleScale?: number;
+}
+
+export interface GeocodeResponse {
+  success: boolean;
+  results: Location[];
+  error?: string;
 }
