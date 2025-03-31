@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Slider } from "@/components/ui/slider";
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MapPin, Loader2 } from 'lucide-react';
+import { throttle } from 'lodash';
 
 interface DistanceRangeSliderProps {
   distance: number;
@@ -20,18 +21,38 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   onAfterChange
 }) => {
   const { t } = useLanguage();
+  const [localDistance, setLocalDistance] = useState(distance);
   
-  const handleChange = (values: number[]) => {
+  // Update local distance when distance prop changes
+  useEffect(() => {
+    setLocalDistance(distance);
+  }, [distance]);
+  
+  // Throttled change handler to prevent too many updates
+  const handleChange = useCallback((values: number[]) => {
     if (values.length > 0) {
-      setDistance(values[0]);
+      setLocalDistance(values[0]);
     }
-  };
-
-  const handleAfterChange = () => {
+  }, []);
+  
+  // Use a throttled version of setDistance to prevent too many parent updates
+  const throttledSetDistance = useCallback(
+    throttle((value: number) => {
+      setDistance(value);
+    }, 100),
+    [setDistance]
+  );
+  
+  // Update parent when local value changes
+  useEffect(() => {
+    throttledSetDistance(localDistance);
+  }, [localDistance, throttledSetDistance]);
+  
+  const handleAfterChange = useCallback(() => {
     if (onAfterChange) {
       onAfterChange();
     }
-  };
+  }, [onAfterChange]);
   
   const formatDistance = (dist: number) => {
     if (dist >= 1000) {
@@ -68,7 +89,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           <MapPin className="h-3.5 w-3.5 mr-1.5" />
           {t("Search Radius", "搜索半径")}:
           <span className="ml-1.5 text-primary font-medium">
-            {formatDisplayDistance(distance)}
+            {formatDisplayDistance(localDistance)}
           </span>
         </div>
         
@@ -81,7 +102,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
       </div>
       
       <Slider
-        value={[distance]}
+        value={[localDistance]}
         min={100}
         max={maxDistance}
         step={100}

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ import CalculatedLocations from "@/components/photoPoints/CalculatedLocations";
 import { useCertifiedLocations } from "@/hooks/location/useCertifiedLocations";
 import { toast } from "sonner";
 
-// Location display component
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
   loading: boolean 
@@ -57,7 +55,6 @@ const CurrentLocationDisplay = ({ coords, loading }: {
   );
 };
 
-// Main Photo Points Nearby page component
 const PhotoPointsNearby: React.FC = () => {
   const { t, language } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -65,14 +62,12 @@ const PhotoPointsNearby: React.FC = () => {
   const [locationName, setLocationName] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   
-  // Use the geolocation hook to get user's coordinates
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
     enableHighAccuracy: true,
     timeout: 10000,
     language
   });
   
-  // Use the photo points search hook for fetching and filtering locations
   const {
     loading,
     searching,
@@ -82,14 +77,14 @@ const PhotoPointsNearby: React.FC = () => {
     hasMoreLocations,
     loadMoreLocations,
     isUserInGoodLocation,
-    totalLocationsCount
+    totalLocationsCount,
+    refreshLocations
   } = usePhotoPointsSearch({
     userLocation: coords,
     currentSiqs,
     maxInitialResults: 6
   });
 
-  // Separate certified and calculated locations
   const { 
     certifiedLocations, 
     calculatedLocations,
@@ -97,9 +92,25 @@ const PhotoPointsNearby: React.FC = () => {
     hasCalculatedLocations,
     certifiedCount,
     calculatedCount
-  } = useCertifiedLocations(displayedLocations);
+  } = useCertifiedLocations(displayedLocations, searchDistance);
   
-  // Auto-switch to calculated view if no certified locations and loading is complete
+  useEffect(() => {
+    const handleExpandRadius = (event: any) => {
+      if (event.detail && event.detail.radius) {
+        setSearchDistance(event.detail.radius);
+        setTimeout(() => {
+          refreshLocations();
+        }, 100);
+      }
+    };
+    
+    document.addEventListener('expand-search-radius', handleExpandRadius);
+    
+    return () => {
+      document.removeEventListener('expand-search-radius', handleExpandRadius);
+    };
+  }, [setSearchDistance, refreshLocations]);
+  
   useEffect(() => {
     if (!loading && !searching && activeView === 'certified' && !hasCertifiedLocations) {
       setActiveView('calculated');
@@ -117,7 +128,6 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [loading, searching, hasCertifiedLocations, activeView, language]);
   
-  // Get location name
   useEffect(() => {
     if (coords && !locationName) {
       try {
@@ -134,7 +144,6 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, locationName]);
   
-  // Get current SIQS from local storage if available
   useEffect(() => {
     try {
       const recentLocations = localStorage.getItem("astrospot_recent_locations");
@@ -156,7 +165,6 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, getPosition, locationName]);
   
-  // Handler for viewing current location details
   const handleViewCurrentLocation = () => {
     if (!coords) return;
     
@@ -173,10 +181,13 @@ const PhotoPointsNearby: React.FC = () => {
     });
   };
 
-  // Handle toggling between certified and calculated views
   const handleViewChange = (view: PhotoPointsViewMode) => {
     setActiveView(view);
   };
+  
+  const handleApplyRadiusChange = useCallback(() => {
+    refreshLocations();
+  }, [refreshLocations]);
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-cover bg-fixed bg-center bg-no-repeat">
@@ -255,6 +266,8 @@ const PhotoPointsNearby: React.FC = () => {
             distance={searchDistance} 
             setDistance={setSearchDistance}
             loading={searching}
+            onAfterChange={handleApplyRadiusChange}
+            maxDistance={10000}
           />
         </div>
         
@@ -314,6 +327,8 @@ const PhotoPointsNearby: React.FC = () => {
               loading={loading || searching}
               hasMore={hasMoreLocations}
               onLoadMore={loadMoreLocations}
+              onRefresh={refreshLocations}
+              searchRadius={searchDistance}
             />
           </div>
         )}

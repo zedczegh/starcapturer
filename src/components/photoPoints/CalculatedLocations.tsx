@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Calculator, Loader2, Target, RefreshCw } from "lucide-react";
+import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ interface CalculatedLocationsProps {
   hasMore: boolean;
   onLoadMore: () => void;
   onRefresh?: () => void;
+  searchRadius?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -20,7 +21,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   loading, 
   hasMore, 
   onLoadMore,
-  onRefresh
+  onRefresh,
+  searchRadius = 0
 }) => {
   const { t } = useLanguage();
   
@@ -59,22 +61,46 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         <div className="flex items-center justify-center gap-2 mt-4">
           <Target className="h-4 w-4 text-primary" />
           <p className="text-sm text-primary">
-            {t(
-              "Try adjusting your search radius to find better viewing spots.",
-              "尝试调整搜索半径以找到更好的观测地点。"
-            )}
+            {searchRadius > 0 ? 
+              t(
+                `Try increasing your search radius beyond ${searchRadius}km.`,
+                `尝试将搜索半径增加到${searchRadius}公里以上。`
+              ) :
+              t(
+                "Try adjusting your search radius to find better viewing spots.",
+                "尝试调整搜索半径以找到更好的观测地点。"
+              )
+            }
           </p>
         </div>
         
         {onRefresh && (
-          <Button 
-            variant="outline" 
-            onClick={onRefresh}
-            className="mt-4 group border-primary/40 hover:bg-cosmic-800/50"
-          >
-            <RefreshCw className="mr-2 h-4 w-4 group-hover:animate-spin" />
-            {t("Refresh Recommendations", "刷新推荐")}
-          </Button>
+          <div className="mt-6 flex flex-col gap-3 items-center">
+            <Button 
+              variant="outline" 
+              onClick={onRefresh}
+              className="group border-primary/40 hover:bg-cosmic-800/50"
+            >
+              <RefreshCw className="mr-2 h-4 w-4 group-hover:animate-spin" />
+              {t("Refresh Recommendations", "刷新推荐")}
+            </Button>
+            
+            {searchRadius < 10000 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={() => {
+                  // We can't directly access setSearchRadius here, so we use a custom event
+                  const event = new CustomEvent('expand-search-radius', { detail: { radius: Math.min(10000, searchRadius * 2) } });
+                  document.dispatchEvent(event);
+                }}
+              >
+                <Search className="mr-1.5 h-3 w-3" />
+                {t("Try wider search area", "尝试更广的搜索范围")}
+              </Button>
+            )}
+          </div>
         )}
       </div>
     );

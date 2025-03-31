@@ -2,11 +2,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot, getSharedAstroSpots } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
-import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchWeatherData } from "@/lib/api";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
+import { findBestViewingLocations, getFallbackLocations, clearSiqsCache } from "@/services/realTimeSiqsService";
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -14,11 +14,8 @@ interface UsePhotoPointsSearchProps {
   maxInitialResults?: number;
 }
 
-// Default seeing conditions (when real data isn't available)
-const DEFAULT_SEEING_CONDITIONS = 3;
-
 // Enhanced with higher max distance
-const MAX_SEARCH_DISTANCE = 10000; // 10,000 km - expanded per requirements
+const MAX_SEARCH_DISTANCE = 10000; // 10,000 km
 
 export const usePhotoPointsSearch = ({
   userLocation,
@@ -34,304 +31,132 @@ export const usePhotoPointsSearch = ({
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [hasMoreLocations, setHasMoreLocations] = useState(false);
   const [isUserInGoodLocation, setIsUserInGoodLocation] = useState(false);
+  const [lastSearchParams, setLastSearchParams] = useState<string>('');
   
-  // SIQS threshold - reduced to 10% better than current location for more hope
-  // Original was 20%, but 10% will show more potential improvements
-  const SIQS_IMPROVEMENT_THRESHOLD = 1.1;
-  
-  // Load all nearby potential locations
-  useEffect(() => {
-    const fetchLocations = async () => {
-      if (!userLocation) return;
+  // Load recommended locations based on user location and search radius
+  const loadRecommendedLocations = useCallback(async (reset: boolean = true) => {
+    if (!userLocation) return;
+    
+    // Generate search params signature
+    const searchParams = `${userLocation.latitude.toFixed(5)}-${userLocation.longitude.toFixed(5)}-${searchDistance}`;
+    
+    // Skip if the same search was already performed (unless forced reset)
+    if (!reset && searchParams === lastSearchParams) {
+      return;
+    }
+    
+    setSearching(true);
+    console.log(`Loading recommended locations with radius: ${searchDistance}km, reset: ${reset}`);
+    
+    try {
+      // Clear SIQS cache to ensure fresh calculations with radius change
+      if (searchParams !== lastSearchParams) {
+        clearSiqsCache();
+      }
       
-      setLoading(true);
-      setSearching(true);
-      try {
-        // Get potential locations from the API - increased to 200 for more options
-        const locations = await getSharedAstroSpots(
+      // Find best viewing locations with real-time SIQS
+      const recommendedLocations = await findBestViewingLocations(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchDistance,
+        15 // Get up to 15 locations
+      );
+      
+      if (recommendedLocations.length === 0 && searchDistance < MAX_SEARCH_DISTANCE) {
+        // If no locations found, try with maximum radius as fallback
+        console.log("No locations found, trying fallback search");
+        const fallbackLocations = await getFallbackLocations(
           userLocation.latitude,
           userLocation.longitude,
-          200, // Get more locations to filter later (increased from 100)
-          searchDistance // Use current search distance parameter
+          MAX_SEARCH_DISTANCE
         );
         
-        // Add distance calculation
-        const locationsWithDistance = locations.map(location => ({
-          ...location,
-          distance: calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            location.latitude,
-            location.longitude
-          ),
-          // Ensure all required properties exist
-          timestamp: location.timestamp || location.date || new Date().toISOString(),
-          // Mark certified dark sky locations - improved detection
-          isDarkSkyReserve: location.isDarkSkyReserve || 
-            (location.certification && 
-              (location.certification.toLowerCase().includes('dark sky') || 
-               location.certification.toLowerCase().includes('reserve') ||
-               location.certification.toLowerCase().includes('sanctuary')))
-        }));
-        
-        setAllLocations(locationsWithDistance);
-        
-        // Calculate real SIQS for each location
-        await calculateRealSIQS(locationsWithDistance, userLocation);
-      } catch (error) {
-        console.error("Error fetching locations:", error);
-        toast.error(
-          language === "en" ? "Error loading locations" : "加载位置时出错", 
-          { description: language === "en" ? "Please try again later" : "请稍后再试" }
-        );
-      } finally {
-        setLoading(false);
-        setSearching(false);
-      }
-    };
-    
-    fetchLocations();
-  }, [userLocation, language, searchDistance]);
-  
-  // Calculate real SIQS scores for locations with improved accuracy and parallelization
-  const calculateRealSIQS = async (locations: SharedAstroSpot[], userLocation: { latitude: number; longitude: number }) => {
-    if (locations.length === 0) return;
-    
-    const enhancedLocations = [...locations];
-    let calculatedUserSiqs = currentSiqs;
-    
-    // If we don't have user's current SIQS, calculate it now
-    if (calculatedUserSiqs === null && userLocation) {
-      try {
-        // Get weather data
-        const weatherData = await fetchWeatherData({
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude
-        });
-        
-        // Get light pollution data
-        const pollutionData = await fetchLightPollutionData(
-          userLocation.latitude, 
-          userLocation.longitude
-        );
-        
-        if (weatherData && pollutionData) {
-          // Calculate SIQS
-          const siqsResult = calculateSIQS({
-            cloudCover: weatherData.cloudCover,
-            bortleScale: pollutionData.bortleScale || 5,
-            seeingConditions: DEFAULT_SEEING_CONDITIONS,
-            windSpeed: weatherData.windSpeed,
-            humidity: weatherData.humidity,
-            moonPhase: 0, // Default value since we don't have real-time moon data
-            precipitation: weatherData.precipitation,
-            weatherCondition: weatherData.weatherCondition,
-            aqi: weatherData.aqi
-          });
+        if (fallbackLocations.length > 0) {
+          setAllLocations(fallbackLocations);
+          setFilteredLocations(fallbackLocations);
+          setDisplayedLocations(fallbackLocations.slice(0, maxInitialResults));
+          setHasMoreLocations(fallbackLocations.length > maxInitialResults);
           
-          calculatedUserSiqs = siqsResult.score;
-          
-          // More optimistic assessment of current location - reduced threshold
-          const userHasGoodSiqs = calculatedUserSiqs !== null && calculatedUserSiqs >= 6.5;
-          setIsUserInGoodLocation(userHasGoodSiqs);
-        }
-      } catch (err) {
-        console.error("Error calculating user SIQS:", err);
-      }
-    } else {
-      // More optimistic assessment with existing SIQS
-      const userHasGoodSiqs = calculatedUserSiqs !== null && calculatedUserSiqs >= 6.5;
-      setIsUserInGoodLocation(userHasGoodSiqs);
-    }
-    
-    // Calculate SIQS for each location with parallel processing for better performance
-    // Process in batches of 10 to avoid overwhelming the API
-    const processInBatches = async (items: SharedAstroSpot[], batchSize: number = 10) => {
-      const results: SharedAstroSpot[] = [];
-      
-      for (let i = 0; i < items.length; i += batchSize) {
-        const batch = items.slice(i, i + batchSize);
-        const batchPromises = batch.map(location => processSingleLocation(location));
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults.filter(Boolean) as SharedAstroSpot[]);
-      }
-      
-      return results;
-    };
-    
-    // Process a single location
-    const processSingleLocation = async (location: SharedAstroSpot): Promise<SharedAstroSpot | null> => {
-      try {
-        // If location already has SIQS, use it but ensure certified locations have high scores
-        if (location.siqs !== undefined) {
-          // Ensure certified locations always have high SIQS scores
-          if ((location.isDarkSkyReserve || location.certification) && location.siqs < 7.5) {
-            return {
-              ...location,
-              siqs: Math.max(location.siqs, 7.5 + Math.random() * 1.5), // Between 7.5-9
-              isViable: true
-            };
-          }
-          return location;
-        }
-        
-        // Get weather data for location
-        const weatherData = await fetchWeatherData({
-          latitude: location.latitude,
-          longitude: location.longitude
-        });
-        
-        // Use existing Bortle scale or fetch it
-        let bortleScale = location.bortleScale;
-        if (!bortleScale) {
-          const pollutionData = await fetchLightPollutionData(
-            location.latitude, 
-            location.longitude
+          toast.info(
+            language === "en" 
+              ? "Expanded search radius to find locations" 
+              : "扩大搜索半径以查找位置",
+            { 
+              description: language === "en" 
+                ? "Showing the best available locations" 
+                : "显示最佳可用位置"
+            }
           );
-          bortleScale = pollutionData?.bortleScale || 5;
+        } else {
+          setAllLocations([]);
+          setFilteredLocations([]);
+          setDisplayedLocations([]);
+          setHasMoreLocations(false);
         }
-        
-        // If it's a certified location but doesn't have a low Bortle scale, 
-        // enforce a maximum of 3 to ensure dark skies
-        if ((location.isDarkSkyReserve || location.certification) && bortleScale > 3) {
-          bortleScale = Math.min(3, bortleScale);
-        }
-        
-        if (weatherData) {
-          // Calculate SIQS
-          const siqsResult = calculateSIQS({
-            cloudCover: weatherData.cloudCover,
-            bortleScale: bortleScale,
-            seeingConditions: DEFAULT_SEEING_CONDITIONS,
-            windSpeed: weatherData.windSpeed,
-            humidity: weatherData.humidity,
-            moonPhase: 0, // Default value
-            precipitation: weatherData.precipitation,
-            weatherCondition: weatherData.weatherCondition,
-            aqi: weatherData.aqi
-          });
-          
-          // Ensure certified locations always have high SIQS scores
-          if ((location.isDarkSkyReserve || location.certification) && siqsResult.score < 7.5) {
-            return {
-              ...location,
-              siqs: 7.5 + Math.random() * 1.5, // Between 7.5-9
-              isViable: true
-            };
-          }
-          
-          return {
-            ...location,
-            siqs: siqsResult.score,
-            isViable: siqsResult.isViable
-          };
-        }
-      } catch (err) {
-        console.error(`Error calculating SIQS for location ${location.name}:`, err);
+      } else {
+        // Process normal results
+        setAllLocations(recommendedLocations);
+        setFilteredLocations(recommendedLocations);
+        setDisplayedLocations(recommendedLocations.slice(0, maxInitialResults));
+        setHasMoreLocations(recommendedLocations.length > maxInitialResults);
       }
       
-      return location;
-    };
-    
-    // Process locations in batches for better performance
-    const locationsWithSiqs = await processInBatches(enhancedLocations);
-    
-    // Apply filters
-    setAllLocations(locationsWithSiqs);
-    applyFilters(locationsWithSiqs, calculatedUserSiqs);
-  };
-  
-  // Filter locations based on distance and SIQS with improved algorithm
-  const applyFilters = (locations: SharedAstroSpot[], userSiqs: number | null) => {
-    if (!userLocation || locations.length === 0) return;
-    
-    // Filter by distance
-    const withinDistance = locations.filter(
-      location => (location.distance || 0) <= searchDistance
-    );
-    
-    // Improved algorithm: Lower threshold for showing locations
-    // This gives users more hope by showing them more potential good spots
-    let betterLocations = withinDistance;
-    if (userSiqs !== null) {
-      // For non-certified locations, apply the reduced SIQS improvement threshold
-      // and also include locations with excellent SIQS regardless of improvement
-      betterLocations = withinDistance.filter(location => 
-        // Always include certified dark sky locations regardless of SIQS
-        location.isDarkSkyReserve === true ||
-        location.certification !== undefined ||
-        // Include excellent locations regardless of improvement over current
-        (location.siqs !== undefined && location.siqs >= 7.0) ||
-        // For regular locations, include if they're somewhat better
-        // Lowered threshold to give more hope and options
-        (location.siqs !== undefined && location.siqs > userSiqs * 1.05)
+      // Update last search params
+      setLastSearchParams(searchParams);
+    } catch (error) {
+      console.error("Error loading recommended locations:", error);
+      toast.error(
+        language === "en" ? "Error loading locations" : "加载位置时出错", 
+        { description: language === "en" ? "Please try again later" : "请稍后再试" }
       );
+    } finally {
+      setSearching(false);
     }
-    
-    // Sort: certified locations first, then by SIQS, then by distance
-    // Modified to give more prominence to locations within easier reach
-    const sortedLocations = betterLocations.sort((a, b) => {
-      // Certified locations first
-      if (a.isDarkSkyReserve && !b.isDarkSkyReserve) return -1;
-      if (!a.isDarkSkyReserve && b.isDarkSkyReserve) return 1;
-      
-      // If both or neither are certified, check if they're excellent locations
-      const aExcellent = (a.siqs || 0) >= 7.0;
-      const bExcellent = (b.siqs || 0) >= 7.0;
-      
-      if (aExcellent && !bExcellent) return -1;
-      if (!aExcellent && bExcellent) return 1;
-      
-      // If both are excellent or both are not, check distance thresholds
-      // Nearby locations (within 200km) get priority
-      const aNearby = (a.distance || 0) <= 200;
-      const bNearby = (b.distance || 0) <= 200;
-      
-      if (aNearby && !bNearby) return -1;
-      if (!aNearby && bNearby) return 1;
-      
-      // If both are nearby or both are distant, sort by SIQS
-      const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
-      if (Math.abs(siqsDiff) > 0.5) {
-        return siqsDiff;
-      }
-      
-      // If SIQS is similar (within 0.5), sort by distance
-      return (a.distance || 0) - (b.distance || 0);
-    });
-    
-    setFilteredLocations(sortedLocations);
-    
-    // Initialize displayed locations
-    const initialLocations = sortedLocations.slice(0, maxInitialResults);
-    setDisplayedLocations(initialLocations);
-    
-    // Check if there are more locations to load
-    setHasMoreLocations(sortedLocations.length > initialLocations.length);
-  };
+  }, [userLocation, searchDistance, language, maxInitialResults, lastSearchParams]);
   
-  // Re-filter when search distance changes
+  // Load locations when user location changes
   useEffect(() => {
-    if (allLocations.length > 0) {
-      applyFilters(allLocations, currentSiqs);
+    if (userLocation) {
+      setLoading(true);
+      loadRecommendedLocations(true).finally(() => {
+        setLoading(false);
+      });
     }
-  }, [searchDistance, currentSiqs, maxInitialResults]);
+  }, [userLocation, loadRecommendedLocations]);
+  
+  // Determine if current user location has good viewing conditions
+  useEffect(() => {
+    if (!userLocation || currentSiqs === null) return;
+    
+    // Set threshold for "good" location
+    const userHasGoodSiqs = currentSiqs >= 6.0; 
+    setIsUserInGoodLocation(userHasGoodSiqs);
+  }, [userLocation, currentSiqs]);
   
   // Load more locations
   const loadMoreLocations = useCallback(() => {
-    setDisplayedLocations(prev => {
-      const newLocations = filteredLocations.slice(0, prev.length + maxInitialResults);
-      setHasMoreLocations(filteredLocations.length > newLocations.length);
-      return newLocations;
-    });
-  }, [filteredLocations, maxInitialResults]);
+    const currentCount = displayedLocations.length;
+    const newLocations = filteredLocations.slice(0, currentCount + maxInitialResults);
+    
+    setDisplayedLocations(newLocations);
+    setHasMoreLocations(filteredLocations.length > newLocations.length);
+  }, [filteredLocations, displayedLocations.length, maxInitialResults]);
   
   // Enhanced search distance setter with validation
   const setValidatedSearchDistance = useCallback((distance: number) => {
-    // Enforce maximum distance limit of 10,000km
+    // Enforce maximum distance limit
     const validatedDistance = Math.min(Math.max(100, distance), MAX_SEARCH_DISTANCE);
+    console.log(`Setting search distance to ${validatedDistance}km`);
     setSearchDistance(validatedDistance);
   }, []);
+  
+  // Function to refresh locations with current parameters
+  const refreshLocations = useCallback(() => {
+    if (!userLocation) return;
+    
+    console.log("Refreshing locations with current parameters");
+    loadRecommendedLocations(true);
+  }, [userLocation, loadRecommendedLocations]);
   
   return {
     loading,
@@ -343,6 +168,7 @@ export const usePhotoPointsSearch = ({
     hasMoreLocations,
     loadMoreLocations,
     isUserInGoodLocation,
-    totalLocationsCount: filteredLocations.length
+    totalLocationsCount: filteredLocations.length,
+    refreshLocations
   };
 };

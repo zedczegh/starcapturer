@@ -2,8 +2,9 @@
 import { fetchForecastData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchWeatherData } from "@/lib/api/weather";
-import { formatSIQSScoreForDisplay } from "@/hooks/siqs/siqsCalculationUtils";
+import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { calculateDistance } from "@/data/utils/distanceCalculator";
 
 // Create a cache to avoid redundant API calls
 const siqsCache = new Map<string, {
@@ -12,8 +13,8 @@ const siqsCache = new Map<string, {
   isViable: boolean;
 }>();
 
-// Invalidate cache entries older than 30 minutes
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+// Invalidate cache entries older than 15 minutes
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 /**
  * Calculate real-time SIQS for a given location
@@ -33,11 +34,14 @@ export async function calculateRealTimeSiqs(
   // Check cache first
   const cachedData = siqsCache.get(cacheKey);
   if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+    console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
     return {
       siqs: cachedData.siqs,
       isViable: cachedData.isViable
     };
   }
+  
+  console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
     // Fetch weather data
@@ -58,14 +62,28 @@ export async function calculateRealTimeSiqs(
       return { siqs: 0, isViable: false };
     }
     
+    // For light pollution, use provided Bortle scale or fetch it
+    let finalBortleScale = bortleScale;
+    if (!finalBortleScale || finalBortleScale <= 0) {
+      try {
+        const pollutionData = await fetchLightPollutionData(latitude, longitude);
+        finalBortleScale = pollutionData?.bortleScale || 5;
+      } catch (err) {
+        console.error("Error fetching light pollution data:", err);
+        finalBortleScale = 5; // Default fallback
+      }
+    }
+    
     // Calculate SIQS using optimized method
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherData,
-      bortleScale,
+      finalBortleScale,
       3, // Default seeing conditions
       0.5, // Default moon phase
       forecastData
     );
+    
+    console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
     
     // Store in cache
     siqsCache.set(cacheKey, {
@@ -96,6 +114,8 @@ export async function batchCalculateSiqs(
   maxParallel: number = 3
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
+  
+  console.log(`Batch calculating SIQS for ${locations.length} locations`);
   
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
@@ -139,21 +159,24 @@ export async function batchCalculateSiqs(
  * @param userLng User's longitude
  * @param radius Search radius in km
  * @param limit Maximum number of locations to return
+ * @param certifiedOnly Whether to return only certified locations
  * @returns Promise resolving to array of locations with SIQS
  */
 export async function findBestViewingLocations(
   userLat: number,
   userLng: number,
   radius: number,
-  limit: number = 9
+  limit: number = 9,
+  certifiedOnly: boolean = false
 ): Promise<SharedAstroSpot[]> {
   try {
     // Import the necessary functions
     const { getRecommendedPhotoPoints } = await import('@/lib/api');
-    const { calculateDistance } = await import('@/data/utils/distanceCalculator');
+    
+    console.log(`Finding best viewing locations within ${radius}km radius, certified only: ${certifiedOnly}`);
     
     // Get recommended points within the specified radius
-    const points = await getRecommendedPhotoPoints(userLat, userLng, radius);
+    const points = await getRecommendedPhotoPoints(userLat, userLng, radius, certifiedOnly);
     
     if (!points || points.length === 0) {
       console.log("No photo points found within radius");
@@ -162,25 +185,32 @@ export async function findBestViewingLocations(
     
     console.log(`Found ${points.length} potential photo points within ${radius}km radius`);
     
-    // Calculate real-time SIQS for up to 15 locations (to have options)
-    // Prioritize closer locations first
-    const sortedByDistance = [...points].sort((a, b) => {
-      const distA = typeof a.distance === 'number' ? a.distance : 
-        calculateDistance(userLat, userLng, a.latitude, a.longitude);
-      const distB = typeof b.distance === 'number' ? b.distance : 
-        calculateDistance(userLat, userLng, b.latitude, b.longitude);
-      return distA - distB;
+    // Calculate distances for each point if not already present
+    const pointsWithDistance = points.map(point => {
+      if (typeof point.distance !== 'number') {
+        const distance = calculateDistance(userLat, userLng, point.latitude, point.longitude);
+        return { ...point, distance };
+      }
+      return point;
     });
     
-    // Take the 15 closest locations for SIQS calculation
-    const candidateLocations = sortedByDistance.slice(0, 15);
+    // Sort by distance to find the closest locations
+    const sortedByDistance = [...pointsWithDistance].sort((a, b) => 
+      (a.distance || 0) - (b.distance || 0)
+    );
+    
+    // Take up to 20 closest locations for SIQS calculation
+    const candidateLimit = Math.min(20, sortedByDistance.length);
+    const candidateLocations = sortedByDistance.slice(0, candidateLimit);
+    
+    console.log(`Selected ${candidateLocations.length} candidate locations for SIQS calculation`);
     
     // Calculate SIQS for these locations
     const locationsWithSiqs = await batchCalculateSiqs(candidateLocations);
     
-    // Filter for locations with viable viewing conditions and sort by SIQS
+    // Filter for locations with decent viewing conditions 
     const viableLocations = locationsWithSiqs
-      .filter(loc => loc.siqs > 4.0) // Good viewing threshold
+      .filter(loc => loc.siqs > 3.0) // Lower threshold to show more options
       .sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
     
     if (viableLocations.length === 0) {
@@ -202,11 +232,52 @@ export async function findBestViewingLocations(
 }
 
 /**
+ * Get a list of locations with good SIQS scores within maximum range
+ * This is used as a fallback when no good locations are found nearby
+ */
+export async function getFallbackLocations(
+  userLat: number,
+  userLng: number,
+  maxRange: number = 10000
+): Promise<SharedAstroSpot[]> {
+  try {
+    // Try to find at least some locations with decent conditions
+    const { getRecommendedPhotoPoints } = await import('@/lib/api');
+    
+    console.log(`Finding fallback locations within ${maxRange}km radius`);
+    
+    // Get more locations within the max range
+    const points = await getRecommendedPhotoPoints(userLat, userLng, maxRange, false, 30);
+    
+    if (!points || points.length === 0) {
+      return [];
+    }
+    
+    // Process a sample of the furthest locations to find good spots
+    const sortedByDistance = [...points]
+      .sort((a, b) => (b.distance || 0) - (a.distance || 0))
+      .slice(0, 15); // Take 15 furthest locations
+    
+    // Calculate SIQS for these locations
+    const locationsWithSiqs = await batchCalculateSiqs(sortedByDistance);
+    
+    // Return best SIQS scores regardless of threshold
+    return locationsWithSiqs
+      .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
+      .slice(0, 9);
+  } catch (error) {
+    console.error("Error finding fallback locations:", error);
+    return [];
+  }
+}
+
+/**
  * Clear the SIQS cache for testing or debugging
  */
 export function clearSiqsCache(): void {
+  const size = siqsCache.size;
   siqsCache.clear();
-  console.log("SIQS cache cleared");
+  console.log(`SIQS cache cleared (${size} entries removed)`);
 }
 
 /**

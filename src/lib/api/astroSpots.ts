@@ -44,22 +44,32 @@ export interface SharingResponse {
  * Optimized for better performance and stability
  * @param latitude - Latitude of the center point
  * @param longitude - Longitude of the center point
- * @param limit - Maximum number of locations to return
  * @param radiusKm - Search radius in kilometers
+ * @param certifiedOnly - Whether to return only certified locations
+ * @param limit - Maximum number of locations to return
  * @returns Promise containing array of SharedAstroSpot
  */
-export async function getSharedAstroSpots(
+export async function getRecommendedPhotoPoints(
   latitude: number,
   longitude: number,
-  limit = 20,
   radiusKm = 100,
+  certifiedOnly = false,
+  limit = 30,
 ): Promise<SharedAstroSpot[]> {
   try {
     // Normalize coordinates to ensure valid values
     const coords = normalizeCoordinates({ latitude, longitude });
     
+    console.log(`Fetching photo points around ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)} with radius ${radiusKm}km`);
+    
     // First, find real Dark Sky certified locations within the radius
     const certifiedLocations = getCertifiedLocationsNearby(coords.latitude, coords.longitude, radiusKm);
+    console.log(`Found ${certifiedLocations.length} certified locations within ${radiusKm}km radius`);
+    
+    // If certifiedOnly is true, return only certified locations
+    if (certifiedOnly) {
+      return certifiedLocations.slice(0, limit);
+    }
     
     // Calculate how many regular locations we need
     const regularLocationsNeeded = Math.max(0, limit - certifiedLocations.length);
@@ -73,12 +83,9 @@ export async function getSharedAstroSpots(
     const combinedSpots = [...certifiedLocations, ...calculatedSpots]
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
     
-    // Add a small delay to simulate network latency (can be removed in production)
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return combinedSpots;
+    return combinedSpots.slice(0, limit);
   } catch (error) {
-    console.error('Error fetching shared astronomy spots:', error);
+    console.error('Error fetching recommended photo points:', error);
     return [];
   }
 }

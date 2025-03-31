@@ -6,30 +6,31 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * Hook to separate certified and calculated recommendation locations
  * Uses memoization for better performance
  * Enhanced to correctly identify certified locations from Dark Sky International
- * Now with proper updates when the radius changes
+ * Now with proper updates when locations or radius changes
  */
 export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius?: number) {
-  const [lastProcessedLength, setLastProcessedLength] = useState(0);
-  const [lastProcessedRadius, setLastProcessedRadius] = useState(0);
   const [processedLocations, setProcessedLocations] = useState<{
     certified: SharedAstroSpot[],
     calculated: SharedAstroSpot[]
   }>({ certified: [], calculated: [] });
   
-  // Use effect to update processed locations when locations or radius changes
+  // Use effect to process locations whenever they change
   useEffect(() => {
-    if (locations.length === lastProcessedLength && searchRadius === lastProcessedRadius) {
-      return; // Skip processing if nothing changed
+    if (!locations || locations.length === 0) {
+      setProcessedLocations({ certified: [], calculated: [] });
+      return;
     }
     
-    // Identify certified locations
+    console.log(`Processing ${locations.length} locations for certified/calculated separation`);
+    
+    // Identify certified locations with improved criteria
     const certified = locations.filter(location => {
       // Check for explicit Dark Sky Reserve flag
       if (location.isDarkSkyReserve === true) {
         return true;
       }
       
-      // Check for certifications based on official Dark Sky names
+      // Check for certifications based on official Dark Sky names or properties
       if (location.certification && location.certification !== '') {
         const cert = location.certification.toLowerCase();
         return (
@@ -42,23 +43,32 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
         );
       }
       
+      // Also check name for potential certified locations that might be missing proper flags
+      if (location.name) {
+        const name = location.name.toLowerCase();
+        return (
+          name.includes('dark sky') &&
+          (name.includes('reserve') || 
+           name.includes('sanctuary') || 
+           name.includes('park'))
+        );
+      }
+      
       return false;
     });
     
     // All locations that are not certified are calculated
     const calculated = locations.filter(location => 
-      !(location.isDarkSkyReserve === true || 
-        (location.certification && location.certification !== ''))
+      !certified.some(cert => cert.id === location.id)
     );
+    
+    console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations`);
     
     setProcessedLocations({
       certified,
       calculated
     });
-    setLastProcessedLength(locations.length);
-    setLastProcessedRadius(searchRadius || 0);
-    
-  }, [locations, searchRadius, lastProcessedLength, lastProcessedRadius]);
+  }, [locations, searchRadius]);
   
   // Memoized values derived from processed locations
   const certifiedLocations = useMemo(() => processedLocations.certified, [processedLocations]);
