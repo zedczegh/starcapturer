@@ -1,13 +1,13 @@
-
-import React, { useMemo, lazy, Suspense } from "react";
-import SIQSSummary from "@/components/SIQSSummary";
-import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
-import LocationUpdater from "@/components/location/LocationUpdater";
-import { determineWeatherCondition } from "@/lib/api";
+import React, { memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-// Lazy load the forecast tabs to improve initial load time
-const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
+import PrimaryConditions from "@/components/weather/PrimaryConditions";
+import SecondaryConditions from "@/components/weather/SecondaryConditions";
+import ForecastTabs from "@/components/forecast/ForecastTabs";
+import SIQSSummary from "@/components/siqs/SIQSSummary";
+import MapDisplay from "@/components/location/MapDisplay";
+import CopyLocationButton from "@/components/location/CopyLocationButton";
+import CloudCoverageMap from "@/components/location/CloudCoverageMap";
+import WarmReminders from '@/components/weather/WarmReminders';
 
 interface LocationContentGridProps {
   locationData: any;
@@ -17,13 +17,13 @@ interface LocationContentGridProps {
   longRangeLoading: boolean;
   gettingUserLocation: boolean;
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
-  setGettingUserLocation: (value: boolean) => void;
+  setGettingUserLocation: (getting: boolean) => void;
   setStatusMessage: (message: string | null) => void;
   onRefreshForecast: () => void;
   onRefreshLongRange: () => void;
 }
 
-const LocationContentGrid: React.FC<LocationContentGridProps> = ({
+const LocationContentGrid: React.FC<LocationContentGridProps> = memo(({
   locationData,
   forecastData,
   longRangeForecast,
@@ -36,97 +36,97 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   onRefreshForecast,
   onRefreshLongRange
 }) => {
-  const { language } = useLanguage();
-  
-  // Memoize the weather data to prevent unnecessary re-calculations
-  const weatherData = useMemo(() => ({
-    temperature: locationData?.weatherData?.temperature || 0,
-    humidity: locationData?.weatherData?.humidity || 0,
-    cloudCover: locationData?.weatherData?.cloudCover || 0,
-    windSpeed: locationData?.weatherData?.windSpeed || 0,
-    precipitation: locationData?.weatherData?.precipitation || 0,
-    time: locationData?.weatherData?.time || new Date().toISOString(),
-    condition: locationData?.weatherData?.condition || 
-      determineWeatherCondition(locationData?.weatherData?.cloudCover || 0),
-    aqi: locationData?.weatherData?.aqi
-  }), [locationData?.weatherData]);
-
-  // Format the moon phase as a human-readable string
-  const moonPhaseString = useMemo(() => {
-    return normalizeMoonPhase(locationData.moonPhase || 0);
-  }, [locationData.moonPhase]);
-
-  // Format the seeing conditions as a human-readable string
-  const seeingConditionsString = useMemo(() => {
-    const value = locationData.seeingConditions;
-    if (typeof value !== 'number') return "Average";
-    
-    if (value <= 1) return "Excellent";
-    if (value <= 2) return "Good";
-    if (value <= 3) return "Average";
-    if (value <= 4) return "Poor";
-    return "Very Poor";
-  }, [locationData.seeingConditions]);
-
-  // Get the Bortle scale, pass null for unknown values
-  const bortleScale = useMemo(() => {
-    const value = locationData.bortleScale;
-    if (value === undefined || value === null || value < 1 || value > 9) {
-      return null;
-    }
-    return value;
-  }, [locationData.bortleScale]);
-
-  // Loading indicator text based on language
-  const loadingText = useMemo(() => {
-    return language === 'en' ? "Loading..." : "加载中...";
-  }, [language]);
+  const { t } = useLanguage();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
-      <div className="space-y-6 lg:space-y-8">
-        <WeatherConditions
-          weatherData={weatherData}
-          moonPhase={moonPhaseString}
-          bortleScale={bortleScale}
-          seeingConditions={seeingConditionsString}
-        />
-        
-        <SIQSSummary
-          siqsResult={locationData.siqsResult || null}
-          weatherData={weatherData}
-          locationData={locationData}
-        />
-      </div>
-      
-      <div className="space-y-6 lg:space-y-8">
-        <div className="relative z-60">
-          <LocationUpdater 
-            locationData={locationData}
-            onLocationUpdate={onLocationUpdate}
-            gettingUserLocation={gettingUserLocation}
-            setGettingUserLocation={setGettingUserLocation}
-            setStatusMessage={setStatusMessage}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* First column */}
+      <div className="space-y-4">
+        {/* Weather Info Card */}
+        <div className="glass-card p-4">
+          <h2 className="text-lg font-medium mb-4">
+            {t("Current Weather", "当前天气")}
+          </h2>
+          
+          <PrimaryConditions weatherData={locationData.weatherData} />
+          
+          <div className="mt-4">
+            <SecondaryConditions weatherData={locationData.weatherData} />
+          </div>
+          
+          {/* Add Warm Reminders component here */}
+          <WarmReminders 
+            locationData={locationData} 
+            forecastData={forecastData} 
           />
         </div>
         
-        <Suspense fallback={
-          <div className="animate-pulse h-64 bg-slate-800/20 rounded-lg flex items-center justify-center">
-            <span className="text-cosmic-400">{loadingText}</span>
+        {/* SIQS Summary */}
+        <div className="glass-card p-4">
+          <h2 className="text-lg font-medium mb-3">
+            {t("SIQS Summary", "SIQS 摘要")}
+          </h2>
+          
+          <SIQSSummary 
+            locationData={locationData} 
+            isLoading={forecastLoading}
+          />
+        </div>
+        
+        {/* Map Display */}
+        <div className="glass-card p-4 overflow-hidden">
+          <h2 className="text-lg font-medium mb-3">
+            {t("Location Map", "位置地图")}
+          </h2>
+          
+          <MapDisplay 
+            latitude={locationData.latitude} 
+            longitude={locationData.longitude} 
+            name={locationData.name}
+          />
+          
+          <div className="mt-3 flex flex-wrap gap-2">
+            <CopyLocationButton 
+              latitude={locationData.latitude} 
+              longitude={locationData.longitude} 
+            />
           </div>
-        }>
+        </div>
+      </div>
+      
+      {/* Second column */}
+      <div className="space-y-4">
+        {/* Weather Forecast Tabs */}
+        <div className="glass-card p-4">
+          <h2 className="text-lg font-medium mb-3">
+            {t("Weather Forecast", "天气预报")}
+          </h2>
+          
           <ForecastTabs 
             forecastData={forecastData}
             longRangeForecast={longRangeForecast}
-            forecastLoading={forecastLoading}
-            longRangeLoading={longRangeLoading}
+            isLoading={forecastLoading || longRangeLoading}
             onRefreshForecast={onRefreshForecast}
             onRefreshLongRange={onRefreshLongRange}
           />
-        </Suspense>
+        </div>
+        
+        {/* Cloud Coverage Map */}
+        <div className="glass-card p-4">
+          <h2 className="text-lg font-medium mb-3">
+            {t("Cloud Coverage", "云层覆盖")}
+          </h2>
+          
+          <CloudCoverageMap 
+            latitude={locationData.latitude} 
+            longitude={locationData.longitude} 
+          />
+        </div>
       </div>
     </div>
   );
-};
+});
 
-export default React.memo(LocationContentGrid);
+LocationContentGrid.displayName = 'LocationContentGrid';
+
+export default LocationContentGrid;

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsHeader from "./LocationDetailsHeader";
@@ -44,10 +43,8 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
 
-  // Use the new refresh manager hook
   const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
   
-  // Use the dedicated SIQS updater
   const { resetUpdateState } = useLocationSIQSUpdater(
     locationData,
     forecastData,
@@ -55,23 +52,18 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     t
   );
 
-  // Reset SIQS update state when location changes
   useEffect(() => {
     resetUpdateState();
   }, [locationData?.latitude, locationData?.longitude]);
 
-  // Single refresh effect with better control
   useEffect(() => {
     if (shouldRefresh && locationData) {
       console.log("Refreshing location data (controlled single refresh)");
       
-      // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
         handleRefresh();
-        // Mark refresh as complete to prevent further refreshes
         markRefreshComplete();
         
-        // Update locationData to remove fromPhotoPoints flag
         if (locationData.fromPhotoPoints) {
           setLocationData(prev => ({
             ...prev,
@@ -84,7 +76,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete]);
 
-  // Handle forced refresh event from parent component
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -102,7 +93,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   }, [locationData]);
 
   const handleRefresh = useCallback(async () => {
-    // Reset SIQS update state before refreshing
     resetUpdateState();
     
     await handleRefreshAll(

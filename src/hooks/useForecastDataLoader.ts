@@ -64,13 +64,13 @@ export const useForecastDataLoader = (
         lastLoadTimeRef.current[locationKey] = now;
       } else {
         console.error("Failed to load forecast data - API returned no data");
-        toast.error(t("Failed to load forecast data", "加载预报数据失败"));
+        toast.error(t("Failed to load forecast data"));
       }
     } catch (error: any) {
       // Don't show errors for aborted requests
       if (error.name !== 'AbortError') {
         console.error("Error loading forecast data:", error);
-        toast.error(t("Failed to load forecast data", "加载预报数据失败"));
+        toast.error(t("Failed to load forecast data"));
       }
     } finally {
       setIsLoading(false);
