@@ -31,8 +31,8 @@ const MapCircle: React.FC<MapCircleProps> = ({
     // Set mounted flag to true
     isMountedRef.current = true;
     
-    // Only proceed if the map is available and ready
-    if (!map || !map.getContainer()) return;
+    // Only proceed if the map is available
+    if (!map) return;
     
     // Remove any existing circle to prevent duplicates
     if (circleRef.current) {
@@ -49,6 +49,12 @@ const MapCircle: React.FC<MapCircleProps> = ({
       if (!isMountedRef.current || !map) return;
       
       try {
+        // Check if map container still exists to prevent errors
+        if (!map.getContainer()) {
+          console.log("Map container not found, skipping circle creation");
+          return;
+        }
+        
         // Create a new circle with the provided props
         circleRef.current = L.circle(center, {
           radius,
@@ -70,7 +76,7 @@ const MapCircle: React.FC<MapCircleProps> = ({
       if (circleRef.current) {
         try {
           // Only attempt to remove if we have a valid reference and the map still exists
-          if (map && !map._isDestroyed) {
+          if (map && map.getContainer()) {
             circleRef.current.remove();
           }
         } catch (error) {

@@ -14,7 +14,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
     click: null as ((e: L.LeafletMouseEvent) => void) | null,
     moveend: null as (() => void) | null
   });
-  const isMountedRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   // Handle map click events
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
@@ -37,6 +37,16 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
     
     if (!map) return;
     
+    // Dispatch event to notify parent components that map is initialized
+    try {
+      if (map.getContainer()) {
+        const event = new CustomEvent('map-initialized');
+        map.getContainer().dispatchEvent(event);
+      }
+    } catch (error) {
+      console.error("Error dispatching map-initialized event:", error);
+    }
+    
     // Store current handlers for cleanup
     eventHandlersRef.current.click = onMapClick ? handleMapClick : null;
     eventHandlersRef.current.moveend = onMapMove ? handleMapMove : null;
@@ -51,10 +61,9 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
     }
     
     // Safe invalidate size with check if map is still valid
-    // Add a slight delay to ensure the map container is ready
     const timer = setTimeout(() => {
       try {
-        if (map && !map._isDestroyed && isMountedRef.current && map.getContainer()) {
+        if (map && isMountedRef.current && map.getContainer()) {
           map.invalidateSize({
             animate: false,
             pan: false
@@ -70,8 +79,8 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, onMapMove }) =>
       clearTimeout(timer);
       
       try {
-        // Only remove listeners if map still exists and is not being destroyed
-        if (map && !map._isDestroyed) {
+        // Only remove listeners if map still exists
+        if (map && map.getContainer()) {
           // Remove event listeners using the stored handlers
           if (eventHandlersRef.current.click) {
             map.off('click', eventHandlersRef.current.click);

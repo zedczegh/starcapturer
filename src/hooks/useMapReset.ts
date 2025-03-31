@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
  */
 export function useMapReset() {
   // Generate a unique ID for this instance of the map
-  const mapIdRef = useRef<string>(`map-${Math.random().toString(36).substring(2, 11)}`);
+  const mapIdRef = useRef<string>(`map-${Math.random().toString(36).substring(2, 11)}-${Date.now()}`);
   const mapInstanceRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const [isMapInitialized, setIsMapInitialized] = useState(false);
@@ -17,11 +17,11 @@ export function useMapReset() {
   const cleanupMap = useCallback(() => {
     if (mapInstanceRef.current) {
       try {
+        console.log("Cleaning up map instance", mapIdRef.current);
         // Remove event listeners
         mapInstanceRef.current.off();
         // Remove the map instance
         mapInstanceRef.current.remove();
-        console.log("Map instance successfully cleaned up");
       } catch (error) {
         console.error("Error cleaning up map instance:", error);
       } finally {
@@ -38,6 +38,7 @@ export function useMapReset() {
     
     // Generate a new random ID on every mount
     mapIdRef.current = `map-${Math.random().toString(36).substring(2, 11)}-${Date.now()}`;
+    console.log("Generated new map ID:", mapIdRef.current);
     setIsMapInitialized(false);
     
     return () => {
@@ -52,7 +53,7 @@ export function useMapReset() {
   // Register the map instance
   const registerMapInstance = useCallback((mapInstance: any) => {
     if (mapInstance && !mapInstanceRef.current && !unmountingRef.current) {
-      console.log("Registering new map instance");
+      console.log("Registering new map instance", mapIdRef.current);
       mapInstanceRef.current = mapInstance;
       setIsMapInitialized(true);
     }

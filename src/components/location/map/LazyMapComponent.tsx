@@ -1,11 +1,10 @@
 
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import MapCircle from './MapCircle';
-import { useMapReset } from '@/hooks/useMapReset';
 
 // Replace default Leaflet marker icons
 const defaultIcon = L.icon({
@@ -33,12 +32,14 @@ const MapResetComponent = ({ onMapClick, onMapMove }: {
   useEffect(() => {
     // Register this map instance with any parent handlers
     if (map) {
-      const mapContainer = map.getContainer();
-      const resetEvent = new CustomEvent('map-initialized', { detail: { map } });
-      mapContainer.dispatchEvent(resetEvent);
+      try {
+        const mapContainer = map.getContainer();
+        const resetEvent = new CustomEvent('map-initialized', { detail: { map } });
+        mapContainer.dispatchEvent(resetEvent);
+      } catch (error) {
+        console.error("Error dispatching map-initialized event:", error);
+      }
     }
-    
-    // No cleanup needed here - handled by parent components
   }, [map]);
   
   return <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />;
@@ -86,7 +87,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   onMapInstance
 }) => {
   const { language } = useLanguage();
-  const uniqueMapId = mapId || `map-${Math.random().toString(36).substring(2, 11)}`;
+  const uniqueMapId = mapId || `map-${Math.random().toString(36).substring(2, 11)}-${Date.now()}`;
   
   // Create a MapCirclesComponent to handle all circles
   const CirclesComponent = React.useCallback(() => {
@@ -96,7 +97,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       <>
         {circles.map((circle, index) => (
           <MapCircle
-            key={`circle-${index}`}
+            key={`circle-${index}-${uniqueMapId}`}
             center={circle.center}
             radius={circle.radius}
             color={circle.color}
@@ -108,7 +109,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         ))}
       </>
     );
-  }, [circles]);
+  }, [circles, uniqueMapId]);
   
   return (
     <div id={uniqueMapId} className={`relative rounded-lg overflow-hidden ${className}`}>
@@ -136,7 +137,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           
           {markers && markers.map((marker, index) => (
             <Marker 
-              key={`marker-${index}`} 
+              key={`marker-${index}-${uniqueMapId}`} 
               position={marker.position}
               icon={marker.color ? L.divIcon({
                 className: 'custom-div-icon',
