@@ -11,7 +11,7 @@ export function useMapReset() {
   const mapInstanceRef = useRef<any>(null);
   const [isMapInitialized, setIsMapInitialized] = useState(false);
   
-  // Reset map ID and initialization state when component mounts
+  // Reset map state when component mounts and clean up when it unmounts
   useEffect(() => {
     // Generate a new random ID on every mount
     mapIdRef.current = `map-${Math.random().toString(36).substring(2, 11)}`;
@@ -21,19 +21,20 @@ export function useMapReset() {
       // Clean up the map instance on unmount
       if (mapInstanceRef.current) {
         try {
-          // Remove map event listeners
+          // Properly remove all event listeners
           mapInstanceRef.current.off();
           // Remove the map instance
           mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
         } catch (error) {
           console.error("Error cleaning up map instance:", error);
         }
       }
-      mapInstanceRef.current = null;
       setIsMapInitialized(false);
     };
   }, []);
   
+  // Register the map instance
   const registerMapInstance = (mapInstance: any) => {
     if (mapInstance && !mapInstanceRef.current) {
       mapInstanceRef.current = mapInstance;

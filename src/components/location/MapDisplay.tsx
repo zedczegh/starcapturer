@@ -30,7 +30,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
 }) => {
   const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
-  const readyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mapReadyHandledRef = useRef(false);
 
   // Memoize position to prevent unnecessary rerenders
   const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
@@ -70,27 +71,51 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
 
   // Callback for map load completion
   const handleMapReady = useCallback(() => {
-    onMapReady();
+    if (!mapReadyHandledRef.current) {
+      mapReadyHandledRef.current = true;
+      onMapReady();
+    }
   }, [onMapReady]);
 
+  // Clean up any lingering timeouts
   useEffect(() => {
-    // Simulate map ready event after component mount
-    readyTimeoutRef.current = setTimeout(handleMapReady, 1000);
+    return () => {
+      if (mapReadyTimeoutRef.current) {
+        clearTimeout(mapReadyTimeoutRef.current);
+        mapReadyTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Simulate map ready event after component mount with safety timeout
+  useEffect(() => {
+    mapReadyHandledRef.current = false;
+    
+    // Set a backup timeout to ensure onMapReady is called even if map initialization event fails
+    mapReadyTimeoutRef.current = setTimeout(() => {
+      handleMapReady();
+    }, 1500);
     
     return () => {
-      if (readyTimeoutRef.current) {
-        clearTimeout(readyTimeoutRef.current);
+      if (mapReadyTimeoutRef.current) {
+        clearTimeout(mapReadyTimeoutRef.current);
+        mapReadyTimeoutRef.current = null;
       }
     };
   }, [handleMapReady]);
 
-  // Listen for map initialization event
+  // Listen for map initialization event from child components
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     
-    const handleMapInitialized = (e: any) => {
-      console.log("Map initialized event received");
+    const handleMapInitialized = () => {
+      // Clear the timeout since we got the actual event
+      if (mapReadyTimeoutRef.current) {
+        clearTimeout(mapReadyTimeoutRef.current);
+        mapReadyTimeoutRef.current = null;
+      }
+      
       handleMapReady();
     };
     
@@ -119,7 +144,6 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
           onMapClick={onMapClick}
           className="w-full h-full"
           scrollWheelZoom={true}
-          zoomControl={true}
           attributionControl={true}
         />
       </Suspense>

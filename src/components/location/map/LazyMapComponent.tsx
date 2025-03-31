@@ -32,14 +32,13 @@ const MapResetComponent = ({ onMapClick, onMapMove }: {
   
   useEffect(() => {
     // Register this map instance with any parent handlers
-    const mapContainer = map.getContainer();
-    const resetEvent = new CustomEvent('map-initialized', { detail: { map } });
-    mapContainer.dispatchEvent(resetEvent);
+    if (map) {
+      const mapContainer = map.getContainer();
+      const resetEvent = new CustomEvent('map-initialized', { detail: { map } });
+      mapContainer.dispatchEvent(resetEvent);
+    }
     
-    // Clean up function to properly handle map disposal
-    return () => {
-      // Do nothing here - cleanup is now handled by the parent component
-    };
+    // No cleanup needed here - handled by parent components
   }, [map]);
   
   return <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />;
@@ -68,7 +67,6 @@ interface LazyMapComponentProps {
   onMapMove?: (lat: number, lng: number) => void;
   className?: string;
   scrollWheelZoom?: boolean;
-  zoomControl?: boolean;
   attributionControl?: boolean;
 }
 
@@ -81,7 +79,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   onMapMove,
   className = "",
   scrollWheelZoom = true,
-  zoomControl = true,
   attributionControl = true
 }) => {
   const { language } = useLanguage();
@@ -125,7 +122,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
           scrollWheelZoom={scrollWheelZoom}
-          zoomControl={zoomControl}
           attributionControl={attributionControl}
         >
           <TileLayer

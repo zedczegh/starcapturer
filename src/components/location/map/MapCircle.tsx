@@ -24,32 +24,29 @@ const MapCircle: React.FC<MapCircleProps> = ({
 }) => {
   const circleRef = useRef<L.Circle | null>(null);
   const map = useMap();
-
+  
+  // This effect creates and manages the circle on the map
   useEffect(() => {
-    // Only create circle if it doesn't exist or properties have changed
-    const shouldRecreate = !circleRef.current || 
-      circleRef.current.getLatLng().lat !== center[0] || 
-      circleRef.current.getLatLng().lng !== center[1] || 
-      circleRef.current.getRadius() !== radius;
+    // Only proceed if the map is available
+    if (!map) return;
     
-    if (shouldRecreate) {
-      // Remove existing circle if it exists
-      if (circleRef.current) {
-        circleRef.current.remove();
-      }
-      
-      // Create new circle and add it to the map
-      circleRef.current = L.circle(center, {
-        radius,
-        color,
-        fillColor,
-        weight,
-        opacity,
-        fillOpacity
-      }).addTo(map);
+    // Remove any existing circle to prevent duplicates
+    if (circleRef.current) {
+      circleRef.current.remove();
+      circleRef.current = null;
     }
-
-    // Cleanup on unmount or before recreation
+    
+    // Create a new circle with the provided props
+    circleRef.current = L.circle(center, {
+      radius,
+      color,
+      fillColor,
+      weight,
+      opacity,
+      fillOpacity
+    }).addTo(map);
+    
+    // Clean up on unmount or before recreation
     return () => {
       if (circleRef.current) {
         try {
@@ -60,7 +57,7 @@ const MapCircle: React.FC<MapCircleProps> = ({
         }
       }
     };
-  }, [center, radius, color, fillColor, weight, opacity, fillOpacity, map]);
+  }, [map, center, radius, color, fillColor, weight, opacity, fillOpacity]);
 
   return null;
 };
