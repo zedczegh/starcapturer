@@ -13,10 +13,11 @@ import { formatSIQSScore } from "@/utils/geoUtils";
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
+  showRealTimeSiqs?: boolean;
 }
 
 // Enhanced card component for photo location display
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = memo(({ location, index }) => {
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = memo(({ location, index, showRealTimeSiqs = false }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   
