@@ -17,9 +17,14 @@ let cachedDarkSkyLocations: LocationEntry[] | null = null;
  */
 export function getAllDarkSkyLocations(): LocationEntry[] {
   if (!cachedDarkSkyLocations) {
-    cachedDarkSkyLocations = locationDatabase.filter(loc => loc.type === 'dark-site');
+    try {
+      cachedDarkSkyLocations = locationDatabase.filter(loc => loc.type === 'dark-site');
+    } catch (error) {
+      console.error("Error filtering dark sky locations:", error);
+      return [];
+    }
   }
-  return cachedDarkSkyLocations;
+  return cachedDarkSkyLocations || [];
 }
 
 /**
@@ -34,18 +39,28 @@ export function findDarkSkyLocationsWithinRadius(
   longitude: number,
   radius: number
 ): LocationEntry[] {
-  const darkSkyLocations = getAllDarkSkyLocations();
-  
-  return darkSkyLocations.filter(location => {
-    const distance = calculateDistance(
-      latitude,
-      longitude,
-      location.coordinates[0],
-      location.coordinates[1]
-    );
+  try {
+    const darkSkyLocations = getAllDarkSkyLocations();
     
-    return distance <= radius;
-  });
+    return darkSkyLocations.filter(location => {
+      try {
+        const distance = calculateDistance(
+          latitude,
+          longitude,
+          location.coordinates[0],
+          location.coordinates[1]
+        );
+        
+        return distance <= radius;
+      } catch (error) {
+        console.error(`Error calculating distance for location ${location.name}:`, error);
+        return false;
+      }
+    });
+  } catch (error) {
+    console.error("Error finding dark sky locations within radius:", error);
+    return [];
+  }
 }
 
 /**
@@ -60,29 +75,40 @@ export function convertToSharedAstroSpot(
   userLatitude: number,
   userLongitude: number
 ): SharedAstroSpot {
-  const distance = calculateDistance(
-    userLatitude,
-    userLongitude,
-    entry.coordinates[0],
-    entry.coordinates[1]
-  );
-  
-  return {
-    id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
-    name: entry.name,
-    latitude: entry.coordinates[0],
-    longitude: entry.coordinates[1],
-    siqs: Math.max(1, 10 - entry.bortleScale),
-    bortleScale: entry.bortleScale,
-    isDarkSkyReserve: true,
-    certification: 'International Dark Sky Association',
-    description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
-    distance: distance,
-    // Remove type field as it's not in the SharedAstroSpot interface
-    // Add only the fields that are in the SharedAstroSpot interface
-    cloudCover: 0, // Will be calculated by SIQS service
-    timestamp: new Date().toISOString() // Add the required timestamp field
-  };
+  try {
+    const distance = calculateDistance(
+      userLatitude,
+      userLongitude,
+      entry.coordinates[0],
+      entry.coordinates[1]
+    );
+    
+    return {
+      id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
+      name: entry.name,
+      latitude: entry.coordinates[0],
+      longitude: entry.coordinates[1],
+      siqs: Math.max(1, 10 - entry.bortleScale),
+      bortleScale: entry.bortleScale,
+      isDarkSkyReserve: true,
+      certification: 'International Dark Sky Association',
+      description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
+      distance: distance,
+      cloudCover: 0, // Will be calculated by SIQS service
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);
+    
+    // Return a minimal valid SharedAstroSpot object as fallback
+    return {
+      id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
+      name: entry.name,
+      latitude: entry.coordinates[0],
+      longitude: entry.coordinates[1],
+      timestamp: new Date().toISOString()
+    };
+  }
 }
 
 /**
@@ -97,9 +123,14 @@ export function getDarkSkyAstroSpots(
   longitude: number,
   radius: number
 ): SharedAstroSpot[] {
-  const locations = findDarkSkyLocationsWithinRadius(latitude, longitude, radius);
-  
-  return locations.map(location => 
-    convertToSharedAstroSpot(location, latitude, longitude)
-  );
+  try {
+    const locations = findDarkSkyLocationsWithinRadius(latitude, longitude, radius);
+    
+    return locations.map(location => 
+      convertToSharedAstroSpot(location, latitude, longitude)
+    );
+  } catch (error) {
+    console.error("Error getting dark sky astro spots:", error);
+    return [];
+  }
 }
