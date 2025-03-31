@@ -3,12 +3,12 @@ import { useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Optimized hook to separate certified and calculated recommendation locations
+ * Hook to separate certified and calculated recommendation locations
  * Uses memoization for better performance
- * Updates to better identify certified locations based on IDA criteria
+ * Enhanced to correctly identify certified locations from Dark Sky International
  */
 export function useCertifiedLocations(locations: SharedAstroSpot[]) {
-  // Use memoization to avoid unnecessary recalculations when locations array reference doesn't change
+  // Use memoization to avoid unnecessary recalculations
   const certifiedLocations = useMemo(() => 
     locations.filter(location => {
       // Check for explicit Dark Sky Reserve flag
@@ -16,15 +16,16 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
         return true;
       }
       
-      // Check for certifications based on IDA naming conventions
-      if (location.certification !== undefined && location.certification !== '') {
+      // Check for certifications based on official Dark Sky names
+      if (location.certification && location.certification !== '') {
         const cert = location.certification.toLowerCase();
         return (
-          cert.includes('dark sky') || 
-          cert.includes('sanctuary') || 
-          cert.includes('reserve') || 
-          cert.includes('park') ||
-          cert.includes('community')
+          cert.includes('international dark sky') || 
+          cert.includes('dark sky sanctuary') || 
+          cert.includes('dark sky reserve') || 
+          cert.includes('dark sky park') ||
+          cert.includes('dark sky community') ||
+          cert.includes('urban night sky place')
         );
       }
       
@@ -37,7 +38,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
     locations.filter(location => 
       // All locations that are not certified
       !(location.isDarkSkyReserve === true || 
-        (location.certification !== undefined && location.certification !== ''))
+        (location.certification && location.certification !== ''))
     ),
     [locations]
   );
@@ -45,7 +46,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
   const hasCertifiedLocations = useMemo(() => certifiedLocations.length > 0, [certifiedLocations]);
   const hasCalculatedLocations = useMemo(() => calculatedLocations.length > 0, [calculatedLocations]);
   
-  // Calculate total count for each type
+  // Calculate counts for UI display
   const certifiedCount = useMemo(() => certifiedLocations.length, [certifiedLocations]);
   const calculatedCount = useMemo(() => calculatedLocations.length, [calculatedLocations]);
   

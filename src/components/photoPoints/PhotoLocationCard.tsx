@@ -39,22 +39,19 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   };
   
   // Format certification type into a friendly display name
-  const formatCertification = (certification?: string) => {
+  const formatCertificationType = (certification?: string) => {
     if (!certification) return '';
     
-    // Extract the last part of certification name for display
-    const parts = certification.split(' ');
-    if (parts.length > 2) {
-      // Try to get meaningful parts like "Dark Sky Park"
-      if (parts.includes('Dark') && parts.includes('Sky')) {
-        const darkIndex = parts.indexOf('Dark');
-        if (darkIndex >= 0 && parts[darkIndex+1] === 'Sky' && parts.length > darkIndex+2) {
-          return parts[darkIndex+2]; // Return "Park", "Reserve", etc.
-        }
-      }
-    }
+    const lowerCert = certification.toLowerCase();
     
-    // Fallback to showing the last part only
+    if (lowerCert.includes('dark sky sanctuary')) return 'Sanctuary';
+    if (lowerCert.includes('dark sky reserve')) return 'Reserve';
+    if (lowerCert.includes('dark sky park')) return 'Park';
+    if (lowerCert.includes('dark sky community')) return 'Community';
+    if (lowerCert.includes('urban night sky place')) return 'Urban';
+    
+    // Default case: extract just the last meaningful part
+    const parts = certification.split(' ');
     return parts[parts.length - 1];
   };
   
@@ -102,8 +99,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
                     {location.certification && (
                       <span className="ml-1 px-1.5 py-0.5 bg-blue-900/30 rounded-full text-[10px] font-medium text-blue-300">
                         {language === 'en' 
-                          ? formatCertification(location.certification) 
-                          : t(formatCertification(location.certification), "认证")}
+                          ? formatCertificationType(location.certification) 
+                          : t(formatCertificationType(location.certification), "认证")}
                       </span>
                     )}
                   </span>

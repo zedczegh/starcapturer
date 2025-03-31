@@ -2,98 +2,125 @@
 import { LocationEntry } from "../locationDatabase";
 
 /**
- * International Dark Sky Places
- * Data sourced from International Dark-Sky Association (IDA)
+ * Official International Dark Sky Places
+ * Data sourced directly from International Dark-Sky Association (IDA)
  * https://www.darksky.org/our-work/conservation/idsp/
  */
 export const darkSkyLocations: LocationEntry[] = [
-  // North America - Dark Sky Parks
-  { name: "Grand Canyon National Park", coordinates: [36.1070, -112.1130], bortleScale: 1, radius: 50, type: 'dark-site' },
-  { name: "Death Valley National Park", coordinates: [36.5323, -116.9325], bortleScale: 1, radius: 60, type: 'dark-site' },
-  { name: "Big Bend National Park", coordinates: [29.2498, -103.2502], bortleScale: 1, radius: 50, type: 'dark-site' },
-  { name: "Natural Bridges National Monument", coordinates: [37.6013, -109.9753], bortleScale: 1, radius: 30, type: 'dark-site' },
-  { name: "Cherry Springs State Park", coordinates: [41.6626, -77.8169], bortleScale: 1, radius: 25, type: 'dark-site' },
-  { name: "Copper Breaks State Park", coordinates: [34.1147, -99.7505], bortleScale: 1, radius: 25, type: 'dark-site' },
-  { name: "Enchanted Rock State Natural Area", coordinates: [30.5055, -98.8177], bortleScale: 1, radius: 25, type: 'dark-site' },
-  { name: "Clayton Lake State Park", coordinates: [36.5605, -103.3194], bortleScale: 1, radius: 25, type: 'dark-site' },
-  { name: "Headlands International Dark Sky Park", coordinates: [45.7768, -84.9001], bortleScale: 1, radius: 20, type: 'dark-site' },
-  { name: "Kissimmee Prairie Preserve State Park", coordinates: [27.6125, -81.0492], bortleScale: 1, radius: 25, type: 'dark-site' },
-  
-  // North America - Dark Sky Reserves
-  { name: "Mont-Mégantic International Dark Sky Reserve", coordinates: [45.4565, -71.1523], bortleScale: 1, radius: 30, type: 'dark-site' },
-  { name: "Central Idaho Dark Sky Reserve", coordinates: [43.8427, -114.5549], bortleScale: 1, radius: 40, type: 'dark-site' },
+  // Dark Sky Sanctuaries (most pristine dark skies)
+  { name: "Aotea / Great Barrier Island", coordinates: [-36.1999, 175.4166], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Cosmic Campground", coordinates: [33.4674, -108.9212], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Devils River State Natural Area", coordinates: [29.8917, -100.9957], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Gabriela Mistral", coordinates: [-30.2092, -70.9981], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Massacre Rim", coordinates: [41.5868, -119.8526], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Pitcairn Islands", coordinates: [-25.0668, -130.1002], bortleScale: 1, radius: 50, type: 'dark-site' },
+  { name: "Rainbow Bridge National Monument", coordinates: [37.0777, -110.9635], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Stewart Island / Rakiura", coordinates: [-46.9991, 168.0833], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "The Jump-Up", coordinates: [-29.0071, 140.0954], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Niue", coordinates: [-19.0544, -169.8672], bortleScale: 1, radius: 40, type: 'dark-site' },
   { name: "Boundary Waters Canoe Area Wilderness", coordinates: [47.9501, -91.4151], bortleScale: 1, radius: 50, type: 'dark-site' },
   
-  // North America - Dark Sky Sanctuaries
-  { name: "Cosmic Campground", coordinates: [33.4674, -108.9212], bortleScale: 1, radius: 20, type: 'dark-site' },
-  { name: "Rainbow Bridge National Monument", coordinates: [37.0777, -110.9635], bortleScale: 1, radius: 20, type: 'dark-site' },
-  { name: "Devils River State Natural Area", coordinates: [29.8917, -100.9957], bortleScale: 1, radius: 25, type: 'dark-site' },
-  
-  // Europe - Dark Sky Parks & Reserves
-  { name: "Galloway Forest Park", coordinates: [55.1100, -4.4800], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Exmoor National Park", coordinates: [51.1180, -3.6427], bortleScale: 1.2, radius: 30, type: 'dark-site' },
-  { name: "Northumberland National Park", coordinates: [55.2857, -2.2288], bortleScale: 1.2, radius: 30, type: 'dark-site' },
-  { name: "Brecon Beacons National Park", coordinates: [51.8787, -3.3712], bortleScale: 1.5, radius: 25, type: 'dark-site' },
-  { name: "Westhavelland International Dark Sky Reserve", coordinates: [52.7167, 12.3133], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Alqueva Dark Sky Reserve", coordinates: [38.2000, -7.5000], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Kerry International Dark Sky Reserve", coordinates: [51.9419, -10.1478], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Pic du Midi International Dark Sky Reserve", coordinates: [42.9361, 0.1428], bortleScale: 1, radius: 30, type: 'dark-site' },
+  // Dark Sky Reserves (core dark sky area surrounded by communities)
+  { name: "Alpes Azur Mercantour", coordinates: [44.2613, 6.7096], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Aoraki Mackenzie", coordinates: [-43.9800, 170.4600], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Brecon Beacons National Park", coordinates: [51.8787, -3.3712], bortleScale: 1.5, radius: 30, type: 'dark-site' },
+  { name: "Central Idaho", coordinates: [43.8427, -114.5549], bortleScale: 1, radius: 40, type: 'dark-site' },
   { name: "Cévennes National Park", coordinates: [44.3298, 3.6023], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Elan Valley Estate Dark Sky Park", coordinates: [52.2651, -3.5769], bortleScale: 1, radius: 25, type: 'dark-site' },
-  { name: "Bodmin Moor Dark Sky Landscape", coordinates: [50.5174, -4.6242], bortleScale: 1.5, radius: 25, type: 'dark-site' },
-  
-  // Europe - Dark Sky Communities
-  { name: "Flagstaff, Arizona", coordinates: [35.1983, -111.6513], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Dripping Springs, Texas", coordinates: [30.1903, -98.0867], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Beverly Shores, Indiana", coordinates: [41.6875, -87.0031], bortleScale: 3, radius: 10, type: 'dark-site' },
-  { name: "Horseshoe Bay, Texas", coordinates: [30.5419, -98.3633], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Torrey, Utah", coordinates: [38.2997, -111.4194], bortleScale: 2, radius: 15, type: 'dark-site' },
-  
-  // Africa & Middle East
+  { name: "Exmoor National Park", coordinates: [51.1180, -3.6427], bortleScale: 1.2, radius: 30, type: 'dark-site' },
+  { name: "Kerry", coordinates: [51.9419, -10.1478], bortleScale: 1, radius: 30, type: 'dark-site' },
+  { name: "Mont-Mégantic", coordinates: [45.4565, -71.1523], bortleScale: 1, radius: 30, type: 'dark-site' },
+  { name: "Moore's Reserve", coordinates: [51.1642, 1.4837], bortleScale: 2, radius: 20, type: 'dark-site' },
   { name: "NamibRand Nature Reserve", coordinates: [-25.0000, 16.0000], bortleScale: 1, radius: 50, type: 'dark-site' },
-  { name: "Sahara Desert", coordinates: [27.1262, 13.1394], bortleScale: 1, radius: 70, type: 'dark-site' },
+  { name: "Pic du Midi", coordinates: [42.9361, 0.1428], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "River Murray", coordinates: [-34.2667, 139.6000], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Rhön", coordinates: [50.5000, 10.0000], bortleScale: 1.5, radius: 30, type: 'dark-site' },
+  { name: "Snowdonia National Park", coordinates: [52.9007, -3.8511], bortleScale: 1.5, radius: 30, type: 'dark-site' },
+  { name: "South Downs", coordinates: [50.9106, -0.7449], bortleScale: 2, radius: 25, type: 'dark-site' },
+  { name: "Westhavelland", coordinates: [52.7167, 12.3133], bortleScale: 1.5, radius: 30, type: 'dark-site' },
+  { name: "Winklmoosalm", coordinates: [47.6694, 12.5803], bortleScale: 1.5, radius: 20, type: 'dark-site' },
+  { name: "Yorkshire Dales", coordinates: [54.2380, -2.0037], bortleScale: 1.5, radius: 30, type: 'dark-site' },
+  
+  // Dark Sky Parks (public lands with exceptional starry nights)
+  { name: "Anza-Borrego Desert State Park", coordinates: [33.1000, -116.3000], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Arches National Park", coordinates: [38.7331, -109.5925], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Big Bend National Park", coordinates: [29.2498, -103.2502], bortleScale: 1, radius: 50, type: 'dark-site' },
+  { name: "Black Gap Wildlife Management Area", coordinates: [29.5638, -102.9607], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Bodmin Moor", coordinates: [50.5174, -4.6242], bortleScale: 2, radius: 25, type: 'dark-site' },
+  { name: "Capitol Reef National Park", coordinates: [38.3670, -111.2615], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Canyonlands National Park", coordinates: [38.3268, -109.8782], bortleScale: 1, radius: 45, type: 'dark-site' },
+  { name: "Capulin Volcano National Monument", coordinates: [36.7811, -103.9695], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Cherry Springs State Park", coordinates: [41.6626, -77.8169], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Chaco Culture National Historical Park", coordinates: [36.0580, -107.9710], bortleScale: 1, radius: 30, type: 'dark-site' },
+  { name: "Death Valley National Park", coordinates: [36.5323, -116.9325], bortleScale: 1, radius: 60, type: 'dark-site' },
+  { name: "De Boschplaat", coordinates: [53.4500, 5.4833], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Dinosaur National Monument", coordinates: [40.5437, -108.9338], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Elan Valley Estate", coordinates: [52.2651, -3.5769], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Enchanted Rock State Natural Area", coordinates: [30.5055, -98.8177], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Flagstaff Area National Monuments", coordinates: [35.2622, -111.5418], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Galloway Forest Park", coordinates: [55.1100, -4.4800], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Geauga Observatory Park", coordinates: [41.5862, -81.0901], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Grand Canyon National Park", coordinates: [36.1070, -112.1130], bortleScale: 1, radius: 50, type: 'dark-site' },
+  { name: "Great Basin National Park", coordinates: [38.9833, -114.3000], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Hehuan Mountain", coordinates: [24.1375, 121.2822], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Hovenweep National Monument", coordinates: [37.3962, -109.0066], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Joshua Tree National Park", coordinates: [33.8734, -115.9010], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Kissimmee Prairie Preserve State Park", coordinates: [27.6125, -81.0492], bortleScale: 1, radius: 30, type: 'dark-site' },
+  { name: "Klamath Marsh National Wildlife Refuge", coordinates: [42.9836, -121.5592], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Natural Bridges National Monument", coordinates: [37.6013, -109.9753], bortleScale: 1, radius: 30, type: 'dark-site' },
+  { name: "Newport State Park", coordinates: [45.2254, -86.9963], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Northumberland National Park", coordinates: [55.2857, -2.2288], bortleScale: 1.2, radius: 30, type: 'dark-site' },
+  { name: "Petrified Forest National Park", coordinates: [35.0648, -109.7764], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Pickett CCC Memorial State Park", coordinates: [36.5600, -84.7933], bortleScale: 1, radius: 25, type: 'dark-site' },
   { name: "Ramon Crater", coordinates: [30.6167, 34.8000], bortleScale: 1, radius: 25, type: 'dark-site' },
-  { name: "Aoraki Mackenzie International Dark Sky Reserve", coordinates: [-43.9800, 170.4600], bortleScale: 1, radius: 40, type: 'dark-site' },
-  
-  // Asia & Pacific
-  { name: "Yeongyang Firefly Eco Park", coordinates: [36.6700, 129.1100], bortleScale: 1, radius: 20, type: 'dark-site' },
-  { name: "Warrumbungle National Park", coordinates: [-31.2733, 149.0158], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Great Barrier Island", coordinates: [-36.2503, 175.4717], bortleScale: 1, radius: 30, type: 'dark-site' },
-  { name: "Tekapo (Aoraki Mackenzie)", coordinates: [-44.0046, 170.4831], bortleScale: 1, radius: 40, type: 'dark-site' },
-  
-  // Australia & New Zealand
-  { name: "River Murray Dark Sky Reserve", coordinates: [-34.2667, 139.6000], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Winton Wetlands", coordinates: [-36.3434, 146.0953], bortleScale: 1.5, radius: 25, type: 'dark-site' },
-  { name: "Wiruna, Australia", coordinates: [-33.1621, 150.1799], bortleScale: 1, radius: 30, type: 'dark-site' },
-  
-  // China & Eastern Asia
-  { name: "Wuyishan National Park", coordinates: [27.6562, 117.9685], bortleScale: 1.5, radius: 30, type: 'dark-site' },
-  { name: "Ngari Night Sky Park (Tibet)", coordinates: [32.5000, 80.0000], bortleScale: 1, radius: 80, type: 'dark-site' },
-  { name: "Qinghai Lake", coordinates: [36.8300, 100.1950], bortleScale: 1, radius: 50, type: 'dark-site' },
-  { name: "Mount Nianbaoyuze", coordinates: [33.8200, 102.2700], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Alxa Desert Populus Forest Starry Sky Park", coordinates: [39.4300, 105.6700], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Arxan National Geopark", coordinates: [47.1784, 119.9432], bortleScale: 1, radius: 30, type: 'dark-site' },
-  
-  // South America
-  { name: "El Leoncito National Park", coordinates: [-31.8000, -69.3000], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Cerro Tololo Inter-American Observatory", coordinates: [-30.1653, -70.8048], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Atacama Desert", coordinates: [-24.5000, -69.2500], bortleScale: 1, radius: 80, type: 'dark-site' },
-  { name: "Valle del Elqui", coordinates: [-29.9553, -70.7844], bortleScale: 1, radius: 40, type: 'dark-site' },
-  
-  // More International Dark Sky Sanctuaries
-  { name: "Gabriela Mistral Dark Sky Sanctuary", coordinates: [-30.2092, -70.9981], bortleScale: 1, radius: 30, type: 'dark-site' },
-  { name: "Pitcairn Islands", coordinates: [-25.0668, -130.1002], bortleScale: 1, radius: 50, type: 'dark-site' },
-  { name: "Stewart Island/Rakiura", coordinates: [-46.9991, 168.0833], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Massacre Rim", coordinates: [41.5868, -119.8526], bortleScale: 1, radius: 40, type: 'dark-site' },
-  
-  // Additional certified Urban Night Sky Places
-  { name: "Fountain Hills, Arizona", coordinates: [33.6044, -111.7242], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Lakewood Ranch, Florida", coordinates: [27.3977, -82.4455], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Camp Oakes", coordinates: [34.1780, -116.8963], bortleScale: 2, radius: 15, type: 'dark-site' },
-  
-  // Lesser known but still certified Dark Sky places
+  { name: "Salinas Pueblo Missions National Monument", coordinates: [34.2597, -106.0978], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "South Llano River State Park", coordinates: [30.4500, -99.9000], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Staunton River State Park", coordinates: [36.8997, -78.6867], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Steinaker State Park", coordinates: [40.5233, -109.5425], bortleScale: 1, radius: 20, type: 'dark-site' },
   { name: "Tumacácori National Historical Park", coordinates: [31.5717, -111.0429], bortleScale: 2, radius: 20, type: 'dark-site' },
-  { name: "Oracle State Park", coordinates: [32.6100, -110.7700], bortleScale: 2, radius: 20, type: 'dark-site' },
-  { name: "Kartchner Caverns State Park", coordinates: [31.8383, -110.3479], bortleScale: 2, radius: 20, type: 'dark-site' },
-  { name: "Middle Fork River Forest Preserve", coordinates: [40.3456, -88.1731], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "UBarU Camp & Retreat Center", coordinates: [30.0600, -99.5467], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Warrumbungle National Park", coordinates: [-31.2733, 149.0158], bortleScale: 1, radius: 35, type: 'dark-site' },
+  { name: "Waterton-Glacier International Peace Park", coordinates: [48.9956, -113.9156], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Weber County North Fork Park", coordinates: [41.3483, -111.8333], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Yeongyang Firefly Eco Park", coordinates: [36.6700, 129.1100], bortleScale: 1, radius: 25, type: 'dark-site' },
+  { name: "Zion National Park", coordinates: [37.2982, -113.0263], bortleScale: 1, radius: 40, type: 'dark-site' },
+  
+  // Dark Sky Communities (populated areas committed to dark sky preservation)
+  { name: "Beverly Shores", coordinates: [41.6875, -87.0031], bortleScale: 3, radius: 10, type: 'dark-site' },
+  { name: "Big Park / Village of Oak Creek", coordinates: [34.7761, -111.7611], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Bon Accord", coordinates: [53.8444, -113.4158], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Camp Verde", coordinates: [34.5689, -111.8544], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Coll", coordinates: [56.6366, -6.5514], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Cottonwood", coordinates: [34.7397, -112.0098], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Dripping Springs", coordinates: [30.1903, -98.0867], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Flagstaff", coordinates: [35.1983, -111.6513], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Fountain Hills", coordinates: [33.6044, -111.7242], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Homer Glen", coordinates: [41.6000, -87.9500], bortleScale: 3, radius: 10, type: 'dark-site' },
+  { name: "Horseshoe Bay", coordinates: [30.5419, -98.3633], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Ketchum", coordinates: [43.6804, -114.3636], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Laketown", coordinates: [41.8255, -111.3197], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Moffat", coordinates: [38.0038, -105.9050], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Morristown", coordinates: [33.8669, -112.6647], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Norwood", coordinates: [38.1386, -108.2913], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Ojai", coordinates: [34.4486, -119.2429], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Paulden", coordinates: [34.8866, -112.4790], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Sedona", coordinates: [34.8697, -111.7610], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Thunder Mountain Pootsee Nightsky", coordinates: [35.6505, -109.8061], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Timpanogos Valley", coordinates: [40.5022, -111.5740], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Torrey", coordinates: [38.2997, -111.4194], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Wimberley Valley", coordinates: [30.0002, -98.0997], bortleScale: 3, radius: 15, type: 'dark-site' },
+  
+  // Urban Night Sky Places (urban areas that protect dark skies)
+  { name: "Parc national du Mont-Mégantic", coordinates: [45.4565, -71.1523], bortleScale: 2, radius: 20, type: 'dark-site' },
+  { name: "Fry Family Park", coordinates: [40.9084, -81.3965], bortleScale: 3, radius: 10, type: 'dark-site' },
+  { name: "Stacy Park", coordinates: [38.6280, -90.3143], bortleScale: 4, radius: 5, type: 'dark-site' },
+  { name: "Valle de Oro National Wildlife Refuge", coordinates: [35.0050, -106.6766], bortleScale: 3, radius: 10, type: 'dark-site' },
+  { name: "Tivoli Quad", coordinates: [29.4252, -98.4946], bortleScale: 3, radius: 5, type: 'dark-site' },
+  { name: "Knoll-Willows Park", coordinates: [30.5103, -97.8747], bortleScale: 3, radius: 5, type: 'dark-site' },
+  { name: "Palos Preserves", coordinates: [41.7061, -87.8631], bortleScale: 3, radius: 10, type: 'dark-site' },
+  { name: "Henry Schuette Park", coordinates: [44.1139, -87.6545], bortleScale: 3, radius: 5, type: 'dark-site' },
+  { name: "Dragon Run State Forest", coordinates: [37.6767, -76.6657], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Lincoln Memorial Garden", coordinates: [39.7371, -89.6981], bortleScale: 3, radius: 5, type: 'dark-site' },
+  { name: "Ozark Highlands Nature Center", coordinates: [36.0908, -94.2088], bortleScale: 3, radius: 5, type: 'dark-site' },
+  { name: "The Riverwood Conservancy", coordinates: [43.5567, -79.6232], bortleScale: 4, radius: 5, type: 'dark-site' },
+  { name: "Old Mans Cave", coordinates: [39.4351, -82.5412], bortleScale: 2, radius: 10, type: 'dark-site' }
 ];

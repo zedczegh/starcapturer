@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -15,7 +15,9 @@ import ViewToggle, { PhotoPointsViewMode } from "@/components/photoPoints/ViewTo
 import DarkSkyLocations from "@/components/photoPoints/DarkSkyLocations";
 import CalculatedLocations from "@/components/photoPoints/CalculatedLocations";
 import { useCertifiedLocations } from "@/hooks/location/useCertifiedLocations";
+import { toast } from "sonner";
 
+// Location display component
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
   loading: boolean 
@@ -27,7 +29,6 @@ const CurrentLocationDisplay = ({ coords, loading }: {
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         {t("Getting location...", "正在获取位置...")}
-        {language === 'zh' && <span>加载中</span>}
       </div>
     );
   }
@@ -56,6 +57,7 @@ const CurrentLocationDisplay = ({ coords, loading }: {
   );
 };
 
+// Main Photo Points Nearby page component
 const PhotoPointsNearby: React.FC = () => {
   const { t, language } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -63,12 +65,14 @@ const PhotoPointsNearby: React.FC = () => {
   const [locationName, setLocationName] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   
+  // Use the geolocation hook to get user's coordinates
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
     enableHighAccuracy: true,
     timeout: 10000,
     language
   });
   
+  // Use the photo points search hook for fetching and filtering locations
   const {
     loading,
     searching,
@@ -95,13 +99,25 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedCount
   } = useCertifiedLocations(displayedLocations);
   
-  // Auto-switch to calculated view if no certified locations
+  // Auto-switch to calculated view if no certified locations and loading is complete
   useEffect(() => {
     if (!loading && !searching && activeView === 'certified' && !hasCertifiedLocations) {
       setActiveView('calculated');
+      toast.info(
+        language === 'en' 
+          ? "No certified Dark Sky locations found nearby" 
+          : "附近没有认证的暗夜地点",
+        {
+          description: language === 'en' 
+            ? "Showing calculated recommendations instead" 
+            : "显示系统计算的推荐位置",
+          duration: 3000
+        }
+      );
     }
-  }, [loading, searching, hasCertifiedLocations, activeView]);
+  }, [loading, searching, hasCertifiedLocations, activeView, language]);
   
+  // Get location name
   useEffect(() => {
     if (coords && !locationName) {
       try {
@@ -118,6 +134,7 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, locationName]);
   
+  // Get current SIQS from local storage if available
   useEffect(() => {
     try {
       const recentLocations = localStorage.getItem("astrospot_recent_locations");
@@ -139,6 +156,7 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, getPosition, locationName]);
   
+  // Handler for viewing current location details
   const handleViewCurrentLocation = () => {
     if (!coords) return;
     
@@ -173,212 +191,125 @@ const PhotoPointsNearby: React.FC = () => {
             {coords && (
               <Button 
                 variant="outline" 
-                className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 text-sm h-9 transition-all duration-300"
+                size="sm" 
                 onClick={handleViewCurrentLocation}
+                className="text-primary bg-cosmic-900/40 hover:bg-cosmic-800/60 transition-colors"
               >
-                <Telescope className="h-4 w-4 mr-2" />
-                {t("View Details", "查看详情")}
+                <MapPin className="h-4 w-4 mr-1.5" />
+                {t("View Current Location", "查看当前位置")}
               </Button>
             )}
             
-            <Link to="/share">
-              <Button className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20 hover:opacity-90 text-sm h-9 transition-all duration-300">
-                <MapPin className="h-4 w-4 mr-2" />
-                {t("Share Location", "分享位置")}
+            <Link to="/share-location">
+              <Button 
+                variant="default" 
+                size="sm"
+                className="bg-primary hover:bg-primary/90 transition-colors"
+              >
+                <Globe className="h-4 w-4 mr-1.5" />
+                {t("Share New Location", "分享新位置")}
               </Button>
             </Link>
           </div>
         </div>
         
-        <div className="mb-8 glassmorphism p-4 rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
+        {geoError && (
+          <div className="mb-6 p-4 border border-amber-500/30 bg-amber-950/20 rounded-lg flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+            <p className="text-sm text-amber-200">
+              {t(
+                "Location access error. Some features may be limited.",
+                "位置访问错误。某些功能可能受限。"
+              )}
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => getPosition()}
+                className="px-2 text-primary"
+              >
+                {t("Try Again", "重试")}
+              </Button>
+            </p>
+          </div>
+        )}
+        
+        {isUserInGoodLocation && (
+          <div className="mb-6 p-4 border border-green-500/30 bg-green-950/20 rounded-lg flex items-center gap-3">
+            <ThumbsUp className="h-5 w-5 text-green-500 flex-shrink-0" />
+            <p className="text-sm text-green-200">
+              {t(
+                "Your current location has good viewing conditions!",
+                "您当前的位置有良好的观测条件！"
+              )}
+            </p>
+          </div>
+        )}
+        
+        <div className="mb-6">
           <DistanceRangeSlider 
-            distance={searchDistance} 
-            setDistance={setSearchDistance} 
+            value={searchDistance} 
+            onChange={setSearchDistance}
+            loading={searching}
           />
         </div>
         
-        {/* View Toggle for Certified vs Calculated Locations */}
-        {!loading && !searching && !geoLoading && coords && (
-          displayedLocations.length > 0 || isUserInGoodLocation ? (
-            <div className="mb-6">
-              <ViewToggle 
-                activeView={activeView} 
-                onViewChange={setActiveView} 
-                certifiedCount={certifiedCount}
-                calculatedCount={calculatedCount}
-                className="max-w-md mx-auto"
-              />
+        <div className="mb-6">
+          <ViewToggle 
+            activeView={activeView} 
+            setActiveView={setActiveView}
+            certifiedCount={certifiedCount}
+            calculatedCount={calculatedCount}
+            loading={loading || searching}
+          />
+        </div>
+        
+        {activeView === 'certified' ? (
+          <div className="mb-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-blue-400" />
+                <h2 className="text-xl font-semibold">
+                  {t("Certified Dark Sky Locations", "认证暗夜地点")}
+                </h2>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {hasCertifiedLocations && (
+                  <span>
+                    {t("Showing", "显示")} {certifiedCount} {t("locations", "个位置")}
+                  </span>
+                )}
+              </div>
             </div>
-          ) : null
-        )}
-        
-        {searching && (
-          <motion.div 
-            className="flex justify-center py-12 flex-col items-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="relative">
-              <Globe className="h-16 w-16 text-primary animate-pulse" />
-              <Rocket className="h-6 w-6 text-primary-focus absolute -top-1 -right-1 animate-ping" style={{animationDuration: "3s"}} />
-            </div>
-            <h2 className="text-xl font-medium text-center mt-6 mb-2">
-              {t("Scanning for ideal photo points...", "正在扫描理想拍摄点...")}
-            </h2>
-            <p className="text-muted-foreground mt-2 text-center max-w-md text-sm">
-              {t("Calculating real-time SIQS scores based on weather and light pollution data", 
-                 "正在根据天气和光污染数据计算实时SIQS评分")}
-            </p>
-          </motion.div>
-        )}
-        
-        {loading && !searching && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-          </div>
-        )}
-        
-        {geoLoading && !coords && (
-          <div className="flex justify-center py-12 flex-col items-center">
-            <div className="relative">
-              <Target className="h-12 w-12 text-primary animate-pulse mb-4" />
-              <div className="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping" style={{animationDuration: "2s"}}></div>
-            </div>
-            <h2 className="text-lg font-medium text-center mt-4">
-              {t("Locating your position...", "正在定位您的位置...")}
-            </h2>
-            <p className="text-muted-foreground mt-2 text-center max-w-md text-sm">
-              {t("We need your location to find the best photo spots near you", 
-                 "我们需要您的位置来找到您附近最好的拍摄点")}
-            </p>
-          </div>
-        )}
-        
-        {geoError && !coords && (
-          <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-destructive/30">
-            <AlertCircle className="h-12 w-12 text-destructive/70 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">
-              {t("Location Access Required", "需要位置访问权限")}
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-6 text-sm">
-              {t(
-                "We need your location to show nearby photo points. Please allow location access and try again.",
-                "我们需要您的位置来显示附近的拍摄点。请允许位置访问并重试。"
-              )}
-            </p>
-            <Button 
-              size="lg" 
-              onClick={getPosition}
-              className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
-            >
-              {t("Try Again", "重试")}
-            </Button>
-          </div>
-        )}
-        
-        {/* Good Location Message - Same for both views */}
-        {!loading && !geoLoading && coords && isUserInGoodLocation && (
-          <motion.div 
-            className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30 mb-8"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="rounded-full bg-green-500/20 w-20 h-20 flex items-center justify-center mx-auto mb-4">
-              <ThumbsUp className="h-10 w-10 text-green-400" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">
-              {t("You're in a Great Spot!", "您所在的位置非常好！")}
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-2 text-sm">
-              {t(
-                "Your current location has excellent conditions for astrophotography!",
-                "您当前的位置具有极佳的天文摄影条件！"
-              )}
-            </p>
-            <p className="font-medium text-lg mb-6">
-              {t("SIQS Score: ", "SIQS评分：")}
-              <span className="text-green-400">{currentSiqs?.toFixed(1)}</span>
-            </p>
             
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button 
-                size="default" 
-                variant="outline" 
-                className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50"
-                onClick={handleViewCurrentLocation}
-              >
-                <Telescope className="h-4 w-4 mr-2" />
-                {t("View Details", "查看详情")}
-              </Button>
-              
-              <CopyLocationButton 
-                latitude={coords.latitude} 
-                longitude={coords.longitude}
-                name={locationName || t("Current Location", "当前位置")}
-                size="default"
-                className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
-              />
+            <DarkSkyLocations 
+              locations={certifiedLocations}
+              loading={loading || searching}
+            />
+          </div>
+        ) : (
+          <div className="mb-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Rocket className="h-5 w-5 text-yellow-400" />
+                <h2 className="text-xl font-semibold">
+                  {t("Calculated Recommendations", "计算推荐位置")}
+                </h2>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {hasCalculatedLocations && (
+                  <span>
+                    {t("Showing", "显示")} {displayedLocations.length}/{calculatedCount} {t("locations", "个位置")}
+                  </span>
+                )}
+              </div>
             </div>
-          </motion.div>
-        )}
-        
-        {/* Conditional Content Based on View Mode */}
-        {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && (
-          <>
-            {activeView === 'certified' ? (
-              <DarkSkyLocations 
-                locations={certifiedLocations} 
-                loading={loading || searching}
-              />
-            ) : (
-              <CalculatedLocations 
-                locations={calculatedLocations}
-                loading={loading || searching}
-                hasMore={hasMoreLocations}
-                onLoadMore={loadMoreLocations}
-              />
-            )}
-          </>
-        )}
-        
-        {/* No recommended locations found message - only shown in calculated view */}
-        {!loading && !searching && !geoLoading && coords && 
-          displayedLocations.length === 0 && 
-          !isUserInGoodLocation && 
-          activeView === 'calculated' && (
-          <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
-            <MapPin className="h-12 w-12 text-primary/50 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">
-              {t("No Better Photo Points Found Nearby", "附近未找到更好的拍摄点")}
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-6 text-sm">
-              {t(
-                "We couldn't find locations with significantly better conditions within your search radius.",
-                "在您的搜索半径内，我们未能找到条件明显更好的位置。"
-              )}
-            </p>
             
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button 
-                size="default" 
-                variant="outline" 
-                className="sci-fi-btn border-primary/40 hover:bg-cosmic-800/50"
-                onClick={handleViewCurrentLocation}
-              >
-                <Telescope className="h-4 w-4 mr-2" />
-                {t("View Details", "查看详情")}
-              </Button>
-              
-              <CopyLocationButton 
-                latitude={coords.latitude} 
-                longitude={coords.longitude}
-                name={locationName || t("Current Location", "当前位置")}
-                size="default"
-                className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
-              />
-            </div>
+            <CalculatedLocations 
+              locations={calculatedLocations}
+              loading={loading || searching}
+              hasMore={hasMoreLocations}
+              onLoadMore={loadMoreLocations}
+            />
           </div>
         )}
       </div>
