@@ -1,3 +1,4 @@
+
 import { validateCoordinates } from './coordinates';
 
 export interface WeatherResponse {
@@ -26,18 +27,6 @@ export interface WeatherResponse {
     wind_speed_10m?: number[];
     relative_humidity_2m?: number[];
   };
-  daily?: {
-    time: string;
-    weatherCode: number;
-    temperatureMax: number;
-    temperatureMin: number;
-    sunrise: string;
-    sunset: string;
-    precipitation: number;
-    cloudCover: number;
-    windSpeed: number;
-    visibility: number;
-  }[];
 }
 
 export interface WeatherData {
@@ -50,18 +39,6 @@ export interface WeatherData {
   condition: string;
   weatherCondition?: string;
   aqi?: number;
-  daily?: {
-    time: string;
-    weatherCode: number;
-    temperatureMax: number;
-    temperatureMin: number;
-    sunrise: string;
-    sunset: string;
-    precipitation: number;
-    cloudCover: number;
-    windSpeed: number;
-    visibility: number;
-  }[];
 }
 
 // Weather code mapping to text descriptions
@@ -143,7 +120,6 @@ export async function fetchWeatherData(
       time: data.current.time,
       condition: weatherConditions[data.current.weather_code] || determineWeatherCondition(data.current.cloud_cover),
       weatherCondition: weatherConditions[data.current.weather_code] || "",
-      daily: data.daily,
     };
     
     // Try to fetch AQI data

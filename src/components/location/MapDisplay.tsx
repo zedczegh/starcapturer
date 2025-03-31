@@ -1,8 +1,7 @@
 
-import React, { useCallback, memo, Suspense, lazy, useMemo, useEffect } from "react";
+import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
-import { useMapReset } from "@/hooks/useMapReset";
 
 // Lazy load the Leaflet map components to improve initial page load
 const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
@@ -14,8 +13,6 @@ interface MapDisplayProps {
   onMapReady: () => void;
   onMapClick: (lat: number, lng: number) => void;
   showInfoPanel?: boolean;
-  isDarkSkyReserve?: boolean;
-  certification?: string;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -24,12 +21,9 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   editable = false,
   onMapReady,
   onMapClick,
-  showInfoPanel = false,
-  isDarkSkyReserve = false,
-  certification = ''
+  showInfoPanel = false
 }) => {
   const { t } = useLanguage();
-  const { mapId } = useMapReset();
 
   // Memoize position to prevent unnecessary rerenders
   const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
@@ -43,43 +37,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
     return locationName;
   }, [locationName]);
 
-  // Create markers array for the map
-  const markers = useMemo(() => {
-    return [{
-      position: memoizedPosition,
-      content: displayName
-    }];
-  }, [memoizedPosition, displayName]);
-
-  // Create circles for dark sky reserves to indicate protected areas
-  const circles = useMemo(() => {
-    if (isDarkSkyReserve) {
-      return [{
-        center: memoizedPosition,
-        radius: 15000, // 15km radius
-        color: '#3b82f6',
-        fillColor: '#3b82f680',
-        weight: 2,
-        opacity: 0.7,
-        fillOpacity: 0.2
-      }];
-    }
-    return [];
-  }, [isDarkSkyReserve, memoizedPosition]);
-
-  // Callback for map load completion
-  const handleMapReady = useCallback(() => {
-    onMapReady();
-  }, [onMapReady]);
-
-  useEffect(() => {
-    // Simulate map ready event after component mount
-    const timer = setTimeout(handleMapReady, 1000);
-    return () => clearTimeout(timer);
-  }, [handleMapReady]);
-
   return (
-    <div className="z-0 h-full w-full" key={mapId}>
+    <div className="z-0 h-full w-full">
       <Suspense fallback={
         <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
           <div className="flex flex-col items-center gap-3">
@@ -89,15 +48,12 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
-          center={memoizedPosition}
-          zoom={10}
-          markers={markers}
-          circles={circles}
+          position={memoizedPosition}
+          locationName={displayName}
+          editable={editable}
+          onMapReady={onMapReady}
           onMapClick={onMapClick}
-          className="w-full h-full"
-          scrollWheelZoom={true}
-          zoomControl={true}
-          attributionControl={true}
+          showInfoPanel={showInfoPanel}
         />
       </Suspense>
     </div>
