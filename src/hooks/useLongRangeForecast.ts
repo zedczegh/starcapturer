@@ -51,8 +51,9 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
           throw new Error('Failed to fetch forecast data');
         }
 
-        // Extract dailyForecasts from weatherData, defaulting to an empty array
-        const dailyForecasts = weatherData.dailyForecasts || [];
+        // Extract daily forecasts from weatherData
+        // Note: The API structure might have changed, ensure we're accessing the correct property
+        const dailyForecasts = weatherData.daily || [];
         
         // Ensure the data is an array
         const forecastsArray = Array.isArray(dailyForecasts) ? dailyForecasts : [];

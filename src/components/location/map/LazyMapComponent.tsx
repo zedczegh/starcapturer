@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import MapCircle from './MapCircle';
+import { useMapReset } from '@/hooks/useMapReset';
 
 // Replace default Leaflet marker icons
 const defaultIcon = L.icon({
@@ -82,7 +83,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   attributionControl = true
 }) => {
   const { language } = useLanguage();
-  const [mapId] = useState(() => `map-${Math.random().toString(36).substring(2, 11)}`);
+  const { mapId, isMapInitialized, setMapInitialized } = useMapReset();
   
   // Create a MapCirclesComponent to handle all circles
   const CirclesComponent = React.useCallback(() => {
@@ -122,6 +123,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
           scrollWheelZoom={scrollWheelZoom}
+          // Pass options correctly for MapContainer
           zoomControl={zoomControl}
           attributionControl={attributionControl}
         >

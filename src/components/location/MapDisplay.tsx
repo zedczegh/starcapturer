@@ -2,6 +2,7 @@
 import React, { useCallback, memo, Suspense, lazy, useMemo, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
+import { useMapReset } from "@/hooks/useMapReset";
 
 // Lazy load the Leaflet map components to improve initial page load
 const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
@@ -28,6 +29,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   certification = ''
 }) => {
   const { t } = useLanguage();
+  const { mapId } = useMapReset();
 
   // Memoize position to prevent unnecessary rerenders
   const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
@@ -77,7 +79,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   }, [handleMapReady]);
 
   return (
-    <div className="z-0 h-full w-full">
+    <div className="z-0 h-full w-full" key={mapId}>
       <Suspense fallback={
         <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
           <div className="flex flex-col items-center gap-3">
