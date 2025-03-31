@@ -46,26 +46,27 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
           longitude
         });
 
-        if (!weatherData || !weatherData.daily) {
+        // Check if weather data contains daily forecasts
+        if (!weatherData || !weatherData.daily_forecasts) {
           throw new Error('Failed to fetch forecast data');
         }
 
-        const dailyForecasts = Array.isArray(weatherData.daily) 
-          ? weatherData.daily 
+        const dailyForecasts = Array.isArray(weatherData.daily_forecasts) 
+          ? weatherData.daily_forecasts 
           : [];
 
         setForecast({
           daily: dailyForecasts.map(day => ({
-            time: day.time,
-            weatherCode: day.weatherCode,
-            temperatureMax: day.temperatureMax,
-            temperatureMin: day.temperatureMin,
-            sunrise: day.sunrise,
-            sunset: day.sunset,
-            precipitation: day.precipitation,
-            cloudCover: day.cloudCover,
-            windSpeed: day.windSpeed,
-            visibility: day.visibility || 0
+            time: day.time || new Date().toISOString(),
+            weatherCode: day.weatherCode || 0,
+            temperatureMax: day.temperatureMax || 25,
+            temperatureMin: day.temperatureMin || 15,
+            sunrise: day.sunrise || '06:00',
+            sunset: day.sunset || '18:00',
+            precipitation: day.precipitation || 0,
+            cloudCover: day.cloudCover || 0,
+            windSpeed: day.windSpeed || 0,
+            visibility: day.visibility || 10
           })),
           isLoading: false,
           error: null

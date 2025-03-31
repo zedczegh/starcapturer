@@ -20,3 +20,9 @@ export { fetchLightPollutionData } from './api/pollution';
 
 // Export other functions related to shared astronomy spots
 export * from './api/astroSpots';
+
+// Export photo points related functions
+export { 
+  getRecommendedPhotoPoints,
+  shareAstroSpot
+} from './api/photoPoints';

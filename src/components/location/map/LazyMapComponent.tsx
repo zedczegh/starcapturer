@@ -1,9 +1,10 @@
 
 import React, { lazy, Suspense } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
+import MapCircle from './MapCircle';
 
 // Replace default Leaflet marker icons
 const defaultIcon = L.icon({
@@ -21,6 +22,16 @@ L.Marker.prototype.options.icon = defaultIcon;
 // Lazy load the actual map component to reduce initial load time
 const MapComponent = lazy(() => import('./MapComponents'));
 
+interface CircleOptions {
+  center: [number, number];
+  radius: number;
+  color: string;
+  fillColor: string;
+  weight?: number;
+  opacity?: number;
+  fillOpacity?: number;
+}
+
 interface LazyMapComponentProps {
   center: [number, number];
   zoom: number;
@@ -29,19 +40,10 @@ interface LazyMapComponentProps {
     content?: React.ReactNode;
     color?: string;
   }>;
-  circles?: Array<{
-    center: [number, number];
-    radius: number;
-    color: string;
-    fillColor: string;
-    weight?: number;
-    opacity?: number;
-    fillOpacity?: number;
-  }>;
+  circles?: CircleOptions[];
   onMapClick?: (lat: number, lng: number) => void;
   onMapMove?: (lat: number, lng: number) => void;
   className?: string;
-  dragging?: boolean;
   scrollWheelZoom?: boolean;
   zoomControl?: boolean;
   attributionControl?: boolean;
@@ -55,12 +57,33 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   onMapClick,
   onMapMove,
   className = "",
-  dragging = true,
   scrollWheelZoom = true,
   zoomControl = true,
   attributionControl = true
 }) => {
   const { language } = useLanguage();
+  
+  // Create a MapCirclesComponent to handle all circles
+  const CirclesComponent = React.useCallback(() => {
+    if (!circles || circles.length === 0) return null;
+    
+    return (
+      <>
+        {circles.map((circle, index) => (
+          <MapCircle
+            key={`circle-${index}`}
+            center={circle.center}
+            radius={circle.radius}
+            color={circle.color}
+            fillColor={circle.fillColor}
+            weight={circle.weight}
+            opacity={circle.opacity}
+            fillOpacity={circle.fillOpacity}
+          />
+        ))}
+      </>
+    );
+  }, [circles]);
   
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
@@ -76,7 +99,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           center={center}
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
-          dragging={dragging}
           scrollWheelZoom={scrollWheelZoom}
           zoomControl={zoomControl}
           attributionControl={attributionControl}
@@ -101,20 +123,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             </Marker>
           ))}
           
-          {circles && circles.map((circle, index) => (
-            <Circle
-              key={`circle-${index}`}
-              center={circle.center}
-              radius={circle.radius}
-              pathOptions={{
-                color: circle.color,
-                fillColor: circle.fillColor,
-                weight: circle.weight || 2,
-                opacity: circle.opacity || 0.7,
-                fillOpacity: circle.fillOpacity || 0.3
-              }}
-            />
-          ))}
+          <CirclesComponent />
           
           <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />
         </MapContainer>

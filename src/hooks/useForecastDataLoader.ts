@@ -45,10 +45,11 @@ export const useForecastDataLoader = (
     
     try {
       console.log(`Loading forecast data for ${locationData.name}`);
+      
+      // The fetchForecastData function only expects latitude, longitude parameters
       const forecastData = await fetchForecastData(
         locationData.latitude, 
-        locationData.longitude,
-        abortControllerRef.current.signal
+        locationData.longitude
       );
       
       if (forecastData && forecastData.hourly) {

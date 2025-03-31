@@ -31,15 +31,13 @@ export function useRefreshManager(locationData: any) {
     
     // Only refresh if:
     // 1. Location has changed significantly
-    // 2. Coming from PhotoPoints page (but not too frequently)
+    // 2. Coming from PhotoPoints page (but limit frequency)
     // 3. First load of this location
     if (
       // Location has changed
       (currentSignature && currentSignature !== locationSignatureRef.current) ||
       // Coming from PhotoPoints page (only refresh once)
-      (locationData?.fromPhotoPoints === true && !refreshedRef.current && canRefreshAgain()) ||
-      // First load of this location (prevent multiple refreshes)
-      (currentSignature && !refreshedRef.current && refreshAttemptCountRef.current === 0)
+      (locationData?.fromPhotoPoints === true && !refreshedRef.current && canRefreshAgain())
     ) {
       console.log("Refresh state reset due to location change or PhotoPoints navigation");
       locationSignatureRef.current = currentSignature;
@@ -53,6 +51,11 @@ export function useRefreshManager(locationData: any) {
         lastRefreshTimeRef.current = Date.now();
       } else {
         console.log("Too many refresh attempts, skipping refresh");
+        
+        // Reset counter after a cool-down period
+        setTimeout(() => {
+          refreshAttemptCountRef.current = 0;
+        }, 10000);
       }
     }
   }, [locationData]);
