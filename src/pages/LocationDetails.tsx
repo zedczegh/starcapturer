@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -9,6 +8,8 @@ import { prefetchLocationData } from "@/lib/queryPrefetcher";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 import { isInChina } from "@/utils/chinaBortleData";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 // Lazy-loaded components for better performance
@@ -22,6 +23,7 @@ const LocationDetails = () => {
   const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { updateBortleScale } = useBortleUpdater();
+  const { t } = useLanguage();
   
   const {
     locationData, 
@@ -36,6 +38,14 @@ const LocationDetails = () => {
     initialState: location.state, 
     navigate 
   });
+
+  // Use the SIQS updater to keep scores in sync with forecast data
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData,
+    locationData?.forecastData,
+    setLocationData,
+    t
+  );
 
   // Handle back navigation to ensure clean return to home page
   useEffect(() => {
@@ -64,8 +74,11 @@ const LocationDetails = () => {
   useEffect(() => {
     if (locationData && !isLoading && locationData.latitude && locationData.longitude) {
       prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
+      
+      // Reset the SIQS update state when location changes
+      resetUpdateState();
     }
-  }, [locationData, isLoading, queryClient]);
+  }, [locationData, isLoading, queryClient, resetUpdateState]);
 
   // Make sure we have Bortle scale data, with special handling for Chinese locations
   useEffect(() => {

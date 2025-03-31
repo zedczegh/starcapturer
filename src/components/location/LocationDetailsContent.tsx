@@ -4,7 +4,8 @@ import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
+import { toast } from "sonner";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
@@ -41,32 +42,20 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
 
-  // Calculate SIQS with focus on nighttime conditions
-  const updateSIQSWithNighttimeData = useCallback(() => {
-    // Only proceed if we have the necessary data
-    if (locationData?.weatherData && forecastData?.hourly) {
-      console.log("Using nighttime forecast data for SIQS calculation");
-      
-      // Calculate fresh SIQS using the utility function
-      const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
-      
-      if (freshSIQSResult) {
-        console.log("SIQS analysis based on nighttime conditions:", freshSIQSResult.score);
-        
-        // Update the SIQS result when forecast data changes
-        setLocationData({
-          ...locationData,
-          siqsResult: freshSIQSResult
-        });
-      }
-    }
-  }, [forecastData, locationData, setLocationData, t]);
+  // Update SIQS when forecast data changes
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData, 
+    forecastData, 
+    setLocationData,
+    t
+  );
 
   // Listen for parent component requesting a refresh
   useEffect(() => {
     const handleForceRefresh = () => {
       console.log("Force refresh request received from parent");
       handleRefreshAll();
+      resetUpdateState(); // Reset SIQS updater state on manual refresh
     };
     
     const container = containerRef.current;
@@ -79,14 +68,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         container.removeEventListener('forceRefresh', handleForceRefresh);
       }
     };
-  }, [handleRefreshAll]);
-
-  // Calculate SIQS immediately when forecast data changes
-  useEffect(() => {
-    if (forecastData && forecastData.hourly) {
-      updateSIQSWithNighttimeData();
-    }
-  }, [forecastData, updateSIQSWithNighttimeData]);
+  }, [handleRefreshAll, resetUpdateState]);
   
   // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
@@ -113,6 +95,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       refreshTimerRef.current = window.setTimeout(() => {
         console.log("Auto-refreshing data after location update or page load");
         handleRefreshAll();
+        resetUpdateState(); // Reset SIQS updater state
         
         // Reset the fromPhotoPoints flag after refreshing
         if (fromPhotoPoints && locationData) {
@@ -130,7 +113,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         window.clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [locationData, handleRefreshAll, setLocationData]);
+  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
 
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>

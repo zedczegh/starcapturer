@@ -93,19 +93,9 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
         />
         
         <SIQSSummary
-          siqsData={{
-            score: locationData.siqsResult?.score || 0,
-            isViable: locationData.siqsResult?.isViable || false,
-            factors: locationData.siqsResult?.factors || []
-          }}
-          weatherData={{
-            temperature: weatherData.temperature,
-            humidity: weatherData.humidity,
-            windSpeed: weatherData.windSpeed
-          }}
-          moonPhase={moonPhaseString}
-          bortleScale={bortleScale}
-          forecastData={forecastData} // Pass forecast data for better SIQS estimation
+          siqsResult={locationData.siqsResult || null}
+          weatherData={weatherData}
+          locationData={locationData}
         />
       </div>
       

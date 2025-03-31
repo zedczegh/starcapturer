@@ -1,6 +1,7 @@
 
 import { useEffect, useRef } from 'react';
 import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
+import { toast } from 'sonner';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring it matches with
@@ -18,14 +19,12 @@ export const useLocationSIQSUpdater = (
   useEffect(() => {
     // Only update SIQS once when the forecast data is available
     if (
-      !updateAttemptedRef.current && 
-      locationData && 
       forecastData?.hourly && 
       Array.isArray(forecastData.hourly.time) &&
-      forecastData.hourly.time.length > 0
+      forecastData.hourly.time.length > 0 &&
+      locationData
     ) {
       console.log("Updating SIQS based on hourly forecast data");
-      updateAttemptedRef.current = true;
       
       try {
         // Calculate new SIQS based on nighttime conditions
@@ -39,6 +38,8 @@ export const useLocationSIQSUpdater = (
             ...locationData,
             siqsResult: freshSIQSResult
           });
+          
+          updateAttemptedRef.current = true;
         } else if (locationData.weatherData?.cloudCover !== undefined) {
           // Fallback to current weather if nighttime forecast is unavailable
           const currentCloudCover = locationData.weatherData.cloudCover;
@@ -66,6 +67,8 @@ export const useLocationSIQSUpdater = (
                 ]
               }
             });
+            
+            updateAttemptedRef.current = true;
           } else {
             console.log(`Current cloud cover (${currentCloudCover}%) too high for imaging`);
             setLocationData({
@@ -85,10 +88,13 @@ export const useLocationSIQSUpdater = (
                 ]
               }
             });
+            
+            updateAttemptedRef.current = true;
           }
         }
       } catch (error) {
         console.error("Error updating SIQS with forecast data:", error);
+        toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
       }
     }
   }, [forecastData, locationData, setLocationData, t]);
