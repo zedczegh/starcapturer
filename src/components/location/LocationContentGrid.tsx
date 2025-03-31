@@ -1,3 +1,4 @@
+
 import React, { memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
@@ -48,10 +49,14 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = memo(({
             {t("Current Weather", "当前天气")}
           </h2>
           
-          <PrimaryConditions weatherData={locationData.weatherData} />
+          {locationData?.weatherData && (
+            <PrimaryConditions weatherData={locationData.weatherData} />
+          )}
           
           <div className="mt-4">
-            <SecondaryConditions weatherData={locationData.weatherData} />
+            {locationData?.weatherData && (
+              <SecondaryConditions weatherData={locationData.weatherData} />
+            )}
           </div>
           
           {/* Add Warm Reminders component here */}
@@ -79,17 +84,21 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = memo(({
             {t("Location Map", "位置地图")}
           </h2>
           
-          <MapDisplay 
-            latitude={locationData.latitude} 
-            longitude={locationData.longitude} 
-            name={locationData.name}
-          />
-          
-          <div className="mt-3 flex flex-wrap gap-2">
-            <CopyLocationButton 
+          {locationData?.latitude && locationData?.longitude && (
+            <MapDisplay 
               latitude={locationData.latitude} 
               longitude={locationData.longitude} 
+              name={locationData.name}
             />
+          )}
+          
+          <div className="mt-3 flex flex-wrap gap-2">
+            {locationData?.latitude && locationData?.longitude && (
+              <CopyLocationButton 
+                latitude={locationData.latitude} 
+                longitude={locationData.longitude} 
+              />
+            )}
           </div>
         </div>
       </div>
@@ -117,10 +126,12 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = memo(({
             {t("Cloud Coverage", "云层覆盖")}
           </h2>
           
-          <CloudCoverageMap 
-            latitude={locationData.latitude} 
-            longitude={locationData.longitude} 
-          />
+          {locationData?.latitude && locationData?.longitude && (
+            <CloudCoverageMap 
+              latitude={locationData.latitude} 
+              longitude={locationData.longitude} 
+            />
+          )}
         </div>
       </div>
     </div>

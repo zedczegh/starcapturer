@@ -1,174 +1,156 @@
 
-import { Language } from "@/contexts/LanguageContext";
+/**
+ * Utility functions for generating astronomy-specific reminders
+ * and warm reminders based on current conditions
+ */
 
 /**
- * Check if moon is bright enough to affect deep sky imaging
+ * Check if the moon is bright enough to significantly affect observations
  */
-export function isMoonBright(moonPhase: string | number): boolean {
-  if (typeof moonPhase === 'number') {
-    return moonPhase > 0.5;
+export function isMoonBright(moonPhase: number): boolean {
+  // Moon is most disruptive between 0.75-1.0 and 0.0-0.25 (close to full)
+  return moonPhase >= 0.75 || moonPhase <= 0.25;
+}
+
+/**
+ * Get advice for dealing with moon brightness based on phase
+ */
+export function getMoonAvoidanceStrategy(language: string = 'en'): string {
+  if (language === 'zh') {
+    return "明亮的月光可能会干扰深空天体的观测。考虑观测与月亮相反方向的天体，或集中在行星和月球观测上。";
+  } else {
+    return "Bright moonlight may interfere with deep-sky observations. Consider observing objects in the opposite direction from the moon, or focus on planetary and lunar observations instead.";
   }
-  
-  // If it's a string, check for brightness indicators
-  return moonPhase.includes("Full") || 
-         moonPhase.includes("Gibbous") || 
-         moonPhase.includes("Quarter");
 }
 
 /**
- * Get recommended moon avoidance strategy based on language
+ * Get advice based on seeing conditions
  */
-export function getMoonAvoidanceStrategy(language: Language): string {
-  return language === 'en' 
-    ? "Consider using a narrowband filter or focus on planetary photography instead."
-    : "考虑使用窄带滤镜或改为进行行星摄影。";
-}
-
-/**
- * Get advice for specific seeing conditions
- */
-export function getSeeingAdvice(score: number, language: Language): string {
-  if (score < 40) {
+export function getSeeingAdvice(seeingScore: number, language: string = 'en'): string {
+  // Seeing score expected to be 0-100
+  if (seeingScore < 30) {
     return language === 'en'
-      ? "Very poor seeing conditions. Focus on wide-field targets or lunar/planetary imaging with short exposures."
-      : "非常差的视宁度条件。专注于广角目标或使用短曝光进行月球/行星摄影。";
-  }
-  
-  if (score < 60) {
+      ? "Poor atmospheric seeing conditions. Focus on wide-field observations rather than high-magnification planetary viewing."
+      : "大气视宁度条件较差。专注于广角观测，而不是高倍率的行星观测。";
+  } else if (seeingScore < 60) {
     return language === 'en'
-      ? "Poor atmospheric stability. Consider using shorter exposures or focusing on brighter targets."
-      : "大气稳定性差。考虑使用较短的曝光时间或专注于较亮的目标。";
+      ? "Moderate seeing conditions. Planetary details may be somewhat blurred at high magnification."
+      : "中等视宁度条件。行星细节在高倍率下可能会有些模糊。";
+  } else {
+    return language === 'en'
+      ? "Good seeing conditions. Excellent for detailed planetary observations and high-magnification viewing."
+      : "良好的视宁度条件。非常适合详细的行星观测和高倍率观测。";
   }
-  
-  return language === 'en'
-    ? "Average seeing conditions. Balance exposure times accordingly."
-    : "一般视宁度条件。相应地平衡曝光时间。";
 }
 
 /**
- * Get advice for humidity levels
+ * Get advice based on humidity levels
  */
-export function getHumidityAdvice(humidity: number, language: Language): string {
+export function getHumidityAdvice(humidity: number, language: string = 'en'): string {
   if (humidity > 85) {
     return language === 'en'
-      ? "Very high humidity. Dew will likely form rapidly on optics. Use dew heaters and check equipment frequently."
-      : "湿度非常高。露水可能会在光学设备上迅速形成。使用露水加热器并经常检查设备。";
-  }
-  
-  if (humidity > 70) {
+      ? "Very high humidity. Watch for dew forming on optics and consider using a dew shield or heater."
+      : "湿度非常高。注意光学元件上的露水形成，考虑使用防露罩或加热器。";
+  } else if (humidity > 70) {
     return language === 'en'
-      ? "High humidity increases risk of dew formation. Consider using dew heaters for your optics."
-      : "高湿度增加了露水形成的风险。考虑为主镜使用加热带。";
+      ? "High humidity may cause dew to form on optics. Keep lens caps on until ready to observe."
+      : "高湿度可能导致光学元件上形成露水。准备好观测前请保持镜头盖盖好。";
+  } else {
+    return language === 'en'
+      ? "Humidity levels are acceptable. Still, it's good practice to allow equipment to acclimate before observing."
+      : "湿度水平可接受。不过，最好在观测前让设备适应环境。";
   }
-  
-  return language === 'en'
-    ? "Moderate humidity. Monitor equipment for potential dew formation."
-    : "中等湿度。监控设备，留意可能的露水形成。";
 }
 
 /**
- * Get advice for light pollution levels
+ * Get advice for light pollution conditions
  */
-export function getLightPollutionAdvice(bortleScale: number | null, language: Language): string {
-  if (!bortleScale) {
+export function getLightPollutionAdvice(bortleScale: number, language: string = 'en'): string {
+  if (!bortleScale || bortleScale < 1 || bortleScale > 9) {
     return language === 'en'
-      ? "Light pollution level unknown. Consider using light pollution filters as a precaution."
-      : "光污染水平未知。建议使用光污染滤镜作为预防措施。";
+      ? "Light pollution data unavailable. Consider using a light pollution filter for best results."
+      : "光污染数据不可用。考虑使用光污染滤镜以获得最佳效果。";
   }
   
-  if (bortleScale >= 7) {
+  if (bortleScale <= 3) {
     return language === 'en'
-      ? "Severe light pollution. Use narrowband filters for deep sky objects or focus on lunar/planetary targets."
-      : "严重光污染。使用窄带滤镜观测深空天体或专注于月球/行星目标。";
-  }
-  
-  if (bortleScale >= 5) {
+      ? "Excellent dark sky conditions. Perfect for observing deep-sky objects without filters."
+      : "极佳的暗空条件。非常适合不使用滤镜观测深空天体。";
+  } else if (bortleScale <= 5) {
     return language === 'en'
-      ? "Significant light pollution. Consider using light pollution filters for deep sky objects."
-      : "显著光污染。考虑使用光污染滤镜观测深空天体。";
+      ? "Moderate light pollution. Consider using a light pollution filter for nebulae and galaxies."
+      : "中等光污染。考虑使用光污染滤镜观测星云和星系。";
+  } else if (bortleScale <= 7) {
+    return language === 'en'
+      ? "Significant light pollution. Focus on brighter objects, star clusters, and planets."
+      : "光污染严重。专注于更亮的天体、星团和行星。";
+  } else {
+    return language === 'en'
+      ? "Heavy light pollution. Best for lunar and planetary observation. Deep-sky objects will be challenging."
+      : "严重光污染。最适合月球和行星观测。深空天体观测将会很有挑战性。";
   }
-  
-  return language === 'en'
-    ? "Moderate light pollution. Some filters may improve contrast for certain targets."
-    : "中等光污染。某些滤镜可能会提高特定目标的对比度。";
 }
 
 /**
- * Get extreme weather alerts based on conditions
+ * Check for extreme weather alerts
  */
 export function getExtremeWeatherAlerts(
-  weatherCode: number | undefined, 
-  windSpeed: number, 
-  precipitation: number, 
-  language: Language
-): { message: string, severity: 'warning' | 'severe', icon: string } | null {
-  // Check for severe weather codes
+  weatherCode: number | undefined,
+  windSpeed: number | undefined,
+  precipitation: number | undefined,
+  language: string = 'en'
+): { message: string; severity: 'warning' | 'alert' | 'advisory' } | null {
+  // Check for high winds (> 30 km/h)
+  if (windSpeed && windSpeed > 30) {
+    return {
+      message: language === 'en'
+        ? "High winds may affect telescope stability. Consider additional stabilization or lower magnification."
+        : "强风可能影响望远镜稳定性。考虑增加稳定措施或降低放大倍率。",
+      severity: 'warning'
+    };
+  }
+  
+  // Check for precipitation
+  if (precipitation && precipitation > 0.2) {
+    return {
+      message: language === 'en'
+        ? "Precipitation detected. Protect your equipment from moisture damage."
+        : "检测到降水。保护您的设备免受潮气损坏。",
+      severity: 'alert'
+    };
+  }
+  
+  // Check for extreme weather conditions based on weather code
   if (weatherCode) {
-    // Thunderstorms
-    if ([95, 96, 99].includes(weatherCode)) {
+    // Thunderstorm (code 200-299)
+    if (weatherCode >= 200 && weatherCode < 300) {
       return {
-        message: language === 'en' 
-          ? "Thunderstorm detected. Equipment may be damaged by lightning. Avoid observation." 
-          : "检测到雷暴。设备可能因闪电而损坏。避免观测。",
-        severity: 'severe',
-        icon: 'thunderstorm'
+        message: language === 'en'
+          ? "Thunderstorms in the forecast. Observing is not recommended due to safety concerns."
+          : "预报有雷暴。出于安全考虑，不建议进行观测。",
+        severity: 'alert'
       };
     }
     
-    // Sandstorms and heavy dust
-    if ([6, 7, 8].includes(weatherCode)) {
+    // Heavy rain/snow (code 500+)
+    if (weatherCode >= 500) {
       return {
-        message: language === 'en' 
-          ? "Dust/sand storm conditions. Equipment may be damaged. Avoid observation." 
-          : "沙尘暴条件。设备可能受损。避免观测。",
-        severity: 'severe',
-        icon: 'wind'
+        message: language === 'en'
+          ? "Precipitation conditions detected. Equipment damage risk is high."
+          : "检测到降水条件。设备损坏风险高。",
+        severity: 'alert'
       };
     }
     
-    // Heavy snow
-    if ([71, 73, 75, 77].includes(weatherCode)) {
+    // Fog/mist (code 700-799)
+    if (weatherCode >= 700 && weatherCode < 800) {
       return {
-        message: language === 'en' 
-          ? "Heavy snow conditions. Protect equipment from moisture damage." 
-          : "大雪条件。保护设备免受水分损害。",
-        severity: 'warning',
-        icon: 'snow'
+        message: language === 'en'
+          ? "Foggy conditions will significantly reduce visibility for astronomical objects."
+          : "雾天条件将显著降低天文物体的可见度。",
+        severity: 'advisory'
       };
     }
-    
-    // Freezing rain
-    if ([66, 67].includes(weatherCode)) {
-      return {
-        message: language === 'en' 
-          ? "Freezing rain detected. Equipment may be damaged by ice formation." 
-          : "检测到冻雨。设备可能因结冰而损坏。",
-        severity: 'warning',
-        icon: 'sleet'
-      };
-    }
-  }
-  
-  // Check for extreme winds
-  if (windSpeed > 60) {
-    return {
-      message: language === 'en' 
-        ? "Dangerously high winds. Equipment stability compromised. Cancel observation." 
-        : "危险的高风速。设备稳定性受损。建议取消观测。",
-      severity: 'severe',
-      icon: 'wind'
-    };
-  }
-  
-  // Check for heavy rain
-  if (precipitation > 15) {
-    return {
-      message: language === 'en' 
-        ? "Heavy rainfall detected. Protect equipment from water damage." 
-        : "检测到大雨。保护设备免受水损伤。",
-      severity: 'warning',
-      icon: 'rain'
-    };
   }
   
   return null;

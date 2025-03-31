@@ -47,8 +47,7 @@ export const useForecastDataLoader = (
       console.log(`Loading forecast data for ${locationData.name}`);
       const forecastData = await fetchForecastData(
         locationData.latitude, 
-        locationData.longitude,
-        abortControllerRef.current.signal
+        locationData.longitude
       );
       
       if (forecastData && forecastData.hourly) {

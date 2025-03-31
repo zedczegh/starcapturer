@@ -1,93 +1,55 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Share2, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
-import BackButton from "@/components/navigation/BackButton";
+import { Share, MapPin, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
+import { zhCN, enUS } from "date-fns/locale";
 
 interface LocationHeaderProps {
-  name: string;
-  latitude: number;
-  longitude: number;
-  timestamp?: number;
-  loading?: boolean;
-  onRefresh?: () => void;
+  locationData: any;
+  onShareLocation: () => void;
 }
 
-const LocationHeader = ({ 
-  name, 
-  latitude, 
-  longitude, 
-  timestamp, 
-  loading,
-  onRefresh 
-}: LocationHeaderProps) => {
-  const navigate = useNavigate();
-  const { t } = useLanguage();
-
-  const handleRefresh = () => {
-    if (onRefresh) {
-      onRefresh();
-      toast.info(t("Refreshing Data", "刷新数据"), {
-        description: t("Fetching latest weather and conditions...", "正在获取最新天气和条件..."),
-        position: "top-center",
-        duration: 3000,
-        icon: <RefreshCw className="h-4 w-4 animate-spin" />
-      });
-    }
-  };
-
+const LocationHeader: React.FC<LocationHeaderProps> = ({
+  locationData,
+  onShareLocation
+}) => {
+  const { t, language } = useLanguage();
+  
+  if (!locationData) return null;
+  
+  const timeAgo = locationData.timestamp 
+    ? formatDistanceToNow(new Date(locationData.timestamp), { 
+        addSuffix: true,
+        locale: language === 'zh' ? zhCN : enUS
+      })
+    : '';
+  
   return (
-    <div className="mb-8">
-      <div className="flex justify-start mb-4">
-        <BackButton 
-          destination="/"
-          className="ml-0 mr-auto" 
-          variant="secondary"
-          size="sm"
-        />
-      </div>
-      
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-center md:text-left">{name || t("Unnamed Location", "未命名位置")}</h1>
-        
-        <div className="flex flex-wrap gap-2 justify-center md:justify-end">
-          {onRefresh && (
-            <Button 
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {t("Refresh", "刷新")}
-            </Button>
-          )}
-          <Button 
-            onClick={() => navigate("/share", { state: { name, latitude, longitude, timestamp } })}
-            disabled={loading}
-          >
-            <Share2 className="mr-2 h-4 w-4" />
-            {t("Share This Location", "分享此位置")}
-          </Button>
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+      <div className="mb-4 md:mb-0">
+        <div className="flex items-center">
+          <MapPin className="h-5 w-5 text-primary mr-2" />
+          <h1 className="text-2xl font-bold">{locationData.name}</h1>
+        </div>
+        <div className="flex items-center mt-1.5 text-sm text-muted-foreground">
+          <Calendar className="h-3.5 w-3.5 mr-1.5" />
+          <span>
+            {t("Updated", "更新于")} {timeAgo}
+          </span>
         </div>
       </div>
       
-      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-4 justify-center md:justify-start">
-        <div>
-          {t("Latitude", "纬度")}: {latitude}
-        </div>
-        <div>•</div>
-        <div>
-          {t("Longitude", "经度")}: {longitude}
-        </div>
-        <div>•</div>
-        <div>
-          {t("Analysis Date", "分析日期")}: {new Date(timestamp || Date.now()).toLocaleDateString()}
-        </div>
-      </div>
+      <Button 
+        variant="outline" 
+        size="sm"
+        onClick={onShareLocation}
+        className="flex items-center gap-2"
+      >
+        <Share className="h-4 w-4" />
+        <span>{t("Share", "分享")}</span>
+      </Button>
     </div>
   );
 };
