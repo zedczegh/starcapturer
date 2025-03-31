@@ -1,58 +1,52 @@
 
-import React, { memo } from "react";
-import ConditionItem from "./ConditionItem";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { 
-  DynamicHumidityIcon, 
-  DynamicTemperatureIcon,
-  DynamicWindIcon,
-  DynamicSeeingIcon
-} from "./DynamicIcons";
+import React from 'react';
+import { Cloud, Thermometer, Wind, Droplets } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import ConditionItem from './ConditionItem';
+import { DynamicCloudCoverIcon, DynamicWindIcon, DynamicTemperatureIcon } from './DynamicIcons';
 
 interface PrimaryConditionsProps {
-  temperature: number;
-  humidity: number;
-  windSpeed: number;
-  seeingConditions: string;
+  weatherData: any;
 }
 
-const PrimaryConditions = memo<PrimaryConditionsProps>(({
-  temperature,
-  humidity,
-  windSpeed,
-  seeingConditions
-}) => {
+const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({ weatherData }) => {
   const { t } = useLanguage();
   
+  if (!weatherData) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        {t("Weather data unavailable", "天气数据不可用")}
+      </div>
+    );
+  }
+  
   return (
-    <div className="space-y-6">
-      <ConditionItem
-        icon={<DynamicTemperatureIcon temperature={temperature} />}
-        label={t("Temperature", "温度")}
-        value={`${temperature.toFixed(1)}°C`}
+    <div className="grid grid-cols-2 gap-3">
+      <ConditionItem 
+        title={t("Temperature", "温度")}
+        value={`${weatherData.temperature.toFixed(1)}°C`}
+        icon={<DynamicTemperatureIcon temperature={weatherData.temperature} className="h-10 w-10" />}
       />
       
-      <ConditionItem
-        icon={<DynamicHumidityIcon humidity={humidity} />}
-        label={t("Humidity", "湿度")}
-        value={`${humidity}%`}
+      <ConditionItem 
+        title={t("Cloud Cover", "云量")}
+        value={`${weatherData.cloudCover}%`}
+        icon={<DynamicCloudCoverIcon cloudCover={weatherData.cloudCover} className="h-10 w-10" />}
       />
       
-      <ConditionItem
-        icon={<DynamicWindIcon windSpeed={windSpeed} />}
-        label={t("Wind Speed", "风速")}
-        value={`${windSpeed} ${t("km/h", "公里/小时")}`}
+      <ConditionItem 
+        title={t("Wind", "风速")}
+        value={`${weatherData.windSpeed.toFixed(1)} km/h`}
+        icon={<DynamicWindIcon windSpeed={weatherData.windSpeed} className="h-10 w-10" />}
       />
       
-      <ConditionItem
-        icon={<DynamicSeeingIcon seeingConditions={seeingConditions} />}
-        label={t("Seeing Conditions", "视宁度")}
-        value={seeingConditions}
+      <ConditionItem 
+        title={t("Humidity", "湿度")}
+        value={`${weatherData.humidity}%`}
+        icon={<Droplets className="h-10 w-10 text-blue-400" />}
       />
     </div>
   );
-});
-
-PrimaryConditions.displayName = 'PrimaryConditions';
+};
 
 export default PrimaryConditions;

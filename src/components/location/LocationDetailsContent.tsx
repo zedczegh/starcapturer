@@ -123,11 +123,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       />
       
       <LocationHeader 
-        name={locationData.name}
-        latitude={locationData.latitude}
-        longitude={locationData.longitude}
-        timestamp={locationData.timestamp}
-        loading={loading}
+        locationData={locationData}
         onRefresh={handleRefreshAll}
       />
       

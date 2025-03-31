@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Share, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLongRangeForecast } from "@/hooks/useLongRangeForecast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useForecastDataLoader } from "@/hooks/useForecastDataLoader";
+import { useLongRangeForecast } from "@/hooks/useLongRangeForecast";
 import { toast } from "sonner";
 import LocationContentGrid from "./LocationContentGrid";
 import LocationControls from "./LocationControls";
@@ -83,6 +83,12 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         });
     }
   }, [locationData, t]);
+
+  // Refresh all data
+  const handleRefreshAll = useCallback(() => {
+    handleRefreshForecast();
+    handleRefreshLongRange();
+  }, [handleRefreshForecast, handleRefreshLongRange]);
   
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -105,6 +111,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       <LocationHeader 
         locationData={locationData}
         onShareLocation={handleShareLocation}
+        onRefresh={handleRefreshAll}
       />
       
       {/* Main content grid */}

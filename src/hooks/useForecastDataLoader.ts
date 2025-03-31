@@ -1,6 +1,6 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { fetchForecastData } from '@/lib/api';
+import { fetchForecastData } from '@/lib/api/forecast';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -46,8 +46,12 @@ export const useForecastDataLoader = (
     try {
       console.log(`Loading forecast data for ${locationData.name}`);
       const forecastData = await fetchForecastData(
-        locationData.latitude, 
-        locationData.longitude
+        {
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+          days: 3
+        }, 
+        abortControllerRef.current.signal
       );
       
       if (forecastData && forecastData.hourly) {

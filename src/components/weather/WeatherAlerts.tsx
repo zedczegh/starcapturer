@@ -1,84 +1,79 @@
 
-import React from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Wind, CloudRain, Cloud, Snowflake } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { motion } from "framer-motion";
-
-interface WeatherAlert {
-  type: "warning" | "severe";
-  message: string;
-  time: string;
-  icon: string;
-}
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, CloudRain, Wind, Thermometer } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface WeatherAlertsProps {
-  alerts: WeatherAlert[];
-  formatTime: (time: string) => string;
-  formatDate: (time: string) => string;
+  alerts: Array<{
+    type: string;
+    severity: 'low' | 'medium' | 'high';
+    message: string;
+    timeRange?: string;
+  }>;
 }
 
-const WeatherAlerts: React.FC<WeatherAlertsProps> = ({ alerts, formatTime, formatDate }) => {
+const WeatherAlerts: React.FC<WeatherAlertsProps> = ({ alerts }) => {
   const { t } = useLanguage();
   
   if (!alerts || alerts.length === 0) {
     return null;
   }
+
+  const getAlertIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'rain':
+      case 'precipitation':
+        return <CloudRain className="h-5 w-5" />;
+      case 'wind':
+        return <Wind className="h-5 w-5" />;
+      case 'temperature':
+        return <Thermometer className="h-5 w-5" />;
+      default:
+        return <AlertTriangle className="h-5 w-5" />;
+    }
+  };
   
+  const getAlertColor = (severity: 'low' | 'medium' | 'high') => {
+    switch (severity) {
+      case 'low':
+        return 'border-yellow-500/30 bg-yellow-900/20 text-yellow-300';
+      case 'medium':
+        return 'border-orange-500/30 bg-orange-900/20 text-orange-300';
+      case 'high':
+        return 'border-red-500/30 bg-red-900/20 text-red-300';
+      default:
+        return 'border-amber-500/30 bg-amber-900/20 text-amber-300';
+    }
+  };
+
   return (
-    <div className="px-4 pt-3 space-y-2">
-      {alerts.map((alert, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.1 }}
-        >
-          <Alert 
-            variant={alert.type === "severe" ? "destructive" : "default"}
-            className={`border ${alert.type === "severe" ? 
-              'border-red-500/50 bg-red-500/10 animate-pulse' : 
-              'border-amber-500/50 bg-amber-500/10'}`}
+    <Card className="shadow-md">
+      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
+        <CardTitle className="text-lg text-gradient-yellow">
+          {t('Weather Alerts', '天气警报')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4 space-y-3">
+        {alerts.map((alert, index) => (
+          <div 
+            key={index} 
+            className={`p-3 rounded-lg border ${getAlertColor(alert.severity)} flex gap-3 items-start`}
           >
-            <div className="flex items-center">
-              {getAlertIcon(alert.icon)}
-              <AlertDescription className="flex items-center ml-2">
-                <span>{alert.message}</span>
-                <span className="ml-2 text-xs opacity-80">
-                  {formatTime(alert.time)} {formatDate(alert.time)}
-                </span>
-              </AlertDescription>
+            <div className="flex-shrink-0 mt-0.5">
+              {getAlertIcon(alert.type)}
             </div>
-          </Alert>
-        </motion.div>
-      ))}
-      
-      {alerts.length > 0 && (
-        <div className="text-xs text-muted-foreground px-1">
-          {t("Weather alerts may affect astronomical observation quality and equipment safety.", 
-            "天气警报可能会影响天文观测质量和设备安全。")}
-        </div>
-      )}
-    </div>
+            <div>
+              <p className="text-sm">{alert.message}</p>
+              {alert.timeRange && (
+                <p className="text-xs mt-1 opacity-80">{alert.timeRange}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 };
 
-// Helper function to get the appropriate icon
-function getAlertIcon(iconType: string) {
-  switch (iconType) {
-    case 'thunderstorm':
-      return <AlertTriangle className="h-4 w-4 text-amber-400" />;
-    case 'wind':
-      return <Wind className="h-4 w-4 text-blue-400" />;
-    case 'rain':
-      return <CloudRain className="h-4 w-4 text-blue-400" />;
-    case 'snow':
-      return <Snowflake className="h-4 w-4 text-blue-300" />;
-    case 'fog':
-      return <Cloud className="h-4 w-4 text-gray-400" />;
-    default:
-      return <AlertTriangle className="h-4 w-4" />;
-  }
-}
-
-export default React.memo(WeatherAlerts);
+export default WeatherAlerts;
