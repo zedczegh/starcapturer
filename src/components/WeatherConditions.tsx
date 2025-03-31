@@ -90,14 +90,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     visible: { opacity: 1, y: 0 }
   };
 
-  // Prepare enhanced weatherData with additional properties if needed
-  const enhancedWeatherData = {
-    ...weatherData,
-    seeingConditions: translatedData.seeingConditions,
-    moonPhase: translatedData.moonPhase,
-    bortleScale
-  };
-
   return (
     <motion.div
       initial="hidden"
@@ -113,11 +105,21 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <motion.div variants={itemVariants}>
-              <PrimaryConditions weatherData={enhancedWeatherData} />
+              <PrimaryConditions
+                temperature={weatherData.temperature}
+                humidity={weatherData.humidity}
+                windSpeed={weatherData.windSpeed}
+                seeingConditions={translatedData.seeingConditions}
+              />
             </motion.div>
             
             <motion.div variants={itemVariants}>
-              <SecondaryConditions weatherData={enhancedWeatherData} />
+              <SecondaryConditions
+                cloudCover={weatherData.cloudCover}
+                moonPhase={translatedData.moonPhase}
+                bortleScale={bortleScale}
+                aqi={weatherData.aqi}
+              />
             </motion.div>
           </div>
         </CardContent>

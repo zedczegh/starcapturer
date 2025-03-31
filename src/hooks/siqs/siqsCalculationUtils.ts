@@ -1,43 +1,95 @@
 
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { extractNightForecasts } from "@/components/forecast/ForecastUtils";
+import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 
 /**
- * Normalize a SIQS score to ensure it's within 0-10 range
+ * Ensure SIQS score is always on a 0-10 scale
+ * Optimized for better precision
  */
 export const normalizeScore = (score: number): number => {
-  // Ensure score is within 0-10 range
-  return Math.max(0, Math.min(10, score));
+  if (score < 0) return 0;
+  if (score <= 10) return Math.max(0, Math.min(10, score)); // Ensure it's within 0-10 range
+  return Math.round((score / 10) * 10) / 10; // Round to 1 decimal place if it's over 10
 };
 
 /**
- * Calculate SIQS score using weather data and other factors
+ * Optimized function to calculate SIQS with weather data
  */
-export const calculateSIQSWithWeatherData = async (
+export async function calculateSIQSWithWeatherData(
   weatherData: any,
   bortleScale: number,
   seeingConditions: number,
   moonPhase: number,
   forecastData: any | null
-) => {
-  // Extract night forecasts if available
-  const nightForecast = forecastData?.hourly ? 
-    extractNightForecasts(forecastData.hourly) : 
-    undefined;
+): Promise<any> {
+  // First try to calculate SIQS using nighttime forecast data
+  if (forecastData && forecastData.hourly) {
+    try {
+      const locationWithWeather = {
+        weatherData,
+        bortleScale,
+        seeingConditions,
+        moonPhase
+      };
+      
+      const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
+      if (nighttimeSIQS) {
+        console.log("Using nighttime forecast for SIQS calculation:", nighttimeSIQS.score);
+        return nighttimeSIQS;
+      }
+    } catch (error) {
+      console.error("Error calculating nighttime SIQS:", error);
+    }
+  }
   
-  // Calculate SIQS score
-  const siqsResult = calculateSIQS({
+  // Fall back to standard calculation if nighttime calculation failed
+  console.log("Falling back to standard SIQS calculation");
+  return calculateSIQS({
     cloudCover: weatherData.cloudCover,
     bortleScale,
     seeingConditions,
     windSpeed: weatherData.windSpeed,
     humidity: weatherData.humidity,
     moonPhase,
-    aqi: weatherData.aqi,
-    weatherCondition: weatherData.condition,
     precipitation: weatherData.precipitation,
-    nightForecast
+    weatherCondition: weatherData.weatherCondition,
+    aqi: weatherData.aqi
   });
-  
-  return siqsResult;
-};
+}
+
+/**
+ * Get descriptive text for SIQS score
+ */
+export function getSIQSDescription(score: number): string {
+  if (score >= 8) return "Excellent";
+  if (score >= 6) return "Good";  
+  if (score >= 4) return "Average";
+  if (score >= 2) return "Poor";
+  return "Bad";
+}
+
+/**
+ * Get CSS color class for SIQS score
+ */
+export function getSIQSColorClass(score: number): string {
+  if (score >= 8) return "bg-green-500/80";
+  if (score >= 6) return "bg-blue-500/80";
+  if (score >= 4) return "bg-yellow-500/80";
+  if (score >= 2) return "bg-orange-500/80";
+  return "bg-red-500/80";
+}
+
+/**
+ * Determine if viewing conditions are good for astrophotography
+ */
+export function isGoodViewingCondition(score: number): boolean {
+  return score >= 6.0;
+}
+
+/**
+ * Format SIQS score for display with consistent decimal places
+ */
+export function formatSIQSScoreForDisplay(score: number): string {
+  // Always show one decimal place
+  return score.toFixed(1);
+}

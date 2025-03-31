@@ -1,77 +1,63 @@
 
-import React from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useLanguage } from '@/contexts/LanguageContext';
+import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader } from "lucide-react";
+
+// Lazy load the Leaflet map components to improve initial page load
+const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
 
 interface MapDisplayProps {
-  locationData: {
-    latitude: number;
-    longitude: number;
-    name: string;
-  };
+  position: [number, number];
+  locationName: string;
+  editable?: boolean;
+  onMapReady: () => void;
+  onMapClick: (lat: number, lng: number) => void;
+  showInfoPanel?: boolean;
 }
 
-const MapDisplay: React.FC<MapDisplayProps> = ({ locationData }) => {
+const MapDisplay: React.FC<MapDisplayProps> = ({
+  position,
+  locationName,
+  editable = false,
+  onMapReady,
+  onMapClick,
+  showInfoPanel = false
+}) => {
   const { t } = useLanguage();
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState(false);
 
-  // Generate Google Maps embed URL
-  const mapUrl = React.useMemo(() => {
-    if (!locationData?.latitude || !locationData?.longitude) return '';
-    
-    const baseUrl = 'https://www.google.com/maps/embed/v1/place';
-    const apiKey = 'AIzaSyDJyQKQe05jPZV7oPsddfVbxlOYuwOcIpM'; // Public API key for map embeds
-    
-    const coordinates = `${locationData.latitude},${locationData.longitude}`;
-    return `${baseUrl}?key=${apiKey}&q=${coordinates}&zoom=9&maptype=satellite`;
-  }, [locationData?.latitude, locationData?.longitude]);
-
-  // Handle iframe loading
-  const handleLoad = () => {
-    setIsLoading(false);
-  };
-
-  // Handle iframe error
-  const handleError = () => {
-    setIsLoading(false);
-    setError(true);
-  };
-
-  if (!locationData?.latitude || !locationData?.longitude) {
-    return (
-      <div className="h-64 rounded-lg bg-cosmic-900/50 flex items-center justify-center">
-        <p className="text-muted-foreground">{t("No location data available", "无位置数据")}</p>
-      </div>
-    );
-  }
+  // Memoize position to prevent unnecessary rerenders
+  const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
+  
+  // Format location name for display
+  const displayName = useMemo(() => {
+    // If the name is too long, truncate it for the map display
+    if (locationName && locationName.length > 50) {
+      return locationName.substring(0, 47) + '...';
+    }
+    return locationName;
+  }, [locationName]);
 
   return (
-    <div className="relative w-full h-96">
-      {isLoading && (
-        <Skeleton className="absolute inset-0 w-full h-full rounded-lg bg-cosmic-700/20" />
-      )}
-      
-      {error ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-cosmic-900/50 rounded-lg">
-          <p className="text-muted-foreground">{t("Failed to load map", "加载地图失败")}</p>
+    <div className="z-0 h-full w-full">
+      <Suspense fallback={
+        <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
+          <div className="flex flex-col items-center gap-3">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-primary-foreground/90">{t("Loading map...", "正在加载地图...")}</p>
+          </div>
         </div>
-      ) : (
-        <iframe
-          title={`Map of ${locationData.name}`}
-          width="100%"
-          height="100%"
-          frameBorder="0"
-          style={{ border: 0, borderRadius: '0.5rem' }}
-          src={mapUrl}
-          allowFullScreen
-          onLoad={handleLoad}
-          onError={handleError}
-          className={`${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+      }>
+        <LazyMapComponent
+          position={memoizedPosition}
+          locationName={displayName}
+          editable={editable}
+          onMapReady={onMapReady}
+          onMapClick={onMapClick}
+          showInfoPanel={showInfoPanel}
         />
-      )}
+      </Suspense>
     </div>
   );
 };
 
-export default MapDisplay;
+export default memo(MapDisplay);

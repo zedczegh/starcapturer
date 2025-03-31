@@ -28,6 +28,10 @@ const LocationMap: React.FC<LocationMapProps> = ({
   showInfoPanel = false
 }) => {
   const { language, t } = useLanguage();
+  const [position, setPosition] = useState<[number, number]>([
+    isFinite(latitude) ? latitude : 0, 
+    isFinite(longitude) ? longitude : 0
+  ]);
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -45,6 +49,14 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const validLongitude = isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
 
+  // Update position when props change
+  useEffect(() => {
+    if (isFinite(latitude) && isFinite(longitude) && 
+       (validLatitude !== position[0] || validLongitude !== position[1])) {
+      setPosition([validLatitude, validLongitude]);
+    }
+  }, [validLatitude, validLongitude, position]);
+
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
     // Reset error state if map loads successfully
@@ -57,6 +69,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
     // Ensure valid coordinates
     const validLat = Math.max(-90, Math.min(90, lat));
     const validLng = normalizeLongitude(lng);
+    
+    setPosition([validLat, validLng]);
     
     try {
       setLocationLoading(true);
@@ -118,11 +132,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
       )}
       
       <MapDisplay 
-        locationData={{
-          latitude: validLatitude,
-          longitude: validLongitude,
-          name: validName
-        }}
+        position={position}
+        locationName={validName}
+        editable={editable}
+        onMapReady={handleMapReady}
+        onMapClick={handleMapClick}
+        showInfoPanel={showInfoPanel}
       />
       
       {mapError && (

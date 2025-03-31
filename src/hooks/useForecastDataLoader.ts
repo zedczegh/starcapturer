@@ -1,6 +1,6 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { fetchForecastData } from '@/lib/api/forecast';
+import { fetchForecastData } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -46,11 +46,8 @@ export const useForecastDataLoader = (
     try {
       console.log(`Loading forecast data for ${locationData.name}`);
       const forecastData = await fetchForecastData(
-        {
-          latitude: locationData.latitude,
-          longitude: locationData.longitude,
-          days: 3
-        }, 
+        locationData.latitude, 
+        locationData.longitude,
         abortControllerRef.current.signal
       );
       
@@ -67,19 +64,19 @@ export const useForecastDataLoader = (
         lastLoadTimeRef.current[locationKey] = now;
       } else {
         console.error("Failed to load forecast data - API returned no data");
-        toast.error(t("Failed to load forecast data", "无法加载天气预报数据"));
+        toast.error(t("Failed to load forecast data", "加载预报数据失败"));
       }
     } catch (error: any) {
       // Don't show errors for aborted requests
       if (error.name !== 'AbortError') {
         console.error("Error loading forecast data:", error);
-        toast.error(t("Failed to load forecast data", "无法加载天气预报数据"));
+        toast.error(t("Failed to load forecast data", "加载预报数据失败"));
       }
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [locationData, setLocationData, t]);
+  }, [locationData?.latitude, locationData?.longitude, locationData?.name, setLocationData, t]);
   
   // Auto-load forecast data when location changes
   useEffect(() => {

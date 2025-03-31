@@ -1,26 +1,24 @@
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Share, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useForecastDataLoader } from "@/hooks/useForecastDataLoader";
-import { useLongRangeForecast } from "@/hooks/useLongRangeForecast";
-import { toast } from "sonner";
+import LocationDetailsHeader from "./LocationDetailsHeader";
 import LocationContentGrid from "./LocationContentGrid";
-import LocationControls from "./LocationControls";
-import LocationHeader from "./LocationHeader";
+import LocationStatusMessage from "./LocationStatusMessage";
+import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
+import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
+import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
+import WeatherAlerts from "@/components/weather/WeatherAlerts";
+import BackButton from "@/components/navigation/BackButton";
+import { useRefreshManager } from "@/hooks/location/useRefreshManager";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 
 interface LocationDetailsViewportProps {
   locationData: any;
-  setLocationData: (data: any) => void;
+  setLocationData: React.Dispatch<React.SetStateAction<any>>;
   statusMessage: string | null;
-  messageType: "info" | "success" | "error" | "warning";
-  setStatusMessage: (message: string | null) => void;
-  handleUpdateLocation: (location: {
-    name: string;
-    latitude: number;
-    longitude: number;
-  }) => Promise<void>;
+  messageType: "info" | "error" | "success" | null;
+  setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
+  handleUpdateLocation: (updatedData: any) => Promise<void>;
 }
 
 const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
@@ -29,120 +27,156 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   statusMessage,
   messageType,
   setStatusMessage,
-  handleUpdateLocation,
+  handleUpdateLocation
 }) => {
-  const { t } = useLanguage();
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
+  const { language, t } = useLanguage();
+  const { loading, handleRefreshAll } = useWeatherUpdater();
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Load forecast data
-  const { loadForecastData, isLoading: forecastLoading } = useForecastDataLoader(
-    locationData, 
-    setLocationData
-  );
-  
-  // Load long-range forecast data
-  const { 
-    longRangeForecast, 
-    loadLongRangeForecast, 
-    isLoading: longRangeLoading 
-  } = useLongRangeForecast(locationData);
-  
-  // Refresh forecast data
-  const handleRefreshForecast = useCallback(() => {
-    toast.info(t("Refreshing forecast...", "正在刷新天气预报..."));
-    loadForecastData(true);
-  }, [loadForecastData, t]);
-  
-  // Refresh long-range forecast data
-  const handleRefreshLongRange = useCallback(() => {
-    toast.info(t("Refreshing long-range forecast...", "正在刷新长期天气预报..."));
-    loadLongRangeForecast(true);
-  }, [loadLongRangeForecast, t]);
-  
-  // Share location
-  const handleShareLocation = useCallback(() => {
-    if (!locationData) return;
-    
-    const shareText = `${t("Check out this location for stargazing", "查看这个观星地点")}: ${locationData.name}`;
-    const shareUrl = window.location.href;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: t("Stargazing Location", "观星地点"),
-        text: shareText,
-        url: shareUrl
-      }).catch(error => console.error("Error sharing:", error));
-    } else {
-      // Fallback for browsers that don't support the Web Share API
-      navigator.clipboard.writeText(`${shareText}\n${shareUrl}`)
-        .then(() => {
-          toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
-        })
-        .catch(() => {
-          toast.error(t("Failed to copy link", "复制链接失败"));
-        });
-    }
-  }, [locationData, t]);
+  const {
+    forecastData,
+    longRangeForecast,
+    forecastLoading,
+    longRangeLoading,
+    weatherAlerts,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast
+  } = useForecastManager(locationData);
 
-  // Refresh all data
-  const handleRefreshAll = useCallback(() => {
-    handleRefreshForecast();
-    handleRefreshLongRange();
-  }, [handleRefreshForecast, handleRefreshLongRange]);
+  // Use the new refresh manager hook
+  const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
   
+  // Use the dedicated SIQS updater
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData,
+    forecastData,
+    setLocationData,
+    t
+  );
+
+  // Reset SIQS update state when location changes
+  useEffect(() => {
+    resetUpdateState();
+  }, [locationData?.latitude, locationData?.longitude]);
+
+  // Single refresh effect with better control
+  useEffect(() => {
+    if (shouldRefresh && locationData) {
+      console.log("Refreshing location data (controlled single refresh)");
+      
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        handleRefresh();
+        // Mark refresh as complete to prevent further refreshes
+        markRefreshComplete();
+        
+        // Update locationData to remove fromPhotoPoints flag
+        if (locationData.fromPhotoPoints) {
+          setLocationData(prev => ({
+            ...prev,
+            fromPhotoPoints: false
+          }));
+        }
+      }, 600);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete]);
+
+  // Handle forced refresh event from parent component
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const handleForceRefresh = () => {
+      console.log("Force refresh triggered from parent component");
+      handleRefresh();
+    };
+    
+    container.addEventListener('forceRefresh', handleForceRefresh);
+    
+    return () => {
+      container.removeEventListener('forceRefresh', handleForceRefresh);
+    };
+  }, [locationData]);
+
+  const handleRefresh = useCallback(async () => {
+    // Reset SIQS update state before refreshing
+    resetUpdateState();
+    
+    await handleRefreshAll(
+      locationData, 
+      setLocationData, 
+      () => {
+        handleRefreshForecast(locationData.latitude, locationData.longitude);
+        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+      },
+      setStatusMessage
+    );
+  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Status message */}
-      {statusMessage && (
-        <div className={`mb-4 p-3 rounded-lg ${
-          messageType === "error" 
-            ? "bg-red-500/20 text-red-200" 
-            : messageType === "warning"
-            ? "bg-amber-500/20 text-amber-200"
-            : messageType === "success"
-            ? "bg-green-500/20 text-green-200"
-            : "bg-blue-500/20 text-blue-200"
-        }`}>
-          {statusMessage}
+    <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 
+         ref={containerRef} 
+         data-refresh-trigger>
+      {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
+      
+      {/* Add top padding to create space for the navbar */}
+      <div className="pt-24 md:pt-28">
+        {/* Back button positioned in the top-left corner */}
+        <div className="fixed top-24 left-4 md:top-28 md:left-8 z-50">
+          <BackButton 
+            destination="/"
+            replace={true}
+            variant="secondary"
+            size="sm"
+            className="hover:bg-primary/20 transition-colors duration-300 hover:opacity-85"
+          />
         </div>
-      )}
-      
-      {/* Location header with name and actions */}
-      <LocationHeader 
-        locationData={locationData}
-        onShareLocation={handleShareLocation}
-        onRefresh={handleRefreshAll}
-      />
-      
-      {/* Main content grid */}
-      <div className="mt-6">
-        <LocationContentGrid
-          locationData={locationData}
-          forecastData={locationData?.forecastData || {}}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={handleUpdateLocation}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
-          onRefreshForecast={handleRefreshForecast}
-          onRefreshLongRange={handleRefreshLongRange}
+        
+        <div className="container mx-auto px-4 mt-4 mb-6">
+          <div className="text-center my-8 pt-6">
+            <LocationDetailsHeader 
+              name={locationData?.name}
+              timestamp={locationData?.timestamp}
+              onRefresh={handleRefresh}
+              loading={loading}
+              className="mx-auto transition-all hover:scale-[1.01] duration-300"
+            />
+          </div>
+        </div>
+        
+        <LocationStatusMessage 
+          message={statusMessage} 
+          type={messageType} 
         />
-      </div>
-      
-      {/* Controls for selecting locations */}
-      <div className="mt-8">
-        <h2 className="text-lg font-medium mb-4">
-          {t("Change Location", "更改位置")}
-        </h2>
-        <LocationControls
-          onLocationUpdate={handleUpdateLocation}
-          gettingUserLocation={gettingUserLocation}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
-          currentLocation={locationData}
-        />
+        
+        {weatherAlerts && weatherAlerts.length > 0 && (
+          <div className="container mx-auto px-4 mb-6 animate-fade-in">
+            <WeatherAlerts 
+              alerts={weatherAlerts}
+              formatTime={formatTime}
+              formatDate={formatDate}
+            />
+          </div>
+        )}
+        
+        <div className="container mx-auto px-4 pb-24 pt-4 backdrop-blur-sm bg-cosmic-950/50 rounded-lg shadow-lg">
+          <LocationContentGrid
+            locationData={locationData}
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            gettingUserLocation={gettingUserLocation}
+            onLocationUpdate={handleUpdateLocation}
+            setGettingUserLocation={setGettingUserLocation}
+            setStatusMessage={setStatusMessage}
+            onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
+            onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
+          />
+        </div>
       </div>
     </div>
   );

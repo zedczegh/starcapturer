@@ -1,70 +1,59 @@
 
-import { toast } from 'sonner';
-
-interface ForecastParams {
-  latitude: number;
-  longitude: number;
-  days?: number;
-}
+import { Coordinates, validateCoordinates } from './coordinates';
 
 /**
- * Fetch forecast data from Open Meteo API
+ * Fetches forecast data for a specific location
  */
-export const fetchForecastData = async (params: ForecastParams, signal?: AbortSignal) => {
-  const { latitude, longitude, days = 3 } = params;
-  
-  const url = new URL('https://api.open-meteo.com/v1/forecast');
-  url.searchParams.append('latitude', latitude.toString());
-  url.searchParams.append('longitude', longitude.toString());
-  url.searchParams.append('hourly', 'temperature_2m,relative_humidity_2m,precipitation,weather_code,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m');
-  url.searchParams.append('daily', 'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,weather_code');
-  url.searchParams.append('forecast_days', days.toString());
-  url.searchParams.append('timezone', 'auto');
-  
+export async function fetchForecastData(coordinates: Coordinates, signal?: AbortSignal): Promise<any | null> {
   try {
-    const response = await fetch(url.toString(), { signal });
+    const validCoords = validateCoordinates(coordinates);
+    
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
+      `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
+      `&forecast_days=${validCoords.days || 3}&timezone=auto`;
+    
+    const response = await fetch(url, { signal });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Forecast API responded with status ${response.status}`);
     }
     
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       console.log('Forecast data fetch aborted');
-      return null;
+      throw error;
     }
-    
-    console.error('Error fetching forecast data:', error);
+    console.error("Error fetching forecast data:", error);
     return null;
   }
-};
+}
 
 /**
- * Fetch long range forecast data (10+ days)
+ * Fetches long range forecast data for a specific location
  */
-export const fetchLongRangeForecastData = async (params: ForecastParams) => {
-  const { latitude, longitude, days = 10 } = params;
-  
-  const url = new URL('https://api.open-meteo.com/v1/forecast');
-  url.searchParams.append('latitude', latitude.toString());
-  url.searchParams.append('longitude', longitude.toString());
-  url.searchParams.append('daily', 'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,weather_code');
-  url.searchParams.append('forecast_days', days.toString());
-  url.searchParams.append('timezone', 'auto');
-  
+export async function fetchLongRangeForecastData(coordinates: Coordinates, signal?: AbortSignal): Promise<any | null> {
   try {
-    const response = await fetch(url.toString());
+    const validCoords = validateCoordinates(coordinates);
+    
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,` +
+      `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean,weather_code` +
+      `&forecast_days=${validCoords.days || 16}&timezone=auto`;
+    
+    const response = await fetch(url, { signal });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Long range forecast API responded with status ${response.status}`);
     }
     
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching long range forecast data:', error);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.log('Long range forecast data fetch aborted');
+      throw error;
+    }
+    console.error("Error fetching long range forecast data:", error);
     return null;
   }
-};
+}

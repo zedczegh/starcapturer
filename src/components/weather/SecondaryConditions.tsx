@@ -1,105 +1,77 @@
-import React from 'react';
-import { Moon, Star, Cloud, Thermometer } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import ConditionItem from './ConditionItem';
-import { DynamicMoonIcon, DynamicSeeingIcon } from './DynamicIcons';
+
+import React, { memo } from "react";
+import { Gauge } from "lucide-react";
+import ConditionItem from "./ConditionItem";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
+import { 
+  DynamicMoonIcon, 
+  DynamicLightbulbIcon,
+  DynamicCloudCoverIcon
+} from "./DynamicIcons";
 
 interface SecondaryConditionsProps {
-  weatherData: any;
+  cloudCover: number;
+  moonPhase: string;
+  bortleScale: number | null;
+  aqi?: number;
 }
 
-const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({ weatherData }) => {
-  const { t } = useLanguage();
+const SecondaryConditions = memo<SecondaryConditionsProps>(({
+  cloudCover,
+  moonPhase,
+  bortleScale,
+  aqi
+}) => {
+  const { t, language } = useLanguage();
   
-  if (!weatherData) {
-    return (
-      <div className="text-center py-4 text-muted-foreground">
-        {t("Weather data unavailable", "天气数据不可用")}
-      </div>
-    );
-  }
+  // AQI display with conditional rendering
+  const aqiValue = aqi !== undefined ? (
+    <>
+      <span className={getAQIColor(aqi)}>
+        {aqi} 
+      </span> 
+      <span className="text-sm ml-1">({getAQIDescription(aqi, t)})</span>
+    </>
+  ) : '--';
   
-  // Calculate dew point from temperature and humidity
-  const calculateDewPoint = (temp: number, humidity: number) => {
-    const a = 17.27;
-    const b = 237.7;
-    
-    const alpha = ((a * temp) / (b + temp)) + Math.log(humidity / 100.0);
-    const dewPoint = (b * alpha) / (a - alpha);
-    
-    return Math.round(dewPoint * 10) / 10;
-  };
-  
-  const dewPoint = calculateDewPoint(weatherData.temperature, weatherData.humidity);
-  
-  // Get moon phase
-  const getMoonPhase = () => {
-    // If we have moon phase data in the weather data, use it
-    if (weatherData.moonPhase !== undefined) {
-      return weatherData.moonPhase;
-    }
-    
-    // Otherwise, calculate it based on current date
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    
-    // Simple estimation algorithm
-    const c = 365.25 * year;
-    const e = 30.6 * month;
-    const jd = c + e + day - 694039.09;
-    const jd2 = jd / 29.53;
-    return (jd2 - Math.floor(jd2));
-  };
-  
-  // Get bortle scale if available
-  const getBortleScale = () => {
-    if (weatherData.bortleScale !== undefined) {
-      return weatherData.bortleScale;
-    }
-    
-    return 5; // Default to moderate light pollution
-  };
-  
-  // Get visibility description
-  const getVisibilityDescription = (visibility: number) => {
-    if (visibility >= 20) return t("Excellent", "极佳");
-    if (visibility >= 10) return t("Good", "良好");
-    if (visibility >= 5) return t("Moderate", "一般");
-    return t("Poor", "较差");
-  };
-  
-  const moonPhase = getMoonPhase();
-  const bortleScale = getBortleScale();
+  // Bortle scale value - now properly handles unknown values
+  const bortleValue = formatBortleScale(bortleScale, t);
   
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <ConditionItem 
+    <div className="space-y-6">
+      <ConditionItem
+        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
+        label={t("Cloud Cover", "云层覆盖")}
+        value={`${cloudCover}%`}
+      />
+      
+      <ConditionItem
+        icon={<DynamicMoonIcon phase={moonPhase} />}
         label={t("Moon Phase", "月相")}
-        value={`${Math.round(moonPhase * 100)}%`}
-        icon={<DynamicMoonIcon phase={moonPhase} className="h-10 w-10" />}
+        value={moonPhase}
       />
       
-      <ConditionItem 
-        label={t("Light Pollution", "光污染")}
-        value={`Bortle ${bortleScale}`}
-        icon={<Star className="h-10 w-10 text-purple-400" />}
-      />
+      {aqi !== undefined && (
+        <ConditionItem
+          icon={<Gauge className="h-4 w-4 text-primary" />}
+          label={t("Air Quality", "空气质量")}
+          value={aqiValue}
+        />
+      )}
       
-      <ConditionItem 
-        label={t("Seeing", "视宁度")}
-        value={weatherData.seeing ? `${weatherData.seeing.toFixed(1)}"` : "~2.1\""}
-        icon={<DynamicSeeingIcon seeingValue={weatherData.seeing || 2.1} className="h-10 w-10" />}
-      />
-      
-      <ConditionItem 
-        label={t("Dew Point", "露点")}
-        value={`${dewPoint}°C`}
-        icon={<Thermometer className="h-10 w-10 text-teal-400" />}
+      <ConditionItem
+        icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
+        label={t("Bortle Scale", "光污染等级")}
+        value={bortleValue}
+        tooltip={bortleScale === null ? (language === 'en' ? 
+          "Bortle scale could not be determined for this location" : 
+          "无法确定此位置的光污染等级") : undefined}
       />
     </div>
   );
-};
+});
+
+SecondaryConditions.displayName = 'SecondaryConditions';
 
 export default SecondaryConditions;

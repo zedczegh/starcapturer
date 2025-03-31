@@ -1,18 +1,13 @@
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Lightbulb } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useLanguage } from "@/contexts/LanguageContext";
-import ForecastTabs from "@/components/forecast/ForecastTabs";
-import CloudCoverageMap from "@/components/location/CloudCoverageMap";
-import MapDisplay from "@/components/location/MapDisplay";
+import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
-import PrimaryConditions from "@/components/weather/PrimaryConditions";
-import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import WarmReminders from "@/components/weather/WarmReminders";
-import { detectExtremeWeatherConditions } from "@/components/forecast/ForecastUtils";
-import WeatherAlerts from "@/components/weather/WeatherAlerts";
+import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
+import LocationUpdater from "@/components/location/LocationUpdater";
+import { determineWeatherCondition } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+// Lazy load the forecast tabs to improve initial load time
+const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
 
 interface LocationContentGridProps {
   locationData: any;
@@ -21,12 +16,8 @@ interface LocationContentGridProps {
   forecastLoading: boolean;
   longRangeLoading: boolean;
   gettingUserLocation: boolean;
-  onLocationUpdate: (location: {
-    name: string;
-    latitude: number;
-    longitude: number;
-  }) => Promise<void>;
-  setGettingUserLocation: React.Dispatch<React.SetStateAction<boolean>>;
+  onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
+  setGettingUserLocation: (value: boolean) => void;
   setStatusMessage: (message: string | null) => void;
   onRefreshForecast: () => void;
   onRefreshLongRange: () => void;
@@ -38,132 +29,104 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   longRangeForecast,
   forecastLoading,
   longRangeLoading,
+  gettingUserLocation,
+  onLocationUpdate,
+  setGettingUserLocation,
+  setStatusMessage,
   onRefreshForecast,
-  onRefreshLongRange,
+  onRefreshLongRange
 }) => {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
   
-  // Generate weather alerts
-  const weatherAlerts = React.useMemo(() => {
-    if (!forecastData || !forecastData.hourly) return [];
+  // Memoize the weather data to prevent unnecessary re-calculations
+  const weatherData = useMemo(() => ({
+    temperature: locationData?.weatherData?.temperature || 0,
+    humidity: locationData?.weatherData?.humidity || 0,
+    cloudCover: locationData?.weatherData?.cloudCover || 0,
+    windSpeed: locationData?.weatherData?.windSpeed || 0,
+    precipitation: locationData?.weatherData?.precipitation || 0,
+    time: locationData?.weatherData?.time || new Date().toISOString(),
+    condition: locationData?.weatherData?.condition || 
+      determineWeatherCondition(locationData?.weatherData?.cloudCover || 0),
+    aqi: locationData?.weatherData?.aqi
+  }), [locationData?.weatherData]);
+
+  // Format the moon phase as a human-readable string
+  const moonPhaseString = useMemo(() => {
+    return normalizeMoonPhase(locationData.moonPhase || 0);
+  }, [locationData.moonPhase]);
+
+  // Format the seeing conditions as a human-readable string
+  const seeingConditionsString = useMemo(() => {
+    const value = locationData.seeingConditions;
+    if (typeof value !== 'number') return "Average";
     
-    const now = new Date();
-    const forecasts = [];
-    
-    // Prepare data for alert detection
-    for (let i = 0; i < forecastData.hourly.time.length; i++) {
-      const forecastTime = new Date(forecastData.hourly.time[i]);
-      
-      // Only include future forecasts
-      if (forecastTime > now) {
-        forecasts.push({
-          time: forecastData.hourly.time[i],
-          weatherCode: forecastData.hourly.weather_code?.[i],
-          windSpeed: forecastData.hourly.wind_speed_10m?.[i],
-          precipitation: forecastData.hourly.precipitation?.[i],
-          temperature: forecastData.hourly.temperature_2m?.[i]
-        });
-      }
+    if (value <= 1) return "Excellent";
+    if (value <= 2) return "Good";
+    if (value <= 3) return "Average";
+    if (value <= 4) return "Poor";
+    return "Very Poor";
+  }, [locationData.seeingConditions]);
+
+  // Get the Bortle scale, pass null for unknown values
+  const bortleScale = useMemo(() => {
+    const value = locationData.bortleScale;
+    if (value === undefined || value === null || value < 1 || value > 9) {
+      return null;
     }
-    
-    return detectExtremeWeatherConditions(forecasts, t);
-  }, [forecastData, t]);
+    return value;
+  }, [locationData.bortleScale]);
+
+  // Loading indicator text based on language
+  const loadingText = useMemo(() => {
+    return language === 'en' ? "Loading..." : "加载中...";
+  }, [language]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {/* SIQS Summary */}
-      <Card className="shadow-md lg:col-span-1">
-        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-lg text-gradient-blue">{t("SIQS Score", "SIQS评分")}</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <SIQSSummary 
-            siqsResult={locationData.siqsResult}
-            weatherData={locationData.weatherData}
-            locationData={locationData}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Primary Weather Conditions */}
-      <Card className="shadow-md">
-        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-lg text-gradient-blue">{t("Current Conditions", "当前状况")}</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <PrimaryConditions weatherData={locationData.weatherData} />
-        </CardContent>
-      </Card>
-
-      {/* Secondary Weather Conditions */}
-      <Card className="shadow-md">
-        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-lg text-gradient-blue">{t("Astronomy Factors", "天文因素")}</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <SecondaryConditions weatherData={locationData.weatherData} />
-        </CardContent>
-      </Card>
-
-      {/* Cloud Coverage Map */}
-      <div className="md:col-span-1 lg:col-span-1">
-        <CloudCoverageMap 
-          latitude={locationData.latitude}
-          longitude={locationData.longitude}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
+      <div className="space-y-6 lg:space-y-8">
+        <WeatherConditions
+          weatherData={weatherData}
+          moonPhase={moonPhaseString}
+          bortleScale={bortleScale}
+          seeingConditions={seeingConditionsString}
         />
-      </div>
-
-      {/* Warm Reminders */}
-      <div className="md:col-span-1 lg:col-span-1">
-        <WarmReminders 
-          weatherData={locationData.weatherData}
-          forecastData={forecastData}
+        
+        <SIQSSummary
+          siqsResult={locationData.siqsResult || null}
+          weatherData={weatherData}
           locationData={locationData}
-          longRangeForecast={longRangeForecast}
         />
       </div>
       
-      {/* Weather Alerts */}
-      {weatherAlerts.length > 0 && (
-        <div className="md:col-span-1 lg:col-span-1">
-          <WeatherAlerts alerts={weatherAlerts} />
+      <div className="space-y-6 lg:space-y-8">
+        <div className="relative z-60">
+          <LocationUpdater 
+            locationData={locationData}
+            onLocationUpdate={onLocationUpdate}
+            gettingUserLocation={gettingUserLocation}
+            setGettingUserLocation={setGettingUserLocation}
+            setStatusMessage={setStatusMessage}
+          />
         </div>
-      )}
-
-      {/* Location Map */}
-      <div className="md:col-span-2 lg:col-span-3">
-        <Card className="shadow-md">
-          <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-            <CardTitle className="flex items-center text-lg text-gradient-blue">
-              <MapPin className="mr-2 h-4 w-4" />
-              {t("Location", "位置")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <MapDisplay 
-              locationData={{
-                latitude: locationData.latitude,
-                longitude: locationData.longitude,
-                name: locationData.name
-              }}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Weather Forecast */}
-      <div className="md:col-span-2 lg:col-span-3">
-        <ForecastTabs 
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          onRefreshForecast={onRefreshForecast}
-          onRefreshLongRange={onRefreshLongRange}
-        />
+        
+        <Suspense fallback={
+          <div className="animate-pulse h-64 bg-slate-800/20 rounded-lg flex items-center justify-center">
+            <span className="text-cosmic-400">{loadingText}</span>
+          </div>
+        }>
+          <ForecastTabs 
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            onRefreshForecast={onRefreshForecast}
+            onRefreshLongRange={onRefreshLongRange}
+          />
+        </Suspense>
       </div>
     </div>
   );
 };
 
-export default LocationContentGrid;
+export default React.memo(LocationContentGrid);
