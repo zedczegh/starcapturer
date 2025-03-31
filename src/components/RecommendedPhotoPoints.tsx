@@ -6,9 +6,10 @@ import { toast } from "sonner";
 import { getRecommendedPhotoPoints } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from "@/lib/api/astroSpots"; // Import from astroSpots instead of types/weather
+import { SharedAstroSpot } from "@/lib/api/astroSpots"; 
 import CopyLocationButton from "@/components/location/CopyLocationButton";
 import { getSafeScore, formatSIQSScore } from "@/utils/geoUtils";
+import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -89,17 +90,22 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const handleViewDetails = (point: SharedAstroSpot) => {
     const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
     
-    navigate(`/location/${point.id}`, {
-      state: {
-        id: point.id,
-        name: pointName,
-        latitude: point.latitude,
-        longitude: point.longitude,
-        bortleScale: point.bortleScale,
-        timestamp: new Date().toISOString(),
-        fromPhotoPoints: true // Add a flag to indicate source
-      }
-    });
+    // Create location data
+    const locationData = {
+      id: point.id,
+      name: pointName,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      bortleScale: point.bortleScale,
+      timestamp: new Date().toISOString(),
+      fromPhotoPoints: true // Add a flag to indicate source
+    };
+    
+    // Save to localStorage to ensure proper refresh handling
+    saveLocationFromPhotoPoints(locationData);
+    
+    // Navigate to location details
+    navigate(`/location/${point.id}`, { state: locationData });
   };
 
   return (
@@ -136,11 +142,9 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       <div className="grid grid-cols-1 gap-3">
         {recommendedPoints.length === 0 ? (
-          !hideEmptyMessage && (
+          !hideEmptyMessage && loading && (
             <div className="text-center py-6 text-muted-foreground">
-              {loading 
-                ? t("Searching for photo points...", "正在搜索拍摄点...")
-                : t("No photo points found near your location.", "在您附近未找到拍摄点。")}
+              {t("Searching for photo points...", "正在搜索拍摄点...")}
             </div>
           )
         ) : (

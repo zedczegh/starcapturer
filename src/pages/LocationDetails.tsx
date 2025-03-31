@@ -22,8 +22,6 @@ const LocationDetails = () => {
   const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { updateBortleScale } = useBortleUpdater();
-  const initialLoadCompleteRef = useRef(false);
-  const isFromPhotoPointsRef = useRef(location.state?.fromPhotoPoints);
   
   const {
     locationData, 
@@ -53,38 +51,6 @@ const LocationDetails = () => {
       window.removeEventListener('popstate', handleBackNavigation);
     };
   }, [navigate]);
-
-  // Enhanced auto-refresh data on mount with better performance
-  useEffect(() => {
-    // Reset initialLoadCompleteRef when redirected from PhotoPoints page
-    if (isFromPhotoPointsRef.current) {
-      initialLoadCompleteRef.current = false;
-      isFromPhotoPointsRef.current = false;
-    }
-    
-    // Ensure this runs only once after the initial data is loaded
-    if (locationData && !isLoading && !initialLoadCompleteRef.current) {
-      initialLoadCompleteRef.current = true;
-      
-      // Notify user that data is being refreshed
-      toast.info("Refreshing location data...", {
-        id: "location-refresh",
-        duration: 2000
-      });
-
-      // Reduced delay before refreshing for better performance
-      const timer = setTimeout(() => {
-        console.log("Auto-refreshing on page load");
-        // Force refresh when coming from PhotoPoints page
-        const viewportElement = document.querySelector('[data-refresh-trigger]');
-        if (viewportElement) {
-          viewportElement.dispatchEvent(new CustomEvent('forceRefresh'));
-        }
-      }, 300); // Reduced from 800ms for faster refresh
-      
-      return () => clearTimeout(timer);
-    }
-  }, [locationData, isLoading]);
 
   // Use the extracted hook for location name translation
   useLocationNameTranslation({

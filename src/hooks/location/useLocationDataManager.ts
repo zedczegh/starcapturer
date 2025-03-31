@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
 import { useLocationInit } from "./useLocationInit";
 import { NavigateFunction } from "react-router-dom";
+import { saveLocationDetails } from "@/utils/locationStorage";
 
 interface UseLocationDataManagerProps {
   id: string | undefined;
@@ -17,7 +18,7 @@ export const useLocationDataManager = ({
   navigate 
 }: UseLocationDataManagerProps) => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<'info' | 'success' | 'error'>('info');
+  const [messageType, setMessageType] = useState<'info' | 'success' | 'error' | null>('info');
   
   const { t } = useLanguage();
   
@@ -28,6 +29,16 @@ export const useLocationDataManager = ({
   } = useLocationInit(id, initialState, navigate);
   
   const { loading, handleLocationUpdate } = useLocationUpdate(locationData, setLocationData);
+
+  // Wrapped setLocationData to ensure persistence
+  const updateLocationData = useCallback((newData: any) => {
+    setLocationData(newData);
+    
+    // Also save to localStorage for persistence
+    if (id && newData) {
+      saveLocationDetails(id, newData);
+    }
+  }, [id, setLocationData]);
 
   const handleUpdateLocation = useCallback(async (newLocation: { name: string; latitude: number; longitude: number }) => {
     try {
@@ -47,7 +58,7 @@ export const useLocationDataManager = ({
 
   return {
     locationData,
-    setLocationData,
+    setLocationData: updateLocationData,
     statusMessage,
     messageType,
     setStatusMessage,

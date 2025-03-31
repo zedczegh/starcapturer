@@ -8,7 +8,7 @@ interface InitializeLocationDataParams {
   id: string | undefined;
   initialState: any;
   navigate: NavigateFunction;
-  toast: any; // Fixed the type to avoid the import error
+  toast: any;
   t: (en: string, zh: string) => string;
   language: string;
   setLocationData: (data: any) => void;
@@ -44,7 +44,9 @@ export async function initializeLocationData({
       // Ensure location data has fresh moon phase
       const dataWithFreshMoonPhase = {
         ...initialState,
-        moonPhase: initialState.moonPhase || calculateMoonPhase()
+        moonPhase: initialState.moonPhase || calculateMoonPhase(),
+        // Preserve fromPhotoPoints flag if it exists
+        fromPhotoPoints: initialState.fromPhotoPoints || false
       };
       
       setLocationData(dataWithFreshMoonPhase);

@@ -9,6 +9,7 @@ import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
 import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import BackButton from "@/components/navigation/BackButton";
+import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -31,8 +32,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { language, t } = useLanguage();
   const { loading, handleRefreshAll } = useWeatherUpdater();
   const containerRef = useRef<HTMLDivElement>(null);
-  const initialRefreshDone = useRef(false);
-  const refreshTimerRef = useRef<number | null>(null);
   
   const {
     forecastData,
@@ -44,36 +43,34 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
 
-  // Check if we came from PhotoPoints page and trigger refresh
-  useEffect(() => {
-    if (locationData?.fromPhotoPoints) {
-      console.log("Detected navigation from PhotoPoints, triggering refresh");
-      
-      // Clear any existing timer
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-      
-      // Set small delay to ensure component is fully mounted
-      refreshTimerRef.current = window.setTimeout(() => {
-        handleRefresh();
-        
-        // Reset the flag after refresh
-        setLocationData(prev => ({
-          ...prev,
-          fromPhotoPoints: false
-        }));
-      }, 300);
-    }
-    
-    return () => {
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-    };
-  }, [locationData?.fromPhotoPoints]);
+  // Use the new refresh manager hook
+  const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
 
-  // Handle forced refresh from parent component
+  // Single refresh effect with better control
+  useEffect(() => {
+    if (shouldRefresh && locationData) {
+      console.log("Refreshing location data (controlled single refresh)");
+      
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        handleRefresh();
+        // Mark refresh as complete to prevent further refreshes
+        markRefreshComplete();
+        
+        // Update locationData to remove fromPhotoPoints flag
+        if (locationData.fromPhotoPoints) {
+          setLocationData(prev => ({
+            ...prev,
+            fromPhotoPoints: false
+          }));
+        }
+      }, 600);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete]);
+
+  // Handle forced refresh event from parent component
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -89,22 +86,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       container.removeEventListener('forceRefresh', handleForceRefresh);
     };
   }, [locationData]);
-
-  // Automatically click refresh once when the page loads
-  useEffect(() => {
-    // Only run once after component mounts
-    if (!initialRefreshDone.current && locationData && !loading) {
-      initialRefreshDone.current = true;
-      
-      // Set a small delay to ensure component is fully mounted
-      const timer = setTimeout(() => {
-        console.log("Auto-refreshing location details on page load");
-        handleRefresh();
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [locationData, loading]);
 
   const handleRefresh = useCallback(async () => {
     await handleRefreshAll(

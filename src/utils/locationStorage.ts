@@ -5,6 +5,8 @@
 
 // Storage key for latest location
 const LATEST_LOCATION_KEY = 'latest_siqs_location';
+// Timestamp key for tracking last refresh
+const REFRESH_TIMESTAMP_KEY = 'last_refresh_timestamp';
 
 // Validate location data
 const isValidLocation = (location: any): boolean => {
@@ -31,6 +33,7 @@ export interface SIQSLocation {
   bortleScale?: number;
   timestamp?: string;
   fromPhotoPoints?: boolean;
+  lastRefreshed?: string; // Track when location was last refreshed
 }
 
 // Save location to localStorage
@@ -44,7 +47,8 @@ export const saveLocation = (location: SIQSLocation): boolean => {
     // Add timestamp if not provided
     const locationWithTimestamp = {
       ...location,
-      timestamp: location.timestamp || new Date().toISOString()
+      timestamp: location.timestamp || new Date().toISOString(),
+      lastRefreshed: new Date().toISOString() // Always update refresh timestamp
     };
     
     localStorage.setItem(LATEST_LOCATION_KEY, JSON.stringify(locationWithTimestamp));
@@ -80,6 +84,7 @@ export const saveLocationFromPhotoPoints = (location: SIQSLocation): boolean => 
     const locationWithFlag = {
       ...location,
       fromPhotoPoints: true,
+      lastRefreshed: null, // Force refresh on next load
       timestamp: location.timestamp || new Date().toISOString()
     };
     
@@ -88,6 +93,41 @@ export const saveLocationFromPhotoPoints = (location: SIQSLocation): boolean => 
     console.error("Error saving location from PhotoPoints:", error);
     return false;
   }
+};
+
+// Save last refresh time for a location
+export const saveRefreshTimestamp = (locationId: string): boolean => {
+  try {
+    const timestamp = new Date().toISOString();
+    localStorage.setItem(`${REFRESH_TIMESTAMP_KEY}_${locationId}`, timestamp);
+    return true;
+  } catch (error) {
+    console.error("Error saving refresh timestamp:", error);
+    return false;
+  }
+};
+
+// Get last refresh time for a location
+export const getLastRefreshTimestamp = (locationId: string): string | null => {
+  try {
+    return localStorage.getItem(`${REFRESH_TIMESTAMP_KEY}_${locationId}`);
+  } catch (error) {
+    console.error("Error retrieving refresh timestamp:", error);
+    return null;
+  }
+};
+
+// Check if location needs refresh (more than 15 minutes old)
+export const needsRefresh = (locationId: string): boolean => {
+  const lastRefresh = getLastRefreshTimestamp(locationId);
+  if (!lastRefresh) return true;
+  
+  const lastRefreshDate = new Date(lastRefresh);
+  const now = new Date();
+  const diffMs = now.getTime() - lastRefreshDate.getTime();
+  const diffMinutes = diffMs / (1000 * 60);
+  
+  return diffMinutes > 15; // Refresh if older than 15 minutes
 };
 
 // Clear saved location from localStorage
@@ -115,6 +155,7 @@ export const saveLocationDetails = (id: string, locationData: any): boolean => {
     }
     
     const key = `location_${id}`;
+    locationData.lastRefreshed = new Date().toISOString();
     localStorage.setItem(key, JSON.stringify(locationData));
     return true;
   } catch (error) {
