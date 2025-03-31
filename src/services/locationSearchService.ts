@@ -138,8 +138,9 @@ function findLocalDarkSkyLocations(
         isDarkSkyReserve: true,
         certification: 'International Dark Sky Association',
         description: `${entry.name} is a certified dark sky location with Bortle scale ${entry.bortleScale}.`,
-        distanceKm: distance,
-        type: 'dark-sky'
+        distance: distance,
+        type: 'dark-sky',
+        timestamp: new Date().toISOString() // Add timestamp
       };
     });
   } catch (error) {
@@ -240,6 +241,6 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
     }
     
     // If equal SIQS, sort by distance
-    return (a.distanceKm || Infinity) - (b.distanceKm || Infinity);
+    return (a.distance || Infinity) - (b.distance || Infinity);
   });
 }

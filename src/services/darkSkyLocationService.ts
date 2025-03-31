@@ -77,10 +77,11 @@ export function convertToSharedAstroSpot(
     isDarkSkyReserve: true,
     certification: 'International Dark Sky Association',
     description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
-    distanceKm: distance,
+    distance: distance,
     type: 'dark-sky',
     cloudCover: 0, // Will be calculated by SIQS service
-    visibility: 0  // Will be calculated by SIQS service
+    visibility: 0,  // Will be calculated by SIQS service
+    timestamp: new Date().toISOString() // Add the required timestamp field
   };
 }
 
