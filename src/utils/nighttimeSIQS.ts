@@ -27,7 +27,7 @@ export const filterNighttimeForecasts = (forecasts: any[]): any[] => {
  */
 export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: any) => {
   console.log("Starting nighttime SIQS calculation");
-  if (!locationData?.weatherData || !forecastData?.hourly || !forecastData.hourly.time) {
+  if (!locationData?.weatherData || !forecastData?.hourly) {
     console.log("Missing required data for nighttime SIQS calculation");
     return null;
   }
@@ -35,22 +35,26 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
   try {
     // Extract nighttime forecasts from hourly data
     const nightForecasts = [];
+    const hourlyData = forecastData.hourly;
     
-    for (let i = 0; i < forecastData.hourly.time.length; i++) {
-      const time = forecastData.hourly.time[i];
-      const date = new Date(time);
-      const hour = date.getHours();
-      
-      // Include hours between 6 PM (18) and 7 AM (7)
-      if (hour >= 18 || hour < 7) {
-        nightForecasts.push({
-          time,
-          cloudCover: forecastData.hourly.cloud_cover?.[i] ?? 0,
-          windSpeed: forecastData.hourly.wind_speed_10m?.[i] ?? 0,
-          humidity: forecastData.hourly.relative_humidity_2m?.[i] ?? 0,
-          precipitation: forecastData.hourly.precipitation?.[i] ?? 0,
-          weatherCondition: forecastData.hourly.weather_code?.[i] ?? 0
-        });
+    // Safely check if we have time data available
+    if (Array.isArray(hourlyData.time)) {
+      for (let i = 0; i < hourlyData.time.length; i++) {
+        const time = hourlyData.time[i];
+        const date = new Date(time);
+        const hour = date.getHours();
+        
+        // Include hours between 6 PM (18) and 7 AM (7)
+        if (hour >= 18 || hour < 7) {
+          nightForecasts.push({
+            time,
+            cloudCover: hourlyData.cloud_cover?.[i] ?? 0,
+            windSpeed: hourlyData.wind_speed_10m?.[i] ?? 0,
+            humidity: hourlyData.relative_humidity_2m?.[i] ?? 0,
+            precipitation: hourlyData.precipitation?.[i] ?? 0,
+            weatherCondition: hourlyData.weather_code?.[i] ?? 0
+          });
+        }
       }
     }
     
@@ -116,14 +120,14 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
  * @param forecastData Daily forecast data with SIQS ratings
  * @returns Average SIQS score from nighttime hours (0-10 scale)
  */
-export const getAverageForecastSIQS = (forecastData: any[]): number => {
-  if (!forecastData || !Array.isArray(forecastData) || forecastData.length === 0) {
+export const getAverageForecastSIQS = (forecastData: any): number => {
+  if (!forecastData) {
     return 0;
   }
   
   try {
     // If forecastData is an object with daily arrays instead of an array itself
-    if (!Array.isArray(forecastData) && forecastData.time && Array.isArray(forecastData.time)) {
+    if (forecastData && typeof forecastData === 'object' && forecastData.time && Array.isArray(forecastData.time)) {
       // Check if we have SIQS values in the data structure
       if (forecastData.siqs && Array.isArray(forecastData.siqs)) {
         const validScores = forecastData.siqs.filter((score: any) => 
@@ -144,7 +148,8 @@ export const getAverageForecastSIQS = (forecastData: any[]): number => {
         };
         
         // Calculate pseudo SIQS score based on cloud cover if available
-        if (forecastData.cloud_cover_mean && forecastData.cloud_cover_mean[i] !== undefined) {
+        if (forecastData.cloud_cover_mean && Array.isArray(forecastData.cloud_cover_mean) && 
+            forecastData.cloud_cover_mean[i] !== undefined) {
           const cloudCover = forecastData.cloud_cover_mean[i];
           if (cloudCover < 40) {
             forecast.siqs.score = Math.max(0, 10 - (cloudCover * 0.25));
@@ -160,7 +165,11 @@ export const getAverageForecastSIQS = (forecastData: any[]): number => {
     }
     
     // Standard array format processing
-    return getForecastSIQSFromArray(forecastData);
+    if (Array.isArray(forecastData)) {
+      return getForecastSIQSFromArray(forecastData);
+    }
+    
+    return 0;
   } catch (error) {
     console.error("Error in getAverageForecastSIQS:", error);
     return 0;
@@ -171,9 +180,15 @@ export const getAverageForecastSIQS = (forecastData: any[]): number => {
  * Helper function to calculate SIQS from an array of forecasts
  */
 function getForecastSIQSFromArray(forecasts: any[]): number {
+  if (!Array.isArray(forecasts) || forecasts.length === 0) {
+    return 0;
+  }
+  
   // Filter to only include the first day's forecast (tonight)
   const today = new Date();
   const todayForecasts = forecasts.filter(forecast => {
+    if (!forecast.date) return false;
+    
     const forecastDate = new Date(forecast.date);
     return forecastDate.getDate() === today.getDate() || 
            (forecastDate.getDate() === today.getDate() + 1 && 

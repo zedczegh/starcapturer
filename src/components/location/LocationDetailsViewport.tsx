@@ -10,6 +10,7 @@ import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import BackButton from "@/components/navigation/BackButton";
 import { useRefreshManager } from "@/hooks/location/useRefreshManager";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -45,6 +46,19 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
 
   // Use the new refresh manager hook
   const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
+  
+  // Use the dedicated SIQS updater
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData,
+    forecastData,
+    setLocationData,
+    t
+  );
+
+  // Reset SIQS update state when location changes
+  useEffect(() => {
+    resetUpdateState();
+  }, [locationData?.latitude, locationData?.longitude]);
 
   // Single refresh effect with better control
   useEffect(() => {
@@ -88,6 +102,9 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   }, [locationData]);
 
   const handleRefresh = useCallback(async () => {
+    // Reset SIQS update state before refreshing
+    resetUpdateState();
+    
     await handleRefreshAll(
       locationData, 
       setLocationData, 
@@ -97,7 +114,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       },
       setStatusMessage
     );
-  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage]);
+  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
 
   return (
     <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 

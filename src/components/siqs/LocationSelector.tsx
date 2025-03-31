@@ -122,7 +122,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
             <div className="h-[60vh]">
               <MapSelector 
                 onSelectLocation={handleLocationSelected}
-                // We only pass the props that MapSelector actually accepts
               />
             </div>
             <div className="p-4 border-t border-cosmic-700 flex justify-end">

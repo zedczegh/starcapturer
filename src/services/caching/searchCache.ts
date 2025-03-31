@@ -1,4 +1,3 @@
-
 import { Location, Language } from "../geocoding/types";
 
 const CACHE_PREFIX = "siqs_search_";
@@ -32,6 +31,10 @@ class SearchCacheService {
   }
 
   cacheResults(query: string, results: Location[], language: Language): void {
+    this.cacheSearchResults(query, language, results);
+  }
+
+  cacheSearchResults(query: string, language: Language, results: Location[]): void {
     try {
       if (!results || results.length === 0) return;
       

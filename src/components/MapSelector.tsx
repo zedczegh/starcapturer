@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,17 +10,39 @@ import { saveLocation } from "@/utils/locationStorage";
 import GlobeLocationSelector from "./GlobeLocationSelector";
 import { SIQSLocation } from "@/utils/locationStorage";
 
+// Update the interface to match how it's being used
 interface MapSelectorProps {
-  onLocationSelect: (location: SIQSLocation) => void;
+  onLocationSelect?: (location: SIQSLocation) => void;
+  onSelectLocation?: (location: SIQSLocation) => void;
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLocation }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
   const [isGlobeOpen, setIsGlobeOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  
+  // Handle all location selections through this unified function
+  const handleLocationSelection = (location: SIQSLocation) => {
+    saveLocation(location);
+    
+    // Call the appropriate callback based on which prop was provided
+    if (onLocationSelect) {
+      onLocationSelect(location);
+    } else if (onSelectLocation) {
+      onSelectLocation(location);
+    }
+    
+    setSearchResults([]);
+    setSearchQuery("");
+    
+    // Clear the input field
+    if (searchInputRef.current) {
+      searchInputRef.current.value = "";
+    }
+  }
   
   // Debounce search function
   const debouncedSearch = useMemo(() => {
@@ -54,21 +77,12 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
       longitude: location.longitude
     };
     
-    saveLocation(siqsLocation);
-    onLocationSelect(siqsLocation);
-    setSearchResults([]);
-    setSearchQuery("");
-    
-    // Clear the input field
-    if (searchInputRef.current) {
-      searchInputRef.current.value = "";
-    }
+    handleLocationSelection(siqsLocation);
   };
   
   // Handle globe location selection
   const handleGlobeLocationSelect = (location: SIQSLocation) => {
-    saveLocation(location);
-    onLocationSelect(location);
+    handleLocationSelection(location);
     setIsGlobeOpen(false);
   };
   
