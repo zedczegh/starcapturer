@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { fetchWeatherData } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { fetchLongRangeForecastData } from '@/lib/api/forecast';
 
 interface DailyForecast {
   time: string;
@@ -41,36 +42,46 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
       try {
         setForecast(prev => ({ ...prev, isLoading: true, error: null }));
         
-        const weatherData = await fetchWeatherData({
+        // Use the correct forecast API function for long range data
+        const forecastData = await fetchLongRangeForecastData({
           latitude,
-          longitude
+          longitude,
+          days: 16
         });
 
-        // Check if weather data is available
-        if (!weatherData) {
+        // Check if forecast data is available
+        if (!forecastData) {
           throw new Error('Failed to fetch forecast data');
         }
 
-        // Extract daily forecasts from weatherData, accessing through the correct property
-        // The data structure might not include a 'forecast' property
-        const dailyForecasts = weatherData.daily || [];
+        // Extract daily forecasts from forecastData
+        const dailyForecasts = forecastData.daily || {};
         
-        // Ensure the data is an array
-        const forecastsArray = Array.isArray(dailyForecasts) ? dailyForecasts : [];
+        // Process the daily data into our format
+        const processedForecasts: DailyForecast[] = [];
+        
+        // Check if time array exists and use its length to process data
+        if (Array.isArray(dailyForecasts.time)) {
+          const daysCount = dailyForecasts.time.length;
+          
+          for (let i = 0; i < daysCount; i++) {
+            processedForecasts.push({
+              time: dailyForecasts.time[i] || new Date().toISOString(),
+              weatherCode: dailyForecasts.weather_code?.[i] || 0,
+              temperatureMax: dailyForecasts.temperature_2m_max?.[i] || 25,
+              temperatureMin: dailyForecasts.temperature_2m_min?.[i] || 15,
+              sunrise: dailyForecasts.sunrise?.[i] || '06:00',
+              sunset: dailyForecasts.sunset?.[i] || '18:00',
+              precipitation: dailyForecasts.precipitation_sum?.[i] || 0,
+              cloudCover: dailyForecasts.cloud_cover_mean?.[i] || 0,
+              windSpeed: dailyForecasts.wind_speed_10m_max?.[i] || 0,
+              visibility: dailyForecasts.visibility?.[i] || 10
+            });
+          }
+        }
 
         setForecast({
-          daily: forecastsArray.map(day => ({
-            time: day.time || new Date().toISOString(),
-            weatherCode: day.weatherCode || 0,
-            temperatureMax: day.temperatureMax || 25,
-            temperatureMin: day.temperatureMin || 15,
-            sunrise: day.sunrise || '06:00',
-            sunset: day.sunset || '18:00',
-            precipitation: day.precipitation || 0,
-            cloudCover: day.cloudCover || 0,
-            windSpeed: day.windSpeed || 0,
-            visibility: day.visibility || 10
-          })),
+          daily: processedForecasts,
           isLoading: false,
           error: null
         });
