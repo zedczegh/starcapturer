@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Camera, Map } from "lucide-react";
+import { Camera, Map, Award } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const PhotoPointsSection: React.FC = () => {
@@ -32,6 +32,16 @@ const PhotoPointsSection: React.FC = () => {
               "浏览我们精选的社区分享的天文摄影地点。为你的下一次拍摄找到完美条件的隐藏宝地。"
             )}
           </p>
+          
+          <div className="mt-6 flex items-center justify-center gap-2 bg-cosmic-700/20 border border-cosmic-600/20 p-2 rounded-lg">
+            <Award className="h-4 w-4 text-blue-400" />
+            <p className="text-sm text-blue-200">
+              {t(
+                "Now featuring official Dark Sky certified locations from around the world!",
+                "现已收录来自世界各地的官方认证暗夜区域！"
+              )}
+            </p>
+          </div>
         </div>
         
         <div className="flex justify-center">

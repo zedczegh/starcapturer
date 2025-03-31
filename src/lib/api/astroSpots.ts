@@ -22,6 +22,8 @@ export interface SharedAstroSpot {
   isViable?: boolean;
   timestamp: string;
   chineseName?: string;
+  isDarkSkyReserve?: boolean; // Flag for certified dark sky locations
+  certification?: string;     // Type of certification (e.g., "IDA Gold Tier")
 }
 
 /**
@@ -58,8 +60,7 @@ export async function getSharedAstroSpots(
   radius = 100  // km
 ): Promise<SharedAstroSpot[]> {
   try {
-    // Real sampling points distributed across different geographical regions
-    // Based on known good viewing locations for astronomy
+    // Regular astronomy spots (keeping existing data)
     const realLocations = [
       // Dark sky preserves and astronomy spots in various regions
       { name: "Zhangbei Grassland Observatory", latitude: 41.1582, longitude: 114.7022, bortleScale: 3 },
@@ -118,6 +119,45 @@ export async function getSharedAstroSpots(
       { name: "Cherry Springs State Park", latitude: 41.6626, longitude: -77.8223, bortleScale: 2 }
     ];
     
+    // Official DarkSky International certified locations
+    const darkSkyReserves = [
+      // Asia Pacific certified dark sky locations
+      { name: "Yaeyama Islands Dark Sky Park", latitude: 24.3874, longitude: 124.1539, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Yeongyang Firefly Eco Park", latitude: 36.8272, longitude: 129.1750, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Warrumbungle Dark Sky", latitude: -31.2742, longitude: 149.0192, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Great Barrier Island", latitude: -36.2507, longitude: 175.4631, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Sanctuary" },
+      { name: "Lake Tekapo Reserve", latitude: -43.8867, longitude: 170.5166, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Reserve" },
+      
+      // Europe certified dark sky locations
+      { name: "Alqueva Dark Sky Reserve", latitude: 38.2000, longitude: -7.4333, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
+      { name: "Westhavelland Nature Park", latitude: 52.6962, longitude: 12.3749, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
+      { name: "Exmoor National Park", latitude: 51.1187, longitude: -3.6531, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
+      { name: "Galloway Forest Park", latitude: 55.1146, longitude: -4.6733, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
+      { name: "Moore's Reserve, Kielder", latitude: 55.2007, longitude: -2.5843, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
+      { name: "Kerry Dark Sky Reserve", latitude: 51.9433, longitude: -10.2694, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Reserve" },
+      { name: "Mont-Mégantic", latitude: 45.4547, longitude: -71.1529, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" },
+      
+      // North America certified dark sky locations
+      { name: "Flagstaff Dark Sky Community", latitude: 35.1981, longitude: -111.6510, bortleScale: 3, isDarkSkyReserve: true, certification: "IDA Dark Sky Community" },
+      { name: "Grand Canyon National Park", latitude: 36.1069, longitude: -112.1129, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Death Valley National Park", latitude: 36.5054, longitude: -117.0794, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Joshua Tree National Park", latitude: 33.8734, longitude: -115.9010, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Big Bend National Park", latitude: 29.2498, longitude: -103.2502, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
+      { name: "Natural Bridges Monument", latitude: 37.6213, longitude: -109.9767, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      { name: "Cherry Springs State Park", latitude: 41.6611, longitude: -77.8170, bortleScale: 2, isDarkSkyReserve: true, certification: "IDA Gold Tier Park" },
+      
+      // South America certified dark sky locations
+      { name: "AURA Observatory Chile", latitude: -30.1679, longitude: -70.8047, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Sanctuary" },
+      { name: "El Leoncito Park", latitude: -31.7997, longitude: -69.2949, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Park" },
+      
+      // Africa certified dark sky locations
+      { name: "NamibRand Nature Reserve", latitude: -25.0333, longitude: 16.0000, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Gold Tier Reserve" },
+      { name: "Winklhoek Farm", latitude: -32.3776, longitude: 20.9031, bortleScale: 1, isDarkSkyReserve: true, certification: "IDA Dark Sky Reserve" }
+    ];
+    
+    // Merge all locations
+    const allLocations = [...realLocations, ...darkSkyReserves];
+    
     // Chinese location names for language support
     const chineseNames: Record<string, string> = {
       "Zhangbei Grassland Observatory": "张北草原天文台",
@@ -170,16 +210,41 @@ export async function getSharedAstroSpots(
       "Pic du Midi": "米迪峰",
       "NamibRand Dark Sky Reserve": "纳米布兰德暗夜保护区",
       "Aoraki Mackenzie": "奥拉基麦肯齐",
-      "Cherry Springs State Park": "樱泉州立公园"
+      "Cherry Springs State Park": "樱泉州立公园",
+      "Yaeyama Islands Dark Sky Park": "八重山群岛暗夜公园",
+      "Yeongyang Firefly Eco Park": "英阳萤火虫生态公园",
+      "Warrumbungle Dark Sky": "沃伦邦格尔暗夜公园",
+      "Great Barrier Island": "大屏障岛暗夜保护区",
+      "Lake Tekapo Reserve": "蒂卡波湖暗夜保护区",
+      "Alqueva Dark Sky Reserve": "阿尔克瓦暗夜保护区",
+      "Westhavelland Nature Park": "西哈维尔兰自然公园",
+      "Exmoor National Park": "埃克斯穆尔国家公园",
+      "Galloway Forest Park": "盖洛韦森林公园",
+      "Moore's Reserve, Kielder": "基尔德摩尔保护区",
+      "Kerry Dark Sky Reserve": "克里暗夜保护区",
+      "Mont-Mégantic": "梅甘蒂克山保护区",
+      "Flagstaff Dark Sky Community": "旗杆镇暗夜社区",
+      "Grand Canyon National Park": "大峡谷国家公园",
+      "Death Valley National Park": "死亡谷国家公园",
+      "Joshua Tree National Park": "约书亚树国家公园",
+      "Big Bend National Park": "大弯国家公园",
+      "Natural Bridges Monument": "自然桥纪念碑",
+      "Cherry Springs State Park": "樱泉州立公园",
+      "AURA Observatory Chile": "智利奥拉天文台",
+      "El Leoncito Park": "小狮子公园",
+      "NamibRand Nature Reserve": "纳米布兰德自然保护区",
+      "Winklhoek Farm": "温克尔胡克农场"
     };
     
     // Calculate distance for each location and filter by radius
-    const locationsWithDistance = realLocations.map(location => {
+    const locationsWithDistance = allLocations.map(location => {
       const distance = calculateDistance(latitude, longitude, location.latitude, location.longitude);
       return {
         ...location,
         id: `loc-${location.latitude}-${location.longitude}`, // Generate deterministic ID
-        description: `Astronomical observation location with Bortle ${location.bortleScale}`,
+        description: location.isDarkSkyReserve 
+          ? `Certified dark sky location with ${location.certification} status. Bortle scale: ${location.bortleScale}.` 
+          : `Astronomical observation location with Bortle ${location.bortleScale}`,
         date: new Date().toISOString(),
         timestamp: new Date().toISOString(), // Add the required timestamp
         distance,
@@ -217,4 +282,3 @@ export function generateBaiduMapsUrl(latitude: number, longitude: number, name: 
   const encodedName = encodeURIComponent(name);
   return `https://api.map.baidu.com/direction?origin=latlng:${latitude},${longitude}|name:Current&destination=name:${encodedName}&mode=driving&coord_type=wgs84&output=html`;
 }
-

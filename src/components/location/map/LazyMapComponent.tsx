@@ -1,6 +1,6 @@
 
 import React, { useCallback, memo, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -23,6 +23,8 @@ interface LazyMapComponentProps {
   onMapReady: () => void;
   onMapClick: (lat: number, lng: number) => void;
   showInfoPanel?: boolean;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
 }
 
 const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
@@ -31,7 +33,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   editable = false,
   onMapReady,
   onMapClick,
-  showInfoPanel = false
+  showInfoPanel = false,
+  isDarkSkyReserve = false,
+  certification = ''
 }) => {
   const { t } = useLanguage();
 
@@ -44,7 +48,13 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   
   // Memoize marker icon to avoid recreating on each render
-  const markerIcon = useMemo(() => createCustomMarker(), []);
+  const markerIcon = useMemo(() => {
+    // Use a special icon for dark sky reserves
+    if (isDarkSkyReserve) {
+      return createCustomMarker('#3b82f6'); // Blue color for dark sky locations
+    }
+    return createCustomMarker(); // Default icon for regular locations
+  }, [isDarkSkyReserve]);
 
   return (
     <>
@@ -64,12 +74,37 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             subdomains={['a', 'b', 'c']}
           />
           
+          {/* Add a circle for dark sky reserves to indicate the quality area */}
+          {isDarkSkyReserve && (
+            <Circle 
+              center={position} 
+              radius={10000} // 10km radius for dark sky area
+              pathOptions={{ 
+                fillColor: '#3b82f6', 
+                fillOpacity: 0.1, 
+                color: '#3b82f6', 
+                weight: 1 
+              }} 
+            />
+          )}
+          
           <Marker 
             position={position}
             icon={markerIcon}
           >
             <Popup>
-              {locationName}
+              <div className="text-sm">
+                <div className="font-medium">{locationName}</div>
+                {isDarkSkyReserve && certification && (
+                  <div className="text-blue-600 text-xs mt-1">
+                    {t("Certified Dark Sky Location", "认证暗夜位置")}
+                    <div className="font-bold">{certification}</div>
+                  </div>
+                )}
+                <div className="mt-1 text-gray-500">
+                  {position[0].toFixed(4)}, {position[1].toFixed(4)}
+                </div>
+              </div>
             </Popup>
           </Marker>
           
@@ -85,6 +120,17 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             {t(`${locationName} is located at coordinates ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`, 
                `${locationName}位于坐标 ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`)}
           </p>
+          
+          {/* Show dark sky certification in the info panel */}
+          {isDarkSkyReserve && certification && (
+            <div className="mt-2 text-sm">
+              <span className="text-blue-400 font-medium">
+                {t("Dark Sky Certification: ", "暗夜保护认证: ")}
+              </span>
+              <span className="text-blue-200">{certification}</span>
+            </div>
+          )}
+          
           {editable && (
             <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
               <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>

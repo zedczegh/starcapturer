@@ -13,6 +13,8 @@ interface MapDisplayProps {
   onMapReady: () => void;
   onMapClick: (lat: number, lng: number) => void;
   showInfoPanel?: boolean;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -21,7 +23,9 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   editable = false,
   onMapReady,
   onMapClick,
-  showInfoPanel = false
+  showInfoPanel = false,
+  isDarkSkyReserve = false,
+  certification = ''
 }) => {
   const { t } = useLanguage();
 
@@ -54,6 +58,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
           onMapReady={onMapReady}
           onMapClick={onMapClick}
           showInfoPanel={showInfoPanel}
+          isDarkSkyReserve={isDarkSkyReserve}
+          certification={certification}
         />
       </Suspense>
     </div>

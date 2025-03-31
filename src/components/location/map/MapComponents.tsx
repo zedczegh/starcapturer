@@ -1,135 +1,123 @@
 
-import React, { useEffect, memo } from "react";
-import { useMap } from "react-leaflet";
+import React, { useEffect } from "react";
+import { useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 
-// Component to update the map view when position changes
-export const MapUpdater = memo(({ position }: { position: [number, number] }) => {
+// Update map view when center position changes
+export function MapUpdater({ position }: { position: [number, number] }) {
   const map = useMap();
   
   useEffect(() => {
-    if (map) {
-      try {
-        map.panTo(position, { animate: true, duration: 0.5 });
-      } catch (error) {
-        console.error("Error updating map view:", error);
+    map.setView(position, map.getZoom(), {
+      animate: true,
+      duration: 1
+    });
+  }, [map, position]);
+  
+  return null;
+}
+
+// Handle map click events for editable maps
+export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  
+  return null;
+}
+
+// Apply global map styles
+export function MapStyles() {
+  return (
+    <style jsx global>{`
+      .leaflet-container {
+        height: 100%;
+        width: 100%;
+        border-radius: 0.5rem;
+        z-index: 1;
+      }
+      
+      .leaflet-control-attribution {
+        font-size: 10px;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        color: rgba(255, 255, 255, 0.7) !important;
+      }
+      
+      .leaflet-control-attribution a {
+        color: rgba(255, 255, 255, 0.9) !important;
+      }
+      
+      .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background-color: rgba(15, 23, 42, 0.9);
+        color: #fff;
+        border-radius: 0.5rem;
+      }
+      
+      .leaflet-control-zoom a {
+        background-color: rgba(15, 23, 42, 0.7) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+      
+      .leaflet-control-zoom a:hover {
+        background-color: rgba(30, 41, 59, 0.9) !important;
+      }
+    `}</style>
+  );
+}
+
+// Create a custom marker icon
+export function createCustomMarker(color = '#f43f5e') {
+  const markerHtmlStyles = `
+    background-color: ${color};
+    width: 2rem;
+    height: 2rem;
+    display: block;
+    position: relative;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 1px solid #FFFFFF;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  `;
+
+  const pulseStyles = `
+    content: '';
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50% 50% 50% 0;
+    background-color: ${color};
+    position: absolute;
+    margin: -1px 0 0 -1px;
+    animation: pulse 2s infinite;
+    opacity: 0.5;
+    box-shadow: 0 0 5px ${color};
+    
+    @keyframes pulse {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(1.5);
+        opacity: 0;
       }
     }
-  }, [position, map]);
-  
-  return null;
-});
+  `;
 
-MapUpdater.displayName = 'MapUpdater';
-
-// Interactive map component that handles clicks
-export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (!map) return;
-    
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-      onMapClick(lat, lng);
-    };
-    
-    map.on('click', handleClick);
-    
-    return () => {
-      map.off('click', handleClick);
-    };
-  }, [map, onMapClick]);
-  
-  return null;
-});
-
-MapEvents.displayName = 'MapEvents';
-
-// CSS injector component to avoid duplicate style tags
-export const MapStyles = memo(() => {
-  useEffect(() => {
-    if (!document.getElementById('custom-marker-styles')) {
-      const style = document.createElement('style');
-      style.id = 'custom-marker-styles';
-      style.innerHTML = `
-        .custom-marker-icon {
-          background: transparent;
-          border: none;
-        }
-        .marker-pin-container {
-          position: relative;
-          width: 30px;
-          height: 42px;
-        }
-        .marker-pin {
-          width: 24px;
-          height: 24px;
-          border-radius: 50% 50% 50% 0;
-          background: #9b87f5;
-          position: absolute;
-          transform: rotate(-45deg);
-          left: 50%;
-          top: 50%;
-          margin: -20px 0 0 -12px;
-          box-shadow: 0 0 6px rgba(0,0,0,0.3);
-        }
-        .marker-pin::after {
-          content: '';
-          width: 14px;
-          height: 14px;
-          margin: 5px 0 0 5px;
-          background: white;
-          position: absolute;
-          border-radius: 50%;
-        }
-        .marker-shadow {
-          width: 24px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(0,0,0,0.15);
-          position: absolute;
-          left: 50%;
-          top: 100%;
-          margin: -6px 0 0 -12px;
-          transform: rotateX(55deg);
-          z-index: -1;
-        }
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
-          }
-          70% {
-            box-shadow: 0 0 0 10px rgba(155, 135, 245, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(155, 135, 245, 0);
-          }
-        }
-        .animate-bounce {
-          animation: pulse 2s infinite;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
-  
-  return null;
-});
-
-MapStyles.displayName = 'MapStyles';
-
-// Create a custom marker with animation effects
-export const createCustomMarker = (): L.DivIcon => {
-  return L.divIcon({
-    className: 'custom-marker-icon',
-    html: `
-      <div class="marker-pin-container">
-        <div class="marker-pin animate-bounce"></div>
-        <div class="marker-shadow"></div>
-      </div>
-    `,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42]
+  const icon = L.divIcon({
+    className: "custom-marker-icon",
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24],
+    html: `<span style="${markerHtmlStyles}">
+             <span style="${pulseStyles}"></span>
+           </span>`,
+    iconSize: [24, 24]
   });
-};
+
+  return icon;
+}
