@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Award, Info } from "lucide-react";
@@ -8,6 +8,7 @@ import { formatSIQSScore } from "@/utils/geoUtils";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useNavigate } from 'react-router-dom';
 import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 import { 
   Tooltip,
   TooltipContent,
@@ -18,11 +19,40 @@ import {
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
+  showRealTimeSiqs?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }) => {
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs = false }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
+  const [isUpdatingSiqs, setIsUpdatingSiqs] = useState(false);
+  
+  // Update SIQS if needed
+  useEffect(() => {
+    if (showRealTimeSiqs && location.latitude && location.longitude && !isUpdatingSiqs) {
+      // Only fetch if we don't already have a valid SIQS score
+      const hasValidSiqs = typeof location.siqs === 'number' && location.siqs > 0;
+      if (!hasValidSiqs) {
+        const fetchRealTimeSiqs = async () => {
+          try {
+            setIsUpdatingSiqs(true);
+            const result = await calculateRealTimeSiqs(
+              location.latitude,
+              location.longitude,
+              location.bortleScale || 5
+            );
+            // No need to update state as this is handled by the parent component
+            setIsUpdatingSiqs(false);
+          } catch (error) {
+            console.error("Error fetching real-time SIQS:", error);
+            setIsUpdatingSiqs(false);
+          }
+        };
+        
+        fetchRealTimeSiqs();
+      }
+    }
+  }, [location, showRealTimeSiqs]);
   
   // Animation variants
   const variants = {
@@ -32,7 +62,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
       y: 0,
       transition: { 
         duration: 0.3,
-        delay: index * 0.1
+        delay: index * 0.05 // Reduced delay for faster rendering
       }
     }
   };
@@ -103,6 +133,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
       latitude: location.latitude,
       longitude: location.longitude,
       bortleScale: location.bortleScale,
+      siqs: location.siqs, // Include current SIQS to maintain consistency
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: location.isDarkSkyReserve,

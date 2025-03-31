@@ -1,3 +1,4 @@
+
 import { fetchForecastData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchWeatherData } from "@/lib/api/weather";
@@ -13,6 +14,10 @@ const siqsCache = new Map<string, {
 
 // Invalidate cache entries older than 30 minutes for more real-time data
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+// Maximum number of concurrent SIQS calculations
+const MAX_CONCURRENT_CALCULATIONS = 3;
+// Current active calculations (to prevent duplicate requests)
+const activeCalculations = new Set<string>();
 
 /**
  * Calculate real-time SIQS for a given location
@@ -39,6 +44,27 @@ export async function calculateRealTimeSiqs(
     };
   }
   
+  // Check if this calculation is already in progress
+  if (activeCalculations.has(cacheKey)) {
+    console.log(`SIQS calculation already in progress for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, waiting...`);
+    // Wait for a short time and check cache again
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Check cache again after waiting
+    const cachedDataAfterWait = siqsCache.get(cacheKey);
+    if (cachedDataAfterWait) {
+      return {
+        siqs: cachedDataAfterWait.siqs,
+        isViable: cachedDataAfterWait.isViable
+      };
+    }
+    
+    // If still no data, return a default value
+    return { siqs: 0, isViable: false };
+  }
+  
+  // Mark this calculation as active
+  activeCalculations.add(cacheKey);
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
@@ -98,6 +124,9 @@ export async function calculateRealTimeSiqs(
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
     return { siqs: 0, isViable: false };
+  } finally {
+    // Remove from active calculations
+    activeCalculations.delete(cacheKey);
   }
 }
 
@@ -110,7 +139,7 @@ export async function calculateRealTimeSiqs(
  */
 export async function batchCalculateSiqs(
   locations: SharedAstroSpot[],
-  maxParallel: number = 5
+  maxParallel: number = MAX_CONCURRENT_CALCULATIONS
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   

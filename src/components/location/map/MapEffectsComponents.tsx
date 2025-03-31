@@ -1,30 +1,39 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, memo } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
-// Update map view when center position changes
-export function MapUpdater({ position }: { position: [number, number] }) {
+// Update map view when center position changes - memoized for better performance
+export const MapUpdater = memo(({ position }: { position: [number, number] }) => {
   const map = useMap();
+  const lastPositionRef = useRef<[number, number]>();
   
   useEffect(() => {
     if (!map) return;
     
-    try {
-      map.setView(position, map.getZoom(), {
-        animate: true,
-        duration: 1
-      });
-    } catch (error) {
-      console.error("Error updating map view:", error);
+    // Check if position has changed significantly before updating
+    const hasSignificantChange = !lastPositionRef.current || 
+      Math.abs(lastPositionRef.current[0] - position[0]) > 0.0001 ||
+      Math.abs(lastPositionRef.current[1] - position[1]) > 0.0001;
+    
+    if (hasSignificantChange) {
+      try {
+        map.setView(position, map.getZoom(), {
+          animate: true,
+          duration: 1
+        });
+        lastPositionRef.current = position;
+      } catch (error) {
+        console.error("Error updating map view:", error);
+      }
     }
   }, [map, position]);
   
   return null;
-}
+});
 
-// Handle map click events for editable maps
-export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+// Handle map click events for editable maps - memoized for better performance
+export const MapEvents = memo(({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
   const map = useMap();
   
   useEffect(() => {
@@ -42,10 +51,10 @@ export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: numbe
   }, [map, onMapClick]);
   
   return null;
-}
+});
 
-// Apply additional dark sky overlay for certified locations
-export function DarkSkyOverlay({ 
+// Apply additional dark sky overlay for certified locations - memoized for performance
+export const DarkSkyOverlay = memo(({ 
   isDarkSkyReserve, 
   position,
   radiusKm = 10,
@@ -55,65 +64,82 @@ export function DarkSkyOverlay({
   position: [number, number];
   radiusKm?: number;
   color?: string;
-}) {
+}) => {
   const map = useMap();
   const [circle, setCircle] = useState<L.Circle | null>(null);
+  const styleElementRef = useRef<HTMLStyleElement | null>(null);
+  const positionRef = useRef<[number, number]>(position);
   
+  // Only update when significant parameters change
   useEffect(() => {
     if (!isDarkSkyReserve || !map) return;
     
-    try {
-      // Remove previous circle if it exists
+    // Check if position has changed significantly
+    const positionChanged = 
+      Math.abs(positionRef.current[0] - position[0]) > 0.0001 ||
+      Math.abs(positionRef.current[1] - position[1]) > 0.0001;
+      
+    if (!circle || positionChanged) {
+      try {
+        // Remove previous circle if it exists
+        if (circle) {
+          circle.remove();
+        }
+        
+        // Convert radius from km to meters
+        const radiusMeters = radiusKm * 1000;
+        
+        // Create a circular overlay for the dark sky region with more translucency
+        const newCircle = L.circle(position, {
+          radius: radiusMeters,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.08, // More translucent
+          weight: 1.5,
+          dashArray: '5, 5',
+          className: 'dark-sky-overlay'
+        }).addTo(map);
+        
+        // Add a subtler pulsing animation effect if not already added
+        if (!styleElementRef.current) {
+          const pulseEffect = document.createElement('style');
+          pulseEffect.innerHTML = `
+            @keyframes pulse {
+              0% { stroke-opacity: 0.5; stroke-width: 1.5; }
+              50% { stroke-opacity: 0.2; stroke-width: 2; }
+              100% { stroke-opacity: 0.5; stroke-width: 1.5; }
+            }
+            .dark-sky-overlay {
+              animation: pulse 4s infinite;
+            }
+          `;
+          document.head.appendChild(pulseEffect);
+          styleElementRef.current = pulseEffect;
+        }
+        
+        // Save the circle reference and position
+        setCircle(newCircle);
+        positionRef.current = position;
+      } catch (error) {
+        console.error("Error creating dark sky overlay:", error);
+      }
+    }
+    
+    return () => {
       if (circle) {
-        circle.remove();
+        try {
+          circle.remove();
+        } catch (error) {
+          console.error("Error removing circle overlay:", error);
+        }
       }
       
-      // Convert radius from km to meters
-      const radiusMeters = radiusKm * 1000;
-      
-      // Create a circular overlay for the dark sky region with more translucency
-      const newCircle = L.circle(position, {
-        radius: radiusMeters,
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.08, // More translucent
-        weight: 1.5,
-        dashArray: '5, 5',
-        className: 'dark-sky-overlay'
-      }).addTo(map);
-      
-      // Add a subtler pulsing animation effect
-      const pulseEffect = document.createElement('style');
-      pulseEffect.innerHTML = `
-        @keyframes pulse {
-          0% { stroke-opacity: 0.5; stroke-width: 1.5; }
-          50% { stroke-opacity: 0.2; stroke-width: 2; }
-          100% { stroke-opacity: 0.5; stroke-width: 1.5; }
-        }
-        .dark-sky-overlay {
-          animation: pulse 4s infinite;
-        }
-      `;
-      document.head.appendChild(pulseEffect);
-      
-      // Save the circle reference
-      setCircle(newCircle);
-      
-      return () => {
-        if (newCircle) {
-          try {
-            newCircle.remove();
-          } catch (error) {
-            console.error("Error removing circle overlay:", error);
-          }
-        }
-        document.head.removeChild(pulseEffect);
-      };
-    } catch (error) {
-      console.error("Error creating dark sky overlay:", error);
-      return undefined;
-    }
-  }, [isDarkSkyReserve, position, map, radiusKm, color]);
+      if (styleElementRef.current) {
+        document.head.removeChild(styleElementRef.current);
+        styleElementRef.current = null;
+      }
+    };
+  }, [isDarkSkyReserve, position, map, radiusKm, color, circle]);
   
   return null;
-}
+});

@@ -1,37 +1,84 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
-import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
-import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
-import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import { MapPin, Loader2, RefreshCw, Locate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
 
+// Lazy load components for better initial loading performance
+const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
+const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
+const useRecommendedLocations = lazy(() => 
+  import('@/hooks/photoPoints/useRecommendedLocations').then(mod => ({ 
+    default: mod.useRecommendedLocations 
+  }))
+);
+
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({ language: 'en' });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+  const [searchRadius, setSearchRadius] = useState(1000);
+  const [locationsData, setLocationsData] = useState({
+    locations: [],
+    loading: true,
+    hasMore: false,
+    refreshSiqsData: () => {},
+    loadMore: () => {}
+  });
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
-  // Set up recommended locations with userLocation
-  const {
-    searchRadius,
-    setSearchRadius,
-    locations,
-    loading,
-    hasMore,
-    loadMore,
-    refreshSiqsData
-  } = useRecommendedLocations(userLocation, 1000, 30); // Increase max results to 30
+  // Handle radius change with debouncing
+  const [debouncedRadius, setDebouncedRadius] = useState(searchRadius);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRadius(searchRadius);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchRadius]);
+
+  // Dynamic import of the hook based on user location
+  useEffect(() => {
+    if (userLocation) {
+      const loadRecommendedLocations = async () => {
+        try {
+          // Dynamic import for code splitting
+          const { useRecommendedLocations } = await import('@/hooks/photoPoints/useRecommendedLocations');
+          const {
+            locations,
+            loading,
+            hasMore,
+            loadMore,
+            refreshSiqsData
+          } = useRecommendedLocations(userLocation, debouncedRadius, 30);
+          
+          setLocationsData({
+            locations,
+            loading,
+            hasMore,
+            loadMore,
+            refreshSiqsData
+          });
+        } catch (error) {
+          console.error("Error loading recommended locations:", error);
+          setLocationsData(prev => ({
+            ...prev,
+            loading: false
+          }));
+        }
+      };
+      
+      loadRecommendedLocations();
+    }
+  }, [userLocation, debouncedRadius]);
 
   // Process locations to separate certified and calculated
   const {
@@ -39,14 +86,12 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedLocations,
     certifiedCount,
     calculatedCount
-  } = useCertifiedLocations(locations, searchRadius);
-  
-  console.log(`Found ${certifiedCount} certified and ${calculatedCount} calculated locations`);
+  } = useCertifiedLocations(locationsData.locations, debouncedRadius);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
     setSearchRadius(value);
-  }, [setSearchRadius]);
+  }, []);
 
   // Listen for custom radius change events
   useEffect(() => {
@@ -61,7 +106,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => {
       document.removeEventListener('set-search-radius', handleSetRadius as EventListener);
     };
-  }, [setSearchRadius]);
+  }, []);
 
   // Call getUserLocation when the component mounts
   useEffect(() => {
@@ -73,19 +118,19 @@ const PhotoPointsNearby: React.FC = () => {
   // Page title
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
-  // Animation variants for page elements
+  // Animation variants for page elements (optimized for performance)
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
+        staggerChildren: 0.05 // Reduced for faster animation
       }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 }, // Reduced y-offset for subtler animation
     visible: { opacity: 1, y: 0 }
   };
   
@@ -157,14 +202,14 @@ const PhotoPointsNearby: React.FC = () => {
                 <Button
                   onClick={() => {
                     getPosition();
-                    refreshSiqsData();
+                    locationsData.refreshSiqsData();
                   }}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2 glassmorphism-light hover:bg-cosmic-700/40 border border-cosmic-600/30"
-                  disabled={locationLoading || loading}
+                  disabled={locationLoading || locationsData.loading}
                 >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${locationsData.loading ? 'animate-spin' : ''}`} />
                   {t("Refresh Data", "刷新数据")}
                 </Button>
               </motion.div>
@@ -193,27 +238,33 @@ const PhotoPointsNearby: React.FC = () => {
                 onViewChange={setActiveView}
                 certifiedCount={certifiedCount}
                 calculatedCount={calculatedCount}
-                loading={loading}
+                loading={locationsData.loading}
               />
             </motion.div>
             
             {/* Content based on active view */}
             <motion.div variants={itemVariants}>
-              {activeView === 'certified' ? (
-                <DarkSkyLocations
-                  locations={certifiedLocations}
-                  loading={loading && !locationLoading}
-                />
-              ) : (
-                <CalculatedLocations
-                  locations={calculatedLocations}
-                  loading={loading && !locationLoading}
-                  hasMore={hasMore}
-                  onLoadMore={loadMore}
-                  onRefresh={refreshSiqsData}
-                  searchRadius={searchRadius}
-                />
-              )}
+              <Suspense fallback={
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              }>
+                {activeView === 'certified' ? (
+                  <DarkSkyLocations
+                    locations={certifiedLocations}
+                    loading={locationsData.loading && !locationLoading}
+                  />
+                ) : (
+                  <CalculatedLocations
+                    locations={calculatedLocations}
+                    loading={locationsData.loading && !locationLoading}
+                    hasMore={locationsData.hasMore}
+                    onLoadMore={locationsData.loadMore}
+                    onRefresh={locationsData.refreshSiqsData}
+                    searchRadius={debouncedRadius}
+                  />
+                )}
+              </Suspense>
             </motion.div>
           </motion.div>
         </div>
