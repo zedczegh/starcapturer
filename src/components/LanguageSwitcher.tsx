@@ -16,7 +16,7 @@ const LanguageSwitcher: React.FC = () => {
       variant="ghost" 
       size="icon" 
       onClick={toggleLanguage} 
-      className="relative"
+      className="relative transition-all duration-300 hover:bg-primary/20"
       title={t("Switch to " + (language === 'en' ? "Chinese" : "English"), 
              "切换到" + (language === 'en' ? "中文" : "英文"))}
     >

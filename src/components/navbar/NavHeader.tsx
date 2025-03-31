@@ -19,7 +19,10 @@ const NavHeader: React.FC<NavHeaderProps> = ({ scrolled, children }) => {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2 z-20">
+        <Link 
+          to="/" 
+          className="flex items-center space-x-2 z-20 transition-all duration-300 hover:opacity-80 hover:scale-[1.02]"
+        >
           <MoonStar className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold tracking-tight">
             Astro<span className="text-primary">SIQS</span>

@@ -72,20 +72,33 @@
   
   /* Glass card styling with enhanced transparency */
   .glass-card {
-    @apply bg-cosmic-800/30 backdrop-blur-sm border border-cosmic-700/30 rounded-lg;
+    @apply bg-cosmic-800/30 backdrop-blur-sm border border-cosmic-700/30 rounded-lg hover:bg-cosmic-700/40 transition-all duration-300;
   }
   
   /* Add glassmorphism utility classes */
   .glassmorphism {
-    @apply bg-cosmic-800/40 backdrop-blur-sm border border-cosmic-700/30;
+    @apply bg-cosmic-800/40 backdrop-blur-sm border border-cosmic-700/30 transition-all duration-300;
   }
   
   .glassmorphism-strong {
-    @apply bg-cosmic-800/60 backdrop-blur-md border border-cosmic-700/40;
+    @apply bg-cosmic-800/60 backdrop-blur-md border border-cosmic-700/40 transition-all duration-300;
   }
   
   .glassmorphism-light {
-    @apply bg-cosmic-800/20 backdrop-blur-sm border border-cosmic-700/20;
+    @apply bg-cosmic-800/20 backdrop-blur-sm border border-cosmic-700/20 transition-all duration-300;
+  }
+  
+  /* Interactive elements with hover effects */
+  .interactive-card {
+    @apply transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:bg-cosmic-700/40;
+  }
+  
+  .interactive-button {
+    @apply transition-all duration-300 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98];
+  }
+  
+  .link-button {
+    @apply hover:text-primary/90 transition-colors duration-300;
   }
   
   /* Cosmic glow styles for better visual effects */

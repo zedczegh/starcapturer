@@ -14,361 +14,361 @@ const AboutSIQS = () => {
     software: [
       { 
         category: "NINA", 
-        subcategory: "教程", 
-        name: "NINA精细测量回差并设置电调参数", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
+        name: language === 'en' ? "NINA Precise Backlash Measurement and Electronic Adjustment" : "NINA精细测量回差并设置电调参数", 
         url: "https://istarshooter.com/article/detail/73" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "软件", 
+        subcategory: language === 'en' ? "Software" : "软件", 
         name: "PixInsight", 
         url: "https://www.pixinsight.com/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
         name: "PixInsight Workflows-chaoticnebula", 
         url: "https://chaoticnebula.com/pixinsight-lrgb-workflow/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
         name: "Cosmic Photons – Astrophotography", 
         url: "https://cosmicphotons.com/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
-        name: "Astronomy Software - The Backyard Astronomy Space", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
+        name: language === 'en' ? "Astronomy Software - The Backyard Astronomy Space" : "天文软件 - 后院天文空间", 
         url: "https://www.backyardastro.org/forum/17-astronomy-software/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
-        name: "AstroProcessing: NSG, PMM apps", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
+        name: language === 'en' ? "AstroProcessing: NSG, PMM apps" : "天文处理: NSG, PMM 应用", 
         url: "https://www.astroprocessing.com/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
         name: "PixInsight-Scripts / Toolbox", 
         url: "https://gitlab.com/pixinsight-scripts/toolbox" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
-        name: "New Foraxx script for PixInsight", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
+        name: language === 'en' ? "New Foraxx script for PixInsight" : "PixInsight的新Foraxx脚本", 
         url: "https://www.astroworldcreations.com/news/new-foraxx-script-for-pixinsight" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
         name: "pixinsight scripts — Seti Astro", 
         url: "https://www.setiastro.com/pjsr-scripts" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
         name: "PixInsight Toolbox", 
         url: "https://www.ideviceapps.de/pixinsight-toolbox.html" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
-        name: "GHS拉伸", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
+        name: language === 'en' ? "GHS Stretching" : "GHS拉伸", 
         url: "https://github.com/mikec1485/GHS" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
-        name: "RC三件套", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
+        name: language === 'en' ? "RC Three-piece Set" : "RC三件套", 
         url: "https://www.rc-astro.com/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "插件", 
+        subcategory: language === 'en' ? "Plugins" : "插件", 
         name: "Herbert Walter PixInsight Scripts", 
         url: "https://www.skypixels.at/pixinsight_scripts.html" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "教程", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
         name: "Adam Block Studios", 
         url: "https://www.adamblockstudios.com/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "教程", 
-        name: "肥尔腩多的主站", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
+        name: language === 'en' ? "Fernando Yang's Main Site" : "肥尔腩多的主站", 
         url: "https://fernandoyang.pt/" 
       },
       { 
         category: "PixInsight", 
-        subcategory: "教程", 
-        name: "深空之王PixInsight教程", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
+        name: language === 'en' ? "Deep Space King PixInsight Tutorials" : "深空之王PixInsight教程", 
         url: "https://space.bilibili.com/244743682/lists/467029?type=season" 
       }
     ],
     maps: [
       { 
-        category: "地图", 
-        subcategory: "卫星", 
-        name: "satellitemap卫星地图", 
+        category: language === 'en' ? "Maps" : "地图", 
+        subcategory: language === 'en' ? "Satellite" : "卫星", 
+        name: language === 'en' ? "Satellite Map" : "satellitemap卫星地图", 
         url: "https://satellitemap.space/?constellation=starlink" 
       },
       { 
-        category: "地图", 
-        subcategory: "星图", 
+        category: language === 'en' ? "Maps" : "地图", 
+        subcategory: language === 'en' ? "Star Charts" : "星图", 
         name: "China-VO SkyView", 
         url: "https://nadc.china-vo.org/skyview/" 
       },
       { 
-        category: "地图", 
-        subcategory: "星图", 
-        name: "虚拟天文馆在线地图", 
+        category: language === 'en' ? "Maps" : "地图", 
+        subcategory: language === 'en' ? "Star Charts" : "星图", 
+        name: language === 'en' ? "Virtual Observatory Online Map" : "虚拟天文馆在线地图", 
         url: "https://stellarium-web.org/" 
       },
       { 
-        category: "地图", 
-        subcategory: "星图", 
+        category: language === 'en' ? "Maps" : "地图", 
+        subcategory: language === 'en' ? "Star Charts" : "星图", 
         name: "Online Star Maps", 
         url: "https://theskylive.com/planetarium?obj=2024pt5#ra|15.79058679773252|dec|73.00498667294666|fov|80" 
       }
     ],
     weather: [
       { 
-        category: "气象", 
-        subcategory: "气象", 
-        name: "windy", 
+        category: language === 'en' ? "Weather" : "气象", 
+        subcategory: language === 'en' ? "Weather" : "气象", 
+        name: "Windy", 
         url: "https://www.windy.com" 
       },
       { 
-        category: "气象", 
-        subcategory: "气象", 
-        name: "中央气象台台风网", 
+        category: language === 'en' ? "Weather" : "气象", 
+        subcategory: language === 'en' ? "Weather" : "气象", 
+        name: language === 'en' ? "China Meteorological Administration Typhoon Network" : "中央气象台台风网", 
         url: "http://typhoon.nmc.cn/web.html" 
       }
     ],
     data: [
       { 
-        category: "数据", 
-        subcategory: "工具", 
-        name: "计算SNR信噪比", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Tools" : "工具", 
+        name: language === 'en' ? "Calculate SNR (Signal-to-Noise Ratio)" : "计算SNR信噪比", 
         url: "https://deepskydetail.shinyapps.io/Calculate_SNR/" 
       },
       { 
-        category: "数据", 
-        subcategory: "工具", 
-        name: "天文工具网", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Tools" : "工具", 
+        name: language === 'en' ? "Astronomy Tools Website" : "天文工具网", 
         url: "https://astronomy.tools/" 
       },
       { 
-        category: "数据", 
-        subcategory: "光污染", 
-        name: "darkskymap-光污染地图", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Light Pollution" : "光污染", 
+        name: language === 'en' ? "Dark Sky Map - Light Pollution Map" : "darkskymap-光污染地图", 
         url: "https://www.darkskymap.com/map" 
       },
       { 
-        category: "数据", 
-        subcategory: "光污染", 
-        name: "光污染地图", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Light Pollution" : "光污染", 
+        name: language === 'en' ? "Light Pollution Map" : "光污染地图", 
         url: "https://www.lightpollutionmap.info/" 
       },
       { 
-        category: "数据", 
-        subcategory: "拍摄数据", 
-        name: "Open datasets – Erellaz", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Imaging Data" : "拍摄数据", 
+        name: language === 'en' ? "Open Datasets – Erellaz" : "开放数据集 – Erellaz", 
         url: "https://erellaz.com/moana/open-datasets/" 
       },
       { 
-        category: "数据", 
-        subcategory: "气象", 
-        name: "历史天气查询", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Weather" : "气象", 
+        name: language === 'en' ? "Historical Weather Query" : "历史天气查询", 
         url: "https://lishi.tianqi.com/" 
       },
       { 
-        category: "数据", 
-        subcategory: "气象", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Weather" : "气象", 
         name: "OpenWeatherMap", 
         url: "https://openweathermap.org/api" 
       },
       { 
-        category: "数据", 
-        subcategory: "数据库", 
-        name: "国内外主要天文数据中心", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Database" : "数据库", 
+        name: language === 'en' ? "Major Astronomical Data Centers Domestic and International" : "国内外主要天文数据中心", 
         url: "https://astro.bnu.edu.cn/Computational_Astronomy/html/7ziyuan/1canshu/canshu.htm" 
       },
       { 
-        category: "数据", 
-        subcategory: "数据库", 
-        name: "国家天文科学数据中心", 
+        category: language === 'en' ? "Data" : "数据", 
+        subcategory: language === 'en' ? "Database" : "数据库", 
+        name: language === 'en' ? "National Astronomical Science Data Center" : "国家天文科学数据中心", 
         url: "https://nadc.china-vo.org/data/" 
       }
     ],
     forums: [
       { 
-        category: "天文论坛", 
-        subcategory: "论坛", 
-        name: "牧夫网", 
+        category: language === 'en' ? "Astronomy Forums" : "天文论坛", 
+        subcategory: language === 'en' ? "Forums" : "论坛", 
+        name: language === 'en' ? "Mufu Network" : "牧夫网", 
         url: "https://bbs.imufu.cn/" 
       },
       { 
-        category: "天文论坛", 
-        subcategory: "论坛", 
-        name: "PixInsight官方社区", 
+        category: language === 'en' ? "Astronomy Forums" : "天文论坛", 
+        subcategory: language === 'en' ? "Forums" : "论坛", 
+        name: language === 'en' ? "PixInsight Official Community" : "PixInsight官方社区", 
         url: "https://pixinsight.com/forum/index.php" 
       }
     ],
     observatories: [
       { 
-        category: "天文台", 
-        subcategory: "租赁", 
-        name: "Telescope Live天文台租赁", 
+        category: language === 'en' ? "Observatories" : "天文台", 
+        subcategory: language === 'en' ? "Rental" : "租赁", 
+        name: language === 'en' ? "Telescope Live Observatory Rental" : "Telescope Live天文台租赁", 
         url: "https://app.telescope.live/login" 
       }
     ],
     beginners: [
       { 
-        category: "新手", 
-        subcategory: "教程", 
-        name: "QHYCCD天文摄影小站", 
+        category: language === 'en' ? "Beginners" : "新手", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
+        name: language === 'en' ? "QHYCCD Astrophotography Station" : "QHYCCD天文摄影小站", 
         url: "https://www.bilibili.com/opus/679310616214634529?spm_id_from=333.999.0.0" 
       },
       { 
-        category: "新手", 
-        subcategory: "教程", 
-        name: "拉近几十亿公里！普通人用天文望远镜能拍到什么？", 
+        category: language === 'en' ? "Beginners" : "新手", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
+        name: language === 'en' ? "Bringing Billions of Kilometers Closer! What Can Ordinary People Photograph with a Telescope?" : "拉近几十亿公里！普通人用天文望远镜能拍到什么？", 
         url: "https://www.bilibili.com/video/BV1y84y147YW/?spm_id_from=333.1387.favlist.content.click" 
       }
     ],
     hardware: [
       { 
-        category: "硬件", 
-        subcategory: "冷冻相机", 
+        category: language === 'en' ? "Hardware" : "硬件", 
+        subcategory: language === 'en' ? "Cooled Cameras" : "冷冻相机", 
         name: "QHYCCD", 
         url: "https://www.qhyccd.cn/" 
       },
       { 
-        category: "硬件", 
-        subcategory: "冷冻相机", 
-        name: "图谱天文", 
+        category: language === 'en' ? "Hardware" : "硬件", 
+        subcategory: language === 'en' ? "Cooled Cameras" : "冷冻相机", 
+        name: language === 'en' ? "ToupTek Astronomy" : "图谱天文", 
         url: "https://www.touptek-astro.com.cn/" 
       },
       { 
-        category: "硬件", 
-        subcategory: "冷冻相机", 
-        name: "fkzwo", 
+        category: language === 'en' ? "Hardware" : "硬件", 
+        subcategory: language === 'en' ? "Cooled Cameras" : "冷冻相机", 
+        name: language === 'en' ? "ZWO" : "ZWO", 
         url: "https://www.zwoastro.cn/" 
       },
       { 
-        category: "硬件", 
-        subcategory: "望远镜", 
-        name: "锐星光学", 
+        category: language === 'en' ? "Hardware" : "硬件", 
+        subcategory: language === 'en' ? "Telescopes" : "望远镜", 
+        name: language === 'en' ? "SharpStar Optics" : "锐星光学", 
         url: "https://www.sharpstar-optics.com/" 
       },
       { 
-        category: "硬件", 
-        subcategory: "望远镜", 
-        name: "裕众光学", 
+        category: language === 'en' ? "Hardware" : "硬件", 
+        subcategory: language === 'en' ? "Telescopes" : "望远镜", 
+        name: language === 'en' ? "Sky-Rover Optics" : "裕众光学", 
         url: "http://www.sky-rover.cn/projectlist.asp?LarCode=%D4%CB%B6%AF-%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5&Midcode=%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5" 
       },
       { 
-        category: "硬件", 
-        subcategory: "望远镜", 
+        category: language === 'en' ? "Hardware" : "硬件", 
+        subcategory: language === 'en' ? "Telescopes" : "望远镜", 
         name: "Sky-Watcher", 
         url: "https://www.skywatcher.com/" 
       }
     ],
     games: [
       { 
-        category: "游戏", 
-        subcategory: "模拟器", 
-        name: "SPACEX 国际空间站对接模拟器", 
+        category: language === 'en' ? "Games" : "游戏", 
+        subcategory: language === 'en' ? "Simulators" : "模拟器", 
+        name: language === 'en' ? "SPACEX International Space Station Docking Simulator" : "SPACEX 国际空间站对接模拟器", 
         url: "https://iss-sim.spacex.com/" 
       }
     ],
     resources: [
       { 
-        category: "资源", 
-        subcategory: "地图", 
-        name: "虚拟天文馆", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Maps" : "地图", 
+        name: language === 'en' ? "Stellarium" : "虚拟天文馆", 
         url: "https://stellarium.org/" 
       },
       { 
-        category: "资源", 
-        subcategory: "资源", 
-        name: "siril后期软件", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "Siril Post-processing Software" : "siril后期软件", 
         url: "https://siril.org/" 
       },
       { 
-        category: "资源", 
-        subcategory: "资源", 
-        name: "siril教程", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "Siril Tutorials" : "siril教程", 
         url: "https://siril.org/tutorials/" 
       },
       { 
-        category: "资源", 
+        category: language === 'en' ? "Resources" : "资源", 
         subcategory: "DIY", 
-        name: "带充电宝功能的便携显示器", 
+        name: language === 'en' ? "Portable Display with Power Bank Functionality" : "带充电宝功能的便携显示器", 
         url: "https://github.com/peng-zhihui/PocketLCD" 
       },
       { 
-        category: "资源", 
-        subcategory: "测评", 
-        name: "滤镜比较", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Reviews" : "测评", 
+        name: language === 'en' ? "Filter Comparison" : "滤镜比较", 
         url: "https://www.researchgate.net/profile/James-Thompson-32" 
       },
       { 
-        category: "资源", 
-        subcategory: "教程", 
-        name: "PC移动热点", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Tutorials" : "教程", 
+        name: language === 'en' ? "PC Mobile Hotspot" : "PC移动热点", 
         url: "https://blog.csdn.net/qq_36349997/article/details/140780453" 
       },
       { 
-        category: "资源", 
-        subcategory: "开源项目", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Open Source Projects" : "开源项目", 
         name: "QHYCCD-QUARCS", 
         url: "https://github.com/QHYCCD-QUARCS" 
       },
       { 
-        category: "资源", 
-        subcategory: "欣赏", 
-        name: "ESA/Hubble图片", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Gallery" : "欣赏", 
+        name: language === 'en' ? "ESA/Hubble Images" : "ESA/Hubble图片", 
         url: "https://esahubble.org/images/" 
       },
       { 
-        category: "资源", 
-        subcategory: "欣赏", 
-        name: "喷气推进实验室", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Gallery" : "欣赏", 
+        name: language === 'en' ? "Jet Propulsion Laboratory" : "喷气推进实验室", 
         url: "https://www.spitzer.caltech.edu/images" 
       },
       { 
-        category: "资源", 
-        subcategory: "欣赏", 
-        name: "高分辨率成像科学实验", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Gallery" : "欣赏", 
+        name: language === 'en' ? "High Resolution Imaging Science Experiment" : "高分辨率成像科学实验", 
         url: "https://www.uahirise.org/" 
       },
       { 
-        category: "资源", 
-        subcategory: "欣赏", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Gallery" : "欣赏", 
         name: "In-The-Sky.org", 
         url: "https://in-the-sky.org/" 
       },
       { 
-        category: "资源", 
-        subcategory: "资源", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
         name: "Nighttime Imaging 'N' Astronomy", 
         url: "https://nighttime-imaging.eu/" 
       },
       { 
-        category: "资源", 
-        subcategory: "资源", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
         name: "TheSky Astronomy Software", 
         url: "https://www.bisque.com/product-category/software/" 
       },
       { 
-        category: "资源", 
-        subcategory: "资源", 
+        category: language === 'en' ? "Resources" : "资源", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
         name: "Astroberry Server", 
         url: "https://www.astroberry.io/" 
       }

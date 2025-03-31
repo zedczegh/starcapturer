@@ -90,9 +90,11 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   
   // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
+    // Check if we came from PhotoPoints or another source
+    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
+    
     // Create a location signature to detect changes
     const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
-    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
     
     // If location has changed or coming from PhotoPoints, refresh data
     if (locationSignature !== lastLocationRef.current || 

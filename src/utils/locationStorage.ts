@@ -30,6 +30,7 @@ export interface SIQSLocation {
   longitude: number;
   bortleScale?: number;
   timestamp?: string;
+  fromPhotoPoints?: boolean;
 }
 
 // Save location to localStorage
@@ -70,6 +71,22 @@ export const getSavedLocation = (): SIQSLocation | null => {
   } catch (error) {
     console.error("Error retrieving location from localStorage:", error);
     return null;
+  }
+};
+
+// Save location with flag to indicate it came from PhotoPoints page
+export const saveLocationFromPhotoPoints = (location: SIQSLocation): boolean => {
+  try {
+    const locationWithFlag = {
+      ...location,
+      fromPhotoPoints: true,
+      timestamp: location.timestamp || new Date().toISOString()
+    };
+    
+    return saveLocation(locationWithFlag);
+  } catch (error) {
+    console.error("Error saving location from PhotoPoints:", error);
+    return false;
   }
 };
 

@@ -32,6 +32,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { loading, handleRefreshAll } = useWeatherUpdater();
   const containerRef = useRef<HTMLDivElement>(null);
   const initialRefreshDone = useRef(false);
+  const refreshTimerRef = useRef<number | null>(null);
   
   const {
     forecastData,
@@ -42,6 +43,35 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshForecast,
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
+
+  // Check if we came from PhotoPoints page and trigger refresh
+  useEffect(() => {
+    if (locationData?.fromPhotoPoints) {
+      console.log("Detected navigation from PhotoPoints, triggering refresh");
+      
+      // Clear any existing timer
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+      
+      // Set small delay to ensure component is fully mounted
+      refreshTimerRef.current = window.setTimeout(() => {
+        handleRefresh();
+        
+        // Reset the flag after refresh
+        setLocationData(prev => ({
+          ...prev,
+          fromPhotoPoints: false
+        }));
+      }, 300);
+    }
+    
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [locationData?.fromPhotoPoints]);
 
   // Handle forced refresh from parent component
   useEffect(() => {
@@ -70,7 +100,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       const timer = setTimeout(() => {
         console.log("Auto-refreshing location details on page load");
         handleRefresh();
-      }, 500);
+      }, 300);
       
       return () => clearTimeout(timer);
     }
@@ -103,7 +133,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             replace={true}
             variant="secondary"
             size="sm"
-            className="hover:bg-primary/20 transition-colors duration-300 hover:opacity-90"
+            className="hover:bg-primary/20 transition-colors duration-300 hover:opacity-85"
           />
         </div>
         
