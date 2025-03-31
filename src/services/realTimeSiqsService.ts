@@ -3,6 +3,15 @@ import { calculateNighttimeSIQS, clearNighttimeSIQSCache } from "@/utils/nightti
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { fetchWeatherData, fetchForecastData } from "@/lib/api";
 
+// Extend the SharedAstroSpot type to include SIQS properties
+declare module '@/lib/api/astroSpots' {
+  interface SharedAstroSpot {
+    siqs?: number;
+    isViable?: boolean;
+    siqsFactors?: any[];
+  }
+}
+
 // Cache for SIQS calculations
 const siqsCache = new Map<string, {
   siqs: number;
@@ -13,6 +22,86 @@ const siqsCache = new Map<string, {
 
 // Cache expiry time (15 minutes)
 const CACHE_EXPIRY = 15 * 60 * 1000;
+
+/**
+ * Calculate real-time SIQS for a single location
+ * @param location Location to calculate SIQS for
+ * @returns Promise resolving to location with SIQS data
+ */
+export const calculateRealTimeSiqs = async (
+  location: SharedAstroSpot
+): Promise<SharedAstroSpot> => {
+  try {
+    const cacheKey = `siqs-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    const cachedSiqs = siqsCache.get(cacheKey);
+    
+    // Return cached value if available and not expired
+    if (cachedSiqs && (Date.now() - cachedSiqs.timestamp) < CACHE_EXPIRY) {
+      return {
+        ...location,
+        siqs: cachedSiqs.siqs,
+        isViable: cachedSiqs.isViable,
+        siqsFactors: cachedSiqs.factors
+      };
+    }
+    
+    // Get weather data
+    const weatherData = await fetchWeatherData({
+      latitude: location.latitude,
+      longitude: location.longitude
+    });
+    
+    if (!weatherData) {
+      return {
+        ...location,
+        siqs: 0,
+        isViable: false
+      };
+    }
+    
+    // Get forecast data
+    const forecastData = await fetchForecastData({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      days: 1
+    });
+    
+    // Calculate SIQS
+    const locationWithWeather = {
+      ...location,
+      weatherData,
+      bortleScale: location.bortleScale || 5
+    };
+    
+    const siqsResult = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
+    
+    const siqs = siqsResult?.score || 0;
+    const isViable = siqsResult?.isViable !== false;
+    const factors = siqsResult?.factors;
+    
+    // Cache the result
+    siqsCache.set(cacheKey, {
+      siqs,
+      isViable,
+      factors,
+      timestamp: Date.now()
+    });
+    
+    return {
+      ...location,
+      siqs,
+      isViable,
+      siqsFactors: factors
+    };
+  } catch (error) {
+    console.error(`Error calculating real-time SIQS for location ${location.name}:`, error);
+    return {
+      ...location,
+      siqs: 0,
+      isViable: false
+    };
+  }
+};
 
 /**
  * Calculate SIQS for a batch of locations with optimized caching
