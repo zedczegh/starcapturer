@@ -1,204 +1,135 @@
-
-import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { MapIcon, SearchIcon } from "lucide-react";
+import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
-import useDebounce from "@/hooks/useDebounce";
-import { searchLocations, Location } from "@/services/geocoding";
-import { searchCache } from "@/services/caching/searchCache";
-import SearchInput from "./map/SearchInput";
-
-// Lazy load the search results component to improve initial loading speed
-const SearchResults = lazy(() => import("./map/SearchResults"));
-
-// Priority search terms that should trigger immediate search
-const PRIORITY_SEARCH_TERMS = ['ca', 'cal', 'cali', 'calif', 'new castle', 'newcastle', 'new york', 'ny', 'denmark'];
+import { Location as LocationType } from "@/services/geocoding/types";
+import { saveLocation } from "@/utils/locationStorage";
+import GlobeLocationSelector from "./GlobeLocationSelector";
+import { SIQSLocation } from "@/utils/locationStorage";
 
 interface MapSelectorProps {
-  onSelectLocation: (location: Location) => void;
-  children?: React.ReactNode;
+  onLocationSelect: (location: SIQSLocation) => void;
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({
-  onSelectLocation,
-  children
-}) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationType[]>([]);
+  const [isGlobeOpen, setIsGlobeOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [searchResults, setSearchResults] = useState<Location[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Use memo to avoid recreating this function on every render
-  const isPrioritySearchTerm = useMemo(() => {
-    return (term: string): boolean => {
-      const normalizedTerm = term.toLowerCase().trim();
-      return PRIORITY_SEARCH_TERMS.includes(normalizedTerm) || 
-             normalizedTerm.startsWith('califo') ||
-             normalizedTerm.startsWith('new ca');
+  // Debounce search function
+  const debouncedSearch = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    return (query: string) => {
+      clearTimeout(timeoutId);
+      
+      timeoutId = setTimeout(async () => {
+        if (query.trim() !== "") {
+          const results = await searchLocations(query, language);
+          setSearchResults(results);
+        } else {
+          setSearchResults([]);
+        }
+      }, 300);
     };
-  }, []);
-
-  // Effect for immediate search on priority terms
-  useEffect(() => {
-    if (searchTerm.length > 0) {
-      // Try cache first for fast response
-      const cachedResults = searchCache.getCachedResults(searchTerm.toLowerCase(), language);
-      
-      if (cachedResults && cachedResults.length > 0) {
-        setSearchResults(cachedResults);
-        setShowResults(true);
-        return;
-      }
-      
-      // For priority search terms, search immediately
-      if (isPrioritySearchTerm(searchTerm)) {
-        handleSearch(searchTerm);
-      }
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchTerm, language, isPrioritySearchTerm]);
-
-  // Normal debounced search effect for other terms
-  useEffect(() => {
-    if (debouncedSearchTerm.length > 0 && !isPrioritySearchTerm(debouncedSearchTerm)) {
-      handleSearch(debouncedSearchTerm);
-    } else if (debouncedSearchTerm.length === 0) {
-      setSearchResults([]);
-      setIsLoading(false);
-    }
-  }, [debouncedSearchTerm, language, isPrioritySearchTerm]);
-
-  const handleSearch = async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsLoading(false);
-      return;
-    }
+  }, [language]);
+  
+  // Handle search input changes
+  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+    debouncedSearch(query);
+  };
+  
+  // Handle location selection from search results
+  const handleSearchResultSelect = (location: LocationType) => {
+    const siqsLocation: SIQSLocation = {
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude
+    };
     
-    setIsLoading(true);
+    saveLocation(siqsLocation);
+    onLocationSelect(siqsLocation);
+    setSearchResults([]);
+    setSearchQuery("");
     
-    // Check cache first
-    const cachedResults = searchCache.getCachedResults(query.toLowerCase(), language);
-    if (cachedResults && cachedResults.length > 0) {
-      setSearchResults(cachedResults);
-      setIsLoading(false);
-      setShowResults(true);
-      return;
-    }
-    
-    try {
-      const results = await searchLocations(query, language);
-      setSearchResults(results);
-      setShowResults(true);
-    } catch (error) {
-      console.error("Location search error:", error);
-      toast.error(t("Search Error", "搜索错误"), {
-        description: t("Could not search for this location. Please try again.", "无法搜索此位置，请重试。")
-      });
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
+    // Clear the input field
+    if (searchInputRef.current) {
+      searchInputRef.current.value = "";
     }
   };
-
-  const handleSelectLocation = useCallback((location: Location) => {
-    onSelectLocation(location);
-    setSearchTerm("");
-    setSearchResults([]);
-    setShowResults(false);
-  }, [onSelectLocation]);
-
-  const handleSearchInputChange = useCallback((value: string) => {
-    setSearchTerm(value);
-    if (value.length > 0) {
-      setShowResults(true);
-    }
-  }, []);
-
-  const clearSearch = useCallback(() => {
-    setSearchTerm("");
-    setSearchResults([]);
-    setShowResults(false);
-  }, []);
-
-  // Handle clicks outside the search component
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
-    };
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Reset search results when language changes
-  useEffect(() => {
-    if (searchTerm.length > 0) {
-      handleSearch(searchTerm);
-    }
-  }, [language]);
-
-  if (children) {
-    return (
-      <div className="relative" ref={containerRef}>
-        <div onClick={() => setShowResults(true)}>
-          {children}
-        </div>
-        
-        {showResults && (
-          <div className="fixed md:absolute z-[9999] mt-1 w-96 max-w-[95vw] right-0 rounded-md bg-background/95 backdrop-blur-md border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
-            <div className="p-3">
-              <SearchInput
-                searchTerm={searchTerm}
-                setSearchTerm={handleSearchInputChange}
-                isLoading={isLoading}
-                clearSearch={clearSearch}
-                autoFocus
-              />
-            </div>
-            
-            <Suspense fallback={<div className="p-6 text-center">Loading results...</div>}>
-              <SearchResults 
-                searchResults={searchResults} 
-                handleSelectLocation={handleSelectLocation} 
-                searchTerm={searchTerm} 
-                isLoading={isLoading} 
-              />
-            </Suspense>
-          </div>
-        )}
-      </div>
-    );
-  }
-
+  
+  // Handle globe location selection
+  const handleGlobeLocationSelect = (location: SIQSLocation) => {
+    saveLocation(location);
+    onLocationSelect(location);
+    setIsGlobeOpen(false);
+  };
+  
+  // Open globe selector
+  const openGlobeSelector = () => {
+    setIsGlobeOpen(true);
+  };
+  
+  // Close globe selector
+  const closeGlobeSelector = () => {
+    setIsGlobeOpen(false);
+  };
+  
   return (
-    <div className="relative w-full" ref={containerRef}>
-      <SearchInput
-        searchTerm={searchTerm}
-        setSearchTerm={handleSearchInputChange}
-        isLoading={isLoading}
-        clearSearch={clearSearch}
-        onFocus={() => setShowResults(true)}
-      />
-
-      {showResults && (
-        <div className="fixed md:absolute z-[9999] mt-1 w-[calc(100vw-2rem)] md:w-full left-4 md:left-0 rounded-md bg-background border-2 border-primary/30 shadow-lg shadow-primary/20 overflow-hidden">
-          <Suspense fallback={<div className="p-6 text-center">Loading results...</div>}>
-            <SearchResults 
-              searchResults={searchResults} 
-              handleSelectLocation={handleSelectLocation} 
-              searchTerm={searchTerm} 
-              isLoading={isLoading} 
-            />
-          </Suspense>
+    <div className="relative">
+      {/* Search Input */}
+      <div className="relative">
+        <input
+          type="text"
+          ref={searchInputRef}
+          placeholder={t("Search for a location...", "搜索地点...")}
+          className="w-full px-4 py-2 rounded-md bg-cosmic-800 border border-cosmic-700 text-white focus:outline-none focus:border-primary transition-colors duration-200"
+          onChange={handleSearchInputChange}
+        />
+        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+          <SearchIcon className="h-5 w-5 text-gray-400" />
+        </div>
+      </div>
+      
+      {/* Search Results */}
+      {searchResults.length > 0 && (
+        <ul className="absolute z-10 mt-2 w-full rounded-md shadow-lg bg-cosmic-800 border border-cosmic-700 divide-y divide-cosmic-700">
+          {searchResults.map((result, index) => (
+            <li
+              key={index}
+              className="px-4 py-2 text-white hover:bg-cosmic-700 cursor-pointer transition-colors duration-200"
+              onClick={() => handleSearchResultSelect(result)}
+            >
+              {result.name}
+            </li>
+          ))}
+        </ul>
+      )}
+      
+      {/* Globe Selector Button */}
+      <Button
+        variant="secondary"
+        className="mt-4 w-full flex items-center justify-center gap-2 bg-cosmic-700 hover:bg-cosmic-600"
+        onClick={openGlobeSelector}
+      >
+        <MapIcon className="w-4 h-4" />
+        {t("Select from Globe", "从地球选择")}
+      </Button>
+      
+      {/* Globe Selector Modal */}
+      {isGlobeOpen && (
+        <div className="fixed top-0 left-0 w-full h-full bg-black/50 z-50 flex items-center justify-center">
+          <GlobeLocationSelector
+            onLocationSelect={handleGlobeLocationSelect}
+            onClose={closeGlobeSelector}
+          />
         </div>
       )}
     </div>

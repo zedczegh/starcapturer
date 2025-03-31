@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { InfoIcon, AlertCircle } from "lucide-react";
@@ -14,6 +13,7 @@ import {
 import { getAverageForecastSIQS } from "@/utils/nighttimeSIQS";
 import { getProgressColorClass } from "./siqs/utils/progressColor";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 interface SIQSSummaryProps {
   siqsData: {
@@ -69,40 +69,113 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
   const { t, language } = useLanguage();
   const [displayScore, setDisplayScore] = useState<number | null>(null);
   
-  // Use forecast data for SIQS if available
-  useEffect(() => {
-    if (forecastData?.daily?.time) {
-      // Try to get SIQS from forecast rows first
-      try {
-        const averageSIQS = getAverageForecastSIQS(forecastData.daily);
-        if (averageSIQS > 0) {
-          console.log("Using average forecast SIQS:", averageSIQS);
-          setDisplayScore(averageSIQS);
-          return;
-        }
-      } catch (error) {
-        console.error("Error getting average forecast SIQS:", error);
+  const extractSIQSFromForecast = useCallback(() => {
+    if (!forecastData) return null;
+    
+    if (forecastData.daily?.siqs && Array.isArray(forecastData.daily.siqs)) {
+      const validScores = forecastData.daily.siqs.filter((s: any) => 
+        typeof s === 'number' && !isNaN(s) && s > 0
+      );
+      
+      if (validScores.length > 0) {
+        const avgScore = validScores.reduce((sum: number, score: number) => sum + score, 0) / validScores.length;
+        console.log("Using average from forecast siqs array:", avgScore);
+        return avgScore;
       }
     }
     
-    // Fall back to siqsData if forecast parsing fails
-    if (siqsData && siqsData.score !== undefined) {
-      // Ensure the score is always on a 0-10 scale
-      const normalizedScore = siqsData.score <= 10 ? siqsData.score : siqsData.score / 10;
-      setDisplayScore(normalizedScore);
+    try {
+      if (forecastData.daily?.time) {
+        const nightScores = getAverageForecastSIQS(forecastData.daily);
+        if (nightScores > 0) {
+          console.log("Using calculated average forecast SIQS:", nightScores);
+          return nightScores;
+        }
+      }
+    } catch (error) {
+      console.error("Error calculating forecast SIQS:", error);
     }
-  }, [forecastData, siqsData]);
+    
+    if (forecastData.hourly) {
+      try {
+        const now = new Date();
+        const tonight = new Date(now);
+        tonight.setHours(21, 0, 0, 0);
+        
+        const nighttimeForecasts = [];
+        for (let i = 0; i < forecastData.hourly.time.length; i++) {
+          const forecastTime = new Date(forecastData.hourly.time[i]);
+          if (forecastTime >= tonight && 
+              (forecastTime.getHours() >= 20 || forecastTime.getHours() <= 5)) {
+            
+            nighttimeForecasts.push({
+              time: forecastData.hourly.time[i],
+              cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
+              weatherCode: forecastData.hourly.weather_code?.[i]
+            });
+          }
+        }
+        
+        if (nighttimeForecasts.length > 0) {
+          const avgCloudCover = nighttimeForecasts.reduce(
+            (sum, forecast) => sum + forecast.cloudCover, 0
+          ) / nighttimeForecasts.length;
+          
+          if (avgCloudCover < 40) {
+            const cloudScore = Math.max(0, Math.min(10, 10 - (avgCloudCover * 0.25)));
+            console.log("Using estimated score from cloud cover:", cloudScore);
+            return cloudScore;
+          }
+        }
+      } catch (error) {
+        console.error("Error analyzing hourly forecast:", error);
+      }
+    }
+    
+    return null;
+  }, [forecastData]);
+  
+  useEffect(() => {
+    const forecastScore = extractSIQSFromForecast();
+    
+    if (forecastScore !== null) {
+      setDisplayScore(forecastScore);
+    } else if (siqsData && siqsData.score !== undefined) {
+      const normalizedScore = siqsData.score <= 10 ? siqsData.score : siqsData.score / 10;
+      
+      if (normalizedScore < 3 && weatherData && weatherData.cloudCover !== undefined) {
+        const cloudCover = weatherData.cloudCover;
+        if (cloudCover < 40) {
+          const estimatedScore = Math.max(0, Math.min(10, 10 - (cloudCover * 0.25)));
+          console.log("Overriding low SIQS score due to good cloud conditions:", estimatedScore);
+          setDisplayScore(estimatedScore);
+          return;
+        }
+      }
+      
+      setDisplayScore(normalizedScore);
+    } else {
+      if (weatherData && weatherData.cloudCover !== undefined) {
+        const cloudCover = weatherData.cloudCover;
+        if (cloudCover < 40) {
+          const estimatedScore = Math.max(0, Math.min(10, 10 - (cloudCover * 0.25)));
+          console.log("Using default estimated score from conditions:", estimatedScore);
+          setDisplayScore(estimatedScore);
+          return;
+        }
+      }
+      
+      setDisplayScore(0);
+    }
+  }, [forecastData, siqsData, weatherData, extractSIQSFromForecast]);
   
   if (!siqsData) {
     return null;
   }
   
-  // Generate condition reminders
   const reminders: { condition: string; threshold: string; advice: string }[] = [];
   
-  // Add weather-based reminders
   if (weatherData) {
-    // Wind speed reminder
     if (weatherData.windSpeed > 15) {
       reminders.push({
         condition: t("Wind Speed", "风速"),
@@ -114,7 +187,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
       });
     }
     
-    // Humidity reminder for dew risk
     if (weatherData.humidity > 80) {
       reminders.push({
         condition: t("Humidity", "湿度"),
@@ -124,7 +196,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     }
   }
   
-  // Moon phase reminder
   if (moonPhase !== undefined) {
     const isBright = typeof moonPhase === 'string' 
       ? moonPhase.includes("Full") || moonPhase.includes("Gibbous")
@@ -142,7 +213,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     }
   }
   
-  // Light pollution reminder
   if (bortleScale && bortleScale > 5) {
     reminders.push({
       condition: t("Light Pollution", "光污染"),
@@ -151,7 +221,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     });
   }
   
-  // Cloud cover reminder
   const cloudFactor = siqsData.factors?.find(f => f.name === "Cloud Cover" || f.name === "云层覆盖");
   if (cloudFactor && cloudFactor.score < 70) {
     reminders.push({
@@ -164,7 +233,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     });
   }
   
-  // Seeing conditions reminder
   const seeingFactor = siqsData.factors?.find(f => f.name === "Seeing Conditions" || f.name === "视宁度");
   if (seeingFactor && seeingFactor.score < 60) {
     reminders.push({
@@ -174,7 +242,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     });
   }
 
-  // Determine score color class
   const getScoreColorClass = (score: number) => {
     if (score < 3) return "bg-red-500/10 text-red-400 border-red-500/30";
     if (score < 5) return "bg-orange-500/10 text-orange-400 border-orange-500/30";
@@ -183,7 +250,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     return "bg-blue-500/10 text-blue-400 border-blue-500/30";
   };
 
-  // Get appropriate score label
   const getScoreLabel = (score: number) => {
     if (score < 3) return t("Poor", "较差");
     if (score < 5) return t("Fair", "一般");
@@ -192,14 +258,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
     return t("Excellent", "极佳");
   };
   
-  // Use displayScore (which comes from forecast data if available) or fall back to original
   const scoreOn10Scale = displayScore !== null ? displayScore : 
-    (siqsData.score <= 10 ? siqsData.score : siqsData.score / 10);
+    (siqsData?.score <= 10 ? siqsData?.score : siqsData?.score / 10) || 0;
   
-  // Get the progress bar color class
   const progressClass = getProgressColorClass(scoreOn10Scale);
   
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -235,7 +298,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
           </h2>
         </CardHeader>
         <CardContent className="p-4 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          {/* Score Display */}
           <motion.div 
             className="flex items-center justify-center mb-4"
             variants={itemVariants}
@@ -246,7 +308,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
             </div>
           </motion.div>
           
-          {/* Recommendation message */}
           <motion.p 
             className="text-center mb-4 italic text-sm"
             variants={itemVariants}
@@ -254,7 +315,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
             {getRecommendationMessage(scoreOn10Scale, language as 'en' | 'zh')}
           </motion.p>
           
-          {/* Bar visualization */}
           <motion.div 
             className="mb-6"
             variants={itemVariants}
@@ -274,14 +334,12 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({
             </div>
           </motion.div>
           
-          {/* Factors list */}
           <motion.div variants={itemVariants}>
             {siqsData.factors && siqsData.factors.length > 0 && (
               <SIQSFactorsList factors={siqsData.factors} />
             )}
           </motion.div>
           
-          {/* Reminders Section */}
           {reminders.length > 0 && (
             <motion.div 
               className="mt-4 bg-cosmic-800/30 rounded-lg p-3 border border-cosmic-700/30 shadow-inner"

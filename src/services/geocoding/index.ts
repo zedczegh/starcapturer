@@ -28,7 +28,7 @@ export async function searchLocations(
   const normalizedQuery = query.trim().toLowerCase();
   
   // Check cache first for faster response times
-  const cachedResults = searchCache.getCachedResults(normalizedQuery, language);
+  const cachedResults = searchCache.getCachedResults(normalizedQuery, language as Language);
   if (cachedResults && cachedResults.length > 0) {
     console.log("Returning cached results for", normalizedQuery);
     return cachedResults;
@@ -36,7 +36,7 @@ export async function searchLocations(
   
   try {
     // Start with our internal database matches
-    let internalMatches = findMatchingLocations(normalizedQuery, 10, language);
+    let internalMatches = findMatchingLocations(normalizedQuery, 10, language as Language);
     
     // Enhanced search for Chinese locations in our database
     if (language === 'zh' || containsChineseCharacters(normalizedQuery)) {
@@ -86,14 +86,14 @@ export async function searchLocations(
       
       // Cache the results
       if (results.length > 0) {
-        searchCache.setCachedResults(normalizedQuery, results, language);
+        searchCache.cacheResults(normalizedQuery, results, language as Language);
       }
       
       return results.slice(0, 10);
     }
     
     // If we don't have enough internal results, proceed with an external API call
-    const apiResults = await getExternalLocationResults(normalizedQuery, language);
+    const apiResults = await getExternalLocationResults(normalizedQuery, language as Language);
     
     // Combine with internal results, prioritizing our own data
     results = [...results, ...apiResults.filter(apiLoc => 
@@ -109,7 +109,7 @@ export async function searchLocations(
     
     // Cache the results for future use
     if (results.length > 0) {
-      searchCache.setCachedResults(normalizedQuery, results, language);
+      searchCache.cacheResults(normalizedQuery, results, language as Language);
     }
     
     return results;

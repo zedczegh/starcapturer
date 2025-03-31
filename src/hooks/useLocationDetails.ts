@@ -3,12 +3,14 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
 import { clearForecastCache } from "./siqs/forecastFetcher";
+import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 
 export const useLocationDetails = (locationData: any, setLocationData: (data: any) => void) => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const initialLoadCompleteRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
+  const siqsUpdatedRef = useRef<boolean>(false);
   
   const { 
     forecastData, 
@@ -38,6 +40,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
       console.log("Location changed, clearing forecast cache");
       clearForecastCache(); // Clear cache when location changes
       initialLoadCompleteRef.current = false; // Reset to trigger a refresh
+      siqsUpdatedRef.current = false; // Reset SIQS update flag
     }
     
     lastLocationRef.current = currentLocation;
@@ -60,9 +63,62 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     }
   }, [locationData]);
 
+  // Update SIQS score when forecast data is available
+  useEffect(() => {
+    if (forecastData && !forecastLoading && locationData && !siqsUpdatedRef.current) {
+      console.log("Updating SIQS score with fresh forecast data");
+      
+      try {
+        const updatedSIQS = calculateNighttimeSIQS(locationData, forecastData, null);
+        
+        if (updatedSIQS) {
+          console.log("Nighttime SIQS calculated:", updatedSIQS.score);
+          
+          // Only update if we have meaningful data (either good or bad score)
+          setLocationData({
+            ...locationData,
+            siqsResult: updatedSIQS
+          });
+          
+          siqsUpdatedRef.current = true;
+        } else if (locationData.weatherData) {
+          // If cloud cover is low but we couldn't calculate nighttime SIQS,
+          // update with a fallback calculation
+          const cloudCover = locationData.weatherData.cloudCover;
+          if (cloudCover < 40) {
+            const estimatedScore = Math.max(0, Math.min(10, 10 - (cloudCover * 0.25)));
+            console.log("Using fallback SIQS based on current cloud cover:", estimatedScore);
+            
+            setLocationData({
+              ...locationData,
+              siqsResult: {
+                score: estimatedScore,
+                isViable: true,
+                factors: [
+                  {
+                    name: "Cloud Cover",
+                    score: (100 - cloudCover * 2.5),
+                    description: `Cloud cover of ${cloudCover}% is good for imaging`
+                  }
+                ]
+              }
+            });
+            
+            siqsUpdatedRef.current = true;
+          }
+        }
+      } catch (error) {
+        console.error("Error updating SIQS with forecast data:", error);
+      }
+    }
+  }, [forecastData, forecastLoading, locationData, setLocationData]);
+
   // Memoized wrapper functions
   const handleRefreshForecast = useCallback(() => {
     if (!locationData) return;
+    
+    // Reset SIQS update flag to ensure it updates again
+    siqsUpdatedRef.current = false;
     
     // Clear the cache for this specific location to force a fresh fetch
     clearForecastCache(locationData.latitude, locationData.longitude);
@@ -77,6 +133,9 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   // Wrapper function for refreshing all data
   const handleRefreshAll = useCallback(() => {
     if (!locationData) return;
+    
+    // Reset SIQS update flag
+    siqsUpdatedRef.current = false;
     
     const fetchBothForecasts = () => {
       handleRefreshForecast();
