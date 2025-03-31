@@ -49,3 +49,14 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 function deg2rad(deg: number): number {
   return deg * (Math.PI/180);
 }
+
+/**
+ * Normalize coordinates to ensure they're within valid ranges
+ * This handles edge cases and ensures consistent coordinate format
+ */
+export function normalizeCoordinates(coords: { latitude: number; longitude: number }): { latitude: number; longitude: number } {
+  return {
+    latitude: Math.max(-90, Math.min(90, coords.latitude)),
+    longitude: normalizeLongitude(coords.longitude)
+  };
+}

@@ -1,6 +1,6 @@
 
 import React, { useCallback, memo, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -56,6 +56,32 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     return createCustomMarker(); // Default icon for regular locations
   }, [isDarkSkyReserve]);
 
+  // Create a circle for dark sky reserves if needed
+  const renderDarkSkyCircle = useCallback(() => {
+    if (!isDarkSkyReserve) return null;
+    
+    // We'll implement this using vanilla Leaflet to avoid the Circle import issue
+    React.useEffect(() => {
+      const map = document.querySelector('.leaflet-map-pane')?.parentElement;
+      if (!map) return;
+      
+      // Create a circular overlay for the dark sky region
+      const circle = L.circle(position, {
+        radius: 10000, // 10km radius
+        color: '#3b82f6',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.1,
+        weight: 1
+      }).addTo(map as any);
+      
+      return () => {
+        circle.remove();
+      };
+    }, []);
+    
+    return null;
+  }, [isDarkSkyReserve, position]);
+
   return (
     <>
       <MapStyles />
@@ -74,19 +100,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             subdomains={['a', 'b', 'c']}
           />
           
-          {/* Add a circle for dark sky reserves to indicate the quality area */}
-          {isDarkSkyReserve && (
-            <Circle 
-              center={position} 
-              radius={10000} // 10km radius for dark sky area
-              pathOptions={{ 
-                fillColor: '#3b82f6', 
-                fillOpacity: 0.1, 
-                color: '#3b82f6', 
-                weight: 1 
-              }} 
-            />
-          )}
+          {renderDarkSkyCircle()}
           
           <Marker 
             position={position}
@@ -94,54 +108,23 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           >
             <Popup>
               <div className="text-sm">
-                <div className="font-medium">{locationName}</div>
-                {isDarkSkyReserve && certification && (
-                  <div className="text-blue-600 text-xs mt-1">
-                    {t("Certified Dark Sky Location", "认证暗夜位置")}
-                    <div className="font-bold">{certification}</div>
+                <strong>{locationName}</strong>
+                {isDarkSkyReserve && (
+                  <div className="mt-1 text-blue-400 text-xs">
+                    {certification || t("Dark Sky Reserve", "暗夜保护区")}
                   </div>
                 )}
-                <div className="mt-1 text-gray-500">
-                  {position[0].toFixed(4)}, {position[1].toFixed(4)}
-                </div>
               </div>
             </Popup>
           </Marker>
           
           <MapUpdater position={position} />
+          
           {editable && <MapEvents onMapClick={onMapClick} />}
         </MapContainer>
       </div>
-      
-      {showInfoPanel && (
-        <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
-          <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
-          <p className="text-sm text-muted-foreground">
-            {t(`${locationName} is located at coordinates ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`, 
-               `${locationName}位于坐标 ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`)}
-          </p>
-          
-          {/* Show dark sky certification in the info panel */}
-          {isDarkSkyReserve && certification && (
-            <div className="mt-2 text-sm">
-              <span className="text-blue-400 font-medium">
-                {t("Dark Sky Certification: ", "暗夜保护认证: ")}
-              </span>
-              <span className="text-blue-200">{certification}</span>
-            </div>
-          )}
-          
-          {editable && (
-            <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
-            </p>
-          )}
-        </div>
-      )}
     </>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export default memo(LazyMapComponent);
+export default LazyMapComponent;

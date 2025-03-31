@@ -1,34 +1,36 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Hook to separate certified and calculated recommendation locations
+ * Optimized hook to separate certified and calculated recommendation locations
+ * Uses memoization for better performance
  */
 export function useCertifiedLocations(locations: SharedAstroSpot[]) {
-  const [certifiedLocations, setCertifiedLocations] = useState<SharedAstroSpot[]>([]);
-  const [calculatedLocations, setCalculatedLocations] = useState<SharedAstroSpot[]>([]);
-  
-  // Whenever the locations array changes, separate into certified and calculated
-  useEffect(() => {
-    const certified = locations.filter(location => 
+  // Use memoization to avoid unnecessary recalculations when locations array reference doesn't change
+  const certifiedLocations = useMemo(() => 
+    locations.filter(location => 
       location.isDarkSkyReserve === true || 
       location.certification !== undefined
-    );
-    
-    const calculated = locations.filter(location => 
+    ),
+    [locations]
+  );
+  
+  const calculatedLocations = useMemo(() => 
+    locations.filter(location => 
       !location.isDarkSkyReserve && 
       location.certification === undefined
-    );
-    
-    setCertifiedLocations(certified);
-    setCalculatedLocations(calculated);
-  }, [locations]);
+    ),
+    [locations]
+  );
+  
+  const hasCertifiedLocations = useMemo(() => certifiedLocations.length > 0, [certifiedLocations]);
+  const hasCalculatedLocations = useMemo(() => calculatedLocations.length > 0, [calculatedLocations]);
   
   return {
     certifiedLocations,
     calculatedLocations,
-    hasCertifiedLocations: certifiedLocations.length > 0,
-    hasCalculatedLocations: calculatedLocations.length > 0
+    hasCertifiedLocations,
+    hasCalculatedLocations
   };
 }

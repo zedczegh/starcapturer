@@ -1,4 +1,3 @@
-
 /**
  * Types and functions for working with shared astronomy spots
  */
@@ -23,6 +22,7 @@ export interface SharedAstroSpot {
   timestamp: string;
   isDarkSkyReserve?: boolean;
   certification?: string;
+  photographer?: string; // Add photographer field to schema
 }
 
 /**
@@ -85,7 +85,8 @@ export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | 
       description: "A great spot for astrophotography with minimal light pollution.",
       timestamp: new Date().toISOString(),
       isDarkSkyReserve: id.includes('reserve'),
-      certification: id.includes('certified') ? "International Dark Sky Association" : undefined
+      certification: id.includes('certified') ? "International Dark Sky Association" : undefined,
+      photographer: "John Doe" // Add photographer field to mock spot
     };
   } catch (error) {
     console.error('Error fetching shared astronomy spot:', error);
@@ -120,6 +121,7 @@ export async function shareAstroSpot(spot: Omit<SharedAstroSpot, 'id'>): Promise
 
 /**
  * Generate mock data for development and testing
+ * Enhanced with more realistic dark sky locations
  */
 function generateMockSpots(
   centerLat: number, 
@@ -146,34 +148,41 @@ function generateMockSpots(
     "土星环瞭望台", "火星天文台", "金星点", "水星高地"
   ];
   
-  // Add certified locations first (about 20% of total)
-  const certifiedCount = Math.floor(count * 0.2);
+  // Add certified locations from Dark Sky International (about 30% of total)
+  const certifiedCount = Math.floor(count * 0.3);
+  
+  // Certifications from Dark Sky International and other organizations
+  const certifications = [
+    "International Dark Sky Association Gold Tier",
+    "International Dark Sky Association Silver Tier",
+    "International Dark Sky Association Bronze Tier",
+    "Dark Sky Preserve",
+    "Starlight Reserve",
+    "Urban Night Sky Place",
+    "Dark Sky Sanctuary",
+    "International Dark Sky Park",
+    "International Dark Sky Reserve",
+    "Dark Sky Community"
+  ];
+  
   for (let i = 0; i < certifiedCount; i++) {
     // Generate a position within the specified radius
-    const randomPoint = generateRandomPoint(centerLat, centerLng, radiusKm * 0.7); // Keep certified points closer
+    const randomPoint = generateRandomPoint(centerLat, centerLng, radiusKm * 0.8); // Keep certified points closer
     
     const nameIndex = i % englishNames.length;
     
     // Higher-quality spots for certified locations
-    const bortleScale = Math.max(1, Math.min(4, Math.floor(Math.random() * 3) + 1));
+    const bortleScale = Math.max(1, Math.min(3, Math.floor(Math.random() * 3) + 1));
     
-    // Add certification details
-    const certifications = [
-      "International Dark Sky Association Gold Tier",
-      "International Dark Sky Association Silver Tier",
-      "Dark Sky Preserve",
-      "Starlight Reserve",
-      "Urban Night Sky Place"
-    ];
-    
+    // Create a certified dark sky location
     spots.push({
       id: `certified-${i}-${Date.now()}`,
-      name: `${englishNames[nameIndex]} Dark Sky Reserve`,
-      chineseName: `${chineseNames[nameIndex]}暗夜保护区`,
+      name: `${englishNames[nameIndex]} Dark Sky ${i % 2 === 0 ? 'Park' : 'Reserve'}`,
+      chineseName: `${chineseNames[nameIndex]}暗夜${i % 2 === 0 ? '公园' : '保护区'}`,
       latitude: randomPoint.latitude,
       longitude: randomPoint.longitude,
       bortleScale,
-      siqs: 9 - Math.random() * 2, // SIQS between 7-9 for certified locations
+      siqs: 9 - Math.random() * 1.5, // SIQS between 7.5-9 for certified locations
       isViable: true,
       distance: randomPoint.distance,
       description: "An officially certified dark sky location with exceptional stargazing conditions.",
@@ -190,8 +199,25 @@ function generateMockSpots(
     
     const nameIndex = i % englishNames.length;
     
-    // More realistic Bortle scale distribution
-    const bortleScale = Math.max(1, Math.min(9, Math.floor(Math.random() * 7) + 1));
+    // Realistic Bortle scale distribution weighted toward darker skies
+    // This creates a more realistic set of results that are actually good for astronomy
+    let bortleScale;
+    const rand = Math.random();
+    if (rand < 0.4) {
+      // 40% chance of good locations (Bortle 1-3)
+      bortleScale = Math.floor(Math.random() * 3) + 1;
+    } else if (rand < 0.7) {
+      // 30% chance of moderate locations (Bortle 4-5)
+      bortleScale = Math.floor(Math.random() * 2) + 4;
+    } else {
+      // 30% chance of poor locations (Bortle 6-9)
+      bortleScale = Math.floor(Math.random() * 4) + 6;
+    }
+    
+    // Calculate a realistic SIQS score based on Bortle scale
+    // SIQS is roughly inverse to Bortle scale but with some randomness
+    const baseSiqs = 10 - bortleScale;
+    const siqs = Math.max(1, Math.min(9, baseSiqs + (Math.random() * 2 - 1)));
     
     spots.push({
       id: `spot-${i}-${Date.now()}`,
@@ -200,7 +226,7 @@ function generateMockSpots(
       latitude: randomPoint.latitude,
       longitude: randomPoint.longitude,
       bortleScale,
-      siqs: Math.max(1, Math.min(9, 10 - bortleScale + (Math.random() * 2 - 1))),
+      siqs: siqs,
       isViable: bortleScale < 6,
       distance: randomPoint.distance,
       description: "A good location for astrophotography and stargazing.",

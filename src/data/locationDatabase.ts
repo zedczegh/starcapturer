@@ -13,6 +13,7 @@ import { polarLocations } from './regions/polarLocations';
 import { centralAsiaLocations } from './regions/centralAsiaLocations';
 import { chinaSuburbanLocations } from './regions/chinaSuburbanLocations';
 import { chinaMountainLocations } from './regions/chinaMountainLocations';
+import { darkSkyLocations } from './regions/darkSkyLocations';
 
 export interface LocationEntry {
   name: string;
@@ -32,7 +33,8 @@ export const locationDatabase: LocationEntry[] = [
   ...polarLocations,
   ...centralAsiaLocations,
   ...chinaSuburbanLocations,
-  ...chinaMountainLocations
+  ...chinaMountainLocations,
+  ...darkSkyLocations  // Add dark sky locations
 ];
 
 // Move distance calculation to a utility file to avoid duplication

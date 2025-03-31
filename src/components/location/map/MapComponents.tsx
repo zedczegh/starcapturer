@@ -1,13 +1,13 @@
 
-import React, { useEffect } from "react";
-import { useMap, useMapEvents } from "react-leaflet";
+import React from "react";
+import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 // Update map view when center position changes
 export function MapUpdater({ position }: { position: [number, number] }) {
   const map = useMap();
   
-  useEffect(() => {
+  React.useEffect(() => {
     map.setView(position, map.getZoom(), {
       animate: true,
       duration: 1
@@ -19,11 +19,19 @@ export function MapUpdater({ position }: { position: [number, number] }) {
 
 // Handle map click events for editable maps
 export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click: (e) => {
+  const map = useMap();
+  
+  React.useEffect(() => {
+    const handleClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
-    }
-  });
+    };
+    
+    map.on('click', handleClick);
+    
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onMapClick]);
   
   return null;
 }
@@ -31,7 +39,7 @@ export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: numbe
 // Apply global map styles
 export function MapStyles() {
   return (
-    <style jsx global>{`
+    <style>{`
       .leaflet-container {
         height: 100%;
         width: 100%;
