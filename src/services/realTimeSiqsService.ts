@@ -176,17 +176,31 @@ export async function findBestViewingLocations(
     console.log(`Finding best viewing locations within ${radius}km radius, certified only: ${certifiedOnly}`);
     
     // Get recommended points within the specified radius
-    const points = await getRecommendedPhotoPoints(userLat, userLng, radius, certifiedOnly);
+    const points = await getRecommendedPhotoPoints(userLat, userLng, radius);
     
     if (!points || points.length === 0) {
       console.log("No photo points found within radius");
       return [];
     }
     
-    console.log(`Found ${points.length} potential photo points within ${radius}km radius`);
+    // If certifiedOnly is true, filter out non-certified locations
+    let filteredPoints = points;
+    if (certifiedOnly) {
+      filteredPoints = points.filter(point => 
+        point.isDarkSkyReserve || 
+        (point.certification && point.certification.length > 0)
+      );
+      
+      if (filteredPoints.length === 0) {
+        console.log("No certified locations found within radius");
+        return [];
+      }
+    }
+    
+    console.log(`Found ${filteredPoints.length} potential photo points within ${radius}km radius`);
     
     // Calculate distances for each point if not already present
-    const pointsWithDistance = points.map(point => {
+    const pointsWithDistance = filteredPoints.map(point => {
       if (typeof point.distance !== 'number') {
         const distance = calculateDistance(userLat, userLng, point.latitude, point.longitude);
         return { ...point, distance };
@@ -247,7 +261,7 @@ export async function getFallbackLocations(
     console.log(`Finding fallback locations within ${maxRange}km radius`);
     
     // Get more locations within the max range
-    const points = await getRecommendedPhotoPoints(userLat, userLng, maxRange, false, 30);
+    const points = await getRecommendedPhotoPoints(userLat, userLng, maxRange);
     
     if (!points || points.length === 0) {
       return [];

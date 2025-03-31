@@ -21,7 +21,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
       return;
     }
     
-    console.log(`Processing ${locations.length} locations for certified/calculated separation`);
+    console.log(`Processing ${locations.length} locations for certified/calculated separation with radius: ${searchRadius}km`);
     
     // Identify certified locations with improved criteria
     const certified = locations.filter(location => {
@@ -62,7 +62,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
       !certified.some(cert => cert.id === location.id)
     );
     
-    console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations`);
+    console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations with radius: ${searchRadius}km`);
     
     setProcessedLocations({
       certified,
