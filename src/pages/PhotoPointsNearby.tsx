@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmetProvider, Helmet } from 'react-helmet-async'; // Import HelmetProvider
+import { Helmet } from 'react-helmet-async'; // Just import Helmet
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -67,13 +67,15 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [getPosition, userLocation]);
 
-  // Page title - using simple string instead of Helmet to avoid SSR issues
+  // Page title - using Helmet for proper title handling
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
-      {/* Using a simple title element for now */}
-      <title>{pageTitle}</title>
+      {/* Use Helmet component for setting page title */}
+      <Helmet>
+        <title>{pageTitle}</title>
+      </Helmet>
       
       <div className="pt-20 md:pt-28 pb-20">
         <div className="container mx-auto px-4">
