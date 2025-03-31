@@ -39,6 +39,8 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Westhavelland", coordinates: [52.7167, 12.3133], bortleScale: 1.5, radius: 30, type: 'dark-site' },
   { name: "Winklmoosalm", coordinates: [47.6694, 12.5803], bortleScale: 1.5, radius: 20, type: 'dark-site' },
   { name: "Yorkshire Dales", coordinates: [54.2380, -2.0037], bortleScale: 1.5, radius: 30, type: 'dark-site' },
+  { name: "Julian Alps", coordinates: [46.3309, 13.5500], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Vayots Dzor", coordinates: [39.7500, 45.3333], bortleScale: 1, radius: 35, type: 'dark-site' },
   
   // Dark Sky Parks (public lands with exceptional starry nights)
   { name: "Anza-Borrego Desert State Park", coordinates: [33.1000, -116.3000], bortleScale: 1, radius: 40, type: 'dark-site' },
@@ -83,6 +85,16 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Weber County North Fork Park", coordinates: [41.3483, -111.8333], bortleScale: 2, radius: 20, type: 'dark-site' },
   { name: "Yeongyang Firefly Eco Park", coordinates: [36.6700, 129.1100], bortleScale: 1, radius: 25, type: 'dark-site' },
   { name: "Zion National Park", coordinates: [37.2982, -113.0263], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Bryce Canyon National Park", coordinates: [37.5930, -112.1871], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Copper Breaks State Park", coordinates: [34.1147, -99.7500], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Dr. T.K. Lawless Park", coordinates: [41.8553, -85.8347], bortleScale: 1, radius: 15, type: 'dark-site' },
+  { name: "Grand Canyon-Parashant National Monument", coordinates: [36.4100, -113.6800], bortleScale: 1, radius: 50, type: 'dark-site' },
+  { name: "Harmony Florida", coordinates: [28.1894, -81.1773], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Mayland Earth to Sky Park", coordinates: [35.9255, -82.0639], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Middle Fork River Forest Preserve", coordinates: [40.3500, -88.1700], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Prineville Reservoir State Park", coordinates: [44.1253, -120.7500], bortleScale: 1, radius: 20, type: 'dark-site' },
+  { name: "Rappahannock County Park", coordinates: [38.7133, -78.1586], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Stelvio National Park", coordinates: [46.5000, 10.5000], bortleScale: 1, radius: 35, type: 'dark-site' },
   
   // Dark Sky Communities (populated areas committed to dark sky preservation)
   { name: "Beverly Shores", coordinates: [41.6875, -87.0031], bortleScale: 3, radius: 10, type: 'dark-site' },
@@ -108,6 +120,11 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Timpanogos Valley", coordinates: [40.5022, -111.5740], bortleScale: 3, radius: 15, type: 'dark-site' },
   { name: "Torrey", coordinates: [38.2997, -111.4194], bortleScale: 2, radius: 15, type: 'dark-site' },
   { name: "Wimberley Valley", coordinates: [30.0002, -98.0997], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Westcliffe & Silver Cliff", coordinates: [38.1322, -105.4625], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Ridgway", coordinates: [38.1520, -107.7508], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Nucla & Naturita", coordinates: [38.2420, -108.5485], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Crestone", coordinates: [37.9936, -105.7002], bortleScale: 2, radius: 15, type: 'dark-site' },
+  { name: "Sark", coordinates: [49.4373, -2.3604], bortleScale: 2, radius: 5, type: 'dark-site' },
   
   // Urban Night Sky Places (urban areas that protect dark skies)
   { name: "Parc national du Mont-Mégantic", coordinates: [45.4565, -71.1523], bortleScale: 2, radius: 20, type: 'dark-site' },
@@ -122,5 +139,9 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Lincoln Memorial Garden", coordinates: [39.7371, -89.6981], bortleScale: 3, radius: 5, type: 'dark-site' },
   { name: "Ozark Highlands Nature Center", coordinates: [36.0908, -94.2088], bortleScale: 3, radius: 5, type: 'dark-site' },
   { name: "The Riverwood Conservancy", coordinates: [43.5567, -79.6232], bortleScale: 4, radius: 5, type: 'dark-site' },
-  { name: "Old Mans Cave", coordinates: [39.4351, -82.5412], bortleScale: 2, radius: 10, type: 'dark-site' }
+  { name: "Old Mans Cave", coordinates: [39.4351, -82.5412], bortleScale: 2, radius: 10, type: 'dark-site' },
+  { name: "Glasgow Science Centre", coordinates: [55.8590, -4.2940], bortleScale: 4, radius: 5, type: 'dark-site' },
+  { name: "Hot Springs National Park", coordinates: [34.5116, -93.0539], bortleScale: 3, radius: 10, type: 'dark-site' },
+  { name: "Pipestone National Monument", coordinates: [44.0094, -96.3250], bortleScale: 3, radius: 5, type: 'dark-site' },
+  { name: "Lake Tekapo starlight reserve", coordinates: [-43.9839, 170.4691], bortleScale: 1, radius: 30, type: 'dark-site' }
 ];

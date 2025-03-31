@@ -1,5 +1,7 @@
+
 /**
  * Types and functions for working with shared astronomy spots
+ * Enhanced with better Dark Sky International location support
  */
 
 import { normalizeCoordinates } from './coordinates';
@@ -39,6 +41,12 @@ export interface SharingResponse {
 /**
  * Fetch shared astronomy spots near specified coordinates
  * Enhanced to include real Dark Sky International locations
+ * Optimized for better performance and stability
+ * @param latitude - Latitude of the center point
+ * @param longitude - Longitude of the center point
+ * @param limit - Maximum number of locations to return
+ * @param radiusKm - Search radius in kilometers
+ * @returns Promise containing array of SharedAstroSpot
  */
 export async function getSharedAstroSpots(
   latitude: number,
@@ -61,11 +69,12 @@ export async function getSharedAstroSpots(
       ? generateCalculatedSpots(coords.latitude, coords.longitude, regularLocationsNeeded, radiusKm, certifiedLocations)
       : [];
     
-    // Combine certified and calculated locations
-    const combinedSpots = [...certifiedLocations, ...calculatedSpots];
+    // Combine certified and calculated locations and sort by nearest first
+    const combinedSpots = [...certifiedLocations, ...calculatedSpots]
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
     
-    // Add a small delay to simulate network latency
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // Add a small delay to simulate network latency (can be removed in production)
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     return combinedSpots;
   } catch (error) {
@@ -76,6 +85,8 @@ export async function getSharedAstroSpots(
 
 /**
  * Fetch a specific shared astronomy spot by ID
+ * @param id - Unique identifier for the spot
+ * @returns Promise containing the SharedAstroSpot or null if not found
  */
 export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | null> {
   try {
@@ -109,6 +120,8 @@ export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | 
 
 /**
  * Share a new astronomy spot
+ * @param spot - The spot data to share
+ * @returns Promise containing sharing response
  */
 export async function shareAstroSpot(spot: Omit<SharedAstroSpot, 'id'>): Promise<SharingResponse> {
   try {
@@ -133,8 +146,12 @@ export async function shareAstroSpot(spot: Omit<SharedAstroSpot, 'id'>): Promise
 }
 
 /**
- * Get certified Dark Sky locations from our database
+ * Get certified Dark Sky locations from the database
  * Uses the actual Dark Sky International locations
+ * @param centerLat - Latitude of center point
+ * @param centerLng - Longitude of center point
+ * @param radiusKm - Search radius in kilometers
+ * @returns Array of SharedAstroSpot
  */
 function getCertifiedLocationsNearby(
   centerLat: number,
@@ -216,6 +233,12 @@ function getCertifiedLocationsNearby(
 /**
  * Generate calculated astronomy spots for general recommendations
  * These are potential good locations that aren't officially certified
+ * @param centerLat - Latitude of center point
+ * @param centerLng - Longitude of center point
+ * @param count - Number of locations to generate
+ * @param radiusKm - Search radius in kilometers
+ * @param existingLocations - Existing locations to avoid duplicating
+ * @returns Array of SharedAstroSpot
  */
 function generateCalculatedSpots(
   centerLat: number, 
@@ -319,6 +342,10 @@ function generateCalculatedSpots(
 
 /**
  * Generate a random point within a given radius of a center point
+ * @param centerLat - Latitude of center point
+ * @param centerLng - Longitude of center point
+ * @param radiusKm - Search radius in kilometers
+ * @returns Object with latitude, longitude and distance
  */
 function generateRandomPoint(
   centerLat: number, 
@@ -347,6 +374,11 @@ function generateRandomPoint(
 
 /**
  * Calculate the distance between two points using the Haversine formula
+ * @param lat1 - Latitude of first point
+ * @param lon1 - Longitude of first point
+ * @param lat2 - Latitude of second point
+ * @param lon2 - Longitude of second point
+ * @returns Distance in kilometers
  */
 function haversineDistance(
   lat1: number, 

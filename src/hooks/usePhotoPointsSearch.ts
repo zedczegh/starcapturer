@@ -17,6 +17,9 @@ interface UsePhotoPointsSearchProps {
 // Default seeing conditions (when real data isn't available)
 const DEFAULT_SEEING_CONDITIONS = 3;
 
+// Enhanced with higher max distance
+const MAX_SEARCH_DISTANCE = 10000; // 10,000 km - expanded per requirements
+
 export const usePhotoPointsSearch = ({
   userLocation,
   currentSiqs,
@@ -90,7 +93,7 @@ export const usePhotoPointsSearch = ({
     fetchLocations();
   }, [userLocation, language, searchDistance]);
   
-  // Calculate real SIQS scores for locations with improved accuracy
+  // Calculate real SIQS scores for locations with improved accuracy and parallelization
   const calculateRealSIQS = async (locations: SharedAstroSpot[], userLocation: { latitude: number; longitude: number }) => {
     if (locations.length === 0) return;
     
@@ -142,87 +145,100 @@ export const usePhotoPointsSearch = ({
     }
     
     // Calculate SIQS for each location with parallel processing for better performance
-    const locationsWithSiqs = await Promise.all(
-      enhancedLocations.map(async (location) => {
-        try {
-          // If location already has SIQS, use it but ensure certified locations have high scores
-          if (location.siqs !== undefined) {
-            // Ensure certified locations always have high SIQS scores
-            if ((location.isDarkSkyReserve || location.certification) && location.siqs < 7.5) {
-              return {
-                ...location,
-                siqs: Math.max(location.siqs, 7.5 + Math.random() * 1.5), // Between 7.5-9
-                isViable: true
-              };
-            }
-            return location;
-          }
-          
-          // Get weather data for location
-          const weatherData = await fetchWeatherData({
-            latitude: location.latitude,
-            longitude: location.longitude
-          });
-          
-          // Use existing Bortle scale or fetch it
-          let bortleScale = location.bortleScale;
-          if (!bortleScale) {
-            const pollutionData = await fetchLightPollutionData(
-              location.latitude, 
-              location.longitude
-            );
-            bortleScale = pollutionData?.bortleScale || 5;
-          }
-          
-          // If it's a certified location but doesn't have a low Bortle scale, 
-          // enforce a maximum of 3 to ensure dark skies
-          if ((location.isDarkSkyReserve || location.certification) && bortleScale > 3) {
-            bortleScale = Math.min(3, bortleScale);
-          }
-          
-          if (weatherData) {
-            // Calculate SIQS
-            const siqsResult = calculateSIQS({
-              cloudCover: weatherData.cloudCover,
-              bortleScale: bortleScale,
-              seeingConditions: DEFAULT_SEEING_CONDITIONS,
-              windSpeed: weatherData.windSpeed,
-              humidity: weatherData.humidity,
-              moonPhase: 0, // Default value
-              precipitation: weatherData.precipitation,
-              weatherCondition: weatherData.weatherCondition,
-              aqi: weatherData.aqi
-            });
-            
-            // Ensure certified locations always have high SIQS scores
-            if ((location.isDarkSkyReserve || location.certification) && siqsResult.score < 7.5) {
-              return {
-                ...location,
-                siqs: 7.5 + Math.random() * 1.5, // Between 7.5-9
-                isViable: true
-              };
-            }
-            
+    // Process in batches of 10 to avoid overwhelming the API
+    const processInBatches = async (items: SharedAstroSpot[], batchSize: number = 10) => {
+      const results: SharedAstroSpot[] = [];
+      
+      for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchPromises = batch.map(location => processSingleLocation(location));
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults.filter(Boolean) as SharedAstroSpot[]);
+      }
+      
+      return results;
+    };
+    
+    // Process a single location
+    const processSingleLocation = async (location: SharedAstroSpot): Promise<SharedAstroSpot | null> => {
+      try {
+        // If location already has SIQS, use it but ensure certified locations have high scores
+        if (location.siqs !== undefined) {
+          // Ensure certified locations always have high SIQS scores
+          if ((location.isDarkSkyReserve || location.certification) && location.siqs < 7.5) {
             return {
               ...location,
-              siqs: siqsResult.score,
-              isViable: siqsResult.isViable
+              siqs: Math.max(location.siqs, 7.5 + Math.random() * 1.5), // Between 7.5-9
+              isViable: true
             };
           }
-        } catch (err) {
-          console.error(`Error calculating SIQS for location ${location.name}:`, err);
+          return location;
         }
         
-        return location;
-      })
-    );
+        // Get weather data for location
+        const weatherData = await fetchWeatherData({
+          latitude: location.latitude,
+          longitude: location.longitude
+        });
+        
+        // Use existing Bortle scale or fetch it
+        let bortleScale = location.bortleScale;
+        if (!bortleScale) {
+          const pollutionData = await fetchLightPollutionData(
+            location.latitude, 
+            location.longitude
+          );
+          bortleScale = pollutionData?.bortleScale || 5;
+        }
+        
+        // If it's a certified location but doesn't have a low Bortle scale, 
+        // enforce a maximum of 3 to ensure dark skies
+        if ((location.isDarkSkyReserve || location.certification) && bortleScale > 3) {
+          bortleScale = Math.min(3, bortleScale);
+        }
+        
+        if (weatherData) {
+          // Calculate SIQS
+          const siqsResult = calculateSIQS({
+            cloudCover: weatherData.cloudCover,
+            bortleScale: bortleScale,
+            seeingConditions: DEFAULT_SEEING_CONDITIONS,
+            windSpeed: weatherData.windSpeed,
+            humidity: weatherData.humidity,
+            moonPhase: 0, // Default value
+            precipitation: weatherData.precipitation,
+            weatherCondition: weatherData.weatherCondition,
+            aqi: weatherData.aqi
+          });
+          
+          // Ensure certified locations always have high SIQS scores
+          if ((location.isDarkSkyReserve || location.certification) && siqsResult.score < 7.5) {
+            return {
+              ...location,
+              siqs: 7.5 + Math.random() * 1.5, // Between 7.5-9
+              isViable: true
+            };
+          }
+          
+          return {
+            ...location,
+            siqs: siqsResult.score,
+            isViable: siqsResult.isViable
+          };
+        }
+      } catch (err) {
+        console.error(`Error calculating SIQS for location ${location.name}:`, err);
+      }
+      
+      return location;
+    };
     
-    // Filter out locations without SIQS
-    const validLocations = locationsWithSiqs.filter(loc => loc.siqs !== undefined);
-    setAllLocations(validLocations);
+    // Process locations in batches for better performance
+    const locationsWithSiqs = await processInBatches(enhancedLocations);
     
     // Apply filters
-    applyFilters(validLocations, calculatedUserSiqs);
+    setAllLocations(locationsWithSiqs);
+    applyFilters(locationsWithSiqs, calculatedUserSiqs);
   };
   
   // Filter locations based on distance and SIQS with improved algorithm
@@ -245,9 +261,10 @@ export const usePhotoPointsSearch = ({
         location.isDarkSkyReserve === true ||
         location.certification !== undefined ||
         // Include excellent locations regardless of improvement over current
-        (location.siqs !== undefined && location.siqs >= 7.5) ||
+        (location.siqs !== undefined && location.siqs >= 7.0) ||
         // For regular locations, include if they're somewhat better
-        (location.siqs !== undefined && location.siqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD)
+        // Lowered threshold to give more hope and options
+        (location.siqs !== undefined && location.siqs > userSiqs * 1.05)
       );
     }
     
@@ -259,8 +276,8 @@ export const usePhotoPointsSearch = ({
       if (!a.isDarkSkyReserve && b.isDarkSkyReserve) return 1;
       
       // If both or neither are certified, check if they're excellent locations
-      const aExcellent = (a.siqs || 0) >= 7.5;
-      const bExcellent = (b.siqs || 0) >= 7.5;
+      const aExcellent = (a.siqs || 0) >= 7.0;
+      const bExcellent = (b.siqs || 0) >= 7.0;
       
       if (aExcellent && !bExcellent) return -1;
       if (!aExcellent && bExcellent) return 1;
@@ -309,11 +326,19 @@ export const usePhotoPointsSearch = ({
     });
   }, [filteredLocations, maxInitialResults]);
   
+  // Enhanced search distance setter with validation
+  const setValidatedSearchDistance = useCallback((distance: number) => {
+    // Enforce maximum distance limit of 10,000km
+    const validatedDistance = Math.min(Math.max(100, distance), MAX_SEARCH_DISTANCE);
+    setSearchDistance(validatedDistance);
+  }, []);
+  
   return {
     loading,
     searching,
     searchDistance,
-    setSearchDistance,
+    setSearchDistance: setValidatedSearchDistance,
+    maxSearchDistance: MAX_SEARCH_DISTANCE,
     displayedLocations,
     hasMoreLocations,
     loadMoreLocations,

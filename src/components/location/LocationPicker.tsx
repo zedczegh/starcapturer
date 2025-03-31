@@ -18,18 +18,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   setCoordinates,
   className
 }) => {
-  const { t } = useLanguage();
-  const { getPosition, loading: geoLoading } = useGeolocation({});
+  const { t, language } = useLanguage();
+  const { getPosition, loading: geoLoading } = useGeolocation({
+    enableHighAccuracy: true,
+    timeout: 10000,
+    language: language
+  });
   
   const handleUseCurrentLocation = async () => {
-    getPosition((coords) => {
-      if (coords) {
-        setCoordinates({
-          latitude: coords.latitude,
-          longitude: coords.longitude
-        });
-      }
-    });
+    getPosition();
   };
   
   const formatCoordinate = (value: number, isLatitude: boolean) => {
