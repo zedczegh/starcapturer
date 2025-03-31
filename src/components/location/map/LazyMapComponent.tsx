@@ -1,13 +1,16 @@
 
-import React, { useCallback, memo, useMemo, useRef, useEffect } from "react";
+import React, { useCallback, memo, useMemo, useRef, useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
 
-// Fix for default marker icons - only initialize once
-if (typeof window !== 'undefined') {
+// Defer Leaflet initialization to client-side only
+// This avoids SSR issues with window/document
+const configureLeaflet = () => {
+  if (typeof window === 'undefined') return;
+  
   // Only run this on the client side
   delete L.Icon.Default.prototype._getIconUrl;
   L.Icon.Default.mergeOptions({
@@ -15,6 +18,11 @@ if (typeof window !== 'undefined') {
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
     shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   });
+};
+
+// Call configure function immediately but only on client
+if (typeof window !== 'undefined') {
+  configureLeaflet();
 }
 
 interface LazyMapComponentProps {
@@ -40,10 +48,17 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
 }) => {
   const { t } = useLanguage();
   const mapRef = useRef<L.Map | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure client-side rendering is detected
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleMapReady = useCallback((map: L.Map) => {
     mapRef.current = map;
     onMapReady();
+    console.log("Map ready with Leaflet version:", L.version);
   }, [onMapReady]);
 
   // Use a China-friendly tile server
@@ -52,16 +67,19 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   
   // Memoize marker icon to avoid recreating on each render
   const markerIcon = useMemo(() => {
+    // Only create marker icon on client-side
+    if (!isClient) return null;
+    
     // Use a special icon for dark sky reserves
     if (isDarkSkyReserve) {
       return createCustomMarker('#3b82f6'); // Blue color for dark sky locations
     }
     return createCustomMarker(); // Default icon for regular locations
-  }, [isDarkSkyReserve]);
+  }, [isDarkSkyReserve, isClient]);
 
   // Create a circle for dark sky reserves using useEffect to ensure map is available
   useEffect(() => {
-    if (!isDarkSkyReserve || !mapRef.current) return;
+    if (!isDarkSkyReserve || !mapRef.current || !isClient) return;
     
     // Create a circular overlay for the dark sky region
     const circle = L.circle(position, {
@@ -77,7 +95,12 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         circle.remove();
       }
     };
-  }, [isDarkSkyReserve, position, mapRef.current]);
+  }, [isDarkSkyReserve, position, isClient]);
+
+  // Skip rendering map until client-side
+  if (!isClient) {
+    return <div className="h-full w-full bg-cosmic-900/30 rounded-lg animate-pulse"></div>;
+  }
 
   return (
     <>
@@ -98,21 +121,23 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             subdomains={['a', 'b', 'c']}
           />
           
-          <Marker 
-            position={position}
-            icon={markerIcon}
-          >
-            <Popup>
-              <div className="text-sm">
-                <strong>{locationName}</strong>
-                {isDarkSkyReserve && (
-                  <div className="mt-1 text-blue-400 text-xs">
-                    {certification || t("Dark Sky Reserve", "暗夜保护区")}
-                  </div>
-                )}
-              </div>
-            </Popup>
-          </Marker>
+          {markerIcon && (
+            <Marker 
+              position={position}
+              icon={markerIcon}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <strong>{locationName}</strong>
+                  {isDarkSkyReserve && (
+                    <div className="mt-1 text-blue-400 text-xs">
+                      {certification || t("Dark Sky Reserve", "暗夜保护区")}
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          )}
           
           <MapUpdater position={position} />
           

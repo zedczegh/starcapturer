@@ -6,6 +6,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense, useMemo } from "react";
+import { HelmetProvider } from "react-helmet-async"; // Add HelmetProvider import
 
 // Improve performance by prefetching popular locations
 import { prefetchPopularLocations } from "./lib/queryPrefetcher";
@@ -62,48 +63,50 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <TooltipProvider>
-          <BrowserRouter>
-            <div className="sci-fi-scrollbar">
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/" element={
-                    <PageTransition>
-                      <Index />
-                    </PageTransition>
-                  } />
-                  <Route path="/location/:id" element={
-                    <PageTransition>
-                      <LocationDetails />
-                    </PageTransition>
-                  } />
-                  <Route path="/share" element={
-                    <PageTransition>
-                      <ShareLocation />
-                    </PageTransition>
-                  } />
-                  <Route path="/photo-points" element={
-                    <PageTransition>
-                      <PhotoPointsNearby />
-                    </PageTransition>
-                  } />
-                  <Route path="/about" element={
-                    <PageTransition>
-                      <AboutSIQS />
-                    </PageTransition>
-                  } />
-                  {/* Catch-all route */}
-                  <Route path="*" element={
-                    <PageTransition>
-                      <NotFound />
-                    </PageTransition>
-                  } />
-                </Routes>
-              </Suspense>
-            </div>
-            <Toaster />
-          </BrowserRouter>
-        </TooltipProvider>
+        <HelmetProvider> {/* Add HelmetProvider here */}
+          <TooltipProvider>
+            <BrowserRouter>
+              <div className="sci-fi-scrollbar">
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={
+                      <PageTransition>
+                        <Index />
+                      </PageTransition>
+                    } />
+                    <Route path="/location/:id" element={
+                      <PageTransition>
+                        <LocationDetails />
+                      </PageTransition>
+                    } />
+                    <Route path="/share" element={
+                      <PageTransition>
+                        <ShareLocation />
+                      </PageTransition>
+                    } />
+                    <Route path="/photo-points" element={
+                      <PageTransition>
+                        <PhotoPointsNearby />
+                      </PageTransition>
+                    } />
+                    <Route path="/about" element={
+                      <PageTransition>
+                        <AboutSIQS />
+                      </PageTransition>
+                    } />
+                    {/* Catch-all route */}
+                    <Route path="*" element={
+                      <PageTransition>
+                        <NotFound />
+                      </PageTransition>
+                    } />
+                  </Routes>
+                </Suspense>
+              </div>
+              <Toaster />
+            </BrowserRouter>
+          </TooltipProvider>
+        </HelmetProvider>
       </LanguageProvider>
     </QueryClientProvider>
   );

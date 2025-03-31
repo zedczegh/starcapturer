@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet-async'; // Fix the import to use react-helmet-async
+import { HelmetProvider, Helmet } from 'react-helmet-async'; // Import HelmetProvider
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -13,7 +13,6 @@ import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 
-// Import react-helmet-async if not already installed
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({ language: 'en' });
@@ -68,11 +67,13 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [getPosition, userLocation]);
 
+  // Page title - using simple string instead of Helmet to avoid SSR issues
+  const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
+  
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
-      <Helmet>
-        <title>{t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测")}</title>
-      </Helmet>
+      {/* Using a simple title element for now */}
+      <title>{pageTitle}</title>
       
       <div className="pt-20 md:pt-28 pb-20">
         <div className="container mx-auto px-4">

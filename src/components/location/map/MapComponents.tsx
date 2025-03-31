@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
@@ -7,12 +7,16 @@ import L from "leaflet";
 export function MapUpdater({ position }: { position: [number, number] }) {
   const map = useMap();
   
-  React.useEffect(() => {
-    if (map) {
+  useEffect(() => {
+    if (!map) return;
+    
+    try {
       map.setView(position, map.getZoom(), {
         animate: true,
         duration: 1
       });
+    } catch (error) {
+      console.error("Error updating map view:", error);
     }
   }, [map, position]);
   
@@ -23,7 +27,7 @@ export function MapUpdater({ position }: { position: [number, number] }) {
 export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   const map = useMap();
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map) return;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
@@ -84,54 +88,60 @@ export function MapStyles() {
 export function createCustomMarker(color = '#f43f5e') {
   if (typeof window === 'undefined') return null; // Return null during SSR
   
-  const markerHtmlStyles = `
-    background-color: ${color};
-    width: 2rem;
-    height: 2rem;
-    display: block;
-    position: relative;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    border: 1px solid #FFFFFF;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-  `;
+  try {
+    const markerHtmlStyles = `
+      background-color: ${color};
+      width: 2rem;
+      height: 2rem;
+      display: block;
+      position: relative;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 1px solid #FFFFFF;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    `;
 
-  const pulseStyles = `
-    content: '';
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50% 50% 50% 0;
-    background-color: ${color};
-    position: absolute;
-    margin: -1px 0 0 -1px;
-    animation: pulse 2s infinite;
-    opacity: 0.5;
-    box-shadow: 0 0 5px ${color};
-    
-    @keyframes pulse {
-      0% {
-        transform: scale(0.5);
-        opacity: 0;
+    const pulseStyles = `
+      content: '';
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50% 50% 50% 0;
+      background-color: ${color};
+      position: absolute;
+      margin: -1px 0 0 -1px;
+      animation: pulse 2s infinite;
+      opacity: 0.5;
+      box-shadow: 0 0 5px ${color};
+      
+      @keyframes pulse {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(1.5);
+          opacity: 0;
+        }
       }
-      50% {
-        opacity: 0.5;
-      }
-      100% {
-        transform: scale(1.5);
-        opacity: 0;
-      }
-    }
-  `;
+    `;
 
-  const icon = L.divIcon({
-    className: "custom-marker-icon",
-    iconAnchor: [12, 24],
-    popupAnchor: [0, -24],
-    html: `<span style="${markerHtmlStyles}">
-             <span style="${pulseStyles}"></span>
-           </span>`,
-    iconSize: [24, 24]
-  });
+    const icon = L.divIcon({
+      className: "custom-marker-icon",
+      iconAnchor: [12, 24],
+      popupAnchor: [0, -24],
+      html: `<span style="${markerHtmlStyles}">
+               <span style="${pulseStyles}"></span>
+             </span>`,
+      iconSize: [24, 24]
+    });
 
-  return icon;
+    return icon;
+  } catch (error) {
+    console.error("Error creating custom marker:", error);
+    // Return default icon as fallback
+    return new L.Icon.Default();
+  }
 }
