@@ -77,7 +77,11 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           <CardTitle className="text-lg text-gradient-blue">{t("SIQS Score", "SIQS评分")}</CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
-          <SIQSSummary siqsResult={locationData.siqsResult} />
+          <SIQSSummary 
+            siqsResult={locationData.siqsResult}
+            weatherData={locationData.weatherData}
+            locationData={locationData}
+          />
         </CardContent>
       </Card>
 

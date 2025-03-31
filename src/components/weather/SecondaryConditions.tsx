@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Star, Hurricane, Thermometer } from 'lucide-react';
+import { Moon, Star, Cloud, Thermometer } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ConditionItem from './ConditionItem';
 import { DynamicMoonIcon, DynamicSeeingIcon } from './DynamicIcons';
@@ -76,25 +76,25 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({ weatherData }
   return (
     <div className="grid grid-cols-2 gap-3">
       <ConditionItem 
-        title={t("Moon Phase", "月相")}
+        label={t("Moon Phase", "月相")}
         value={`${Math.round(moonPhase * 100)}%`}
         icon={<DynamicMoonIcon phase={moonPhase} className="h-10 w-10" />}
       />
       
       <ConditionItem 
-        title={t("Light Pollution", "光污染")}
+        label={t("Light Pollution", "光污染")}
         value={`Bortle ${bortleScale}`}
         icon={<Star className="h-10 w-10 text-purple-400" />}
       />
       
       <ConditionItem 
-        title={t("Seeing", "视宁度")}
+        label={t("Seeing", "视宁度")}
         value={weatherData.seeing ? `${weatherData.seeing.toFixed(1)}"` : "~2.1\""}
-        icon={<DynamicSeeingIcon seeing={weatherData.seeing || 2.1} className="h-10 w-10" />}
+        icon={<DynamicSeeingIcon seeingValue={weatherData.seeing || 2.1} className="h-10 w-10" />}
       />
       
       <ConditionItem 
-        title={t("Dew Point", "露点")}
+        label={t("Dew Point", "露点")}
         value={`${dewPoint}°C`}
         icon={<Thermometer className="h-10 w-10 text-teal-400" />}
       />

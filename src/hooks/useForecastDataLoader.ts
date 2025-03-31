@@ -67,19 +67,19 @@ export const useForecastDataLoader = (
         lastLoadTimeRef.current[locationKey] = now;
       } else {
         console.error("Failed to load forecast data - API returned no data");
-        toast.error(t("Failed to load forecast data"));
+        toast.error(t("Failed to load forecast data", "无法加载天气预报数据"));
       }
     } catch (error: any) {
       // Don't show errors for aborted requests
       if (error.name !== 'AbortError') {
         console.error("Error loading forecast data:", error);
-        toast.error(t("Failed to load forecast data"));
+        toast.error(t("Failed to load forecast data", "无法加载天气预报数据"));
       }
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [locationData?.latitude, locationData?.longitude, locationData?.name, setLocationData, t]);
+  }, [locationData, setLocationData, t]);
   
   // Auto-load forecast data when location changes
   useEffect(() => {
