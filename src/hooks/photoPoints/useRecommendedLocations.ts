@@ -1,210 +1,199 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { 
-  clearSiqsCache, 
-  batchCalculateSiqs 
-} from '@/services/realTimeSiqsService';
 import { 
   findLocationsWithinRadius, 
-  findCertifiedLocations 
+  findCertifiedLocations, 
+  findCalculatedLocations,
+  sortLocationsByQuality
 } from '@/services/locationSearchService';
-import { clearLocationSearchCache } from '@/services/locationCacheService';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-/**
- * Hook to handle recommended locations with real-time SIQS data
- */
-export function useRecommendedLocations(initialUserLocation?: { latitude: number; longitude: number } | null) {
+interface Location {
+  latitude: number;
+  longitude: number;
+}
+
+export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
-    initialUserLocation || null
-  );
-  const [searchRadius, setSearchRadius] = useState<number>(2000);
+  const [searchRadius, setSearchRadius] = useState<number>(1000);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
-  const [showCertifiedOnly, setShowCertifiedOnly] = useState<boolean>(false);
-  const [lastSearchParams, setLastSearchParams] = useState<string>('');
-
-  /**
-   * Load locations based on current parameters
-   */
-  const loadLocations = useCallback(async (reset: boolean = false) => {
-    if (!userLocation) return;
-    
-    // Generate search params signature
-    const searchParams = `${userLocation.latitude.toFixed(5)}-${userLocation.longitude.toFixed(5)}-${searchRadius}-${page}-${showCertifiedOnly}`;
-    
-    // Skip if the same search was already performed (unless forced reset)
-    if (!reset && searchParams === lastSearchParams) {
+  const prevRadiusRef = useRef<number>(searchRadius);
+  const prevLocationRef = useRef<Location | null>(userLocation);
+  
+  // Function to load locations
+  const loadLocations = useCallback(async () => {
+    if (!userLocation) {
       return;
     }
     
-    setLoading(true);
-    console.log(`Loading locations with radius: ${searchRadius}km, page: ${page}, reset: ${reset}`);
-    
     try {
-      // Calculate current page for API query
-      const currentPage = reset ? 1 : page;
-      const limit = 9; // Number of items per page
+      setLoading(true);
       
-      // Clear caches when radius changes to ensure fresh data
-      if (searchRadius !== parseInt(lastSearchParams.split('-')[2], 10)) {
-        clearSiqsCache();
-        clearLocationSearchCache();
-      }
+      // Record the current radius and location for comparison
+      prevRadiusRef.current = searchRadius;
+      prevLocationRef.current = userLocation;
       
-      // Find locations based on whether we're looking for certified only or all locations
-      let points: SharedAstroSpot[] = [];
+      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`);
       
-      if (showCertifiedOnly) {
-        points = await findCertifiedLocations(
+      // Get all locations within radius
+      const results = await findLocationsWithinRadius(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius
+      );
+      
+      if (results.length === 0) {
+        console.log("No locations found, trying to expand search...");
+        // If no results at all, try to find some certified locations
+        const certifiedResults = await findCertifiedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          searchRadius
+          Math.min(searchRadius * 1.5, 10000)
         );
-      } else {
-        points = await findLocationsWithinRadius(
-          userLocation.latitude,
-          userLocation.longitude,
-          searchRadius,
-          false
-        );
-      }
-      
-      // Calculate real-time SIQS for locations that don't have it
-      const pointsNeedingSiqs = points.filter(point => point.siqs === undefined || point.siqs === null);
-      if (pointsNeedingSiqs.length > 0) {
-        const updatedPoints = await batchCalculateSiqs(pointsNeedingSiqs);
         
-        // Merge updated points with existing ones
-        points = points.map(point => {
-          const updated = updatedPoints.find(p => p.id === point.id);
-          return updated || point;
-        });
-      }
-      
-      console.log(`Found ${points.length} locations within ${searchRadius}km radius`);
-      
-      // Limit results based on page
-      const paginatedPoints = points.slice(0, limit * currentPage);
-      
-      // Update state with fetched locations
-      if (reset) {
-        setLocations(paginatedPoints);
-        setPage(1);
+        // And also try to find calculated locations
+        const calculatedResults = await findCalculatedLocations(
+          userLocation.latitude,
+          userLocation.longitude,
+          Math.min(searchRadius * 1.5, 10000)
+        );
+        
+        // Combine results
+        const combinedResults = [...certifiedResults, ...calculatedResults];
+        
+        if (combinedResults.length > 0) {
+          // Sort by quality and distance
+          const sortedResults = sortLocationsByQuality(combinedResults);
+          setLocations(sortedResults);
+          setHasMore(sortedResults.length >= 20);
+        } else {
+          setLocations([]);
+          setHasMore(false);
+        }
       } else {
-        // Avoid duplicates when loading more
-        const existingIds = new Set(locations.map(loc => loc.id));
-        const newPoints = paginatedPoints.filter(point => !existingIds.has(point.id));
-        setLocations(prev => [...prev, ...newPoints]);
+        // Sort by quality and distance
+        const sortedResults = sortLocationsByQuality(results);
+        setLocations(sortedResults);
+        setHasMore(sortedResults.length >= 20);
       }
       
-      // Determine if more locations might be available
-      setHasMore(points.length > paginatedPoints.length);
-      
-      // Update last search params
-      setLastSearchParams(searchParams);
+      setPage(1);
     } catch (error) {
       console.error("Error loading recommended locations:", error);
-      toast.error(
-        t("Failed to load locations", "加载位置失败"),
-        { description: t("Please try again later", "请稍后再试") }
-      );
+      toast.error(t(
+        "Failed to load recommended locations. Please try again.",
+        "加载推荐位置失败。请重试。"
+      ));
+      setLocations([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [userLocation, searchRadius, page, showCertifiedOnly, locations, lastSearchParams, t]);
-
-  /**
-   * Handle location change
-   */
-  useEffect(() => {
-    if (userLocation) {
-      loadLocations(true);
-    }
-  }, [userLocation, loadLocations]);
-
-  /**
-   * Handle radius change
-   */
-  const handleRadiusChange = useCallback((radius: number) => {
-    console.log(`Radius changed to ${radius}km`);
-    setSearchRadius(radius);
-    // Reset to page 1
-    setPage(1);
-    // Force reload with new radius immediately
-    setTimeout(() => loadLocations(true), 0);
-  }, [loadLocations]);
-
-  /**
-   * Toggle between certified and all locations
-   */
-  const toggleCertifiedOnly = useCallback(() => {
-    setShowCertifiedOnly(prev => !prev);
-    setPage(1); // Reset to page 1
-    // Force reload
-    setTimeout(() => loadLocations(true), 0);
-  }, [loadLocations]);
-
-  /**
-   * Load more locations
-   */
-  const loadMore = useCallback(() => {
-    setPage(prev => prev + 1);
-  }, []);
-
-  /**
-   * Refresh locations with latest SIQS data
-   */
-  const refreshSiqsData = useCallback(async () => {
-    if (locations.length === 0) {
-      loadLocations(true);
+  }, [searchRadius, userLocation, t]);
+  
+  // Load more locations for pagination
+  const loadMore = useCallback(async () => {
+    if (!userLocation || !hasMore) {
       return;
     }
     
-    setLoading(true);
     try {
-      // Clear cache to ensure fresh SIQS calculations
-      clearSiqsCache();
+      setLoading(true);
+      const nextPage = page + 1;
       
-      // Recalculate SIQS for all locations
-      const updatedLocations = await batchCalculateSiqs(locations);
-      setLocations(updatedLocations);
-      
-      toast.success(
-        t("SIQS data refreshed", "SIQS 数据已刷新"),
-        { description: t("Showing latest viewing conditions", "显示最新观测条件") }
+      // Get more locations
+      const results = await findLocationsWithinRadius(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius
       );
+      
+      // Filter out locations we already have
+      const existingIds = new Set(locations.map(loc => loc.id));
+      const newResults = results.filter(loc => !existingIds.has(loc.id));
+      
+      if (newResults.length > 0) {
+        // Sort by quality and distance
+        const allLocations = [...locations, ...newResults];
+        const sortedResults = sortLocationsByQuality(allLocations);
+        
+        setLocations(sortedResults);
+        setHasMore(newResults.length >= 10);
+        setPage(nextPage);
+      } else {
+        setHasMore(false);
+      }
     } catch (error) {
-      console.error("Error refreshing SIQS data:", error);
+      console.error("Error loading more locations:", error);
+      toast.error(t(
+        "Failed to load more locations. Please try again.",
+        "加载更多位置失败。请重试。"
+      ));
     } finally {
       setLoading(false);
     }
-  }, [locations, loadLocations, t]);
-
-  // Load more when page changes
+  }, [hasMore, locations, page, searchRadius, userLocation, t]);
+  
+  // Refresh SIQS data for locations
+  const refreshSiqsData = useCallback(async () => {
+    if (!userLocation || locations.length === 0) {
+      return;
+    }
+    
+    try {
+      toast.info(t(
+        "Refreshing location data...",
+        "正在刷新位置数据..."
+      ));
+      
+      setLoading(true);
+      
+      // Load fresh data
+      await loadLocations();
+      
+      toast.success(t(
+        "Location data refreshed successfully",
+        "位置数据刷新成功"
+      ));
+    } catch (error) {
+      console.error("Error refreshing SIQS data:", error);
+      toast.error(t(
+        "Failed to refresh location data",
+        "刷新位置数据失败"
+      ));
+    } finally {
+      setLoading(false);
+    }
+  }, [loadLocations, locations.length, userLocation, t]);
+  
+  // Load locations when userLocation or searchRadius changes
   useEffect(() => {
-    if (page > 1) {
+    // Check if we need to reload based on radius or location change
+    const radiusChanged = searchRadius !== prevRadiusRef.current;
+    const locationChanged = 
+      (userLocation && !prevLocationRef.current) ||
+      (!userLocation && prevLocationRef.current) ||
+      (userLocation && prevLocationRef.current && 
+        (userLocation.latitude !== prevLocationRef.current.latitude || 
+         userLocation.longitude !== prevLocationRef.current.longitude));
+    
+    if (userLocation && (radiusChanged || locationChanged)) {
       loadLocations();
     }
-  }, [page, loadLocations]);
-
+  }, [loadLocations, searchRadius, userLocation]);
+  
   return {
-    userLocation,
-    setUserLocation,
     searchRadius,
-    setSearchRadius: handleRadiusChange,
-    applyRadiusChange: () => loadLocations(true), // Added for backward compatibility
+    setSearchRadius,
     locations,
     loading,
     hasMore,
     loadMore,
-    showCertifiedOnly,
-    toggleCertifiedOnly,
     refreshSiqsData
   };
-}
+};

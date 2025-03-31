@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -15,8 +15,11 @@ import BackButton from '@/components/navigation/BackButton';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
-  const { userLocation, loading: locationLoading, getUserLocation } = useGeolocation();
+  const { loading: locationLoading, coords, getPosition } = useGeolocation({ language: 'en' });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+
+  // Get user location from coordinates
+  const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
   // Set up recommended locations with userLocation
   const {
@@ -60,9 +63,9 @@ const PhotoPointsNearby: React.FC = () => {
   // Call getUserLocation when the component mounts
   useEffect(() => {
     if (!userLocation) {
-      getUserLocation();
+      getPosition();
     }
-  }, [getUserLocation, userLocation]);
+  }, [getPosition, userLocation]);
 
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
@@ -93,7 +96,7 @@ const PhotoPointsNearby: React.FC = () => {
           {!userLocation && (
             <div className="flex justify-center mb-8">
               <Button
-                onClick={getUserLocation}
+                onClick={getPosition}
                 className="flex items-center gap-2"
                 disabled={locationLoading}
               >
@@ -111,11 +114,11 @@ const PhotoPointsNearby: React.FC = () => {
           {userLocation && (
             <div className="max-w-xl mx-auto mb-8">
               <DistanceRangeSlider
-                value={searchRadius}
-                onChange={handleRadiusChange}
-                min={100}
-                max={10000}
-                step={100}
+                currentValue={searchRadius}
+                onValueChange={handleRadiusChange}
+                minValue={100}
+                maxValue={10000}
+                stepValue={100}
               />
             </div>
           )}

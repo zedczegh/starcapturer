@@ -25,5 +25,3 @@ export {
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
-
-// This function was causing a duplicate export error - removing it
