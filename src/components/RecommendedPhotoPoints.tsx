@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Telescope, Loader2, Star, MapPin } from "lucide-react";
+import { Telescope, Loader2, Star, MapPin, Award } from "lucide-react";
 import { toast } from "sonner";
 import { getRecommendedPhotoPoints } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
@@ -16,13 +16,15 @@ interface RecommendedPhotoPointsProps {
   className?: string;
   userLocation?: { latitude: number; longitude: number } | null;
   hideEmptyMessage?: boolean;
+  preferCertified?: boolean;
 }
 
 const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({ 
   onSelectPoint,
   className,
   userLocation,
-  hideEmptyMessage = false
+  hideEmptyMessage = false,
+  preferCertified = true
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
@@ -54,10 +56,19 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           distance: point.distance || 0,
           description: point.description || "",
           date: point.date || new Date().toISOString(),
-          timestamp: point.timestamp || new Date().toISOString()
+          timestamp: point.timestamp || new Date().toISOString(),
+          isDarkSkyReserve: point.isDarkSkyReserve || false,
+          certification: point.certification
         }));
         
-        setRecommendedPoints(convertedPoints);
+        // Filter based on certified status if preferCertified is true
+        let filteredPoints = convertedPoints;
+        if (preferCertified) {
+          const certifiedPoints = convertedPoints.filter(p => p.isDarkSkyReserve || p.certification);
+          filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : convertedPoints;
+        }
+        
+        setRecommendedPoints(filteredPoints);
       } catch (error) {
         console.error("Error fetching recommended points:", error);
       } finally {
@@ -66,7 +77,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     };
     
     fetchPoints();
-  }, [userLocation]);
+  }, [userLocation, preferCertified]);
 
   const handleSelectPoint = (point: SharedAstroSpot) => {
     onSelectPoint(point);
@@ -98,7 +109,9 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       longitude: point.longitude,
       bortleScale: point.bortleScale,
       timestamp: new Date().toISOString(),
-      fromPhotoPoints: true // Add a flag to indicate source
+      fromPhotoPoints: true, // Add a flag to indicate source
+      isDarkSkyReserve: point.isDarkSkyReserve,
+      certification: point.certification
     };
     
     // Save to localStorage to ensure proper refresh handling
@@ -112,8 +125,17 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Telescope className="h-5 w-5 text-primary" />
-          {t("Recommended Photo Points", "推荐拍摄点")}
+          {preferCertified ? (
+            <>
+              <Award className="h-5 w-5 text-blue-400" />
+              {t("Certified Dark Sky Locations", "认证暗夜地点")}
+            </>
+          ) : (
+            <>
+              <Telescope className="h-5 w-5 text-primary" />
+              {t("Recommended Photo Points", "推荐拍摄点")}
+            </>
+          )}
           {loading && (
             <div className="flex items-center">
               <Loader2 className="h-4 w-4 animate-spin ml-2" />
@@ -160,9 +182,17 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 <h4 className="font-medium text-sm line-clamp-1">
                   {language === 'en' ? point.name : (point.chineseName || point.name)}
                 </h4>
+                
                 <div className="flex items-center">
-                  <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
-                  <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
+                  {point.isDarkSkyReserve || point.certification ? (
+                    <div className="flex items-center mr-2">
+                      <Award className="h-3 w-3 text-blue-400 mr-1" fill="rgba(96, 165, 250, 0.3)" />
+                    </div>
+                  ) : null}
+                  <div className="flex items-center">
+                    <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
+                    <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
+                  </div>
                 </div>
               </div>
               

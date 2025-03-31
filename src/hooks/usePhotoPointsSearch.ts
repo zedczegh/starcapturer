@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -60,7 +61,10 @@ export const usePhotoPointsSearch = ({
             location.longitude
           ),
           // Ensure all required properties exist
-          timestamp: location.timestamp || location.date || new Date().toISOString()
+          timestamp: location.timestamp || location.date || new Date().toISOString(),
+          // Mark certified dark sky locations
+          isDarkSkyReserve: location.isDarkSkyReserve || 
+            (location.certification && location.certification.toLowerCase().includes('dark sky'))
         }));
         
         setAllLocations(locationsWithDistance);
@@ -206,19 +210,30 @@ export const usePhotoPointsSearch = ({
     // If user has a good SIQS, only show locations that are significantly better
     let betterLocations = withinDistance;
     if (userSiqs !== null) {
+      // For non-certified locations, apply the SIQS improvement threshold
       betterLocations = withinDistance.filter(location => 
-        location.siqs !== undefined && 
-        location.siqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD
+        // Always include certified dark sky locations regardless of SIQS
+        location.isDarkSkyReserve === true ||
+        location.certification !== undefined ||
+        // For regular locations, only include if they're significantly better
+        (location.siqs !== undefined && 
+         location.siqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD)
       );
     }
     
-    // Sort by SIQS first, then by distance if SIQS is similar
+    // Sort: certified locations first, then by SIQS, then by distance
     const sortedLocations = betterLocations.sort((a, b) => {
-      // If SIQS difference is significant, sort by SIQS
-      if ((b.siqs || 0) - (a.siqs || 0) > 1) {
-        return (b.siqs || 0) - (a.siqs || 0);
-      } 
-      // Otherwise, sort by distance
+      // Certified locations first
+      if (a.isDarkSkyReserve && !b.isDarkSkyReserve) return -1;
+      if (!a.isDarkSkyReserve && b.isDarkSkyReserve) return 1;
+      
+      // Then sort by SIQS
+      const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
+      if (Math.abs(siqsDiff) > 1) {
+        return siqsDiff;
+      }
+      
+      // If SIQS is similar, sort by distance
       return (a.distance || 0) - (b.distance || 0);
     });
     

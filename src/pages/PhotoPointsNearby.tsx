@@ -10,10 +10,12 @@ import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
 import NavBar from "@/components/NavBar";
 import DistanceRangeSlider from "@/components/photoPoints/DistanceRangeSlider";
-import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import CopyLocationButton from "@/components/location/CopyLocationButton";
 import { toast } from "sonner";
-import { DEEP_SPACE_BG } from "@/assets";
+import ViewToggle, { PhotoPointsViewMode } from "@/components/photoPoints/ViewToggle";
+import DarkSkyLocations from "@/components/photoPoints/DarkSkyLocations";
+import CalculatedLocations from "@/components/photoPoints/CalculatedLocations";
+import { useCertifiedLocations } from "@/hooks/location/useCertifiedLocations";
 
 const CurrentLocationDisplay = ({ coords, loading }: { 
   coords: { latitude: number; longitude: number; name?: string } | null; 
@@ -60,6 +62,7 @@ const PhotoPointsNearby: React.FC = () => {
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const navigate = useNavigate();
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
     enableHighAccuracy: true,
@@ -81,6 +84,20 @@ const PhotoPointsNearby: React.FC = () => {
     currentSiqs,
     maxInitialResults: 6
   });
+
+  // Separate certified and calculated locations
+  const { 
+    certifiedLocations, 
+    calculatedLocations,
+    hasCertifiedLocations
+  } = useCertifiedLocations(displayedLocations);
+  
+  // Auto-switch to calculated view if no certified locations
+  useEffect(() => {
+    if (!loading && !searching && activeView === 'certified' && !hasCertifiedLocations) {
+      setActiveView('calculated');
+    }
+  }, [loading, searching, hasCertifiedLocations, activeView]);
   
   useEffect(() => {
     if (coords && !locationName) {
@@ -119,17 +136,6 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [coords, getPosition, locationName]);
   
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        staggerChildren: 0.1,
-        when: "beforeChildren" 
-      } 
-    }
-  };
-  
   const handleViewCurrentLocation = () => {
     if (!coords) return;
     
@@ -147,7 +153,7 @@ const PhotoPointsNearby: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-[url('/src/assets/deep-space-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
+    <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-cover bg-fixed bg-center bg-no-repeat">
       <NavBar />
       
       <div className="container mx-auto px-4 pt-24 pb-16 backdrop-blur-sm">
@@ -187,6 +193,19 @@ const PhotoPointsNearby: React.FC = () => {
             setDistance={setSearchDistance} 
           />
         </div>
+        
+        {/* View Toggle for Certified vs Calculated Locations */}
+        {!loading && !searching && !geoLoading && coords && (
+          displayedLocations.length > 0 || isUserInGoodLocation ? (
+            <div className="mb-6">
+              <ViewToggle 
+                activeView={activeView} 
+                onViewChange={setActiveView} 
+                className="max-w-md mx-auto"
+              />
+            </div>
+          ) : null
+        )}
         
         {searching && (
           <motion.div 
@@ -253,9 +272,10 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
         )}
         
+        {/* Good Location Message - Same for both views */}
         {!loading && !geoLoading && coords && isUserInGoodLocation && (
           <motion.div 
-            className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30"
+            className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30 mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -299,7 +319,30 @@ const PhotoPointsNearby: React.FC = () => {
           </motion.div>
         )}
         
-        {!loading && !searching && !geoLoading && coords && displayedLocations.length === 0 && !isUserInGoodLocation && (
+        {/* Conditional Content Based on View Mode */}
+        {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && (
+          <>
+            {activeView === 'certified' ? (
+              <DarkSkyLocations 
+                locations={certifiedLocations} 
+                loading={loading || searching}
+              />
+            ) : (
+              <CalculatedLocations 
+                locations={calculatedLocations}
+                loading={loading || searching}
+                hasMore={hasMoreLocations}
+                onLoadMore={loadMoreLocations}
+              />
+            )}
+          </>
+        )}
+        
+        {/* No recommended locations found message - only shown in calculated view */}
+        {!loading && !searching && !geoLoading && coords && 
+          displayedLocations.length === 0 && 
+          !isUserInGoodLocation && 
+          activeView === 'calculated' && (
           <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
             <MapPin className="h-12 w-12 text-primary/50 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">
@@ -331,36 +374,6 @@ const PhotoPointsNearby: React.FC = () => {
                 className="sci-fi-btn bg-cosmic-800/70 border-primary/30 hover:bg-primary/20"
               />
             </div>
-          </div>
-        )}
-        
-        {!loading && !searching && !geoLoading && coords && displayedLocations.length > 0 && !isUserInGoodLocation && (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {displayedLocations.map((location, index) => (
-              <PhotoLocationCard
-                key={location.id}
-                location={location}
-                index={index}
-              />
-            ))}
-          </motion.div>
-        )}
-        
-        {!loading && !searching && hasMoreLocations && displayedLocations.length > 0 && !isUserInGoodLocation && (
-          <div className="flex justify-center mt-8">
-            <Button 
-              variant="outline" 
-              onClick={loadMoreLocations}
-              className="group sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 transition-all duration-300"
-            >
-              {t("Load More Locations", "加载更多位置")}
-              <Rocket className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Button>
           </div>
         )}
       </div>

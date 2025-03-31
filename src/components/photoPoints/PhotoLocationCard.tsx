@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSafeScore, formatSIQSScore } from '@/utils/geoUtils';
 
 interface PhotoLocationCardProps {
@@ -71,11 +71,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
               <h3 className="font-semibold text-lg text-white line-clamp-1">{displayName}</h3>
               
               {/* Display Dark Sky certification badge if available */}
-              {location.isDarkSkyReserve && (
+              {(location.isDarkSkyReserve || location.certification) && (
                 <div className="flex items-center gap-1 mt-1">
                   <Award className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />
                   <span className="text-xs text-blue-400">
-                    {t("Certified Dark Sky", "认证暗夜区域")}
+                    {location.certification || t("Certified Dark Sky", "认证暗夜区域")}
                   </span>
                 </div>
               )}
