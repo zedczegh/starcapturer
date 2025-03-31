@@ -1,5 +1,5 @@
 
-import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
+import React, { useCallback, memo, Suspense, lazy, useMemo, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 
@@ -13,6 +13,8 @@ interface MapDisplayProps {
   onMapReady: () => void;
   onMapClick: (lat: number, lng: number) => void;
   showInfoPanel?: boolean;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -21,7 +23,9 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   editable = false,
   onMapReady,
   onMapClick,
-  showInfoPanel = false
+  showInfoPanel = false,
+  isDarkSkyReserve = false,
+  certification = ''
 }) => {
   const { t } = useLanguage();
 
@@ -37,6 +41,41 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
     return locationName;
   }, [locationName]);
 
+  // Create markers array for the map
+  const markers = useMemo(() => {
+    return [{
+      position: memoizedPosition,
+      content: displayName
+    }];
+  }, [memoizedPosition, displayName]);
+
+  // Create circles for dark sky reserves to indicate protected areas
+  const circles = useMemo(() => {
+    if (isDarkSkyReserve) {
+      return [{
+        center: memoizedPosition,
+        radius: 15000, // 15km radius
+        color: '#3b82f6',
+        fillColor: '#3b82f680',
+        weight: 2,
+        opacity: 0.7,
+        fillOpacity: 0.2
+      }];
+    }
+    return [];
+  }, [isDarkSkyReserve, memoizedPosition]);
+
+  // Callback for map load completion
+  const handleMapReady = useCallback(() => {
+    onMapReady();
+  }, [onMapReady]);
+
+  useEffect(() => {
+    // Simulate map ready event after component mount
+    const timer = setTimeout(handleMapReady, 1000);
+    return () => clearTimeout(timer);
+  }, [handleMapReady]);
+
   return (
     <div className="z-0 h-full w-full">
       <Suspense fallback={
@@ -48,12 +87,15 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
-          position={memoizedPosition}
-          locationName={displayName}
-          editable={editable}
-          onMapReady={onMapReady}
+          center={memoizedPosition}
+          zoom={10}
+          markers={markers}
+          circles={circles}
           onMapClick={onMapClick}
-          showInfoPanel={showInfoPanel}
+          className="w-full h-full"
+          scrollWheelZoom={true}
+          zoomControl={true}
+          attributionControl={true}
         />
       </Suspense>
     </div>

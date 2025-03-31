@@ -1,101 +1,157 @@
 
-import React, { useCallback, memo, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
+import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { useLanguage } from '@/contexts/LanguageContext';
+import MapCircle from './MapCircle';
 
-// Fix for default marker icons - only initialize once
-if (!L.Icon.Default.imagePath) {
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
+// Replace default Leaflet marker icons
+const defaultIcon = L.icon({
+  iconUrl: '/marker-icon.png',
+  shadowUrl: '/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Set default icon for all markers
+L.Marker.prototype.options.icon = defaultIcon;
+
+// Lazy load the actual map component to reduce initial load time
+const MapComponent = lazy(() => import('./MapComponents'));
+
+// MapResetComponent to handle cleanup and prevent "Map container is already initialized" error
+const MapResetComponent = ({ onMapClick, onMapMove }: { 
+  onMapClick?: (lat: number, lng: number) => void; 
+  onMapMove?: (lat: number, lng: number) => void; 
+}) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Cleanup function to properly handle map disposal
+    return () => {
+      // Only invalidate size if map is already initialized
+      if (map) {
+        map.invalidateSize();
+      }
+    };
+  }, [map]);
+  
+  return <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />;
+};
+
+interface CircleOptions {
+  center: [number, number];
+  radius: number;
+  color: string;
+  fillColor: string;
+  weight?: number;
+  opacity?: number;
+  fillOpacity?: number;
 }
 
 interface LazyMapComponentProps {
-  position: [number, number];
-  locationName: string;
-  editable?: boolean;
-  onMapReady: () => void;
-  onMapClick: (lat: number, lng: number) => void;
-  showInfoPanel?: boolean;
+  center: [number, number];
+  zoom: number;
+  markers?: Array<{
+    position: [number, number];
+    content?: React.ReactNode;
+    color?: string;
+  }>;
+  circles?: CircleOptions[];
+  onMapClick?: (lat: number, lng: number) => void;
+  onMapMove?: (lat: number, lng: number) => void;
+  className?: string;
+  scrollWheelZoom?: boolean;
+  zoomControl?: boolean;
+  attributionControl?: boolean;
 }
 
 const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
-  position,
-  locationName,
-  editable = false,
-  onMapReady,
+  center,
+  zoom,
+  markers,
+  circles,
   onMapClick,
-  showInfoPanel = false
+  onMapMove,
+  className = "",
+  scrollWheelZoom = true,
+  zoomControl = true,
+  attributionControl = true
 }) => {
-  const { t } = useLanguage();
-
-  const handleMapReady = useCallback(() => {
-    onMapReady();
-  }, [onMapReady]);
-
-  // Use a China-friendly tile server
-  const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  const { language } = useLanguage();
+  const [mapId] = useState(() => `map-${Math.random().toString(36).substring(2, 11)}`);
   
-  // Memoize marker icon to avoid recreating on each render
-  const markerIcon = useMemo(() => createCustomMarker(), []);
-
+  // Create a MapCirclesComponent to handle all circles
+  const CirclesComponent = React.useCallback(() => {
+    if (!circles || circles.length === 0) return null;
+    
+    return (
+      <>
+        {circles.map((circle, index) => (
+          <MapCircle
+            key={`circle-${index}`}
+            center={circle.center}
+            radius={circle.radius}
+            color={circle.color}
+            fillColor={circle.fillColor}
+            weight={circle.weight}
+            opacity={circle.opacity}
+            fillOpacity={circle.fillOpacity}
+          />
+        ))}
+      </>
+    );
+  }, [circles]);
+  
   return (
-    <>
-      <MapStyles />
-      <div className="h-full w-full">
-        <MapContainer 
-          center={position}
-          zoom={12} 
-          style={{ height: "100%", width: "100%" }}
-          scrollWheelZoom={true}
-          whenReady={handleMapReady}
-          attributionControl={false}
+    <div id={mapId} className={`relative rounded-lg overflow-hidden ${className}`}>
+      <Suspense fallback={
+        <div className="animate-pulse flex items-center justify-center bg-cosmic-800/30 h-full w-full min-h-[200px]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">{language === 'en' ? 'Loading map...' : '加载地图中...'}</p>
+          </div>
+        </div>
+      }>
+        <MapContainer
+          key={mapId}
+          center={center}
+          zoom={zoom}
+          className="w-full h-full min-h-[200px]"
+          scrollWheelZoom={scrollWheelZoom}
+          zoomControl={zoomControl}
+          attributionControl={attributionControl}
         >
           <TileLayer
-            url={tileServerUrl}
-            attribution={attribution}
-            subdomains={['a', 'b', 'c']}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           
-          <Marker 
-            position={position}
-            icon={markerIcon}
-          >
-            <Popup>
-              {locationName}
-            </Popup>
-          </Marker>
+          {markers && markers.map((marker, index) => (
+            <Marker 
+              key={`marker-${index}`} 
+              position={marker.position}
+              icon={marker.color ? L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: ${marker.color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+              }) : defaultIcon}
+            >
+              {marker.content && <Popup>{marker.content}</Popup>}
+            </Marker>
+          ))}
           
-          <MapUpdater position={position} />
-          {editable && <MapEvents onMapClick={onMapClick} />}
+          <CirclesComponent />
+          
+          <MapResetComponent onMapClick={onMapClick} onMapMove={onMapMove} />
         </MapContainer>
-      </div>
-      
-      {showInfoPanel && (
-        <div className="p-4 bg-cosmic-800/50 border-t border-cosmic-600/10">
-          <h3 className="font-medium text-sm mb-1 text-primary-foreground/90">{t("Location", "位置")}</h3>
-          <p className="text-sm text-muted-foreground">
-            {t(`${locationName} is located at coordinates ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`, 
-               `${locationName}位于坐标 ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`)}
-          </p>
-          {editable && (
-            <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              {t("Click anywhere on the map to update the location", "点击地图上的任意位置来更新位置")}
-            </p>
-          )}
-        </div>
-      )}
-    </>
+      </Suspense>
+    </div>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export default memo(LazyMapComponent);
+export default LazyMapComponent;

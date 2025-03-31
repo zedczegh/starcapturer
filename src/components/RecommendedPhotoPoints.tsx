@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin } from "lucide-react";
@@ -53,7 +52,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           isViable: point.isViable || false,
           distance: point.distance || 0,
           description: point.description || "",
-          date: point.date || new Date().toISOString(),
           timestamp: point.timestamp || new Date().toISOString()
         }));
         

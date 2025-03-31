@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Star, ArrowRight, Eye } from 'lucide-react';
+import { MapPin, Star, ArrowRight, Eye, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSafeScore, formatSIQSScore } from '@/utils/geoUtils';
 
 interface PhotoLocationCardProps {
@@ -67,7 +67,19 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       <Card className="glassmorphism h-full flex flex-col overflow-hidden border-cosmic-700/30 hover:shadow-glow transition-all duration-300">
         <div className="p-4 flex-grow">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="font-semibold text-lg text-white line-clamp-1">{displayName}</h3>
+            <div className="flex-1 flex flex-col">
+              <h3 className="font-semibold text-lg text-white line-clamp-1">{displayName}</h3>
+              
+              {/* Display Dark Sky certification badge if available */}
+              {location.isDarkSkyReserve && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Award className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />
+                  <span className="text-xs text-blue-400">
+                    {t("Certified Dark Sky", "认证暗夜区域")}
+                  </span>
+                </div>
+              )}
+            </div>
             <motion.div 
               className={`px-2.5 py-1 rounded-full text-sm font-medium ${getSiqsColorClass()} flex items-center shadow-glow-light`}
               whileHover={{ scale: 1.1 }}
@@ -105,6 +117,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
               </span>
             </div>
           </div>
+          
+          {/* Show certification if available */}
+          {location.certification && (
+            <div className="mt-2 text-xs">
+              <span className="block text-blue-400">{t("Certification", "认证")}</span>
+              <span className="text-blue-200">{location.certification}</span>
+            </div>
+          )}
         </div>
         
         <div className="border-t border-cosmic-700/30 p-3 flex justify-between items-center bg-cosmic-900/40">

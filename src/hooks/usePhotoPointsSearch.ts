@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -60,7 +61,7 @@ export const usePhotoPointsSearch = ({
             location.longitude
           ),
           // Ensure all required properties exist
-          timestamp: location.timestamp || location.date || new Date().toISOString()
+          timestamp: location.timestamp || new Date().toISOString()
         }));
         
         setAllLocations(locationsWithDistance);
@@ -206,17 +207,24 @@ export const usePhotoPointsSearch = ({
     // If user has a good SIQS, only show locations that are significantly better
     let betterLocations = withinDistance;
     if (userSiqs !== null) {
-      betterLocations = withinDistance.filter(location => 
-        location.siqs !== undefined && 
-        location.siqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD
-      );
+      betterLocations = withinDistance.filter(location => {
+        const locationSiqs = typeof location.siqs === 'number' ? location.siqs : 
+          (typeof location.siqs === 'object' && location.siqs !== null ? (location.siqs as any).score || 0 : 0);
+        return locationSiqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD;
+      });
     }
     
     // Sort by SIQS first, then by distance if SIQS is similar
     const sortedLocations = betterLocations.sort((a, b) => {
+      // Extract numeric SIQS values for comparison
+      const siqsA = typeof a.siqs === 'number' ? a.siqs : 
+        (typeof a.siqs === 'object' && a.siqs !== null ? (a.siqs as any).score || 0 : 0);
+      const siqsB = typeof b.siqs === 'number' ? b.siqs : 
+        (typeof b.siqs === 'object' && b.siqs !== null ? (b.siqs as any).score || 0 : 0);
+        
       // If SIQS difference is significant, sort by SIQS
-      if ((b.siqs || 0) - (a.siqs || 0) > 1) {
-        return (b.siqs || 0) - (a.siqs || 0);
+      if (siqsB - siqsA > 1) {
+        return siqsB - siqsA;
       } 
       // Otherwise, sort by distance
       return (a.distance || 0) - (b.distance || 0);
