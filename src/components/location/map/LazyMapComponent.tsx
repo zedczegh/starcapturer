@@ -1,6 +1,6 @@
 
-import React, { lazy, Suspense } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,6 +21,26 @@ L.Marker.prototype.options.icon = defaultIcon;
 
 // Lazy load the actual map component to reduce initial load time
 const MapComponent = lazy(() => import('./MapComponents'));
+
+// MapResetComponent to handle cleanup and prevent "Map container is already initialized" error
+const MapResetComponent = ({ onMapClick, onMapMove }: { 
+  onMapClick?: (lat: number, lng: number) => void; 
+  onMapMove?: (lat: number, lng: number) => void; 
+}) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Cleanup function to properly handle map disposal
+    return () => {
+      // Only invalidate size if map is already initialized
+      if (map) {
+        map.invalidateSize();
+      }
+    };
+  }, [map]);
+  
+  return <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />;
+};
 
 interface CircleOptions {
   center: [number, number];
@@ -62,6 +82,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   attributionControl = true
 }) => {
   const { language } = useLanguage();
+  const [mapId] = useState(() => `map-${Math.random().toString(36).substring(2, 11)}`);
   
   // Create a MapCirclesComponent to handle all circles
   const CirclesComponent = React.useCallback(() => {
@@ -86,7 +107,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   }, [circles]);
   
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`}>
+    <div id={mapId} className={`relative rounded-lg overflow-hidden ${className}`}>
       <Suspense fallback={
         <div className="animate-pulse flex items-center justify-center bg-cosmic-800/30 h-full w-full min-h-[200px]">
           <div className="text-center">
@@ -96,10 +117,13 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         </div>
       }>
         <MapContainer
+          key={mapId}
           center={center}
           zoom={zoom}
           className="w-full h-full min-h-[200px]"
           scrollWheelZoom={scrollWheelZoom}
+          zoomControl={zoomControl}
+          attributionControl={attributionControl}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -123,7 +147,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           
           <CirclesComponent />
           
-          <MapComponent onMapClick={onMapClick} onMapMove={onMapMove} />
+          <MapResetComponent onMapClick={onMapClick} onMapMove={onMapMove} />
         </MapContainer>
       </Suspense>
     </div>

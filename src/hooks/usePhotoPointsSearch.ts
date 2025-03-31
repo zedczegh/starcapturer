@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -208,7 +209,7 @@ export const usePhotoPointsSearch = ({
     if (userSiqs !== null) {
       betterLocations = withinDistance.filter(location => {
         const locationSiqs = typeof location.siqs === 'number' ? location.siqs : 
-          (typeof location.siqs === 'object' && location.siqs ? location.siqs.score : 0);
+          (typeof location.siqs === 'object' && location.siqs !== null ? (location.siqs as any).score || 0 : 0);
         return locationSiqs > userSiqs * SIQS_IMPROVEMENT_THRESHOLD;
       });
     }
@@ -217,9 +218,9 @@ export const usePhotoPointsSearch = ({
     const sortedLocations = betterLocations.sort((a, b) => {
       // Extract numeric SIQS values for comparison
       const siqsA = typeof a.siqs === 'number' ? a.siqs : 
-        (typeof a.siqs === 'object' && a.siqs ? a.siqs.score : 0);
+        (typeof a.siqs === 'object' && a.siqs !== null ? (a.siqs as any).score || 0 : 0);
       const siqsB = typeof b.siqs === 'number' ? b.siqs : 
-        (typeof b.siqs === 'object' && b.siqs ? b.siqs.score : 0);
+        (typeof b.siqs === 'object' && b.siqs !== null ? (b.siqs as any).score || 0 : 0);
         
       // If SIQS difference is significant, sort by SIQS
       if (siqsB - siqsA > 1) {

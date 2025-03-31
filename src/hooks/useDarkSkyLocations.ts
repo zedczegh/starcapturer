@@ -49,9 +49,9 @@ export function useDarkSkyLocations(
         const sortedLocations = locationsWithDistance.sort((a, b) => {
           // Use safe number comparison
           const scoreA = typeof a.siqs === 'number' ? a.siqs : 
-            (typeof a.siqs === 'object' ? a.siqs.score : 0);
+            (typeof a.siqs === 'object' && a.siqs !== null ? (a.siqs as any).score || 0 : 0);
           const scoreB = typeof b.siqs === 'number' ? b.siqs : 
-            (typeof b.siqs === 'object' ? b.siqs.score : 0);
+            (typeof b.siqs === 'object' && b.siqs !== null ? (b.siqs as any).score || 0 : 0);
           
           return scoreB - scoreA;
         });

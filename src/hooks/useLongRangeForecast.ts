@@ -47,16 +47,18 @@ export function useLongRangeForecast(latitude?: number, longitude?: number) {
         });
 
         // Check if weather data contains daily forecasts
-        if (!weatherData || !weatherData.dailyForecasts) {
+        if (!weatherData) {
           throw new Error('Failed to fetch forecast data');
         }
 
-        const dailyForecasts = Array.isArray(weatherData.dailyForecasts) 
-          ? weatherData.dailyForecasts 
-          : [];
+        // Extract dailyForecasts from weatherData, defaulting to an empty array
+        const dailyForecasts = weatherData.dailyForecasts || [];
+        
+        // Ensure the data is an array
+        const forecastsArray = Array.isArray(dailyForecasts) ? dailyForecasts : [];
 
         setForecast({
-          daily: dailyForecasts.map(day => ({
+          daily: forecastsArray.map(day => ({
             time: day.time || new Date().toISOString(),
             weatherCode: day.weatherCode || 0,
             temperatureMax: day.temperatureMax || 25,
