@@ -1,3 +1,4 @@
+
 import React, { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -5,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { siqsToColor } from "@/lib/calculateSIQS";
-import { CalendarClock, MapPin, Star, Award, Building, Globe, Moon } from "lucide-react";
+import { CalendarClock, MapPin, Star, Award, Park, Building, Globe, Moon } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { formatLocationName } from "@/utils/locationNameFormatter";
@@ -70,7 +71,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
     } else if (certLower.includes('reserve') || isDarkSkyReserve) {
       return <Globe className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
     } else if (certLower.includes('park')) {
-      return <Award className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+      return <Park className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
     } else if (certLower.includes('community')) {
       return <Building className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
     } else {

@@ -1,73 +1,56 @@
+import { Language } from "@/services/geocoding/types";
 
 /**
- * Utility for formatting location names consistently
- * Handles special cases and language-specific formatting
+ * Format and clean up location names for display
+ * Removes duplicates and unnecessary parts
  */
-
-/**
- * Format a location name for display
- * @param name Raw location name
- * @param language Current language (en or zh)
- * @returns Formatted location name
- */
-export function formatLocationName(name: string, language?: string): string {
-  if (!name) return '';
+export function formatLocationName(locationName: string, language: Language = 'en'): string {
+  if (!locationName) return language === 'en' ? 'Unknown location' : '未知位置';
   
-  // If we have Chinese characters and language is not Chinese, use default handling
-  const hasChinese = /[\u4e00-\u9fa5]/.test(name);
-  if (hasChinese && language !== 'zh') {
-    return name;
+  // If it contains coordinates, return a friendlier message
+  if (locationName.includes('°') || locationName.includes('Location at') || locationName.includes('位置在')) {
+    return language === 'en' ? 'Remote area' : '偏远地区';
   }
   
-  // Remove unnecessary prefixes/suffixes
-  let formatted = name
-    .replace(/^location at /i, '')
-    .replace(/^dark sky /i, '')
-    .replace(/international dark sky /i, '')
-    .trim();
+  // Split by commas based on language
+  const separator = language === 'en' ? ',' : '，';
+  const parts = locationName.split(separator);
   
-  // Capitalize words
-  formatted = formatted
-    .split(' ')
-    .map(word => {
-      // Don't capitalize certain small words unless they're the first word
-      const smallWords = ['a', 'an', 'the', 'in', 'on', 'at', 'by', 'for', 'of', 'and', 'or'];
-      if (smallWords.includes(word.toLowerCase())) {
-        return word.toLowerCase();
-      }
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(' ');
+  // Remove duplicate parts while preserving order
+  const uniqueParts = [...new Set(parts.map(p => p.trim()))];
   
-  // Ensure first letter is capitalized
-  formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  // For long names, use just the first part or first two parts
+  if (uniqueParts.length > 3) {
+    if (language === 'en') {
+      return uniqueParts.slice(0, 2).join(', ');
+    } else {
+      return uniqueParts.slice(0, 2).join('，');
+    }
+  }
   
-  return formatted;
+  // For shorter names, keep all parts
+  return uniqueParts.join(language === 'en' ? ', ' : '，');
 }
 
 /**
- * Format certification type for UI display
- * @param certification Raw certification type from API
- * @param language Current language (en or zh)
- * @returns Formatted certification type
+ * Extract town name from a longer location string
  */
-export function formatCertificationType(certification: string | undefined, language?: string): string {
-  if (!certification) return '';
+export function extractTownName(locationName: string, language: Language = 'en'): string {
+  if (!locationName) return language === 'en' ? 'Unknown location' : '未知位置';
   
-  // Chinese translations
-  if (language === 'zh') {
-    if (certification.includes('Sanctuary')) return '国际暗夜保护区';
-    if (certification.includes('Reserve')) return '国际暗夜保护区';
-    if (certification.includes('Park')) return '国际暗夜公园';
-    if (certification.includes('Community')) return '国际暗夜社区';
-    if (certification.includes('Urban')) return '城市夜空地点';
-    return '认证暗夜地点';
+  // If it contains coordinates, return a friendlier message
+  if (locationName.includes('°') || locationName.includes('Location at') || locationName.includes('位置在')) {
+    return language === 'en' ? 'Remote area' : '偏远地区';
   }
   
-  // For English, use a shorter version
-  if (certification.includes('International Dark Sky')) {
-    return certification.replace('International Dark Sky', 'Dark Sky');
+  // Split by commas based on language
+  const separator = language === 'en' ? ',' : '，';
+  const parts = locationName.split(separator);
+  
+  // Just return the first part as the town name
+  if (parts.length > 0) {
+    return parts[0].trim();
   }
   
-  return certification;
+  return locationName;
 }

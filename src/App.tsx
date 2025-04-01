@@ -5,13 +5,15 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
-import { lazy, Suspense, useCallback } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { HelmetProvider } from "react-helmet-async";
 
+// Improve performance by prefetching popular locations
+import { prefetchPopularLocations } from "./lib/queryPrefetcher";
 // Improved loading component
 import PageLoader from "./components/loaders/PageLoader";
 
-// Optimize chunks for better performance
+// Lazily load pages with improved chunking for faster initial load
 const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
 const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
 const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
@@ -25,24 +27,30 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000,   // 10 minutes
+      staleTime: 15 * 60 * 1000, // Increased to 15 minutes for better caching
+      gcTime: 30 * 60 * 1000,    // Increased to 30 minutes
     },
   },
 });
 
-// Optimized animated page transitions with shorter durations for better performance
+// Prefetch data for popular locations
+prefetchPopularLocations(queryClient);
+
+// Optimized animated page transitions with shorter durations
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  
+  // Use key based on pathname without query parameters for smoother transitions
+  const pathnameBase = location.pathname.split('?')[0];
   
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        key={pathnameBase}
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
+        transition={{ duration: 0.1 }} // Faster transitions
         className="min-h-screen"
       >
         {children}
@@ -55,11 +63,6 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 const helmetContext = {};
 
 const App = () => {
-  // Better error handling for route loading
-  const handleError = useCallback((error: Error) => {
-    console.error("Application route error:", error);
-  }, []);
-  
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
@@ -86,7 +89,7 @@ const App = () => {
                     } />
                     <Route path="/photo-points" element={
                       <PageTransition>
-                        <LocationDetails />
+                        <PhotoPointsNearby />
                       </PageTransition>
                     } />
                     <Route path="/about" element={
