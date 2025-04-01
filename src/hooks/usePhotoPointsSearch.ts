@@ -76,10 +76,13 @@ export const usePhotoPointsSearch = ({
         );
         
         if (calculatedLocations.length > 0) {
-          setAllLocations(calculatedLocations);
-          setFilteredLocations(calculatedLocations);
-          setDisplayedLocations(calculatedLocations.slice(0, maxInitialResults));
-          setHasMoreLocations(calculatedLocations.length > maxInitialResults);
+          // Filter out any locations with SIQS=0
+          const validLocations = calculatedLocations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+          
+          setAllLocations(validLocations);
+          setFilteredLocations(validLocations);
+          setDisplayedLocations(validLocations.slice(0, maxInitialResults));
+          setHasMoreLocations(validLocations.length > maxInitialResults);
           
           toast.info(
             language === "en" 
@@ -109,11 +112,13 @@ export const usePhotoPointsSearch = ({
           );
         }
       } else {
-        // Process normal results
-        setAllLocations(locations);
-        setFilteredLocations(locations);
-        setDisplayedLocations(locations.slice(0, maxInitialResults));
-        setHasMoreLocations(locations.length > maxInitialResults);
+        // Filter out any locations with SIQS=0 from the standard results too
+        const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+        
+        setAllLocations(validLocations);
+        setFilteredLocations(validLocations);
+        setDisplayedLocations(validLocations.slice(0, maxInitialResults));
+        setHasMoreLocations(validLocations.length > maxInitialResults);
       }
       
       // Update last search params

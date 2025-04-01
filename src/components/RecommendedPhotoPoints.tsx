@@ -49,12 +49,15 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         if (points && points.length > 0) {
           const pointsWithSiqs = await batchCalculateSiqs(points);
           
+          // batchCalculateSiqs already filters out SIQS=0 locations
           let filteredPoints = pointsWithSiqs;
+          
           if (preferCertified) {
             const certifiedPoints = filteredPoints.filter(p => p.isDarkSkyReserve || p.certification);
             filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
           }
           
+          // Sort by SIQS score (highest first)
           filteredPoints.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
           
           setRecommendedPoints(filteredPoints.slice(0, 5));

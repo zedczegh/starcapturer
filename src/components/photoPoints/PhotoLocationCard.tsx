@@ -66,7 +66,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
             location.bortleScale || 5
           );
           
-          setRealTimeSiqs(result.siqs);
+          // Only update if SIQS is greater than 0
+          if (result.siqs > 0) {
+            setRealTimeSiqs(result.siqs);
+          } else {
+            // If we got a zero score, hide this card
+            setRealTimeSiqs(0);
+          }
         } catch (error) {
           console.error("Error fetching real-time SIQS:", error);
         } finally {
@@ -78,11 +84,21 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
     }
   }, [location, showRealTimeSiqs]);
 
+  // If we have a real-time SIQS of 0, don't render this card
+  if (realTimeSiqs === 0) {
+    return null;
+  }
+
   // Get display name based on language
   const displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   
   // Get SIQS score to display (real-time or stored)
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
+  
+  // If the SIQS score is 0 and we're not currently loading, don't render
+  if (displaySiqs === 0 && !loadingSiqs) {
+    return null;
+  }
   
   const handleViewDetails = () => {
     // Prepare location data for details page
