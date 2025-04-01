@@ -1,3 +1,4 @@
+
 import { LocationEntry } from "../locationDatabase";
 
 /**
@@ -256,43 +257,5 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Tomales Point", coordinates: [38.2077, -122.9693], bortleScale: 2, radius: 12, type: 'dark-site' },
   { name: "Mount Diablo State Park", coordinates: [37.8817, -121.9142], bortleScale: 3, radius: 15, type: 'dark-site' },
   { name: "Sunol Regional Wilderness", coordinates: [37.5170, -121.8329], bortleScale: 3, radius: 12, type: 'dark-site' },
-  { name: "Samuel P. Taylor State Park", coordinates: [38.0255, -122.7304], bortleScale: 3, radius: 10, type: 'dark-site' },
-  
-  // Parks - New additions
-  { name: "Aenos National Park", coordinates: [38.1451, 20.6573], bortleScale: 3, type: 'dark-site', radius: 20 },
-  { name: "Albanyà", coordinates: [42.3083, 2.7249], bortleScale: 3, type: 'dark-site', radius: 15 },
-  { name: "AlUla Manara and AlGharameel Nature Reserves", coordinates: [26.6086, 37.9128], bortleScale: 2, type: 'dark-site', radius: 30 },
-  { name: "AMC Maine Woods", coordinates: [45.5896, -69.2297], bortleScale: 2, type: 'dark-site', radius: 25 },
-  { name: "Antelope Island State Park", coordinates: [41.0421, -112.2292], bortleScale: 3, type: 'dark-site', radius: 15 },
-  { name: "Anza-Borrego Desert State Park", coordinates: [33.1153, -116.3846], bortleScale: 2, type: 'dark-site', radius: 40 },
-  { name: "Arches National Park", coordinates: [38.7331, -109.5925], bortleScale: 2, type: 'dark-site', radius: 25 },
-  { name: "Big Bend National Park", coordinates: [29.2498, -103.2502], bortleScale: 1, type: 'dark-site', radius: 50 },
-  { name: "Big Bend Ranch State Park", coordinates: [29.4728, -103.9340], bortleScale: 1, type: 'dark-site', radius: 45 },
-  { name: "Big Cypress National Preserve", coordinates: [25.9000, -81.3300], bortleScale: 3, type: 'dark-site', radius: 30 },
-  { name: "Black Canyon of the Gunnison National Park", coordinates: [38.5754, -107.7416], bortleScale: 2, type: 'dark-site', radius: 20 },
-  { name: "Bodmin Moor Dark Sky Landscape", coordinates: [50.5169, -4.6048], bortleScale: 3, type: 'dark-site', radius: 15 },
-  { name: "Browns Canyon National Monument", coordinates: [38.6546, -106.0580], bortleScale: 2, type: 'dark-site', radius: 20 },
-  { name: "Bruneau Dunes State Park", coordinates: [42.8936, -115.6943], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Bryce Canyon National Park", coordinates: [37.5930, -112.1871], bortleScale: 2, type: 'dark-site', radius: 25 },
-  { name: "Buffalo National River", coordinates: [36.0410, -92.9006], bortleScale: 3, type: 'dark-site', radius: 30 },
-  { name: "Bükk National Park", coordinates: [48.0519, 20.4964], bortleScale: 3, type: 'dark-site', radius: 15 },
-  { name: "Canyonlands National Park", coordinates: [38.2136, -109.9025], bortleScale: 1, type: 'dark-site', radius: 35 },
-  { name: "Cape Lookout National Seashore", coordinates: [34.6158, -76.5407], bortleScale: 3, type: 'dark-site', radius: 20 },
-  { name: "Capitol Reef National Park", coordinates: [38.0877, -111.1355], bortleScale: 2, type: 'dark-site', radius: 25 },
-  { name: "Capulin Volcano National Monument", coordinates: [36.7811, -103.9696], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Cedar Breaks National Monument", coordinates: [37.6351, -112.8452], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Chaco Culture National Historical Park", coordinates: [36.0530, -107.9560], bortleScale: 1, type: 'dark-site', radius: 20 },
-  { name: "Cherry Springs State Park", coordinates: [41.6626, -77.8169], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Chiricahua National Monument", coordinates: [32.0086, -109.3442], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "City of Rocks National Reserve", coordinates: [42.0372, -113.7183], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Clayton Lake State Park", coordinates: [36.5828, -103.3195], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Copper Breaks State Park", coordinates: [34.1125, -99.7505], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Cottonwood Canyon State Park", coordinates: [45.3546, -120.4760], bortleScale: 2, type: 'dark-site', radius: 20 },
-  { name: "Craters Of The Moon National Monument", coordinates: [43.4166, -113.5166], bortleScale: 1, type: 'dark-site', radius: 25 },
-  { name: "Curecanti National Recreation Area", coordinates: [38.4515, -107.1866], bortleScale: 2, type: 'dark-site', radius: 20 },
-  { name: "Dark Sky Park Bulbjerg", coordinates: [57.1514, 8.7866], bortleScale: 3, type: 'dark-site', radius: 10 },
-  { name: "De Boschplaat", coordinates: [53.4126, 5.5784], bortleScale: 3, type: 'dark-site', radius: 15 },
-  { name: "Dead Horse Point State Park", coordinates: [38.5010, -109.7392], bortleScale: 2, type: 'dark-site', radius: 15 },
-  { name: "Death Valley National Park", coordinates: [36.5323, -116.9325], bortleScale: 1, type: 'dark-site', radius: 50 },
-  { name: "Desengano State Park", coordinates: [-21.8257, -41.9120], bortleScale: 3, type: 'dark-site', radius: 20 },
+  { name: "Samuel P. Taylor State Park", coordinates: [38.0255, -122.7304], bortleScale: 3, radius: 10, type: 'dark-site' }
 ];

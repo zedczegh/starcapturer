@@ -1,179 +1,259 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Star, Award, Clock, Loader2, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Ruler, Award, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { siqsToColor } from '@/lib/calculateSIQS';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { formatDistanceToNow } from 'date-fns';
-import { formatLocationName, getRegionalName } from '@/utils/locationNameFormatter';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
+import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { getLocationNameForCoordinates } from '@/components/location/map/LocationNameService';
+import { extractNearestTownName } from '@/utils/locationNameFormatter';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
+  showRealTimeSiqs?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }) => {
-  const { t, language } = useLanguage();
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs = false }) => {
+  const navigate = useNavigate();
+  const { language, t } = useLanguage();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [loadingSiqs, setLoadingSiqs] = useState(false);
+  const [nearestTown, setNearestTown] = useState<string | null>(null);
+  const [loadingTown, setLoadingTown] = useState(false);
   
-  // Animation variants for staggered list animation
-  const item = {
+  // Format the distance for display
+  const formatDistance = (distance?: number) => {
+    if (!distance) return t("Unknown distance", "未知距离");
+    
+    if (distance < 1) {
+      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+    }
+    
+    if (distance < 10) {
+      return t(`${distance.toFixed(1)} km away`, `距离 ${distance.toFixed(1)} 公里`);
+    }
+    
+    return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+  };
+  
+  // Format the date for display
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'zh-CN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).format(date);
+    } catch (error) {
+      return '';
+    }
+  };
+  
+  // Get nearest town name
+  useEffect(() => {
+    if (location.latitude && location.longitude) {
+      const fetchNearestTown = async () => {
+        setLoadingTown(true);
+        try {
+          // First check if location already has a name we can use
+          if (location.name && 
+              !location.name.includes("°") && 
+              !location.name.includes("Location at") &&
+              !location.name.includes("位置在") &&
+              !location.name.includes("Remote area") &&
+              !location.name.includes("偏远地区")) {
+            
+            const extractedName = extractNearestTownName(location.name, location.description, language);
+            setNearestTown(extractedName);
+            setLoadingTown(false);
+            return;
+          }
+          
+          // Otherwise fetch from our location service
+          const townName = await getLocationNameForCoordinates(
+            location.latitude,
+            location.longitude,
+            language
+          );
+          
+          if (townName) {
+            const extractedTownName = extractNearestTownName(townName, location.description, language);
+            setNearestTown(extractedTownName);
+          } else {
+            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
+          }
+        } catch (error) {
+          console.error("Error fetching nearest town:", error);
+          setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
+        } finally {
+          setLoadingTown(false);
+        }
+      };
+      
+      fetchNearestTown();
+    }
+  }, [location, language]);
+  
+  // Load real-time SIQS data if requested
+  useEffect(() => {
+    if (showRealTimeSiqs && location.latitude && location.longitude) {
+      const fetchSiqs = async () => {
+        setLoadingSiqs(true);
+        try {
+          const result = await calculateRealTimeSiqs(
+            location.latitude,
+            location.longitude,
+            location.bortleScale || 5
+          );
+          
+          // Only update if SIQS is greater than 0
+          if (result.siqs > 0) {
+            setRealTimeSiqs(result.siqs);
+          } else {
+            // If we got a zero score, hide this card
+            setRealTimeSiqs(0);
+          }
+        } catch (error) {
+          console.error("Error fetching real-time SIQS:", error);
+        } finally {
+          setLoadingSiqs(false);
+        }
+      };
+      
+      fetchSiqs();
+    }
+  }, [location, showRealTimeSiqs]);
+
+  // If we have a real-time SIQS of 0, don't render this card
+  if (realTimeSiqs === 0) {
+    return null;
+  }
+
+  // Get display name based on language
+  const displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+  
+  // Get SIQS score to display (real-time or stored)
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
+  
+  // If the SIQS score is 0 and we're not currently loading, don't render
+  if (displaySiqs === 0 && !loadingSiqs) {
+    return null;
+  }
+  
+  const handleViewDetails = () => {
+    // Prepare location data for details page
+    const locationData = {
+      id: location.id,
+      name: displayName,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortleScale,
+      timestamp: new Date().toISOString(),
+      fromPhotoPoints: true,
+      isDarkSkyReserve: location.isDarkSkyReserve,
+      certification: location.certification
+    };
+    
+    // Save to localStorage to ensure proper refresh handling
+    saveLocationFromPhotoPoints(locationData);
+    
+    // Navigate to location details with state
+    navigate(`/location/${location.id}`, { state: { fromPhotoPoints: true, ...locationData } });
+  };
+  
+  // Animation variants
+  const cardVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
+    visible: { 
+      opacity: 1, 
       y: 0,
-      transition: {
-        delay: index * 0.05,
-        duration: 0.5,
-        ease: [0.48, 0.15, 0.25, 0.96]
+      transition: { 
+        duration: 0.4,
+        delay: index * 0.1
       }
     }
   };
   
-  const scoreColor = location.siqs 
-    ? siqsToColor(location.siqs, location.isViable ?? (location.siqs >= 6.5)) 
-    : '#4a5568';
-  
-  // Format the relative time
-  const relativeTime = location.timestamp
-    ? formatDistanceToNow(new Date(location.timestamp), { addSuffix: true })
-    : '';
-  
-  // Format the distance if available
-  const formattedDistance = location.distance 
-    ? location.distance < 1 
-      ? `${(location.distance * 1000).toFixed(0)} m`
-      : `${location.distance.toFixed(1)} km`
-    : '';
-    
-  // Format location name, using regional naming for remote locations
-  let displayName = formatLocationName(location.name, language as any);
-  
-  // Use regional naming for remote areas or coordinates
-  if (
-    displayName === "Remote area" || 
-    displayName === "偏远地区" || 
-    displayName.includes("°") || 
-    displayName.includes("Location at") || 
-    displayName.includes("位置在")
-  ) {
-    // Try regional naming like "Northwest Yunnan"
-    const regionalName = getRegionalName(location.latitude, location.longitude, language as any);
-    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-      displayName = regionalName;
-    }
-  }
-
-  // Use Chinese name if available and language is Chinese
-  if (language === 'zh' && location.chineseName) {
-    displayName = location.chineseName;
-  }
-  
   return (
-    <motion.div variants={item} initial="hidden" animate="visible">
-      <Link to={`/location/${location.id}`} state={{ ...location }}>
-        <Card className="h-full overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-          {/* Dark blue background with gradient */}
-          <div 
-            className="h-24 relative flex items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, rgba(16,18,64,1) 0%, rgba(36,42,107,1) 100%)"
-            }}
-          >
-            {/* Add stars background */}
-            <div
-              className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage: "url('/images/stars.png')",
-                backgroundSize: "cover"
-              }}
-            />
-            
-            {/* SIQS score display with color-coded rings */}
-            <div className="relative z-10 flex items-center justify-center">
-              <div 
-                className="rounded-full p-3 flex items-center justify-center" 
-                style={{ backgroundColor: scoreColor, opacity: 0.2 }}
-              >
-                <div 
-                  className="rounded-full p-6 flex items-center justify-center"
-                  style={{ backgroundColor: scoreColor, opacity: 0.4 }}
-                />
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl font-bold">
-                  {location.siqs ? location.siqs.toFixed(1) : '?'}
-                </span>
-              </div>
-            </div>
+    <motion.div
+      variants={cardVariants}
+      className="glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30"
+    >
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-medium line-clamp-1">{displayName}</h3>
+        
+        <div className="flex items-center">
+          {(location.isDarkSkyReserve || location.certification) && (
+            <Badge variant="secondary" className="mr-2 bg-blue-500/20 text-blue-300 border-blue-500/40">
+              <Award className="h-3 w-3 mr-1" />
+              {t("Certified", "认证")}
+            </Badge>
+          )}
+          
+          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
+            {loadingSiqs ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <Star className="h-3 w-3 mr-1 text-yellow-400" fill="#facc15" />
+            )}
+            <span className="text-xs font-medium">
+              {loadingSiqs ? '...' : formatSIQSScoreForDisplay(displaySiqs)}
+            </span>
           </div>
-          
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
-                
-                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                  <MapPin className="h-3.5 w-3.5 mr-1" />
-                  <span>
-                    {location.latitude.toFixed(2)}, {location.longitude.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Show certification badge for dark sky reserves */}
-              {(location.isDarkSkyReserve || location.certification) && (
-                <Badge className="bg-blue-500 hover:bg-blue-600 whitespace-nowrap">
-                  <Award className="h-3 w-3 mr-1" />
-                  {t("Certified", "已认证")}
-                </Badge>
-              )}
-              
-              {/* Viable badge */}
-              {location.isViable !== undefined && (
-                <Badge 
-                  variant={location.isViable ? "default" : "destructive"}
-                  className="whitespace-nowrap"
-                >
-                  {location.isViable ? (
-                    <span className="flex items-center">
-                      <Star className="h-3 w-3 mr-1" />
-                      {t("Viable", "可行")}
-                    </span>
-                  ) : (
-                    t("Not Viable", "不可行")
-                  )}
-                </Badge>
-              )}
-            </div>
-            
-            {/* Only show certification name if it exists */}
-            {location.certification && (
-              <div className="mt-2">
-                <Badge variant="outline" className="bg-blue-950/30 text-xs">
-                  {location.certification}
-                </Badge>
-              </div>
-            )}
-          </CardContent>
-          
-          <CardFooter className="p-4 pt-0 text-xs text-muted-foreground flex justify-between items-center">
-            <div className="flex items-center">
-              {relativeTime}
-            </div>
-            
-            {formattedDistance && (
-              <div className="flex items-center">
-                <Ruler className="h-3.5 w-3.5 mr-1.5" />
-                {formattedDistance}
-              </div>
-            )}
-          </CardFooter>
-        </Card>
-      </Link>
+        </div>
+      </div>
+      
+      {location.description && (
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{location.description}</p>
+      )}
+      
+      <div className="flex flex-col space-y-1.5 mt-2">
+        <div className="flex items-center text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3 mr-1.5" />
+          {formatDistance(location.distance)}
+        </div>
+        
+        {/* Nearest town information */}
+        <div className="flex items-center text-xs text-muted-foreground">
+          <Building2 className="h-3 w-3 mr-1.5" />
+          {loadingTown ? (
+            <span className="flex items-center">
+              <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+              {t("Loading...", "加载中...")}
+            </span>
+          ) : nearestTown ? (
+            <span className="line-clamp-1">{t("Near ", "靠近 ")}{nearestTown}</span>
+          ) : (
+            <span>{t("Remote location", "偏远位置")}</span>
+          )}
+        </div>
+        
+        {location.date && (
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Clock className="h-3 w-3 mr-1.5" />
+            {formatDate(location.date)}
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-3 flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleViewDetails}
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-xs"
+        >
+          {t("View Details", "查看详情")}
+        </Button>
+      </div>
     </motion.div>
   );
 };

@@ -6,7 +6,7 @@ import { MapPin, Star, Award, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/geoUtils";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
+import { extractNearestTownName } from "@/utils/locationNameFormatter";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -42,17 +42,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             return;
           }
           
-          // Try directional region naming first (e.g., "Northwest Yunnan")
-          const regionalName = getRegionalName(point.latitude, point.longitude, language);
-          
-          // If we got a valid region name, use it
-          if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-            setNearestTown(regionalName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // Use enhanced location service as a fallback
+          // Use enhanced location service
           const townName = await getLocationNameForCoordinates(
             point.latitude,
             point.longitude,

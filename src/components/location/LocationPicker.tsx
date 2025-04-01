@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { SearchIcon, MapPin, Locate } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
@@ -115,8 +114,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           <Command>
             <CommandInput
               placeholder={t("Type a location...", "输入地点...")}
-              value={searchQuery}
-              onValueChange={handleSearch}
+              onChange={(e) => handleSearch(e.target.value)}
               ref={searchInputRef}
             />
             <CommandEmpty>{t("No results found.", "没有找到结果。")}</CommandEmpty>

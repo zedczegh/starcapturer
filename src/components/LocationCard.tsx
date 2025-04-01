@@ -9,7 +9,7 @@ import { siqsToColor } from "@/lib/calculateSIQS";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
-import { formatLocationName, getRegionalName } from "@/utils/locationNameFormatter";
+import { formatLocationName, extractTownName } from "@/utils/locationNameFormatter";
 
 interface LocationCardProps {
   id: string;
@@ -48,22 +48,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   const scoreColor = siqsToColor(siqs, isViable);
 
-  // Format name more nicely, try regional format if default name is unclear
-  let displayName = formatLocationName(name, language as any);
-  
-  // If the display name is just "Remote area" or contains coordinates, try using regional naming
-  if (
-    displayName === "Remote area" || 
-    displayName === "偏远地区" || 
-    displayName.includes("°") || 
-    displayName.includes("Location at") || 
-    displayName.includes("位置在")
-  ) {
-    const regionalName = getRegionalName(latitude, longitude, language as any);
-    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-      displayName = regionalName;
-    }
-  }
+  // Format name more nicely
+  const displayName = formatLocationName(name, language as any);
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {
