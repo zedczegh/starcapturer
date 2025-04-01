@@ -32,6 +32,63 @@ export function formatLocationName(name: string, language: Language = 'en'): str
 }
 
 /**
+ * Extract nearest town name from location name and description
+ * @param name Location name
+ * @param description Location description (optional)
+ * @param language Current UI language
+ * @returns Extracted town name
+ */
+export function extractNearestTownName(name: string, description?: string, language: Language = 'en'): string {
+  if (!name) return language === 'en' ? 'Unknown location' : '未知位置';
+  
+  // Remove coordinates and extra details from name
+  let cleanName = name
+    .replace(/\s*\(\d+\.\d+,\s*\d+\.\d+\)\s*$/, '')
+    .replace(/^Location\s+at\s+/i, '')
+    .replace(/^位置在\s+/, '');
+  
+  // Handle cases where the name is just coordinates
+  if (name.includes('°') || cleanName.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+    // Try to extract location from description if available
+    if (description) {
+      if (description.includes('near ')) {
+        const nearMatch = description.match(/near\s+([^,\.]+)/i);
+        if (nearMatch && nearMatch[1]) {
+          return nearMatch[1].trim();
+        }
+      }
+      
+      if (language === 'zh' && description.includes('靠近')) {
+        const nearMatch = description.match(/靠近\s+([^,\.，。]+)/i);
+        if (nearMatch && nearMatch[1]) {
+          return nearMatch[1].trim();
+        }
+      }
+    }
+    
+    // Return regional name as fallback
+    return language === 'en' ? 'Remote area' : '偏远地区';
+  }
+  
+  // Extract town name from "near X" patterns in the name
+  if (cleanName.includes(' near ')) {
+    const nearParts = cleanName.split(' near ');
+    if (nearParts.length > 1) {
+      return nearParts[1].trim();
+    }
+  }
+  
+  if (language === 'zh' && cleanName.includes('靠近')) {
+    const nearParts = cleanName.split('靠近');
+    if (nearParts.length > 1) {
+      return nearParts[1].trim();
+    }
+  }
+  
+  return cleanName;
+}
+
+/**
  * Get a regional name based on coordinates (e.g., "Northwest Yunnan")
  * Useful for remote areas without specific place names
  * @param latitude Latitude
