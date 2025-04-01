@@ -71,7 +71,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
         <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
         <h2 className="text-xl font-semibold mb-2">
-          {t("No Recommended Locations Found", "未找到推荐地点")}
+          {t("No Viable Locations Found", "未找到可行的观测点")}
         </h2>
         <p className="text-muted-foreground max-w-lg mx-auto mb-2 text-sm">
           {t(

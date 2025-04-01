@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// Define proper GeolocationOptions without language
+// Define proper GeolocationOptions without language property
 export interface GeolocationOptions {
   enableHighAccuracy?: boolean;
   timeout?: number;

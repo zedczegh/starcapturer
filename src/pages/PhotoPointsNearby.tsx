@@ -12,6 +12,7 @@ import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
+import { clearSiqsCache } from '@/services/realTimeSiqsService';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -41,6 +42,14 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
+  
+  // Function to handle refresh for both certified and calculated locations
+  const handleRefreshAllSiqsData = useCallback(() => {
+    // Clear SIQS cache to force recalculation
+    clearSiqsCache();
+    // Refresh all data
+    refreshSiqsData();
+  }, [refreshSiqsData]);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -145,6 +154,7 @@ const PhotoPointsNearby: React.FC = () => {
             <DarkSkyLocations
               locations={certifiedLocations}
               loading={loading && !locationLoading}
+              onRefresh={handleRefreshAllSiqsData}
             />
           ) : (
             <CalculatedLocations
@@ -152,7 +162,7 @@ const PhotoPointsNearby: React.FC = () => {
               loading={loading && !locationLoading}
               hasMore={hasMore}
               onLoadMore={loadMore}
-              onRefresh={refreshSiqsData}
+              onRefresh={handleRefreshAllSiqsData}
               searchRadius={searchRadius}
             />
           )}
