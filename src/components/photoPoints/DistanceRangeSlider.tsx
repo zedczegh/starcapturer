@@ -26,7 +26,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
     if (distance >= 1000) {
       return `${(distance / 1000).toFixed(1)}${t("km", "公里")}`;
     }
-    return `${distance}${t("km", "公里")}`;
+    return `${distance}${t("m", "米")}`;
   };
   
   // Handle slider value change

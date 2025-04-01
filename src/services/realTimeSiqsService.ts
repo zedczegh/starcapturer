@@ -153,7 +153,7 @@ export async function batchCalculateSiqs(
   }
   
   // Filter out any locations with SIQS = 0
-  return updatedLocations.filter(loc => loc.siqs > 0);
+  return updatedLocations.filter(loc => loc.siqs && loc.siqs > 0);
 }
 
 /**

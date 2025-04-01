@@ -39,11 +39,10 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         // Calculate SIQS for all locations
         const updatedLocations = await batchCalculateSiqs(locations);
         
-        // Filter out locations with SIQS score of 0
-        const validLocations = updatedLocations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+        // Filter out locations with SIQS score of 0 (already done in batchCalculateSiqs)
         
         // Sort by SIQS (highest first) and then by distance (closest first)
-        validLocations.sort((a, b) => {
+        updatedLocations.sort((a, b) => {
           // First compare by SIQS
           const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
           if (siqsDiff !== 0) return siqsDiff;
@@ -52,7 +51,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
           return (a.distance || Infinity) - (b.distance || Infinity);
         });
         
-        setLocationsWithSiqs(validLocations);
+        setLocationsWithSiqs(updatedLocations);
       } catch (error) {
         console.error("Error calculating SIQS for locations:", error);
       } finally {
