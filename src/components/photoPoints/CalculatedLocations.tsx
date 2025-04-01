@@ -7,6 +7,7 @@ import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
 import { batchCalculateSiqs } from '@/services/realTimeSiqsService';
+import { toast } from 'sonner';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -28,39 +29,90 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const { t } = useLanguage();
   const [calculatingSiqs, setCalculatingSiqs] = useState(false);
   const [locationsWithSiqs, setLocationsWithSiqs] = useState<SharedAstroSpot[]>([]);
+  const [hasApiError, setHasApiError] = useState(false);
   
   // Calculate SIQS for locations
   useEffect(() => {
     const calculateSiqs = async () => {
-      if (locations.length === 0 || loading) return;
+      if (locations.length === 0) {
+        setLocationsWithSiqs([]);
+        return;
+      }
+      
+      if (loading) return;
       
       setCalculatingSiqs(true);
+      setHasApiError(false);
+      
       try {
+        // If we already have locations with SIQS, don't recalculate unless forcing refresh
+        if (locationsWithSiqs.length > 0 && locations.length === locationsWithSiqs.length) {
+          setCalculatingSiqs(false);
+          return;
+        }
+        
         // Calculate SIQS for all locations
         const updatedLocations = await batchCalculateSiqs(locations);
         
-        // Filter out locations with SIQS score of 0 (already done in batchCalculateSiqs)
-        
-        // Sort by SIQS (highest first) and then by distance (closest first)
-        updatedLocations.sort((a, b) => {
-          // First compare by SIQS
-          const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
-          if (siqsDiff !== 0) return siqsDiff;
+        // If no locations returned, show error message for API issues
+        if (updatedLocations.length === 0 && locations.length > 0) {
+          setHasApiError(true);
           
-          // If SIQS is the same, compare by distance
-          return (a.distance || Infinity) - (b.distance || Infinity);
-        });
-        
-        setLocationsWithSiqs(updatedLocations);
+          // Fall back to using locations with estimated SIQS values
+          const fallbackLocations = locations.map(loc => ({
+            ...loc,
+            siqs: Math.max(0, 10 - (loc.bortleScale || 5)),
+            isViable: true
+          }));
+          
+          // Sort by Bortle scale (lower is better) and then by distance
+          fallbackLocations.sort((a, b) => {
+            // First compare by bortle scale (lower is better)
+            const bortleDiff = (a.bortleScale || 5) - (b.bortleScale || 5);
+            if (bortleDiff !== 0) return bortleDiff;
+            
+            // If bortle scale is the same, compare by distance
+            return (a.distance || Infinity) - (b.distance || Infinity);
+          });
+          
+          setLocationsWithSiqs(fallbackLocations);
+          
+          toast.error(t(
+            "Weather API limit reached. Using estimated values.",
+            "天气API达到限制。使用估算值。"
+          ));
+        } else {
+          // Sort by SIQS (highest first) and then by distance (closest first)
+          updatedLocations.sort((a, b) => {
+            // First compare by SIQS
+            const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
+            if (siqsDiff !== 0) return siqsDiff;
+            
+            // If SIQS is the same, compare by distance
+            return (a.distance || Infinity) - (b.distance || Infinity);
+          });
+          
+          setLocationsWithSiqs(updatedLocations);
+        }
       } catch (error) {
         console.error("Error calculating SIQS for locations:", error);
+        setHasApiError(true);
+        
+        // Fall back to using raw locations with estimated SIQS values
+        const fallbackLocations = locations.map(loc => ({
+          ...loc,
+          siqs: Math.max(0, 10 - (loc.bortleScale || 5)),
+          isViable: true
+        }));
+        
+        setLocationsWithSiqs(fallbackLocations);
       } finally {
         setCalculatingSiqs(false);
       }
     };
     
     calculateSiqs();
-  }, [locations, loading]);
+  }, [locations, loading, t]);
   
   // Add event listener for expanding search radius
   useEffect(() => {
@@ -164,6 +216,12 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   return (
     <>
+      {hasApiError && (
+        <div className="mb-4 p-2 rounded-md bg-amber-900/20 border border-amber-500/30 text-amber-300 text-sm text-center">
+          <p>{t("Using estimated SIQS values due to weather API limitations.", "由于天气API限制，使用估算的SIQS值。")}</p>
+        </div>
+      )}
+      
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -175,7 +233,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
             key={location.id || `calc-loc-${index}`}
             location={location}
             index={index}
-            showRealTimeSiqs={true}
+            showRealTimeSiqs={!hasApiError}
           />
         ))}
       </motion.div>

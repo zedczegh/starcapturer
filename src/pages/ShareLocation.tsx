@@ -1,168 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import React, { useState } from "react";
+import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { MapPin, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import BackButton from "@/components/navigation/BackButton";
 import { toast } from "sonner";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { MapPin, Loader2 } from "lucide-react";
 
-interface ShareLocationProps {
-  // No props needed for this component
-}
+// Import translation keys
+import { shareLocationKeys } from "@/lib/localization/keys";
 
-const ShareLocation = () => {
-  const [locationName, setLocationName] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
-  const [placeDetails, setPlaceDetails] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+const ShareLocation: React.FC = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
-  const { getPosition, loading: geoLoading } = useGeolocation({
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 0
-  });
+  // Form state
+  const [name, setName] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    // Validate inputs
-    if (!locationName || !latitude || !longitude) {
-      toast.error(t("Please fill in all fields.", "请填写所有字段。"));
-      setIsSubmitting(false);
+    
+    // Validate form
+    if (!name || !latitude || !longitude) {
+      toast.error(
+        language === "en" 
+          ? "Please fill in all required fields" 
+          : "请填写所有必填字段"
+      );
       return;
     }
-
-    // Validate latitude and longitude
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-
-    if (isNaN(lat) || lat < -90 || lat > 90 || isNaN(lng) || lng < -180 || lng > 180) {
-      toast.error(t("Invalid latitude or longitude.", "无效的纬度或经度。"));
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Here you would typically send the data to your backend
-    const locationData = {
-      name: locationName,
-      latitude: lat,
-      longitude: lng,
-      placeDetails: placeDetails,
-    };
-
-    console.log("Submitting location data:", locationData);
-
-    // Simulate a successful submission
-    setTimeout(() => {
-      toast.success(t("Location shared successfully!", "位置分享成功！"));
-      setIsSubmitting(false);
-      navigate('/'); // Redirect to home or another appropriate route
-    }, 1500);
-  };
-
-  const handleUseCurrentLocation = async () => {
+    
     try {
-      await getPosition();
-      toast.success(t("Location acquired!", "获取位置成功！"));
-    } catch (error: any) {
-      toast.error(t("Failed to get location: ", "获取位置失败：") + error.message);
+      setIsSubmitting(true);
+      
+      // Implement API call to share location
+      // This is a placeholder for the actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast.success(
+        language === "en" 
+          ? "Location shared successfully!" 
+          : "位置已成功分享！"
+      );
+      
+      // Navigate back to home page
+      navigate("/");
+    } catch (error) {
+      console.error("Error sharing location:", error);
+      toast.error(
+        language === "en" 
+          ? "Failed to share location. Please try again." 
+          : "分享位置失败。请重试。"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
-      <div className="container mx-auto px-4 py-24">
-        <Card className="max-w-md mx-auto bg-cosmic-900/70 border border-cosmic-700/50 text-white shadow-lg">
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="locationName">{t("Location Name", "位置名称")}</Label>
-                <Input
-                  id="locationName"
-                  value={locationName}
-                  onChange={(e) => setLocationName(e.target.value)}
-                  placeholder={t("e.g., Milky Way Point", "例如，银河点")}
-                  className="bg-cosmic-800/30 border-cosmic-700/40"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="latitude">{t("Latitude", "纬度")}</Label>
-                <Input
-                  id="latitude"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  placeholder="e.g., 40.7128"
-                  className="bg-cosmic-800/30 border-cosmic-700/40"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="longitude">{t("Longitude", "经度")}</Label>
-                <Input
-                  id="longitude"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  placeholder="e.g., -74.0060"
-                  className="bg-cosmic-800/30 border-cosmic-700/40"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="placeDetails">{t("Place Details", "地点详情")}</Label>
-                <Textarea
-                  id="placeDetails"
-                  value={placeDetails}
-                  onChange={(e) => setPlaceDetails(e.target.value)}
-                  placeholder={t("Describe the location (optional)", "描述位置（可选）")}
-                  className="bg-cosmic-800/30 border-cosmic-700/40 resize-none"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between items-center">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleUseCurrentLocation}
-                disabled={geoLoading || isSubmitting}
-                className="bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600/30"
-              >
-                {geoLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("Getting Location", "获取位置")}
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    {t("Use My Location", "使用我的位置")}
-                  </>
-                )}
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-primary text-white hover:bg-primary/90"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("Submitting...", "提交中...")}
-                  </>
-                ) : (
-                  t("Share Location", "分享位置")
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+      <Helmet>
+        <title>{t("Share Location | Sky Viewer", "分享位置 | 天空观测")}</title>
+      </Helmet>
+      
+      <div className="pt-20 md:pt-28 pb-20">
+        <div className="container mx-auto px-4">
+          <BackButton destination="/" />
+          
+          <div className="max-w-md mx-auto mt-6">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold mb-2">{t("Share Your Location", "分享您的位置")}</h1>
+              <p className="text-muted-foreground">
+                {t("Help others discover great viewing spots by sharing your location.", "通过分享您的位置，帮助他人发现优质的观测点。")}
+              </p>
+            </div>
+            
+            <div className="glassmorphism p-6 rounded-lg border border-cosmic-600/30">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">{t("Location Name", "位置名称")} *</Label>
+                  <Input
+                    id="name"
+                    placeholder={t("e.g. Mountain Peak Observatory", "例如：山顶天文台")}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="latitude">{t("Latitude", "纬度")} *</Label>
+                    <Input
+                      id="latitude"
+                      placeholder="e.g. 35.6762"
+                      value={latitude}
+                      onChange={(e) => setLatitude(e.target.value)}
+                      required
+                      type="number"
+                      step="0.0001"
+                      min="-90"
+                      max="90"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="longitude">{t("Longitude", "经度")} *</Label>
+                    <Input
+                      id="longitude"
+                      placeholder="e.g. 139.6503"
+                      value={longitude}
+                      onChange={(e) => setLongitude(e.target.value)}
+                      required
+                      type="number"
+                      step="0.0001"
+                      min="-180"
+                      max="180"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="description">{t("Description", "描述")}</Label>
+                  <Textarea
+                    id="description"
+                    placeholder={t("Tell others what makes this location special for stargazing...", "告诉他人这个位置为何适合观星...")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {t("Processing...", "处理中...")}
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <Share2 className="mr-2 h-4 w-4" />
+                      {t("Share Location", "分享位置")}
+                    </span>
+                  )}
+                </Button>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

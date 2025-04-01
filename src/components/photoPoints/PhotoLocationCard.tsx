@@ -58,6 +58,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
   useEffect(() => {
     if (showRealTimeSiqs && location.latitude && location.longitude) {
       const fetchSiqs = async () => {
+        // If we already have SIQS value from the location, use it
+        if (location.siqs !== undefined && location.siqs > 0) {
+          setRealTimeSiqs(location.siqs);
+          return;
+        }
+        
         setLoadingSiqs(true);
         try {
           const result = await calculateRealTimeSiqs(
@@ -69,6 +75,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
           setRealTimeSiqs(result.siqs);
         } catch (error) {
           console.error("Error fetching real-time SIQS:", error);
+          // Use a fallback calculation based on Bortle scale
+          const fallbackSiqs = Math.max(0, 10 - (location.bortleScale || 5));
+          setRealTimeSiqs(fallbackSiqs);
         } finally {
           setLoadingSiqs(false);
         }
