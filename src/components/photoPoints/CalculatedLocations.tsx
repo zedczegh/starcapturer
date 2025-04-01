@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -26,15 +25,12 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
   
-  // Sort locations by distance (closest first)
   const sortedLocations = [...validLocations].sort((a, b) => 
     (a.distance || Infinity) - (b.distance || Infinity)
   );
   
-  // Add event listener for expanding search radius
   useEffect(() => {
     const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
       if (onRefresh) {
@@ -117,7 +113,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
                 size="sm"
                 className="text-xs text-muted-foreground"
                 onClick={() => {
-                  // Trigger custom event to expand search radius
                   const newRadius = Math.min(10000, searchRadius + 1000);
                   document.dispatchEvent(new CustomEvent('expand-search-radius', { 
                     detail: { radius: newRadius } 

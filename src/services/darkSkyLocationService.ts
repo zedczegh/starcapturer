@@ -1,3 +1,4 @@
+
 /**
  * Service for efficiently retrieving Dark Sky locations
  * Provides optimized access to the dark sky locations database
@@ -10,6 +11,29 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 // Cache of dark sky locations for quick access
 let cachedDarkSkyLocations: LocationEntry[] | null = null;
 
+// Radius-based cache for dark sky locations
+const radiusCache = new Map<string, LocationEntry[]>();
+
+// Cache for converted AstroSpots
+const astroSpotCache = new Map<string, SharedAstroSpot>();
+
+// Cache invalidation time (15 minutes)
+const CACHE_TIMEOUT = 15 * 60 * 1000;
+let lastCacheTime = Date.now();
+
+/**
+ * Clear caches when they become stale
+ */
+function clearStaleCache() {
+  const now = Date.now();
+  if (now - lastCacheTime > CACHE_TIMEOUT) {
+    radiusCache.clear();
+    astroSpotCache.clear();
+    lastCacheTime = now;
+    console.log("Cleared stale dark sky location caches");
+  }
+}
+
 /**
  * Get all dark sky locations from the database
  * @returns Array of LocationEntry with type 'dark-site'
@@ -18,6 +42,7 @@ export function getAllDarkSkyLocations(): LocationEntry[] {
   if (!cachedDarkSkyLocations) {
     try {
       cachedDarkSkyLocations = locationDatabase.filter(loc => loc.type === 'dark-site');
+      console.log(`Cached ${cachedDarkSkyLocations.length} dark sky locations`);
     } catch (error) {
       console.error("Error filtering dark sky locations:", error);
       return [];
@@ -38,10 +63,26 @@ export function findDarkSkyLocationsWithinRadius(
   longitude: number,
   radius: number
 ): LocationEntry[] {
+  clearStaleCache();
+  
   try {
-    const darkSkyLocations = getAllDarkSkyLocations();
+    // Create cache key based on coordinates and radius (rounded to reduce variations)
+    const cacheKey = `${latitude.toFixed(1)}-${longitude.toFixed(1)}-${Math.round(radius/100)*100}`;
     
-    return darkSkyLocations.filter(location => {
+    // Check if we have cached results for this query
+    if (radiusCache.has(cacheKey)) {
+      const cachedResults = radiusCache.get(cacheKey);
+      if (cachedResults) {
+        console.log(`Using cached dark sky locations for radius ${radius}km`);
+        return cachedResults;
+      }
+    }
+    
+    const darkSkyLocations = getAllDarkSkyLocations();
+    const startTime = performance.now();
+    
+    // Use faster filtering method
+    const results = darkSkyLocations.filter(location => {
       try {
         const distance = calculateDistance(
           latitude,
@@ -56,6 +97,14 @@ export function findDarkSkyLocationsWithinRadius(
         return false;
       }
     });
+    
+    const endTime = performance.now();
+    console.log(`Found ${results.length} dark sky locations in ${(endTime - startTime).toFixed(2)}ms`);
+    
+    // Store in cache
+    radiusCache.set(cacheKey, results);
+    
+    return results;
   } catch (error) {
     console.error("Error finding dark sky locations within radius:", error);
     return [];
@@ -100,6 +149,14 @@ export function convertToSharedAstroSpot(
   userLongitude: number
 ): SharedAstroSpot {
   try {
+    // Create cache key
+    const cacheKey = `${entry.name}-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}`;
+    
+    // Check cache first
+    if (astroSpotCache.has(cacheKey)) {
+      return astroSpotCache.get(cacheKey) as SharedAstroSpot;
+    }
+    
     const distance = calculateDistance(
       userLatitude,
       userLongitude,
@@ -116,7 +173,7 @@ export function convertToSharedAstroSpot(
     // Add some variability but keep scores high for certified locations
     const siqs = Math.max(6, Math.min(9, baseSiqs + (Math.random() * 1.5)));
     
-    return {
+    const spot: SharedAstroSpot = {
       id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
       name: entry.name,
       latitude: entry.coordinates[0],
@@ -131,6 +188,11 @@ export function convertToSharedAstroSpot(
       isViable: true,
       timestamp: new Date().toISOString()
     };
+    
+    // Store in cache
+    astroSpotCache.set(cacheKey, spot);
+    
+    return spot;
   } catch (error) {
     console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);
     
@@ -160,13 +222,30 @@ export function getDarkSkyAstroSpots(
   radius: number
 ): SharedAstroSpot[] {
   try {
+    const startTime = performance.now();
     const locations = findDarkSkyLocationsWithinRadius(latitude, longitude, radius);
     
-    return locations.map(location => 
+    const spots = locations.map(location => 
       convertToSharedAstroSpot(location, latitude, longitude)
     );
+    
+    const endTime = performance.now();
+    console.log(`Converted ${spots.length} dark sky locations to AstroSpots in ${(endTime - startTime).toFixed(2)}ms`);
+    
+    return spots;
   } catch (error) {
     console.error("Error getting dark sky astro spots:", error);
     return [];
   }
+}
+
+/**
+ * Clear all dark sky location caches
+ * Call this when user changes location significantly
+ */
+export function clearDarkSkyLocationCache(): void {
+  cachedDarkSkyLocations = null;
+  radiusCache.clear();
+  astroSpotCache.clear();
+  console.log("Dark sky location caches cleared");
 }

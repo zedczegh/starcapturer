@@ -1,274 +1,190 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useGeolocation } from '@/hooks/location/useGeolocation';
-import { shareAstroSpot } from '@/lib/api/astroSpots';
-import NavBar from '@/components/NavBar';
-import LocationPicker from '@/components/location/LocationPicker';
-import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
-import { fetchWeatherData } from '@/lib/api/weather';
-import { fetchLightPollutionData } from '@/lib/api/pollution';
-import { calculateSIQS } from '@/lib/calculateSIQS';
-import LocationQuality from '@/components/photoPoints/LocationQuality';
-import PhotoGuidelines from '@/components/photoPoints/PhotoGuidelines';
-// Remove the incorrect import
-// import RecommendedPhotoPoints from '@/components/RecommendedPhotoPoints';
-
-// New interface to properly define what RecommendedPhotoPoints expects
-interface LocationData {
-  latitude: number;
-  longitude: number;
-  name?: string;
-}
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { MapPin, Loader2, CheckCircle } from "lucide-react";
+import BackButton from "@/components/navigation/BackButton";
 
 const ShareLocation: React.FC = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
-  const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [photographer, setPhotographer] = useState('');
-  const [coordinates, setCoordinates] = useState<{latitude: number; longitude: number} | null>(null);
-  const [bortleScale, setBortleScale] = useState<number | null>(null);
-  const [siqs, setSiqs] = useState<number | null>(null);
-  const [qualityChecked, setQualityChecked] = useState(false);
-  const [currentWeather, setCurrentWeather] = useState<any>(null);
-  
-  const { coords, loading: geoLoading } = useGeolocation({
-    enableHighAccuracy: true,
-    timeout: 15000,
-    language
-  });
-  
-  useEffect(() => {
-    // Set initial coordinates from geolocation if available
-    if (coords && !coordinates) {
-      setCoordinates({
-        latitude: coords.latitude,
-        longitude: coords.longitude
-      });
-    }
-  }, [coords, coordinates]);
-  
-  // Check location quality when coordinates change
-  useEffect(() => {
-    const checkLocationQuality = async () => {
-      if (!coordinates) return;
-      
-      try {
-        // Get light pollution data
-        const pollutionData = await fetchLightPollutionData(
-          coordinates.latitude,
-          coordinates.longitude
-        );
-        
-        if (pollutionData) {
-          setBortleScale(pollutionData.bortleScale);
-        }
-        
-        // Get weather data
-        const weather = await fetchWeatherData({
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude
-        });
-        
-        setCurrentWeather(weather);
-        
-        // Calculate SIQS if we have both weather and pollution data
-        if (weather && pollutionData) {
-          const siqsResult = calculateSIQS({
-            cloudCover: weather.cloudCover,
-            bortleScale: pollutionData.bortleScale || 5,
-            seeingConditions: 3, // Default value
-            windSpeed: weather.windSpeed,
-            humidity: weather.humidity,
-            moonPhase: 0, // Default value
-            precipitation: weather.precipitation,
-            weatherCondition: weather.weatherCondition,
-            aqi: weather.aqi
-          });
-          
-          setSiqs(siqsResult.score);
-          setQualityChecked(true);
-        }
-      } catch (error) {
-        console.error("Error checking location quality:", error);
+  const [locationName, setLocationName] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [description, setDescription] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+
+  // Get user's current location
+  const getUserLocation = () => {
+    setLocationLoading(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude.toFixed(5));
+        setLongitude(position.coords.longitude.toFixed(5));
+        setLocationLoading(false);
+      },
+      (error) => {
+        setLocationError(error.message);
+        setLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
       }
-    };
-    
-    checkLocationQuality();
-  }, [coordinates]);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!coordinates) {
-      toast.error(
-        language === "en" ? "Location required" : "需要位置", 
-        { description: language === "en" ? "Please select a location" : "请选择一个位置" }
-      );
-      return;
-    }
-    
-    if (!name.trim()) {
-      toast.error(
-        language === "en" ? "Name required" : "需要名称", 
-        { description: language === "en" ? "Please enter a name for this location" : "请输入此位置的名称" }
-      );
-      return;
-    }
-    
-    setSubmitting(true);
-    
-    try {
-      const spotData = {
-        name,
-        chineseName: language === "zh" ? name : undefined,
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        bortleScale: bortleScale || 5,
-        siqs: siqs || undefined,
-        description: description.trim() || undefined,
-        photographer: photographer.trim() || undefined,
-        timestamp: new Date().toISOString()
-      };
-      
-      const result = await shareAstroSpot(spotData);
-      
-      if (result.success) {
-        toast.success(
-          language === "en" ? "Location shared" : "位置已分享", 
-          { description: language === "en" ? "Your astronomy spot has been shared successfully" : "您的天文观测点已成功分享" }
-        );
-        
-        // Navigate to the photo points page
-        navigate("/photo-points");
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      console.error("Error sharing location:", error);
-      toast.error(
-        language === "en" ? "Sharing failed" : "分享失败", 
-        { description: language === "en" ? "Could not share your location. Please try again." : "无法分享您的位置。请重试。" }
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    );
   };
-  
-  // This is correct - the proper usage for RecommendedPhotoPoints component
-  const locationData = coordinates ? {
-    latitude: coordinates.latitude,
-    longitude: coordinates.longitude
-  } : null;
-  
+
+  // Handle sharing the location
+  const handleShareLocation = async () => {
+    setShareLoading(true);
+    setShareSuccess(false);
+
+    // Simulate API call
+    setTimeout(() => {
+      setShareLoading(false);
+      setShareSuccess(true);
+      toast.success(t("Location shared successfully!", "地点分享成功！"));
+
+      // Redirect to home page after 2 seconds
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    }, 2000);
+  };
+
+  // Page title - using Helmet for proper title handling
+  const pageTitle = t("Share Location | Sky Viewer", "分享地点 | 天空观测");
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900">
-      <NavBar />
-      
-      <div className="container mx-auto px-4 pt-24 pb-16">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold mb-6">
-            {t("Share Astronomy Location", "分享天文位置")}
-          </h1>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card className="p-6 glassmorphism">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <Label htmlFor="location-name">{t("Location Name", "位置名称")}</Label>
-                    <Input 
-                      id="location-name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={t("e.g. Mountain Viewpoint", "例如：山顶观景点")}
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label>{t("Location Coordinates", "位置坐标")}</Label>
-                    <LocationPicker 
-                      coordinates={coordinates}
-                      setCoordinates={setCoordinates}
-                      className="mt-1"
-                    />
-                    
-                    {bortleScale !== null && (
-                      <div className="mt-2">
-                        <LightPollutionIndicator 
-                          bortleScale={bortleScale} 
-                          showDescription={true}
-                          compact={true}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="photographer">{t("Photographer (Optional)", "摄影师（可选）")}</Label>
-                    <Input 
-                      id="photographer"
-                      value={photographer}
-                      onChange={(e) => setPhotographer(e.target.value)}
-                      placeholder={t("Your name or handle", "您的名字或代号")}
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="description">{t("Description (Optional)", "描述（可选）")}</Label>
-                    <Textarea 
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder={t("Details about this location...", "关于此位置的详细信息...")}
-                      className="mt-1 h-24"
-                    />
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    disabled={submitting || !coordinates}
-                    className="w-full"
-                  >
-                    {submitting ? 
-                      t("Sharing...", "正在分享...") : 
-                      t("Share Location", "分享位置")}
-                  </Button>
-                </form>
-              </Card>
-            </div>
-            
-            <div className="space-y-6">
-              <LocationQuality 
-                bortleScale={bortleScale}
-                siqs={siqs}
-                weather={currentWeather}
-                isChecking={!qualityChecked && coordinates !== null}
-              />
-              
-              <PhotoGuidelines />
-              
-              {/* Fix the RecommendedPhotoPoints usage by passing locationData instead of userLocation */}
-              {/* Commenting out as we'll add a proper import and usage once we have the correct component
-              {coordinates && (
-                <RecommendedPhotoPoints
-                  locationData={locationData}
-                  hideEmptyMessage={true}
-                />
+    <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
+      {/* Use Helmet component for setting page title */}
+      <Helmet>
+        <title>{pageTitle}</title>
+      </Helmet>
+
+      <div className="pt-20 md:pt-28 pb-20">
+        <div className="container mx-auto px-4">
+          {/* Back Button */}
+          <div className="mb-6">
+            <BackButton destination="/" />
+          </div>
+
+          <div className="flex flex-col items-center text-center mb-8">
+            <h1 className="text-3xl font-bold mb-3">
+              {t("Share Your Location", "分享您的地点")}
+            </h1>
+            <p className="text-muted-foreground max-w-xl">
+              {t(
+                "Help others discover great stargazing spots by sharing your favorite locations.",
+                "通过分享您最喜欢的地点，帮助其他人发现绝佳的观星地点。"
               )}
-              */}
-            </div>
+            </p>
+          </div>
+
+          <div className="max-w-md mx-auto">
+            {shareSuccess ? (
+              <div className="text-center py-8">
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <p className="text-lg font-semibold">
+                  {t("Location Shared!", "地点已分享！")}
+                </p>
+                <p className="text-muted-foreground">
+                  {t("Thank you for contributing to the community.", "感谢您为社区做出贡献。")}
+                </p>
+              </div>
+            ) : (
+              <form className="space-y-4">
+                <div>
+                  <Label htmlFor="locationName">{t("Location Name", "地点名称")}</Label>
+                  <Input
+                    type="text"
+                    id="locationName"
+                    placeholder={t("Enter location name", "输入地点名称")}
+                    value={locationName}
+                    onChange={(e) => setLocationName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="latitude">{t("Latitude", "纬度")}</Label>
+                    <Label htmlFor="longitude">{t("Longitude", "经度")}</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      id="latitude"
+                      placeholder={t("Latitude", "纬度")}
+                      value={latitude}
+                      onChange={(e) => setLatitude(e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      id="longitude"
+                      placeholder={t("Longitude", "经度")}
+                      value={longitude}
+                      onChange={(e) => setLongitude(e.target.value)}
+                    />
+                  </div>
+                  {!latitude && !longitude && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2 flex items-center justify-center gap-2"
+                      onClick={getUserLocation}
+                      disabled={locationLoading}
+                    >
+                      {locationLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {t("Detecting Location...", "检测位置中...")}
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="h-4 w-4" />
+                          {t("Use Current Location", "使用当前位置")}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {locationError && (
+                    <p className="text-red-500 text-sm mt-1">{locationError}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="description">{t("Description", "描述")}</Label>
+                  <Textarea
+                    id="description"
+                    placeholder={t("Describe the location", "描述该地点")}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleShareLocation}
+                  disabled={shareLoading}
+                >
+                  {shareLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      {t("Sharing Location...", "分享地点中...")}
+                    </>
+                  ) : (
+                    t("Share Location", "分享地点")
+                  )}
+                </Button>
+              </form>
+            )}
           </div>
         </div>
       </div>
