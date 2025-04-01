@@ -3,7 +3,6 @@ import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestLocation } from "@/data/locationDatabase";
 import type { Language } from "@/services/geocoding/types";
 import { enhanceRemoteLocationName, identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
-import { formatLocationName } from "@/utils/locationNameFormatter";
 
 export type LocationCacheService = {
   setCachedData: (key: string, data: any) => void;
@@ -58,8 +57,7 @@ export async function getLocationNameForCoordinates(
       let finalName = locationName;
       
       // If we get coordinates back or "Location at", try to improve the result
-      if (finalName.includes("°") || finalName.includes("Location at") || finalName.includes("位置在") || 
-          finalName.includes("Remote area") || finalName.includes("偏远地区")) {
+      if (finalName.includes("°") || finalName.includes("Location at") || finalName.includes("位置在")) {
         if (isRemoteRegion) {
           finalName = enhanceRemoteLocationName(latitude, normalizedLng, null, language);
         } else {
@@ -75,15 +73,12 @@ export async function getLocationNameForCoordinates(
         }
       }
       
-      // Format the final name
-      const formattedName = formatLocationName(finalName, language);
-      
       // Cache successful result
-      if (cacheService && formattedName) {
-        cacheService.setCachedData(cacheKey, formattedName);
+      if (cacheService && finalName) {
+        cacheService.setCachedData(cacheKey, finalName);
       }
       
-      return formattedName;
+      return finalName;
     } catch (apiError) {
       console.error("Error getting location name from API:", apiError);
       // Continue to fallbacks
