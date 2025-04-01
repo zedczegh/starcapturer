@@ -4,7 +4,6 @@
  * Optimized for performance and reliability
  */
 
-import { calculateSIQS } from "@/lib/calculateSIQS";
 import { fetchForecastDataForToday } from "@/lib/api/daily-forecast";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
@@ -110,22 +109,11 @@ export async function calculateRealTimeSiqs(
     
     if (forecast) {
       // We have forecast data, calculate SIQS using the actual Bortle scale or a reasonable default
-      const calculationParams = {
-        latitude,
-        longitude,
-        bortleScale: bortleScale || 4, // Use provided Bortle scale or default to 4
-        cloudCover: forecast.current?.cloudCover || 0,
-        moonPhase: forecast.current?.moonPhase || 0,
-        humidity: forecast.current?.humidity || 60,
-        seeing: 3, // Default reasonable seeing value
-        forecast
-      };
-      
-      // Calculate SIQS with timeout protection
-      siqs = await withTimeout(
-        calculateSIQS(calculationParams),
-        SIQS_CALCULATION_TIMEOUT,
-        calculateFallbackSiqs(bortleScale, forecast.current?.cloudCover)
+      siqs = calculateDirectSiqsScore(
+        bortleScale || 4, // Use provided Bortle scale or default to 4
+        forecast.current?.cloudCover || 0,
+        forecast.current?.moonPhase || 0,
+        forecast.current?.humidity || 60
       );
     } else {
       // No forecast data, use fallback calculation
@@ -152,6 +140,41 @@ export async function calculateRealTimeSiqs(
       fromCache: false
     };
   }
+}
+
+/**
+ * Direct calculation of SIQS score from parameters
+ * Avoids async complexity for better performance
+ */
+function calculateDirectSiqsScore(
+  bortleScale: number,
+  cloudCover: number,
+  moonPhase: number,
+  humidity: number,
+): number {
+  // Start with a perfect score of 10
+  let score = 10;
+  
+  // Penalize for light pollution (1-9 Bortle scale)
+  // Higher Bortle = higher light pollution = lower score
+  const bortlePenalty = Math.min(7, (bortleScale - 1) * 0.8);
+  score -= bortlePenalty;
+  
+  // Penalize for cloud cover (0-100%)
+  const cloudPenalty = cloudCover * 0.08;
+  score -= cloudPenalty;
+  
+  // Penalize for moon phase (0-1, where 1 is full moon)
+  const moonPenalty = moonPhase * 2;
+  score -= moonPenalty;
+  
+  // Slight penalty for very high humidity
+  if (humidity > 80) {
+    score -= (humidity - 80) * 0.05;
+  }
+  
+  // Ensure score is within 0-10 range
+  return Math.max(0, Math.min(10, score));
 }
 
 /**

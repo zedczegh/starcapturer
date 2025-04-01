@@ -22,9 +22,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   onLocationUpdate
 }) => {
   const { t } = useLanguage();
-  const lastLocationRef = useRef<string>('');
-  const refreshTimerRef = useRef<number | null>(null);
-  const autoRefreshAttemptedRef = useRef<boolean>(false);
+  const refreshAttemptedRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -70,49 +68,31 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     };
   }, [handleRefreshAll, resetUpdateState]);
   
-  // Enhanced auto-refresh when page is opened or location is updated
+  // Single auto-refresh when page is opened, regardless of source
   useEffect(() => {
-    // Check if we came from PhotoPoints or another source
-    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
-    
-    // Create a location signature to detect changes
-    const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
-    
-    // If location has changed or coming from PhotoPoints, refresh data
-    if (locationSignature !== lastLocationRef.current || 
-        fromPhotoPoints || 
-        !autoRefreshAttemptedRef.current) {
+    // Only refresh once per component instance
+    if (!refreshAttemptedRef.current && locationData?.latitude && locationData?.longitude) {
+      console.log("Performing one-time refresh on component mount");
       
-      lastLocationRef.current = locationSignature;
-      autoRefreshAttemptedRef.current = true;
-      
-      // Clear any existing timer
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-      
-      // Set a small delay before refreshing to allow component to fully mount
-      refreshTimerRef.current = window.setTimeout(() => {
-        console.log("Auto-refreshing data after location update or page load");
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
         handleRefreshAll();
-        resetUpdateState(); // Reset SIQS updater state
+        resetUpdateState();
         
         // Reset the fromPhotoPoints flag after refreshing
-        if (fromPhotoPoints && locationData) {
+        if (locationData?.fromPhotoPoints) {
           setLocationData({
             ...locationData,
             fromPhotoPoints: false
           });
         }
-      }, 300); // Reduced from 500ms for faster refresh
+        
+        // Mark that we've attempted a refresh
+        refreshAttemptedRef.current = true;
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
-    
-    // Cleanup on unmount
-    return () => {
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-    };
   }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
 
   return (

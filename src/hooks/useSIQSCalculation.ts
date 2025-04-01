@@ -1,22 +1,14 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
-import { fetchForecastData } from "@/lib/api";
 import { getWeatherData } from "@/services/environmentalDataService/weatherService";
 import { getBortleScaleData } from "@/services/environmentalDataService/bortleScaleService";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
-
-// Extract scoring and normalization logic
-import { 
-  normalizeScore, 
-  calculateSIQSWithWeatherData 
-} from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -109,20 +101,37 @@ export const useSIQSCalculation = (
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
       
-      // Calculate SIQS score using utility function
-      const siqsResult = await calculateSIQSWithWeatherData(
-        data,
-        validBortleScale,
-        seeingConditions,
-        freshMoonPhase,
-        forecastResult
-      );
-      
-      // Ensure SIQS score is consistently on a 0-10 scale
-      const normalizedScore = normalizeScore(siqsResult.score);
+      // Calculate SIQS score using Nighttime SIQS if forecast data is available
+      let siqsResult;
+      if (forecastResult) {
+        siqsResult = calculateNighttimeSIQS({ 
+          bortleScale: validBortleScale,
+          seeingConditions,
+          moonPhase: freshMoonPhase
+        }, forecastResult, data);
+      } else {
+        // Fallback to simplified calculation
+        siqsResult = {
+          score: Math.max(0, 10 - validBortleScale - (data.cloudCover / 20)),
+          isViable: data.cloudCover < 60,
+          factors: [
+            {
+              name: "Light Pollution",
+              score: Math.max(0, 10 - validBortleScale),
+              description: `Bortle scale ${validBortleScale} indicates moderate light pollution`
+            },
+            {
+              name: "Cloud Cover",
+              score: Math.max(0, 10 - (data.cloudCover / 10)),
+              description: `${data.cloudCover}% cloud cover affects visibility`
+            }
+          ]
+        };
+      }
       
       if (displayOnly) {
-        // For consistency, always store the 0-10 scale value
+        // For consistency, use normalized score
+        const normalizedScore = siqsResult ? Math.max(0, Math.min(10, siqsResult.score)) : 0;
         setSiqsScore(normalizedScore);
         setIsCalculating(false);
         clearTimeout(timeout);
@@ -142,7 +151,7 @@ export const useSIQSCalculation = (
         weatherData: data,
         siqsResult: {
           ...siqsResult,
-          score: normalizedScore // Ensure the score is on a 0-10 scale
+          score: Math.max(0, Math.min(10, siqsResult.score)) // Ensure the score is on a 0-10 scale
         },
         moonPhase: freshMoonPhase,
         timestamp: new Date().toISOString(),

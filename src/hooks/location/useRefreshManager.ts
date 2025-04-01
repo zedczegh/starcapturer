@@ -3,14 +3,14 @@ import { useState, useEffect, useRef } from 'react';
 
 /**
  * Hook to manage refresh state for location data
- * Prevents multiple refreshes when navigating from PhotoPoints page
- * Fixed to prevent refresh bugs in location details
+ * Prevents multiple refreshes when navigating between pages
+ * Fixed to limit refreshes to once per page load
  */
 export function useRefreshManager(locationData: any) {
   const [shouldRefresh, setShouldRefresh] = useState(false);
-  const refreshedRef = useRef(false);
+  const hasRefreshedRef = useRef(false);
   const locationSignatureRef = useRef<string | null>(null);
-  const lastRefreshTimeRef = useRef<number>(0);
+  const pageVisitCountRef = useRef<number>(0);
   
   // Calculate a unique signature for this location
   const getLocationSignature = () => {
@@ -18,43 +18,40 @@ export function useRefreshManager(locationData: any) {
     return `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}`;
   };
   
-  // Reset refresh state when location changes
+  // Reset refresh state when location changes or once per page visit
   useEffect(() => {
     const currentSignature = getLocationSignature();
-    const currentTime = Date.now();
-    const timeSinceLastRefresh = currentTime - lastRefreshTimeRef.current;
     
-    // Prevent refresh spamming - only allow refresh every 2 seconds
-    const preventRefreshSpamming = timeSinceLastRefresh < 2000;
+    // Increment page visit counter for this location
+    if (currentSignature && currentSignature !== locationSignatureRef.current) {
+      pageVisitCountRef.current = 1;
+      locationSignatureRef.current = currentSignature;
+    }
     
-    // Check if location has changed or if coming from PhotoPoints
-    if (
-      // Location has changed significantly
-      (currentSignature && currentSignature !== locationSignatureRef.current) ||
-      // Coming from PhotoPoints page
-      (locationData?.fromPhotoPoints === true) ||
-      // First load of this location
-      (currentSignature && !refreshedRef.current)
-    ) {
-      if (!preventRefreshSpamming) {
-        console.log("Refresh state reset due to location change or PhotoPoints navigation");
-        locationSignatureRef.current = currentSignature;
-        lastRefreshTimeRef.current = currentTime;
-        setShouldRefresh(true);
-      } else {
-        console.log("Refresh prevented due to throttling (refresh requested too soon)");
-      }
+    // Only refresh on first visit to this location
+    if (currentSignature && !hasRefreshedRef.current) {
+      console.log("First visit to this location, triggering single refresh");
+      setShouldRefresh(true);
+      hasRefreshedRef.current = true;
+    } else {
+      console.log("Location already refreshed, skipping automatic refresh");
     }
   }, [locationData]);
   
   // Function to mark refresh as complete
   const markRefreshComplete = () => {
-    refreshedRef.current = true;
     setShouldRefresh(false);
+  };
+  
+  // Function to manually trigger a refresh when needed
+  const triggerManualRefresh = () => {
+    console.log("Manual refresh triggered");
+    setShouldRefresh(true);
   };
   
   return {
     shouldRefresh,
-    markRefreshComplete
+    markRefreshComplete,
+    triggerManualRefresh
   };
 }

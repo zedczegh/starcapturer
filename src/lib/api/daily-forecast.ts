@@ -1,27 +1,39 @@
 
+/**
+ * API functions for fetching daily forecast data
+ */
 import { fetchForecastData } from './forecast';
 
 /**
- * Fetch today's forecast data
+ * Fetches forecast data for the current day
  */
-export async function fetchForecastDataForToday({
-  latitude,
-  longitude
-}: {
-  latitude: number;
-  longitude: number;
-}) {
+export async function fetchForecastDataForToday({ 
+  latitude, 
+  longitude 
+}: { 
+  latitude: number; 
+  longitude: number 
+}): Promise<any> {
   try {
-    // Use the existing forecast endpoint but only request 1 day
-    const forecastData = await fetchForecastData({
-      latitude,
-      longitude,
-      days: 1
-    });
+    console.log(`Fetching forecast data for today at ${latitude}, ${longitude}`);
+    
+    // Use the existing forecast API but only return data for today
+    const forecastData = await fetchForecastData(latitude, longitude);
     
     if (!forecastData) {
-      console.error("Failed to fetch today's forecast data");
-      return null;
+      throw new Error("Failed to fetch forecast data");
+    }
+    
+    // Filter to only include hours for the current day
+    const now = new Date();
+    const todayString = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    // Filter hourly forecast to only include hours from today
+    if (forecastData.hourly) {
+      forecastData.hourly = forecastData.hourly.filter((hour: any) => {
+        const hourDate = new Date(hour.time);
+        return hourDate.toISOString().split('T')[0] === todayString;
+      });
     }
     
     return forecastData;

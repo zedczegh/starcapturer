@@ -39,10 +39,10 @@ const ShareLocation: React.FC = () => {
   const [qualityChecked, setQualityChecked] = useState(false);
   const [currentWeather, setCurrentWeather] = useState<any>(null);
   
-  const { coords, loading: geoLoading } = useGeolocation({
+  const { coords, loading: geoLoading } = useGeolocation({ 
     enableHighAccuracy: true,
     timeout: 15000,
-    language
+    language: language
   });
   
   useEffect(() => {
@@ -204,8 +204,7 @@ const ShareLocation: React.FC = () => {
                     {bortleScale !== null && (
                       <div className="mt-2">
                         <LightPollutionIndicator 
-                          bortleScale={bortleScale} 
-                          compact={true}
+                          bortleScale={bortleScale}
                         />
                       </div>
                     )}
