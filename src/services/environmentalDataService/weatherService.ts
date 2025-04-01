@@ -2,11 +2,11 @@
 import { fetchWeatherData } from "@/lib/api";
 
 // Default timeout for weather API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 5000;
+const DEFAULT_TIMEOUT = 8000;
 // Default cache lifetime for weather data (in milliseconds)
 const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
 // Maximum retry attempts
-const MAX_RETRIES = 2;
+const MAX_RETRIES = 3;
 
 /**
  * Optimized service for retrieving weather data with better caching and error handling
@@ -36,6 +36,7 @@ export const getWeatherData = async (
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       
+      // Use the improved options
       const data = await fetchWeatherData({
         latitude,
         longitude,
@@ -51,10 +52,12 @@ export const getWeatherData = async (
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`Weather data fetch attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`, lastError.message);
       
-      // If this isn't our last attempt, try again with a slight delay
+      // If this isn't our last attempt, try again with exponential backoff
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        const backoffDelay = Math.min(500 * Math.pow(1.5, attempt), 3000);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
       }
     }
   }

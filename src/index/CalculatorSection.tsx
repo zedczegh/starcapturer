@@ -1,210 +1,131 @@
 
-import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useQueryClient } from "@tanstack/react-query";
-import SIQSCalculator from "@/components/SIQSCalculator";
-import SIQSSummary from "@/components/SIQSSummary";
-import StatusMessage from "@/components/StatusMessage";
-import { toast } from "sonner";
-import { loadSavedLocation } from "@/utils/locationStorage";
-import RecommendedPhotoPoints from "@/components/RecommendedPhotoPoints";
-import MapSelector from "@/components/MapSelector";
+import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Card, CardContent } from '@/components/ui/card';
+import SIQSCalculator from '@/components/siqs/SIQSCalculator';
+import SIQSSummary from '@/components/siqs/SIQSSummary';
+import { motion, useInView } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
-// Add loading debounce for improved UX
-let loadingDebounceTimer: NodeJS.Timeout | null = null;
-
-// Define props for this component
-interface CalculatorSectionProps {
-  noAutoLocationRequest?: boolean;
-}
-
-const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationRequest = false }) => {
+const CalculatorSection: React.FC = () => {
   const { t, language } = useLanguage();
+  const [siqsScore, setSiqsScore] = useState<number>(0);
+  const [isViable, setIsViable] = useState<boolean>(false);
+  const [locationData, setLocationData] = useState<any>(null);
+  const calculatorRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(calculatorRef, { once: true, amount: 0.2 });
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [selectedLocation, setSelectedLocation] = useState<any>(null);
-  const [siqs, setSiqs] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLocation, setHasLocation] = useState(false);
   
-  // Attempt to load saved location on mount
-  useEffect(() => {
-    const loadLocation = async () => {
-      try {
-        const savedLocation = loadSavedLocation();
-        if (savedLocation && savedLocation.name) {
-          console.log("Found saved location:", savedLocation.name);
-          setSelectedLocation(savedLocation);
-          setHasLocation(true);
-        }
-      } catch (error) {
-        console.error("Error loading saved location:", error);
+  // Title and paragraph variants for animations
+  const textVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.6,
+        ease: "easeOut"
       }
-    };
-    
-    loadLocation();
-  }, []);
-  
-  // Handle location selection
-  const handleLocationSelect = useCallback((location: any) => {
-    console.log("Location selected:", location.name);
-    setSelectedLocation(location);
-    setHasLocation(true);
-    setSiqs(null);
-  }, []);
-  
-  // Handle SIQS update
-  const handleUpdateSiqs = useCallback((score: number, isViable: boolean) => {
-    setSiqs(score);
-    
-    // Debounce loading state to prevent flickering UI
-    if (loadingDebounceTimer) {
-      clearTimeout(loadingDebounceTimer);
     }
-    
-    setIsLoading(true);
-    loadingDebounceTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    
-    if (!isViable) {
-      toast.warning(t(
-        "This location may not be suitable for astrophotography",
-        "该位置可能不适合天文摄影"
-      ), {
-        duration: 4000,
+  };
+  
+  // Card variants for animation
+  const cardVariants = {
+    hidden: { opacity: 0, y: 40 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.8,
+        ease: "easeOut",
+        delay: 0.2
+      }
+    }
+  };
+  
+  // Handle SIQS calculation result
+  const handleSiqsCalculation = (score: number, viable: boolean) => {
+    setSiqsScore(score);
+    setIsViable(viable);
+  };
+  
+  // Handle location selection/change
+  const handleLocationChange = (location: any) => {
+    setLocationData(location);
+  };
+  
+  // Handle view detailed report click
+  const handleViewDetailedReport = () => {
+    if (locationData && siqsScore > 0) {
+      // Add SIQS data to the location
+      const locationWithSiqs = {
+        ...locationData,
+        siqs: siqsScore,
+        isViable: isViable
+      };
+      
+      // Navigate to location details page with the data
+      navigate(`/location/${locationData.id || 'custom'}`, { 
+        state: locationWithSiqs
       });
     }
-  }, [t]);
+  };
   
   return (
-    <section id="calculator" className="py-16 bg-cosmic-900">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="text-center mb-12">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-3xl md:text-4xl font-bold text-white"
-          >
-            {t("Sky Imaging Quality Score Calculator", "天空成像质量评分计算器")}
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mt-4 text-cosmic-300 max-w-2xl mx-auto"
-          >
+    <section
+      id="calculator"
+      className="py-16 md:py-24 bg-cosmic-950 relative overflow-hidden"
+      ref={calculatorRef}
+    >
+      {/* Background elements */}
+      <div className="absolute inset-0 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover opacity-30"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-cosmic-950 via-cosmic-950/90 to-cosmic-950"></div>
+      
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          className="text-center max-w-2xl mx-auto mb-12"
+          variants={textVariants}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+        >
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gradient-blue">
+            {t("Calculate Sky Quality", "计算天空质量")}
+          </h2>
+          <p className="text-muted-foreground">
             {t(
-              "Calculate the potential quality of astrophotography at your location",
-              "计算您所在位置的天文摄影潜在质量"
+              "Our Sky Imaging Quality Score (SIQS) helps you determine if conditions are right for astrophotography at your location.",
+              "我们的天空成像质量评分（SIQS）帮助您确定您所在位置的条件是否适合天文摄影。"
             )}
-          </motion.p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-5 space-y-6">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-white">
-                  {t("Enter Location", "输入位置")}
-                </h3>
-                <div className="space-y-4">
-                  <MapSelector onLocationSelect={handleLocationSelect} />
-                  
-                  {/* Removed the "Select from Globe" button */}
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <div className="mt-6 space-y-4">
-                <SIQSCalculator
-                  location={selectedLocation}
-                  onUpdateSiqs={handleUpdateSiqs}
-                  noAutoLocationRequest={noAutoLocationRequest}
-                />
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="lg:col-span-7">
-            {!hasLocation ? (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="bg-cosmic-800 p-6 rounded-xl h-full flex flex-col justify-center items-center"
-              >
-                <StatusMessage
-                  type="info"
-                  message={t(
-                    "Enter a location to calculate SIQS score",
-                    "输入位置以计算SIQS评分"
-                  )}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="space-y-6"
-              >
-                <SIQSSummary siqs={siqs} location={selectedLocation} />
-
-                {!isLoading && siqs !== null && selectedLocation && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.5 }}
-                    className="mt-6 space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <h3 className="text-lg font-semibold text-white">
-                        {t("Recommended Photo Points", "推荐拍摄点")}
-                      </h3>
-                      <Button
-                        onClick={() => navigate("/photo-points")}
-                        className="rounded-full text-sm px-4 py-1 h-auto"
-                      >
-                        {t("View All Photo Points", "查看全部拍摄点")}
-                      </Button>
-                    </div>
-                    
-                    <RecommendedPhotoPoints
-                      onSelectPoint={handleLocationSelect}
-                      userLocation={
-                        selectedLocation ? {
-                          latitude: selectedLocation.latitude,
-                          longitude: selectedLocation.longitude
-                        } : null
-                      }
-                      preferCertified={true}
-                    />
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
-          </div>
-        </div>
+          </p>
+        </motion.div>
+        
+        <motion.div
+          className="grid md:grid-cols-2 gap-8"
+          variants={cardVariants}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+        >
+          {/* SIQS Calculator */}
+          <Card className="bg-cosmic-900/50 border-cosmic-700/30 shadow-xl hover:shadow-cosmic-800/20 transition-shadow duration-300">
+            <CardContent className="p-0">
+              <SIQSCalculator 
+                onCalculate={handleSiqsCalculation}
+                onLocationChange={handleLocationChange}
+              />
+            </CardContent>
+          </Card>
+          
+          {/* SIQS Summary */}
+          <Card className="bg-cosmic-900/50 border-cosmic-700/30 shadow-xl hover:shadow-cosmic-800/20 transition-shadow duration-300">
+            <CardContent className="p-0">
+              <SIQSSummary 
+                score={siqsScore} 
+                isViable={isViable}
+                onViewDetails={handleViewDetailedReport}
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </section>
   );

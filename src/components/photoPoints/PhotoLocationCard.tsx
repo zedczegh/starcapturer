@@ -9,24 +9,21 @@ import { siqsToColor } from "@/lib/calculateSIQS";
 import { formatLocationName } from "@/utils/locationNameFormatter";
 import { formatDistance } from "@/utils/unitConversion";
 import { CalendarClock, MapPin, Award, Building, Globe, Moon } from "lucide-react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { getRelativeTimeText } from "@/utils/dateUtils";
 
 export interface PhotoLocationCardProps {
-  location: SharedAstroSpot;
+  location: any;
   index: number;
-  showRealTimeSiqs?: boolean;
 }
 
 const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   location,
-  index,
-  showRealTimeSiqs = false
+  index
 }) => {
   const { t, language } = useLanguage();
   
   const scoreColor = siqsToColor(location.siqs || 0, location.isViable || false);
-  const displayName = formatLocationName(location.name, language as any);
+  const displayName = formatLocationName(location.name, language);
   const distance = formatDistance(location.distance || 0, language);
   const relativeTime = getRelativeTimeText(location.timestamp, language === 'zh');
   
@@ -60,35 +57,41 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             delay: index * 0.05,
             duration: 0.3,
             type: "spring",
-            stiffness: 150,
-          },
-        },
+            stiffness: 150
+          }
+        }
       }}
       className="w-full"
     >
       <Link to={`/location/${location.id}`} state={location}>
         <Card className="h-full overflow-hidden transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg">
-          <div
+          <div 
             className="h-24 bg-cosmic-800 flex items-center justify-center relative"
             style={{
-              background: "linear-gradient(135deg, rgba(16,18,64,1) 0%, rgba(36,42,107,1) 100%)",
+              background: "linear-gradient(135deg, rgba(16,18,64,1) 0%, rgba(36,42,107,1) 100%)"
             }}
           >
-            <div
+            <div 
               className="absolute inset-0 opacity-30"
               style={{
                 backgroundImage: "url('/images/stars.png')",
-                backgroundSize: "cover",
+                backgroundSize: "cover"
               }}
             />
             <div className="relative z-10 flex items-center justify-center">
-              <div
+              <div 
                 className="rounded-full p-3 flex items-center justify-center"
-                style={{ backgroundColor: scoreColor, opacity: 0.2 }}
+                style={{
+                  backgroundColor: scoreColor,
+                  opacity: 0.2
+                }}
               >
-                <div
+                <div 
                   className="rounded-full p-6 flex items-center justify-center"
-                  style={{ backgroundColor: scoreColor, opacity: 0.4 }}
+                  style={{
+                    backgroundColor: scoreColor,
+                    opacity: 0.4
+                  }}
                 />
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
@@ -96,20 +99,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
               </div>
             </div>
           </div>
-          
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
                 <div className="flex items-center text-sm text-muted-foreground mt-1">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
-                  <span>
-                    {distance}
-                  </span>
+                  <span>{distance}</span>
                 </div>
               </div>
-              <Badge
-                className="ml-2"
+              <Badge 
+                className="ml-2" 
                 variant={location.isViable ? "default" : "destructive"}
               >
                 {location.isViable ? t("Viable", "可行") : t("Not Viable", "不可行")}
@@ -119,9 +119,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             {location.certification && (
               <div className="mt-2 flex items-center">
                 {getCertificationIcon()}
-                <span className="text-xs text-blue-400 ml-1 line-clamp-1">
-                  {location.certification}
-                </span>
+                <span className="text-xs text-blue-400 ml-1 line-clamp-1">{location.certification}</span>
               </div>
             )}
           </CardContent>

@@ -13,6 +13,7 @@ interface SiqsCache {
   [key: string]: {
     siqs: number;
     timestamp: number;
+    isViable?: boolean;
   };
 }
 
@@ -73,7 +74,8 @@ export async function calculateLocationSiqs(
   // Calculate SIQS
   let siqs: number;
   try {
-    siqs = calculateSIQS({
+    // Use calculateSIQS and handle its return type properly
+    const result = calculateSIQS({
       bortleScale,
       seeingIndex: location.seeingIndex || 2,
       cloudCover: location.cloudCover || 0,
@@ -84,10 +86,18 @@ export async function calculateLocationSiqs(
       isViable: location.isViable !== undefined ? location.isViable : true
     });
     
+    // Handle result properly whether it's a number or object
+    if (typeof result === 'number') {
+      siqs = result;
+    } else {
+      siqs = result.score;
+    }
+    
     // Cache the result
     SIQS_CACHE[cacheKey] = {
       siqs,
-      timestamp: now
+      timestamp: now,
+      isViable: typeof result === 'object' ? result.isViable : siqs >= 2.0
     };
     
     return siqs;

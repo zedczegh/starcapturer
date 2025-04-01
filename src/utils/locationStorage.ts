@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for managing location data in localStorage
  */
@@ -6,6 +7,8 @@
 const LATEST_LOCATION_KEY = 'latest_siqs_location';
 // Timestamp key for tracking last refresh
 const REFRESH_TIMESTAMP_KEY = 'last_refresh_timestamp';
+// Key for saved locations collection
+const SAVED_LOCATIONS_KEY = 'saved_siqs_locations';
 
 // Validate location data
 const isValidLocation = (location: any): boolean => {
@@ -51,6 +54,10 @@ export const saveLocation = (location: SIQSLocation): boolean => {
     };
     
     localStorage.setItem(LATEST_LOCATION_KEY, JSON.stringify(locationWithTimestamp));
+    
+    // Also add to saved locations if not already present
+    saveToLocationHistory(locationWithTimestamp);
+    
     return true;
   } catch (error) {
     console.error("Error saving location to localStorage:", error);
@@ -74,6 +81,59 @@ export const getSavedLocation = (): SIQSLocation | null => {
   } catch (error) {
     console.error("Error retrieving location from localStorage:", error);
     return null;
+  }
+};
+
+// Save multiple locations for history/favorites
+const saveToLocationHistory = (location: SIQSLocation): void => {
+  try {
+    if (!isValidLocation(location)) return;
+    
+    const existingLocationsStr = localStorage.getItem(SAVED_LOCATIONS_KEY);
+    const existingLocations: SIQSLocation[] = existingLocationsStr 
+      ? JSON.parse(existingLocationsStr) 
+      : [];
+    
+    // Check if this location already exists (by coordinates)
+    const existingIndex = existingLocations.findIndex(
+      loc => Math.abs(loc.latitude - location.latitude) < 0.0001 && 
+             Math.abs(loc.longitude - location.longitude) < 0.0001
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing location
+      existingLocations[existingIndex] = {
+        ...existingLocations[existingIndex],
+        ...location,
+        lastRefreshed: new Date().toISOString()
+      };
+    } else {
+      // Add new location to the beginning of the array
+      existingLocations.unshift(location);
+      
+      // Limit the number of saved locations to 50
+      if (existingLocations.length > 50) {
+        existingLocations.pop();
+      }
+    }
+    
+    localStorage.setItem(SAVED_LOCATIONS_KEY, JSON.stringify(existingLocations));
+  } catch (error) {
+    console.error("Error saving to location history:", error);
+  }
+};
+
+// Get all saved locations
+export const getSavedLocations = (): SIQSLocation[] => {
+  try {
+    const locationsStr = localStorage.getItem(SAVED_LOCATIONS_KEY);
+    if (!locationsStr) return [];
+    
+    const locations = JSON.parse(locationsStr);
+    return Array.isArray(locations) ? locations : [];
+  } catch (error) {
+    console.error("Error retrieving saved locations:", error);
+    return [];
   }
 };
 

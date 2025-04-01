@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
@@ -17,7 +16,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
   const { t, language } = useLanguage();
   
   // Handle location selection
@@ -35,7 +33,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
     if (searchInputRef.current) {
       searchInputRef.current.value = "";
     }
-  }
+  };
   
   // Debounce search function
   const debouncedSearch = useMemo(() => {
