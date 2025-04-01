@@ -30,6 +30,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             const parts = point.description.split("near");
             if (parts.length > 1) {
               setNearestTown(parts[1].trim());
+              setLoadingTown(false);
               return;
             }
           }
