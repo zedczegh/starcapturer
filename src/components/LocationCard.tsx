@@ -9,7 +9,6 @@ import { siqsToColor } from "@/lib/calculateSIQS";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
-import { formatLocationName, getRegionalName } from "@/utils/locationNameFormatter";
 
 interface LocationCardProps {
   id: string;
@@ -32,7 +31,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
   timestamp,
   className,
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
@@ -48,22 +47,9 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   const scoreColor = siqsToColor(siqs, isViable);
 
-  // Format name more nicely, try regional format if default name is unclear
-  let displayName = formatLocationName(name, language as any);
-  
-  // If the display name is just "Remote area" or contains coordinates, try using regional naming
-  if (
-    displayName === "Remote area" || 
-    displayName === "偏远地区" || 
-    displayName.includes("°") || 
-    displayName.includes("Location at") || 
-    displayName.includes("位置在")
-  ) {
-    const regionalName = getRegionalName(latitude, longitude, language as any);
-    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-      displayName = regionalName;
-    }
-  }
+  // Display name more prominently than coordinates
+  const displayName = name && !name.includes("Location at") ? name : 
+    t("Location near coordinates", "坐标附近的位置");
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {

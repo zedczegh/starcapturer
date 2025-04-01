@@ -1,8 +1,8 @@
+
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestLocation } from "@/data/locationDatabase";
 import type { Language } from "@/services/geocoding/types";
 import { enhanceRemoteLocationName, identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
-import { formatLocationName, getRegionalName } from "@/utils/locationNameFormatter";
 
 export type LocationCacheService = {
   setCachedData: (key: string, data: any) => void;
@@ -18,7 +18,7 @@ export function normalizeLongitude(longitude: number): number {
 
 /**
  * Get a location name for given coordinates with fallback mechanisms
- * Enhanced to better handle remote regions and provide more useful names
+ * Enhanced to better handle remote regions like Tibet and Xinjiang
  */
 export async function getLocationNameForCoordinates(
   latitude: number,
@@ -55,63 +55,22 @@ export async function getLocationNameForCoordinates(
       
       // For remote regions, enhance the name if needed
       let finalName = locationName;
-      
-      // If we get coordinates back or "Location at", try to improve the result
-      if (finalName.includes("°") || finalName.includes("Location at") || finalName.includes("位置在") || 
-          finalName.includes("Remote area") || finalName.includes("偏远地区")) {
-        
-        // For remote regions, use directional naming (like "Northwest Yunnan")
-        const regionalName = getRegionalName(latitude, longitude, language);
-        
-        // If we got a valid regional name, use it
-        if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-          finalName = regionalName;
-        } 
-        // Otherwise fallback to other methods
-        else if (isRemoteRegion) {
-          finalName = enhanceRemoteLocationName(latitude, normalizedLng, null, language);
-        } else {
-          // Try database fallback
-          const nearest = findClosestLocation(latitude, longitude);
-          if (nearest && nearest.name) {
-            finalName = nearest.distance <= 50 
-              ? (language === 'en' ? `Near ${nearest.name}` : `靠近${nearest.name}`)
-              : (language === 'en' ? `Region of ${nearest.name}` : `${nearest.name}地区`);
-          } else {
-            finalName = language === 'en' ? 'Remote area' : '偏远地区';
-          }
-        }
+      if (isRemoteRegion) {
+        finalName = enhanceRemoteLocationName(latitude, normalizedLng, locationName, language);
       }
-      
-      // Format the final name
-      const formattedName = formatLocationName(finalName, language);
       
       // Cache successful result
-      if (cacheService && formattedName) {
-        cacheService.setCachedData(cacheKey, formattedName);
+      if (cacheService && finalName) {
+        cacheService.setCachedData(cacheKey, finalName);
       }
       
-      return formattedName;
+      return finalName;
     } catch (apiError) {
       console.error("Error getting location name from API:", apiError);
       // Continue to fallbacks
     }
   } catch (error) {
     console.error("Error in getLocationNameForCoordinates:", error);
-    
-    // Use directional naming for remote regions
-    const regionalName = getRegionalName(latitude, longitude, language);
-    
-    // If we got a valid regional name, use it and cache it
-    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-      // Cache this result too
-      if (cacheService) {
-        const fallbackCacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
-        cacheService.setCachedData(fallbackCacheKey, regionalName);
-      }
-      
-      return regionalName;
-    }
     
     // Special handling for remote regions
     const isRemoteRegion = identifyRemoteRegion(latitude, longitude);
@@ -134,7 +93,7 @@ export async function getLocationNameForCoordinates(
       if (nearest && nearest.name) {
         const fallbackName = nearest.distance <= 20 
           ? nearest.name 
-          : (language === 'en' ? `Near ${nearest.name}` : `靠近${nearest.name}`);
+          : (language === 'en' ? `Near ${nearest.name}` : `${nearest.name}附近`);
         
         // Cache this result too
         if (cacheService) {
@@ -147,9 +106,9 @@ export async function getLocationNameForCoordinates(
       console.error("Database fallback failed:", dbError);
     }
     
-    // Last resort: More descriptive fallback
+    // Last resort: Use coordinates
     return language === 'en'
-      ? `Remote area`
-      : `偏远地区`;
+      ? `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`
+      : `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
   }
 }

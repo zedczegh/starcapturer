@@ -2,11 +2,12 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const useSiqsNavigation = () => {
   const navigate = useNavigate();
   
-  // Set up geolocation for direct access - removing invalid language option
+  // Set up geolocation for direct access
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
     timeout: 15000,

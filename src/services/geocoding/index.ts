@@ -1,3 +1,4 @@
+
 import { Location, GeocodeResponse, Language } from './types';
 import { findMatchingLocations } from './locationDatabase';
 import { findSmallTownMatches } from './smallTownsDatabase';
@@ -156,7 +157,6 @@ async function getExternalLocationResults(
 
 /**
  * Reverse geocode: Get location name from coordinates
- * Enhanced to ensure real location names instead of coordinates
  */
 export async function getLocationName(
   latitude: number, 
@@ -164,7 +164,7 @@ export async function getLocationName(
   language: Language = 'en'
 ): Promise<string> {
   try {
-    // First check our extensive Chinese location database for better results
+    // First check our extensive Chinese location database
     if (isInChina(latitude, longitude)) {
       const closestLocation = findClosestChineseLocation(latitude, longitude);
       if (closestLocation) {
@@ -183,104 +183,22 @@ export async function getLocationName(
         }
         
         // If reasonably close, use "Near X"
-        if (distance < 30) { // Within 30 km
+        if (distance < 20) { // Within 20 km
           return language === 'zh' 
-            ? `${closestLocation.district}附近` 
-            : `Near ${closestLocation.nameEn}`;
+            ? `${closestLocation.district}附近, ${closestLocation.city}` 
+            : `Near ${closestLocation.nameEn}, ${closestLocation.city}`;
         }
       }
     }
     
-    // Fall back to standard API call for better name resolution
-    try {
-      const locationName = await getLocationNameFromCoordinates(latitude, longitude, language);
-      
-      // If we got a proper location name (not coordinates), return it
-      if (locationName && !locationName.includes("°")) {
-        if (language === 'zh') {
-          // Format Chinese location - keep it simple with just the town name if possible
-          const parts = locationName.split('，');
-          if (parts.length > 0) {
-            // Return just the first part (usually town name) or full name if it's short
-            return parts.length > 2 && locationName.length > 20 ? parts[0] : locationName;
-          }
-        } else {
-          // Format English location - extract just the town name if possible
-          const parts = locationName.split(',');
-          if (parts.length > 0) {
-            // Return just the first part (usually town name) or first two parts if short
-            return parts.length > 2 ? `${parts[0]}` : locationName;
-          }
-        }
-        return locationName;
-      }
-    } catch (error) {
-      console.error("Error using OpenStreetMap API:", error);
-    }
-    
-    // Fall back to using our database if API call failed or returned coordinates
-    try {
-      const { findClosestLocation } = await import('../../data/locationDatabase');
-      const nearest = findClosestLocation(latitude, longitude);
-      
-      if (nearest && nearest.name) {
-        // Return "Near X" for locations within reasonable distance
-        if (nearest.distance <= 50) {
-          return language === 'zh' 
-            ? `${nearest.name}附近` 
-            : `Near ${nearest.name}`;
-        }
-      }
-    } catch (error) {
-      console.error("Database fallback failed:", error);
-    }
-    
-    // Last resort: Return a simplified regional name instead of coordinates
-    const regionName = getSimplifiedRegionName(latitude, longitude, language);
-    return regionName;
+    // Fall back to standard API call
+    return await getLocationNameFromCoordinates(latitude, longitude, language);
   } catch (error) {
     console.error("Error getting location name:", error);
     return language === 'en' 
-      ? `Remote location` 
-      : `偏远位置`;
+      ? `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°` 
+      : `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
   }
-}
-
-/**
- * Get a simplified region name when precise location names aren't available
- */
-function getSimplifiedRegionName(
-  latitude: number, 
-  longitude: number, 
-  language: Language
-): string {
-  // China region names by approximate location
-  const china = {
-    north: language === 'en' ? "Northern China" : "中国北部",
-    northeast: language === 'en' ? "Northeast China" : "中国东北",
-    east: language === 'en' ? "Eastern China" : "中国东部",
-    south: language === 'en' ? "Southern China" : "中国南部",
-    central: language === 'en' ? "Central China" : "中国中部",
-    west: language === 'en' ? "Western China" : "中国西部",
-    northwest: language === 'en' ? "Northwest China" : "中国西北",
-    southwest: language === 'en' ? "Southwest China" : "中国西南",
-  };
-  
-  // Simple region determination based on coordinates
-  let region;
-  if (latitude > 40) {
-    if (longitude < 110) region = china.northwest;
-    else region = china.northeast;
-  } else if (latitude > 30) {
-    if (longitude < 105) region = china.west;
-    else if (longitude > 118) region = china.east;
-    else region = china.central;
-  } else {
-    if (longitude < 105) region = china.southwest;
-    else region = china.south;
-  }
-  
-  return region;
 }
 
 /**
