@@ -10,6 +10,7 @@ const siqsCache = new Map<string, {
   siqs: number;
   timestamp: number;
   isViable: boolean;
+  factors?: any[];
 }>();
 
 // Invalidate cache entries older than 15 minutes
@@ -26,7 +27,7 @@ export async function calculateRealTimeSiqs(
   latitude: number, 
   longitude: number, 
   bortleScale: number
-): Promise<{ siqs: number; isViable: boolean }> {
+): Promise<{ siqs: number; isViable: boolean; factors?: any[] }> {
   // Generate cache key
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   
@@ -36,7 +37,8 @@ export async function calculateRealTimeSiqs(
     console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
     return {
       siqs: cachedData.siqs,
-      isViable: cachedData.isViable
+      isViable: cachedData.isViable,
+      factors: cachedData.factors
     };
   }
   
@@ -92,12 +94,14 @@ export async function calculateRealTimeSiqs(
     siqsCache.set(cacheKey, {
       siqs: finalSiqs,
       isViable: isViable,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      factors: siqsResult.factors
     });
     
     return {
       siqs: finalSiqs,
-      isViable: isViable
+      isViable: isViable,
+      factors: siqsResult.factors
     };
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
@@ -140,7 +144,8 @@ export async function batchCalculateSiqs(
         return {
           ...location,
           siqs: result.siqs,
-          isViable: result.isViable
+          isViable: result.isViable,
+          siqsFactors: result.factors // Store factors for potential display
         };
       } catch (error) {
         console.error(`Error calculating SIQS for location ${location.name}:`, error);
@@ -183,4 +188,15 @@ export function clearSiqsCache(): void {
  */
 export function getSiqsCacheSize(): number {
   return siqsCache.size;
+}
+
+/**
+ * Clear specific location from the SIQS cache
+ */
+export function clearLocationSiqsCache(latitude: number, longitude: number): void {
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  if (siqsCache.has(cacheKey)) {
+    siqsCache.delete(cacheKey);
+    console.log(`Cleared SIQS cache for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  }
 }

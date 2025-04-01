@@ -1,5 +1,5 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
@@ -55,6 +55,21 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   seeingConditions,
 }) => {
   const { language, t } = useLanguage();
+  const [stableWeatherData, setStableWeatherData] = useState(weatherData);
+  
+  // Ensure weather data is stable and validated
+  useEffect(() => {
+    // Only update stable weather data if we have valid new data
+    if (
+      weatherData && 
+      typeof weatherData.temperature === 'number' &&
+      typeof weatherData.humidity === 'number' &&
+      typeof weatherData.cloudCover === 'number' &&
+      typeof weatherData.windSpeed === 'number'
+    ) {
+      setStableWeatherData(weatherData);
+    }
+  }, [weatherData]);
   
   // Use memoized translations and normalizations for better performance
   const translatedData = useMemo(() => {
@@ -69,11 +84,11 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       moonPhase: language === 'zh'
         ? getMoonPhaseInChinese(normalizedMoonPhase)
         : normalizedMoonPhase,
-      weatherCondition: language === 'zh' && weatherData.condition
-        ? getWeatherConditionInChinese(weatherData.condition)
-        : weatherData.condition
+      weatherCondition: language === 'zh' && stableWeatherData.condition
+        ? getWeatherConditionInChinese(stableWeatherData.condition)
+        : stableWeatherData.condition
     };
-  }, [language, seeingConditions, moonPhase, weatherData.condition]);
+  }, [language, seeingConditions, moonPhase, stableWeatherData.condition]);
 
   // Animation variants
   const containerVariants = {
@@ -106,19 +121,19 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <motion.div variants={itemVariants}>
               <PrimaryConditions
-                temperature={weatherData.temperature}
-                humidity={weatherData.humidity}
-                windSpeed={weatherData.windSpeed}
+                temperature={stableWeatherData.temperature}
+                humidity={stableWeatherData.humidity}
+                windSpeed={stableWeatherData.windSpeed}
                 seeingConditions={translatedData.seeingConditions}
               />
             </motion.div>
             
             <motion.div variants={itemVariants}>
               <SecondaryConditions
-                cloudCover={weatherData.cloudCover}
+                cloudCover={stableWeatherData.cloudCover}
                 moonPhase={translatedData.moonPhase}
                 bortleScale={bortleScale}
-                aqi={weatherData.aqi}
+                aqi={stableWeatherData.aqi}
               />
             </motion.div>
           </div>

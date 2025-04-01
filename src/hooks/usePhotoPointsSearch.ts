@@ -19,8 +19,10 @@ interface UsePhotoPointsSearchProps {
 
 // Maximum search distance
 const MAX_SEARCH_DISTANCE = 10000; // 10,000 km
-// Maximum calculated locations to request (reduced from 50 to 10)
+// Maximum calculated locations to request per batch
 const MAX_CALCULATED_LOCATIONS = 10;
+// Maximum number of "load more" clicks allowed
+const MAX_LOAD_MORE_CLICKS = 2;
 
 export const usePhotoPointsSearch = ({
   userLocation,
@@ -37,6 +39,8 @@ export const usePhotoPointsSearch = ({
   const [hasMoreLocations, setHasMoreLocations] = useState(false);
   const [isUserInGoodLocation, setIsUserInGoodLocation] = useState(false);
   const [lastSearchParams, setLastSearchParams] = useState<string>('');
+  const [loadMoreClickCount, setLoadMoreClickCount] = useState(0);
+  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState(false);
   
   // Load recommended locations based on user location and search radius
   const loadRecommendedLocations = useCallback(async (reset: boolean = true) => {
@@ -97,6 +101,8 @@ export const usePhotoPointsSearch = ({
           setFilteredLocations(validLocations);
           setDisplayedLocations(validLocations.slice(0, maxInitialResults));
           setHasMoreLocations(validLocations.length > maxInitialResults);
+          setCanLoadMoreCalculated(true); // Enable load more for calculated
+          setLoadMoreClickCount(0); // Reset click counter
           
           toast.info(
             language === "en" 
@@ -113,6 +119,7 @@ export const usePhotoPointsSearch = ({
           setFilteredLocations([]);
           setDisplayedLocations([]);
           setHasMoreLocations(false);
+          setCanLoadMoreCalculated(false);
           
           toast.error(
             language === "en" 
@@ -143,6 +150,8 @@ export const usePhotoPointsSearch = ({
         setFilteredLocations(validLocations);
         setDisplayedLocations(validLocations.slice(0, maxInitialResults));
         setHasMoreLocations(validLocations.length > maxInitialResults);
+        setCanLoadMoreCalculated(true); // Enable load more based on presence of locations
+        setLoadMoreClickCount(0); // Reset click counter
       }
       
       // Update last search params
@@ -157,6 +166,108 @@ export const usePhotoPointsSearch = ({
       setSearching(false);
     }
   }, [userLocation, searchDistance, language, maxInitialResults, lastSearchParams]);
+  
+  // Load more calculated locations
+  const loadMoreCalculatedLocations = useCallback(async () => {
+    if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
+      return;
+    }
+    
+    setSearching(true);
+    console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
+    
+    try {
+      // Get more calculated locations
+      const newCalculatedLocations = await findCalculatedLocations(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchDistance,
+        true, // Allow expanding radius
+        MAX_CALCULATED_LOCATIONS // Get 10 more each time
+      );
+      
+      // Filter out invalid locations
+      const validNewLocations = newCalculatedLocations.filter(loc => {
+        // Check for duplicates in existing locations
+        const isDuplicate = allLocations.some(existing => 
+          existing.latitude === loc.latitude && 
+          existing.longitude === loc.longitude
+        );
+        
+        if (isDuplicate) {
+          return false;
+        }
+        
+        // Check for water and SIQS
+        return isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name) && 
+               loc.siqs !== undefined && loc.siqs > 0;
+      });
+      
+      if (validNewLocations.length > 0) {
+        // Combine with existing locations
+        const combinedLocations = [...allLocations, ...validNewLocations];
+        
+        // Sort by distance
+        combinedLocations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+        
+        // Update state
+        setAllLocations(combinedLocations);
+        setFilteredLocations(combinedLocations);
+        setDisplayedLocations(combinedLocations.slice(0, Math.max(displayedLocations.length, maxInitialResults) + validNewLocations.length));
+        
+        // Increment click counter
+        setLoadMoreClickCount(prev => prev + 1);
+        
+        // Check if we've reached the maximum clicks
+        if (loadMoreClickCount + 1 >= MAX_LOAD_MORE_CLICKS) {
+          setCanLoadMoreCalculated(false);
+          toast.info(
+            language === "en" 
+              ? "Maximum number of location requests reached" 
+              : "已达到位置请求的最大数量",
+            { 
+              description: language === "en" 
+                ? "To prevent overloading, no more locations can be loaded" 
+                : "为防止超负荷，无法加载更多位置"
+            }
+          );
+        }
+        
+        toast.success(
+          language === "en" 
+            ? `Added ${validNewLocations.length} more locations` 
+            : `添加了${validNewLocations.length}个更多位置`,
+          { 
+            description: language === "en" 
+              ? "Showing additional calculated viewing locations" 
+              : "显示额外的计算观测位置"
+          }
+        );
+      } else {
+        toast.info(
+          language === "en" 
+            ? "No more unique locations found" 
+            : "未找到更多独特位置",
+          { 
+            description: language === "en" 
+              ? "Try increasing your search radius" 
+              : "尝试增加您的搜索半径"
+          }
+        );
+        
+        // Disable load more if we can't find any new locations
+        setCanLoadMoreCalculated(false);
+      }
+    } catch (error) {
+      console.error("Error loading more calculated locations:", error);
+      toast.error(
+        language === "en" ? "Error loading additional locations" : "加载额外位置时出错", 
+        { description: language === "en" ? "Please try again later" : "请稍后再试" }
+      );
+    } finally {
+      setSearching(false);
+    }
+  }, [userLocation, searchDistance, language, allLocations, displayedLocations.length, maxInitialResults, loadMoreClickCount]);
   
   // Load locations when user location changes
   useEffect(() => {
@@ -177,7 +288,7 @@ export const usePhotoPointsSearch = ({
     setIsUserInGoodLocation(userHasGoodSiqs);
   }, [userLocation, currentSiqs]);
   
-  // Load more locations
+  // Load more locations from existing filteredLocations
   const loadMoreLocations = useCallback(() => {
     const currentCount = displayedLocations.length;
     const newLocations = filteredLocations.slice(0, currentCount + maxInitialResults);
@@ -202,6 +313,7 @@ export const usePhotoPointsSearch = ({
     // Clear caches to ensure fresh data
     clearSiqsCache();
     clearLocationSearchCache();
+    setLoadMoreClickCount(0); // Reset click counter on refresh
     loadRecommendedLocations(true);
   }, [userLocation, loadRecommendedLocations]);
   
@@ -216,6 +328,11 @@ export const usePhotoPointsSearch = ({
     loadMoreLocations,
     isUserInGoodLocation,
     totalLocationsCount: filteredLocations.length,
-    refreshLocations
+    refreshLocations,
+    // New properties for calculated locations
+    canLoadMoreCalculated,
+    loadMoreCalculatedLocations,
+    loadMoreClickCount,
+    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS
   };
 };
