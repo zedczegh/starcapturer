@@ -66,13 +66,25 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
   
   // Navigate to details page
   const handleViewDetails = () => {
-    // When navigating from the photo points page, we need to pass the proper state
-    navigate(`/location/${location.id}`, { 
+    // Critical fix: Make sure we pass the complete location object
+    // and preserve the original ID when navigating
+    const locationWithMetadata = {
+      ...location,
+      fromPhotoPoints: true, // Add flag to indicate we're coming from photo points
+      // Preserve these important fields for calculation:
+      weatherData: location.weatherData || {},
+      timestamp: location.timestamp || new Date().toISOString()
+    };
+    
+    // Use the correct path structure based on the location ID
+    const path = location.id.startsWith('calculated') ? 
+      `/location/${location.id}` : 
+      `/photo-point/${location.id}`;
+    
+    // Navigate with the complete state
+    navigate(path, { 
       state: { 
-        location: {
-          ...location,
-          fromPhotoPoints: true // Add flag to indicate we're coming from photo points
-        } 
+        location: locationWithMetadata
       }
     });
   };

@@ -27,8 +27,9 @@ const LocationDetails = () => {
   const { t } = useLanguage();
   const siqsUpdateRequiredRef = useRef(true);
   
-  // Determine if we're coming from photo points
-  const isPhotoPoint = location.pathname.includes("/photo-point/");
+  // Determine if we're coming from photo points - check both URL and state flag
+  const isPhotoPoint = location.pathname.includes("/photo-point/") || 
+                       (location.state?.location?.fromPhotoPoints === true);
   
   const {
     locationData, 
