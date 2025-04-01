@@ -6,6 +6,7 @@ import { MapPin, Star, Award, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/geoUtils";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
+import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -27,35 +28,40 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
-          // First check if description contains location info
-          if (point.description && point.description.toLowerCase().includes("near")) {
-            const parts = point.description.split(/near/i);
-            if (parts.length > 1) {
-              setNearestTown(parts[1].trim());
-              setLoadingTown(false);
-              return;
-            }
+          // First check if we already have a name from point data
+          if (point.name && 
+              !point.name.includes("°") && 
+              !point.name.includes("Location at") &&
+              !point.name.includes("位置在") &&
+              !point.name.includes("Remote area") &&
+              !point.name.includes("偏远地区")) {
+            
+            const extractedName = extractNearestTownName(point.name, point.description, language);
+            setNearestTown(extractedName);
+            setLoadingTown(false);
+            return;
           }
           
-          // If point has a name that's not coordinates, prioritize that
-          if (point.name && !point.name.includes("°") && !point.name.includes("Location at")) {
-            const nameParts = language === 'en' ? point.name.split(',') : point.name.split('，');
-            if (nameParts.length > 0) {
-              setNearestTown(nameParts[0].trim());
-              setLoadingTown(false);
-              return;
-            }
+          // Try directional region naming first (e.g., "Northwest Yunnan")
+          const regionalName = getRegionalName(point.latitude, point.longitude, language);
+          
+          // If we got a valid region name, use it
+          if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
+            setNearestTown(regionalName);
+            setLoadingTown(false);
+            return;
           }
           
-          // Use enhanced location service
+          // Use enhanced location service as a fallback
           const townName = await getLocationNameForCoordinates(
             point.latitude,
             point.longitude,
             language
           );
           
-          if (townName && !townName.includes("°")) {
-            setNearestTown(townName);
+          if (townName) {
+            const extractedTownName = extractNearestTownName(townName, point.description, language);
+            setNearestTown(extractedTownName);
           } else {
             // Better fallback for remote areas
             setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
