@@ -20,8 +20,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const { t, language } = useLanguage();
   const { getPosition, loading: geoLoading } = useGeolocation({
     enableHighAccuracy: true,
-    timeout: 10000,
-    language: language
+    timeout: 10000
   });
 
   const [locationLoading, setLocationLoading] = useState(false);

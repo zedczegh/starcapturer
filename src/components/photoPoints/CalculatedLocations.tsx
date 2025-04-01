@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -142,7 +143,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
             key={location.id || `calc-loc-${index}`}
             location={location}
             index={index}
-            showRealTimeSiqs={true}
           />
         ))}
       </motion.div>
