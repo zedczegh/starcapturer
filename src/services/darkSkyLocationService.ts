@@ -17,8 +17,7 @@ const darkSkyLocations = [
     bortleScale: 1,
     isDarkSkyReserve: true,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-02",
@@ -29,8 +28,7 @@ const darkSkyLocations = [
     bortleScale: 1,
     isDarkSkyReserve: true,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-03",
@@ -41,8 +39,7 @@ const darkSkyLocations = [
     bortleScale: 2,
     isDarkSkyReserve: true,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-04",
@@ -52,8 +49,7 @@ const darkSkyLocations = [
     longitude: -117.1,
     bortleScale: 2,
     certification: "Dark Sky Park",
-    type: "park",
-    timestamp: new Date().toISOString()
+    type: "park"
   },
   {
     id: "ds-05",
@@ -63,8 +59,7 @@ const darkSkyLocations = [
     longitude: -103.2,
     bortleScale: 1,
     certification: "Dark Sky Park",
-    type: "park",
-    timestamp: new Date().toISOString()
+    type: "park"
   },
   {
     id: "ds-06",
@@ -75,8 +70,7 @@ const darkSkyLocations = [
     bortleScale: 2,
     isDarkSkyReserve: true,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-07",
@@ -87,8 +81,7 @@ const darkSkyLocations = [
     bortleScale: 3,
     isDarkSkyReserve: true,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-08",
@@ -98,8 +91,7 @@ const darkSkyLocations = [
     longitude: 0.1,
     bortleScale: 2,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-09",
@@ -109,8 +101,7 @@ const darkSkyLocations = [
     longitude: 6.8,
     bortleScale: 2,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-10",
@@ -120,8 +111,7 @@ const darkSkyLocations = [
     longitude: -3.6,
     bortleScale: 2,
     certification: "Dark Sky Reserve",
-    type: "reserve",
-    timestamp: new Date().toISOString()
+    type: "reserve"
   },
   {
     id: "ds-11",
@@ -131,8 +121,7 @@ const darkSkyLocations = [
     longitude: -2.5,
     bortleScale: 3,
     certification: "Dark Sky Park",
-    type: "park",
-    timestamp: new Date().toISOString()
+    type: "park"
   },
   {
     id: "ds-12",
@@ -142,8 +131,7 @@ const darkSkyLocations = [
     longitude: -4.5,
     bortleScale: 2,
     certification: "Dark Sky Park",
-    type: "park",
-    timestamp: new Date().toISOString()
+    type: "park"
   },
   {
     id: "ds-13",
@@ -153,8 +141,7 @@ const darkSkyLocations = [
     longitude: 110.5,
     bortleScale: 3,
     certification: "Dark Sky Park",
-    type: "park",
-    timestamp: new Date().toISOString()
+    type: "park"
   }
 ];
 

@@ -6,11 +6,11 @@ import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import { Loader2 } from 'lucide-react';
+import { MapPin, Loader2, RefreshCw, Locate } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 
 // Lazy load components for better initial loading performance
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
@@ -34,7 +34,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchRadius]);
 
-  // Use the recommended locations hook
+  // Use the hook directly instead of dynamically importing it
   const {
     displayedLocations,
     loading: locationsLoading,
@@ -84,19 +84,19 @@ const PhotoPointsNearby: React.FC = () => {
   // Page title
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
-  // Animation variants for page elements
+  // Animation variants for page elements (optimized for performance)
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: {
-        staggerChildren: 0.05
+        staggerChildren: 0.05 // Reduced for faster animation
       }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
+    hidden: { opacity: 0, y: 10 }, // Reduced y-offset for subtler animation
     visible: { opacity: 1, y: 0 }
   };
   
@@ -119,14 +119,67 @@ const PhotoPointsNearby: React.FC = () => {
               <BackButton destination="/" />
             </motion.div>
             
-            <PhotoPointsHeader 
-              userLocation={userLocation}
-              locationLoading={locationLoading}
-              locationsLoading={locationsLoading}
-              getPosition={getPosition}
-              refreshData={refreshSiqsData}
-              variants={itemVariants}
-            />
+            <motion.div className="flex flex-col items-center text-center mb-8" variants={itemVariants}>
+              <h1 className="text-3xl font-bold mb-3 text-gradient">
+                {t("Astronomy Photo Points", "天文摄影点")}
+              </h1>
+              <p className="text-muted-foreground max-w-xl">
+                {t(
+                  "Discover the best locations for astrophotography near you. Filter by certified dark sky areas or algorithmically calculated spots.",
+                  "发现您附近最佳的天文摄影地点。按认证暗夜区域或算法计算的位置进行筛选。"
+                )}
+              </p>
+            </motion.div>
+            
+            {/* User location section */}
+            {!userLocation && (
+              <motion.div className="flex justify-center mb-8" variants={itemVariants}>
+                <Button
+                  onClick={getPosition}
+                  className="flex items-center gap-2 glassmorphism bg-cosmic-800/30 hover:bg-cosmic-700/40 border border-cosmic-700/30"
+                  disabled={locationLoading}
+                >
+                  {locationLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MapPin className="h-4 w-4" />
+                  )}
+                  {t("Use My Location", "使用我的位置")}
+                </Button>
+              </motion.div>
+            )}
+            
+            {/* User location indicator and refresh button */}
+            {userLocation && (
+              <motion.div 
+                className="flex flex-col md:flex-row justify-center items-center gap-4 mb-8"
+                variants={itemVariants}
+              >
+                <div className="flex items-center gap-2 glassmorphism-light px-4 py-2 rounded-lg">
+                  <Locate className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm">
+                    {t(
+                      `Location: ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`,
+                      `位置: ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`
+                    )}
+                  </span>
+                </div>
+                
+                <Button
+                  onClick={() => {
+                    getPosition();
+                    refreshSiqsData();
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 glassmorphism-light hover:bg-cosmic-700/40 border border-cosmic-600/30"
+                  disabled={locationLoading || locationsLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${locationsLoading ? 'animate-spin' : ''}`} />
+                  {t("Refresh Data", "刷新数据")}
+                </Button>
+              </motion.div>
+            )}
             
             {/* Distance filter */}
             {userLocation && (
