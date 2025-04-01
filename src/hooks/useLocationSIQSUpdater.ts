@@ -83,9 +83,8 @@ export const useLocationSIQSUpdater = (
           const currentCloudCover = locationData.weatherData.cloudCover;
           
           // Simplified SIQS formula based on cloud cover - capped at 50% cloud cover
-          const estimatedScore = currentCloudCover <= 50 
-            ? Math.max(0, Math.min(10, 10 - (currentCloudCover * 0.2))) 
-            : 0;
+          const cloudScore = Math.max(0, 100 - (currentCloudCover * 2));
+          const estimatedScore = cloudScore / 10;
           
           console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
           
@@ -97,7 +96,7 @@ export const useLocationSIQSUpdater = (
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: Math.max(0, 10 - (currentCloudCover / 5)),
+                  score: cloudScore / 10, // Convert to 0-10 scale for display
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
