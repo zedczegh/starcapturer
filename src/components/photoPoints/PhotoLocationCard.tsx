@@ -9,7 +9,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Award, MapPin, Calendar, Moon, Globe, Park, Building, Star } from 'lucide-react';
+import { Award, MapPin, Calendar, Moon, Globe, TreePine, Building, Star } from 'lucide-react';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -50,7 +50,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
     } else if (certLower.includes('reserve') || location.isDarkSkyReserve) {
       return <Globe className="h-4 w-4 mr-2" fill="rgba(96, 165, 250, 0.2)" />;
     } else if (certLower.includes('park')) {
-      return <Park className="h-4 w-4 mr-2" fill="rgba(96, 165, 250, 0.2)" />;
+      return <TreePine className="h-4 w-4 mr-2" fill="rgba(96, 165, 250, 0.2)" />;
     } else if (certLower.includes('community')) {
       return <Building className="h-4 w-4 mr-2" fill="rgba(96, 165, 250, 0.2)" />;
     } else {
