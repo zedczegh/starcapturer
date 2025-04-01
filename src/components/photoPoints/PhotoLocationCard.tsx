@@ -17,9 +17,15 @@ interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
   showRealTimeSiqs?: boolean;
+  isMobile?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs = false }) => {
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ 
+  location, 
+  index, 
+  showRealTimeSiqs = false,
+  isMobile = false 
+}) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
@@ -180,15 +186,15 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
     navigate(`/location/${location.id}`, { state: { fromPhotoPoints: true, ...locationData } });
   };
   
-  // Animation variants
+  // Animation variants - reduced for mobile
   const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: isMobile ? 10 : 20 },
     visible: { 
       opacity: 1, 
       y: 0,
       transition: { 
-        duration: 0.4,
-        delay: index * 0.1
+        duration: isMobile ? 0.2 : 0.4,
+        delay: isMobile ? index * 0.05 : index * 0.1
       }
     }
   };
@@ -196,7 +202,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
   return (
     <motion.div
       variants={cardVariants}
-      className="glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30"
+      className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
+      layout={!isMobile}
     >
       <div className="flex justify-between items-start mb-2">
         <h3 className="text-lg font-medium line-clamp-1">{displayName}</h3>

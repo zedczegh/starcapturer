@@ -5,21 +5,28 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Award, Globe, Loader2 } from "lucide-react";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DarkSkyLocationsProps {
   locations: SharedAstroSpot[];
   loading: boolean;
+  initialLoad?: boolean;
 }
 
-const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({ locations, loading }) => {
+const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({ 
+  locations, 
+  loading,
+  initialLoad = false
+}) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.1,
+        staggerChildren: isMobile ? 0.05 : 0.1,
         when: "beforeChildren" 
       } 
     }
@@ -62,15 +69,16 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({ locations, loading 
   return (
     <motion.div
       variants={containerVariants}
-      initial="hidden"
+      initial={initialLoad ? "hidden" : "visible"}
       animate="visible"
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${isMobile ? 'content-visibility-auto' : ''}`}
     >
       {locations.map((location, index) => (
         <PhotoLocationCard
           key={location.id}
           location={location}
           index={index}
+          isMobile={isMobile}
         />
       ))}
     </motion.div>

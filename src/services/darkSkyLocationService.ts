@@ -19,7 +19,19 @@ let cachedDarkSkyLocations: LocationEntry[] | null = null;
 export function getAllDarkSkyLocations(): LocationEntry[] {
   if (!cachedDarkSkyLocations) {
     try {
-      cachedDarkSkyLocations = locationDatabase.filter(loc => loc.type === 'dark-site');
+      // Filter dark-site locations and exclude water locations
+      const darkSiteLocations = locationDatabase.filter(loc => loc.type === 'dark-site');
+      const filteredLocations = darkSiteLocations.filter(loc => {
+        // Skip water locations
+        const isWater = isWaterLocation(loc.coordinates[0], loc.coordinates[1]);
+        if (isWater) {
+          console.log(`Filtered out water location: ${loc.name}`);
+          return false;
+        }
+        return true;
+      });
+      
+      cachedDarkSkyLocations = filteredLocations;
     } catch (error) {
       console.error("Error filtering dark sky locations:", error);
       return [];
@@ -57,7 +69,7 @@ export function findDarkSkyLocationsWithinRadius(
           return false;
         }
         
-        // Check if this is a water location
+        // Double-check if this is a water location (in case the cached list contains any)
         const isWater = isWaterLocation(location.coordinates[0], location.coordinates[1]);
         if (isWater) {
           console.log(`Filtered out water location: ${location.name}`);

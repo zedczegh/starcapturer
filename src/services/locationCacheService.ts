@@ -20,6 +20,14 @@ const locationSearchCache: LocationCache = {};
 
 // Cache expiration time (30 minutes by default)
 const DEFAULT_CACHE_EXPIRATION_MS = 30 * 60 * 1000;
+// Shorter expiration for mobile to prevent memory issues
+const MOBILE_CACHE_EXPIRATION_MS = 15 * 60 * 1000;
+
+// Check if we're on a mobile device
+const isMobileDevice = () => {
+  return window.innerWidth < 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
 
 /**
  * Generate a cache key for location search
@@ -77,15 +85,27 @@ export function cacheLocationSearch(
   
   const key = generateCacheKey(latitude, longitude, radius, customKey);
   const now = Date.now();
-  const actualExpirationMs = expirationMs || DEFAULT_CACHE_EXPIRATION_MS;
+  // Use mobile-specific expiration if on mobile device
+  const defaultExpiration = isMobileDevice() ? MOBILE_CACHE_EXPIRATION_MS : DEFAULT_CACHE_EXPIRATION_MS;
+  const actualExpirationMs = expirationMs || defaultExpiration;
+  
+  // Limit the number of locations stored in mobile cache to prevent memory issues
+  const locationsToCache = isMobileDevice() && validLocations.length > 30 
+    ? validLocations.slice(0, 30) 
+    : validLocations;
   
   locationSearchCache[key] = {
-    locations: validLocations,
+    locations: locationsToCache,
     timestamp: now,
     expiresAt: now + actualExpirationMs
   };
   
-  console.log(`Cached ${validLocations.length} locations with key ${key}, expires in ${Math.round(actualExpirationMs/60000)} minutes`);
+  console.log(`Cached ${locationsToCache.length} locations with key ${key}, expires in ${Math.round(actualExpirationMs/60000)} minutes`);
+  
+  // Clean up old cache entries if we have too many (mobile optimization)
+  if (isMobileDevice() && Object.keys(locationSearchCache).length > 5) {
+    cleanupOldCacheEntries();
+  }
 }
 
 /**
@@ -128,6 +148,38 @@ export function getCachedLocationSearch(
   }
   
   return validLocations;
+}
+
+/**
+ * Clean up older cache entries to prevent memory leaks
+ * Especially important for mobile devices
+ */
+function cleanupOldCacheEntries(): void {
+  const now = Date.now();
+  const cacheKeys = Object.keys(locationSearchCache);
+  
+  // Sort by timestamp (oldest first)
+  cacheKeys.sort((a, b) => 
+    locationSearchCache[a].timestamp - locationSearchCache[b].timestamp
+  );
+  
+  // Remove oldest entries until we have a reasonable number
+  const targetCount = isMobileDevice() ? 3 : 10;
+  if (cacheKeys.length > targetCount) {
+    const keysToRemove = cacheKeys.slice(0, cacheKeys.length - targetCount);
+    keysToRemove.forEach(key => {
+      delete locationSearchCache[key];
+      console.log(`Cleaned up old cache entry: ${key}`);
+    });
+  }
+  
+  // Also remove any expired entries
+  Object.keys(locationSearchCache).forEach(key => {
+    if (locationSearchCache[key].expiresAt < now) {
+      delete locationSearchCache[key];
+      console.log(`Removed expired cache entry: ${key}`);
+    }
+  });
 }
 
 /**
@@ -179,6 +231,7 @@ export function getCacheStats(): {
   averageLocationsPerEntry: number;
   oldestEntry: number;
   newestEntry: number;
+  isMobile: boolean;
 } {
   const keys = Object.keys(locationSearchCache);
   let totalLocations = 0;
@@ -207,6 +260,14 @@ export function getCacheStats(): {
     totalLocations,
     averageLocationsPerEntry: keys.length ? totalLocations / keys.length : 0,
     oldestEntry: Math.round(oldestEntryAge / 1000),
-    newestEntry: Math.round(newestEntryAge / 1000)
+    newestEntry: Math.round(newestEntryAge / 1000),
+    isMobile: isMobileDevice()
   };
+}
+
+// Periodically clean up the cache to prevent memory issues on mobile
+if (typeof window !== 'undefined') {
+  // Clean cache every 5 minutes on mobile, every 15 minutes on desktop
+  const cleanupInterval = isMobileDevice() ? 5 * 60 * 1000 : 15 * 60 * 1000;
+  setInterval(cleanupOldCacheEntries, cleanupInterval);
 }

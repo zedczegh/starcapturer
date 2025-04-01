@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
+import { useIsMobile } from '@/hooks/use-mobile';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
 import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
@@ -15,10 +16,12 @@ import BackButton from '@/components/navigation/BackButton';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
   });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+  const [initialLoad, setInitialLoad] = useState(true);
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
@@ -69,6 +72,17 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [getPosition, userLocation]);
 
+  // Mark initial load as complete after everything is loaded
+  useEffect(() => {
+    if (!loading && !locationLoading && initialLoad) {
+      // Small delay to ensure all animations are complete
+      const timer = setTimeout(() => {
+        setInitialLoad(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, locationLoading, initialLoad]);
+
   // Page title - using Helmet for proper title handling
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
@@ -79,7 +93,7 @@ const PhotoPointsNearby: React.FC = () => {
         <title>{pageTitle}</title>
       </Helmet>
       
-      <div className="pt-20 md:pt-28 pb-20">
+      <div className={`pt-20 md:pt-28 pb-20 ${isMobile ? 'will-change-auto' : ''}`}>
         <div className="container mx-auto px-4">
           {/* Back Button */}
           <div className="mb-6">
@@ -141,21 +155,25 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
           
           {/* Content based on active view */}
-          {activeView === 'certified' ? (
-            <DarkSkyLocations
-              locations={certifiedLocations}
-              loading={loading && !locationLoading}
-            />
-          ) : (
-            <CalculatedLocations
-              locations={calculatedLocations}
-              loading={loading && !locationLoading}
-              hasMore={hasMore}
-              onLoadMore={loadMore}
-              onRefresh={refreshSiqsData}
-              searchRadius={searchRadius}
-            />
-          )}
+          <div className={isMobile ? 'transform-gpu' : ''}>
+            {activeView === 'certified' ? (
+              <DarkSkyLocations
+                locations={certifiedLocations}
+                loading={loading && !locationLoading}
+                initialLoad={initialLoad}
+              />
+            ) : (
+              <CalculatedLocations
+                locations={calculatedLocations}
+                loading={loading && !locationLoading}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                onRefresh={refreshSiqsData}
+                searchRadius={searchRadius}
+                initialLoad={initialLoad}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

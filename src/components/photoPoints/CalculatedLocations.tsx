@@ -6,6 +6,7 @@ import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -14,6 +15,7 @@ interface CalculatedLocationsProps {
   onLoadMore: () => void;
   onRefresh?: () => void;
   searchRadius?: number;
+  initialLoad?: boolean;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -22,9 +24,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   hasMore, 
   onLoadMore,
   onRefresh,
-  searchRadius = 0
+  searchRadius = 0,
+  initialLoad = false
 }) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
@@ -57,7 +61,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.1,
+        staggerChildren: isMobile ? 0.05 : 0.1,
         when: "beforeChildren" 
       } 
     }
@@ -138,9 +142,9 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     <>
       <motion.div
         variants={containerVariants}
-        initial="hidden"
+        initial={initialLoad ? "hidden" : "visible"}
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${isMobile ? 'content-visibility-auto' : ''}`}
       >
         {sortedLocations.map((location, index) => (
           <PhotoLocationCard
@@ -148,6 +152,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
             location={location}
             index={index}
             showRealTimeSiqs={true}
+            isMobile={isMobile}
           />
         ))}
       </motion.div>
