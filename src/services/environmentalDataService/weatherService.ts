@@ -14,6 +14,18 @@ export interface WeatherData {
   timestamp: string;
 }
 
+export interface WeatherApiResponse {
+  current: {
+    temperature_2m: number;
+    cloud_cover: number;
+    relative_humidity_2m: number;
+    precipitation: number;
+    wind_speed_10m: number;
+    weather_code: number;
+    time: string;
+  };
+}
+
 /**
  * Get weather data for a specific location
  */
@@ -47,24 +59,24 @@ export async function getWeatherData(
     }
     
     // Fetch weather data
-    const weatherData = await fetchWeatherData({
+    const weatherResponse = await fetchWeatherData({
       latitude,
       longitude
-    });
+    }) as WeatherApiResponse;
     
-    if (!weatherData) {
+    if (!weatherResponse) {
       throw new Error("Could not fetch weather data");
     }
     
     // Format weather data
     const formattedData: WeatherData = {
-      temperature: weatherData.current?.temperature_2m || 0,
-      cloudCover: weatherData.current?.cloud_cover || 0,
-      humidity: weatherData.current?.relative_humidity_2m || 0,
-      precipitation: weatherData.current?.precipitation || 0,
-      windSpeed: weatherData.current?.wind_speed_10m || 0,
-      weatherCode: weatherData.current?.weather_code || 0,
-      timestamp: weatherData.current?.time || new Date().toISOString()
+      temperature: weatherResponse.current?.temperature_2m || 0,
+      cloudCover: weatherResponse.current?.cloud_cover || 0,
+      humidity: weatherResponse.current?.relative_humidity_2m || 0,
+      precipitation: weatherResponse.current?.precipitation || 0,
+      windSpeed: weatherResponse.current?.wind_speed_10m || 0,
+      weatherCode: weatherResponse.current?.weather_code || 0,
+      timestamp: weatherResponse.current?.time || new Date().toISOString()
     };
     
     // Cache the data

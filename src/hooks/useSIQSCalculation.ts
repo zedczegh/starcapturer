@@ -6,7 +6,8 @@ import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { fetchForecastData } from "@/lib/api";
-import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
+import { getWeatherData } from "@/services/environmentalDataService/weatherService";
+import { getBortleScaleData } from "@/services/environmentalDataService/bortleScaleService";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
@@ -46,6 +47,15 @@ export const useSIQSCalculation = (
     setIsCalculating(true);
     displayOnly ? null : setLoading && setLoading(true);
     
+    // Set a timeout to prevent hanging forever
+    const timeout = setTimeout(() => {
+      setIsCalculating(false);
+      displayOnly ? null : setLoading && setLoading(false);
+      setStatusMessage && setStatusMessage(language === 'en' ? 
+        "Calculation is taking too long. Please try again." : 
+        "计算时间过长，请重试。");
+    }, 30000); // 30 second timeout
+    
     try {
       // Get weather data
       const cacheKey = `weather-${lat.toFixed(4)}-${lng.toFixed(4)}`;
@@ -66,6 +76,7 @@ export const useSIQSCalculation = (
           "无法获取天气数据，请重试。");
         setIsCalculating(false);
         displayOnly ? null : setLoading && setLoading(false);
+        clearTimeout(timeout);
         return;
       }
       
@@ -114,6 +125,7 @@ export const useSIQSCalculation = (
         // For consistency, always store the 0-10 scale value
         setSiqsScore(normalizedScore);
         setIsCalculating(false);
+        clearTimeout(timeout);
         return;
       }
       
@@ -157,6 +169,8 @@ export const useSIQSCalculation = (
         console.error("Failed to save to localStorage", e);
       }
       
+      clearTimeout(timeout);
+      
       // Wait a small delay to ensure the state is updated
       setTimeout(() => {
         setIsCalculating(false);
@@ -170,6 +184,7 @@ export const useSIQSCalculation = (
         "计算SIQS时发生错误，请重试。");
       setIsCalculating(false);
       displayOnly ? null : setLoading && setLoading(false);
+      clearTimeout(timeout);
     }
   }, [isCalculating, navigate, getCachedData, setCachedData]);
   

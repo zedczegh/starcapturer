@@ -58,7 +58,6 @@ const ShareLocationForm: React.FC<{
     
     try {
       // Create spot data object
-      // Removed the photoUrl field which was causing the TypeScript error
       const spotData: Omit<SharedAstroSpot, 'id'> = {
         name,
         chineseName: chineseName || undefined,

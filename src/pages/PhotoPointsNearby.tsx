@@ -26,7 +26,7 @@ const PhotoPointsNearby = () => {
   
   // Set up geolocation
   const { 
-    position, 
+    coords, 
     loading: locationLoading, 
     error: locationError, 
     getPosition 
@@ -47,18 +47,18 @@ const PhotoPointsNearby = () => {
     toggleCertifiedOnly,
     refreshSiqsData
   } = useRecommendedLocations(
-    position ? { latitude: position.coords.latitude, longitude: position.coords.longitude } : null
+    coords ? { latitude: coords.latitude, longitude: coords.longitude } : null
   );
   
   // Set user location when position is available
   useEffect(() => {
-    if (position && !userLocation) {
+    if (coords && !userLocation) {
       setUserLocation({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude
+        latitude: coords.latitude,
+        longitude: coords.longitude
       });
     }
-  }, [position, userLocation, setUserLocation]);
+  }, [coords, userLocation, setUserLocation]);
   
   // Request location if not available
   useEffect(() => {
@@ -185,7 +185,7 @@ const PhotoPointsNearby = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <DistanceRangeSlider 
-              value={searchRadius} 
+              currentValue={searchRadius} 
               onChange={setSearchRadius}
               onApply={applyRadiusChange}
             />
@@ -254,7 +254,6 @@ const PhotoPointsNearby = () => {
                 <Progress 
                   value={isLoading ? 70 : 100} 
                   className="h-1.5 bg-cosmic-800/60"
-                  colorClass="bg-primary/80"
                 />
               </div>
             )}
@@ -262,7 +261,7 @@ const PhotoPointsNearby = () => {
             <div className="mb-8 flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
               <div className="flex gap-2 items-center">
                 <ViewToggle 
-                  view={view} 
+                  currentView={view} 
                   onViewChange={setView}
                   certifiedCount={locationData.certifiedCount}
                   calculatedCount={locationData.calculatedCount}
@@ -302,7 +301,7 @@ const PhotoPointsNearby = () => {
               <DarkSkyLocations 
                 locations={locationData.certifiedLocations} 
                 loading={isLoading}
-                isEmpty={!locationData.hasCertifiedLocations}
+                isEmptyState={!locationData.hasCertifiedLocations}
                 searchRadius={searchRadius}
               />
             ) : (

@@ -18,8 +18,6 @@ import { fetchLightPollutionData } from '@/lib/api/pollution';
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import LocationQuality from '@/components/photoPoints/LocationQuality';
 import PhotoGuidelines from '@/components/photoPoints/PhotoGuidelines';
-// Remove the incorrect import
-// import RecommendedPhotoPoints from '@/components/RecommendedPhotoPoints';
 
 // New interface to properly define what RecommendedPhotoPoints expects
 interface LocationData {
@@ -207,7 +205,6 @@ const ShareLocation: React.FC = () => {
                       <div className="mt-2">
                         <LightPollutionIndicator 
                           bortleScale={bortleScale} 
-                          showDescription={true}
                           compact={true}
                         />
                       </div>

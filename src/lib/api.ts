@@ -19,23 +19,12 @@ export { getLocationNameFromCoordinates } from './api/location';
 export { fetchLightPollutionData } from './api/pollution';
 
 // Export types and functions related to shared astronomy spots
-export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
+export type { SharedAstroSpot, SharingResponse, AstroSpotQueryOptions } from './api/astroSpots';
 export { 
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
 
-// Function to get recommended photo points based on user location
-// This is a shorthand for getRecommendedPhotoPoints
-export const getRecommendedPhotoPoints = async (
-  latitude: number, 
-  longitude: number, 
-  radius = 100, 
-  certifiedOnly = false, 
-  limit = 30
-) => {
-  // Use the getRecommendedPhotoPoints function from astroSpots module
-  const { getRecommendedPhotoPoints: getPoints } = await import('./api/astroSpots');
-  return getPoints(latitude, longitude, radius, certifiedOnly, limit);
-};
+// Re-export utilities from geoUtils for convenience
+export { calculateDistance as geoDistance } from '@/utils/geoUtils';

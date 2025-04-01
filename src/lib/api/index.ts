@@ -4,9 +4,10 @@
  */
 
 // Location APIs
-export { fetchLocationData } from './location';
+export { getLocationNameFromCoordinates } from './location';
 export { fetchWeatherData } from './weather';
 export { fetchLightPollutionData } from './pollution';
 export { fetchForecastData, fetchLongRangeForecastData } from './forecast';
-export { getRecommendedPhotoPoints } from './astroSpots';
+export { getRecommendedPhotoPoints, shareAstroSpot, getSharedAstroSpot } from './astroSpots';
 export { fetchForecastDataForToday } from './daily-forecast';
+
