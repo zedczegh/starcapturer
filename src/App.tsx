@@ -86,7 +86,7 @@ const App = () => {
                     } />
                     <Route path="/photo-points" element={
                       <PageTransition>
-                        <LocationDetails />
+                        <PhotoPointsNearby />
                       </PageTransition>
                     } />
                     <Route path="/about" element={

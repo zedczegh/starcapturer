@@ -1,61 +1,115 @@
 
 /**
- * Format date in a user-friendly way
- * @param date Date to format
- * @param isChineseFormat Whether to use Chinese date format
- * @returns Formatted date string
+ * Date and time utility functions for formatting and displaying dates
  */
-export function formatDate(date: Date, isChineseFormat: boolean = false): string {
-  if (!date || isNaN(date.getTime())) {
-    return isChineseFormat ? '未知日期' : 'Unknown date';
+
+/**
+ * Get relative time text from a timestamp (e.g., "2 hours ago")
+ * @param timestamp ISO timestamp string
+ * @param isChinese Whether to use Chinese language
+ * @returns Formatted relative time string
+ */
+export function getRelativeTimeText(timestamp: string, isChinese = false): string {
+  if (!timestamp) {
+    return isChinese ? '未知时间' : 'Unknown time';
   }
   
   try {
-    if (isChineseFormat) {
-      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    // Handle invalid dates
+    if (isNaN(date.getTime())) {
+      return isChinese ? '未知时间' : 'Unknown time';
     }
     
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    // Less than a minute
+    if (diffInSeconds < 60) {
+      return isChinese ? '刚刚' : 'Just now';
+    }
+    
+    // Less than an hour
+    if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return isChinese 
+        ? `${minutes} 分钟前` 
+        : `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    }
+    
+    // Less than a day
+    if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return isChinese 
+        ? `${hours} 小时前` 
+        : `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    }
+    
+    // Less than a week
+    if (diffInSeconds < 604800) {
+      const days = Math.floor(diffInSeconds / 86400);
+      return isChinese 
+        ? `${days} 天前` 
+        : `${days} day${days !== 1 ? 's' : ''} ago`;
+    }
+    
+    // Less than a month
+    if (diffInSeconds < 2592000) {
+      const weeks = Math.floor(diffInSeconds / 604800);
+      return isChinese 
+        ? `${weeks} 周前` 
+        : `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
+    }
+    
+    // Less than a year
+    if (diffInSeconds < 31536000) {
+      const months = Math.floor(diffInSeconds / 2592000);
+      return isChinese 
+        ? `${months} 个月前` 
+        : `${months} month${months !== 1 ? 's' : ''} ago`;
+    }
+    
+    // More than a year
+    const years = Math.floor(diffInSeconds / 31536000);
+    return isChinese 
+      ? `${years} 年前` 
+      : `${years} year${years !== 1 ? 's' : ''} ago`;
   } catch (error) {
-    console.error('Error formatting date:', error);
-    return isChineseFormat ? '日期格式错误' : 'Date format error';
+    console.error("Error formatting relative time:", error);
+    return isChinese ? '未知时间' : 'Unknown time';
   }
 }
 
 /**
- * Get relative time text from timestamp
- * @param timestamp ISO timestamp string
- * @param isChineseFormat Whether to use Chinese text format
- * @returns Relative time text like "2 days ago"
+ * Format date to a localized string
+ * @param dateStr Date string or timestamp
+ * @param isChinese Whether to use Chinese language
+ * @returns Formatted date string
  */
-export function getRelativeTimeText(timestamp: string, isChineseFormat: boolean = false): string {
+export function formatDate(dateStr: string, isChinese = false): string {
+  if (!dateStr) {
+    return isChinese ? '未知日期' : 'Unknown date';
+  }
+  
   try {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const date = new Date(dateStr);
     
-    if (isChineseFormat) {
-      if (diffMinutes < 1) return '刚刚';
-      if (diffMinutes < 60) return `${diffMinutes}分钟前`;
-      if (diffHours < 24) return `${diffHours}小时前`;
-      if (diffDays < 30) return `${diffDays}天前`;
-      return formatDate(date, true);
+    // Handle invalid dates
+    if (isNaN(date.getTime())) {
+      return isChinese ? '未知日期' : 'Unknown date';
+    }
+    
+    if (isChinese) {
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
     } else {
-      if (diffMinutes < 1) return 'just now';
-      if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-      if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-      return formatDate(date, false);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
     }
   } catch (error) {
-    console.error('Error getting relative time:', error);
-    return isChineseFormat ? '未知时间' : 'unknown time';
+    console.error("Error formatting date:", error);
+    return isChinese ? '未知日期' : 'Unknown date';
   }
 }

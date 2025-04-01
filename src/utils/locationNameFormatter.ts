@@ -1,73 +1,63 @@
 
 /**
- * Utility for formatting location names consistently
- * Handles special cases and language-specific formatting
+ * Format location names for display based on language and preferences
  */
 
 /**
- * Format a location name for display
- * @param name Raw location name
+ * Format location name for display
+ * @param name Original location name
  * @param language Current language (en or zh)
- * @returns Formatted location name
+ * @returns Formatted location name for display
  */
-export function formatLocationName(name: string, language?: string): string {
-  if (!name) return '';
+export function formatLocationName(name: string, language: string): string {
+  if (!name) return language === 'zh' ? '未知位置' : 'Unknown location';
   
-  // If we have Chinese characters and language is not Chinese, use default handling
-  const hasChinese = /[\u4e00-\u9fa5]/.test(name);
-  if (hasChinese && language !== 'zh') {
+  // For English language
+  if (language === 'en') {
+    // Remove coordinates if they're present in name
+    if (name.includes('°')) {
+      return 'Astronomy Point';
+    }
+    
+    // Check if it's a generated location name
+    if (name.startsWith('Location at')) {
+      const parts = name.split(', ');
+      if (parts.length > 1) {
+        return parts[1];
+      }
+      return 'Astronomy Point';
+    }
+    
+    return name;
+  } 
+  // For Chinese language
+  else {
+    // Remove coordinates if they're present in name
+    if (name.includes('°')) {
+      return '天文观测点';
+    }
+    
+    // Check if it's a generated location name
+    if (name.startsWith('Location at') || name.startsWith('位置在')) {
+      return '天文观测点';
+    }
+    
     return name;
   }
-  
-  // Remove unnecessary prefixes/suffixes
-  let formatted = name
-    .replace(/^location at /i, '')
-    .replace(/^dark sky /i, '')
-    .replace(/international dark sky /i, '')
-    .trim();
-  
-  // Capitalize words
-  formatted = formatted
-    .split(' ')
-    .map(word => {
-      // Don't capitalize certain small words unless they're the first word
-      const smallWords = ['a', 'an', 'the', 'in', 'on', 'at', 'by', 'for', 'of', 'and', 'or'];
-      if (smallWords.includes(word.toLowerCase())) {
-        return word.toLowerCase();
-      }
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(' ');
-  
-  // Ensure first letter is capitalized
-  formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  
-  return formatted;
 }
 
 /**
- * Format certification type for UI display
- * @param certification Raw certification type from API
+ * Format a location name to be displayed as a page title
+ * @param name Original location name
  * @param language Current language (en or zh)
- * @returns Formatted certification type
+ * @returns Formatted page title
  */
-export function formatCertificationType(certification: string | undefined, language?: string): string {
-  if (!certification) return '';
+export function formatLocationPageTitle(name: string, language: string): string {
+  const formatted = formatLocationName(name, language);
   
-  // Chinese translations
-  if (language === 'zh') {
-    if (certification.includes('Sanctuary')) return '国际暗夜保护区';
-    if (certification.includes('Reserve')) return '国际暗夜保护区';
-    if (certification.includes('Park')) return '国际暗夜公园';
-    if (certification.includes('Community')) return '国际暗夜社区';
-    if (certification.includes('Urban')) return '城市夜空地点';
-    return '认证暗夜地点';
+  if (language === 'en') {
+    return `${formatted} | Sky Viewer`;
+  } else {
+    return `${formatted} | 天空观测`;
   }
-  
-  // For English, use a shorter version
-  if (certification.includes('International Dark Sky')) {
-    return certification.replace('International Dark Sky', 'Dark Sky');
-  }
-  
-  return certification;
 }

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,36 +24,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     timeout: 10000
   });
 
-  const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
-
-  const handleGetLocation = () => {
-    setLocationLoading(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoordinates({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        });
-        setLocationLoading(false);
-      },
-      (error) => {
-        setLocationError(error);
-        setLocationLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  };
-
-  const handleUseCurrentLocation = async () => {
-    getPosition();
-  };
 
   const formatCoordinate = (value: number, isLatitude: boolean) => {
     return `${value.toFixed(6)}° ${isLatitude ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W')}`;
@@ -93,7 +64,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
               type="button"
               variant="secondary"
               size="icon"
-              onClick={handleUseCurrentLocation}
+              onClick={getPosition}
               disabled={geoLoading}
               className="h-10 w-10 bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600/30"
             >

@@ -2,35 +2,30 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { SearchIcon } from "lucide-react";
+import { Search } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Location as LocationType } from "@/services/geocoding/types";
 import { saveLocation } from "@/utils/locationStorage";
 import { SIQSLocation } from "@/utils/locationStorage";
 
-// Update the interface to match how it's being used
 interface MapSelectorProps {
   onLocationSelect?: (location: SIQSLocation) => void;
-  onSelectLocation?: (location: SIQSLocation) => void;
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLocation }) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   
-  // Handle all location selections through this unified function
+  // Handle location selection
   const handleLocationSelection = (location: SIQSLocation) => {
     saveLocation(location);
     
-    // Call the appropriate callback based on which prop was provided
     if (onLocationSelect) {
       onLocationSelect(location);
-    } else if (onSelectLocation) {
-      onSelectLocation(location);
     }
     
     setSearchResults([]);
@@ -90,7 +85,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
           onChange={handleSearchInputChange}
         />
         <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-          <SearchIcon className="h-5 w-5 text-gray-400" />
+          <Search className="h-5 w-5 text-gray-400" />
         </div>
       </div>
       
