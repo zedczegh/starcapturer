@@ -34,10 +34,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: limit
+    maxInitialResults: Math.max(limit * 2, 10) // Increased to get more locations, especially certified ones
   });
 
-  // Only show limited number of locations
+  // Show more locations with priority to certified ones
   const limitedLocations = useMemo(() => {
     // Prioritize certified locations 
     const certified = displayedLocations.filter(loc => 
@@ -48,14 +48,24 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       !loc.isDarkSkyReserve && !loc.certification
     );
     
-    // Combine with certified locations first, then add non-certified
-    // to fill up to the limit
-    const sortedLocations = [
-      ...certified,
-      ...nonCertified
-    ].slice(0, limit);
+    // Take all certified locations up to the limit
+    // If there's still room, add calculated locations
+    let result = [];
     
-    return sortedLocations;
+    if (certified.length <= limit) {
+      // If we have fewer certified locations than the limit,
+      // include all certified and fill the rest with non-certified
+      result = [
+        ...certified,
+        ...nonCertified.slice(0, limit - certified.length)
+      ];
+    } else {
+      // If we have more certified locations than the limit,
+      // just take the limit number of certified locations
+      result = certified.slice(0, limit);
+    }
+    
+    return result;
   }, [displayedLocations, limit]);
 
   if (loading) {

@@ -17,7 +17,7 @@ import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValid
  * @param longitude Center longitude
  * @param radius Search radius in km
  * @param certifiedOnly Whether to return only certified locations
- * @param limit Maximum number of locations to return (defaults to 50)
+ * @param limit Maximum number of locations to return (defaults to 50, ignored for certifiedOnly=true)
  * @returns Promise resolving to array of SharedAstroSpot
  */
 export async function findLocationsWithinRadius(
@@ -43,20 +43,20 @@ export async function findLocationsWithinRadius(
     
     // If we're only looking for certified locations, we can also check the local database
     if (certifiedOnly) {
-      // Find dark sky locations from our local database
+      // Find dark sky locations from our local database - don't apply limit for certified locations
       const localDarkSkyLocations = findLocalDarkSkyLocations(latitude, longitude, radius);
       
       if (localDarkSkyLocations.length > 0) {
         console.log(`Found ${localDarkSkyLocations.length} local dark sky locations within radius`);
       }
       
-      // Get recommended points from API with provided limit
+      // Get recommended points from API - no limit for certified locations
       const apiPoints = await getRecommendedPhotoPoints(
         latitude, 
         longitude, 
         radius,
         true, // certified only
-        limit // use passed limit
+        999 // very high limit for certified locations
       );
       
       // Filter out water locations

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -26,7 +27,7 @@ const PhotoPointsNearby: React.FC = () => {
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
-  // Set up recommended locations with userLocation
+  // Set up recommended locations with userLocation with a high limit to get as many certified locations as possible
   const {
     searchRadius,
     setSearchRadius,
@@ -40,8 +41,8 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks,
-    currentSiqs // Get currentSiqs from the hook
-  } = useRecommendedLocations(userLocation);
+    currentSiqs
+  } = useRecommendedLocations(userLocation, 200); // Increase the initial limit to get more locations
 
   // Process locations to separate certified and calculated
   const {
