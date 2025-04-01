@@ -9,7 +9,7 @@ import {
 } from "@/services/locationSearchService";
 import { clearSiqsCache } from '@/services/realTimeSiqsService';
 import { clearLocationSearchCache } from "@/services/locationCacheService";
-import { isValidAstronomyLocation } from "@/utils/locationValidator";
+import { isWaterLocation, isValidAstronomyLocation } from "@/utils/locationValidator";
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -329,7 +329,7 @@ export const usePhotoPointsSearch = ({
     isUserInGoodLocation,
     totalLocationsCount: filteredLocations.length,
     refreshLocations,
-    // Properties for calculated locations
+    // New properties for calculated locations
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,

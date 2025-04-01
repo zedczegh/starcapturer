@@ -1,13 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Calculator, Loader2, Target, RefreshCw, Search, Plus, AlertCircle } from "lucide-react";
+import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from '@/hooks/use-mobile';
-import { toast } from 'sonner';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -17,11 +16,6 @@ interface CalculatedLocationsProps {
   onRefresh?: () => void;
   searchRadius?: number;
   initialLoad?: boolean;
-  // New props for load more calculated locations
-  onLoadMoreCalculated?: () => void;
-  canLoadMoreCalculated?: boolean;
-  loadMoreClickCount?: number;
-  maxLoadMoreClicks?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -31,16 +25,10 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMore,
   onRefresh,
   searchRadius = 0,
-  initialLoad = false,
-  // New props with defaults
-  onLoadMoreCalculated,
-  canLoadMoreCalculated = false,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
+  initialLoad = false
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const [loadingMoreCalculated, setLoadingMoreCalculated] = useState(false);
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
@@ -49,41 +37,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const sortedLocations = [...validLocations].sort((a, b) => 
     (a.distance || Infinity) - (b.distance || Infinity)
   );
-  
-  // Handle load more calculated locations
-  const handleLoadMoreCalculated = async () => {
-    if (!onLoadMoreCalculated || !canLoadMoreCalculated) return;
-    
-    try {
-      setLoadingMoreCalculated(true);
-      await onLoadMoreCalculated();
-      
-      // Show different messages based on how many clicks remain
-      const remainingClicks = maxLoadMoreClicks - (loadMoreClickCount + 1);
-      if (remainingClicks === 1) {
-        toast.info(
-          language === 'en' 
-            ? "Added more locations. You can request more locations one more time." 
-            : "已添加更多位置。您还可以再请求一次更多位置。"
-        );
-      } else if (remainingClicks === 0) {
-        toast.info(
-          language === 'en' 
-            ? "Added more locations. This was the final batch to prevent overloading."
-            : "已添加更多位置。这是最后一批，以防止过载。"
-        );
-      }
-    } catch (error) {
-      console.error("Error loading more calculated locations:", error);
-      toast.error(
-        language === 'en' 
-          ? "Failed to load more locations" 
-          : "加载更多位置失败"
-      );
-    } finally {
-      setLoadingMoreCalculated(false);
-    }
-  };
   
   // Add event listener for expanding search radius
   useEffect(() => {
@@ -204,47 +157,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         ))}
       </motion.div>
       
-      {/* Load More Calculated Locations Button - New */}
-      {onLoadMoreCalculated && canLoadMoreCalculated && (
-        <div className="flex justify-center mt-8">
-          <Button 
-            variant="default" 
-            onClick={handleLoadMoreCalculated}
-            disabled={loadingMoreCalculated}
-            className="group sci-fi-btn bg-cosmic-700/80 hover:bg-cosmic-600/90 hover:opacity-90 transition-all duration-300"
-          >
-            {loadingMoreCalculated ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
-            )}
-            {t("Load More Locations (AI Generated)", "加载更多位置（AI生成）")}
-            {loadMoreClickCount > 0 && (
-              <span className="ml-2 text-xs opacity-80">
-                {t(
-                  `(${maxLoadMoreClicks - loadMoreClickCount}/${maxLoadMoreClicks} left)`,
-                  `（剩余${maxLoadMoreClicks - loadMoreClickCount}/${maxLoadMoreClicks}）`
-                )}
-              </span>
-            )}
-          </Button>
-        </div>
-      )}
-      
-      {/* Show info about click limits if we're close to the max */}
-      {onLoadMoreCalculated && canLoadMoreCalculated && loadMoreClickCount > 0 && (
-        <div className="flex justify-center mt-2">
-          <div className="flex items-center text-xs text-amber-400/80 gap-1.5">
-            <AlertCircle className="h-3 w-3" />
-            {t(
-              "Limited to prevent system overload", 
-              "限制以防止系统过载"
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Original Load More Button */}
       {hasMore && (
         <div className="flex justify-center mt-8">
           <Button 

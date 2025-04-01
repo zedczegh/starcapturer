@@ -5,7 +5,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { usePhotoPointsSearch } from '@/hooks/usePhotoPointsSearch';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
@@ -27,26 +26,16 @@ const PhotoPointsNearby: React.FC = () => {
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
-  // Use the enhanced photo points search hook
+  // Set up recommended locations with userLocation
   const {
+    searchRadius,
+    setSearchRadius,
+    locations,
     loading,
-    searching,
-    searchDistance,
-    setSearchDistance,
-    maxSearchDistance,
-    displayedLocations,
-    hasMoreLocations,
-    loadMoreLocations,
-    refreshLocations,
-    canLoadMoreCalculated,
-    loadMoreCalculatedLocations,
-    loadMoreClickCount,
-    maxLoadMoreClicks
-  } = usePhotoPointsSearch({
-    userLocation,
-    currentSiqs: null,
-    maxInitialResults: 12 // Show more initially on this dedicated page
-  });
+    hasMore,
+    loadMore,
+    refreshSiqsData
+  } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
   const {
@@ -54,18 +43,18 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedLocations,
     certifiedCount,
     calculatedCount
-  } = useCertifiedLocations(displayedLocations, searchDistance);
+  } = useCertifiedLocations(locations, searchRadius);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
-    setSearchDistance(value);
-  }, [setSearchDistance]);
+    setSearchRadius(value);
+  }, [setSearchRadius]);
 
   // Listen for custom radius change events
   useEffect(() => {
     const handleSetRadius = (e: CustomEvent<{ radius: number }>) => {
       if (e.detail.radius) {
-        setSearchDistance(e.detail.radius);
+        setSearchRadius(e.detail.radius);
       }
     };
     
@@ -74,7 +63,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => {
       document.removeEventListener('set-search-radius', handleSetRadius as EventListener);
     };
-  }, [setSearchDistance]);
+  }, [setSearchRadius]);
 
   // Call getUserLocation when the component mounts
   useEffect(() => {
@@ -145,10 +134,10 @@ const PhotoPointsNearby: React.FC = () => {
           {userLocation && (
             <div className="max-w-xl mx-auto mb-8">
               <DistanceRangeSlider
-                currentValue={searchDistance}
+                currentValue={searchRadius}
                 onValueChange={handleRadiusChange}
                 minValue={100}
-                maxValue={maxSearchDistance}
+                maxValue={10000}
                 stepValue={100}
               />
             </div>
@@ -177,16 +166,11 @@ const PhotoPointsNearby: React.FC = () => {
               <CalculatedLocations
                 locations={calculatedLocations}
                 loading={loading && !locationLoading}
-                hasMore={hasMoreLocations}
-                onLoadMore={loadMoreLocations}
-                onRefresh={refreshLocations}
-                searchRadius={searchDistance}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                onRefresh={refreshSiqsData}
+                searchRadius={searchRadius}
                 initialLoad={initialLoad}
-                // New props for loading more calculated locations
-                onLoadMoreCalculated={loadMoreCalculatedLocations}
-                canLoadMoreCalculated={canLoadMoreCalculated}
-                loadMoreClickCount={loadMoreClickCount}
-                maxLoadMoreClicks={maxLoadMoreClicks}
               />
             )}
           </div>
