@@ -4,11 +4,14 @@
  */
 
 export function getCloudDescription(cloudCover: number): string {
-  if (cloudCover <= 10) return `Clear skies with ${cloudCover}% cloud cover, excellent for imaging`;
-  if (cloudCover <= 25) return `Mostly clear with ${cloudCover}% cloud cover, good for imaging`;
-  if (cloudCover <= 40) return `Partly cloudy with ${cloudCover}% cloud cover, may affect quality`;
-  if (cloudCover <= 50) return `Cloudy with ${cloudCover}% cloud cover, challenging conditions`;
-  return `Heavy cloud cover (${cloudCover}%) makes imaging difficult or impossible`;
+  // Ensure we only show one decimal place for cloud cover percentage
+  const formattedCloudCover = cloudCover.toFixed(1);
+  
+  if (cloudCover <= 10) return `Clear skies with ${formattedCloudCover}% cloud cover, excellent for imaging`;
+  if (cloudCover <= 25) return `Mostly clear with ${formattedCloudCover}% cloud cover, good for imaging`;
+  if (cloudCover <= 40) return `Partly cloudy with ${formattedCloudCover}% cloud cover, may affect quality`;
+  if (cloudCover <= 50) return `Cloudy with ${formattedCloudCover}% cloud cover, challenging conditions`;
+  return `Heavy cloud cover (${formattedCloudCover}%) makes imaging difficult or impossible`;
 }
 
 export function getLightPollutionDescription(bortleScale: number): string {

@@ -10,6 +10,7 @@ import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewTo
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
 import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
+import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationReminder';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
@@ -39,7 +40,8 @@ const PhotoPointsNearby: React.FC = () => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks
+    maxLoadMoreClicks,
+    currentSiqs // Use the current SIQS score for the reminder
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -128,6 +130,12 @@ const PhotoPointsNearby: React.FC = () => {
               )}
             </p>
           </div>
+          
+          {/* Add the reminder component */}
+          <CurrentLocationReminder 
+            currentSiqs={currentSiqs} 
+            isVisible={!!userLocation && !loading}
+          />
           
           {/* User location section */}
           {!userLocation && (

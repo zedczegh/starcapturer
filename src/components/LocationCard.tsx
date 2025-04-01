@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { siqsToColor } from "@/lib/calculateSIQS";
+import { siqsToColor } from "@/lib/siqs/utils";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
@@ -46,7 +46,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
     minute: "2-digit",
   });
   
-  const scoreColor = siqsToColor(siqs, isViable);
+  const scoreColor = siqsToColor(siqs);
 
   // Format name more nicely, try regional format if default name is unclear
   let displayName = formatLocationName(name, language as any);
