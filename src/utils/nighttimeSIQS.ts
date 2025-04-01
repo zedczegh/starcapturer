@@ -69,7 +69,7 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     const avgCloudCover = calculateAverageCloudCover(nightForecasts);
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
-    // Check if cloud cover is too high to make imaging possible (updated to 50%)
+    // Check if cloud cover is too high to make imaging possible (threshold at 50%)
     if (avgCloudCover > 50) {
       console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
       return {
@@ -94,6 +94,10 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     // Calculate if any precipitation is expected
     const hasPrecipitation = nightForecasts.some(f => f.precipitation > 0);
     
+    // Log calculation inputs for better debugging
+    console.log("SIQS calculation with", nightForecasts.length, "nighttime forecast items");
+    console.log("Using nighttime forecast data for SIQS calculation");
+    
     // Calculate SIQS with emphasis on nighttime conditions
     const siqs = calculateSIQS({
       cloudCover: avgCloudCover,
@@ -104,9 +108,11 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
       moonPhase: locationData.moonPhase || 0,
       precipitation: hasPrecipitation ? 0.1 : 0,
       aqi: locationData.weatherData.aqi,
+      weatherCondition: nightForecasts[0]?.weatherCondition || 0,
       nightForecast: nightForecasts
     });
     
+    console.log("Final SIQS score based on nighttime forecast:", siqs.score.toFixed(1));
     console.log("Calculated nighttime SIQS:", siqs.score);
     return siqs;
   } catch (error) {
