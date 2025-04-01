@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { RefreshCcw, Ruler, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { toast } from "sonner";
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -37,8 +38,36 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     }
   };
   
+  const handleRefresh = () => {
+    try {
+      onRefresh();
+      toast.success(t(
+        "Refreshing location data...",
+        "正在刷新位置数据..."
+      ));
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error(t(
+        "Failed to refresh data. Please try again.",
+        "刷新数据失败。请重试。"
+      ));
+    }
+  };
+  
+  const handleLoadMore = () => {
+    try {
+      onLoadMore();
+    } catch (error) {
+      console.error("Error loading more locations:", error);
+      toast.error(t(
+        "Failed to load more locations. Please try again.",
+        "加载更多位置失败。请重试。"
+      ));
+    }
+  };
+  
   // No data state
-  if (!loading && locations.length === 0) {
+  if (!loading && (!locations || locations.length === 0)) {
     return (
       <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
         <AlertCircle className="h-12 w-12 text-amber-400 mx-auto mb-4" />
@@ -65,7 +94,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         <div className="mt-6">
           <Button
             variant="outline"
-            onClick={onRefresh}
+            onClick={handleRefresh}
             className="flex items-center gap-2"
           >
             <RefreshCcw className="h-4 w-4" />
@@ -77,7 +106,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   // Loading state
-  if (loading && locations.length === 0) {
+  if (loading && (!locations || locations.length === 0)) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
@@ -94,9 +123,9 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {locations.map((location, index) => (
+        {locations && locations.map((location, index) => (
           <PhotoLocationCard
-            key={location.id}
+            key={location.id || `location-${index}`}
             location={location}
             index={index}
           />
@@ -107,7 +136,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       {hasMore && !loading && (
         <div className="flex justify-center mt-8">
           <Button 
-            onClick={onLoadMore}
+            onClick={handleLoadMore}
             variant="outline"
             className="gap-2"
           >
@@ -117,18 +146,18 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       )}
       
       {/* Loading state when fetching more */}
-      {loading && locations.length > 0 && (
+      {loading && locations && locations.length > 0 && (
         <div className="flex justify-center mt-8">
           <Loader2 className="h-6 w-6 text-primary animate-spin" />
         </div>
       )}
       
       {/* Refresh button */}
-      {!loading && locations.length > 0 && (
+      {!loading && locations && locations.length > 0 && (
         <div className="flex justify-center mt-4">
           <Button
             variant="ghost"
-            onClick={onRefresh}
+            onClick={handleRefresh}
             className="text-sm text-muted-foreground flex items-center gap-2"
           >
             <RefreshCcw className="h-3.5 w-3.5" />
@@ -140,4 +169,4 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   );
 };
 
-export default CalculatedLocations;
+export default memo(CalculatedLocations);
