@@ -49,7 +49,7 @@ export const useGeolocation = (options?: GeolocationOptions) => {
     );
   }, [handleSuccess, handleError, options]);
 
-  // Get position on mount if options.autoRequest is true
+  // Get position on mount if options.enableHighAccuracy is true
   useEffect(() => {
     if (options?.enableHighAccuracy) {
       getPosition();

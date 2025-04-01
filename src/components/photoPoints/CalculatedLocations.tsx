@@ -1,11 +1,12 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
 import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
+import { batchCalculateSiqs } from '@/services/realTimeSiqsService';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -25,9 +26,42 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   searchRadius = 0
 }) => {
   const { t } = useLanguage();
+  const [calculatingSiqs, setCalculatingSiqs] = useState(false);
+  const [locationsWithSiqs, setLocationsWithSiqs] = useState<SharedAstroSpot[]>([]);
   
-  // Filter out locations with SIQS score of 0
-  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+  // Calculate SIQS for locations
+  useEffect(() => {
+    const calculateSiqs = async () => {
+      if (locations.length === 0 || loading) return;
+      
+      setCalculatingSiqs(true);
+      try {
+        // Calculate SIQS for all locations
+        const updatedLocations = await batchCalculateSiqs(locations);
+        
+        // Filter out locations with SIQS score of 0
+        const validLocations = updatedLocations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+        
+        // Sort by SIQS (highest first) and then by distance (closest first)
+        validLocations.sort((a, b) => {
+          // First compare by SIQS
+          const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
+          if (siqsDiff !== 0) return siqsDiff;
+          
+          // If SIQS is the same, compare by distance
+          return (a.distance || Infinity) - (b.distance || Infinity);
+        });
+        
+        setLocationsWithSiqs(validLocations);
+      } catch (error) {
+        console.error("Error calculating SIQS for locations:", error);
+      } finally {
+        setCalculatingSiqs(false);
+      }
+    };
+    
+    calculateSiqs();
+  }, [locations, loading]);
   
   // Add event listener for expanding search radius
   useEffect(() => {
@@ -58,7 +92,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     }
   };
   
-  if (loading) {
+  if (loading || calculatingSiqs) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
@@ -66,7 +100,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
-  if (validLocations.length === 0) {
+  if (locationsWithSiqs.length === 0) {
     return (
       <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
         <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
@@ -137,7 +171,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {validLocations.map((location, index) => (
+        {locationsWithSiqs.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `calc-loc-${index}`}
             location={location}

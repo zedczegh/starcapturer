@@ -24,6 +24,16 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     timeout: 10000
   });
   
+  // Use coords from geolocation when available and update parent
+  React.useEffect(() => {
+    if (coords && !coordinates) {
+      setCoordinates({
+        latitude: coords.latitude,
+        longitude: coords.longitude
+      });
+    }
+  }, [coords, coordinates, setCoordinates]);
+  
   const handleUseCurrentLocation = async () => {
     getPosition();
   };
@@ -69,6 +79,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
               onClick={handleUseCurrentLocation}
               disabled={geoLoading}
               className="h-10 w-10 bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600/30"
+              data-location-button="true"
             >
               {geoLoading ? (
                 <motion.div

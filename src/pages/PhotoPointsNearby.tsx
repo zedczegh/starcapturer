@@ -114,6 +114,7 @@ const PhotoPointsNearby: React.FC = () => {
                 onClick={getPosition}
                 className="flex items-center gap-2"
                 disabled={locationLoading}
+                data-location-button="true"
               >
                 {locationLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -153,13 +154,13 @@ const PhotoPointsNearby: React.FC = () => {
           {activeView === 'certified' ? (
             <DarkSkyLocations
               locations={certifiedLocations}
-              loading={loading && !locationLoading}
+              loading={loading || locationLoading}
               onRefresh={handleRefreshAllSiqsData}
             />
           ) : (
             <CalculatedLocations
               locations={calculatedLocations}
-              loading={loading && !locationLoading}
+              loading={loading || locationLoading}
               hasMore={hasMore}
               onLoadMore={loadMore}
               onRefresh={handleRefreshAllSiqsData}
