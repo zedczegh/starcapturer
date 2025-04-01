@@ -1,12 +1,20 @@
 
 /**
- * Central export file for all API functions
+ * API index file
+ * Exports all API functions for use throughout the app
  */
 
-// Location APIs
-export { getLocationNameFromCoordinates } from './location';
-export { fetchWeatherData } from './weather';
-export { fetchLightPollutionData } from './pollution';
-export { fetchForecastData, fetchLongRangeForecastData } from './forecast';
-export { getRecommendedPhotoPoints, shareAstroSpot, getSharedAstroSpot } from './astroSpots';
-export { fetchForecastDataForToday } from './daily-forecast';
+// Export forecast APIs
+export * from './forecast';
+export * from './daily-forecast';
+
+// Export location/coordinate APIs
+export * from './location';
+export * from './coordinates';
+
+// Export weather data APIs
+export * from './weather';
+export * from './pollution';
+
+// Export astronomy spot APIs
+export * from './astroSpots';

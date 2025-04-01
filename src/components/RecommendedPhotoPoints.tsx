@@ -1,8 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Telescope, Loader2, Star, MapPin, Award } from "lucide-react";
 import { toast } from "sonner";
-import { getRecommendedPhotoPoints } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots"; 
@@ -38,7 +38,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       setLoading(true);
       try {
-        const radius = 200;
+        const radius = 200; // Keep radius smaller for quicker results
+        console.log(`Fetching photo points within ${radius}km of user location`);
+        
+        // Use the location search service
         const points = await findLocationsWithinRadius(
           userLocation.latitude,
           userLocation.longitude,
@@ -47,6 +50,9 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         );
         
         if (points && points.length > 0) {
+          console.log(`Found ${points.length} photo points`);
+          
+          // Calculate SIQS for points that don't have it
           const pointsWithSiqs = await batchCalculateSiqs(points);
           
           let filteredPoints = pointsWithSiqs;
@@ -55,14 +61,17 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
           }
           
+          // Sort by SIQS score, highest first
           filteredPoints.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
           
           setRecommendedPoints(filteredPoints.slice(0, 5));
         } else {
+          console.log("No photo points found within radius");
           setRecommendedPoints([]);
         }
       } catch (error) {
         console.error("Error fetching recommended points:", error);
+        setRecommendedPoints([]);
       } finally {
         setLoading(false);
       }

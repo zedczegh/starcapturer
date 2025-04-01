@@ -48,37 +48,24 @@ export const getRecommendedPhotoPoints = async (
   limit = 30
 ): Promise<SharedAstroSpot[]> => {
   try {
-    // Mock data for now - in a real app, this would call an API
-    const mockLocations: SharedAstroSpot[] = [
-      {
-        id: "spot1",
-        name: "Dark Sky Reserve",
-        latitude: latitude + 0.1,
-        longitude: longitude + 0.1,
-        bortleScale: 2,
-        siqs: 8.5,
-        isDarkSkyReserve: true,
-        certification: "International Dark Sky Reserve",
-        county: "Alpine County",
-        state: "California",
-        country: "United States",
-        distance: 15
-      },
-      {
-        id: "spot2",
-        name: "Mountain Viewpoint",
-        latitude: latitude - 0.2,
-        longitude: longitude - 0.15,
-        bortleScale: 3,
-        siqs: 7.8,
-        county: "Sierra County",
-        state: "Nevada",
-        country: "United States",
-        distance: 25
-      }
-    ];
+    console.log(`API: Getting photo points within ${radius}km of ${latitude}, ${longitude}`);
     
-    return mockLocations;
+    // Import calculation points for locations since we don't have a real API
+    const { getCalculationPointsNear } = await import('@/data/calculationPoints');
+    
+    // Get calculation points near the specified coordinates
+    const calculatedPoints = await getCalculationPointsNear(latitude, longitude, radius);
+    
+    // Filter for certified only if requested
+    const filteredPoints = certifiedOnly
+      ? calculatedPoints.filter(p => p.isDarkSkyReserve || p.certification)
+      : calculatedPoints;
+    
+    // Limit to requested number
+    const limitedPoints = filteredPoints.slice(0, limit);
+    
+    console.log(`API: Found ${limitedPoints.length} photo points`);
+    return limitedPoints;
   } catch (error) {
     console.error("Error fetching recommended photo points:", error);
     return [];
@@ -90,7 +77,27 @@ export const getRecommendedPhotoPoints = async (
  */
 export const getSharedAstroSpot = async (id: string): Promise<SharedAstroSpot | null> => {
   try {
-    // Mock implementation
+    // First check if we have it in localStorage
+    const storedLocation = localStorage.getItem(`location_${id}`);
+    if (storedLocation) {
+      const locationData = JSON.parse(storedLocation);
+      return {
+        id,
+        name: locationData.name,
+        chineseName: locationData.chineseName,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        bortleScale: locationData.bortleScale || 4,
+        siqs: locationData.siqs,
+        county: locationData.county || "Sample County",
+        state: locationData.state || "Sample State",
+        country: locationData.country || "Sample Country",
+        isDarkSkyReserve: locationData.isDarkSkyReserve,
+        certification: locationData.certification
+      };
+    }
+    
+    // Fallback to mock implementation
     return {
       id,
       name: "Sample Astro Spot",
@@ -115,12 +122,23 @@ export const shareAstroSpot = async (
   spotData: Omit<SharedAstroSpot, "id">
 ): Promise<SharingResponse> => {
   try {
-    // Mock implementation
-    console.log("Sharing astro spot:", spotData);
+    // Generate a unique ID
+    const id = `spot-${Date.now()}`;
+    
+    // Store in localStorage for persistence
+    const fullSpotData = {
+      ...spotData,
+      id,
+      timestamp: new Date().toISOString()
+    };
+    
+    localStorage.setItem(`location_${id}`, JSON.stringify(fullSpotData));
+    
+    console.log("Shared astro spot saved:", fullSpotData);
     return {
       success: true,
       message: "Location shared successfully",
-      id: `spot-${Date.now()}`
+      id
     };
   } catch (error) {
     console.error("Error sharing astro spot:", error);

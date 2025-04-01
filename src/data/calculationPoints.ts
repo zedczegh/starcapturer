@@ -1,97 +1,135 @@
 
 /**
- * Pre-calculated points for better sky visibility that can be used
- * when no other locations are found.
+ * Provides calculation points for locations when real data isn't available
  */
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getLocationDetailsById } from '@/utils/locationStorage';
 
-// Define the structure for calculation points
-interface CalculationPoint {
-  id: string;
-  name: string;
-  chineseName: string;
-  county: string;
-  state: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  bortleScale: number;
-  description?: string;
-}
-
-// Sample calculation points - focused on lower light pollution areas
-const calculationPoints: CalculationPoint[] = [
+// Default fallback points in case no real data is available
+const fallbackPoints: SharedAstroSpot[] = [
   {
-    id: "calc-point-1",
-    name: "Mountain Observation Point",
-    chineseName: "山区观测点",
-    county: "Alpine",
-    state: "Colorado",
-    country: "USA",
-    latitude: 39.1911,
-    longitude: -106.8175,
-    bortleScale: 2,
-    description: "High altitude observation point with minimal light pollution"
-  },
-  {
-    id: "calc-point-2",
-    name: "Desert Viewpoint",
-    chineseName: "沙漠观景点",
-    county: "Mojave",
-    state: "California",
-    country: "USA",
-    latitude: 35.0117,
-    longitude: -115.4729,
-    bortleScale: 1,
-    description: "Clear desert skies with excellent visibility"
-  },
-  {
-    id: "calc-point-3",
-    name: "Forest Clearing",
-    chineseName: "森林空地",
-    county: "Kittitas",
-    state: "Washington",
-    country: "USA",
-    latitude: 47.1732,
-    longitude: -120.9543,
+    id: 'cp-1',
+    name: 'Mountain Observatory',
+    chineseName: '山区天文台',
+    latitude: 40.7128,
+    longitude: -74.0060,
     bortleScale: 3,
-    description: "Secluded forest clearing away from city lights"
+    isDarkSkyReserve: false
   },
   {
-    id: "calc-point-4",
-    name: "Prairie Observation Site",
-    chineseName: "草原观测站",
-    county: "Cherry",
-    state: "Nebraska",
-    country: "USA",
-    latitude: 42.5603,
-    longitude: -101.0782,
+    id: 'cp-2',
+    name: 'Desert Viewpoint',
+    chineseName: '沙漠观景点',
+    latitude: 37.7749,
+    longitude: -122.4194,
     bortleScale: 2,
-    description: "Open prairie with wide horizons and dark skies"
+    isDarkSkyReserve: false
   },
   {
-    id: "calc-point-5",
-    name: "Remote Lake Viewpoint",
-    chineseName: "偏远湖泊观景点",
-    county: "Boundary",
-    state: "Idaho",
-    country: "USA",
-    latitude: 48.7675,
-    longitude: -116.2346,
-    bortleScale: 2,
-    description: "Lakeside viewing area with minimal artificial light"
+    id: 'cp-3',
+    name: 'Dark Sky Park',
+    chineseName: '暗夜公园',
+    latitude: 34.0522,
+    longitude: -118.2437,
+    bortleScale: 4,
+    certification: 'International Dark Sky Park',
+    isDarkSkyReserve: true
   }
 ];
 
 /**
- * Get pre-calculated points that are good for astrophotography
- * @returns Array of calculation points
+ * Get calculation points for astronomy locations
+ * This function is used when real API data isn't available
  */
-export const getCalculationPoints = async (): Promise<CalculationPoint[]> => {
-  // Simulate async data loading - in a real app, this might come from an API
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(calculationPoints);
-    }, 100); // Short delay to simulate API call but not cause performance issues
-  });
+export const getCalculationPoints = async (): Promise<SharedAstroSpot[]> => {
+  try {
+    // First check if we have any locally saved locations
+    const localPoints: SharedAstroSpot[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('location_')) {
+        const id = key.replace('location_', '');
+        const pointData = getLocationDetailsById(id);
+        
+        if (pointData) {
+          localPoints.push({
+            id,
+            name: pointData.name,
+            chineseName: pointData.chineseName,
+            latitude: pointData.latitude,
+            longitude: pointData.longitude,
+            bortleScale: pointData.bortleScale || 4,
+            isDarkSkyReserve: pointData.isDarkSkyReserve || false,
+            certification: pointData.certification
+          });
+        }
+      }
+    }
+    
+    // Try to load from mock API
+    const { getRecommendedPhotoPoints } = await import('@/lib/api/astroSpots');
+    
+    // Combine results
+    let combinedPoints = [...localPoints];
+    
+    if (combinedPoints.length === 0) {
+      // No local points, fall back to mockup data
+      combinedPoints = fallbackPoints;
+    }
+    
+    return combinedPoints;
+  } catch (error) {
+    console.error("Error loading calculation points:", error);
+    return fallbackPoints;
+  }
 };
 
+/**
+ * Get calculation points near a specific location
+ */
+export const getCalculationPointsNear = async (
+  latitude: number, 
+  longitude: number,
+  radius: number = 100
+): Promise<SharedAstroSpot[]> => {
+  try {
+    const points = await getCalculationPoints();
+    
+    // Add fake calculation points around the given location
+    const nearbyPoints: SharedAstroSpot[] = [];
+    
+    // Create some synthetic points around the provided coordinates
+    for (let i = 0; i < 5; i++) {
+      // Create points at different distances and directions
+      const distance = (Math.random() * radius * 0.8) + (radius * 0.2);
+      const angle = Math.random() * Math.PI * 2;
+      
+      // Convert distance (in km) to degrees (very rough approximation)
+      const latOffset = (distance / 111) * Math.cos(angle);
+      const lonOffset = (distance / 111) * Math.sin(angle) / Math.cos(latitude * Math.PI / 180);
+      
+      const newLat = latitude + latOffset;
+      const newLon = longitude + lonOffset;
+      
+      // Randomize Bortle scale between 2-6
+      const bortleScale = Math.floor(Math.random() * 5) + 2;
+      
+      nearbyPoints.push({
+        id: `calc-${i}-${Date.now()}`,
+        name: `Viewpoint ${i+1}`,
+        chineseName: `观察点 ${i+1}`,
+        latitude: newLat,
+        longitude: newLon,
+        bortleScale,
+        distance,
+        isDarkSkyReserve: i === 0, // Make one location a dark sky reserve
+        certification: i === 0 ? 'Calculated Dark Sky Area' : undefined
+      });
+    }
+    
+    return [...points, ...nearbyPoints];
+  } catch (error) {
+    console.error("Error creating calculation points near location:", error);
+    return [];
+  }
+};

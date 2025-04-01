@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -30,7 +29,7 @@ const PhotoPointsNearby = () => {
     loading: locationLoading, 
     error: locationError, 
     getPosition 
-  } = useGeolocation({});
+  } = useGeolocation({ enableHighAccuracy: true });
   
   // Use recommended locations hook with user's position
   const {

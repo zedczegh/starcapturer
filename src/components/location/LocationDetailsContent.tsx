@@ -5,6 +5,7 @@ import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
+import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 import { toast } from "sonner";
 
 // Lazy load the content grid for better performance
@@ -40,6 +41,9 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
 
+  // Use the refresh manager to handle automatic refreshes
+  const { shouldRefresh, markRefreshComplete, triggerManualRefresh } = useRefreshManager(locationData);
+
   // Update SIQS when forecast data changes
   const { resetUpdateState } = useLocationSIQSUpdater(
     locationData, 
@@ -68,11 +72,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     };
   }, [handleRefreshAll, resetUpdateState]);
   
-  // Single auto-refresh when page is opened, regardless of source
+  // Handle automatic refresh when shouldRefresh changes to true
   useEffect(() => {
-    // Only refresh once per component instance
-    if (!refreshAttemptedRef.current && locationData?.latitude && locationData?.longitude) {
-      console.log("Performing one-time refresh on component mount");
+    if (shouldRefresh && locationData?.latitude && locationData?.longitude) {
+      console.log("Performing refresh based on refresh manager signal");
       
       // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
@@ -87,13 +90,13 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           });
         }
         
-        // Mark that we've attempted a refresh
-        refreshAttemptedRef.current = true;
+        // Mark that refresh is complete
+        markRefreshComplete();
       }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
+  }, [shouldRefresh, locationData, handleRefreshAll, setLocationData, resetUpdateState, markRefreshComplete]);
 
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>

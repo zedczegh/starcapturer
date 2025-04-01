@@ -3,6 +3,7 @@
  * API functions for fetching daily forecast data
  */
 import { fetchForecastData } from './forecast';
+import { validateCoordinates } from './coordinates';
 
 /**
  * Fetches forecast data for the current day
@@ -18,7 +19,7 @@ export async function fetchForecastDataForToday({
     console.log(`Fetching forecast data for today at ${latitude}, ${longitude}`);
     
     // Use the existing forecast API but only return data for today
-    const forecastData = await fetchForecastData(latitude, longitude);
+    const forecastData = await fetchForecastData({ latitude, longitude });
     
     if (!forecastData) {
       throw new Error("Failed to fetch forecast data");

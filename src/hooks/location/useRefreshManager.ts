@@ -10,7 +10,6 @@ export function useRefreshManager(locationData: any) {
   const [shouldRefresh, setShouldRefresh] = useState(false);
   const hasRefreshedRef = useRef(false);
   const locationSignatureRef = useRef<string | null>(null);
-  const pageVisitCountRef = useRef<number>(0);
   
   // Calculate a unique signature for this location
   const getLocationSignature = () => {
@@ -18,24 +17,23 @@ export function useRefreshManager(locationData: any) {
     return `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}`;
   };
   
-  // Reset refresh state when location changes or once per page visit
+  // Reset refresh state when location changes or component mounts
   useEffect(() => {
     const currentSignature = getLocationSignature();
     
-    // Increment page visit counter for this location
-    if (currentSignature && currentSignature !== locationSignatureRef.current) {
-      pageVisitCountRef.current = 1;
-      locationSignatureRef.current = currentSignature;
-    }
-    
-    // Only refresh on first visit to this location
+    // Only refresh once per component mount/location
     if (currentSignature && !hasRefreshedRef.current) {
       console.log("First visit to this location, triggering single refresh");
       setShouldRefresh(true);
       hasRefreshedRef.current = true;
     } else {
-      console.log("Location already refreshed, skipping automatic refresh");
+      console.log("Location already refreshed or unchanged, skipping automatic refresh");
     }
+    
+    // Reset the refresh state when component unmounts
+    return () => {
+      // We don't reset hasRefreshedRef here to maintain the "once per mount" behavior
+    };
   }, [locationData]);
   
   // Function to mark refresh as complete
