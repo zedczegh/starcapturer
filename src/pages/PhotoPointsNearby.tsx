@@ -32,14 +32,14 @@ const PhotoPointsNearby: React.FC = () => {
     setSearchRadius,
     locations,
     loading,
+    searching,
     hasMore,
     loadMore,
     refreshSiqsData,
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks,
-    searching
+    maxLoadMoreClicks
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -97,6 +97,11 @@ const PhotoPointsNearby: React.FC = () => {
 
   // Page title - using Helmet for proper title handling
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
+  
+  // Determine loading state for current active view
+  const isCurrentViewLoading = loading || searching && 
+    ((activeView === 'certified' && certifiedCount === 0) || 
+     (activeView === 'calculated' && calculatedCount === 0));
   
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
@@ -162,7 +167,7 @@ const PhotoPointsNearby: React.FC = () => {
               onViewChange={setActiveView}
               certifiedCount={certifiedCount}
               calculatedCount={calculatedCount}
-              loading={searching}
+              loading={isCurrentViewLoading}
             />
           </div>
           
