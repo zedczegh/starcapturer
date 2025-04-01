@@ -2,12 +2,11 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MapIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Location as LocationType } from "@/services/geocoding/types";
 import { saveLocation } from "@/utils/locationStorage";
-import GlobeLocationSelector from "./GlobeLocationSelector";
 import { SIQSLocation } from "@/utils/locationStorage";
 
 // Update the interface to match how it's being used
@@ -19,7 +18,6 @@ interface MapSelectorProps {
 const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLocation }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
-  const [isGlobeOpen, setIsGlobeOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { t, language } = useLanguage();
@@ -80,22 +78,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
     handleLocationSelection(siqsLocation);
   };
   
-  // Handle globe location selection
-  const handleGlobeLocationSelect = (location: SIQSLocation) => {
-    handleLocationSelection(location);
-    setIsGlobeOpen(false);
-  };
-  
-  // Open globe selector
-  const openGlobeSelector = () => {
-    setIsGlobeOpen(true);
-  };
-  
-  // Close globe selector
-  const closeGlobeSelector = () => {
-    setIsGlobeOpen(false);
-  };
-  
   return (
     <div className="relative">
       {/* Search Input */}
@@ -125,26 +107,6 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
             </li>
           ))}
         </ul>
-      )}
-      
-      {/* Globe Selector Button */}
-      <Button
-        variant="secondary"
-        className="mt-4 w-full flex items-center justify-center gap-2 bg-cosmic-700 hover:bg-cosmic-600"
-        onClick={openGlobeSelector}
-      >
-        <MapIcon className="w-4 h-4" />
-        {t("Select from Globe", "从地球选择")}
-      </Button>
-      
-      {/* Globe Selector Modal */}
-      {isGlobeOpen && (
-        <div className="fixed top-0 left-0 w-full h-full bg-black/50 z-50 flex items-center justify-center">
-          <GlobeLocationSelector
-            onLocationSelect={handleGlobeLocationSelect}
-            onClose={closeGlobeSelector}
-          />
-        </div>
       )}
     </div>
   );
