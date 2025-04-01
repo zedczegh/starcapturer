@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -333,6 +332,7 @@ export const usePhotoPointsSearch = ({
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS
+    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
+    currentSiqs // Exposing currentSiqs in the return value
   };
 };

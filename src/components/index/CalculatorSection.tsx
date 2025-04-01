@@ -1,8 +1,33 @@
 
-import React from "react";
+import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
+
+// Create a global object to store the current SIQS score
+export const currentSiqsStore = {
+  score: null as number | null,
+  setScore: (score: number | null) => {
+    currentSiqsStore.score = score;
+    // Also save to localStorage for persistence
+    if (score !== null) {
+      localStorage.setItem('current_siqs_score', score.toString());
+    }
+  },
+  getScore: () => {
+    // If no score in memory, try localStorage
+    if (currentSiqsStore.score === null) {
+      const storedScore = localStorage.getItem('current_siqs_score');
+      if (storedScore) {
+        const parsedScore = parseFloat(storedScore);
+        if (!isNaN(parsedScore)) {
+          currentSiqsStore.score = parsedScore;
+        }
+      }
+    }
+    return currentSiqsStore.score;
+  }
+};
 
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
@@ -12,6 +37,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   noAutoLocationRequest = false 
 }) => {
   const { t } = useLanguage();
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getScore());
   
   // Define animations
   const containerVariants = {
@@ -37,6 +63,12 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         damping: 24 
       }
     }
+  };
+  
+  // Update current SIQS score when calculated
+  const handleSiqsCalculated = (score: number | null) => {
+    setCurrentSiqs(score);
+    currentSiqsStore.setScore(score);
   };
   
   return (
@@ -102,6 +134,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           <SIQSCalculator 
             className="mx-auto max-w-2xl" 
             noAutoLocationRequest={noAutoLocationRequest}
+            onSiqsCalculated={handleSiqsCalculated}
           />
         </motion.div>
       </motion.div>

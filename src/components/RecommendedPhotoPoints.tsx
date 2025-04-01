@@ -1,186 +1,120 @@
 
-import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Telescope, Loader2, Award } from "lucide-react";
-import { toast } from "sonner";
-import { Link, useNavigate } from "react-router-dom";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from "@/lib/api/astroSpots"; 
-import CopyLocationButton from "@/components/location/CopyLocationButton";
-import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
-import { findLocationsWithinRadius } from "@/services/locationSearchService";
-import { batchCalculateSiqs } from "@/services/realTimeSiqsService";
+import React, { useMemo } from "react";
+import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
+import { PhotoPoint } from "@/types/photoPoints";
+import { Button } from "./ui/button";
+import { ChevronRight, MapPin, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { currentSiqsStore } from "./index/CalculatorSection";
+import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 
 interface RecommendedPhotoPointsProps {
-  onSelectPoint: (point: SharedAstroSpot) => void;
-  className?: string;
-  userLocation?: { latitude: number; longitude: number } | null;
+  onSelectPoint?: (point: PhotoPoint) => void;
+  userLocation: { latitude: number; longitude: number } | null;
+  limit?: number;
   hideEmptyMessage?: boolean;
-  preferCertified?: boolean;
 }
 
-const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({ 
+const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   onSelectPoint,
-  className,
   userLocation,
+  limit = 3,
   hideEmptyMessage = false,
-  preferCertified = true
 }) => {
-  const { language, t } = useLanguage();
-  const navigate = useNavigate();
-  const [recommendedPoints, setRecommendedPoints] = useState<SharedAstroSpot[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchPoints = async () => {
-      if (!userLocation) return;
-      
-      setLoading(true);
-      try {
-        const radius = 200;
-        const points = await findLocationsWithinRadius(
-          userLocation.latitude,
-          userLocation.longitude,
-          radius,
-          false
-        );
-        
-        if (points && points.length > 0) {
-          const pointsWithSiqs = await batchCalculateSiqs(points);
-          
-          // batchCalculateSiqs already filters out SIQS=0 locations
-          let filteredPoints = pointsWithSiqs;
-          
-          if (preferCertified) {
-            const certifiedPoints = filteredPoints.filter(p => p.isDarkSkyReserve || p.certification);
-            filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
-          }
-          
-          // Sort by distance (closest first)
-          filteredPoints.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-          
-          // Then sort by SIQS score within similar distance ranges
-          const distanceGroups: { [key: number]: SharedAstroSpot[] } = {};
-          
-          filteredPoints.forEach(point => {
-            const distanceGroup = Math.floor((point.distance || 0) / 50);
-            if (!distanceGroups[distanceGroup]) distanceGroups[distanceGroup] = [];
-            distanceGroups[distanceGroup].push(point);
-          });
-          
-          // Sort each distance group by SIQS
-          Object.keys(distanceGroups).forEach(group => {
-            distanceGroups[parseInt(group)].sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
-          });
-          
-          // Flatten the groups back to an array
-          const sortedPoints = Object.keys(distanceGroups)
-            .sort((a, b) => parseInt(a) - parseInt(b))
-            .flatMap(group => distanceGroups[parseInt(group)]);
-          
-          setRecommendedPoints(sortedPoints.slice(0, 5));
-        } else {
-          setRecommendedPoints([]);
-        }
-      } catch (error) {
-        console.error("Error fetching recommended points:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPoints();
-  }, [userLocation, preferCertified]);
-
-  const handleSelectPoint = (point: SharedAstroSpot) => {
-    onSelectPoint(point);
-    const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
-    
-    toast.success(t("Photo Point Selected", "已选择拍摄点"), {
-      description: t(`Selected ${pointName}`, `已选择 ${pointName}`),
-    });
-  };
+  const { t } = useLanguage();
+  const currentSiqs = currentSiqsStore.getScore();
   
-  const handleViewDetails = (point: SharedAstroSpot) => {
-    const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
-    
-    const locationData = {
-      id: point.id,
-      name: pointName,
-      latitude: point.latitude,
-      longitude: point.longitude,
-      bortleScale: point.bortleScale,
-      timestamp: new Date().toISOString(),
-      fromPhotoPoints: true,
-      isDarkSkyReserve: point.isDarkSkyReserve,
-      certification: point.certification
-    };
-    
-    saveLocationFromPhotoPoints(locationData);
-    
-    navigate(`/location/${point.id}`, { state: locationData });
-  };
+  const {
+    displayedLocations,
+    loading,
+    searching
+  } = usePhotoPointsSearch({
+    userLocation,
+    currentSiqs,
+    maxInitialResults: limit
+  });
 
+  // Only show limited number of locations
+  const limitedLocations = useMemo(() => {
+    return displayedLocations.slice(0, limit);
+  }, [displayedLocations, limit]);
+
+  if (loading) {
+    return (
+      <div className="mt-2 flex justify-center py-6">
+        <Loader2 className="w-6 h-6 animate-spin text-primary/60" />
+      </div>
+    );
+  }
+
+  if (limitedLocations.length === 0 && !hideEmptyMessage) {
+    return (
+      <div className="mt-2 text-center py-6">
+        <p className="text-muted-foreground text-sm">
+          {t(
+            "No recommended photo points found nearby.",
+            "在附近找不到推荐的摄影点。"
+          )}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {t(
+            "Try expanding your search radius.",
+            "尝试扩大您的搜索半径。"
+          )}
+        </p>
+      </div>
+    );
+  }
+  
   return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          {preferCertified ? (
-            <>
-              <Award className="h-5 w-5 text-blue-400" />
-              {t("Certified Dark Sky Locations", "认证暗夜地点")}
-            </>
-          ) : (
-            <>
-              <Telescope className="h-5 w-5 text-primary" />
-              {t("Recommended Photo Points", "推荐拍摄点")}
-            </>
-          )}
-          {loading && (
-            <div className="flex items-center">
-              <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              {language === 'zh' && <span className="text-sm ml-1">加载中</span>}
-            </div>
-          )}
-        </h3>
-        <div className="flex items-center gap-2">
-          {userLocation && (
-            <CopyLocationButton 
-              latitude={userLocation.latitude} 
-              longitude={userLocation.longitude}
-              name={t("Current Location", "当前位置")}
+    <div className="mt-2">
+      <CurrentLocationReminder 
+        currentSiqs={currentSiqs}
+        isVisible={limitedLocations.length > 0}
+      />
+      
+      <AnimatePresence>
+        <div className="space-y-3">
+          {limitedLocations.map((location, index) => (
+            <motion.div
+              key={`${location.id || location.latitude}-${location.longitude}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <PhotoPointCard
+                point={location}
+                onSelect={onSelectPoint}
+                userLocation={userLocation}
+              />
+            </motion.div>
+          ))}
+        </div>
+      </AnimatePresence>
+
+      {limitedLocations.length > 0 && (
+        <div className="mt-4 flex justify-center">
+          <Link to="/photo-points">
+            <Button
               variant="ghost"
               size="sm"
-              className="text-primary hover:text-primary-focus hover:bg-cosmic-800/70 px-2 h-7 text-xs"
-            />
-          )}
-          <Link to="/photo-points">
-            <Button variant="link" size="sm" className="text-primary hover:opacity-80 transition-opacity px-2 h-7 text-xs">
-              {t("View All", "查看所有")}
+              className="text-primary hover:text-primary/90 hover:bg-primary/10"
+            >
+              {t("View All Photo Points", "查看所有摄影点")}
+              <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           </Link>
         </div>
-      </div>
-      
-      <div className="grid grid-cols-1 gap-3">
-        {recommendedPoints.length === 0 ? (
-          !hideEmptyMessage && loading && (
-            <div className="text-center py-6 text-muted-foreground">
-              {t("Searching for photo points...", "正在搜索拍摄点...")}
-            </div>
-          )
-        ) : (
-          recommendedPoints.map((point) => (
-            <PhotoPointCard 
-              key={point.id}
-              point={point}
-              onSelect={handleSelectPoint}
-              onViewDetails={handleViewDetails}
-            />
-          ))
-        )}
-      </div>
+      )}
+
+      {searching && (
+        <div className="flex justify-center mt-3">
+          <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
+        </div>
+      )}
     </div>
   );
 };

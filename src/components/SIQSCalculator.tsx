@@ -18,12 +18,14 @@ interface SIQSCalculatorProps {
   className?: string;
   hideRecommendedPoints?: boolean;
   noAutoLocationRequest?: boolean;
+  onSiqsCalculated?: (siqsScore: number | null) => void;
 }
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
   className,
   hideRecommendedPoints = false,
-  noAutoLocationRequest = false
+  noAutoLocationRequest = false,
+  onSiqsCalculated
 }) => {
   const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -185,6 +187,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     
     return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
+  
+  useEffect(() => {
+    if (onSiqsCalculated) {
+      onSiqsCalculated(siqsScore);
+    }
+  }, [siqsScore, onSiqsCalculated]);
   
   const animationVariants = {
     hidden: { opacity: 0, y: 20 },
