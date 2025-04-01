@@ -3,9 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   findLocationsWithinRadius, 
-  findCertifiedLocations, 
-  findCalculatedLocations,
-  sortLocationsByQuality
+  findCertifiedDarkSkyLocations, 
+  findCalculatedLocations
 } from '@/services/locationSearchService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,6 +13,28 @@ interface Location {
   latitude: number;
   longitude: number;
 }
+
+// Helper function to sort locations by quality
+const sortLocationsByQuality = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+  // First sort by distance groups (0-50km, 50-100km, etc.)
+  const distanceGroups: { [key: number]: SharedAstroSpot[] } = {};
+  
+  locations.forEach(point => {
+    const distanceGroup = Math.floor((point.distance || 0) / 50);
+    if (!distanceGroups[distanceGroup]) distanceGroups[distanceGroup] = [];
+    distanceGroups[distanceGroup].push(point);
+  });
+  
+  // Sort each distance group by SIQS score
+  Object.keys(distanceGroups).forEach(group => {
+    distanceGroups[parseInt(group)].sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+  });
+  
+  // Flatten the groups back to an array
+  return Object.keys(distanceGroups)
+    .sort((a, b) => parseInt(a) - parseInt(b))
+    .flatMap(group => distanceGroups[parseInt(group)]);
+};
 
 export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
@@ -50,7 +71,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       if (results.length === 0) {
         console.log("No locations found, trying to expand search...");
         // If no results at all, try to find some certified locations
-        const certifiedResults = await findCertifiedLocations(
+        const certifiedResults = await findCertifiedDarkSkyLocations(
           userLocation.latitude,
           userLocation.longitude,
           Math.min(searchRadius * 1.5, 10000)
