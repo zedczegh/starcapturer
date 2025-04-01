@@ -18,6 +18,8 @@ import { fetchLightPollutionData } from '@/lib/api/pollution';
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import LocationQuality from '@/components/photoPoints/LocationQuality';
 import PhotoGuidelines from '@/components/photoPoints/PhotoGuidelines';
+// Remove the incorrect import
+// import RecommendedPhotoPoints from '@/components/RecommendedPhotoPoints';
 
 // New interface to properly define what RecommendedPhotoPoints expects
 interface LocationData {
@@ -39,10 +41,10 @@ const ShareLocation: React.FC = () => {
   const [qualityChecked, setQualityChecked] = useState(false);
   const [currentWeather, setCurrentWeather] = useState<any>(null);
   
-  const { coords, loading: geoLoading } = useGeolocation({ 
+  const { coords, loading: geoLoading } = useGeolocation({
     enableHighAccuracy: true,
     timeout: 15000,
-    language: language
+    language
   });
   
   useEffect(() => {
@@ -204,7 +206,9 @@ const ShareLocation: React.FC = () => {
                     {bortleScale !== null && (
                       <div className="mt-2">
                         <LightPollutionIndicator 
-                          bortleScale={bortleScale}
+                          bortleScale={bortleScale} 
+                          showDescription={true}
+                          compact={true}
                         />
                       </div>
                     )}

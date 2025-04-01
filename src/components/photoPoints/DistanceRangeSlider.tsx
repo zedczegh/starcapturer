@@ -1,123 +1,69 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Slider } from "@/components/ui/slider";
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin, Loader2 } from 'lucide-react';
-import { throttle } from 'lodash';
+import { Slider } from '@/components/ui/slider';
+import { MapPin } from 'lucide-react';
 
-interface DistanceRangeSliderProps {
-  distance: number;
-  setDistance: (distance: number) => void;
-  loading?: boolean;
-  maxDistance?: number;
-  onAfterChange?: () => void;
+export interface DistanceRangeSliderProps {
+  currentValue: number;
+  onValueChange: (value: number) => void;
+  minValue?: number;
+  maxValue?: number;
+  stepValue?: number;
 }
 
-const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({ 
-  distance, 
-  setDistance,
-  loading = false,
-  maxDistance = 10000, // Default to 10,000 km
-  onAfterChange
+const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
+  currentValue,
+  onValueChange,
+  minValue = 100,
+  maxValue = 10000,
+  stepValue = 100
 }) => {
   const { t } = useLanguage();
-  const [localDistance, setLocalDistance] = useState(distance);
   
-  // Update local distance when distance prop changes
-  useEffect(() => {
-    setLocalDistance(distance);
-  }, [distance]);
-  
-  // Throttled change handler to prevent too many updates
-  const handleChange = useCallback((values: number[]) => {
-    if (values.length > 0) {
-      setLocalDistance(values[0]);
+  // Format distance for display
+  const formatDistance = (distance: number) => {
+    if (distance >= 1000) {
+      return `${(distance / 1000).toFixed(1)}${t("km", "公里")}`;
     }
-  }, []);
-  
-  // Use a throttled version of setDistance to prevent too many parent updates
-  const throttledSetDistance = useCallback(
-    throttle((value: number) => {
-      setDistance(value);
-    }, 100),
-    [setDistance]
-  );
-  
-  // Update parent when local value changes
-  useEffect(() => {
-    throttledSetDistance(localDistance);
-  }, [localDistance, throttledSetDistance]);
-  
-  const handleAfterChange = useCallback(() => {
-    if (onAfterChange) {
-      onAfterChange();
-    }
-  }, [onAfterChange]);
-  
-  const formatDistance = (dist: number) => {
-    if (dist >= 1000) {
-      return `${(dist / 1000).toFixed(1)}k`;
-    }
-    return dist.toString();
+    return `${distance}${t("m", "米")}`;
   };
   
-  // Create logarithmic-like steps for better UX with large range
-  // Added more steps for finer control
-  const distanceSteps = [
-    100, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000
-  ];
-  
-  // Find the closest step for the slider value display
-  const findClosestStep = (value: number) => {
-    return distanceSteps.reduce((prev, curr) => 
-      Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
-    );
-  };
-  
-  // Format displayed distance for better readability
-  const formatDisplayDistance = (dist: number) => {
-    if (dist >= 1000) {
-      return `${(dist / 1000).toFixed(1)}k km`;
-    }
-    return `${dist} km`;
+  // Handle slider value change
+  const handleValueChange = (values: number[]) => {
+    onValueChange(values[0]);
   };
   
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5 mr-1.5" />
-          {t("Search Radius", "搜索半径")}:
-          <span className="ml-1.5 text-primary font-medium">
-            {formatDisplayDistance(localDistance)}
+    <div className="glassmorphism bg-cosmic-900/30 border border-cosmic-700/30 p-4 rounded-lg">
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-sm text-muted-foreground">
+          {t("Search Radius", "搜索半径")}
+        </div>
+        <div className="flex items-center gap-1.5 text-primary font-medium">
+          <MapPin className="h-3.5 w-3.5" />
+          <span className="text-sm">
+            {formatDistance(currentValue)}
           </span>
         </div>
-        
-        {loading && (
-          <div className="flex items-center text-xs text-muted-foreground gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {t("Updating...", "更新中...")}
-          </div>
-        )}
       </div>
       
       <Slider
-        value={[localDistance]}
-        min={100}
-        max={maxDistance}
-        step={100}
-        onValueChange={handleChange}
-        onValueCommit={handleAfterChange}
-        disabled={loading}
-        className="cursor-pointer"
+        value={[currentValue]}
+        min={minValue}
+        max={maxValue}
+        step={stepValue}
+        onValueChange={handleValueChange}
+        className="mt-2"
       />
       
-      <div className="flex justify-between text-xs text-muted-foreground px-1">
-        <span>100 km</span>
-        <span>{formatDistance(findClosestStep(maxDistance / 4))} km</span>
-        <span>{formatDistance(findClosestStep(maxDistance / 2))} km</span>
-        <span>{formatDistance(findClosestStep(maxDistance * 3/4))} km</span>
-        <span>{formatDistance(maxDistance)} km</span>
+      <div className="flex justify-between mt-1.5">
+        <div className="text-xs text-muted-foreground">
+          {formatDistance(minValue)}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {formatDistance(maxValue)}
+        </div>
       </div>
     </div>
   );

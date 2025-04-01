@@ -16,22 +16,22 @@ export function usePhotoPointsNavigation(locationId: string | undefined) {
   const refreshHandledRef = useRef(false);
   
   useEffect(() => {
-    // Only process if coming from PhotoPoints and not already handled
-    if (location.state?.fromPhotoPoints === true && !refreshHandledRef.current && locationId) {
-      console.log("Detected navigation from PhotoPoints page with ID:", locationId);
-      
-      // Mark as handled to prevent repeated processing
+    // Check if we're coming from PhotoPoints page
+    const fromPhotoPoints = location.state?.fromPhotoPoints === true;
+    
+    // Only handle if not already processed
+    if (fromPhotoPoints && !refreshHandledRef.current && locationId) {
+      console.log("Detected navigation from PhotoPoints page");
       refreshHandledRef.current = true;
       
       // Get existing location data
       const existingData = getLocationDetailsById(locationId);
       
+      // Update the data with the fromPhotoPoints flag
       if (existingData) {
-        // Update the data with the fromPhotoPoints flag
         const updatedData = {
           ...existingData,
-          fromPhotoPoints: true,
-          timestamp: new Date().toISOString() // Update timestamp for freshness
+          fromPhotoPoints: true
         };
         
         // Save to localStorage
@@ -48,16 +48,10 @@ export function usePhotoPointsNavigation(locationId: string | undefined) {
     }
   }, [location.state, locationId, t]);
   
-  // Reset on unmount
-  useEffect(() => {
-    return () => {
-      refreshHandledRef.current = false;
-    };
-  }, []);
-  
   return { 
     needsRefresh,
     markRefreshComplete: () => {
+      refreshHandledRef.current = true;
       setNeedsRefresh(false);
     }
   };

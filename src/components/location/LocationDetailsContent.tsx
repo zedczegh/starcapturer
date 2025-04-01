@@ -5,7 +5,6 @@ import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
-import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 import { toast } from "sonner";
 
 // Lazy load the content grid for better performance
@@ -23,7 +22,9 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   onLocationUpdate
 }) => {
   const { t } = useLanguage();
-  const refreshAttemptedRef = useRef<boolean>(false);
+  const lastLocationRef = useRef<string>('');
+  const refreshTimerRef = useRef<number | null>(null);
+  const autoRefreshAttemptedRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -40,9 +41,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     handleRefreshForecast,
     handleRefreshLongRangeForecast
   } = useLocationDetails(locationData, setLocationData);
-
-  // Use the refresh manager to handle automatic refreshes
-  const { shouldRefresh, markRefreshComplete, triggerManualRefresh } = useRefreshManager(locationData);
 
   // Update SIQS when forecast data changes
   const { resetUpdateState } = useLocationSIQSUpdater(
@@ -72,31 +70,50 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     };
   }, [handleRefreshAll, resetUpdateState]);
   
-  // Handle automatic refresh when shouldRefresh changes to true
+  // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
-    if (shouldRefresh && locationData?.latitude && locationData?.longitude) {
-      console.log("Performing refresh based on refresh manager signal");
+    // Check if we came from PhotoPoints or another source
+    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
+    
+    // Create a location signature to detect changes
+    const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
+    
+    // If location has changed or coming from PhotoPoints, refresh data
+    if (locationSignature !== lastLocationRef.current || 
+        fromPhotoPoints || 
+        !autoRefreshAttemptedRef.current) {
       
-      // Small delay to ensure component is fully mounted
-      const timer = setTimeout(() => {
+      lastLocationRef.current = locationSignature;
+      autoRefreshAttemptedRef.current = true;
+      
+      // Clear any existing timer
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+      
+      // Set a small delay before refreshing to allow component to fully mount
+      refreshTimerRef.current = window.setTimeout(() => {
+        console.log("Auto-refreshing data after location update or page load");
         handleRefreshAll();
-        resetUpdateState();
+        resetUpdateState(); // Reset SIQS updater state
         
         // Reset the fromPhotoPoints flag after refreshing
-        if (locationData?.fromPhotoPoints) {
+        if (fromPhotoPoints && locationData) {
           setLocationData({
             ...locationData,
             fromPhotoPoints: false
           });
         }
-        
-        // Mark that refresh is complete
-        markRefreshComplete();
-      }, 300);
-      
-      return () => clearTimeout(timer);
+      }, 300); // Reduced from 500ms for faster refresh
     }
-  }, [shouldRefresh, locationData, handleRefreshAll, setLocationData, resetUpdateState, markRefreshComplete]);
+    
+    // Cleanup on unmount
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
 
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
@@ -26,12 +26,30 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Add event listener for expanding search radius
+  useEffect(() => {
+    const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
+      if (onRefresh) {
+        document.dispatchEvent(new CustomEvent('set-search-radius', { 
+          detail: { radius: e.detail.radius } 
+        }));
+        setTimeout(onRefresh, 100);
+      }
+    };
+    
+    document.addEventListener('expand-search-radius', handleExpandRadius as EventListener);
+    
+    return () => {
+      document.removeEventListener('expand-search-radius', handleExpandRadius as EventListener);
+    };
+  }, [onRefresh]);
+  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.05, // Reduced from 0.1 for faster animation
+        staggerChildren: 0.1,
         when: "beforeChildren" 
       } 
     }
@@ -39,11 +57,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-        <p className="text-sm text-muted-foreground">
-          {t("Loading locations...", "正在加载位置...")}
-        </p>
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -94,9 +109,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
                 size="sm"
                 className="text-xs text-muted-foreground"
                 onClick={() => {
-                  // We can't directly access setSearchRadius here, so we use a custom event
-                  const event = new CustomEvent('expand-search-radius', { detail: { radius: Math.min(10000, searchRadius * 2) } });
-                  document.dispatchEvent(event);
+                  // Trigger custom event to expand search radius
+                  const newRadius = Math.min(10000, searchRadius * 2);
+                  document.dispatchEvent(new CustomEvent('expand-search-radius', { 
+                    detail: { radius: newRadius } 
+                  }));
                 }}
               >
                 <Search className="mr-1.5 h-3 w-3" />
@@ -109,11 +126,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
-  // Limit initial rendering to improve performance
-  const initialRenderCount = Math.min(locations.length, 6);
-  const initialLocations = locations.slice(0, initialRenderCount);
-  const remainingLocations = locations.slice(initialRenderCount);
-  
   return (
     <>
       <motion.div
@@ -122,24 +134,13 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {initialLocations.map((location, index) => (
+        {locations.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `calc-loc-${index}`}
             location={location}
             index={index}
             showRealTimeSiqs={true}
           />
-        ))}
-        
-        {/* Render remaining locations without animation for better performance */}
-        {remainingLocations.map((location, index) => (
-          <div key={location.id || `calc-loc-remaining-${index}`}>
-            <PhotoLocationCard
-              location={location}
-              index={index + initialRenderCount}
-              showRealTimeSiqs={true}
-            />
-          </div>
         ))}
       </motion.div>
       

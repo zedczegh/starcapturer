@@ -1,14 +1,21 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
+import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
-import { getWeatherData } from "@/services/environmentalDataService/weatherService";
-import { getBortleScaleData } from "@/services/environmentalDataService/bortleScaleService";
+import { fetchForecastData } from "@/lib/api";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
+
+// Extract scoring and normalization logic
+import { 
+  normalizeScore, 
+  calculateSIQSWithWeatherData 
+} from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -39,15 +46,6 @@ export const useSIQSCalculation = (
     setIsCalculating(true);
     displayOnly ? null : setLoading && setLoading(true);
     
-    // Set a timeout to prevent hanging forever
-    const timeout = setTimeout(() => {
-      setIsCalculating(false);
-      displayOnly ? null : setLoading && setLoading(false);
-      setStatusMessage && setStatusMessage(language === 'en' ? 
-        "Calculation is taking too long. Please try again." : 
-        "计算时间过长，请重试。");
-    }, 30000); // 30 second timeout
-    
     try {
       // Get weather data
       const cacheKey = `weather-${lat.toFixed(4)}-${lng.toFixed(4)}`;
@@ -68,7 +66,6 @@ export const useSIQSCalculation = (
           "无法获取天气数据，请重试。");
         setIsCalculating(false);
         displayOnly ? null : setLoading && setLoading(false);
-        clearTimeout(timeout);
         return;
       }
       
@@ -94,47 +91,29 @@ export const useSIQSCalculation = (
       );
       
       // Validate Bortle scale before proceeding
-      const validBortleScale = (actualBortleScale === null || actualBortleScale < 1 || actualBortleScale > 9 || isNaN(Number(actualBortleScale)))
+      const validBortleScale = (actualBortleScale < 1 || actualBortleScale > 9 || isNaN(actualBortleScale))
         ? 5 // Default to moderate value if invalid
         : actualBortleScale;
       
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
       
-      // Calculate SIQS score using Nighttime SIQS if forecast data is available
-      let siqsResult;
-      if (forecastResult) {
-        siqsResult = calculateNighttimeSIQS({ 
-          bortleScale: validBortleScale,
-          seeingConditions,
-          moonPhase: freshMoonPhase
-        }, forecastResult, data);
-      } else {
-        // Fallback to simplified calculation
-        siqsResult = {
-          score: Math.max(0, 10 - validBortleScale - (data.cloudCover / 20)),
-          isViable: data.cloudCover < 60,
-          factors: [
-            {
-              name: "Light Pollution",
-              score: Math.max(0, 10 - validBortleScale),
-              description: `Bortle scale ${validBortleScale} indicates moderate light pollution`
-            },
-            {
-              name: "Cloud Cover",
-              score: Math.max(0, 10 - (data.cloudCover / 10)),
-              description: `${data.cloudCover}% cloud cover affects visibility`
-            }
-          ]
-        };
-      }
+      // Calculate SIQS score using utility function
+      const siqsResult = await calculateSIQSWithWeatherData(
+        data,
+        validBortleScale,
+        seeingConditions,
+        freshMoonPhase,
+        forecastResult
+      );
+      
+      // Ensure SIQS score is consistently on a 0-10 scale
+      const normalizedScore = normalizeScore(siqsResult.score);
       
       if (displayOnly) {
-        // For consistency, use normalized score
-        const normalizedScore = siqsResult ? Math.max(0, Math.min(10, siqsResult.score)) : 0;
+        // For consistency, always store the 0-10 scale value
         setSiqsScore(normalizedScore);
         setIsCalculating(false);
-        clearTimeout(timeout);
         return;
       }
       
@@ -151,7 +130,7 @@ export const useSIQSCalculation = (
         weatherData: data,
         siqsResult: {
           ...siqsResult,
-          score: Math.max(0, Math.min(10, siqsResult.score)) // Ensure the score is on a 0-10 scale
+          score: normalizedScore // Ensure the score is on a 0-10 scale
         },
         moonPhase: freshMoonPhase,
         timestamp: new Date().toISOString(),
@@ -178,8 +157,6 @@ export const useSIQSCalculation = (
         console.error("Failed to save to localStorage", e);
       }
       
-      clearTimeout(timeout);
-      
       // Wait a small delay to ensure the state is updated
       setTimeout(() => {
         setIsCalculating(false);
@@ -193,7 +170,6 @@ export const useSIQSCalculation = (
         "计算SIQS时发生错误，请重试。");
       setIsCalculating(false);
       displayOnly ? null : setLoading && setLoading(false);
-      clearTimeout(timeout);
     }
   }, [isCalculating, navigate, getCachedData, setCachedData]);
   

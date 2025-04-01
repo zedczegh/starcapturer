@@ -1,16 +1,16 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Telescope, Loader2, Star, MapPin, Award } from "lucide-react";
+import { Telescope, Loader2, Award } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots"; 
 import CopyLocationButton from "@/components/location/CopyLocationButton";
-import { formatSIQSScore } from "@/utils/geoUtils";
 import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
 import { findLocationsWithinRadius } from "@/services/locationSearchService";
 import { batchCalculateSiqs } from "@/services/realTimeSiqsService";
+import PhotoPointCard from "./photoPoints/PhotoPointCard";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint: (point: SharedAstroSpot) => void;
@@ -38,10 +38,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       setLoading(true);
       try {
-        const radius = 200; // Keep radius smaller for quicker results
-        console.log(`Fetching photo points within ${radius}km of user location`);
-        
-        // Use the location search service
+        const radius = 200;
         const points = await findLocationsWithinRadius(
           userLocation.latitude,
           userLocation.longitude,
@@ -50,9 +47,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         );
         
         if (points && points.length > 0) {
-          console.log(`Found ${points.length} photo points`);
-          
-          // Calculate SIQS for points that don't have it
           const pointsWithSiqs = await batchCalculateSiqs(points);
           
           let filteredPoints = pointsWithSiqs;
@@ -61,17 +55,14 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
           }
           
-          // Sort by SIQS score, highest first
           filteredPoints.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
           
           setRecommendedPoints(filteredPoints.slice(0, 5));
         } else {
-          console.log("No photo points found within radius");
           setRecommendedPoints([]);
         }
       } catch (error) {
         console.error("Error fetching recommended points:", error);
-        setRecommendedPoints([]);
       } finally {
         setLoading(false);
       }
@@ -87,16 +78,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     toast.success(t("Photo Point Selected", "已选择拍摄点"), {
       description: t(`Selected ${pointName}`, `已选择 ${pointName}`),
     });
-  };
-
-  const formatDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
-    
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
   
   const handleViewDetails = (point: SharedAstroSpot) => {
@@ -169,51 +150,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           )
         ) : (
           recommendedPoints.map((point) => (
-            <div 
+            <PhotoPointCard 
               key={point.id}
-              className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
-              onClick={() => {
-                handleSelectPoint(point);
-              }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="font-medium text-sm line-clamp-1">
-                  {language === 'en' ? point.name : (point.chineseName || point.name)}
-                </h4>
-                
-                <div className="flex items-center">
-                  {point.isDarkSkyReserve || point.certification ? (
-                    <div className="flex items-center mr-2">
-                      <Award className="h-3 w-3 text-blue-400 mr-1" fill="rgba(96, 165, 250, 0.3)" />
-                    </div>
-                  ) : null}
-                  <div className="flex items-center">
-                    <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
-                    <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center">
-                  <MapPin className="h-3 w-3 text-muted-foreground mr-1" />
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistance(point.distance)}
-                  </span>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="h-6 text-xs px-2 text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewDetails(point);
-                  }}
-                >
-                  {t("View", "查看")}
-                </Button>
-              </div>
-            </div>
+              point={point}
+              onSelect={handleSelectPoint}
+              onViewDetails={handleViewDetails}
+            />
           ))
         )}
       </div>

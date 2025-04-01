@@ -79,7 +79,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       <Progress
         value={siqsScore * 10}
         className="h-3 my-2 bg-cosmic-800/40"
-        colorClass={memoizedValues.colorClass}
+        style={progressStyle}
       />
       
       <div className="flex justify-between items-center mt-2">

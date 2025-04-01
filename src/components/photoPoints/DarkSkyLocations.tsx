@@ -9,14 +9,9 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 interface DarkSkyLocationsProps {
   locations: SharedAstroSpot[];
   loading: boolean;
-  searchRadius?: number;
 }
 
-const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({ 
-  locations, 
-  loading,
-  searchRadius = 0 
-}) => {
+const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({ locations, loading }) => {
   const { t } = useLanguage();
   
   const containerVariants = {

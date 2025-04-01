@@ -19,12 +19,9 @@ export { getLocationNameFromCoordinates } from './api/location';
 export { fetchLightPollutionData } from './api/pollution';
 
 // Export types and functions related to shared astronomy spots
-export type { SharedAstroSpot, SharingResponse, AstroSpotQueryOptions } from './api/astroSpots';
+export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
 export { 
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
-
-// Re-export utilities from geoUtils for convenience
-export { calculateDistance as geoDistance } from '@/utils/geoUtils';

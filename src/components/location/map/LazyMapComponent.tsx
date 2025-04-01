@@ -1,20 +1,16 @@
 
-import React, { useCallback, memo, useMemo } from "react";
+import React, { useCallback, memo, useMemo, useRef, useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapUpdater, MapEvents, MapStyles, createCustomMarker } from "./MapComponents";
-
-// Fix for default marker icons - only initialize once
-if (!L.Icon.Default.imagePath) {
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
-}
+import { 
+  MapUpdater, 
+  MapEvents, 
+  MapStyles, 
+  createCustomMarker,
+  DarkSkyOverlay
+} from "./MapComponents";
 
 interface LazyMapComponentProps {
   position: [number, number];
@@ -38,9 +34,25 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   certification = ''
 }) => {
   const { t } = useLanguage();
+  const mapRef = useRef<L.Map | null>(null);
+  // Use state to track client-side rendering
+  const [isClient, setIsClient] = useState(false);
 
-  const handleMapReady = useCallback(() => {
-    onMapReady();
+  // Ensure client-side rendering is detected
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handleMapReady = useCallback((map: L.Map) => {
+    if (!map) return;
+    
+    try {
+      mapRef.current = map;
+      onMapReady();
+      console.log("Map ready with Leaflet version:", L.version);
+    } catch (error) {
+      console.error("Error handling map ready event:", error);
+    }
   }, [onMapReady]);
 
   // Use a China-friendly tile server
@@ -49,38 +61,20 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   
   // Memoize marker icon to avoid recreating on each render
   const markerIcon = useMemo(() => {
+    // Only create marker icon on client-side
+    if (!isClient) return null;
+    
     // Use a special icon for dark sky reserves
     if (isDarkSkyReserve) {
       return createCustomMarker('#3b82f6'); // Blue color for dark sky locations
     }
     return createCustomMarker(); // Default icon for regular locations
-  }, [isDarkSkyReserve]);
+  }, [isDarkSkyReserve, isClient]);
 
-  // Create a circle for dark sky reserves if needed
-  const renderDarkSkyCircle = useCallback(() => {
-    if (!isDarkSkyReserve) return null;
-    
-    // We'll implement this using vanilla Leaflet to avoid the Circle import issue
-    React.useEffect(() => {
-      const map = document.querySelector('.leaflet-map-pane')?.parentElement;
-      if (!map) return;
-      
-      // Create a circular overlay for the dark sky region
-      const circle = L.circle(position, {
-        radius: 10000, // 10km radius
-        color: '#3b82f6',
-        fillColor: '#3b82f6',
-        fillOpacity: 0.1,
-        weight: 1
-      }).addTo(map as any);
-      
-      return () => {
-        circle.remove();
-      };
-    }, []);
-    
-    return null;
-  }, [isDarkSkyReserve, position]);
+  // Skip rendering map until client-side
+  if (!isClient) {
+    return <div className="h-full w-full bg-cosmic-900/30 rounded-lg animate-pulse"></div>;
+  }
 
   return (
     <>
@@ -91,8 +85,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           zoom={12} 
           style={{ height: "100%", width: "100%" }}
           scrollWheelZoom={true}
-          whenReady={handleMapReady}
+          whenReady={(map) => handleMapReady(map.target)}
           attributionControl={false}
+          ref={mapRef}
         >
           <TileLayer
             url={tileServerUrl}
@@ -100,25 +95,32 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             subdomains={['a', 'b', 'c']}
           />
           
-          {renderDarkSkyCircle()}
-          
-          <Marker 
-            position={position}
-            icon={markerIcon}
-          >
-            <Popup>
-              <div className="text-sm">
-                <strong>{locationName}</strong>
-                {isDarkSkyReserve && (
-                  <div className="mt-1 text-blue-400 text-xs">
-                    {certification || t("Dark Sky Reserve", "暗夜保护区")}
-                  </div>
-                )}
-              </div>
-            </Popup>
-          </Marker>
+          {markerIcon && (
+            <Marker 
+              position={position}
+              icon={markerIcon}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <strong>{locationName}</strong>
+                  {isDarkSkyReserve && (
+                    <div className="mt-1 text-blue-400 text-xs">
+                      {certification || t("Dark Sky Reserve", "暗夜保护区")}
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          )}
           
           <MapUpdater position={position} />
+          
+          {isDarkSkyReserve && (
+            <DarkSkyOverlay 
+              isDarkSkyReserve={isDarkSkyReserve} 
+              position={position} 
+            />
+          )}
           
           {editable && <MapEvents onMapClick={onMapClick} />}
         </MapContainer>
@@ -127,4 +129,4 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   );
 };
 
-export default LazyMapComponent;
+export default memo(LazyMapComponent);
