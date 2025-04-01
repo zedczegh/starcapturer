@@ -12,7 +12,11 @@ import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
+/**
+ * Page for browsing and discovering astronomy photo points near a location
+ */
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({
@@ -28,7 +32,7 @@ const PhotoPointsNearby: React.FC = () => {
     searchRadius,
     setSearchRadius,
     locations,
-    loading,
+    loading: locationsLoading,
     hasMore,
     loadMore,
     refreshSiqsData
@@ -41,6 +45,9 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
+  
+  // Track loading state - combine location loading and data loading
+  const loading = locationLoading || locationsLoading;
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -141,21 +148,32 @@ const PhotoPointsNearby: React.FC = () => {
           </div>
           
           {/* Content based on active view */}
-          {activeView === 'certified' ? (
-            <DarkSkyLocations
-              locations={certifiedLocations}
-              loading={loading && !locationLoading}
-            />
-          ) : (
-            <CalculatedLocations
-              locations={calculatedLocations}
-              loading={loading && !locationLoading}
-              hasMore={hasMore}
-              onLoadMore={loadMore}
-              onRefresh={refreshSiqsData}
-              searchRadius={searchRadius}
-            />
-          )}
+          <ErrorBoundary fallback={
+            <div className="text-center p-8">
+              <p className="text-lg text-red-400 mb-4">
+                {t("There was an error loading the photo points.", "加载拍摄点时出错了。")}
+              </p>
+              <Button onClick={refreshSiqsData}>
+                {t("Try Again", "重试")}
+              </Button>
+            </div>
+          }>
+            {activeView === 'certified' ? (
+              <DarkSkyLocations
+                locations={certifiedLocations}
+                loading={loading}
+              />
+            ) : (
+              <CalculatedLocations
+                locations={calculatedLocations}
+                loading={loading}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                onRefresh={refreshSiqsData}
+                searchRadius={searchRadius}
+              />
+            )}
+          </ErrorBoundary>
         </div>
       </div>
     </div>

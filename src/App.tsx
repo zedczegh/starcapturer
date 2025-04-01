@@ -82,11 +82,6 @@ const App = () => {
                         <LocationDetails />
                       </PageTransition>
                     } />
-                    <Route path="/photo-point/:id" element={
-                      <PageTransition>
-                        <LocationDetails />
-                      </PageTransition>
-                    } />
                     <Route path="/share" element={
                       <PageTransition>
                         <ShareLocation />

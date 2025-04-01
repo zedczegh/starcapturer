@@ -14,7 +14,6 @@ import { centralAsiaLocations } from './regions/centralAsiaLocations';
 import { chinaSuburbanLocations } from './regions/chinaSuburbanLocations';
 import { chinaMountainLocations } from './regions/chinaMountainLocations';
 import { darkSkyLocations } from './regions/darkSkyLocations';
-import { internationalDarkSkyLocations } from './regions/internationalDarkSkyLocations';
 
 export interface LocationEntry {
   name: string;
@@ -35,8 +34,7 @@ export const locationDatabase: LocationEntry[] = [
   ...centralAsiaLocations,
   ...chinaSuburbanLocations,
   ...chinaMountainLocations,
-  ...darkSkyLocations,
-  ...internationalDarkSkyLocations  // Add international dark sky locations
+  ...darkSkyLocations  // Add dark sky locations
 ];
 
 // Move distance calculation to a utility file to avoid duplication
