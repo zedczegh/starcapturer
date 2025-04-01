@@ -5,21 +5,16 @@ import {
   findLocationsWithinRadius, 
   findCertifiedLocations, 
   findCalculatedLocations,
-  sortLocationsByQuality,
-  clearLocationSearchCache
+  sortLocationsByQuality
 } from '@/services/locationSearchService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { clearSiqsCache } from '@/services/realTimeSiqsService';
 
 interface Location {
   latitude: number;
   longitude: number;
 }
 
-/**
- * Hook for efficiently loading and managing recommended locations
- */
 export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
   const [searchRadius, setSearchRadius] = useState<number>(1000);
@@ -29,27 +24,12 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const [page, setPage] = useState<number>(1);
   const prevRadiusRef = useRef<number>(searchRadius);
   const prevLocationRef = useRef<Location | null>(userLocation);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  
-  // Cancel previous requests when making new ones
-  const cancelPrevRequest = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-  }, []);
   
   // Function to load locations
   const loadLocations = useCallback(async () => {
     if (!userLocation) {
       return;
     }
-    
-    // Cancel any in-progress requests
-    cancelPrevRequest();
-    
-    // Create new abort controller for this request
-    abortControllerRef.current = new AbortController();
     
     try {
       setLoading(true);
@@ -67,12 +47,6 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         searchRadius
       );
       
-      // Check if request was cancelled
-      if (abortControllerRef.current?.signal.aborted) {
-        console.log("Location request was cancelled");
-        return;
-      }
-      
       if (results.length === 0) {
         console.log("No locations found, trying to expand search...");
         // If no results at all, try to find some certified locations
@@ -82,18 +56,12 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
           Math.min(searchRadius * 1.5, 10000)
         );
         
-        // Check if request was cancelled
-        if (abortControllerRef.current?.signal.aborted) return;
-        
         // And also try to find calculated locations
         const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
           Math.min(searchRadius * 1.5, 10000)
         );
-        
-        // Check if request was cancelled
-        if (abortControllerRef.current?.signal.aborted) return;
         
         // Combine results
         const combinedResults = [...certifiedResults, ...calculatedResults];
@@ -116,12 +84,6 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       
       setPage(1);
     } catch (error) {
-      // Ignore errors from aborted requests
-      if (error.name === 'AbortError') {
-        console.log("Location request was aborted");
-        return;
-      }
-      
       console.error("Error loading recommended locations:", error);
       toast.error(t(
         "Failed to load recommended locations. Please try again.",
@@ -130,16 +92,13 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       setLocations([]);
       setHasMore(false);
     } finally {
-      // Only set loading to false if this is still the current request
-      if (!abortControllerRef.current?.signal.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [searchRadius, userLocation, t, cancelPrevRequest]);
+  }, [searchRadius, userLocation, t]);
   
   // Load more locations for pagination
   const loadMore = useCallback(async () => {
-    if (!userLocation || !hasMore || loading) {
+    if (!userLocation || !hasMore) {
       return;
     }
     
@@ -178,7 +137,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [hasMore, loading, locations, page, searchRadius, userLocation, t]);
+  }, [hasMore, locations, page, searchRadius, userLocation, t]);
   
   // Refresh SIQS data for locations
   const refreshSiqsData = useCallback(async () => {
@@ -193,10 +152,6 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       ));
       
       setLoading(true);
-      
-      // Clear both caches to ensure fresh data
-      clearSiqsCache();
-      clearLocationSearchCache();
       
       // Load fresh data
       await loadLocations();
@@ -215,13 +170,6 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       setLoading(false);
     }
   }, [loadLocations, locations.length, userLocation, t]);
-  
-  // Cleanup effect for the abort controller
-  useEffect(() => {
-    return () => {
-      cancelPrevRequest();
-    };
-  }, [cancelPrevRequest]);
   
   // Load locations when userLocation or searchRadius changes
   useEffect(() => {
