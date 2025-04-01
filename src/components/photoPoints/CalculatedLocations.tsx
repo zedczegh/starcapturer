@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,6 +27,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+  
+  // Sort locations by distance (closest first)
+  const sortedLocations = [...validLocations].sort((a, b) => 
+    (a.distance || Infinity) - (b.distance || Infinity)
+  );
   
   // Add event listener for expanding search radius
   useEffect(() => {
@@ -66,7 +70,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
-  if (validLocations.length === 0) {
+  if (sortedLocations.length === 0) {
     return (
       <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
         <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
@@ -137,7 +141,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {validLocations.map((location, index) => (
+        {sortedLocations.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `calc-loc-${index}`}
             location={location}

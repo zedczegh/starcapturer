@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Award, Clock, Loader2 } from 'lucide-react';
+import { MapPin, Star, Award, Clock, Loader2, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -10,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
 import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { getLocationName } from '@/services/geocoding';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -22,6 +22,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
+  const [nearestTown, setNearestTown] = useState<string | null>(null);
+  const [loadingTown, setLoadingTown] = useState(false);
   
   // Format the distance for display
   const formatDistance = (distance?: number) => {
@@ -53,6 +55,47 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
       return '';
     }
   };
+  
+  // Get nearest town name
+  useEffect(() => {
+    if (location.latitude && location.longitude) {
+      const fetchNearestTown = async () => {
+        setLoadingTown(true);
+        try {
+          // Check if the location already has a nearest town name
+          if (location.description && location.description.includes("near")) {
+            const parts = location.description.split("near");
+            if (parts.length > 1) {
+              setNearestTown(parts[1].trim());
+              return;
+            }
+          }
+          
+          // Otherwise fetch the nearest town
+          const townName = await getLocationName(
+            location.latitude,
+            location.longitude,
+            language as any
+          );
+          
+          // Extract just the town name from the full address if possible
+          let simplifiedName = townName;
+          if (townName.includes(',')) {
+            const parts = townName.split(',');
+            simplifiedName = parts[0].trim();
+          }
+          
+          setNearestTown(simplifiedName);
+        } catch (error) {
+          console.error("Error fetching nearest town:", error);
+        } finally {
+          setLoadingTown(false);
+        }
+      };
+      
+      fetchNearestTown();
+    }
+  }, [location, language]);
   
   // Load real-time SIQS data if requested
   useEffect(() => {
@@ -171,6 +214,21 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
         <div className="flex items-center text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 mr-1.5" />
           {formatDistance(location.distance)}
+        </div>
+        
+        {/* Nearest town information */}
+        <div className="flex items-center text-xs text-muted-foreground">
+          <Building2 className="h-3 w-3 mr-1.5" />
+          {loadingTown ? (
+            <span className="flex items-center">
+              <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+              {t("Loading...", "加载中...")}
+            </span>
+          ) : nearestTown ? (
+            <span className="line-clamp-1">{t("Near ", "靠近 ")}{nearestTown}</span>
+          ) : (
+            <span>{t("Remote location", "偏远位置")}</span>
+          )}
         </div>
         
         {location.date && (

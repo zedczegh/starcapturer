@@ -1,10 +1,10 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Award } from "lucide-react";
+import { MapPin, Star, Award, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/geoUtils";
+import { getLocationName } from "@/services/geocoding";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -18,6 +18,45 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   onViewDetails 
 }) => {
   const { language, t } = useLanguage();
+  const [nearestTown, setNearestTown] = useState<string | null>(null);
+  const [loadingTown, setLoadingTown] = useState(false);
+
+  useEffect(() => {
+    if (point.latitude && point.longitude) {
+      const fetchNearestTown = async () => {
+        setLoadingTown(true);
+        try {
+          if (point.description && point.description.includes("near")) {
+            const parts = point.description.split("near");
+            if (parts.length > 1) {
+              setNearestTown(parts[1].trim());
+              return;
+            }
+          }
+          
+          const townName = await getLocationName(
+            point.latitude,
+            point.longitude,
+            language as any
+          );
+          
+          let simplifiedName = townName;
+          if (townName.includes(',')) {
+            const parts = townName.split(',');
+            simplifiedName = parts[0].trim();
+          }
+          
+          setNearestTown(simplifiedName);
+        } catch (error) {
+          console.error("Error fetching nearest town:", error);
+        } finally {
+          setLoadingTown(false);
+        }
+      };
+      
+      fetchNearestTown();
+    }
+  }, [point, language]);
 
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
@@ -54,13 +93,32 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       </div>
       
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex flex-col space-y-1 mt-2">
         <div className="flex items-center">
           <MapPin className="h-3 w-3 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground">
             {formatDistance(point.distance)}
           </span>
         </div>
+        
+        <div className="flex items-center">
+          <Building2 className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {loadingTown ? (
+              <span className="flex items-center">
+                <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+                {language === 'zh' ? "加载中..." : "Loading..."}
+              </span>
+            ) : nearestTown ? (
+              <>{t("Near ", "靠近 ")}{nearestTown}</>
+            ) : (
+              t("Remote location", "偏远位置")
+            )}
+          </span>
+        </div>
+      </div>
+      
+      <div className="mt-3 flex justify-end">
         <Button 
           size="sm" 
           variant="ghost" 
