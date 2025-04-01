@@ -1,98 +1,78 @@
 
-import { fetchWeatherData } from "@/lib/api";
+/**
+ * Weather data service
+ */
+import { fetchWeatherData } from "@/lib/api/weather";
 
-// Default timeout for weather API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 5000;
-// Default cache lifetime for weather data (in milliseconds)
-const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
-// Maximum retry attempts
-const MAX_RETRIES = 2;
+export interface WeatherData {
+  temperature: number;
+  cloudCover: number;
+  humidity: number;
+  precipitation: number;
+  windSpeed: number;
+  weatherCode: number;
+  timestamp: string;
+}
 
 /**
- * Optimized service for retrieving weather data with better caching and error handling
+ * Get weather data for a specific location
  */
-export const getWeatherData = async (
+export async function getWeatherData(
   latitude: number,
   longitude: number,
   cacheKey: string,
   getCachedData: (key: string, maxAge?: number) => any,
   setCachedData: (key: string, data: any) => void,
-  displayOnly: boolean,
+  displayOnly: boolean = false,
   language: string = 'en',
-  setStatusMessage?: (message: string | null) => void,
-  timeout: number = DEFAULT_TIMEOUT
-): Promise<any> => {
-  // First try to use cached data
-  const cachedWeatherData = getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
-  if (cachedWeatherData) {
-    return cachedWeatherData;
-  }
-  
-  // Implement retry logic for better resilience
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      // Add timeout to prevent hanging
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      const data = await fetchWeatherData({
-        latitude,
-        longitude,
-        days: 3
-      }, controller.signal);
-      
-      clearTimeout(timeoutId);
-      
-      if (data) {
-        // Cache the weather data for future use
-        setCachedData(cacheKey, data);
-        return data;
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      // If this isn't our last attempt, try again with a slight delay
-      if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
-      }
+  setStatusMessage?: (message: string | null) => void
+): Promise<WeatherData | null> {
+  try {
+    // Check if we have cached data first
+    const maxCacheAge = 15 * 60 * 1000; // 15 minutes
+    const cachedData = getCachedData(cacheKey, maxCacheAge);
+    
+    if (cachedData) {
+      console.log("Using cached weather data");
+      return cachedData;
     }
+    
+    // Set status message if loading
+    if (!displayOnly) {
+      setStatusMessage && setStatusMessage(
+        language === 'en' 
+          ? "Retrieving weather data..." 
+          : "正在获取天气数据..."
+      );
+    }
+    
+    // Fetch weather data
+    const weatherData = await fetchWeatherData({
+      latitude,
+      longitude
+    });
+    
+    if (!weatherData) {
+      throw new Error("Could not fetch weather data");
+    }
+    
+    // Format weather data
+    const formattedData: WeatherData = {
+      temperature: weatherData.current?.temperature_2m || 0,
+      cloudCover: weatherData.current?.cloud_cover || 0,
+      humidity: weatherData.current?.relative_humidity_2m || 0,
+      precipitation: weatherData.current?.precipitation || 0,
+      windSpeed: weatherData.current?.wind_speed_10m || 0,
+      weatherCode: weatherData.current?.weather_code || 0,
+      timestamp: weatherData.current?.time || new Date().toISOString()
+    };
+    
+    // Cache the data
+    setCachedData(cacheKey, formattedData);
+    
+    return formattedData;
+  } catch (error) {
+    console.error("Error getting weather data:", error);
+    return null;
   }
-  
-  // All attempts failed - use fallback data
-  console.error("Failed to fetch weather data after retries:", lastError);
-  
-  // Use fallback weather data
-  const fallbackData = {
-    temperature: 20,
-    humidity: 50,
-    cloudCover: 30,
-    windSpeed: 10,
-    precipitation: 0,
-    time: new Date().toISOString(),
-    condition: "Clear",
-    weatherCondition: "Clear",
-    aqi: 50
-  };
-  
-  // Show status message if needed
-  if (!displayOnly && setStatusMessage) {
-    setStatusMessage(language === 'en'
-      ? "Could not fetch real-time weather. Using offline data instead."
-      : "无法获取实时天气数据，使用离线数据替代。");
-  }
-  
-  // Even fallback data should be cached to prevent repeated failed requests
-  setCachedData(cacheKey, fallbackData);
-  return fallbackData;
-};
-
-/**
- * Get cached weather data with minimal processing
- */
-export const getCachedWeatherData = (
-  cacheKey: string,
-  getCachedData: (key: string, maxAge?: number) => any
-): any => {
-  return getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
-};
+}

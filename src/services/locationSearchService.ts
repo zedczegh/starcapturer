@@ -6,18 +6,75 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
-import {
-  getCachedLocationSearch,
-  cacheLocationSearch,
-  generateLocationCacheKey
-} from "@/services/locationCacheService";
 import { batchCalculateSiqs } from "@/services/realTimeSiqsService";
+
+// Cache for location searches to prevent redundant API calls
+const locationSearchCache = new Map<string, {
+  locations: SharedAstroSpot[];
+  timestamp: number;
+}>();
+
+// Cache lifetime: 1 hour
+const CACHE_LIFETIME = 60 * 60 * 1000;
 
 // Limit the maximum number of parallel SIQS calculations to prevent overloading
 const MAX_PARALLEL_SIQS = 3;
 
 // Limit the maximum number of locations to process at once
 const MAX_BATCH_SIZE = 15;
+
+/**
+ * Clear the location search cache
+ */
+export function clearLocationSearchCache(): void {
+  locationSearchCache.clear();
+  console.log("Location search cache cleared");
+}
+
+/**
+ * Generate a cache key for location searches
+ */
+export function generateLocationCacheKey(
+  latitude: number,
+  longitude: number,
+  radiusKm: number
+): string {
+  return `locations-${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radiusKm}`;
+}
+
+/**
+ * Get cached location search results if available
+ */
+export function getCachedLocationSearch(
+  latitude: number,
+  longitude: number,
+  radiusKm: number
+): SharedAstroSpot[] | null {
+  const cacheKey = generateLocationCacheKey(latitude, longitude, radiusKm);
+  const cached = locationSearchCache.get(cacheKey);
+  
+  if (cached && (Date.now() - cached.timestamp) < CACHE_LIFETIME) {
+    return cached.locations;
+  }
+  
+  return null;
+}
+
+/**
+ * Cache location search results
+ */
+export function cacheLocationSearch(
+  latitude: number,
+  longitude: number,
+  radiusKm: number,
+  locations: SharedAstroSpot[]
+): void {
+  const cacheKey = generateLocationCacheKey(latitude, longitude, radiusKm);
+  locationSearchCache.set(cacheKey, {
+    locations,
+    timestamp: Date.now()
+  });
+}
 
 /**
  * Find locations within a specified radius of coordinates
@@ -33,7 +90,6 @@ export async function findLocationsWithinRadius(
 
   try {
     // Try to get cached results first
-    const cacheKey = generateLocationCacheKey(latitude, longitude, radiusKm);
     const cachedResults = getCachedLocationSearch(latitude, longitude, radiusKm);
     
     if (cachedResults) {
@@ -101,7 +157,7 @@ export async function findCalculatedLocations(
   console.log(`Finding calculated locations within ${radiusKm}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
-    // Get calculation points from database
+    // Import calculation points data
     const { getCalculationPoints } = await import('@/data/calculationPoints');
     const points = await getCalculationPoints();
     
@@ -193,7 +249,7 @@ async function processInBatches(
  */
 function getDummyCounty(latitude: number, longitude: number): string {
   // Simple hash function to get consistent names for the same coordinates
-  const hash = Math.abs((latitude * 10000 + longitude * 10000) % 10);
+  const hash = Math.abs(Math.floor((latitude * 10000 + longitude * 10000) % 10));
   
   const counties = [
     "Alpine", "Riverside", "Jefferson", "Franklin", "Madison",
@@ -216,7 +272,7 @@ function getDummyState(latitude: number, longitude: number): string {
   if (latitude > 35 && longitude < -80) return "Virginia";
   
   // For other regions, use a simple hash
-  const hash = Math.abs((latitude * 1000 + longitude * 1000) % 10);
+  const hash = Math.abs(Math.floor((latitude * 1000 + longitude * 1000) % 10));
   const states = [
     "Colorado", "California", "Oregon", "Washington", "Arizona",
     "New Mexico", "Idaho", "Wyoming", "Utah", "Maine"
@@ -239,4 +295,3 @@ function getDummyCountry(latitude: number, longitude: number): string {
   
   return "International";
 }
-

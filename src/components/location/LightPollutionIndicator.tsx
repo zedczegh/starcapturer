@@ -1,140 +1,73 @@
 
-import React from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { getBortleScaleDescription, getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
-import { cn } from '@/lib/utils';
-import { getSIQSColorClass, formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
+import React from "react";
+import { Lightbulb } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { getProgressColor, getProgressColorClass } from "@/components/siqs/utils/progressColor";
+import { formatSIQSScore } from "@/utils/geoUtils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LightPollutionIndicatorProps {
   bortleScale: number;
-  showDescription?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  showBortleNumber?: boolean;
-  className?: string;
-  siqs?: number;
-  compact?: boolean;
+  showLabel?: boolean;
 }
 
 const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   bortleScale,
-  showDescription = true,
-  size = 'md',
-  showBortleNumber = true,
-  className,
-  siqs,
-  compact = false
+  showLabel = true
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   
-  // Get Bortle scale color
-  const colorData = getBortleScaleColor(bortleScale);
+  // Validate Bortle scale
+  const validBortleScale = Math.max(1, Math.min(9, bortleScale || 5));
   
-  // Destructure color properties correctly
-  const colorText = typeof colorData === 'string' ? colorData : colorData.text;
-  const colorBg = typeof colorData === 'string' ? colorData : colorData.bg;
-  const colorBorder = typeof colorData === 'string' ? colorData : colorData.border;
+  // Calculate progress - invert Bortle scale for display (1 is best, 9 is worst)
+  const progressValue = ((10 - validBortleScale) / 9) * 100;
   
-  // Get size class
-  const sizeClass = {
-    sm: 'h-3 w-3 text-xs',
-    md: 'h-4 w-4 text-sm',
-    lg: 'h-5 w-5 text-base'
-  }[size];
+  // Get color based on value
+  const progressColor = getProgressColor(progressValue / 10);
+  const colorClass = getProgressColorClass(progressValue / 10);
   
-  const description = getBortleScaleDescription(bortleScale);
-  
-  // Format Bortle scale for display (keep one decimal place if needed)
-  const formatBortleScale = (value: number) => {
-    return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+  // Translate Bortle scale to text description
+  const getBortleDescription = (scale: number): string => {
+    switch(scale) {
+      case 1: return t("Excellent Dark Sky", "极佳的暗夜天空");
+      case 2: return t("Truly Dark Sky", "真正的暗夜天空");
+      case 3: return t("Rural Sky", "乡村天空");
+      case 4: return t("Rural/Suburban Transition", "乡村/郊区过渡");
+      case 5: return t("Suburban Sky", "郊区天空");
+      case 6: return t("Bright Suburban Sky", "明亮的郊区天空");
+      case 7: return t("Suburban/Urban Transition", "郊区/城市过渡");
+      case 8: return t("City Sky", "城市天空");
+      case 9: return t("Inner-City Sky", "市中心天空");
+      default: return t("Unknown", "未知");
+    }
   };
 
-  // Display SIQS score alongside Bortle scale if provided
-  const hasSIQS = siqs !== undefined && siqs !== null;
-  
-  // Compact mode for sidebar widgets
-  if (compact && hasSIQS) {
-    return (
-      <div className={cn("flex items-center space-x-2", className)}>
-        <div className="flex items-center">
-          <div 
-            className={cn(
-              "rounded-full mr-1.5 flex items-center justify-center border", 
-              "h-3 w-3",
-              colorBg,
-              colorBorder
-            )}
-          >
-            <span className={cn("font-semibold text-[0.65em]", colorText)}>
-              {formatBortleScale(bortleScale)}
-            </span>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {t("Bortle", "波特尔")}
-          </span>
-        </div>
-        
-        <div className="flex items-center">
-          <div 
-            className={cn(
-              "rounded-full mr-1.5 flex items-center justify-center border", 
-              "h-3 w-3",
-              getSIQSColorClass(siqs)
-            )}
-          >
-            <span className="font-semibold text-[0.65em] text-white">
-              {formatSIQSScoreForDisplay(siqs)}
-            </span>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {t("SIQS", "SIQS")}
-          </span>
-        </div>
-      </div>
-    );
-  }
-  
   return (
-    <div className={cn("flex items-center", className)}>
-      <div 
-        className={cn(
-          "rounded-full mr-2 flex items-center justify-center border", 
-          sizeClass,
-          colorBg,
-          colorBorder
-        )}
-      >
-        {showBortleNumber && (
-          <span className={cn("font-semibold text-[0.65em]", colorText)}>
-            {formatBortleScale(bortleScale)}
-          </span>
-        )}
-      </div>
-      
-      {showDescription && (
-        <span className="text-sm text-muted-foreground">
-          {t(description, language === 'en' ? description : getBortleScaleDescription(bortleScale, 'zh'))}
-        </span>
-      )}
-      
-      {/* Show SIQS score if provided */}
-      {hasSIQS && !compact && (
-        <div className="ml-3 flex items-center">
-          <div 
-            className={cn(
-              "rounded-full mr-2 flex items-center justify-center border", 
-              sizeClass,
-              getSIQSColorClass(siqs)
-            )}
-          >
-            <span className={cn("font-semibold text-[0.65em] text-white")}>
-              {formatSIQSScoreForDisplay(siqs)}
+    <div className="space-y-2">
+      {showLabel && (
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            <Lightbulb className="h-4 w-4 mr-1.5 text-yellow-400" />
+            <span className="text-sm font-medium text-muted-foreground">
+              {t("Light Pollution", "光污染")}
             </span>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {t("SIQS Score", "SIQS 评分")}
+          <span className="text-sm font-medium">
+            {t("Bortle", "波特尔")} {validBortleScale}/9
           </span>
         </div>
       )}
+      
+      <Progress
+        value={progressValue}
+        className="h-2.5 bg-primary/10"
+        colorClass={colorClass}
+      />
+      
+      <div className="text-xs text-muted-foreground">
+        {getBortleDescription(validBortleScale)}
+      </div>
     </div>
   );
 };

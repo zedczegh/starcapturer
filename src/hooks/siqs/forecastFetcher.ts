@@ -61,8 +61,26 @@ export async function fetchForecastForLocation(
 
 /**
  * Clear the forecast cache
+ * Optional parameters to clear cache for a specific location
  */
-export function clearForecastCache(): void {
-  forecastCache.clear();
-  console.log("Forecast cache cleared");
+export function clearForecastCache(
+  latitude?: number,
+  longitude?: number
+): void {
+  if (latitude !== undefined && longitude !== undefined) {
+    // Clear cache for a specific location
+    const keyPrefix = `forecast-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    
+    // Delete all entries for this location
+    for (const key of forecastCache.keys()) {
+      if (key.startsWith(keyPrefix)) {
+        forecastCache.delete(key);
+      }
+    }
+    console.log(`Forecast cache cleared for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  } else {
+    // Clear entire cache
+    forecastCache.clear();
+    console.log("Forecast cache cleared");
+  }
 }

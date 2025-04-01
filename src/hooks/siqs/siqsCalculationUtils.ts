@@ -5,6 +5,28 @@
  */
 
 /**
+ * Get color class based on SIQS score for consistent styling across components
+ */
+export function getSIQSColorClass(score: number | undefined): string {
+  if (score === undefined || score === null) return "text-muted-foreground";
+  if (score >= 7.5) return "text-green-500";
+  if (score >= 6.5) return "text-green-400";
+  if (score >= 5.5) return "text-yellow-500";
+  if (score >= 4.5) return "text-yellow-400";
+  if (score >= 3.5) return "text-orange-400";
+  if (score >= 2.5) return "text-red-400";
+  return "text-red-500";
+}
+
+/**
+ * Format SIQS score for display with consistent handling of undefined values
+ */
+export function formatSIQSScoreForDisplay(score: number | undefined): string {
+  if (score === undefined || score === null) return "--";
+  return score.toFixed(1);
+}
+
+/**
  * Calculate SIQS using weather data with better reliability
  * @param weatherData - Weather data
  * @param bortleScale - Bortle scale (light pollution)

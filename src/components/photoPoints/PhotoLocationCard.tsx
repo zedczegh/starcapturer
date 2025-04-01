@@ -6,11 +6,10 @@ import { MapPin, Info, Star, Award, Thermometer, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatSIQSScore } from '@/utils/geoUtils';
-import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getSIQSColorClass, formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -81,12 +80,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       fromPhotoPoints: true,
       isDarkSkyReserve: location.isDarkSkyReserve,
       certification: location.certification,
-      county: location.county,
-      state: location.state,
-      country: location.country
+      county: location.county || "",
+      state: location.state || "",
+      country: location.country || ""
     };
     
-    saveLocationFromPhotoPoints(locationData);
+    // Save to localStorage for reference
+    try {
+      localStorage.setItem(`location_${location.id}`, JSON.stringify(locationData));
+    } catch (e) {
+      console.error("Failed to save location to localStorage", e);
+    }
     
     navigate(`/location/${location.id}`, { state: locationData });
   };
@@ -106,14 +110,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         ease: "easeOut"
       }
     }
-  };
-  
-  // Get SIQS color based on value
-  const getSiqsColor = (siqs?: number) => {
-    if (!siqs) return "text-muted-foreground";
-    if (siqs >= 7) return "text-green-400";
-    if (siqs >= 5) return "text-yellow-400";
-    return "text-red-400";
   };
   
   // Certification badge based on location type
@@ -159,12 +155,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div className="flex items-center">
-                <Star className={`h-3.5 w-3.5 mr-1 ${getSiqsColor(localSiqs || location.siqs)}`} 
+                <Star className={`h-3.5 w-3.5 mr-1 ${getSIQSColorClass(localSiqs || location.siqs)}`} 
                      fill={localSiqs || location.siqs ? "#facc15" : "none"} />
-                <span className={`text-xs font-medium ${getSiqsColor(localSiqs || location.siqs)}`}>
+                <span className={`text-xs font-medium ${getSIQSColorClass(localSiqs || location.siqs)}`}>
                   {isUpdatingSiqs ? 
                     t("Calculating...", "计算中...") : 
-                    `SIQS: ${formatSIQSScore(localSiqs || location.siqs)}`}
+                    `SIQS: ${formatSIQSScoreForDisplay(localSiqs || location.siqs)}`}
                 </span>
               </div>
               
