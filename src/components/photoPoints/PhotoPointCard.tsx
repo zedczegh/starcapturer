@@ -6,7 +6,6 @@ import { MapPin, Star, Award, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/geoUtils";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -24,66 +23,57 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const [loadingTown, setLoadingTown] = useState(false);
 
   useEffect(() => {
-    // Make sure we have valid coordinates before proceeding
-    if (!point?.latitude || !point?.longitude) {
-      setNearestTown(language === 'en' ? 'Unknown location' : '未知位置');
-      return;
-    }
-    
-    const fetchNearestTown = async () => {
-      setLoadingTown(true);
-      try {
-        // First check if we already have a name from point data
-        if (point.name && 
-            !point.name.includes("°") && 
-            !point.name.includes("Location at") &&
-            !point.name.includes("位置在") &&
-            !point.name.includes("Remote area") &&
-            !point.name.includes("偏远地区")) {
+    if (point.latitude && point.longitude) {
+      const fetchNearestTown = async () => {
+        setLoadingTown(true);
+        try {
+          // First check if description contains location info
+          if (point.description && point.description.toLowerCase().includes("near")) {
+            const parts = point.description.split(/near/i);
+            if (parts.length > 1) {
+              setNearestTown(parts[1].trim());
+              setLoadingTown(false);
+              return;
+            }
+          }
           
-          const extractedName = extractNearestTownName(point.name, point.description, language);
-          setNearestTown(extractedName);
-          setLoadingTown(false);
-          return;
-        }
-        
-        // Try directional region naming first (e.g., "Northwest Yunnan")
-        const regionalName = getRegionalName(point.latitude, point.longitude, language);
-        
-        // If we got a valid region name, use it
-        if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-          setNearestTown(regionalName);
-          setLoadingTown(false);
-          return;
-        }
-        
-        // Use enhanced location service as a fallback
-        const townName = await getLocationNameForCoordinates(
-          point.latitude,
-          point.longitude,
-          language
-        );
-        
-        if (townName) {
-          const extractedTownName = extractNearestTownName(townName, point.description, language);
-          setNearestTown(extractedTownName);
-        } else {
-          // Better fallback for remote areas
+          // If point has a name that's not coordinates, prioritize that
+          if (point.name && !point.name.includes("°") && !point.name.includes("Location at")) {
+            const nameParts = language === 'en' ? point.name.split(',') : point.name.split('，');
+            if (nameParts.length > 0) {
+              setNearestTown(nameParts[0].trim());
+              setLoadingTown(false);
+              return;
+            }
+          }
+          
+          // Use enhanced location service
+          const townName = await getLocationNameForCoordinates(
+            point.latitude,
+            point.longitude,
+            language
+          );
+          
+          if (townName && !townName.includes("°")) {
+            setNearestTown(townName);
+          } else {
+            // Better fallback for remote areas
+            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
+          }
+        } catch (error) {
+          console.error("Error fetching nearest town:", error);
           setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
+        } finally {
+          setLoadingTown(false);
         }
-      } catch (error) {
-        console.error("Error fetching nearest town:", error);
-        setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-      } finally {
-        setLoadingTown(false);
-      }
-    };
-    
-    fetchNearestTown();
-  }, [point?.latitude, point?.longitude, point?.description, point?.name, language]);
+      };
+      
+      fetchNearestTown();
+    }
+  }, [point.latitude, point.longitude, point.description, point.name, language]);
 
   const formatDistance = (distance?: number) => {
-    if (distance === undefined || distance === null) return t("Unknown distance", "未知距离");
+    if (distance === undefined) return t("Unknown distance", "未知距离");
     
     if (distance < 1) 
       return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
@@ -91,17 +81,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
     return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
-
-  // Handle null or undefined point gracefully
-  if (!point) {
-    return (
-      <div className="glassmorphism p-3 rounded-lg animate-pulse">
-        <div className="h-4 bg-gray-300/20 rounded w-2/3 mb-2"></div>
-        <div className="h-3 bg-gray-300/20 rounded w-1/2 mb-1"></div>
-        <div className="h-3 bg-gray-300/20 rounded w-1/3 mt-2"></div>
-      </div>
-    );
-  }
 
   const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
 
@@ -112,7 +91,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     >
       <div className="flex items-center justify-between mb-1">
         <h4 className="font-medium text-sm line-clamp-1">
-          {pointName || t("Unnamed Location", "未命名位置")}
+          {pointName}
         </h4>
         
         <div className="flex items-center">
