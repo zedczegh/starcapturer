@@ -69,9 +69,9 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     const avgCloudCover = calculateAverageCloudCover(nightForecasts);
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
-    // Check if cloud cover is too high to make imaging possible
-    if (avgCloudCover > 40) {
-      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 40% threshold. SIQS score = 0`);
+    // Check if cloud cover is too high to make imaging possible (updated to 50%)
+    if (avgCloudCover > 50) {
+      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
       return {
         score: 0,
         isViable: false,

@@ -1,11 +1,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { 
-  findLocationsWithinRadius, 
-  sortLocationsByQuality,
-  findCalculatedLocations
-} from '@/services/locationSearchService';
+import { useLocationFind } from './useLocationFind';
+import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -31,6 +28,10 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   // New state for "load more calculated" functionality
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
+  
+  // Extract location finding logic
+  const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
+  const { findCalculatedLocations } = useCalculatedLocationsFind();
   
   // Function to load locations
   const loadLocations = useCallback(async () => {
@@ -97,7 +98,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [searchRadius, userLocation, t]);
+  }, [searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
   
   // Load more locations for pagination
   const loadMore = useCallback(async () => {
@@ -140,7 +141,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [hasMore, locations, page, searchRadius, userLocation, t]);
+  }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
   
   // Load more calculated locations (new function)
   const loadMoreCalculatedLocations = useCallback(async () => {
@@ -203,7 +204,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setSearching(false);
     }
-  }, [loadMoreClickCount, locations, searchRadius, t, userLocation]);
+  }, [loadMoreClickCount, locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
   
   // Refresh SIQS data for locations
   const refreshSiqsData = useCallback(async () => {

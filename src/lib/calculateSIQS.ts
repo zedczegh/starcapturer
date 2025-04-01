@@ -57,12 +57,12 @@ function filterNightTimeForecast(forecast: any[]): any[] {
 }
 
 /**
- * Check if cloud cover exceeds 40% (imaging impossible threshold)
+ * Check if cloud cover exceeds the threshold (modified from 40% to 50%)
  * @param cloudCover Cloud cover percentage
- * @returns True if cloud cover is over 40%
+ * @returns True if cloud cover is over threshold
  */
 function isCloudCoverTooHigh(cloudCover: number): boolean {
-  return typeof cloudCover === 'number' && cloudCover > 40;
+  return typeof cloudCover === 'number' && cloudCover > 50;
 }
 
 /**
@@ -100,9 +100,9 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     // Calculate average cloud cover from nighttime forecast
     const avgCloudCover = tonightForecast.reduce((sum, item) => sum + (item.cloudCover || 0), 0) / tonightForecast.length;
     
-    // STRICT ENFORCEMENT of cloud cover > 40% = 0 rule
+    // STRICT ENFORCEMENT of cloud cover > 50% = 0 rule (modified from 40% to 50%)
     if (isCloudCoverTooHigh(avgCloudCover)) {
-      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 40% threshold. SIQS score = 0`);
+      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
       return {
         score: 0,
         isViable: false,
@@ -207,9 +207,9 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   // If no nighttime forecast is available, fall back to current conditions
   console.log("No nighttime forecast available, using current conditions for SIQS");
   
-  // STRICT ENFORCEMENT of cloud cover > 40% = 0 rule for current conditions
+  // STRICT ENFORCEMENT of cloud cover > 50% = 0 rule for current conditions (modified from 40% to 50%)
   if (isCloudCoverTooHigh(cloudCover)) {
-    console.log(`Current cloud cover is ${cloudCover}%, which exceeds 40% threshold. SIQS score = 0`);
+    console.log(`Current cloud cover is ${cloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
     return {
       score: 0,
       isViable: false,

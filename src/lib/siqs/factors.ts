@@ -4,11 +4,11 @@
 
 // Individual score calculation functions (0-100 scale)
 export function calculateCloudScore(cloudCover: number): number {
-  // If cloud cover is above 40%, score should be 0
-  if (cloudCover > 40) return 0;
+  // If cloud cover is above 50%, score should be 0 (updated from 40%)
+  if (cloudCover > 50) return 0;
   
-  // Otherwise, linear scale from 0-40%
-  return 100 - (cloudCover * 2.5);
+  // Otherwise, linear scale from 0-50% (updated from 0-40%)
+  return 100 - (cloudCover * 2);
 }
 
 export function calculateLightPollutionScore(bortleScale: number): number {

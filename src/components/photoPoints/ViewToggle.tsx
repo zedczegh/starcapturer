@@ -59,7 +59,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
         <span className="ml-1 text-xs text-muted-foreground">
           ({calculatedCount})
         </span>
-        {loading && <span className="ml-1 inline-flex items-center"><Loader2 className="h-3 w-3 animate-spin" /></span>}
+        {loading && <Loader2 className="ml-1 h-3 w-3 animate-spin" />}
       </Toggle>
     </div>
   );
