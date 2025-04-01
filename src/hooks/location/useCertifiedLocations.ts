@@ -37,7 +37,9 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
           cert.includes('dark sky reserve') || 
           cert.includes('dark sky park') ||
           cert.includes('dark sky community') ||
-          cert.includes('urban night sky place')
+          cert.includes('urban night sky place') ||
+          cert.includes('dark sky association') ||
+          cert.includes('ida')
         );
       }
       
@@ -45,10 +47,12 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
       if (location.name) {
         const name = location.name.toLowerCase();
         return (
-          name.includes('dark sky') &&
+          (name.includes('dark sky') || name.includes('dark-sky')) &&
           (name.includes('reserve') || 
            name.includes('sanctuary') || 
-           name.includes('park'))
+           name.includes('park') ||
+           name.includes('community') ||
+           name.includes('certified'))
         );
       }
       

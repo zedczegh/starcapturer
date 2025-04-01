@@ -39,7 +39,23 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 
   // Only show limited number of locations
   const limitedLocations = useMemo(() => {
-    return displayedLocations.slice(0, limit);
+    // Prioritize certified locations 
+    const certified = displayedLocations.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    );
+    
+    const nonCertified = displayedLocations.filter(loc => 
+      !loc.isDarkSkyReserve && !loc.certification
+    );
+    
+    // Combine with certified locations first, then add non-certified
+    // to fill up to the limit
+    const sortedLocations = [
+      ...certified,
+      ...nonCertified
+    ].slice(0, limit);
+    
+    return sortedLocations;
   }, [displayedLocations, limit]);
 
   if (loading) {

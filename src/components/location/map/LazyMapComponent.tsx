@@ -1,6 +1,6 @@
 
 import React, { useCallback, memo, useMemo, useRef, useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -59,17 +59,72 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   const tileServerUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   
+  // Determine marker color and overlay properties based on certification type
+  const getCertificationDetails = useMemo(() => {
+    if (!isDarkSkyReserve && !certification) {
+      return {
+        markerColor: undefined, // Default
+        overlayColor: 'rgba(65, 105, 225, 0.15)',
+        overlayRadius: 0, // No overlay
+        popupLabel: ''
+      };
+    }
+    
+    // Set default values for dark sky locations
+    let details = {
+      markerColor: '#3b82f6', // Blue default for dark sky locations
+      overlayColor: 'rgba(59, 130, 246, 0.15)',
+      overlayRadius: 20000, // 20km radius default
+      popupLabel: t("Dark Sky Location", "暗夜地点")
+    };
+    
+    // Customize based on certification type
+    const cert = (certification || '').toLowerCase();
+    
+    if (cert.includes('sanctuary') || cert.includes('reserve')) {
+      details = {
+        markerColor: '#3b82f6', // Blue for reserves
+        overlayColor: 'rgba(59, 130, 246, 0.15)',
+        overlayRadius: 40000, // 40km radius for reserves
+        popupLabel: t("Dark Sky Reserve", "暗夜保护区")
+      };
+    } else if (cert.includes('park')) {
+      details = {
+        markerColor: '#22c55e', // Green for parks
+        overlayColor: 'rgba(34, 197, 94, 0.15)',
+        overlayRadius: 30000, // 30km radius for parks
+        popupLabel: t("Dark Sky Park", "暗夜公园")
+      };
+    } else if (cert.includes('community')) {
+      details = {
+        markerColor: '#f59e0b', // Amber for communities
+        overlayColor: 'rgba(245, 158, 11, 0.15)', 
+        overlayRadius: 15000, // 15km radius for communities
+        popupLabel: t("Dark Sky Community", "暗夜社区")
+      };
+    } else if (cert.includes('urban')) {
+      details = {
+        markerColor: '#a855f7', // Purple for urban night sky places
+        overlayColor: 'rgba(168, 85, 247, 0.15)',
+        overlayRadius: 5000, // 5km radius for urban places
+        popupLabel: t("Urban Night Sky", "城市夜空")
+      };
+    }
+    
+    return details;
+  }, [isDarkSkyReserve, certification, t]);
+
   // Memoize marker icon to avoid recreating on each render
   const markerIcon = useMemo(() => {
     // Only create marker icon on client-side
     if (!isClient) return null;
     
-    // Use a special icon for dark sky reserves
-    if (isDarkSkyReserve) {
-      return createCustomMarker('#3b82f6'); // Blue color for dark sky locations
+    // Use certification-specific color if available
+    if (isDarkSkyReserve || certification) {
+      return createCustomMarker(getCertificationDetails.markerColor);
     }
     return createCustomMarker(); // Default icon for regular locations
-  }, [isDarkSkyReserve, isClient]);
+  }, [isDarkSkyReserve, certification, isClient, getCertificationDetails]);
 
   // Skip rendering map until client-side
   if (!isClient) {
@@ -95,6 +150,21 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
             subdomains={['a', 'b', 'c']}
           />
           
+          {/* Add a Circle for certified locations */}
+          {isDarkSkyReserve && getCertificationDetails.overlayRadius > 0 && (
+            <Circle 
+              center={position}
+              radius={getCertificationDetails.overlayRadius}
+              pathOptions={{
+                color: getCertificationDetails.markerColor || '#3b82f6',
+                fillColor: getCertificationDetails.overlayColor,
+                fillOpacity: 0.3,
+                weight: 2,
+                opacity: 0.5
+              }}
+            />
+          )}
+          
           {markerIcon && (
             <Marker 
               position={position}
@@ -103,9 +173,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
               <Popup>
                 <div className="text-sm">
                   <strong>{locationName}</strong>
-                  {isDarkSkyReserve && (
+                  {(isDarkSkyReserve || certification) && (
                     <div className="mt-1 text-blue-400 text-xs">
-                      {certification || t("Dark Sky Reserve", "暗夜保护区")}
+                      {getCertificationDetails.popupLabel || certification || t("Dark Sky Reserve", "暗夜保护区")}
                     </div>
                   )}
                 </div>

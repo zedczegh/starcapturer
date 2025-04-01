@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Award, Building2, Loader2 } from "lucide-react";
+import { MapPin, Star, Award, Building2, Loader2, Trees, Globe, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/geoUtils";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
@@ -90,7 +90,49 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
 
+  // Determine certification icon and color
+  const getCertificationInfo = () => {
+    if (!point.certification && !point.isDarkSkyReserve) {
+      return null;
+    }
+    
+    const certification = (point.certification || '').toLowerCase();
+    
+    if (certification.includes('sanctuary') || certification.includes('reserve')) {
+      return {
+        icon: <Globe className="h-4 w-4 text-blue-400 mr-1" />,
+        text: t('Dark Sky Reserve', '暗夜保护区'),
+        color: 'text-blue-400'
+      };
+    } else if (certification.includes('park')) {
+      return {
+        icon: <Trees className="h-4 w-4 text-green-400 mr-1" />,
+        text: t('Dark Sky Park', '暗夜公园'),
+        color: 'text-green-400'
+      };
+    } else if (certification.includes('community')) {
+      return {
+        icon: <Building2 className="h-4 w-4 text-amber-400 mr-1" />,
+        text: t('Dark Sky Community', '暗夜社区'),
+        color: 'text-amber-400'
+      };
+    } else if (certification.includes('urban')) {
+      return {
+        icon: <Building2 className="h-4 w-4 text-purple-400 mr-1" />,
+        text: t('Urban Night Sky', '城市夜空'),
+        color: 'text-purple-400'
+      };
+    } else {
+      return {
+        icon: <ShieldCheck className="h-4 w-4 text-blue-300 mr-1" />,
+        text: t('Certified Location', '认证地点'),
+        color: 'text-blue-300'
+      };
+    }
+  };
+
   const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
+  const certInfo = getCertificationInfo();
 
   return (
     <div 
@@ -103,17 +145,24 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </h4>
         
         <div className="flex items-center">
-          {point.isDarkSkyReserve || point.certification ? (
+          {certInfo && (
             <div className="flex items-center mr-2">
               <Award className="h-3 w-3 text-blue-400 mr-1" fill="rgba(96, 165, 250, 0.3)" />
             </div>
-          ) : null}
+          )}
           <div className="flex items-center">
             <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
             <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
           </div>
         </div>
       </div>
+      
+      {certInfo && (
+        <div className={`flex items-center mt-1 ${certInfo.color} text-xs font-medium`}>
+          {certInfo.icon}
+          <span>{certInfo.text}</span>
+        </div>
+      )}
       
       <div className="flex flex-col space-y-1 mt-2">
         <div className="flex items-center">
