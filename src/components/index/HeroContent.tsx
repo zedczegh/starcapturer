@@ -1,9 +1,10 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Star, Satellite } from "lucide-react";
+import { Star, Telescope, Satellite } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Link } from "react-router-dom";
 
 const HeroContent: React.FC = () => {
   const { t } = useLanguage();
