@@ -12,9 +12,6 @@ import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
-import { clearDarkSkyLocationCache } from '@/services/darkSkyLocationService';
-import { clearSiqsCache } from '@/services/realTimeSiqsService';
-import { clearLocationSearchCache } from '@/services/locationCacheService';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -22,7 +19,6 @@ const PhotoPointsNearby: React.FC = () => {
     enableHighAccuracy: true
   });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
-  const [isChangingRadius, setIsChangingRadius] = useState(false);
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
@@ -46,34 +42,16 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
 
-  // Handle radius change with debounce
+  // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
-    setIsChangingRadius(true);
-    // Clear previous timer if it exists
-    const timerId = (window as any).__radiusDebounce;
-    if (timerId) {
-      clearTimeout(timerId);
-    }
-    
-    // Set a new timer
-    (window as any).__radiusDebounce = setTimeout(() => {
-      // Clear caches when radius changes significantly
-      if (Math.abs(value - searchRadius) > 500) {
-        clearDarkSkyLocationCache();
-        clearSiqsCache();
-        clearLocationSearchCache();
-      }
-      
-      setSearchRadius(value);
-      setIsChangingRadius(false);
-    }, 300);
-  }, [setSearchRadius, searchRadius]);
+    setSearchRadius(value);
+  }, [setSearchRadius]);
 
   // Listen for custom radius change events
   useEffect(() => {
     const handleSetRadius = (e: CustomEvent<{ radius: number }>) => {
       if (e.detail.radius) {
-        handleRadiusChange(e.detail.radius);
+        setSearchRadius(e.detail.radius);
       }
     };
     
@@ -82,7 +60,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => {
       document.removeEventListener('set-search-radius', handleSetRadius as EventListener);
     };
-  }, [handleRadiusChange]);
+  }, [setSearchRadius]);
 
   // Call getUserLocation when the component mounts
   useEffect(() => {
@@ -90,17 +68,6 @@ const PhotoPointsNearby: React.FC = () => {
       getPosition();
     }
   }, [getPosition, userLocation]);
-
-  // Cleanup caches when component unmounts
-  useEffect(() => {
-    return () => {
-      // Clear any active debounce timer
-      const timerId = (window as any).__radiusDebounce;
-      if (timerId) {
-        clearTimeout(timerId);
-      }
-    };
-  }, []);
 
   // Page title - using Helmet for proper title handling
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
@@ -159,12 +126,6 @@ const PhotoPointsNearby: React.FC = () => {
                 maxValue={10000}
                 stepValue={100}
               />
-              {isChangingRadius && (
-                <div className="text-center mt-2 text-xs text-muted-foreground flex items-center justify-center">
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  {t("Updating results...", "正在更新结果...")}
-                </div>
-              )}
             </div>
           )}
           
