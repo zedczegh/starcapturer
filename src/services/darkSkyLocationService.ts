@@ -128,19 +128,9 @@ export function getDarkSkyAstroSpots(
   try {
     const locations = findDarkSkyLocationsWithinRadius(latitude, longitude, radius);
     
-    const spots = locations.map(location => 
+    return locations.map(location => 
       convertToSharedAstroSpot(location, latitude, longitude)
     );
-    
-    // Sort them by SIQS and distance
-    return spots.sort((a, b) => {
-      // First compare by SIQS (higher is better)
-      const siqsDiff = (b.siqs || 0) - (a.siqs || 0);
-      if (siqsDiff !== 0) return siqsDiff;
-      
-      // If SIQS is equal, sort by distance (closer is better)
-      return (a.distance || Infinity) - (b.distance || Infinity);
-    });
   } catch (error) {
     console.error("Error getting dark sky astro spots:", error);
     return [];

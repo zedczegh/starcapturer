@@ -44,46 +44,21 @@ export async function calculateRealTimeSiqs(
   
   try {
     // Fetch weather data
-    let weatherData = null;
-    try {
-      weatherData = await fetchWeatherData({
-        latitude,
-        longitude
-      });
-    } catch (err) {
-      console.error("Error fetching weather data:", err);
-      // Continue with default values
-    }
+    const weatherData = await fetchWeatherData({
+      latitude,
+      longitude
+    });
     
     // Fetch forecast data for nighttime calculation
-    let forecastData = null;
-    try {
-      forecastData = await fetchForecastData({
-        latitude,
-        longitude,
-        days: 2
-      });
-    } catch (err) {
-      console.error("Error fetching forecast data:", err);
-      // Continue with default values
-    }
+    const forecastData = await fetchForecastData({
+      latitude,
+      longitude,
+      days: 2
+    });
     
     // Default values if API calls fail
     if (!weatherData) {
-      // Generate a fallback SIQS based on bortle scale only
-      const fallbackSiqs = Math.max(0, 10 - bortleScale);
-      
-      // Store in cache
-      siqsCache.set(cacheKey, {
-        siqs: fallbackSiqs,
-        isViable: fallbackSiqs > 3,
-        timestamp: Date.now()
-      });
-      
-      return { 
-        siqs: fallbackSiqs, 
-        isViable: fallbackSiqs > 3 
-      };
+      return { siqs: 0, isViable: false };
     }
     
     // For light pollution, use provided Bortle scale or fetch it
@@ -126,14 +101,7 @@ export async function calculateRealTimeSiqs(
     };
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
-    
-    // Fallback calculation based on Bortle scale only
-    const fallbackSiqs = Math.max(0, 10 - bortleScale);
-    
-    return { 
-      siqs: fallbackSiqs, 
-      isViable: fallbackSiqs > 3 
-    };
+    return { siqs: 0, isViable: false };
   }
 }
 
@@ -155,46 +123,24 @@ export async function batchCalculateSiqs(
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
   
-  // Track API rate limiting
-  let isRateLimited = false;
-  
   // Process locations in chunks to avoid too many parallel requests
   for (let i = 0; i < updatedLocations.length; i += maxParallel) {
-    // Stop processing if rate limited
-    if (isRateLimited) break;
-    
     const chunk = updatedLocations.slice(i, i + maxParallel);
     const promises = chunk.map(async (location) => {
       if (!location.latitude || !location.longitude) return location;
       
-      try {
-        const result = await calculateRealTimeSiqs(
-          location.latitude,
-          location.longitude,
-          location.bortleScale || 5
-        );
-        
-        // Update the location object with real-time SIQS
-        return {
-          ...location,
-          siqs: result.siqs,
-          isViable: result.isViable
-        };
-      } catch (error) {
-        console.error("Error calculating SIQS for location:", error);
-        // If API is rate limited, mark flag
-        if (error.toString().includes("429") || error.toString().includes("rate limit")) {
-          isRateLimited = true;
-        }
-        
-        // Fallback to bortle scale calculation
-        const fallbackSiqs = Math.max(0, 10 - (location.bortleScale || 5));
-        return {
-          ...location,
-          siqs: fallbackSiqs,
-          isViable: fallbackSiqs > 3
-        };
-      }
+      const result = await calculateRealTimeSiqs(
+        location.latitude,
+        location.longitude,
+        location.bortleScale || 5
+      );
+      
+      // Update the location object with real-time SIQS
+      return {
+        ...location,
+        siqs: result.siqs,
+        isViable: result.isViable
+      };
     });
     
     // Wait for the current chunk to complete before processing next chunk
@@ -207,7 +153,7 @@ export async function batchCalculateSiqs(
   }
   
   // Filter out any locations with SIQS = 0
-  return updatedLocations.filter(loc => loc.siqs && loc.siqs > 0);
+  return updatedLocations.filter(loc => loc.siqs > 0);
 }
 
 /**

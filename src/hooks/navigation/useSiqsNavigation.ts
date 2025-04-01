@@ -6,12 +6,14 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 export const useSiqsNavigation = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
   
   // Set up geolocation for direct access
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
     timeout: 15000,
-    maximumAge: 60000
+    maximumAge: 60000,
+    language 
   });
 
   const handleSIQSClick = useCallback((e?: React.MouseEvent) => {

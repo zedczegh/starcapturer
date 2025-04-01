@@ -12,7 +12,6 @@ import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
-import { clearSiqsCache } from '@/services/realTimeSiqsService';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -42,14 +41,6 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
-  
-  // Function to handle refresh for both certified and calculated locations
-  const handleRefreshAllSiqsData = useCallback(() => {
-    // Clear SIQS cache to force recalculation
-    clearSiqsCache();
-    // Refresh all data
-    refreshSiqsData();
-  }, [refreshSiqsData]);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -114,7 +105,6 @@ const PhotoPointsNearby: React.FC = () => {
                 onClick={getPosition}
                 className="flex items-center gap-2"
                 disabled={locationLoading}
-                data-location-button="true"
               >
                 {locationLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -154,16 +144,15 @@ const PhotoPointsNearby: React.FC = () => {
           {activeView === 'certified' ? (
             <DarkSkyLocations
               locations={certifiedLocations}
-              loading={loading || locationLoading}
-              onRefresh={handleRefreshAllSiqsData}
+              loading={loading && !locationLoading}
             />
           ) : (
             <CalculatedLocations
               locations={calculatedLocations}
-              loading={loading || locationLoading}
+              loading={loading && !locationLoading}
               hasMore={hasMore}
               onLoadMore={loadMore}
-              onRefresh={handleRefreshAllSiqsData}
+              onRefresh={refreshSiqsData}
               searchRadius={searchRadius}
             />
           )}

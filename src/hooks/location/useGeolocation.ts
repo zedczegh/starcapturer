@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// Define proper GeolocationOptions without language property
+// Define proper GeolocationOptions without language
 export interface GeolocationOptions {
   enableHighAccuracy?: boolean;
   timeout?: number;
@@ -49,7 +49,7 @@ export const useGeolocation = (options?: GeolocationOptions) => {
     );
   }, [handleSuccess, handleError, options]);
 
-  // Get position on mount if options.enableHighAccuracy is true
+  // Get position on mount if options.autoRequest is true
   useEffect(() => {
     if (options?.enableHighAccuracy) {
       getPosition();
