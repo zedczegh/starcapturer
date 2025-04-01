@@ -46,7 +46,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
     minute: "2-digit",
   });
   
-  const scoreColor = siqsToColor(siqs, isViable);
+  // Fixed: Removed second argument to match function signature
+  const scoreColor = siqsToColor(siqs);
 
   // Format name more nicely, try regional format if default name is unclear
   let displayName = formatLocationName(name, language as any);
