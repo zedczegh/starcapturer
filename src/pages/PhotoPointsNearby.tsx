@@ -9,22 +9,20 @@ import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewTo
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
 import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import { MapPin, Loader2, Globe, Award, ChevronLeft } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import BackButton from '@/components/navigation/BackButton';
 import { clearDarkSkyLocationCache } from '@/services/darkSkyLocationService';
 import { clearSiqsCache } from '@/services/realTimeSiqsService';
 import { clearLocationSearchCache } from '@/services/locationCacheService';
-import { motion } from 'framer-motion';
 
 const PhotoPointsNearby: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { loading: locationLoading, coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
   });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [isChangingRadius, setIsChangingRadius] = useState(false);
-  const [pageLoaded, setPageLoaded] = useState(false);
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
@@ -47,17 +45,6 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
-
-  // Mark page as loaded after initial data fetch
-  useEffect(() => {
-    if (!loading && !locationLoading) {
-      // Use timeout to ensure smooth transitions
-      const timer = setTimeout(() => {
-        setPageLoaded(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, locationLoading]);
 
   // Handle radius change with debounce
   const handleRadiusChange = useCallback((value: number) => {
@@ -118,24 +105,6 @@ const PhotoPointsNearby: React.FC = () => {
   // Page title - using Helmet for proper title handling
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        duration: 0.5,
-        staggerChildren: 0.1,
-        delayChildren: 0.1
-      }
-    }
-  };
-  
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-  
   return (
     <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
       {/* Use Helmet component for setting page title */}
@@ -143,33 +112,15 @@ const PhotoPointsNearby: React.FC = () => {
         <title>{pageTitle}</title>
       </Helmet>
       
-      <motion.div
-        initial="hidden"
-        animate={pageLoaded ? "visible" : "hidden"}
-        variants={containerVariants}
-        className="pt-20 md:pt-28 pb-20"
-      >
-        <div className="container mx-auto px-4 max-w-6xl">
+      <div className="pt-20 md:pt-28 pb-20">
+        <div className="container mx-auto px-4">
           {/* Back Button */}
-          <motion.div variants={itemVariants} className="mb-6">
-            <Button
-              as={Link}
-              to="/"
-              variant="ghost"
-              size="sm"
-              className="gap-1 text-muted-foreground hover:text-white"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              {t("Back to Home", "返回首页")}
-            </Button>
-          </motion.div>
+          <div className="mb-6">
+            <BackButton destination="/" />
+          </div>
           
-          <motion.div variants={itemVariants} className="flex flex-col items-center text-center mb-8">
-            <div className="mb-3 flex items-center justify-center space-x-2">
-              <Award className="h-6 w-6 text-blue-400" />
-              <Globe className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold mb-3 text-gradient-blue">
+          <div className="flex flex-col items-center text-center mb-8">
+            <h1 className="text-3xl font-bold mb-3">
               {t("Astronomy Photo Points", "天文摄影点")}
             </h1>
             <p className="text-muted-foreground max-w-xl">
@@ -178,15 +129,14 @@ const PhotoPointsNearby: React.FC = () => {
                 "发现您附近最佳的天文摄影地点。按认证暗夜区域或算法计算的位置进行筛选。"
               )}
             </p>
-          </motion.div>
+          </div>
           
           {/* User location section */}
           {!userLocation && (
-            <motion.div variants={itemVariants} className="flex justify-center mb-8">
+            <div className="flex justify-center mb-8">
               <Button
                 onClick={getPosition}
-                className="flex items-center gap-2 bg-primary/90 hover:bg-primary"
-                size="lg"
+                className="flex items-center gap-2"
                 disabled={locationLoading}
               >
                 {locationLoading ? (
@@ -196,35 +146,30 @@ const PhotoPointsNearby: React.FC = () => {
                 )}
                 {t("Use My Location", "使用我的位置")}
               </Button>
-            </motion.div>
+            </div>
           )}
           
           {/* Distance filter */}
           {userLocation && (
-            <motion.div variants={itemVariants} className="max-w-xl mx-auto mb-8">
-              <div className="glassmorphism p-4 rounded-xl">
-                <h3 className="text-sm font-medium mb-2 text-center">
-                  {t("Search Radius", "搜索半径")}
-                </h3>
-                <DistanceRangeSlider
-                  currentValue={searchRadius}
-                  onValueChange={handleRadiusChange}
-                  minValue={100}
-                  maxValue={10000}
-                  stepValue={100}
-                />
-                {isChangingRadius && (
-                  <div className="text-center mt-2 text-xs text-muted-foreground flex items-center justify-center">
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    {t("Updating results...", "正在更新结果...")}
-                  </div>
-                )}
-              </div>
-            </motion.div>
+            <div className="max-w-xl mx-auto mb-8">
+              <DistanceRangeSlider
+                currentValue={searchRadius}
+                onValueChange={handleRadiusChange}
+                minValue={100}
+                maxValue={10000}
+                stepValue={100}
+              />
+              {isChangingRadius && (
+                <div className="text-center mt-2 text-xs text-muted-foreground flex items-center justify-center">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  {t("Updating results...", "正在更新结果...")}
+                </div>
+              )}
+            </div>
           )}
           
           {/* Tab toggle */}
-          <motion.div variants={itemVariants} className="mb-6">
+          <div className="mb-6">
             <ViewToggle
               activeView={activeView}
               onViewChange={setActiveView}
@@ -232,28 +177,26 @@ const PhotoPointsNearby: React.FC = () => {
               calculatedCount={calculatedCount}
               loading={loading}
             />
-          </motion.div>
+          </div>
           
           {/* Content based on active view */}
-          <motion.div variants={itemVariants}>
-            {activeView === 'certified' ? (
-              <DarkSkyLocations
-                locations={certifiedLocations}
-                loading={loading && !locationLoading}
-              />
-            ) : (
-              <CalculatedLocations
-                locations={calculatedLocations}
-                loading={loading && !locationLoading}
-                hasMore={hasMore}
-                onLoadMore={loadMore}
-                onRefresh={refreshSiqsData}
-                searchRadius={searchRadius}
-              />
-            )}
-          </motion.div>
+          {activeView === 'certified' ? (
+            <DarkSkyLocations
+              locations={certifiedLocations}
+              loading={loading && !locationLoading}
+            />
+          ) : (
+            <CalculatedLocations
+              locations={calculatedLocations}
+              loading={loading && !locationLoading}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              onRefresh={refreshSiqsData}
+              searchRadius={searchRadius}
+            />
+          )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

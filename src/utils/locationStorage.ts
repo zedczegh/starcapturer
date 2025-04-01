@@ -1,152 +1,182 @@
 /**
- * Functions for managing location data in local storage
+ * Utility functions for managing location data in localStorage
  */
-import { v4 as uuidv4 } from 'uuid';
 
+// Storage key for latest location
+const LATEST_LOCATION_KEY = 'latest_siqs_location';
+// Timestamp key for tracking last refresh
+const REFRESH_TIMESTAMP_KEY = 'last_refresh_timestamp';
+
+// Validate location data
+const isValidLocation = (location: any): boolean => {
+  return (
+    location &&
+    typeof location === 'object' &&
+    typeof location.name === 'string' &&
+    typeof location.latitude === 'number' && 
+    isFinite(location.latitude) &&
+    typeof location.longitude === 'number' && 
+    isFinite(location.longitude) &&
+    location.latitude >= -90 && 
+    location.latitude <= 90 &&
+    location.longitude >= -180 && 
+    location.longitude <= 180
+  );
+};
+
+// Type definition for location data
 export interface SIQSLocation {
-  id?: string;
   name: string;
   latitude: number;
   longitude: number;
-  timestamp?: string;
   bortleScale?: number;
-  lightPollution?: number;
-  placeDetails?: string;
-  fromCalculator?: boolean;
-  isDarkSkyReserve?: boolean;
-  certification?: string;
+  timestamp?: string;
+  fromPhotoPoints?: boolean;
+  lastRefreshed?: string; // Track when location was last refreshed
 }
 
-// Load saved location data
-export const loadSavedLocation = (): SIQSLocation | null => {
+// Save location to localStorage
+export const saveLocation = (location: SIQSLocation): boolean => {
   try {
-    const savedData = localStorage.getItem('siqs_last_location');
-    if (savedData) {
-      return JSON.parse(savedData);
+    if (!isValidLocation(location)) {
+      console.error("Invalid location data:", location);
+      return false;
     }
+    
+    // Add timestamp if not provided
+    const locationWithTimestamp = {
+      ...location,
+      timestamp: location.timestamp || new Date().toISOString(),
+      lastRefreshed: new Date().toISOString() // Always update refresh timestamp
+    };
+    
+    localStorage.setItem(LATEST_LOCATION_KEY, JSON.stringify(locationWithTimestamp));
+    return true;
   } catch (error) {
-    console.error('Error loading saved location:', error);
-  }
-  return null;
-};
-
-// Save location data to localStorage
-export const saveLocation = (location: SIQSLocation): void => {
-  try {
-    // Generate an ID if one doesn't exist
-    if (!location.id) {
-      location.id = uuidv4();
-    }
-    
-    // Add timestamp if not present
-    if (!location.timestamp) {
-      location.timestamp = new Date().toISOString();
-    }
-    
-    // Save to localStorage
-    localStorage.setItem('siqs_last_location', JSON.stringify(location));
-    
-    // Update saved locations list
-    addToSavedLocations(location);
-  } catch (error) {
-    console.error('Error saving location:', error);
+    console.error("Error saving location to localStorage:", error);
+    return false;
   }
 };
 
-// Clear saved location data
-export const clearSavedLocation = (): void => {
+// Get saved location from localStorage
+export const getSavedLocation = (): SIQSLocation | null => {
   try {
-    localStorage.removeItem('siqs_last_location');
-  } catch (error) {
-    console.error('Error clearing saved location:', error);
-  }
-};
-
-// Get list of saved locations
-export const getSavedLocations = (): SIQSLocation[] => {
-  try {
-    const savedLocations = localStorage.getItem('siqs_saved_locations');
-    if (savedLocations) {
-      return JSON.parse(savedLocations);
-    }
-  } catch (error) {
-    console.error('Error getting saved locations:', error);
-  }
-  return [];
-};
-
-// Add a location to the saved locations list
-export const addToSavedLocations = (location: SIQSLocation): void => {
-  try {
-    const savedLocations = getSavedLocations();
+    const savedLocationString = localStorage.getItem(LATEST_LOCATION_KEY);
+    if (!savedLocationString) return null;
     
-    // Check if location already exists by coordinates
-    const exists = savedLocations.some(loc => 
-      loc.latitude === location.latitude && 
-      loc.longitude === location.longitude
-    );
+    const savedLocation = JSON.parse(savedLocationString);
     
-    // If it doesn't exist, add it to the list
-    if (!exists) {
-      savedLocations.push(location);
-      localStorage.setItem('siqs_saved_locations', JSON.stringify(savedLocations));
-    }
-  } catch (error) {
-    console.error('Error adding to saved locations:', error);
-  }
-};
-
-// Get location details by ID
-export const getLocationDetailsById = (id: string): SIQSLocation | null => {
-  try {
-    // First check if it's the current location
-    const currentLocation = loadSavedLocation();
-    if (currentLocation && currentLocation.id === id) {
-      return currentLocation;
+    if (isValidLocation(savedLocation)) {
+      return savedLocation;
     }
     
-    // Otherwise look through saved locations
-    const savedLocations = getSavedLocations();
-    const location = savedLocations.find(loc => loc.id === id);
-    return location || null;
+    return null;
   } catch (error) {
-    console.error('Error getting location by ID:', error);
+    console.error("Error retrieving location from localStorage:", error);
     return null;
   }
 };
 
-// Save location coming from photo points page
-export const saveLocationFromPhotoPoints = (locationData: SIQSLocation): void => {
+// Save location with flag to indicate it came from PhotoPoints page
+export const saveLocationFromPhotoPoints = (locationData: any): void => {
+  if (!locationData?.id) return;
+  
   try {
-    // Ensure it has an ID
-    if (!locationData.id) {
-      locationData.id = uuidv4();
-    }
+    // Make sure we add the fromPhotoPoints flag
+    const dataToSave = {
+      ...locationData,
+      fromPhotoPoints: true,
+      timestamp: new Date().toISOString()
+    };
     
-    // Ensure it has a timestamp
-    if (!locationData.timestamp) {
-      locationData.timestamp = new Date().toISOString();
-    }
-    
-    // Add fromPhotoPoints flag
-    locationData.fromCalculator = false;
-    
-    // Save to localStorage
-    localStorage.setItem('siqs_last_location', JSON.stringify(locationData));
-    
-    // Also add to saved locations for history
-    addToSavedLocations(locationData);
+    localStorage.setItem(`location_${locationData.id}`, JSON.stringify(dataToSave));
   } catch (error) {
-    console.error('Error saving location from photo points:', error);
+    console.error('Error saving location with PhotoPoints flag:', error);
   }
 };
 
-// Clear all saved location data
-export const clearAllLocationData = (): void => {
+// Save last refresh time for a location
+export const saveRefreshTimestamp = (locationId: string): boolean => {
   try {
-    localStorage.removeItem('siqs_last_location');
-    localStorage.removeItem('siqs_saved_locations');
+    const timestamp = new Date().toISOString();
+    localStorage.setItem(`${REFRESH_TIMESTAMP_KEY}_${locationId}`, timestamp);
+    return true;
   } catch (error) {
-    console.error('Error clearing all location data:', error);
+    console.error("Error saving refresh timestamp:", error);
+    return false;
+  }
+};
+
+// Get last refresh time for a location
+export const getLastRefreshTimestamp = (locationId: string): string | null => {
+  try {
+    return localStorage.getItem(`${REFRESH_TIMESTAMP_KEY}_${locationId}`);
+  } catch (error) {
+    console.error("Error retrieving refresh timestamp:", error);
+    return null;
+  }
+};
+
+// Check if location needs refresh (more than 15 minutes old)
+export const needsRefresh = (locationId: string): boolean => {
+  const lastRefresh = getLastRefreshTimestamp(locationId);
+  if (!lastRefresh) return true;
+  
+  const lastRefreshDate = new Date(lastRefresh);
+  const now = new Date();
+  const diffMs = now.getTime() - lastRefreshDate.getTime();
+  const diffMinutes = diffMs / (1000 * 60);
+  
+  return diffMinutes > 15; // Refresh if older than 15 minutes
+};
+
+// Clear saved location from localStorage
+export const clearSavedLocation = (): boolean => {
+  try {
+    localStorage.removeItem(LATEST_LOCATION_KEY);
+    return true;
+  } catch (error) {
+    console.error("Error clearing location from localStorage:", error);
+    return false;
+  }
+};
+
+// Check if we have a saved location
+export const hasSavedLocation = (): boolean => {
+  return getSavedLocation() !== null;
+};
+
+// Save location details with ID (used for detailed location info)
+export const saveLocationDetails = (id: string, locationData: any): boolean => {
+  try {
+    if (!id) {
+      console.error("Invalid location ID");
+      return false;
+    }
+    
+    const key = `location_${id}`;
+    locationData.lastRefreshed = new Date().toISOString();
+    localStorage.setItem(key, JSON.stringify(locationData));
+    return true;
+  } catch (error) {
+    console.error("Error saving location details to localStorage:", error);
+    return false;
+  }
+};
+
+// Get saved location details by ID
+export const getLocationDetailsById = (id: string): any | null => {
+  try {
+    if (!id) return null;
+    
+    const key = `location_${id}`;
+    const storedData = localStorage.getItem(key);
+    
+    if (!storedData) return null;
+    
+    return JSON.parse(storedData);
+  } catch (error) {
+    console.error("Error retrieving location details from localStorage:", error);
+    return null;
   }
 };

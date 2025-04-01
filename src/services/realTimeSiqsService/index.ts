@@ -6,7 +6,7 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
-import { calculateSIQS, SIQSResult } from "@/lib/calculateSIQS";
+import { calculateSIQS } from "@/lib/calculateSIQS";
 
 // Cache for SIQS calculations
 interface SiqsCache {
@@ -70,23 +70,19 @@ export async function calculateLocationSiqs(
     location.longitude
   );
   
-  // Calculate SIQS with available data
+  // Calculate SIQS
+  let siqs: number;
   try {
-    const result = calculateSIQS({
+    siqs = calculateSIQS({
       bortleScale,
+      seeingIndex: location.seeingIndex || 2,
       cloudCover: location.cloudCover || 0,
-      seeingConditions: 2, // Default value if not available
-      windSpeed: 5, // Default value if not available
-      humidity: 50, // Default value if not available
-      moonPhase: 0, // Default value if not available
-      weatherCondition: '',
-      precipitation: 0,
-      isViable: location.isViable !== undefined ? location.isViable : true,
-      aqi: undefined
+      humidity: location.humidity || 0.5,
+      moonPhase: location.moonPhase || 0,
+      moonElevation: location.moonElevation || 0,
+      temperature: location.temperature || 15,
+      isViable: location.isViable !== undefined ? location.isViable : true
     });
-    
-    // Extract the numeric score from the result
-    const siqs = typeof result === 'number' ? result : result.score;
     
     // Cache the result
     SIQS_CACHE[cacheKey] = {
