@@ -1,122 +1,60 @@
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect, useCallback } from 'react';
 
-interface GeolocationOptions {
+// Define proper GeolocationOptions without language
+export interface GeolocationOptions {
   enableHighAccuracy?: boolean;
   timeout?: number;
   maximumAge?: number;
-  language: string;
 }
 
-export const useGeolocation = (options: GeolocationOptions = { language: 'en' }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { toast } = useToast();
-  const { language } = options;
+export const useGeolocation = (options?: GeolocationOptions) => {
+  const [coords, setCoords] = useState<GeolocationCoordinates | null>(null);
+  const [error, setError] = useState<GeolocationPositionError | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const clearTimeoutRef = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
-
-  const handleSuccess = (position: GeolocationPosition) => {
-    clearTimeoutRef();
-    setLoading(false);
+  // Success handler for geolocation
+  const handleSuccess = useCallback((position: GeolocationPosition) => {
+    setCoords(position.coords);
     setError(null);
-    setCoords({
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude
-    });
-    
-    // Log success for debugging
-    console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
-  };
-
-  const handleError = (geolocationError: GeolocationPositionError) => {
-    clearTimeoutRef();
     setLoading(false);
-    
-    let errorMessage = "";
-    switch (geolocationError.code) {
-      case geolocationError.PERMISSION_DENIED:
-        errorMessage = language === 'en'
-          ? "Location permission denied. Please check your browser settings."
-          : "位置权限被拒绝。请检查您的浏览器设置。";
-        break;
-      case geolocationError.POSITION_UNAVAILABLE:
-        errorMessage = language === 'en'
-          ? "Location information is unavailable. Try another method."
-          : "位置信息不可用。请尝试其他方法。";
-        break;
-      case geolocationError.TIMEOUT:
-        errorMessage = language === 'en'
-          ? "Location request timed out. Please try again."
-          : "位置请求超时。请重试。";
-        break;
-      default:
-        errorMessage = language === 'en'
-          ? "An unknown error occurred while getting your location."
-          : "获取位置时发生未知错误。";
-    }
-    
-    setError(errorMessage);
-    console.error("Geolocation error:", geolocationError);
-    
-    // Show toast for better user awareness
-    toast({
-      title: language === 'en' ? "Location Error" : "位置错误",
-      description: errorMessage,
-      variant: "destructive",
-    });
-  };
+  }, []);
 
+  // Error handler for geolocation
+  const handleError = useCallback((error: GeolocationPositionError) => {
+    setError(error);
+    setLoading(false);
+    console.error("Geolocation error:", error.message);
+  }, []);
+
+  // Function to get current position
   const getPosition = useCallback(() => {
     if (!navigator.geolocation) {
-      const message = language === 'en' 
-        ? "Your browser doesn't support geolocation. Please enter coordinates manually."
-        : "您的浏览器不支持地理位置，请手动输入坐标。";
-      setError(message);
+      setError({ 
+        code: 0, 
+        message: "Geolocation not supported by this browser", 
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2, 
+        TIMEOUT: 3 
+      });
       return;
     }
-    
+
     setLoading(true);
-    console.log("Requesting geolocation...");
-    
-    // Set timeout as a backup
-    timeoutRef.current = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        setError(language === 'en' 
-          ? "Location request timed out. Please try again or enter coordinates manually." 
-          : "位置请求超时。请重试或手动输入坐标。");
-      }
-    }, options.timeout || 12000);
     
     navigator.geolocation.getCurrentPosition(
       handleSuccess,
       handleError,
-      {
-        enableHighAccuracy: options.enableHighAccuracy || true,
-        timeout: options.timeout || 12000,
-        maximumAge: options.maximumAge || 0
-      }
+      options
     );
-  }, [language, loading, options.enableHighAccuracy, options.maximumAge, options.timeout, toast]);
+  }, [handleSuccess, handleError, options]);
 
-  // Cleanup on unmount
+  // Get position on mount if options.autoRequest is true
   useEffect(() => {
-    return clearTimeoutRef;
-  }, []);
+    if (options?.enableHighAccuracy) {
+      getPosition();
+    }
+  }, [getPosition, options]);
 
-  return {
-    loading,
-    error,
-    coords,
-    getPosition
-  };
+  return { coords, error, loading, getPosition };
 };

@@ -26,6 +26,9 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Filter out locations with SIQS score of 0
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+  
   // Add event listener for expanding search radius
   useEffect(() => {
     const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
@@ -63,7 +66,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
-  if (locations.length === 0) {
+  if (validLocations.length === 0) {
     return (
       <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
         <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
@@ -81,8 +84,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
           <p className="text-sm text-primary">
             {searchRadius > 0 ? 
               t(
-                `Try increasing your search radius beyond ${searchRadius/1000}km.`,
-                `尝试将搜索半径增加到${searchRadius/1000}公里以上。`
+                `Try increasing your search radius beyond ${searchRadius}km.`,
+                `尝试将搜索半径增加到${searchRadius}公里以上。`
               ) :
               t(
                 "Try adjusting your search radius to find better viewing spots.",
@@ -110,7 +113,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
                 className="text-xs text-muted-foreground"
                 onClick={() => {
                   // Trigger custom event to expand search radius
-                  const newRadius = Math.min(10000, searchRadius * 2);
+                  const newRadius = Math.min(10000, searchRadius + 1000);
                   document.dispatchEvent(new CustomEvent('expand-search-radius', { 
                     detail: { radius: newRadius } 
                   }));
@@ -134,7 +137,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {locations.map((location, index) => (
+        {validLocations.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `calc-loc-${index}`}
             location={location}

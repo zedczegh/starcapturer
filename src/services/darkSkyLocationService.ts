@@ -100,12 +100,14 @@ export function convertToSharedAstroSpot(
   } catch (error) {
     console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);
     
-    // Return a minimal valid SharedAstroSpot object as fallback
+    // Return a minimal valid SharedAstroSpot object as fallback with required properties
     return {
       id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
       name: entry.name,
       latitude: entry.coordinates[0],
       longitude: entry.coordinates[1],
+      bortleScale: entry.bortleScale || 5, // Provide a default value
+      siqs: 0, // Default SIQS
       timestamp: new Date().toISOString()
     };
   }

@@ -84,16 +84,20 @@ export async function calculateRealTimeSiqs(
     
     console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
     
+    // Ensure SIQS is positive
+    const finalSiqs = Math.max(0, siqsResult.score);
+    const isViable = finalSiqs > 0;
+    
     // Store in cache
     siqsCache.set(cacheKey, {
-      siqs: siqsResult.score,
-      isViable: siqsResult.isViable,
+      siqs: finalSiqs,
+      isViable: isViable,
       timestamp: Date.now()
     });
     
     return {
-      siqs: siqsResult.score,
-      isViable: siqsResult.isViable
+      siqs: finalSiqs,
+      isViable: isViable
     };
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
@@ -148,7 +152,8 @@ export async function batchCalculateSiqs(
     });
   }
   
-  return updatedLocations;
+  // Filter out any locations with SIQS = 0
+  return updatedLocations.filter(loc => loc.siqs > 0);
 }
 
 /**

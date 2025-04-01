@@ -1,3 +1,4 @@
+
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -172,7 +173,14 @@ export async function findCalculatedLocations(
     
     if (calculatedPoints.length > 0) {
       // Calculate SIQS scores for these locations
-      return await batchCalculateSiqs(calculatedPoints);
+      const locationsWithSiqs = await batchCalculateSiqs(calculatedPoints);
+      
+      // Filter out locations with SIQS 0 (bad viewing conditions)
+      const validLocations = locationsWithSiqs.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+      
+      if (validLocations.length > 0) {
+        return validLocations;
+      }
     }
     
     // If no calculated points found and we can try larger radius
