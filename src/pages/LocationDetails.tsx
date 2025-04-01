@@ -27,6 +27,9 @@ const LocationDetails = () => {
   const { t } = useLanguage();
   const siqsUpdateRequiredRef = useRef(true);
   
+  // Determine if we're coming from photo points
+  const isPhotoPoint = location.pathname.includes("/photo-point/");
+  
   const {
     locationData, 
     setLocationData, 
@@ -52,7 +55,12 @@ const LocationDetails = () => {
   // Handle back navigation to ensure clean return to home page
   useEffect(() => {
     const handleBackNavigation = () => {
-      navigate("/", { replace: true });
+      // If we came from photo points, go back to photo-points page
+      if (isPhotoPoint || (locationData && locationData.fromPhotoPoints)) {
+        navigate("/photo-points", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     };
 
     window.addEventListener('popstate', handleBackNavigation);
@@ -60,7 +68,7 @@ const LocationDetails = () => {
     return () => {
       window.removeEventListener('popstate', handleBackNavigation);
     };
-  }, [navigate]);
+  }, [navigate, locationData, isPhotoPoint]);
 
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
@@ -132,10 +140,10 @@ const LocationDetails = () => {
     updateBortleScaleData();
   }, [locationData, isLoading, setLocationData, updateBortleScale, resetUpdateState]);
   
-  // Ensure SIQS is updated when coming from calculator
+  // Ensure SIQS is updated when coming from calculator or photo points
   useEffect(() => {
-    if (locationData?.fromCalculator && siqsUpdateRequiredRef.current) {
-      console.log("Location from calculator, ensuring SIQS data is preserved");
+    if ((locationData?.fromCalculator || locationData?.fromPhotoPoints) && siqsUpdateRequiredRef.current) {
+      console.log("Location from calculator or photo points, ensuring SIQS data is preserved");
       resetUpdateState();
       siqsUpdateRequiredRef.current = false;
     }

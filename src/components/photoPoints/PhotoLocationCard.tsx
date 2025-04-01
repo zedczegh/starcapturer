@@ -15,9 +15,10 @@ import BortleScaleBadge from './BortleScaleBadge';
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
+  showRealTimeSiqs?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }) => {
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   
@@ -65,8 +66,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
   
   // Navigate to details page
   const handleViewDetails = () => {
-    navigate(`/photo-point/${location.id}`, { 
-      state: { location }
+    // When navigating from the photo points page, we need to pass the proper state
+    navigate(`/location/${location.id}`, { 
+      state: { 
+        location: {
+          ...location,
+          fromPhotoPoints: true // Add flag to indicate we're coming from photo points
+        } 
+      }
     });
   };
   
