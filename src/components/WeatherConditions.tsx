@@ -6,6 +6,7 @@ import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
 import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -17,10 +18,11 @@ interface WeatherConditionsProps {
     time: string;
     condition: string;
     aqi?: number;
-  };
+  } | null;
   moonPhase: string | number;
   bortleScale: number | null;
   seeingConditions: string;
+  loading?: boolean;
 }
 
 // Helper function to normalize moon phase display
@@ -53,6 +55,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   moonPhase,
   bortleScale,
   seeingConditions,
+  loading = false,
 }) => {
   const { language, t } = useLanguage();
   
@@ -69,11 +72,11 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       moonPhase: language === 'zh'
         ? getMoonPhaseInChinese(normalizedMoonPhase)
         : normalizedMoonPhase,
-      weatherCondition: language === 'zh' && weatherData.condition
+      weatherCondition: language === 'zh' && weatherData?.condition
         ? getWeatherConditionInChinese(weatherData.condition)
-        : weatherData.condition
+        : weatherData?.condition || t("Unknown", "未知")
     };
-  }, [language, seeingConditions, moonPhase, weatherData.condition]);
+  }, [language, seeingConditions, moonPhase, weatherData?.condition, t]);
 
   // Animation variants
   const containerVariants = {
@@ -90,6 +93,27 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     visible: { opacity: 1, y: 0 }
   };
 
+  // Show loading state
+  if (loading || !weatherData) {
+    return (
+      <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
+        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
+          <CardTitle className="text-xl text-gradient-blue">
+            {t("Current Conditions", "当前状况")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {t("Loading weather data...", "正在加载天气数据...")}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <motion.div
       initial="hidden"
@@ -102,8 +126,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <motion.div variants={itemVariants}>
               <PrimaryConditions
                 temperature={weatherData.temperature}
@@ -128,4 +152,4 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   );
 };
 
-export default React.memo(WeatherConditions);
+export default WeatherConditions;

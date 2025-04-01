@@ -11,9 +11,14 @@ import { SIQSLocation } from "@/utils/locationStorage";
 
 interface MapSelectorProps {
   onLocationSelect?: (location: SIQSLocation) => void;
+  // Add the correct prop for compatibility with existing components
+  onSelectLocation?: (location: any) => void;
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ 
+  onLocationSelect,
+  onSelectLocation 
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +31,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect }) => {
     
     if (onLocationSelect) {
       onLocationSelect(location);
+    }
+    
+    // Support for the alternate prop name used in other components
+    if (onSelectLocation) {
+      onSelectLocation(location);
     }
     
     setSearchResults([]);
