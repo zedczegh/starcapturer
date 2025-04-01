@@ -2,6 +2,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
+import { validateCloudCover } from '@/lib/siqs/utils';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
@@ -80,10 +81,10 @@ export const useLocationSIQSUpdater = (
         } else if (locationData.weatherData?.cloudCover !== undefined) {
           // Fallback to current weather if nighttime forecast is unavailable
           console.log("Using fallback SIQS calculation based on current weather");
-          const currentCloudCover = locationData.weatherData.cloudCover;
+          const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
-          // Simplified SIQS formula based on cloud cover - capped at 50% cloud cover
-          const cloudScore = Math.max(0, 100 - (currentCloudCover * 2));
+          // Special handling for 0% cloud cover - should be score 10
+          const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
           const estimatedScore = cloudScore / 10;
           
           console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);

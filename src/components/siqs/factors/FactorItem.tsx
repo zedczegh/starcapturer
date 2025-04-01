@@ -17,11 +17,14 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   // Always ensure the display score is on 0-10 scale for consistent display
   const normalizedScore = factor.score > 10 ? factor.score / 10 : factor.score;
   
+  // Ensure cloud cover score is accurate when cloud cover is 0%
+  const finalScore = factor.name === "Cloud Cover" && normalizedScore > 9.9 ? 10 : normalizedScore;
+  
   // Scale from 0-10 to 0-100 for the progress bar
-  const progressValue = normalizedScore * 10;
+  const progressValue = finalScore * 10;
   
   // Get the appropriate color class based on the normalized score
-  const colorClass = getProgressColorClass(normalizedScore);
+  const colorClass = getProgressColorClass(finalScore);
   
   return (
     <motion.div
@@ -33,7 +36,7 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
       <div className="flex justify-between items-center">
         <span className="text-sm font-medium">{factor.name}</span>
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass.replace('bg-', 'text-')} bg-cosmic-800/50`}>
-          {normalizedScore.toFixed(1)}
+          {finalScore.toFixed(1)}
         </span>
       </div>
       <Progress 

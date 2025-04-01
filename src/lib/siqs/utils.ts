@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for SIQS calculations and display
  */
@@ -47,4 +48,12 @@ export function normalizeFactorScores(factors: any[]): any[] {
       score: factor.score / 10
     };
   });
+}
+
+// Validate Cloud Cover value to ensure proper display
+export function validateCloudCover(cloudCover: number): number {
+  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, cloudCover));
 }

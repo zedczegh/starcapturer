@@ -5,6 +5,16 @@
 
 // Individual score calculation functions (0-100 scale)
 export function calculateCloudScore(cloudCover: number): number {
+  // Ensure cloud cover is a valid number
+  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
+    return 0;
+  }
+  
+  // If cloud cover is 0%, score should be 100 points (perfect)
+  if (cloudCover === 0) {
+    return 100;
+  }
+  
   // If cloud cover is above 50%, score should be very low
   if (cloudCover > 50) return 0;
   

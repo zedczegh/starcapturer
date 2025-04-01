@@ -1,9 +1,10 @@
+
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { 
   calculateCloudScore, 
   normalizeScore 
 } from "@/lib/siqs/factors";
-import { isImagingImpossible, normalizeFactorScores } from "@/lib/siqs/utils";
+import { isImagingImpossible, normalizeFactorScores, validateCloudCover } from "@/lib/siqs/utils";
 import { getCloudDescription } from "@/lib/siqs/descriptions";
 
 /**
@@ -78,7 +79,9 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     console.log(`Found ${nightForecasts.length} nighttime forecast hours`);
     
     // Calculate average values for cloud cover, wind speed, and humidity
-    const avgCloudCover = nightForecasts.reduce((sum, item) => sum + item.cloudCover, 0) / nightForecasts.length;
+    const avgCloudCover = validateCloudCover(
+      nightForecasts.reduce((sum, item) => sum + (item.cloudCover || 0), 0) / nightForecasts.length
+    );
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
     // Check if cloud cover is too high to make imaging possible (threshold at 50%)
