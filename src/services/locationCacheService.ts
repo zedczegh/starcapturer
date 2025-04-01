@@ -1,164 +1,138 @@
 
 /**
  * Service for caching location search results
- * Improves performance by reducing redundant API calls and calculations
+ * Reduces API calls and improves performance for repeated searches
  */
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
-// In-memory location cache
-const searchCache: Map<string, { 
-  data: SharedAstroSpot[]; 
-  timestamp: number;
-  latitude: number;
-  longitude: number;
-  radius: number;
-}> = new Map();
+interface LocationCache {
+  [key: string]: {
+    locations: SharedAstroSpot[];
+    timestamp: number;
+    expiresAt: number;
+  };
+}
 
-// Cache duration in milliseconds (5 minutes)
-const CACHE_DURATION = 5 * 60 * 1000;
+// In-memory cache for location search results
+const locationSearchCache: LocationCache = {};
 
-// Maximum cache size
-const MAX_CACHE_SIZE = 30;
+// Cache expiration time (30 minutes)
+const CACHE_EXPIRATION_MS = 30 * 60 * 1000;
 
 /**
- * Store location search results in cache
- * @param latitude - Search center latitude
- * @param longitude - Search center longitude
- * @param radius - Search radius in km
- * @param data - Location data to cache
- * @param cacheKey - Optional custom cache key
+ * Generate a cache key for location search
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @param radius Search radius
+ * @param customKey Optional custom key
+ * @returns Cache key string
+ */
+const generateCacheKey = (
+  latitude: number, 
+  longitude: number, 
+  radius: number,
+  customKey?: string
+): string => {
+  if (customKey) {
+    return customKey;
+  }
+  
+  // Round coordinates to reduce cache fragmentation
+  const lat = Math.round(latitude * 100) / 100;
+  const lng = Math.round(longitude * 100) / 100;
+  
+  // Round radius to nearest 100km for better cache hits
+  const roundedRadius = Math.ceil(radius / 100) * 100;
+  
+  return `${lat},${lng},${roundedRadius}`;
+};
+
+/**
+ * Cache location search results
+ * @param latitude Search center latitude
+ * @param longitude Search center longitude
+ * @param radius Search radius in km
+ * @param locations Location results to cache
+ * @param customKey Optional custom cache key
  */
 export function cacheLocationSearch(
   latitude: number,
   longitude: number,
   radius: number,
-  data: SharedAstroSpot[],
-  cacheKey?: string
+  locations: SharedAstroSpot[],
+  customKey?: string
 ): void {
-  try {
-    // Generate cache key if not provided
-    const key = cacheKey || `${latitude.toFixed(2)},${longitude.toFixed(2)},${radius}`;
-    
-    // Add timestamp to track cache freshness
-    searchCache.set(key, {
-      data,
-      timestamp: Date.now(),
-      latitude,
-      longitude,
-      radius
-    });
-    
-    // Evict oldest entries if cache gets too large
-    if (searchCache.size > MAX_CACHE_SIZE) {
-      const oldestKey = findOldestCacheKey();
-      if (oldestKey) {
-        searchCache.delete(oldestKey);
-      }
-    }
-  } catch (error) {
-    console.error("Error caching location search:", error);
-  }
+  const key = generateCacheKey(latitude, longitude, radius, customKey);
+  const now = Date.now();
+  
+  locationSearchCache[key] = {
+    locations,
+    timestamp: now,
+    expiresAt: now + CACHE_EXPIRATION_MS
+  };
+  
+  console.log(`Cached ${locations.length} locations with key ${key}`);
 }
 
 /**
- * Find the oldest entry in the cache
- * @returns The key of the oldest cache entry or null if cache is empty
- */
-function findOldestCacheKey(): string | null {
-  if (searchCache.size === 0) return null;
-  
-  let oldestKey: string | null = null;
-  let oldestTime = Infinity;
-  
-  for (const [key, value] of searchCache.entries()) {
-    if (value.timestamp < oldestTime) {
-      oldestTime = value.timestamp;
-      oldestKey = key;
-    }
-  }
-  
-  return oldestKey;
-}
-
-/**
- * Get cached location search results
- * @param latitude - Search center latitude
- * @param longitude - Search center longitude
- * @param radius - Search radius in km
- * @param cacheKey - Optional custom cache key
- * @returns Cached location data or null if not found or expired
+ * Get cached location search results if available and not expired
+ * @param latitude Search center latitude
+ * @param longitude Search center longitude
+ * @param radius Search radius in km
+ * @param customKey Optional custom cache key
+ * @returns Cached locations or null if cache miss or expired
  */
 export function getCachedLocationSearch(
   latitude: number,
   longitude: number,
   radius: number,
-  cacheKey?: string
+  customKey?: string
 ): SharedAstroSpot[] | null {
-  try {
-    // Try custom key first if provided
-    if (cacheKey && searchCache.has(cacheKey)) {
-      const cached = searchCache.get(cacheKey);
-      
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
-      }
-    }
-    
-    // Then try standard key
-    const standardKey = `${latitude.toFixed(2)},${longitude.toFixed(2)},${radius}`;
-    
-    if (searchCache.has(standardKey)) {
-      const cached = searchCache.get(standardKey);
-      
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
-      }
-    }
-    
-    // Check if we have a close-enough match with a larger radius
-    for (const [key, value] of searchCache.entries()) {
-      // Skip expired entries
-      if (Date.now() - value.timestamp >= CACHE_DURATION) continue;
-      
-      // If we have a larger radius that covers this search
-      if (value.radius >= radius && 
-          Math.abs(value.latitude - latitude) < 0.1 && 
-          Math.abs(value.longitude - longitude) < 0.1) {
-        
-        // Filter results by actual radius
-        return value.data.filter(loc => 
-          loc.distance !== undefined && loc.distance <= radius
-        );
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.error("Error retrieving cached location search:", error);
+  const key = generateCacheKey(latitude, longitude, radius, customKey);
+  const cacheEntry = locationSearchCache[key];
+  
+  if (!cacheEntry) {
     return null;
   }
+  
+  // Check if cache has expired
+  if (Date.now() > cacheEntry.expiresAt) {
+    console.log(`Cache expired for key ${key}`);
+    delete locationSearchCache[key];
+    return null;
+  }
+  
+  return cacheEntry.locations;
 }
 
 /**
- * Clear all location search caches
+ * Clear all cached location search results
  */
 export function clearLocationSearchCache(): void {
-  searchCache.clear();
+  Object.keys(locationSearchCache).forEach(key => {
+    delete locationSearchCache[key];
+  });
+  console.log("Location search cache cleared");
 }
 
 /**
- * Remove expired entries from cache
+ * Clear specific cached location search
+ * @param latitude Search center latitude
+ * @param longitude Search center longitude
+ * @param radius Search radius in km
+ * @param customKey Optional custom cache key
  */
-export function cleanExpiredCache(): void {
-  const now = Date.now();
+export function clearSpecificLocationCache(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  customKey?: string
+): void {
+  const key = generateCacheKey(latitude, longitude, radius, customKey);
   
-  for (const [key, value] of searchCache.entries()) {
-    if (now - value.timestamp >= CACHE_DURATION) {
-      searchCache.delete(key);
-    }
+  if (locationSearchCache[key]) {
+    delete locationSearchCache[key];
+    console.log(`Cleared cache for key ${key}`);
   }
 }
-
-// Clean expired cache entries automatically every 10 minutes
-setInterval(cleanExpiredCache, 10 * 60 * 1000);
