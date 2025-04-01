@@ -52,11 +52,12 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
         </div>
       }>
         <LazyMapComponent
-          latitude={memoizedPosition[0]}
-          longitude={memoizedPosition[1]}
-          zoom={13}
-          markerLatitude={memoizedPosition[0]}
-          markerLongitude={memoizedPosition[1]}
+          position={memoizedPosition}
+          locationName={displayName}
+          editable={editable}
+          onMapReady={onMapReady}
+          onMapClick={onMapClick}
+          showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
         />

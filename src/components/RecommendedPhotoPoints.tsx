@@ -4,7 +4,7 @@ import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Button } from "./ui/button";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, MapPin, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,10 +34,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: Math.max(limit * 2, 10) // Increased to get more locations, especially certified ones
+    maxInitialResults: limit
   });
 
-  // Show more locations with priority to certified ones
+  // Only show limited number of locations
   const limitedLocations = useMemo(() => {
     // Prioritize certified locations 
     const certified = displayedLocations.filter(loc => 
@@ -48,24 +48,14 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       !loc.isDarkSkyReserve && !loc.certification
     );
     
-    // Take all certified locations up to the limit
-    // If there's still room, add calculated locations
-    let result = [];
+    // Combine with certified locations first, then add non-certified
+    // to fill up to the limit
+    const sortedLocations = [
+      ...certified,
+      ...nonCertified
+    ].slice(0, limit);
     
-    if (certified.length <= limit) {
-      // If we have fewer certified locations than the limit,
-      // include all certified and fill the rest with non-certified
-      result = [
-        ...certified,
-        ...nonCertified.slice(0, limit - certified.length)
-      ];
-    } else {
-      // If we have more certified locations than the limit,
-      // just take the limit number of certified locations
-      result = certified.slice(0, limit);
-    }
-    
-    return result;
+    return sortedLocations;
   }, [displayedLocations, limit]);
 
   if (loading) {
