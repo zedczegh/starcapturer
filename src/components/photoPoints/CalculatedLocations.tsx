@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
@@ -7,6 +7,7 @@ import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -16,6 +17,10 @@ interface CalculatedLocationsProps {
   onRefresh?: () => void;
   searchRadius?: number;
   initialLoad?: boolean;
+  onLoadMoreCalculated?: () => void;
+  canLoadMoreCalculated?: boolean;
+  loadMoreClickCount?: number;
+  maxLoadMoreClicks?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -25,10 +30,15 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMore,
   onRefresh,
   searchRadius = 0,
-  initialLoad = false
+  initialLoad = false,
+  onLoadMoreCalculated,
+  canLoadMoreCalculated = false,
+  loadMoreClickCount = 0,
+  maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const [showLoadMoreCalc, setShowLoadMoreCalc] = useState(false);
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
@@ -37,6 +47,15 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const sortedLocations = [...validLocations].sort((a, b) => 
     (a.distance || Infinity) - (b.distance || Infinity)
   );
+  
+  // Determine whether to show the calculated load more button
+  useEffect(() => {
+    if (onLoadMoreCalculated && canLoadMoreCalculated && loadMoreClickCount < maxLoadMoreClicks) {
+      setShowLoadMoreCalc(true);
+    } else {
+      setShowLoadMoreCalc(false);
+    }
+  }, [onLoadMoreCalculated, canLoadMoreCalculated, loadMoreClickCount, maxLoadMoreClicks]);
   
   // Add event listener for expanding search radius
   useEffect(() => {
@@ -64,6 +83,27 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         staggerChildren: isMobile ? 0.05 : 0.1,
         when: "beforeChildren" 
       } 
+    }
+  };
+  
+  // Handle load more calculated locations
+  const handleLoadMoreCalculated = () => {
+    if (onLoadMoreCalculated) {
+      onLoadMoreCalculated();
+      
+      // Show progress to the user
+      const remainingClicks = maxLoadMoreClicks - loadMoreClickCount - 1;
+      if (remainingClicks > 0) {
+        toast.info(t(
+          `Loading more locations... (${remainingClicks} more loads available)`,
+          `正在加载更多位置...（还可以加载${remainingClicks}次）`
+        ));
+      } else {
+        toast.info(t(
+          "Loading final batch of locations...",
+          "正在加载最后一批位置..."
+        ));
+      }
     }
   };
   
@@ -157,6 +197,21 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         ))}
       </motion.div>
       
+      {/* New button for loading more calculated locations */}
+      {showLoadMoreCalc && (
+        <div className="flex justify-center mt-8">
+          <Button 
+            variant="default" 
+            onClick={handleLoadMoreCalculated}
+            className="group sci-fi-btn bg-cosmic-700/80 hover:bg-cosmic-600/90 transition-all duration-300"
+          >
+            {t("Find More Locations", "查找更多位置")}
+            <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+      )}
+      
+      {/* Original load more button for pagination */}
       {hasMore && (
         <div className="flex justify-center mt-8">
           <Button 

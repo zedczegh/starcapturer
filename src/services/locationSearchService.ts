@@ -382,6 +382,7 @@ function generateCalculatedSpots(
     
     // Filter out water locations
     if (isWaterLocation(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected water location at ${randomPoint.latitude}, ${randomPoint.longitude}`);
       continue;
     }
     

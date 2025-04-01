@@ -3,9 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   findLocationsWithinRadius, 
-  findCertifiedLocations, 
-  findCalculatedLocations,
-  sortLocationsByQuality
+  sortLocationsByQuality,
+  findCalculatedLocations
 } from '@/services/locationSearchService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,6 +13,9 @@ interface Location {
   latitude: number;
   longitude: number;
 }
+
+// Maximum number of "load more" clicks allowed
+const MAX_LOAD_MORE_CLICKS = 2;
 
 export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
@@ -24,6 +26,10 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const [page, setPage] = useState<number>(1);
   const prevRadiusRef = useRef<number>(searchRadius);
   const prevLocationRef = useRef<Location | null>(userLocation);
+  
+  // New state for "load more calculated" functionality
+  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
+  const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
   // Function to load locations
   const loadLocations = useCallback(async () => {
@@ -49,37 +55,32 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       
       if (results.length === 0) {
         console.log("No locations found, trying to expand search...");
-        // If no results at all, try to find some certified locations
-        const certifiedResults = await findCertifiedLocations(
-          userLocation.latitude,
-          userLocation.longitude,
-          Math.min(searchRadius * 1.5, 10000)
-        );
-        
-        // And also try to find calculated locations
+        // If no results at all, try to find some calculated locations
         const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
           Math.min(searchRadius * 1.5, 10000)
         );
         
-        // Combine results
-        const combinedResults = [...certifiedResults, ...calculatedResults];
-        
-        if (combinedResults.length > 0) {
+        if (calculatedResults.length > 0) {
           // Sort by quality and distance
-          const sortedResults = sortLocationsByQuality(combinedResults);
+          const sortedResults = sortLocationsByQuality(calculatedResults);
           setLocations(sortedResults);
           setHasMore(sortedResults.length >= 20);
+          setCanLoadMoreCalculated(true);
+          setLoadMoreClickCount(0); // Reset click counter
         } else {
           setLocations([]);
           setHasMore(false);
+          setCanLoadMoreCalculated(false);
         }
       } else {
         // Sort by quality and distance
         const sortedResults = sortLocationsByQuality(results);
         setLocations(sortedResults);
         setHasMore(sortedResults.length >= 20);
+        setCanLoadMoreCalculated(true);
+        setLoadMoreClickCount(0); // Reset click counter
       }
       
       setPage(1);
@@ -91,6 +92,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       ));
       setLocations([]);
       setHasMore(false);
+      setCanLoadMoreCalculated(false);
     } finally {
       setLoading(false);
     }
@@ -138,6 +140,69 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       setLoading(false);
     }
   }, [hasMore, locations, page, searchRadius, userLocation, t]);
+  
+  // Load more calculated locations (new function)
+  const loadMoreCalculatedLocations = useCallback(async () => {
+    if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
+      
+      // Get more calculated locations
+      const calculatedResults = await findCalculatedLocations(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius,
+        true, // Allow radius expansion
+        10 // Get 10 more locations
+      );
+      
+      // Filter out locations we already have
+      const existingIds = new Set(locations.map(loc => loc.id));
+      const newResults = calculatedResults.filter(loc => !existingIds.has(loc.id));
+      
+      if (newResults.length > 0) {
+        // Sort by quality and distance
+        const allLocations = [...locations, ...newResults];
+        const sortedResults = sortLocationsByQuality(allLocations);
+        
+        setLocations(sortedResults);
+        
+        // Increment click counter
+        const newClickCount = loadMoreClickCount + 1;
+        setLoadMoreClickCount(newClickCount);
+        
+        // Check if we've reached the limit
+        if (newClickCount >= MAX_LOAD_MORE_CLICKS) {
+          setCanLoadMoreCalculated(false);
+        }
+        
+        toast.success(t(
+          `Added ${newResults.length} more locations`,
+          `添加了${newResults.length}个更多位置`
+        ));
+      } else {
+        toast.info(t(
+          "No more unique locations found",
+          "未找到更多独特位置"
+        ));
+        
+        // Disable button if we can't find more locations
+        setCanLoadMoreCalculated(false);
+      }
+    } catch (error) {
+      console.error("Error loading more calculated locations:", error);
+      toast.error(t(
+        "Failed to load more locations",
+        "加载更多位置失败"
+      ));
+    } finally {
+      setLoading(false);
+    }
+  }, [loadMoreClickCount, locations, searchRadius, t, userLocation]);
   
   // Refresh SIQS data for locations
   const refreshSiqsData = useCallback(async () => {
@@ -194,6 +259,11 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     loading,
     hasMore,
     loadMore,
-    refreshSiqsData
+    refreshSiqsData,
+    // New properties for load more calculated functionality
+    canLoadMoreCalculated,
+    loadMoreCalculatedLocations,
+    loadMoreClickCount,
+    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS
   };
 };

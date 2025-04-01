@@ -34,7 +34,11 @@ const PhotoPointsNearby: React.FC = () => {
     loading,
     hasMore,
     loadMore,
-    refreshSiqsData
+    refreshSiqsData,
+    canLoadMoreCalculated,
+    loadMoreCalculatedLocations,
+    loadMoreClickCount,
+    maxLoadMoreClicks
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -171,6 +175,10 @@ const PhotoPointsNearby: React.FC = () => {
                 onRefresh={refreshSiqsData}
                 searchRadius={searchRadius}
                 initialLoad={initialLoad}
+                onLoadMoreCalculated={loadMoreCalculatedLocations}
+                canLoadMoreCalculated={canLoadMoreCalculated}
+                loadMoreClickCount={loadMoreClickCount}
+                maxLoadMoreClicks={maxLoadMoreClicks}
               />
             )}
           </div>

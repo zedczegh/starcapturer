@@ -48,6 +48,25 @@ export const normalizeMoonPhase = (phase: string | number): string => {
   return phase; // If it's already a string, return as is
 };
 
+// Validate weather data to ensure it's complete and has valid values
+const validateWeatherData = (data: any) => {
+  const isValid = data && 
+    typeof data.temperature === 'number' &&
+    typeof data.humidity === 'number' &&
+    typeof data.cloudCover === 'number' &&
+    typeof data.windSpeed === 'number' &&
+    typeof data.precipitation === 'number' &&
+    typeof data.time === 'string' &&
+    typeof data.condition === 'string';
+  
+  if (!isValid) {
+    console.error("Invalid weather data detected:", data);
+    return false;
+  }
+  
+  return true;
+};
+
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   weatherData,
   moonPhase,
@@ -60,14 +79,10 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   // Ensure weather data is stable and validated
   useEffect(() => {
     // Only update stable weather data if we have valid new data
-    if (
-      weatherData && 
-      typeof weatherData.temperature === 'number' &&
-      typeof weatherData.humidity === 'number' &&
-      typeof weatherData.cloudCover === 'number' &&
-      typeof weatherData.windSpeed === 'number'
-    ) {
+    if (validateWeatherData(weatherData)) {
       setStableWeatherData(weatherData);
+    } else {
+      console.warn("Received invalid weather data, keeping previous stable data");
     }
   }, [weatherData]);
   
