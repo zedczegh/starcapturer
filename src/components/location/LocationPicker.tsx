@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,42 +24,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     timeout: 10000,
     language: language
   });
-
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [locationError, setLocationError] = useState(null);
-
-  const handleGetLocation = () => {
-    setLocationLoading(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoordinates({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        });
-        setLocationLoading(false);
-      },
-      (error) => {
-        setLocationError(error);
-        setLocationLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  };
-
+  
   const handleUseCurrentLocation = async () => {
     getPosition();
   };
-
+  
   const formatCoordinate = (value: number, isLatitude: boolean) => {
     return `${value.toFixed(6)}° ${isLatitude ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W')}`;
   };
-
+  
   return (
     <div className={className}>
       <div className="grid grid-cols-1 gap-4">
