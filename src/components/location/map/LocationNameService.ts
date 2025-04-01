@@ -1,9 +1,8 @@
-
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestLocation } from "@/data/locationDatabase";
 import type { Language } from "@/services/geocoding/types";
 import { enhanceRemoteLocationName, identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
-import { formatLocationName } from "@/utils/locationNameFormatter";
+import { formatLocationName, getRegionalName } from "@/utils/locationNameFormatter";
 
 export type LocationCacheService = {
   setCachedData: (key: string, data: any) => void;
@@ -60,7 +59,16 @@ export async function getLocationNameForCoordinates(
       // If we get coordinates back or "Location at", try to improve the result
       if (finalName.includes("°") || finalName.includes("Location at") || finalName.includes("位置在") || 
           finalName.includes("Remote area") || finalName.includes("偏远地区")) {
-        if (isRemoteRegion) {
+        
+        // For remote regions, use directional naming (like "Northwest Yunnan")
+        const regionalName = getRegionalName(latitude, longitude, language);
+        
+        // If we got a valid regional name, use it
+        if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
+          finalName = regionalName;
+        } 
+        // Otherwise fallback to other methods
+        else if (isRemoteRegion) {
           finalName = enhanceRemoteLocationName(latitude, normalizedLng, null, language);
         } else {
           // Try database fallback
@@ -90,6 +98,20 @@ export async function getLocationNameForCoordinates(
     }
   } catch (error) {
     console.error("Error in getLocationNameForCoordinates:", error);
+    
+    // Use directional naming for remote regions
+    const regionalName = getRegionalName(latitude, longitude, language);
+    
+    // If we got a valid regional name, use it and cache it
+    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
+      // Cache this result too
+      if (cacheService) {
+        const fallbackCacheKey = `loc-name-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`;
+        cacheService.setCachedData(fallbackCacheKey, regionalName);
+      }
+      
+      return regionalName;
+    }
     
     // Special handling for remote regions
     const isRemoteRegion = identifyRemoteRegion(latitude, longitude);

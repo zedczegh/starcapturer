@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +11,7 @@ import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
 import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { getLocationNameForCoordinates } from '@/components/location/map/LocationNameService';
-import { extractNearestTownName } from '@/utils/locationNameFormatter';
+import { extractNearestTownName, getRegionalName } from '@/utils/locationNameFormatter';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -73,6 +74,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
             
             const extractedName = extractNearestTownName(location.name, location.description, language);
             setNearestTown(extractedName);
+            setLoadingTown(false);
+            return;
+          }
+          
+          // Try directional region naming first (e.g., "Northwest Yunnan")
+          const regionalName = getRegionalName(location.latitude, location.longitude, language);
+          
+          // If we got a valid region name, use it
+          if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
+            setNearestTown(regionalName);
             setLoadingTown(false);
             return;
           }

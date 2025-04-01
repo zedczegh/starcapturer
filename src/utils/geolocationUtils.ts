@@ -4,7 +4,7 @@
  * Note: The language property is not part of the standard GeolocationOptions
  * but we need it for our application's language handling
  */
-export interface ExtendedGeolocationOptions extends Omit<GeolocationOptions, 'language'> {
+export interface ExtendedGeolocationOptions extends Omit<PositionOptions, 'language'> {
   language?: string;
 }
 
@@ -12,7 +12,7 @@ export interface ExtendedGeolocationOptions extends Omit<GeolocationOptions, 'la
  * Convert our extended options to standard GeolocationOptions
  * by removing any non-standard properties
  */
-export function toStandardGeolocationOptions(options: ExtendedGeolocationOptions): GeolocationOptions {
+export function toStandardGeolocationOptions(options: ExtendedGeolocationOptions): PositionOptions {
   // Extract only the properties that are part of the standard GeolocationOptions
   const { enableHighAccuracy, timeout, maximumAge } = options;
   
