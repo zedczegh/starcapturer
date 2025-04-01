@@ -49,15 +49,36 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         if (points && points.length > 0) {
           const pointsWithSiqs = await batchCalculateSiqs(points);
           
+          // batchCalculateSiqs already filters out SIQS=0 locations
           let filteredPoints = pointsWithSiqs;
+          
           if (preferCertified) {
             const certifiedPoints = filteredPoints.filter(p => p.isDarkSkyReserve || p.certification);
             filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
           }
           
-          filteredPoints.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+          // First sort by distance (closest first)
+          filteredPoints.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
           
-          setRecommendedPoints(filteredPoints.slice(0, 5));
+          // Then sort by SIQS score within similar distance ranges (grouped by 50km)
+          filteredPoints = filteredPoints.reduce((acc, point) => {
+            const distanceGroup = Math.floor((point.distance || 0) / 50);
+            if (!acc[distanceGroup]) acc[distanceGroup] = [];
+            acc[distanceGroup].push(point);
+            return acc;
+          }, {} as Record<number, SharedAstroSpot[]>);
+          
+          // Sort each distance group by SIQS
+          Object.keys(filteredPoints).forEach(group => {
+            filteredPoints[Number(group)].sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+          });
+          
+          // Flatten the groups back to an array
+          const sortedPoints = Object.keys(filteredPoints)
+            .sort((a, b) => Number(a) - Number(b))
+            .flatMap(group => filteredPoints[Number(group)]);
+          
+          setRecommendedPoints(sortedPoints.slice(0, 5));
         } else {
           setRecommendedPoints([]);
         }

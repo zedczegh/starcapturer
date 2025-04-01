@@ -2,7 +2,6 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 export const useSiqsNavigation = () => {
   const navigate = useNavigate();
