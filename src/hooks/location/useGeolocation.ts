@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface GeolocationOptions {
@@ -9,7 +9,7 @@ interface GeolocationOptions {
   language: string;
 }
 
-export const useGeolocation = (options: GeolocationOptions = { language: 'en' }) => {
+export const useGeolocation = (options: GeolocationOptions) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -75,7 +75,7 @@ export const useGeolocation = (options: GeolocationOptions = { language: 'en' })
     });
   };
 
-  const getPosition = useCallback(() => {
+  const getPosition = () => {
     if (!navigator.geolocation) {
       const message = language === 'en' 
         ? "Your browser doesn't support geolocation. Please enter coordinates manually."
@@ -106,7 +106,7 @@ export const useGeolocation = (options: GeolocationOptions = { language: 'en' })
         maximumAge: options.maximumAge || 0
       }
     );
-  }, [language, loading, options.enableHighAccuracy, options.maximumAge, options.timeout, toast]);
+  };
 
   // Cleanup on unmount
   useEffect(() => {

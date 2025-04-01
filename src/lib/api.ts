@@ -25,3 +25,17 @@ export {
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
+
+// Function to get recommended photo points based on user location
+// This is a shorthand for getRecommendedPhotoPoints
+export const getRecommendedPhotoPoints = async (
+  latitude: number, 
+  longitude: number, 
+  radius = 100, 
+  certifiedOnly = false, 
+  limit = 30
+) => {
+  // Use the getRecommendedPhotoPoints function from astroSpots module
+  const { getRecommendedPhotoPoints: getPoints } = await import('./api/astroSpots');
+  return getPoints(latitude, longitude, radius, certifiedOnly, limit);
+};

@@ -1,124 +1,133 @@
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateDistance } from "@/data/utils/distanceCalculator";
-import { getCertifiedLocationsNearby, getAllCertifiedLocations } from "./darkSkyLocationService";
-import { getCachedLocationSearch, cacheLocationSearch } from "./locationCacheService";
-import { findCalculatedLocations } from "./locationCalculationService";
+/**
+ * Service for performing radius-based location searches
+ * Focuses on finding the best locations for astronomy viewing within a radius
+ */
+
+import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
+import { calculateRealTimeSiqs, batchCalculateSiqs } from '@/services/realTimeSiqsService';
+import { getCachedLocationSearch, cacheLocationSearch } from '@/services/locationCacheService';
 
 /**
- * Find certified and calculated locations within a specified radius
+ * Find all locations within a radius of a center point
  * @param latitude Center latitude
  * @param longitude Center longitude
  * @param radius Search radius in km
- * @param onlyCertified Return only certified dark sky locations
- * @returns Array of locations within the radius, sorted by distance
+ * @param certifiedOnly Whether to return only certified locations
+ * @returns Promise resolving to array of SharedAstroSpot
  */
-export const findLocationsWithinRadius = async (
+export async function findLocationsWithinRadius(
   latitude: number,
   longitude: number,
   radius: number,
-  onlyCertified: boolean = false
-): Promise<SharedAstroSpot[]> => {
-  // First try to get from cache
-  const cachedResults = getCachedLocationSearch(latitude, longitude, radius);
-  if (cachedResults) {
-    return onlyCertified 
-      ? cachedResults.filter(loc => loc.isDarkSkyReserve || loc.certification)
-      : cachedResults;
-  }
-  
-  // Get certified dark sky locations
-  const certifiedLocations = getCertifiedLocationsNearby(latitude, longitude, radius);
-  
-  // If only certified locations are requested, return them immediately
-  if (onlyCertified) {
-    return certifiedLocations;
-  }
-  
-  // Get additional calculated locations
-  const calculatedLocations = await findCalculatedLocations(latitude, longitude, radius, false);
-  
-  // Combine certified and calculated locations, ensuring no duplicates
-  const allLocations = [...certifiedLocations];
-  
-  // Create a set of certified location IDs for fast lookups
-  const certifiedIds = new Set(certifiedLocations.map(loc => loc.id));
-  
-  // Add calculated locations that aren't duplicates
-  calculatedLocations.forEach(calcLoc => {
-    if (!certifiedIds.has(calcLoc.id)) {
-      allLocations.push(calcLoc);
+  certifiedOnly: boolean = false
+): Promise<SharedAstroSpot[]> {
+  try {
+    // Check cache first
+    const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly}`;
+    const cachedData = getCachedLocationSearch(latitude, longitude, radius);
+    
+    if (cachedData) {
+      return cachedData;
     }
-  });
-  
-  // Sort locations by distance
-  allLocations.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-  
-  // Cache the results for future use
-  cacheLocationSearch(latitude, longitude, radius, allLocations);
-  
-  return allLocations;
-};
+    
+    console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    
+    // Get recommended points within the specified radius
+    const points = await getRecommendedPhotoPoints(
+      latitude, 
+      longitude, 
+      radius,
+      certifiedOnly
+    );
+    
+    if (!points || points.length === 0) {
+      console.log("No photo points found within radius");
+      return [];
+    }
+    
+    // Cache the results
+    cacheLocationSearch(latitude, longitude, radius, points);
+    
+    return points;
+  } catch (error) {
+    console.error("Error finding locations within radius:", error);
+    return [];
+  }
+}
 
 /**
- * Get all known locations within a radius for filtering
+ * Enhanced search for calculated locations with fallback
  * @param latitude Center latitude
  * @param longitude Center longitude
  * @param radius Search radius in km
- * @returns Object with certified and calculated locations
+ * @param tryLargerRadius Whether to try a larger radius if no results found
+ * @returns Promise resolving to array of SharedAstroSpot
  */
-export const getAllLocationsWithinRadius = async (
+export async function findCalculatedLocations(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  tryLargerRadius: boolean = true
+): Promise<SharedAstroSpot[]> {
+  try {
+    // First try the specified radius
+    const points = await findLocationsWithinRadius(latitude, longitude, radius, false);
+    
+    // Filter out certified locations to get only calculated ones
+    const calculatedPoints = points.filter(point => 
+      !point.isDarkSkyReserve && !point.certification
+    );
+    
+    if (calculatedPoints.length > 0) {
+      // Calculate SIQS scores for these locations
+      return await batchCalculateSiqs(calculatedPoints);
+    }
+    
+    // If no calculated points found and we can try larger radius
+    if (tryLargerRadius && radius < 10000) {
+      console.log(`No calculated locations found within ${radius}km, trying larger radius`);
+      // Double the radius but cap at 10000km
+      const newRadius = Math.min(radius * 2, 10000);
+      return findCalculatedLocations(latitude, longitude, newRadius, false);
+    }
+    
+    return [];
+  } catch (error) {
+    console.error("Error finding calculated locations:", error);
+    return [];
+  }
+}
+
+/**
+ * Find certified Dark Sky locations within radius
+ * @param latitude Center latitude
+ * @param longitude Center longitude 
+ * @param radius Search radius in km
+ * @returns Promise resolving to array of SharedAstroSpot
+ */
+export async function findCertifiedLocations(
   latitude: number,
   longitude: number,
   radius: number
-): Promise<{
-  certified: SharedAstroSpot[];
-  calculated: SharedAstroSpot[];
-}> => {
-  // Get all certified locations
-  const allCertified = getAllCertifiedLocations();
-  
-  // Filter by radius and add distance
-  const certifiedWithDistance = allCertified.map(loc => {
-    const distance = calculateDistance(
-      latitude,
-      longitude,
-      loc.latitude,
-      loc.longitude
+): Promise<SharedAstroSpot[]> {
+  try {
+    // Get all locations including certified ones
+    const points = await findLocationsWithinRadius(latitude, longitude, radius, false);
+    
+    // Filter to get only certified locations
+    const certifiedPoints = points.filter(point => 
+      point.isDarkSkyReserve || point.certification
     );
     
-    return {
-      ...loc,
-      distance
-    };
-  }).filter(loc => loc.distance <= radius);
-  
-  // Get calculated locations
-  const calculatedLocations = await findCalculatedLocations(
-    latitude,
-    longitude,
-    radius,
-    false
-  );
-  
-  // Filter out any calculated locations that match certified ones
-  const certifiedCoords = new Set(
-    certifiedWithDistance.map(loc => `${loc.latitude.toFixed(3)},${loc.longitude.toFixed(3)}`)
-  );
-  
-  const uniqueCalculated = calculatedLocations.filter(loc => {
-    const coordKey = `${loc.latitude.toFixed(3)},${loc.longitude.toFixed(3)}`;
-    return !certifiedCoords.has(coordKey);
-  });
-  
-  console.log(`Processing ${certifiedWithDistance.length + uniqueCalculated.length} locations for certified/calculated separation with radius: ${radius}km`);
-  console.log(`Found ${certifiedWithDistance.length} certified and ${uniqueCalculated.length} calculated locations with radius: ${radius}km`);
-  
-  return {
-    certified: certifiedWithDistance,
-    calculated: uniqueCalculated
-  };
-};
-
-// Re-export from calculation service
-export { findCalculatedLocations } from './locationCalculationService';
+    if (certifiedPoints.length > 0) {
+      // Calculate SIQS scores for these locations
+      return await batchCalculateSiqs(certifiedPoints);
+    }
+    
+    return [];
+  } catch (error) {
+    console.error("Error finding certified locations:", error);
+    return [];
+  }
+}

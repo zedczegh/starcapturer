@@ -1,5 +1,5 @@
 
-import React, { useEffect, memo } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
@@ -16,8 +16,7 @@ interface CalculatedLocationsProps {
   searchRadius?: number;
 }
 
-// Memoized component to prevent unnecessary re-renders
-const CalculatedLocations: React.FC<CalculatedLocationsProps> = memo(({ 
+const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
   locations, 
   loading, 
   hasMore, 
@@ -27,30 +26,12 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = memo(({
 }) => {
   const { t } = useLanguage();
   
-  // Add event listener for expanding search radius
-  useEffect(() => {
-    const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
-      if (onRefresh) {
-        document.dispatchEvent(new CustomEvent('set-search-radius', { 
-          detail: { radius: e.detail.radius } 
-        }));
-        setTimeout(onRefresh, 100);
-      }
-    };
-    
-    document.addEventListener('expand-search-radius', handleExpandRadius as EventListener);
-    
-    return () => {
-      document.removeEventListener('expand-search-radius', handleExpandRadius as EventListener);
-    };
-  }, [onRefresh]);
-  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.05, // Reduced for faster animation
+        staggerChildren: 0.1,
         when: "beforeChildren" 
       } 
     }
@@ -110,11 +91,9 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = memo(({
                 size="sm"
                 className="text-xs text-muted-foreground"
                 onClick={() => {
-                  // Trigger custom event to expand search radius
-                  const newRadius = Math.min(10000, searchRadius * 2);
-                  document.dispatchEvent(new CustomEvent('expand-search-radius', { 
-                    detail: { radius: newRadius } 
-                  }));
+                  // We can't directly access setSearchRadius here, so we use a custom event
+                  const event = new CustomEvent('expand-search-radius', { detail: { radius: Math.min(10000, searchRadius * 2) } });
+                  document.dispatchEvent(event);
                 }}
               >
                 <Search className="mr-1.5 h-3 w-3" />
@@ -173,6 +152,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = memo(({
       )}
     </>
   );
-});
+};
 
 export default CalculatedLocations;

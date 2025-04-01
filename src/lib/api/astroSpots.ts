@@ -1,3 +1,4 @@
+
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -26,11 +27,6 @@ export interface SharedAstroSpot {
   isDarkSkyReserve?: boolean;
   certification?: string;
   photographer?: string;
-  cloudCover?: number;
-  visibility?: number;
-  county?: string;
-  state?: string;
-  country?: string;
 }
 
 /**
@@ -121,9 +117,7 @@ export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | 
       timestamp: new Date().toISOString(),
       isDarkSkyReserve: id.includes('reserve'),
       certification: id.includes('certified') ? "International Dark Sky Park" : undefined,
-      photographer: "John Doe",
-      cloudCover: 0.5,
-      visibility: 10
+      photographer: "John Doe"
     };
   } catch (error) {
     console.error('Error fetching shared astronomy spot:', error);
@@ -166,7 +160,7 @@ export async function shareAstroSpot(spot: Omit<SharedAstroSpot, 'id'>): Promise
  * @param radiusKm - Search radius in kilometers
  * @returns Array of SharedAstroSpot
  */
-export function getCertifiedLocationsNearby(
+function getCertifiedLocationsNearby(
   centerLat: number,
   centerLng: number,
   radiusKm: number
@@ -182,36 +176,8 @@ export function getCertifiedLocationsNearby(
     'urban-night-sky-place': 'Urban Night Sky Place'
   };
   
-  // Sample locations with county, state, and country
-  const sampleLocations = [
-    {
-      name: "Cherry Springs State Park",
-      coordinates: [41.6626, -77.8287],
-      bortleScale: 2,
-      county: "Potter County",
-      state: "Pennsylvania",
-      country: "USA"
-    },
-    {
-      name: "NamibRand Nature Reserve",
-      coordinates: [-25.0000, 16.0000],
-      bortleScale: 1,
-      county: "Hardap Region",
-      state: "Namibia",
-      country: "Africa"
-    },
-    {
-      name: "Aoraki Mackenzie",
-      coordinates: [-43.7500, 170.1000],
-      bortleScale: 2,
-      county: "Canterbury",
-      state: "South Island",
-      country: "New Zealand"
-    }
-  ];
-  
-  // Create locations from sample data for demo purposes
-  for (const location of sampleLocations) {
+  // Go through our database of real Dark Sky locations
+  for (const location of darkSkyLocations) {
     const distance = calculateDistance(
       centerLat, 
       centerLng, 
@@ -220,7 +186,31 @@ export function getCertifiedLocationsNearby(
     );
     
     if (distance <= radiusKm) {
+      // Determine certification type based on location name or type
+      let certification = '';
+      let isDarkSkyReserve = false;
+      
+      const lowerName = location.name.toLowerCase();
+      
+      if (lowerName.includes('sanctuary') || lowerName.includes('wildernes')) {
+        certification = certificationTypes['dark-sky-sanctuary'];
+      } else if (lowerName.includes('reserve')) {
+        certification = certificationTypes['dark-sky-reserve'];
+        isDarkSkyReserve = true;
+      } else if (lowerName.includes('community') || 
+                lowerName.includes('village') || 
+                lowerName.includes('town') ||
+                lowerName.includes('city')) {
+        certification = certificationTypes['dark-sky-community'];
+      } else if (lowerName.includes('urban')) {
+        certification = certificationTypes['urban-night-sky-place'];
+      } else {
+        // Default to park for national parks, state parks, etc.
+        certification = certificationTypes['dark-sky-park'];
+      }
+      
       // Calculate a realistic SIQS score based on Bortle scale
+      // Dark Sky locations tend to have excellent sky quality
       const baseSiqs = 10 - location.bortleScale;
       // Add some variability but keep scores high for certified locations
       const siqs = Math.max(7, Math.min(9, baseSiqs + (Math.random() * 1.5)));
@@ -228,6 +218,7 @@ export function getCertifiedLocationsNearby(
       locations.push({
         id: `certified-${locations.length}-${Date.now()}`,
         name: location.name,
+        // Chinese name is transliteration with "Dark Sky" prefix
         chineseName: `暗夜天空 ${location.name}`,
         latitude: location.coordinates[0],
         longitude: location.coordinates[1],
@@ -237,69 +228,13 @@ export function getCertifiedLocationsNearby(
         distance: distance,
         description: `An officially certified dark sky location designated by the International Dark-Sky Association.`,
         timestamp: new Date().toISOString(),
-        isDarkSkyReserve: true,
-        certification: certificationTypes['dark-sky-reserve'],
-        county: location.county,
-        state: location.state,
-        country: location.country
+        isDarkSkyReserve: isDarkSkyReserve,
+        certification: certification
       });
     }
   }
   
   return locations;
-}
-
-/**
- * Get all certified locations
- * @returns Array of SharedAstroSpot
- */
-export function getAllCertifiedLocations(): SharedAstroSpot[] {
-  // Sample locations with county, state, and country
-  const sampleLocations = [
-    {
-      name: "Cherry Springs State Park",
-      coordinates: [41.6626, -77.8287],
-      bortleScale: 2,
-      county: "Potter County",
-      state: "Pennsylvania",
-      country: "USA"
-    },
-    {
-      name: "NamibRand Nature Reserve",
-      coordinates: [-25.0000, 16.0000],
-      bortleScale: 1,
-      county: "Hardap Region",
-      state: "Namibia",
-      country: "Africa"
-    },
-    {
-      name: "Aoraki Mackenzie",
-      coordinates: [-43.7500, 170.1000],
-      bortleScale: 2,
-      county: "Canterbury",
-      state: "South Island",
-      country: "New Zealand"
-    }
-  ];
-  
-  // Create locations from sample data
-  return sampleLocations.map((location, index) => ({
-    id: `certified-${index}-${Date.now()}`,
-    name: location.name,
-    chineseName: `暗夜天空 ${location.name}`,
-    latitude: location.coordinates[0],
-    longitude: location.coordinates[1],
-    bortleScale: location.bortleScale,
-    siqs: 9 - location.bortleScale + (Math.random() * 1),
-    isViable: true,
-    description: `An officially certified dark sky location designated by the International Dark-Sky Association.`,
-    timestamp: new Date().toISOString(),
-    isDarkSkyReserve: true,
-    certification: "International Dark Sky Reserve",
-    county: location.county,
-    state: location.state, 
-    country: location.country
-  }));
 }
 
 /**

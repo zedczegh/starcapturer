@@ -1,32 +1,111 @@
 
-import React, { useState } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Award, MapPin, ArrowRight, CloudSun, Globe } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Star, Award, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import LocationQuality from './LocationQuality';
-import LocationWeatherBadge from './LocationWeatherBadge';
+import { Badge } from '@/components/ui/badge';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
+import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 
-export interface PhotoLocationCardProps {
+interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
   showRealTimeSiqs?: boolean;
 }
 
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ 
-  location, 
-  index,
-  showRealTimeSiqs = false 
-}) => {
-  const { t } = useLanguage();
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, showRealTimeSiqs = false }) => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [realTimeSiqs, setRealTimeSiqs] = useState<number | undefined>(location.siqs);
+  const { language, t } = useLanguage();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [loadingSiqs, setLoadingSiqs] = useState(false);
   
-  // Animation variants for cards
+  // Format the distance for display
+  const formatDistance = (distance?: number) => {
+    if (!distance) return t("Unknown distance", "未知距离");
+    
+    if (distance < 1) {
+      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+    }
+    
+    if (distance < 10) {
+      return t(`${distance.toFixed(1)} km away`, `距离 ${distance.toFixed(1)} 公里`);
+    }
+    
+    return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+  };
+  
+  // Format the date for display
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'zh-CN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).format(date);
+    } catch (error) {
+      return '';
+    }
+  };
+  
+  // Load real-time SIQS data if requested
+  useEffect(() => {
+    if (showRealTimeSiqs && location.latitude && location.longitude) {
+      const fetchSiqs = async () => {
+        setLoadingSiqs(true);
+        try {
+          const result = await calculateRealTimeSiqs(
+            location.latitude,
+            location.longitude,
+            location.bortleScale || 5
+          );
+          
+          setRealTimeSiqs(result.siqs);
+        } catch (error) {
+          console.error("Error fetching real-time SIQS:", error);
+        } finally {
+          setLoadingSiqs(false);
+        }
+      };
+      
+      fetchSiqs();
+    }
+  }, [location, showRealTimeSiqs]);
+
+  // Get display name based on language
+  const displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+  
+  // Get SIQS score to display (real-time or stored)
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
+  
+  const handleViewDetails = () => {
+    // Prepare location data for details page
+    const locationData = {
+      id: location.id,
+      name: displayName,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortleScale,
+      timestamp: new Date().toISOString(),
+      fromPhotoPoints: true,
+      isDarkSkyReserve: location.isDarkSkyReserve,
+      certification: location.certification
+    };
+    
+    // Save to localStorage to ensure proper refresh handling
+    saveLocationFromPhotoPoints(locationData);
+    
+    // Navigate to location details with state
+    navigate(`/location/${location.id}`, { state: { fromPhotoPoints: true, ...locationData } });
+  };
+  
+  // Animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -34,157 +113,67 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       y: 0,
       transition: { 
         duration: 0.4,
-        delay: index * 0.05
+        delay: index * 0.1
       }
-    },
-    hover: { 
-      y: -5,
-      boxShadow: "0 10px 25px rgba(0, 0, 30, 0.2)",
-      transition: { type: "spring", stiffness: 400 }
     }
-  };
-  
-  const handleViewDetails = async () => {
-    setIsLoading(true);
-    
-    try {
-      // If real-time SIQS is requested and not already calculated, get it now
-      let locationWithSiqs = location;
-      
-      if (showRealTimeSiqs && !location.siqs) {
-        locationWithSiqs = await calculateRealTimeSiqs(location);
-        setRealTimeSiqs(locationWithSiqs.siqs);
-      }
-      
-      // Navigate to location details
-      navigate(`/location/${encodeURIComponent(location.id)}`, {
-        state: { 
-          fromPhotoPoints: true,
-          location: locationWithSiqs
-        }
-      });
-    } catch (error) {
-      console.error("Error navigating to location details:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Format distance
-  const formatDistance = (distance?: number) => {
-    if (!distance) return "";
-    
-    if (distance < 1) {
-      return `${(distance * 1000).toFixed(0)}m`;
-    } else if (distance < 10) {
-      return `${distance.toFixed(1)}km`;
-    } else {
-      return `${distance.toFixed(0)}km`;
-    }
-  };
-  
-  // Show certification badge
-  const getCertificationBadge = () => {
-    if (location.isDarkSkyReserve) {
-      return (
-        <div className="absolute top-3 right-3 bg-blue-600/80 text-white px-2 py-1 rounded-md text-xs flex items-center space-x-1">
-          <Award className="h-3 w-3" />
-          <span>{t("Dark Sky Reserve", "国际暗夜保护区")}</span>
-        </div>
-      );
-    } else if (location.certification) {
-      return (
-        <div className="absolute top-3 right-3 bg-blue-600/80 text-white px-2 py-1 rounded-md text-xs flex items-center space-x-1">
-          <Award className="h-3 w-3" />
-          <span>{t("Certified", "认证暗夜地点")}</span>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // Format location details
-  const getLocationDetails = () => {
-    const details = [];
-    
-    if (location.county) details.push(location.county);
-    if (location.state) details.push(location.state);
-    if (location.country) details.push(location.country);
-    
-    if (details.length === 0) return null;
-    
-    return (
-      <div className="flex items-center text-xs text-cosmic-300 mb-2">
-        <Globe className="h-3 w-3 mr-1 flex-shrink-0" />
-        <span className="truncate">{details.join(', ')}</span>
-      </div>
-    );
   };
   
   return (
     <motion.div
       variants={cardVariants}
-      initial="hidden"
-      animate="visible"
-      whileHover="hover"
-      className="relative bg-cosmic-900/80 border border-cosmic-700/50 rounded-xl overflow-hidden glassmorphism-dark"
+      className="glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30"
     >
-      {/* Certification badge */}
-      {getCertificationBadge()}
-      
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-gradient-blue">{location.name}</h3>
-          {location.distance !== undefined && (
-            <span className="text-xs text-cosmic-300 bg-cosmic-800/50 px-2 py-1 rounded flex items-center">
-              <MapPin className="h-3 w-3 mr-1" />
-              {formatDistance(location.distance)}
-            </span>
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-medium line-clamp-1">{displayName}</h3>
+        
+        <div className="flex items-center">
+          {(location.isDarkSkyReserve || location.certification) && (
+            <Badge variant="secondary" className="mr-2 bg-blue-500/20 text-blue-300 border-blue-500/40">
+              <Award className="h-3 w-3 mr-1" />
+              {t("Certified", "认证")}
+            </Badge>
           )}
+          
+          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
+            {loadingSiqs ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <Star className="h-3 w-3 mr-1 text-yellow-400" fill="#facc15" />
+            )}
+            <span className="text-xs font-medium">
+              {loadingSiqs ? '...' : formatSIQSScoreForDisplay(displaySiqs)}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {location.description && (
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{location.description}</p>
+      )}
+      
+      <div className="flex flex-col space-y-1.5 mt-2">
+        <div className="flex items-center text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3 mr-1.5" />
+          {formatDistance(location.distance)}
         </div>
         
-        {/* Location details (county, state, country) */}
-        {getLocationDetails()}
-        
-        {/* Location quality indicator */}
-        <div className="mb-4">
-          <LocationQuality 
-            bortleScale={location.bortleScale || 5} 
-            siqs={showRealTimeSiqs ? realTimeSiqs : location.siqs}
-            weather={null}
-            isChecking={false}
-          />
-        </div>
-        
-        {/* Weather badge - only show if SIQS is available */}
-        {(showRealTimeSiqs || location.siqs !== undefined) && (
-          <div className="mb-4">
-            <LocationWeatherBadge 
-              siqs={showRealTimeSiqs ? realTimeSiqs : location.siqs} 
-              isViable={location.isViable !== false}
-            />
+        {location.date && (
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Clock className="h-3 w-3 mr-1.5" />
+            {formatDate(location.date)}
           </div>
         )}
-        
-        {/* View details button */}
-        <div className="flex justify-end mt-2">
-          <Button 
-            onClick={handleViewDetails} 
-            disabled={isLoading}
-            variant="outline" 
-            size="sm"
-            className="bg-cosmic-800/50 border-cosmic-700/30 hover:bg-cosmic-700/50"
-          >
-            {isLoading ? (
-              <CloudSun className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                {t("View Details", "查看详情")}
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </>
-            )}
-          </Button>
-        </div>
+      </div>
+      
+      <div className="mt-3 flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleViewDetails}
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-xs"
+        >
+          {t("View Details", "查看详情")}
+        </Button>
       </div>
     </motion.div>
   );

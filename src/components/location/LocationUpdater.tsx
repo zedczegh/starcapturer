@@ -25,7 +25,6 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
   const updateInProgressRef = useRef(false);
   const locationUpdateTimeoutRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<{lat: number, lng: number} | null>(null);
-  const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Safely check if locationData has required properties
   const hasValidCoordinates = locationData && 
@@ -46,11 +45,6 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
     };
   }, []);
 
-  // Reset error state when locationData changes
-  useEffect(() => {
-    setUpdateError(null);
-  }, [locationData]);
-
   // Check if the location change is significant (prevent tiny changes from triggering updates)
   const isSignificantChange = (lat1: number, lng1: number, lat2: number, lng2: number): boolean => {
     // If we don't have a previous update, consider it significant
@@ -66,13 +60,6 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
 
   // Memoized location update handler with debouncing and throttling
   const handleLocationUpdate = useCallback(async (location: { name: string; latitude: number; longitude: number }) => {
-    // Validate coordinates
-    if (!isFinite(location.latitude) || !isFinite(location.longitude)) {
-      console.error("Invalid coordinates received:", location);
-      setUpdateError(t("Invalid coordinates", "无效的坐标"));
-      return;
-    }
-    
     // Skip small location changes to improve performance
     if (lastUpdateRef.current && 
         !isSignificantChange(location.latitude, location.longitude, 
@@ -99,7 +86,6 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
     
     console.log('Location update received:', location);
     updateInProgressRef.current = true;
-    setUpdateError(null);
     
     try {
       // Update our reference to the last processed coordinates
@@ -112,7 +98,6 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
     } catch (error) {
       console.error('Error updating location:', error);
       setStatusMessage(t('Failed to update location', '更新位置失败'));
-      setUpdateError(t('Failed to update location. Please try again.', '更新位置失败，请重试。'));
       toast.error(t('Failed to update location', '更新位置失败'));
     } finally {
       // Allow next update after a small delay to prevent rapid consecutive updates
@@ -131,11 +116,6 @@ const LocationUpdater: React.FC<LocationUpdaterProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        {updateError && (
-          <div className="bg-red-500/20 border-t border-red-500/30 p-2 text-sm text-red-200">
-            {updateError}
-          </div>
-        )}
         <LocationMap
           latitude={hasValidCoordinates ? locationData.latitude : fallbackLatitude}
           longitude={hasValidCoordinates ? locationData.longitude : fallbackLongitude}

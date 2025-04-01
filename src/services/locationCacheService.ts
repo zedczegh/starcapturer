@@ -1,70 +1,81 @@
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+/**
+ * Service for caching location data
+ * Helps keep location results around between radius changes and searches
+ */
 
-// Cache TTL in milliseconds (5 minutes)
-const CACHE_TTL = 5 * 60 * 1000;
-
-// Cache for location searches
-const searchCache = new Map<string, {
+// Cache for storing radius-based location searches 
+const radiusSearchCache = new Map<string, {
+  data: any;
   timestamp: number;
-  data: SharedAstroSpot[];
 }>();
 
-/**
- * Generate a cache key for location search
- */
-const generateCacheKey = (
-  latitude: number,
-  longitude: number,
-  radius: number
-): string => {
-  return `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}`;
-};
+// Configurable cache durations
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
 /**
- * Cache location search results
+ * Get cached search results for a specific location + radius pair
+ * @param latitude Latitude of center point
+ * @param longitude Longitude of center point
+ * @param radius Search radius in km
+ * @returns Cached data or null if not found/expired
  */
-export const cacheLocationSearch = (
-  latitude: number,
-  longitude: number,
-  radius: number,
-  locations: SharedAstroSpot[]
-): void => {
-  const key = generateCacheKey(latitude, longitude, radius);
-  searchCache.set(key, {
-    timestamp: Date.now(),
-    data: locations
-  });
-};
-
-/**
- * Get cached location search results if available and not expired
- */
-export const getCachedLocationSearch = (
-  latitude: number,
-  longitude: number,
+export function getCachedLocationSearch(
+  latitude: number, 
+  longitude: number, 
   radius: number
-): SharedAstroSpot[] | null => {
-  const key = generateCacheKey(latitude, longitude, radius);
-  const cached = searchCache.get(key);
+): any | null {
+  // Generate a cache key with reduced precision for better hit rates
+  const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}`;
   
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    return cached.data;
+  const cachedData = radiusSearchCache.get(cacheKey);
+  if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+    console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km`);
+    return cachedData.data;
   }
   
   return null;
-};
+}
 
 /**
- * Clear the location search cache
+ * Store search results in cache
+ * @param latitude Latitude of center point
+ * @param longitude Longitude of center point
+ * @param radius Search radius in km
+ * @param data Data to cache
  */
-export const clearLocationSearchCache = (): void => {
-  searchCache.clear();
-};
+export function cacheLocationSearch(
+  latitude: number, 
+  longitude: number, 
+  radius: number, 
+  data: any
+): void {
+  // Generate a cache key with reduced precision for better hit rates
+  const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}`;
+  
+  radiusSearchCache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  console.log(`Cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km`);
+}
 
 /**
- * Get the current size of the location search cache
+ * Clear all location search caches
  */
-export const getLocationSearchCacheSize = (): number => {
-  return searchCache.size;
-};
+export function clearLocationSearchCache(): void {
+  const size = radiusSearchCache.size;
+  radiusSearchCache.clear();
+  console.log(`Location search cache cleared (${size} entries removed)`);
+}
+
+/**
+ * Generate a unique cache key for a location
+ */
+export function generateLocationCacheKey(latitude: number, longitude: number, radius?: number): string {
+  if (radius !== undefined) {
+    return `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}`;
+  }
+  return `${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
+}
