@@ -9,6 +9,7 @@ import {
 } from "@/services/locationSearchService";
 import { clearSiqsCache } from '@/services/realTimeSiqsService';
 import { clearLocationSearchCache } from "@/services/locationCacheService";
+import { isWaterLocation, isValidAstronomyLocation } from "@/utils/locationValidator";
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -79,10 +80,19 @@ export const usePhotoPointsSearch = ({
           MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
         );
         
-        if (calculatedLocations.length > 0) {
-          // Filter out any locations with SIQS=0
-          const validLocations = calculatedLocations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+        // Apply water filtering again to ensure no water locations
+        let validLocations = calculatedLocations.filter(loc => {
+          // Double-check that these locations are not on water
+          if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+            console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
+            return false;
+          }
           
+          // Also filter out locations with SIQS=0
+          return loc.siqs !== undefined && loc.siqs > 0;
+        });
+        
+        if (validLocations.length > 0) {
           setAllLocations(validLocations);
           setFilteredLocations(validLocations);
           setDisplayedLocations(validLocations.slice(0, maxInitialResults));
@@ -117,7 +127,17 @@ export const usePhotoPointsSearch = ({
         }
       } else {
         // Filter out any locations with SIQS=0 from the standard results too
-        const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+        // And also filter out any water locations
+        const validLocations = locations.filter(loc => {
+          // First check if location is valid (not on water)
+          if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+            console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
+            return false;
+          }
+          
+          // Then check SIQS
+          return loc.siqs !== undefined && loc.siqs > 0;
+        });
         
         setAllLocations(validLocations);
         setFilteredLocations(validLocations);
@@ -199,4 +219,3 @@ export const usePhotoPointsSearch = ({
     refreshLocations
   };
 };
-

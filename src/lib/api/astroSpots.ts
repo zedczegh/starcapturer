@@ -7,7 +7,7 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -270,6 +270,7 @@ function generateCalculatedSpots(
   const spots: SharedAstroSpot[] = [];
   
   // Names for calculated locations - authentic and not misleading
+  // IMPORTANT: Removed any names that might suggest water locations
   const englishNames = [
     "Mountain Observation Point", "Valley Viewpoint", "Highland Observation Spot",
     "Ridge Viewpoint", "Observatory Site", "Canyon Overlook",
@@ -298,7 +299,7 @@ function generateCalculatedSpots(
   });
   
   let attemptsCount = 0;
-  const maxAttempts = count * 5; // Increased attempts to ensure we find enough valid locations
+  const maxAttempts = count * 15; // Increased attempts to ensure we find enough valid land locations
   
   while (spots.length < count && attemptsCount < maxAttempts) {
     attemptsCount++;
@@ -312,8 +313,22 @@ function generateCalculatedSpots(
       continue;
     }
     
-    // Filter out water locations before adding
+    // Triple-check that this is not a water location
+    // 1. First check with standard water detection
     if (isWaterLocation(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected water location at ${randomPoint.latitude}, ${randomPoint.longitude}`);
+      continue;
+    }
+    
+    // 2. Second check with coastal water detection
+    if (isLikelyCoastalWater(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected coastal water at ${randomPoint.latitude}, ${randomPoint.longitude}`);
+      continue;
+    }
+    
+    // 3. Third check with general astronomy validation
+    if (!isValidAstronomyLocation(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected invalid astronomy location at ${randomPoint.latitude}, ${randomPoint.longitude}`);
       continue;
     }
     
