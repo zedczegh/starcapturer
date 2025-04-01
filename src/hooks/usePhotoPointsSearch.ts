@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,7 +8,7 @@ import {
 } from "@/services/locationSearchService";
 import { clearSiqsCache } from '@/services/realTimeSiqsService';
 import { clearLocationSearchCache } from "@/services/locationCacheService";
-import { isWaterLocation, isValidAstronomyLocation } from "@/utils/locationValidator";
+import { isValidAstronomyLocation } from "@/utils/locationValidator";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 
 interface UsePhotoPointsSearchProps {
@@ -69,9 +68,7 @@ export const usePhotoPointsSearch = ({
       const locations = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchDistance,
-        false, // Get all locations, not just certified
-        MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+        searchDistance
       );
       
       if (locations.length === 0) {
@@ -80,9 +77,7 @@ export const usePhotoPointsSearch = ({
         const calculatedLocations = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          searchDistance,
-          true, // Allow expanding the search radius
-          MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+          searchDistance
         );
         
         // Apply water filtering again to ensure no water locations
@@ -330,11 +325,10 @@ export const usePhotoPointsSearch = ({
     isUserInGoodLocation,
     totalLocationsCount: filteredLocations.length,
     refreshLocations,
-    // New properties for calculated locations
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs // Ensure currentSiqs is exposed in the return
+    currentSiqs
   };
 };

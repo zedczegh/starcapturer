@@ -1,11 +1,13 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { useLocationFind } from './useLocationFind';
-import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
+import { 
+  useLocationFinding, 
+  useCalculatedLocationsFinding, 
+  useLocationSorting 
+} from './location';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface Location {
   latitude: number;
@@ -27,16 +29,17 @@ export const useRecommendedLocations = (userLocation: Location | null, initialFe
   const prevLocationRef = useRef<Location | null>(userLocation);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
-  // New state for "load more calculated" functionality
+  // State for "load more calculated" functionality
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
   // Get current SIQS score from the store
   const currentSiqs = currentSiqsStore.getScore();
   
-  // Extract location finding logic
-  const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
-  const { findCalculatedLocations } = useCalculatedLocationsFind();
+  // Extract location finding logic to custom hooks
+  const { findLocationsWithinRadius } = useLocationFinding();
+  const { findCalculatedLocations } = useCalculatedLocationsFinding();
+  const { sortLocationsByQuality } = useLocationSorting();
   
   // Function to load locations
   const loadLocations = useCallback(async () => {
@@ -63,9 +66,7 @@ export const useRecommendedLocations = (userLocation: Location | null, initialFe
       const results = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        false, // Not certified-only
-        initialFetchLimit // Use the customizable limit
+        searchRadius
       );
       
       if (results.length === 0) {
@@ -74,11 +75,7 @@ export const useRecommendedLocations = (userLocation: Location | null, initialFe
         const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          Math.min(searchRadius * 1.5, 10000),
-          true, // Allow expansion
-          10,  // Limit
-          isRadiusIncrease, // Preserve previous locations if radius increased
-          isRadiusIncrease ? previousLocationsRef.current : []
+          searchRadius
         );
         
         if (calculatedResults.length > 0) {
@@ -139,13 +136,11 @@ export const useRecommendedLocations = (userLocation: Location | null, initialFe
       setLoading(true);
       const nextPage = page + 1;
       
-      // Get more locations with a higher limit to ensure we get as many certified locations as possible
+      // Get more locations with a higher limit
       const results = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        false, // Not certified-only
-        initialFetchLimit // Use the same limit as initial fetch
+        searchRadius
       );
       
       // Filter out locations we already have
@@ -173,7 +168,7 @@ export const useRecommendedLocations = (userLocation: Location | null, initialFe
     } finally {
       setLoading(false);
     }
-  }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality, initialFetchLimit]);
+  }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
   
   // Load more calculated locations (new function)
   const loadMoreCalculatedLocations = useCallback(async () => {
