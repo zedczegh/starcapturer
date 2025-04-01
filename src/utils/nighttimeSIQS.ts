@@ -27,7 +27,7 @@ export const filterNighttimeForecasts = (forecasts: any[]): any[] => {
  */
 export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: any) => {
   console.log("Starting nighttime SIQS calculation");
-  if (!locationData?.weatherData || !forecastData?.hourly) {
+  if (!locationData || !forecastData?.hourly) {
     console.log("Missing required data for nighttime SIQS calculation");
     return null;
   }
@@ -94,6 +94,9 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     // Calculate if any precipitation is expected
     const hasPrecipitation = nightForecasts.some(f => f.precipitation > 0);
     
+    // Get current weather data for more accurate calculations
+    const currentWeather = locationData.weatherData || {};
+    
     // Log calculation inputs for better debugging
     console.log("SIQS calculation with", nightForecasts.length, "nighttime forecast items");
     console.log("Using nighttime forecast data for SIQS calculation");
@@ -107,7 +110,7 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
       humidity: avgHumidity,
       moonPhase: locationData.moonPhase || 0,
       precipitation: hasPrecipitation ? 0.1 : 0,
-      aqi: locationData.weatherData.aqi,
+      aqi: currentWeather.aqi,
       weatherCondition: nightForecasts[0]?.weatherCondition || 0,
       nightForecast: nightForecasts
     });

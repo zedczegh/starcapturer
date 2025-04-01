@@ -97,7 +97,7 @@ export const useLocationSIQSUpdater = (
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: Math.round((100 - currentCloudCover) * 10) / 10,
+                  score: Math.max(0, 10 - (currentCloudCover / 5)),
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 

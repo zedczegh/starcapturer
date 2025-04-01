@@ -14,9 +14,10 @@ interface FactorItemProps {
 }
 
 const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
-  // Convert score from 0-100 to 0-10 scale if needed
-  const score = factor.score > 10 ? factor.score / 10 : factor.score;
-  const colorClass = getProgressColorClass(score);
+  // Normalize score to ensure it's on a 0-10 scale
+  const displayScore = factor.score > 10 ? factor.score / 10 : factor.score;
+  const progressValue = factor.score > 10 ? factor.score : factor.score * 10;
+  const colorClass = getProgressColorClass(displayScore);
   
   return (
     <motion.div
@@ -28,11 +29,11 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
       <div className="flex justify-between items-center">
         <span className="text-sm font-medium">{factor.name}</span>
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass.replace('bg-', 'text-')} bg-cosmic-800/50`}>
-          {score.toFixed(1)}
+          {displayScore.toFixed(1)}
         </span>
       </div>
       <Progress 
-        value={factor.score > 10 ? factor.score : factor.score * 10} 
+        value={progressValue} 
         className="h-2"
         colorClass={colorClass}
       />

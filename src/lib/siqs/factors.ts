@@ -4,21 +4,23 @@
 
 // Individual score calculation functions (0-100 scale)
 export function calculateCloudScore(cloudCover: number): number {
-  // If cloud cover is above 50%, score should be 0 (updated from 40%)
+  // If cloud cover is above 50%, score should be very low
   if (cloudCover > 50) return 0;
   
-  // Otherwise, linear scale from 0-50% (updated from 0-40%)
-  return 100 - (cloudCover * 2);
+  // Otherwise, linear scale from 0-50%
+  // 0% cloud cover should be 100 points
+  // 50% cloud cover should be 0 points
+  return Math.max(0, 100 - (cloudCover * 2));
 }
 
 export function calculateLightPollutionScore(bortleScale: number): number {
   // Inverted scale, 100 is dark (bortle 1), 0 is bright (bortle 9)
-  return 100 - ((bortleScale - 1) / 8) * 100;
+  return Math.max(0, 100 - ((bortleScale - 1) / 8) * 100);
 }
 
 export function calculateSeeingScore(seeingConditions: number): number {
   // Inverted scale, 100 is perfect (seeing 1), 0 is terrible (seeing 5)
-  return 100 - ((seeingConditions - 1) / 4) * 100;
+  return Math.max(0, 100 - ((seeingConditions - 1) / 4) * 100);
 }
 
 export function calculateWindScore(windSpeed: number): number {
@@ -28,13 +30,16 @@ export function calculateWindScore(windSpeed: number): number {
 
 export function calculateHumidityScore(humidity: number): number {
   // 100 is dry (0% humidity), decreases as humidity increases
-  return 100 - humidity;
+  // Higher humidity is worse for astronomy
+  return Math.max(0, 100 - humidity);
 }
 
 export function calculateMoonScore(moonPhase: number): number {
-  // 100 is new moon (0), decreases as moon gets fuller (0.5), back to 100 at new moon (1)
+  // 100 is new moon (0), decreases as moon gets fuller (0.5), back up at full moon (1)
+  // This is a simplified model - in reality new moon (0) and full moon (1) are best,
+  // and half moon (0.5) is worst for deep sky objects
   const moonIllumination = Math.abs(moonPhase - 0.5) * 2; // Scale to 0-1
-  return 100 - (moonIllumination * 100);
+  return Math.max(0, moonIllumination * 100);
 }
 
 export function calculateAQIScore(aqi: number): number {
