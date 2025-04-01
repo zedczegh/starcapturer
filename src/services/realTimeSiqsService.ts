@@ -1,178 +1,226 @@
 
 /**
- * Service for real-time SIQS calculation with optimized performance
+ * Real-time SIQS calculation service
+ * Optimized for performance and reliability
  */
 
-import { fetchWeatherData } from "@/lib/api/weather";
-import { fetchLightPollutionData } from "@/lib/api/pollution";
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { fetchForecastDataForToday } from "@/lib/api/daily-forecast";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 
-// Create a cache to avoid redundant API calls
+// Cache for SIQS calculations to prevent redundant API calls
 const siqsCache = new Map<string, {
   siqs: number;
   timestamp: number;
-  isViable: boolean;
 }>();
 
-// Invalidate cache entries older than 15 minutes
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+// Cache lifetime: 30 minutes
+const CACHE_LIFETIME = 30 * 60 * 1000;
 
-// Maximum time to wait for SIQS calculation before using fallback
-const CALCULATION_TIMEOUT = 3000; // 3 seconds
+// Maximum wait time for SIQS calculation before timing out (5 seconds)
+const SIQS_CALCULATION_TIMEOUT = 5000;
 
 /**
- * Calculate real-time SIQS for a given location with timeout and error handling
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- * @param bortleScale Bortle scale of the location (light pollution)
- * @returns Promise resolving to SIQS score and viability
+ * Clear the SIQS cache
+ */
+export function clearSiqsCache(): void {
+  siqsCache.clear();
+  console.log("SIQS cache cleared");
+}
+
+/**
+ * Generate a cache key for SIQS calculations
+ */
+function generateSiqsCacheKey(latitude: number, longitude: number, bortleScale?: number): string {
+  return `siqs-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale || 'auto'}`;
+}
+
+/**
+ * Timeout wrapper for promises
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallbackValue: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    let resolved = false;
+    
+    // Set timeout
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        console.warn(`Operation timed out after ${ms}ms`);
+        resolved = true;
+        resolve(fallbackValue);
+      }
+    }, ms);
+    
+    // Try to resolve with the actual promise
+    promise.then((result) => {
+      if (!resolved) {
+        clearTimeout(timer);
+        resolved = true;
+        resolve(result);
+      }
+    }).catch((error) => {
+      console.error("Error in timed operation:", error);
+      if (!resolved) {
+        clearTimeout(timer);
+        resolved = true;
+        resolve(fallbackValue);
+      }
+    });
+  });
+}
+
+/**
+ * Calculate real-time SIQS for a location
  */
 export async function calculateRealTimeSiqs(
-  latitude: number, 
-  longitude: number, 
-  bortleScale: number
-): Promise<{ siqs: number; isViable: boolean }> {
+  latitude: number,
+  longitude: number,
+  bortleScale?: number
+): Promise<{ siqs: number; timestamp: number; fromCache: boolean }> {
   // Generate cache key
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cacheKey = generateSiqsCacheKey(latitude, longitude, bortleScale);
   
   // Check cache first
   const cachedData = siqsCache.get(cacheKey);
-  if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-    console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
-    return {
-      siqs: cachedData.siqs,
-      isViable: cachedData.isViable
+  if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_LIFETIME) {
+    return { 
+      ...cachedData, 
+      fromCache: true 
     };
   }
   
-  console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-  
-  // Create a promise that will timeout after a set time
-  const timeoutPromise = new Promise<{ siqs: number; isViable: boolean }>((resolve) => {
-    setTimeout(() => {
-      console.log(`SIQS calculation timeout for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-      resolve({ siqs: 5, isViable: true }); // Fallback values
-    }, CALCULATION_TIMEOUT);
-  });
-  
-  // Actual calculation promise
-  const calculationPromise = new Promise<{ siqs: number; isViable: boolean }>(async (resolve) => {
-    try {
-      // Fetch weather data
-      const weatherData = await fetchWeatherData({
+  try {
+    console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    
+    // Fetch today's forecast data with timeout protection
+    const forecastPromise = fetchForecastDataForToday({
+      latitude,
+      longitude
+    });
+    
+    // Use timeout to prevent long-running operations
+    const forecast = await withTimeout(
+      forecastPromise,
+      SIQS_CALCULATION_TIMEOUT,
+      null
+    );
+    
+    // Default SIQS if no forecast or calculation times out
+    let siqs = 0;
+    
+    if (forecast) {
+      // We have forecast data, calculate SIQS using the actual Bortle scale or a reasonable default
+      const calculationParams = {
         latitude,
-        longitude
-      });
+        longitude,
+        bortleScale: bortleScale || 4, // Use provided Bortle scale or default to 4
+        cloudCover: forecast.current?.cloudCover || 0,
+        moonPhase: forecast.current?.moonPhase || 0,
+        humidity: forecast.current?.humidity || 60,
+        seeing: 3, // Default reasonable seeing value
+        forecast
+      };
       
-      // For light pollution, use provided Bortle scale or fetch it
-      let finalBortleScale = bortleScale;
-      if (!finalBortleScale || finalBortleScale <= 0) {
-        try {
-          const pollutionData = await fetchLightPollutionData(latitude, longitude);
-          finalBortleScale = pollutionData?.bortleScale || 5;
-        } catch (err) {
-          console.error("Error fetching light pollution data:", err);
-          finalBortleScale = 5; // Default fallback
-        }
-      }
-      
-      // Calculate SIQS using optimized method
-      const siqsResult = await calculateSIQSWithWeatherData(
-        weatherData || { cloudCover: 30, humidity: 50, precipitation: 0 },
-        finalBortleScale,
-        3, // Default seeing conditions
-        0.5, // Default moon phase
-        null // No forecast for quick calculation
+      // Calculate SIQS with timeout protection
+      siqs = await withTimeout(
+        calculateSIQS(calculationParams),
+        SIQS_CALCULATION_TIMEOUT,
+        calculateFallbackSiqs(bortleScale, forecast.current?.cloudCover)
       );
-      
-      console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
-      
-      // Store in cache
-      siqsCache.set(cacheKey, {
-        siqs: siqsResult.score,
-        isViable: siqsResult.isViable,
-        timestamp: Date.now()
-      });
-      
-      resolve({
-        siqs: siqsResult.score,
-        isViable: siqsResult.isViable
-      });
-    } catch (error) {
-      console.error("Error calculating real-time SIQS:", error);
-      // Use a reasonable default value on error
-      resolve({ siqs: 5, isViable: true });
+    } else {
+      // No forecast data, use fallback calculation
+      siqs = calculateFallbackSiqs(bortleScale);
     }
-  });
-  
-  // Race between timeout and actual calculation
-  return Promise.race([calculationPromise, timeoutPromise]);
+    
+    // Cache the result
+    const result = {
+      siqs,
+      timestamp: Date.now(),
+      fromCache: false
+    };
+    
+    siqsCache.set(cacheKey, result);
+    return result;
+  } catch (error) {
+    console.error("Error calculating real-time SIQS:", error);
+    
+    // Return a fallback value based on Bortle scale
+    const fallbackSiqs = calculateFallbackSiqs(bortleScale);
+    return {
+      siqs: fallbackSiqs,
+      timestamp: Date.now(),
+      fromCache: false
+    };
+  }
 }
 
 /**
- * Batch process multiple locations for SIQS calculation
- * with smart prioritization and parallelization
- * @param locations Array of locations to process
- * @param maxParallel Maximum number of parallel requests
- * @returns Promise resolving to locations with updated SIQS
+ * Calculate a fallback SIQS score based just on Bortle scale
+ */
+function calculateFallbackSiqs(bortleScale?: number, cloudCover?: number): number {
+  if (cloudCover && cloudCover > 60) {
+    return 0; // Heavy cloud cover means poor viewing conditions
+  }
+  
+  // If we have a Bortle scale, estimate SIQS based on that
+  if (bortleScale) {
+    // Invert the Bortle scale (1-9) to get approximate SIQS (9-1)
+    // Then scale to SIQS range (0-10)
+    const invertedValue = 10 - bortleScale;
+    // Apply cloud penalty if available
+    const cloudPenalty = cloudCover ? (cloudCover / 100) * 3 : 0;
+    return Math.max(0, Math.min(10, invertedValue + 1 - cloudPenalty));
+  }
+  
+  // No Bortle scale or cloud cover data, return a moderate default
+  return 5;
+}
+
+/**
+ * Batch calculate SIQS for multiple locations
  */
 export async function batchCalculateSiqs(
   locations: SharedAstroSpot[],
-  maxParallel: number = 3
+  maxParallel: number = 5
 ): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) return [];
+  // Create a copy to avoid mutating the original
+  const locationsCopy = [...locations];
   
-  console.log(`Batch calculating SIQS for ${locations.length} locations`);
-  
-  // Clone the locations array to avoid mutating the original
-  const updatedLocations = [...locations];
-  
-  // Process locations in chunks to avoid too many parallel requests
-  for (let i = 0; i < updatedLocations.length; i += maxParallel) {
-    const chunk = updatedLocations.slice(i, i + maxParallel);
-    const promises = chunk.map(async (location) => {
-      if (!location.latitude || !location.longitude) return location;
-      
-      const result = await calculateRealTimeSiqs(
-        location.latitude,
-        location.longitude,
-        location.bortleScale || 5
-      );
-      
-      // Update the location object with real-time SIQS
-      return {
-        ...location,
-        siqs: result.siqs,
-        isViable: result.isViable
-      };
+  // Process in batches to avoid overwhelming the system
+  const processBatch = async (batch: SharedAstroSpot[]): Promise<SharedAstroSpot[]> => {
+    // Create an array of SIQS calculation promises
+    const promises = batch.map(async (location) => {
+      try {
+        const result = await calculateRealTimeSiqs(
+          location.latitude,
+          location.longitude,
+          location.bortleScale
+        );
+        
+        // Return new object with updated SIQS
+        return {
+          ...location,
+          siqs: result.siqs
+        };
+      } catch (error) {
+        console.error(`Error calculating SIQS for location ${location.id}:`, error);
+        // Return original location if calculation fails
+        return location;
+      }
     });
     
-    // Wait for the current chunk to complete before processing next chunk
-    const results = await Promise.all(promises);
-    
-    // Update the locations array with the results
-    results.forEach((result, idx) => {
-      updatedLocations[i + idx] = result;
-    });
+    // Wait for all promises to resolve
+    return Promise.all(promises);
+  };
+  
+  const results: SharedAstroSpot[] = [];
+  
+  // Process locations in batches of maxParallel
+  for (let i = 0; i < locationsCopy.length; i += maxParallel) {
+    const batch = locationsCopy.slice(i, i + maxParallel);
+    const processedBatch = await processBatch(batch);
+    results.push(...processedBatch);
   }
   
-  return updatedLocations;
-}
-
-/**
- * Clear the SIQS cache for testing or debugging
- */
-export function clearSiqsCache(): void {
-  const size = siqsCache.size;
-  siqsCache.clear();
-  console.log(`SIQS cache cleared (${size} entries removed)`);
-}
-
-/**
- * Get the current SIQS cache size
- * @returns Number of cached entries
- */
-export function getSiqsCacheSize(): number {
-  return siqsCache.size;
+  return results;
 }

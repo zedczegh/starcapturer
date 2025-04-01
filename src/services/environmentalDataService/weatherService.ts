@@ -2,7 +2,7 @@
 /**
  * Weather data service
  */
-import { fetchWeatherData } from "@/lib/api/weather";
+import { fetchWeatherData } from "@/lib/api";
 
 export interface WeatherData {
   temperature: number;
@@ -62,21 +62,24 @@ export async function getWeatherData(
     const weatherResponse = await fetchWeatherData({
       latitude,
       longitude
-    }) as WeatherApiResponse;
+    });
     
     if (!weatherResponse) {
       throw new Error("Could not fetch weather data");
     }
     
+    // Safely cast the response to our expected type
+    const typedResponse = weatherResponse as unknown as WeatherApiResponse;
+    
     // Format weather data
     const formattedData: WeatherData = {
-      temperature: weatherResponse.current?.temperature_2m || 0,
-      cloudCover: weatherResponse.current?.cloud_cover || 0,
-      humidity: weatherResponse.current?.relative_humidity_2m || 0,
-      precipitation: weatherResponse.current?.precipitation || 0,
-      windSpeed: weatherResponse.current?.wind_speed_10m || 0,
-      weatherCode: weatherResponse.current?.weather_code || 0,
-      timestamp: weatherResponse.current?.time || new Date().toISOString()
+      temperature: typedResponse.current?.temperature_2m || 0,
+      cloudCover: typedResponse.current?.cloud_cover || 0,
+      humidity: typedResponse.current?.relative_humidity_2m || 0,
+      precipitation: typedResponse.current?.precipitation || 0,
+      windSpeed: typedResponse.current?.wind_speed_10m || 0,
+      weatherCode: typedResponse.current?.weather_code || 0,
+      timestamp: typedResponse.current?.time || new Date().toISOString()
     };
     
     // Cache the data

@@ -1,4 +1,3 @@
-
 /**
  * Service for searching and finding astronomy locations
  * Optimized for better performance and memory usage
@@ -22,6 +21,9 @@ const MAX_PARALLEL_SIQS = 3;
 
 // Limit the maximum number of locations to process at once
 const MAX_BATCH_SIZE = 15;
+
+// Maximum wait time for operations before timing out (10 seconds)
+const OPERATION_TIMEOUT = 10000;
 
 /**
  * Clear the location search cache
@@ -77,6 +79,17 @@ export function cacheLocationSearch(
 }
 
 /**
+ * Timeout wrapper for promises to prevent long-running operations
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    setTimeout(() => reject(new Error(errorMessage)), ms);
+  });
+  
+  return Promise.race([promise, timeoutPromise]);
+}
+
+/**
  * Find locations within a specified radius of coordinates
  * Uses caching for better performance and memory usage
  */
@@ -105,18 +118,22 @@ export async function findLocationsWithinRadius(
       return cachedResults;
     }
     
-    // No cached results, fetch from API
+    // No cached results, fetch from API with timeout
     const { getRecommendedPhotoPoints } = await import("@/lib/api");
     
     console.log(`Fetching locations within ${radiusKm}km radius...`);
     
-    // Get recommended points - use a reasonable limit to prevent memory issues
-    const locations = await getRecommendedPhotoPoints(
-      latitude,
-      longitude,
-      radiusKm,
-      certifiedOnly,
-      30 // Limit to 30 results for better performance
+    // Get recommended points with timeout protection
+    const locations = await withTimeout(
+      getRecommendedPhotoPoints(
+        latitude,
+        longitude,
+        radiusKm,
+        certifiedOnly,
+        30 // Limit to 30 results for better performance
+      ),
+      OPERATION_TIMEOUT,
+      "Location search timed out"
     );
     
     if (!locations || locations.length === 0) {
@@ -124,16 +141,29 @@ export async function findLocationsWithinRadius(
       return findCalculatedLocations(latitude, longitude, radiusKm, true);
     }
     
-    // Add county/state/country information to each location
-    const enhancedLocations = locations.map(location => ({
-      ...location,
-      county: location.county || getDummyCounty(location.latitude, location.longitude),
-      state: location.state || getDummyState(location.latitude, location.longitude),
-      country: location.country || getDummyCountry(location.latitude, location.longitude)
-    }));
+    // Add distance information to each location if not already present
+    const enhancedLocations = locations.map(location => {
+      // Calculate distance if not already present
+      const distance = location.distance ?? calculateDistance(
+        latitude, longitude,
+        location.latitude, location.longitude
+      );
+      
+      return {
+        ...location,
+        distance,
+        county: location.county || getDummyCounty(location.latitude, location.longitude),
+        state: location.state || getDummyState(location.latitude, location.longitude),
+        country: location.country || getDummyCountry(location.latitude, location.longitude)
+      };
+    });
     
-    // Cache the results for future use
-    cacheLocationSearch(latitude, longitude, radiusKm, enhancedLocations);
+    // Sort by distance
+    enhancedLocations.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+    
+    // Cache the results for future use (only keep a reasonable number)
+    const resultsToCache = enhancedLocations.slice(0, 30);
+    cacheLocationSearch(latitude, longitude, radiusKm, resultsToCache);
     
     return enhancedLocations;
   } catch (error) {
@@ -157,9 +187,22 @@ export async function findCalculatedLocations(
   console.log(`Finding calculated locations within ${radiusKm}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
-    // Import calculation points data
+    // Try to get cached results first with a slightly different key
+    const cacheKey = `calc-locations-${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radiusKm}`;
+    const cached = locationSearchCache.get(cacheKey);
+    
+    if (cached && (Date.now() - cached.timestamp) < CACHE_LIFETIME) {
+      console.log("Using cached calculated locations");
+      return cached.locations;
+    }
+    
+    // Import calculation points data with timeout protection
     const { getCalculationPoints } = await import('@/data/calculationPoints');
-    const points = await getCalculationPoints();
+    const points = await withTimeout(
+      getCalculationPoints(),
+      OPERATION_TIMEOUT,
+      "Calculation points fetching timed out"
+    );
     
     if (!points || points.length === 0) {
       console.log("No calculation points available");
@@ -179,11 +222,12 @@ export async function findCalculatedLocations(
       };
     }).filter(point => point.distance <= (allowExpand ? radiusKm * 2 : radiusKm));
     
-    // Sort by distance
+    // Sort by distance and limit to a reasonable number for performance
     pointsWithDistance.sort((a, b) => a.distance - b.distance);
+    const limitedPoints = pointsWithDistance.slice(0, 15);
     
     // Convert to SharedAstroSpot format
-    const locations: SharedAstroSpot[] = pointsWithDistance.map(point => ({
+    const locations: SharedAstroSpot[] = limitedPoints.map(point => ({
       id: point.id,
       name: point.name,
       chineseName: point.chineseName,
@@ -198,8 +242,18 @@ export async function findCalculatedLocations(
       timestamp: new Date().toISOString()
     }));
     
-    // Calculate SIQS in batches to prevent overloading
-    const batchedLocations = await processInBatches(locations, MAX_BATCH_SIZE);
+    // Calculate SIQS in batches to prevent overloading, with timeout
+    const batchedLocations = await withTimeout(
+      processInBatches(locations, MAX_BATCH_SIZE),
+      OPERATION_TIMEOUT,
+      "SIQS calculation timed out"
+    );
+    
+    // Cache the results
+    locationSearchCache.set(cacheKey, {
+      locations: batchedLocations,
+      timestamp: Date.now()
+    });
     
     return batchedLocations;
   } catch (error) {

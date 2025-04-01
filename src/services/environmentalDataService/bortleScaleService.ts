@@ -2,7 +2,7 @@
 /**
  * Bortle scale service
  */
-import { fetchLightPollutionData } from "@/lib/api/pollution";
+import { fetchLightPollutionData } from "@/lib/api";
 
 /**
  * Get Bortle scale value for a location

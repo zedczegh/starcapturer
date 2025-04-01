@@ -30,7 +30,7 @@ const PhotoPointsNearby = () => {
     loading: locationLoading, 
     error: locationError, 
     getPosition 
-  } = useGeolocation();
+  } = useGeolocation({});
   
   // Use recommended locations hook with user's position
   const {
@@ -185,9 +185,10 @@ const PhotoPointsNearby = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <DistanceRangeSlider 
-              currentValue={searchRadius} 
-              onChange={setSearchRadius}
-              onApply={applyRadiusChange}
+              distance={searchRadius} 
+              setDistance={setSearchRadius}
+              onAfterChange={applyRadiusChange}
+              loading={isLoading}
             />
             
             <Button 
@@ -261,10 +262,11 @@ const PhotoPointsNearby = () => {
             <div className="mb-8 flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
               <div className="flex gap-2 items-center">
                 <ViewToggle 
-                  currentView={view} 
+                  activeView={view} 
                   onViewChange={setView}
                   certifiedCount={locationData.certifiedCount}
                   calculatedCount={locationData.calculatedCount}
+                  loading={isLoading}
                 />
                 
                 {view === "calculated" && (
@@ -301,7 +303,6 @@ const PhotoPointsNearby = () => {
               <DarkSkyLocations 
                 locations={locationData.certifiedLocations} 
                 loading={isLoading}
-                isEmptyState={!locationData.hasCertifiedLocations}
                 searchRadius={searchRadius}
               />
             ) : (
