@@ -1,3 +1,4 @@
+
 // SIQS = Stellar Imaging Quality Score
 import { SIQSFactors, SIQSResult } from './siqs/types';
 import { 
@@ -305,22 +306,3 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     factors: factorsList
   };
 }
-
-/**
- * Convert SIQS score to text description
- */
-export const siqsToText = (score: number, language: string = 'en'): string => {
-  if (score >= 9) {
-    return language === 'en' ? 'Excellent' : '优秀';
-  } else if (score >= 7) {
-    return language === 'en' ? 'Very Good' : '非常好';
-  } else if (score >= 5) {
-    return language === 'en' ? 'Good' : '良好';
-  } else if (score >= 3) {
-    return language === 'en' ? 'Fair' : '一般';
-  } else if (score > 0) {
-    return language === 'en' ? 'Poor' : '较差';
-  } else {
-    return language === 'en' ? 'Not Viable' : '不可行';
-  }
-};

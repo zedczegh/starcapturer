@@ -1,42 +1,38 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { MapIcon, SearchIcon } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Location as LocationType } from "@/services/geocoding/types";
 import { saveLocation } from "@/utils/locationStorage";
+import GlobeLocationSelector from "./GlobeLocationSelector";
 import { SIQSLocation } from "@/utils/locationStorage";
 
+// Update the interface to match how it's being used
 interface MapSelectorProps {
   onLocationSelect?: (location: SIQSLocation) => void;
-  onSelectLocation?: (selectedLocation: { name: string; latitude: number; longitude: number; placeDetails?: string; }) => void;
+  onSelectLocation?: (location: SIQSLocation) => void;
 }
 
-const MapSelector: React.FC<MapSelectorProps> = ({ 
-  onLocationSelect,
-  onSelectLocation 
-}) => {
+const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLocation }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
+  const [isGlobeOpen, setIsGlobeOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
   
-  // Handle location selection
+  // Handle all location selections through this unified function
   const handleLocationSelection = (location: SIQSLocation) => {
     saveLocation(location);
     
-    // Support both callback patterns
+    // Call the appropriate callback based on which prop was provided
     if (onLocationSelect) {
       onLocationSelect(location);
-    }
-    
-    if (onSelectLocation) {
-      onSelectLocation({
-        name: location.name,
-        latitude: location.latitude,
-        longitude: location.longitude
-      });
+    } else if (onSelectLocation) {
+      onSelectLocation(location);
     }
     
     setSearchResults([]);
@@ -46,7 +42,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     if (searchInputRef.current) {
       searchInputRef.current.value = "";
     }
-  };
+  }
   
   // Debounce search function
   const debouncedSearch = useMemo(() => {
@@ -84,6 +80,22 @@ const MapSelector: React.FC<MapSelectorProps> = ({
     handleLocationSelection(siqsLocation);
   };
   
+  // Handle globe location selection
+  const handleGlobeLocationSelect = (location: SIQSLocation) => {
+    handleLocationSelection(location);
+    setIsGlobeOpen(false);
+  };
+  
+  // Open globe selector
+  const openGlobeSelector = () => {
+    setIsGlobeOpen(true);
+  };
+  
+  // Close globe selector
+  const closeGlobeSelector = () => {
+    setIsGlobeOpen(false);
+  };
+  
   return (
     <div className="relative">
       {/* Search Input */}
@@ -96,7 +108,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
           onChange={handleSearchInputChange}
         />
         <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-gray-400" />
+          <SearchIcon className="h-5 w-5 text-gray-400" />
         </div>
       </div>
       
@@ -113,6 +125,26 @@ const MapSelector: React.FC<MapSelectorProps> = ({
             </li>
           ))}
         </ul>
+      )}
+      
+      {/* Globe Selector Button */}
+      <Button
+        variant="secondary"
+        className="mt-4 w-full flex items-center justify-center gap-2 bg-cosmic-700 hover:bg-cosmic-600"
+        onClick={openGlobeSelector}
+      >
+        <MapIcon className="w-4 h-4" />
+        {t("Select from Globe", "从地球选择")}
+      </Button>
+      
+      {/* Globe Selector Modal */}
+      {isGlobeOpen && (
+        <div className="fixed top-0 left-0 w-full h-full bg-black/50 z-50 flex items-center justify-center">
+          <GlobeLocationSelector
+            onLocationSelect={handleGlobeLocationSelect}
+            onClose={closeGlobeSelector}
+          />
+        </div>
       )}
     </div>
   );

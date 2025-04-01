@@ -2,11 +2,11 @@
 import { fetchWeatherData } from "@/lib/api";
 
 // Default timeout for weather API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 10000; // Increased timeout for better reliability
+const DEFAULT_TIMEOUT = 5000;
 // Default cache lifetime for weather data (in milliseconds)
 const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
 // Maximum retry attempts
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 2;
 
 /**
  * Optimized service for retrieving weather data with better caching and error handling
@@ -36,11 +36,10 @@ export const getWeatherData = async (
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       
-      // Use the improved options with adjusted parameters
       const data = await fetchWeatherData({
         latitude,
         longitude,
-        days: 3 // Request more days for better forecast display
+        days: 3
       }, controller.signal);
       
       clearTimeout(timeoutId);
@@ -52,12 +51,10 @@ export const getWeatherData = async (
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      console.warn(`Weather data fetch attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`, lastError.message);
       
-      // If this isn't our last attempt, try again with exponential backoff
+      // If this isn't our last attempt, try again with a slight delay
       if (attempt < MAX_RETRIES) {
-        const backoffDelay = Math.min(500 * Math.pow(1.5, attempt), 3000);
-        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
       }
     }
   }
@@ -65,7 +62,7 @@ export const getWeatherData = async (
   // All attempts failed - use fallback data
   console.error("Failed to fetch weather data after retries:", lastError);
   
-  // Use fallback weather data with more complete properties
+  // Use fallback weather data
   const fallbackData = {
     temperature: 20,
     humidity: 50,
@@ -75,9 +72,7 @@ export const getWeatherData = async (
     time: new Date().toISOString(),
     condition: "Clear",
     weatherCondition: "Clear",
-    aqi: 50,
-    // Add more properties to prevent undefined errors in the UI
-    weatherCode: 0
+    aqi: 50
   };
   
   // Show status message if needed

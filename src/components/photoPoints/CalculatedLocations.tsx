@@ -1,168 +1,184 @@
 
-import React from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
-import PhotoLocationCard from './PhotoLocationCard';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Calculator, Loader2, Target, RefreshCw, Search } from "lucide-react";
+import PhotoLocationCard from '@/components/photoPoints/PhotoLocationCard';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { Button } from "@/components/ui/button";
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
   loading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
-  onRefresh: () => void;
-  searchRadius: number;
+  onRefresh?: () => void;
+  searchRadius?: number;
 }
 
-const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
-  locations,
-  loading,
-  hasMore,
+const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
+  locations, 
+  loading, 
+  hasMore, 
   onLoadMore,
   onRefresh,
-  searchRadius
+  searchRadius = 0
 }) => {
   const { t } = useLanguage();
-
-  // Animation variants
+  
+  // Filter out locations with SIQS score of 0
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+  
+  // Sort locations by distance (closest first)
+  const sortedLocations = [...validLocations].sort((a, b) => 
+    (a.distance || Infinity) - (b.distance || Infinity)
+  );
+  
+  // Add event listener for expanding search radius
+  useEffect(() => {
+    const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
+      if (onRefresh) {
+        document.dispatchEvent(new CustomEvent('set-search-radius', { 
+          detail: { radius: e.detail.radius } 
+        }));
+        setTimeout(onRefresh, 100);
+      }
+    };
+    
+    document.addEventListener('expand-search-radius', handleExpandRadius as EventListener);
+    
+    return () => {
+      document.removeEventListener('expand-search-radius', handleExpandRadius as EventListener);
+    };
+  }, [onRefresh]);
+  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.05,
-        delayChildren: 0.1
-      }
+        staggerChildren: 0.1,
+        when: "beforeChildren" 
+      } 
     }
   };
   
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  // Loading state
-  if (loading && (!locations || locations.length === 0)) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
-        <p>{t("Loading calculated locations...", "正在加载计算位置...")}</p>
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     );
   }
-
-  // Empty state
-  if (!loading && (!locations || locations.length === 0)) {
+  
+  if (sortedLocations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center bg-cosmic-900/30 rounded-lg border border-cosmic-800/50">
-        <div className="mb-4 p-4 rounded-full bg-cosmic-800/50">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-8 w-8 text-muted-foreground"
-          >
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-            <path d="M8 11h8" />
-            <path d="M12 15V7" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold mb-2">
-          {t("No Calculated Locations Found", "未找到计算位置")}
-        </h3>
-        <p className="text-muted-foreground max-w-md mb-4">
+      <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
+        <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold mb-2">
+          {t("No Recommended Locations Found", "未找到推荐地点")}
+        </h2>
+        <p className="text-muted-foreground max-w-lg mx-auto mb-2 text-sm">
           {t(
-            "We couldn't find any algorithmically calculated locations within your search radius of",
-            "在您的搜索半径内找不到任何算法计算的位置"
-          )}{" "}
-          {searchRadius}km.
+            "We couldn't find any locations with good viewing conditions within your search radius.",
+            "在您的搜索半径内，我们未能找到具有良好观测条件的地点。"
+          )}
         </p>
-        <Button
-          variant="outline"
-          onClick={onRefresh}
-          className="gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("Refresh", "刷新")}
-        </Button>
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Target className="h-4 w-4 text-primary" />
+          <p className="text-sm text-primary">
+            {searchRadius > 0 ? 
+              t(
+                `Try increasing your search radius beyond ${searchRadius}km.`,
+                `尝试将搜索半径增加到${searchRadius}公里以上。`
+              ) :
+              t(
+                "Try adjusting your search radius to find better viewing spots.",
+                "尝试调整搜索半径以找到更好的观测地点。"
+              )
+            }
+          </p>
+        </div>
+        
+        {onRefresh && (
+          <div className="mt-6 flex flex-col gap-3 items-center">
+            <Button 
+              variant="outline" 
+              onClick={onRefresh}
+              className="group border-primary/40 hover:bg-cosmic-800/50"
+            >
+              <RefreshCw className="mr-2 h-4 w-4 group-hover:animate-spin" />
+              {t("Refresh Recommendations", "刷新推荐")}
+            </Button>
+            
+            {searchRadius < 10000 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={() => {
+                  // Trigger custom event to expand search radius
+                  const newRadius = Math.min(10000, searchRadius + 1000);
+                  document.dispatchEvent(new CustomEvent('expand-search-radius', { 
+                    detail: { radius: newRadius } 
+                  }));
+                }}
+              >
+                <Search className="mr-1.5 h-3 w-3" />
+                {t("Try wider search area", "尝试更广的搜索范围")}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
-
+  
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="w-full"
-    >
-      <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+    <>
+      <motion.div
         variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {locations.map((location, index) => (
-          <motion.div
-            key={`${location.id}-${index}`}
-            variants={itemVariants}
-            className="w-full"
-          >
-            <PhotoLocationCard
-              key={location.id || `calculated-${index}`}
-              location={location}
-              index={index}
-            />
-          </motion.div>
+        {sortedLocations.map((location, index) => (
+          <PhotoLocationCard
+            key={location.id || `calc-loc-${index}`}
+            location={location}
+            index={index}
+            showRealTimeSiqs={true}
+          />
         ))}
       </motion.div>
-
-      {/* Load more button */}
+      
       {hasMore && (
-        <motion.div
-          variants={itemVariants}
-          className="w-full flex justify-center mt-6"
-        >
-          <Button
-            variant="outline"
+        <div className="flex justify-center mt-8">
+          <Button 
+            variant="outline" 
             onClick={onLoadMore}
-            disabled={loading}
-            className="min-w-[200px]"
+            className="group sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 transition-all duration-300"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                {t("Loading...", "加载中...")}
-              </>
-            ) : (
-              t("Load More", "加载更多")
-            )}
+            {t("Load More Locations", "加载更多位置")}
+            <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
-        </motion.div>
+        </div>
       )}
-
-      {/* Refresh button */}
-      <motion.div
-        variants={itemVariants}
-        className="w-full flex justify-center mt-4"
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRefresh}
-          className="text-muted-foreground hover:text-primary"
-        >
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          {t("Refresh Data", "刷新数据")}
-        </Button>
-      </motion.div>
-    </motion.div>
+      
+      {onRefresh && (
+        <div className="flex justify-center mt-4">
+          <Button 
+            variant="ghost" 
+            onClick={onRefresh}
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-primary"
+          >
+            <RefreshCw className="mr-1.5 h-3 w-3" />
+            {t("Refresh with new SIQS data", "使用新的SIQS数据刷新")}
+          </Button>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -1,63 +1,98 @@
 
-/**
- * Format location names for display based on language and preferences
- */
+import { Language } from "@/services/geocoding/types";
 
 /**
- * Format location name for display
- * @param name Original location name
- * @param language Current language (en or zh)
- * @returns Formatted location name for display
+ * Format and clean up location names for display
+ * Removes duplicates and unnecessary parts
  */
-export function formatLocationName(name: string, language: string): string {
-  if (!name) return language === 'zh' ? '未知位置' : 'Unknown location';
+export function formatLocationName(locationName: string, language: Language = 'en'): string {
+  if (!locationName) return language === 'en' ? 'Unknown location' : '未知位置';
   
-  // For English language
-  if (language === 'en') {
-    // Remove coordinates if they're present in name
-    if (name.includes('°')) {
-      return 'Astronomy Point';
-    }
-    
-    // Check if it's a generated location name
-    if (name.startsWith('Location at')) {
-      const parts = name.split(', ');
-      if (parts.length > 1) {
-        return parts[1];
-      }
-      return 'Astronomy Point';
-    }
-    
-    return name;
-  } 
-  // For Chinese language
-  else {
-    // Remove coordinates if they're present in name
-    if (name.includes('°')) {
-      return '天文观测点';
-    }
-    
-    // Check if it's a generated location name
-    if (name.startsWith('Location at') || name.startsWith('位置在')) {
-      return '天文观测点';
-    }
-    
-    return name;
+  // If it contains coordinates, return a friendlier message
+  if (locationName.includes('°') || locationName.includes('Location at') || locationName.includes('位置在')) {
+    return language === 'en' ? 'Remote area' : '偏远地区';
   }
+  
+  // Split by commas based on language
+  const separator = language === 'en' ? ',' : '，';
+  const parts = locationName.split(separator);
+  
+  // Remove duplicate parts while preserving order
+  const uniqueParts = [...new Set(parts.map(p => p.trim()))];
+  
+  // For long names, use just the first part or first two parts
+  if (uniqueParts.length > 3) {
+    if (language === 'en') {
+      return uniqueParts.slice(0, 2).join(', ');
+    } else {
+      return uniqueParts.slice(0, 2).join('，');
+    }
+  }
+  
+  // For shorter names, keep all parts
+  return uniqueParts.join(language === 'en' ? ', ' : '，');
 }
 
 /**
- * Format a location name to be displayed as a page title
- * @param name Original location name
- * @param language Current language (en or zh)
- * @returns Formatted page title
+ * Extract town name from a longer location string
  */
-export function formatLocationPageTitle(name: string, language: string): string {
-  const formatted = formatLocationName(name, language);
+export function extractTownName(locationName: string, language: Language = 'en'): string {
+  if (!locationName) return language === 'en' ? 'Unknown location' : '未知位置';
   
-  if (language === 'en') {
-    return `${formatted} | Sky Viewer`;
-  } else {
-    return `${formatted} | 天空观测`;
+  // If it contains coordinates, return a friendlier message
+  if (locationName.includes('°') || locationName.includes('Location at') || locationName.includes('位置在')) {
+    return language === 'en' ? 'Remote area' : '偏远地区';
   }
+  
+  // Split by commas based on language
+  const separator = language === 'en' ? ',' : '，';
+  const parts = locationName.split(separator);
+  
+  // Just return the first part as the town name
+  if (parts.length > 0) {
+    return parts[0].trim();
+  }
+  
+  return locationName;
+}
+
+/**
+ * Improved location name formatter for PhotoPointCard component
+ * Extracts meaningful location names from complex strings
+ */
+export function extractNearestTownName(
+  locationName: string, 
+  description: string | undefined, 
+  language: Language = 'en'
+): string {
+  // First check if description contains location info
+  if (description) {
+    const nearText = language === 'en' ? "near" : "靠近";
+    if (description.toLowerCase().includes(nearText.toLowerCase())) {
+      const parts = description.split(new RegExp(nearText, 'i'));
+      if (parts.length > 1) {
+        return parts[1].trim();
+      }
+    }
+  }
+  
+  // If location name is not coordinates or "Remote area", use it
+  if (locationName && 
+      !locationName.includes("°") && 
+      !locationName.includes("Location at") && 
+      !locationName.includes("位置在") &&
+      !locationName.includes("Remote area") &&
+      !locationName.includes("偏远地区")) {
+      
+    // Extract just the first part of a comma-separated name
+    const separator = language === 'en' ? ',' : '，';
+    const parts = locationName.split(separator);
+    if (parts.length > 0) {
+      return parts[0].trim();
+    }
+    
+    return locationName;
+  }
+  
+  return language === 'en' ? 'Remote area' : '偏远地区';
 }

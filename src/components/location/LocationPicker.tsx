@@ -1,87 +1,162 @@
-
-import React, { useState } from "react";
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin, LocateFixed } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useGeolocation } from '@/hooks/location/useGeolocation';
+import React, { useState, useEffect, useRef } from "react";
+import { SearchIcon, MapPin, Locate } from "lucide-react";
+import { searchLocations } from "@/services/geocoding";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Location as LocationType } from "@/services/geocoding/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ExtendedGeolocationOptions, getCurrentPosition } from "@/utils/geolocationUtils";
 
 interface LocationPickerProps {
-  coordinates: { latitude: number; longitude: number } | null;
-  setCoordinates: (coords: { latitude: number; longitude: number }) => void;
-  className?: string;
+  locationName: string;
+  loading: boolean;
+  onSelectLocation: (location: LocationType) => void;
+  handleUseCurrentLocation: () => void;
+  noAutoLocationRequest?: boolean;
 }
 
 const LocationPicker: React.FC<LocationPickerProps> = ({
-  coordinates,
-  setCoordinates,
-  className
+  locationName,
+  loading,
+  onSelectLocation,
+  handleUseCurrentLocation,
+  noAutoLocationRequest = false
 }) => {
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationType[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, language } = useLanguage();
-  const { getPosition, loading: geoLoading } = useGeolocation({
-    enableHighAccuracy: true,
-    timeout: 10000
-  });
-
-  const [locationError, setLocationError] = useState(null);
-
-  const formatCoordinate = (value: number, isLatitude: boolean) => {
-    return `${value.toFixed(6)}° ${isLatitude ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W')}`;
+  
+  useEffect(() => {
+    if (locationName) {
+      setSearchQuery(locationName);
+    }
+  }, [locationName]);
+  
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() !== "") {
+      const results = await searchLocations(query, language);
+      setSearchResults(results);
+    } else {
+      setSearchResults([]);
+    }
   };
+  
+  const handleSelect = (location: LocationType) => {
+    onSelectLocation(location);
+    setOpen(false);
+    setSearchQuery(location.name);
+    if (searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+  };
+  
+  const handleGetCurrentLocation = () => {
+    setIsLoading(true);
+    setError(null);
+    
+    const geolocationOptions: ExtendedGeolocationOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+      language: language
+    };
 
+    getCurrentPosition(
+      (position) => {
+        setIsLoading(false);
+        handleUseCurrentLocation();
+      },
+      (error) => {
+        setIsLoading(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setError(t("Location permission denied. Please enable it in your browser settings.", "位置权限被拒绝。请在浏览器设置中启用它。"));
+        } else {
+          setError(t("Failed to get current location.", "获取当前位置失败。"));
+        }
+        console.error("Error getting current location:", error);
+      },
+      geolocationOptions
+    );
+  };
+  
   return (
-    <div className={className}>
-      <div className="grid grid-cols-1 gap-4">
-        <div className="flex gap-2 items-center">
-          <div className="flex-1 flex flex-col sm:flex-row gap-2">
-            <div className="flex-1">
-              <div className="text-xs text-muted-foreground mb-1">{t("Latitude", "纬度")}</div>
-              <Input
-                type="text"
-                value={coordinates ? formatCoordinate(coordinates.latitude, true) : ''}
-                readOnly
-                className="bg-cosmic-800/30 border-cosmic-700/40 cursor-default"
-              />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs text-muted-foreground mb-1">{t("Longitude", "经度")}</div>
-              <Input
-                type="text"
-                value={coordinates ? formatCoordinate(coordinates.longitude, false) : ''}
-                readOnly
-                className="bg-cosmic-800/30 border-cosmic-700/40 cursor-default"
-              />
-            </div>
-          </div>
-          
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="mt-5"
+    <div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
           >
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon"
-              onClick={getPosition}
-              disabled={geoLoading}
-              className="h-10 w-10 bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600/30"
-            >
-              {geoLoading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                >
-                  <LocateFixed className="h-4 w-4" />
-                </motion.div>
+            <span className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 opacity-70" />
+              {searchQuery ? (
+                searchQuery
               ) : (
-                <MapPin className="h-4 w-4" />
+                <span className="text-muted-foreground">
+                  {t("Search for a location...", "搜索地点...")}
+                </span>
               )}
-            </Button>
-          </motion.div>
-        </div>
-      </div>
+            </span>
+            <SearchIcon className="h-4 w-4 opacity-70 shrink-0" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[600px] p-0" align="start">
+          <Command>
+            <CommandInput
+              placeholder={t("Type a location...", "输入地点...")}
+              onChange={(e) => handleSearch(e.target.value)}
+              ref={searchInputRef}
+            />
+            <CommandEmpty>{t("No results found.", "没有找到结果。")}</CommandEmpty>
+            <ScrollArea className="h-[200px]">
+              <CommandGroup heading={t("Suggestions", "建议")}>
+                {searchResults.map((location) => (
+                  <CommandItem
+                    key={location.name}
+                    onSelect={() => handleSelect(location)}
+                  >
+                    <MapPin className="mr-2 h-4 w-4" />
+                    <span>{location.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </ScrollArea>
+            <div className="py-2 px-3 border-t border-muted">
+              <Button
+                variant="ghost"
+                className="w-full justify-center"
+                onClick={handleGetCurrentLocation}
+                disabled={isLoading || noAutoLocationRequest}
+              >
+                {isLoading ? (
+                  <>
+                    <Locate className="mr-2 h-4 w-4 animate-spin" />
+                    {t("Locating...", "定位中...")}
+                  </>
+                ) : (
+                  <>
+                    <Locate className="mr-2 h-4 w-4" />
+                    {t("Use Current Location", "使用当前位置")}
+                  </>
+                )}
+              </Button>
+              {error && (
+                <p className="text-red-500 text-sm mt-1">{error}</p>
+              )}
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };
