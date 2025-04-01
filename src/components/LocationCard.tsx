@@ -9,6 +9,7 @@ import { siqsToColor } from "@/lib/calculateSIQS";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
+import { formatLocationName } from "@/utils/locationNameFormatter";
 
 interface LocationCardProps {
   id: string;
@@ -31,7 +32,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
   timestamp,
   className,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
@@ -47,9 +48,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   const scoreColor = siqsToColor(siqs, isViable);
 
-  // Display name more prominently than coordinates
-  const displayName = name && !name.includes("Location at") ? name : 
-    t("Location near coordinates", "坐标附近的位置");
+  // Format name more nicely
+  const displayName = formatLocationName(name, language as any);
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {

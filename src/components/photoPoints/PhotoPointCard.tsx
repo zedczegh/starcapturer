@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Award, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/geoUtils";
-import { getLocationName } from "@/services/geocoding";
+import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -26,6 +27,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
+          // First check if description contains location info
           if (point.description && point.description.toLowerCase().includes("near")) {
             const parts = point.description.split(/near/i);
             if (parts.length > 1) {
@@ -35,7 +37,18 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             }
           }
           
-          const townName = await getLocationName(
+          // If point has a name that's not coordinates, prioritize that
+          if (point.name && !point.name.includes("°") && !point.name.includes("Location at")) {
+            const nameParts = language === 'en' ? point.name.split(',') : point.name.split('，');
+            if (nameParts.length > 0) {
+              setNearestTown(nameParts[0].trim());
+              setLoadingTown(false);
+              return;
+            }
+          }
+          
+          // Use enhanced location service
+          const townName = await getLocationNameForCoordinates(
             point.latitude,
             point.longitude,
             language
@@ -44,11 +57,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           if (townName && !townName.includes("°")) {
             setNearestTown(townName);
           } else {
-            setNearestTown(language === 'en' ? 'Remote location' : '偏远位置');
+            // Better fallback for remote areas
+            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
           }
         } catch (error) {
           console.error("Error fetching nearest town:", error);
-          setNearestTown(language === 'en' ? 'Remote location' : '偏远位置');
+          setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
         } finally {
           setLoadingTown(false);
         }
@@ -56,7 +70,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       
       fetchNearestTown();
     }
-  }, [point.latitude, point.longitude, point.description, language]);
+  }, [point.latitude, point.longitude, point.description, point.name, language]);
 
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
@@ -112,7 +126,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             ) : nearestTown ? (
               <>{t("Near ", "靠近 ")}{nearestTown}</>
             ) : (
-              t("Remote location", "偏远位置")
+              t("Remote area", "偏远地区")
             )}
           </span>
         </div>
