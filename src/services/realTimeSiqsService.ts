@@ -86,7 +86,7 @@ export async function calculateRealTimeSiqs(
     
     // Ensure SIQS is positive
     const finalSiqs = Math.max(0, siqsResult.score);
-    const isViable = finalSiqs > 0;
+    const isViable = finalSiqs >= 2.0; // Consistent threshold with other parts of the app
     
     // Store in cache
     siqsCache.set(cacheKey, {
@@ -129,18 +129,30 @@ export async function batchCalculateSiqs(
     const promises = chunk.map(async (location) => {
       if (!location.latitude || !location.longitude) return location;
       
-      const result = await calculateRealTimeSiqs(
-        location.latitude,
-        location.longitude,
-        location.bortleScale || 5
-      );
-      
-      // Update the location object with real-time SIQS
-      return {
-        ...location,
-        siqs: result.siqs,
-        isViable: result.isViable
-      };
+      try {
+        const result = await calculateRealTimeSiqs(
+          location.latitude,
+          location.longitude,
+          location.bortleScale || 5
+        );
+        
+        // Update the location object with real-time SIQS
+        return {
+          ...location,
+          siqs: result.siqs,
+          isViable: result.isViable
+        };
+      } catch (error) {
+        console.error(`Error calculating SIQS for location ${location.name}:`, error);
+        // Return location with fallback calculation based on bortleScale
+        // This ensures we still display locations even if API fails
+        const fallbackSiqs = Math.max(0, 10 - (location.bortleScale || 5));
+        return {
+          ...location,
+          siqs: fallbackSiqs,
+          isViable: fallbackSiqs >= 2.0
+        };
+      }
     });
     
     // Wait for the current chunk to complete before processing next chunk

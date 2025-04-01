@@ -3,14 +3,13 @@ import { useState, useEffect, useRef } from 'react';
 
 /**
  * Hook to manage refresh state for location data
- * Prevents multiple refreshes when navigating from PhotoPoints page
- * Fixed to prevent refresh bugs in location details
+ * Ensures only one refresh when the location details page is opened
  */
 export function useRefreshManager(locationData: any) {
   const [shouldRefresh, setShouldRefresh] = useState(false);
   const refreshedRef = useRef(false);
   const locationSignatureRef = useRef<string | null>(null);
-  const lastRefreshTimeRef = useRef<number>(0);
+  const pageLoadRefreshedRef = useRef(false);
   
   // Calculate a unique signature for this location
   const getLocationSignature = () => {
@@ -18,32 +17,23 @@ export function useRefreshManager(locationData: any) {
     return `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}`;
   };
   
-  // Reset refresh state when location changes
+  // Reset refresh state when location changes or on first page load
   useEffect(() => {
     const currentSignature = getLocationSignature();
-    const currentTime = Date.now();
-    const timeSinceLastRefresh = currentTime - lastRefreshTimeRef.current;
     
-    // Prevent refresh spamming - only allow refresh every 2 seconds
-    const preventRefreshSpamming = timeSinceLastRefresh < 2000;
-    
-    // Check if location has changed or if coming from PhotoPoints
+    // Check for location change or first load
     if (
+      // First page load for any location
+      !pageLoadRefreshedRef.current ||
       // Location has changed significantly
       (currentSignature && currentSignature !== locationSignatureRef.current) ||
-      // Coming from PhotoPoints page
-      (locationData?.fromPhotoPoints === true) ||
-      // First load of this location
-      (currentSignature && !refreshedRef.current)
+      // Coming from PhotoPoints page (special case)
+      (locationData?.fromPhotoPoints === true)
     ) {
-      if (!preventRefreshSpamming) {
-        console.log("Refresh state reset due to location change or PhotoPoints navigation");
-        locationSignatureRef.current = currentSignature;
-        lastRefreshTimeRef.current = currentTime;
-        setShouldRefresh(true);
-      } else {
-        console.log("Refresh prevented due to throttling (refresh requested too soon)");
-      }
+      console.log("Refresh triggered: new location or initial page load");
+      locationSignatureRef.current = currentSignature;
+      setShouldRefresh(true);
+      pageLoadRefreshedRef.current = true;
     }
   }, [locationData]);
   
@@ -53,8 +43,14 @@ export function useRefreshManager(locationData: any) {
     setShouldRefresh(false);
   };
   
+  // Function to reset page load refresh flag (for testing purposes)
+  const resetPageLoadFlag = () => {
+    pageLoadRefreshedRef.current = false;
+  };
+  
   return {
     shouldRefresh,
-    markRefreshComplete
+    markRefreshComplete,
+    resetPageLoadFlag
   };
 }

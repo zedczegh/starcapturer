@@ -4,8 +4,8 @@ import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 
 /**
- * Hook to update SIQS score based on forecast data, ensuring it matches with
- * the weather forecast astro scores for the current location
+ * Hook to update SIQS score based on forecast data, ensuring consistency
+ * throughout the application
  */
 export const useLocationSIQSUpdater = (
   locationData: any, 
@@ -15,16 +15,25 @@ export const useLocationSIQSUpdater = (
 ) => {
   const updateAttemptedRef = useRef(false);
   const forceUpdateRef = useRef(false);
+  const lastLocationRef = useRef<string | null>(null);
   
+  // Reset update state for new calculations
   const resetUpdateState = useCallback(() => {
     updateAttemptedRef.current = false;
     forceUpdateRef.current = true;
+    console.log("SIQS update state reset");
   }, []);
   
   // Update SIQS score when forecast data becomes available
   useEffect(() => {
-    // Reset update state when location changes
-    if (locationData && locationData.id && !updateAttemptedRef.current) {
+    // Track location changes to force recalculation
+    const locationSignature = locationData ? 
+      `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}` : null;
+    
+    // Reset state when location changes
+    if (locationSignature !== lastLocationRef.current) {
+      console.log("Location changed, resetting SIQS update state");
+      lastLocationRef.current = locationSignature;
       resetUpdateState();
     }
     
@@ -46,7 +55,7 @@ export const useLocationSIQSUpdater = (
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
-          console.log(`Updated SIQS score: ${freshSIQSResult.score}`);
+          console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
           
           // Update the SIQS result with the fresh calculation
           setLocationData({
@@ -61,12 +70,11 @@ export const useLocationSIQSUpdater = (
           const currentCloudCover = locationData.weatherData.cloudCover;
           
           // Simplified SIQS formula based on cloud cover
-          // Better than showing no score at all
           const estimatedScore = currentCloudCover <= 75 
             ? Math.max(0, Math.min(10, 10 - (currentCloudCover * 0.1))) 
             : 0;
           
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore}`);
+          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
           
           setLocationData({
             ...locationData,
