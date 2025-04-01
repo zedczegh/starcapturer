@@ -65,14 +65,26 @@ export async function calculateRealTimeSiqs(
     
     // For light pollution, use provided Bortle scale or fetch it
     let finalBortleScale = bortleScale;
-    if (!finalBortleScale || finalBortleScale <= 0) {
+    
+    // Always try to fetch fresh light pollution data if Bortle scale is missing or invalid
+    if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
       try {
         const pollutionData = await fetchLightPollutionData(latitude, longitude);
-        finalBortleScale = pollutionData?.bortleScale || 5;
+        
+        if (pollutionData?.bortleScale && pollutionData.bortleScale > 0 && pollutionData.bortleScale <= 9) {
+          finalBortleScale = pollutionData.bortleScale;
+          console.log(`Updated Bortle scale from API: ${finalBortleScale}`);
+        } else {
+          // Use default if API returns invalid value
+          finalBortleScale = 5; // Default fallback
+          console.log(`Using default Bortle scale: ${finalBortleScale}`);
+        }
       } catch (err) {
         console.error("Error fetching light pollution data:", err);
         finalBortleScale = 5; // Default fallback
       }
+    } else {
+      console.log(`Using provided Bortle scale: ${finalBortleScale}`);
     }
     
     // Calculate SIQS using optimized method
@@ -169,7 +181,7 @@ export async function batchCalculateSiqs(
     });
   }
   
-  // Filter out any locations with SIQS = 0
+  // Filter out any locations with SIQS = 0 and water locations
   return updatedLocations.filter(loc => loc.siqs > 0);
 }
 

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
@@ -135,18 +136,36 @@ function getSynchronizedWeatherData(locationData: any, forecastData: any): any |
     const currentForecast = forecastData.current;
     const currentWeather = locationData.weatherData;
     
+    // Validate forecast data first to avoid bad updates
+    if (
+      typeof currentForecast.temperature_2m !== 'number' ||
+      typeof currentForecast.relative_humidity_2m !== 'number' ||
+      typeof currentForecast.cloud_cover !== 'number' ||
+      typeof currentForecast.wind_speed_10m !== 'number'
+    ) {
+      console.warn("Invalid forecast data detected, keeping original weather data");
+      return null;
+    }
+    
+    // Preserve original data for fields not in forecast
+    const preservedData = {
+      condition: currentWeather.condition,
+      aqi: currentWeather.aqi,
+      time: currentForecast.time || currentWeather.time
+    };
+    
     // Get the most recent and accurate data
     return {
-      ...currentWeather,
-      // Use forecast current data for more consistent values
-      temperature: currentForecast.temperature_2m || currentWeather.temperature,
-      humidity: currentForecast.relative_humidity_2m || currentWeather.humidity,
-      cloudCover: currentForecast.cloud_cover || currentWeather.cloudCover,
-      windSpeed: currentForecast.wind_speed_10m || currentWeather.windSpeed,
+      ...currentWeather, // Keep all original fields
+      // Override with validated forecast data
+      temperature: currentForecast.temperature_2m,
+      humidity: currentForecast.relative_humidity_2m,
+      cloudCover: currentForecast.cloud_cover,
+      windSpeed: currentForecast.wind_speed_10m,
       precipitation: currentForecast.precipitation || currentWeather.precipitation,
-      time: currentForecast.time || currentWeather.time,
-      // Keep condition derived from the weather code
-      condition: getWeatherCondition(currentForecast.weather_code, currentForecast.cloud_cover) || currentWeather.condition,
+      // Preserve high-quality data from the original weather
+      ...preservedData,
+      // Add weather condition description from code if available
       weatherCondition: getWeatherCondition(currentForecast.weather_code, null) || currentWeather.weatherCondition
     };
   } catch (error) {
