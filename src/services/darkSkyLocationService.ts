@@ -10,49 +10,32 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 // Cache of dark sky locations for quick access
 let cachedDarkSkyLocations: LocationEntry[] | null = null;
-
-// Radius-based cache for dark sky locations
-const radiusCache = new Map<string, LocationEntry[]>();
-
-// Cache for converted AstroSpots
-const astroSpotCache = new Map<string, SharedAstroSpot>();
-
-// Cache invalidation time (15 minutes)
-const CACHE_TIMEOUT = 15 * 60 * 1000;
-let lastCacheTime = Date.now();
+let lastCacheTimestamp: number = 0;
+const CACHE_VALIDITY_PERIOD = 30 * 60 * 1000; // 30 minutes
 
 /**
- * Clear caches when they become stale
- */
-function clearStaleCache() {
-  const now = Date.now();
-  if (now - lastCacheTime > CACHE_TIMEOUT) {
-    radiusCache.clear();
-    astroSpotCache.clear();
-    lastCacheTime = now;
-    console.log("Cleared stale dark sky location caches");
-  }
-}
-
-/**
- * Get all dark sky locations from the database
+ * Get all dark sky locations from the database with improved caching
  * @returns Array of LocationEntry with type 'dark-site'
  */
 export function getAllDarkSkyLocations(): LocationEntry[] {
-  if (!cachedDarkSkyLocations) {
+  const now = Date.now();
+  
+  // Check if cache is valid
+  if (!cachedDarkSkyLocations || now - lastCacheTimestamp > CACHE_VALIDITY_PERIOD) {
     try {
       cachedDarkSkyLocations = locationDatabase.filter(loc => loc.type === 'dark-site');
-      console.log(`Cached ${cachedDarkSkyLocations.length} dark sky locations`);
+      lastCacheTimestamp = now;
     } catch (error) {
       console.error("Error filtering dark sky locations:", error);
       return [];
     }
   }
+  
   return cachedDarkSkyLocations || [];
 }
 
 /**
- * Find dark sky locations within a radius
+ * Find dark sky locations within a radius with error handling
  * @param latitude Center latitude
  * @param longitude Center longitude
  * @param radius Search radius in km
@@ -63,27 +46,26 @@ export function findDarkSkyLocationsWithinRadius(
   longitude: number,
   radius: number
 ): LocationEntry[] {
-  clearStaleCache();
+  // Validate inputs
+  if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(radius)) {
+    console.error("Invalid coordinates or radius for dark sky location search");
+    return [];
+  }
+  
+  if (radius <= 0) {
+    return [];
+  }
   
   try {
-    // Create cache key based on coordinates and radius (rounded to reduce variations)
-    const cacheKey = `${latitude.toFixed(1)}-${longitude.toFixed(1)}-${Math.round(radius/100)*100}`;
-    
-    // Check if we have cached results for this query
-    if (radiusCache.has(cacheKey)) {
-      const cachedResults = radiusCache.get(cacheKey);
-      if (cachedResults) {
-        console.log(`Using cached dark sky locations for radius ${radius}km`);
-        return cachedResults;
-      }
-    }
-    
     const darkSkyLocations = getAllDarkSkyLocations();
-    const startTime = performance.now();
     
-    // Use faster filtering method
-    const results = darkSkyLocations.filter(location => {
+    return darkSkyLocations.filter(location => {
       try {
+        if (!location.coordinates || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+          console.error(`Invalid coordinates for location ${location.name}`);
+          return false;
+        }
+        
         const distance = calculateDistance(
           latitude,
           longitude,
@@ -97,14 +79,6 @@ export function findDarkSkyLocationsWithinRadius(
         return false;
       }
     });
-    
-    const endTime = performance.now();
-    console.log(`Found ${results.length} dark sky locations in ${(endTime - startTime).toFixed(2)}ms`);
-    
-    // Store in cache
-    radiusCache.set(cacheKey, results);
-    
-    return results;
   } catch (error) {
     console.error("Error finding dark sky locations within radius:", error);
     return [];
@@ -112,32 +86,42 @@ export function findDarkSkyLocationsWithinRadius(
 }
 
 /**
- * Determine certification type based on location name or properties
- * @param location The location entry
- * @returns Certification string
+ * Get a description for a dark sky location based on its certification
+ * @param certification Certification string
+ * @returns Description text
  */
-function determineCertificationType(location: LocationEntry): string {
-  const lowerName = location.name.toLowerCase();
-  
-  if (lowerName.includes('sanctuary')) {
-    return 'International Dark Sky Sanctuary';
-  } else if (lowerName.includes('reserve')) {
-    return 'International Dark Sky Reserve';
-  } else if (lowerName.includes('community') || 
-            lowerName.includes('village') || 
-            lowerName.includes('town') ||
-            lowerName.includes('city')) {
-    return 'International Dark Sky Community';
-  } else if (lowerName.includes('urban')) {
-    return 'Urban Night Sky Place';
-  } else {
-    // Default to park for national parks, state parks, etc.
-    return 'International Dark Sky Park';
+function getDarkSkyDescription(name: string, certification?: string, bortleScale?: number): string {
+  if (!certification) {
+    return `${name} is a dark sky location with good viewing conditions.`;
   }
+  
+  const bortleText = bortleScale ? ` (Bortle scale ${bortleScale})` : '';
+  
+  if (certification.includes('Park')) {
+    return `${name} is a certified International Dark Sky Park with protected night skies and excellent stargazing conditions${bortleText}.`;
+  }
+  
+  if (certification.includes('Reserve')) {
+    return `${name} is a certified International Dark Sky Reserve combining a dark core zone with surrounding communities committed to dark sky preservation${bortleText}.`;
+  }
+  
+  if (certification.includes('Sanctuary')) {
+    return `${name} is a certified International Dark Sky Sanctuary - one of the darkest and most remote places in the world${bortleText}.`;
+  }
+  
+  if (certification.includes('Community')) {
+    return `${name} is a certified International Dark Sky Community that has shown exceptional dedication to preserving the night sky${bortleText}.`;
+  }
+  
+  if (certification.includes('Urban Night Sky Place')) {
+    return `${name} is a certified Urban Night Sky Place that demonstrates commitments to dark sky preservation despite nearby urban light pollution${bortleText}.`;
+  }
+  
+  return `${name} is a certified dark sky location with ${certification} designation${bortleText}.`;
 }
 
 /**
- * Convert LocationEntry to SharedAstroSpot format
+ * Convert LocationEntry to SharedAstroSpot format with improved error handling
  * @param entry LocationEntry from database
  * @param userLatitude User latitude for distance calculation
  * @param userLongitude User longitude for distance calculation
@@ -149,12 +133,9 @@ export function convertToSharedAstroSpot(
   userLongitude: number
 ): SharedAstroSpot {
   try {
-    // Create cache key
-    const cacheKey = `${entry.name}-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}`;
-    
-    // Check cache first
-    if (astroSpotCache.has(cacheKey)) {
-      return astroSpotCache.get(cacheKey) as SharedAstroSpot;
+    // Validate coordinates
+    if (!Array.isArray(entry.coordinates) || entry.coordinates.length !== 2) {
+      throw new Error(`Invalid coordinates for location ${entry.name}`);
     }
     
     const distance = calculateDistance(
@@ -164,53 +145,48 @@ export function convertToSharedAstroSpot(
       entry.coordinates[1]
     );
     
-    // Determine certification type
-    const certification = determineCertificationType(entry);
-    const isDarkSkyReserve = certification === 'International Dark Sky Reserve';
+    // Generate a consistent ID from the name
+    const id = `dark-sky-${entry.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
     
-    // Calculate a realistic SIQS score based on Bortle scale
-    const baseSiqs = Math.max(1, 10 - entry.bortleScale);
-    // Add some variability but keep scores high for certified locations
-    const siqs = Math.max(6, Math.min(9, baseSiqs + (Math.random() * 1.5)));
+    // Get appropriate description based on certification type
+    const description = getDarkSkyDescription(entry.name, entry.certification, entry.bortleScale);
     
-    const spot: SharedAstroSpot = {
-      id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
+    return {
+      id,
       name: entry.name,
       latitude: entry.coordinates[0],
       longitude: entry.coordinates[1],
-      siqs: siqs,
-      bortleScale: entry.bortleScale,
-      isDarkSkyReserve: isDarkSkyReserve,
-      certification: certification,
-      description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
+      siqs: Math.max(1, 10 - (entry.bortleScale || 1)), // Default to high SIQS if no Bortle
+      bortleScale: entry.bortleScale || 1, // Assume excellent conditions if not specified
+      isDarkSkyReserve: true,
+      certification: entry.certification || 'International Dark Sky Location',
+      description,
       distance: distance,
       cloudCover: 0, // Will be calculated by SIQS service
-      isViable: true,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isViable: true, // Dark sky locations are generally viable for observation
+      type: entry.type || 'dark-site' // Include the type information
     };
-    
-    // Store in cache
-    astroSpotCache.set(cacheKey, spot);
-    
-    return spot;
   } catch (error) {
     console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);
     
     // Return a minimal valid SharedAstroSpot object as fallback with required properties
     return {
-      id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
+      id: `dark-sky-${entry.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
       name: entry.name,
-      latitude: entry.coordinates[0],
-      longitude: entry.coordinates[1],
-      bortleScale: entry.bortleScale || 5, // Provide a default value
-      siqs: 0, // Default SIQS
-      timestamp: new Date().toISOString()
+      latitude: entry.coordinates?.[0] || 0,
+      longitude: entry.coordinates?.[1] || 0,
+      bortleScale: entry.bortleScale || 1, // Provide a default value
+      siqs: entry.bortleScale ? Math.max(1, 10 - entry.bortleScale) : 9, // Default high SIQS
+      timestamp: new Date().toISOString(),
+      isDarkSkyReserve: true,
+      certification: entry.certification || 'International Dark Sky Location'
     };
   }
 }
 
 /**
- * Get dark sky locations as SharedAstroSpot objects
+ * Get dark sky locations as SharedAstroSpot objects with better error handling
  * @param latitude User latitude
  * @param longitude User longitude
  * @param radius Search radius in km
@@ -221,18 +197,17 @@ export function getDarkSkyAstroSpots(
   longitude: number,
   radius: number
 ): SharedAstroSpot[] {
+  if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(radius)) {
+    console.error("Invalid parameters for getDarkSkyAstroSpots");
+    return [];
+  }
+  
   try {
-    const startTime = performance.now();
     const locations = findDarkSkyLocationsWithinRadius(latitude, longitude, radius);
     
-    const spots = locations.map(location => 
+    return locations.map(location => 
       convertToSharedAstroSpot(location, latitude, longitude)
-    );
-    
-    const endTime = performance.now();
-    console.log(`Converted ${spots.length} dark sky locations to AstroSpots in ${(endTime - startTime).toFixed(2)}ms`);
-    
-    return spots;
+    ).filter(spot => !!spot.id); // Filter out any invalid spots
   } catch (error) {
     console.error("Error getting dark sky astro spots:", error);
     return [];
@@ -240,12 +215,32 @@ export function getDarkSkyAstroSpots(
 }
 
 /**
- * Clear all dark sky location caches
- * Call this when user changes location significantly
+ * Find a specific dark sky location by name
+ * @param name Name to search for
+ * @returns LocationEntry if found, null otherwise
  */
-export function clearDarkSkyLocationCache(): void {
-  cachedDarkSkyLocations = null;
-  radiusCache.clear();
-  astroSpotCache.clear();
-  console.log("Dark sky location caches cleared");
+export function findDarkSkyLocationByName(name: string): LocationEntry | null {
+  if (!name) return null;
+  
+  try {
+    const darkSkyLocations = getAllDarkSkyLocations();
+    const normalizedSearch = name.toLowerCase().trim();
+    
+    // Try exact match first
+    const exactMatch = darkSkyLocations.find(
+      loc => loc.name.toLowerCase() === normalizedSearch
+    );
+    
+    if (exactMatch) return exactMatch;
+    
+    // Try partial match
+    const partialMatch = darkSkyLocations.find(
+      loc => loc.name.toLowerCase().includes(normalizedSearch)
+    );
+    
+    return partialMatch || null;
+  } catch (error) {
+    console.error("Error finding dark sky location by name:", error);
+    return null;
+  }
 }

@@ -1,4 +1,3 @@
-
 /**
  * Database of locations with accurate Bortle scale values
  * Data sourced from astronomical observations and light pollution maps
@@ -21,6 +20,7 @@ export interface LocationEntry {
   bortleScale: number;
   radius: number; // km - the approximate radius this location's Bortle scale applies to
   type?: 'urban' | 'rural' | 'dark-site' | 'natural' | 'suburban';
+  certification?: string; // Added for certified dark sky locations
 }
 
 // Combine all regional location databases
