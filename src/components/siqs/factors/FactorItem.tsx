@@ -26,18 +26,6 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   // Get the appropriate color class based on the normalized score
   const colorClass = getProgressColorClass(finalScore);
   
-  // Format the description to ensure cloud cover percentage shows only 1 decimal place
-  let formattedDescription = factor.description;
-  
-  if (factor.name === "Cloud Cover" || factor.name === "云层覆盖") {
-    // Match cloud cover percentage pattern (number followed by %)
-    const percentageRegex = /(\d+\.\d+)%/g;
-    formattedDescription = factor.description.replace(percentageRegex, (match, percentage) => {
-      const roundedPercentage = parseFloat(percentage).toFixed(1);
-      return `${roundedPercentage}%`;
-    });
-  }
-  
   return (
     <motion.div
       className="space-y-1"
@@ -56,7 +44,7 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
         className="h-2"
         colorClass={colorClass}
       />
-      <p className="text-xs text-muted-foreground">{formattedDescription}</p>
+      <p className="text-xs text-muted-foreground">{factor.description}</p>
     </motion.div>
   );
 };
