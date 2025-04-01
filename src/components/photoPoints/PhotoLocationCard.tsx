@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Ruler, Award, Star, TreeDeciduous, Moon, Building2, Landmark, Home } from 'lucide-react';
+import { MapPin, Ruler, Award, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { siqsToColor } from '@/lib/calculateSIQS';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,19 +15,6 @@ interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
 }
-
-// Map certification types to their respective icons
-const certificationIcons: Record<string, React.ReactNode> = {
-  'International Dark Sky Park': <TreeDeciduous className="h-3 w-3 mr-1" />,
-  'International Dark Sky Reserve': <Moon className="h-3 w-3 mr-1" />,
-  'International Dark Sky Sanctuary': <Star className="h-3 w-3 mr-1" />,
-  'International Dark Sky Community': <Landmark className="h-3 w-3 mr-1" />,
-  'Urban Night Sky Place': <Building2 className="h-3 w-3 mr-1" />,
-  'Dark Sky Friendly Development of Distinction': <Home className="h-3 w-3 mr-1" />
-};
-
-// Default icon if certification type doesn't match
-const defaultCertIcon = <Award className="h-3 w-3 mr-1" />;
 
 const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }) => {
   const { t, language } = useLanguage();
@@ -68,7 +55,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
   // Use regional naming for remote areas or coordinates
   if (
     displayName === "Remote area" || 
-    displayName === "Remote location" || 
     displayName === "偏远地区" || 
     displayName.includes("°") || 
     displayName.includes("Location at") || 
@@ -85,20 +71,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
   if (language === 'zh' && location.chineseName) {
     displayName = location.chineseName;
   }
-
-  // Get appropriate certification icon
-  const getCertificationIcon = () => {
-    if (!location.certification) return defaultCertIcon;
-    
-    // Try to match the certification with our known types
-    for (const [certType, icon] of Object.entries(certificationIcons)) {
-      if (location.certification.includes(certType)) {
-        return icon;
-      }
-    }
-    
-    return defaultCertIcon;
-  };
   
   return (
     <motion.div variants={item} initial="hidden" animate="visible">
@@ -155,7 +127,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }
               {/* Show certification badge for dark sky reserves */}
               {(location.isDarkSkyReserve || location.certification) && (
                 <Badge className="bg-blue-500 hover:bg-blue-600 whitespace-nowrap">
-                  {getCertificationIcon()}
+                  <Award className="h-3 w-3 mr-1" />
                   {t("Certified", "已认证")}
                 </Badge>
               )}
