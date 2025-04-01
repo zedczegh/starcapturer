@@ -41,7 +41,8 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     const now = new Date();
     const forecasts = [];
     
-    for (let i = 0; i < 8; i++) {
+    // Generate 24 hours of fallback data instead of just 8
+    for (let i = 0; i < 24; i++) {
       const forecastTime = new Date(now);
       forecastTime.setHours(now.getHours() + i);
       
@@ -58,7 +59,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
     return forecasts;
   }, []);
 
-  // Filter forecasts to only show future data
+  // Filter forecasts to only show future data (24 hours)
   const forecasts = useMemo(() => {
     const isForecastDataValid = forecastData && 
                             forecastData.hourly && 
@@ -77,7 +78,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
       let startIndex = 0;
       for (let i = 0; i < forecastData.hourly.time.length; i++) {
         const forecastTime = new Date(forecastData.hourly.time[i]);
-        if (forecastTime > now) {
+        if (forecastTime >= now) {
           startIndex = i;
           break;
         }

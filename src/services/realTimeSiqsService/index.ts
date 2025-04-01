@@ -1,176 +1,146 @@
 
-/**
- * Real-time SIQS calculation service
- * Optimized for performance with caching and batched processing
- */
-
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
 import { calculateSIQS } from "@/lib/calculateSIQS";
+import { fetchWeatherData } from "@/lib/api";
+import { SharedAstroSpot } from "@/types/weather";
+import { SIQSFactors } from "@/lib/siqs/types";
 
-// Cache for SIQS calculations
-interface SiqsCache {
-  [key: string]: {
-    siqs: number;
-    timestamp: number;
-    isViable?: boolean;
+/**
+ * Calculate SIQS score for a location with fallback values when needed
+ */
+export const calculateSiqsForLocation = async (
+  latitude: number,
+  longitude: number,
+  bortleScale: number,
+  language: string = 'en'
+): Promise<{ 
+  score: number;
+  isViable: boolean;
+  factors: Array<{ name: string; score: number; description: string }>;
+}> => {
+  try {
+    // Fetch current weather data
+    const weatherData = await fetchWeatherData({ latitude, longitude });
+    
+    if (!weatherData) {
+      console.warn("Weather data unavailable, using default values");
+      return getDefaultSiqsResult(bortleScale, language);
+    }
+    
+    // Calculate SIQS with available weather data
+    const result = calculateSIQS({
+      cloudCover: weatherData.cloudCover,
+      bortleScale: bortleScale || 5,
+      seeingConditions: 3, // Default to average
+      windSpeed: weatherData.windSpeed,
+      humidity: weatherData.humidity,
+      moonPhase: 0.5, // Default to average
+      precipitation: weatherData.precipitation,
+      aqi: weatherData.aqi
+    });
+    
+    return result;
+  } catch (error) {
+    console.error("Error calculating SIQS:", error);
+    return getDefaultSiqsResult(bortleScale, language);
+  }
+};
+
+/**
+ * Get default SIQS result when data is unavailable
+ */
+function getDefaultSiqsResult(
+  bortleScale: number,
+  language: string
+): { 
+  score: number;
+  isViable: boolean;
+  factors: Array<{ name: string; score: number; description: string }>;
+} {
+  const defaultScore = bortleScale < 5 ? 6 : 4;
+  
+  return {
+    score: defaultScore,
+    isViable: defaultScore >= 3,
+    factors: [
+      {
+        name: language === 'en' ? 'Bortle Scale' : '波特尔等级',
+        score: ((9 - bortleScale) * 11.11), // Convert 1-9 scale to 0-100
+        description: language === 'en' 
+          ? `Bortle scale ${bortleScale} affects sky darkness` 
+          : `波特尔等级 ${bortleScale} 影响天空黑暗度`
+      },
+      {
+        name: language === 'en' ? 'Weather Conditions' : '天气状况',
+        score: 70,
+        description: language === 'en'
+          ? 'Using default weather conditions'
+          : '使用默认天气状况'
+      }
+    ]
   };
 }
 
-// Calculation options
-interface CalculationOptions {
-  forceRefresh?: boolean;
-  cacheTimeoutMinutes?: number;
-}
-
-// Configuration
-const DEFAULT_CACHE_TIMEOUT = 15; // minutes
-const SIQS_CACHE: SiqsCache = {};
-
 /**
- * Get SIQS calculation cache key
+ * Calculate SIQS for a shared astro spot with fallback values
  */
-function getSiqsCacheKey(location: SharedAstroSpot): string {
-  return `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}_${location.id || 'unknown'}`;
-}
-
-/**
- * Calculate SIQS for a single location with caching
- */
-export async function calculateLocationSiqs(
-  location: SharedAstroSpot,
-  options: CalculationOptions = {}
-): Promise<number> {
-  // Skip empty or invalid locations
-  if (!location || !location.latitude || !location.longitude) {
-    return 0;
-  }
-  
-  const {
-    forceRefresh = false,
-    cacheTimeoutMinutes = DEFAULT_CACHE_TIMEOUT
-  } = options;
-  
-  const cacheKey = getSiqsCacheKey(location);
-  const cacheEntry = SIQS_CACHE[cacheKey];
-  const now = Date.now();
-  
-  // Use cached value if available and not expired or forced refresh
-  if (
-    !forceRefresh &&
-    cacheEntry &&
-    now - cacheEntry.timestamp < cacheTimeoutMinutes * 60 * 1000
-  ) {
-    return cacheEntry.siqs;
-  }
-  
-  // Get Bortle scale if not provided
-  const bortleScale = location.bortleScale || estimateBortleScaleByLocation(
-    location.name,
-    location.latitude,
-    location.longitude
-  );
-  
-  // Calculate SIQS
-  let siqs: number;
+export const calculateSpotSIQS = (
+  spot: SharedAstroSpot,
+  language: string = 'en'
+): number => {
   try {
-    // Use calculateSIQS and handle its return type properly
-    const result = calculateSIQS({
-      bortleScale,
-      seeingIndex: location.seeingIndex || 2,
-      cloudCover: location.cloudCover || 0,
-      humidity: location.humidity || 0.5,
-      moonPhase: location.moonPhase || 0,
-      moonElevation: location.moonElevation || 0,
-      temperature: location.temperature || 15,
-      isViable: location.isViable !== undefined ? location.isViable : true
-    });
-    
-    // Handle result properly whether it's a number or object
-    if (typeof result === 'number') {
-      siqs = result;
-    } else {
-      siqs = result.score;
+    // If spot already has SIQS score, use it
+    if (typeof spot.siqs === 'number') {
+      return spot.siqs;
     }
     
-    // Cache the result
-    SIQS_CACHE[cacheKey] = {
-      siqs,
-      timestamp: now,
-      isViable: typeof result === 'object' ? result.isViable : siqs >= 2.0
+    if (spot.siqs && typeof spot.siqs === 'object' && typeof spot.siqs.score === 'number') {
+      return spot.siqs.score;
+    }
+    
+    // Use what data we have with defaults for missing values
+    const factors: SIQSFactors = {
+      bortleScale: spot.bortleScale || 5,
+      cloudCover: 10, // Default to low cloud cover
+      seeingConditions: 3, // Default to average
+      windSpeed: 5, // Default to low wind
+      humidity: 50, // Default to moderate humidity
+      moonPhase: 0.5, // Default to half moon
+      aqi: 50 // Default to moderate AQI
     };
     
-    return siqs;
+    const result = calculateSIQS(factors);
+    return result.score;
   } catch (error) {
-    console.error("Error calculating SIQS:", error);
-    return 0;
+    console.error("Error calculating spot SIQS:", error);
+    // Return a reasonable default based on Bortle scale
+    return spot.bortleScale < 5 ? 6 : 4;
   }
-}
+};
 
 /**
- * Calculate SIQS for multiple locations efficiently in batches
+ * Estimate SIQS based on available parameters
  */
-export async function batchCalculateSiqs(
-  locations: SharedAstroSpot[],
-  options: CalculationOptions = {}
-): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) {
-    return [];
-  }
-  
-  // Process in parallel for improved performance
-  const locationsWithSiqs: SharedAstroSpot[] = await Promise.all(
-    locations.map(async (location) => {
-      try {
-        const siqs = await calculateLocationSiqs(location, options);
-        
-        // Only return locations with valid SIQS scores
-        if (siqs > 0) {
-          return {
-            ...location,
-            siqs
-          };
-        } else {
-          return null;
-        }
-      } catch (error) {
-        console.error(`Error processing location ${location.id}:`, error);
-        return null;
-      }
-    })
-  );
-  
-  // Filter out null entries and sort by SIQS
-  return locationsWithSiqs
-    .filter(Boolean) as SharedAstroSpot[];
-}
-
-/**
- * Prefetch SIQS data for locations to improve UX
- * This doesn't block the UI and runs in the background
- */
-export async function prefetchSiqsData(
-  locations: SharedAstroSpot[],
-  options: CalculationOptions = {}
-): Promise<void> {
-  if (!locations || locations.length === 0) {
-    return;
-  }
-  
-  // Use a small delay to avoid blocking the main thread
-  setTimeout(() => {
-    batchCalculateSiqs(locations, options).catch(error => {
-      console.error("Error prefetching SIQS data:", error);
+export const estimateSIQS = (
+  bortleScale: number,
+  cloudCover: number = 10,
+  windSpeed: number = 5,
+  moonPhase: number = 0.5
+): number => {
+  try {
+    const result = calculateSIQS({
+      bortleScale,
+      cloudCover,
+      seeingConditions: 3,
+      windSpeed,
+      humidity: 50,
+      moonPhase,
+      precipitation: 0,
+      aqi: 50
     });
-  }, 100);
-}
-
-/**
- * Clear SIQS cache to force fresh calculations
- */
-export function clearSiqsCache(): void {
-  Object.keys(SIQS_CACHE).forEach(key => {
-    delete SIQS_CACHE[key];
-  });
-  console.log("SIQS cache cleared");
-}
+    
+    return result.score;
+  } catch (error) {
+    console.error("Error estimating SIQS:", error);
+    return bortleScale < 5 ? 6 : 4;
+  }
+};
