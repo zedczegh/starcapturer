@@ -6,7 +6,7 @@ import { useGeolocation } from "@/hooks/location/useGeolocation";
 export const useSiqsNavigation = () => {
   const navigate = useNavigate();
   
-  // Set up geolocation for direct access
+  // Set up geolocation for direct access - removing invalid language option
   const geo = useGeolocation({ 
     enableHighAccuracy: true, 
     timeout: 15000,

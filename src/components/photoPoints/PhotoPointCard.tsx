@@ -26,8 +26,8 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
-          if (point.description && point.description.includes("near")) {
-            const parts = point.description.split("near");
+          if (point.description && point.description.toLowerCase().includes("near")) {
+            const parts = point.description.split(/near/i);
             if (parts.length > 1) {
               setNearestTown(parts[1].trim());
               setLoadingTown(false);
@@ -38,18 +38,17 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           const townName = await getLocationName(
             point.latitude,
             point.longitude,
-            language as any
+            language
           );
           
-          let simplifiedName = townName;
-          if (townName.includes(',')) {
-            const parts = townName.split(',');
-            simplifiedName = parts[0].trim();
+          if (townName && !townName.includes("°")) {
+            setNearestTown(townName);
+          } else {
+            setNearestTown(language === 'en' ? 'Remote location' : '偏远位置');
           }
-          
-          setNearestTown(simplifiedName);
         } catch (error) {
           console.error("Error fetching nearest town:", error);
+          setNearestTown(language === 'en' ? 'Remote location' : '偏远位置');
         } finally {
           setLoadingTown(false);
         }
@@ -57,7 +56,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       
       fetchNearestTown();
     }
-  }, [point, language]);
+  }, [point.latitude, point.longitude, point.description, language]);
 
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");

@@ -57,26 +57,27 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             filteredPoints = certifiedPoints.length > 0 ? certifiedPoints : filteredPoints;
           }
           
-          // First sort by distance (closest first)
+          // Sort by distance (closest first)
           filteredPoints.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
           
-          // Then sort by SIQS score within similar distance ranges (grouped by 50km)
-          filteredPoints = filteredPoints.reduce((acc, point) => {
+          // Then sort by SIQS score within similar distance ranges
+          const distanceGroups: { [key: number]: SharedAstroSpot[] } = {};
+          
+          filteredPoints.forEach(point => {
             const distanceGroup = Math.floor((point.distance || 0) / 50);
-            if (!acc[distanceGroup]) acc[distanceGroup] = [];
-            acc[distanceGroup].push(point);
-            return acc;
-          }, {} as Record<number, SharedAstroSpot[]>);
+            if (!distanceGroups[distanceGroup]) distanceGroups[distanceGroup] = [];
+            distanceGroups[distanceGroup].push(point);
+          });
           
           // Sort each distance group by SIQS
-          Object.keys(filteredPoints).forEach(group => {
-            filteredPoints[Number(group)].sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+          Object.keys(distanceGroups).forEach(group => {
+            distanceGroups[parseInt(group)].sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
           });
           
           // Flatten the groups back to an array
-          const sortedPoints = Object.keys(filteredPoints)
-            .sort((a, b) => Number(a) - Number(b))
-            .flatMap(group => filteredPoints[Number(group)]);
+          const sortedPoints = Object.keys(distanceGroups)
+            .sort((a, b) => parseInt(a) - parseInt(b))
+            .flatMap(group => distanceGroups[parseInt(group)]);
           
           setRecommendedPoints(sortedPoints.slice(0, 5));
         } else {
