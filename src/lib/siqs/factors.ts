@@ -1,4 +1,3 @@
-
 /**
  * Factor score calculation functions for SIQS
  */
@@ -26,21 +25,21 @@ export function calculateSeeingScore(seeingConditions: number): number {
 
 export function calculateWindScore(windSpeed: number): number {
   // 100 is calm (0 mph), decreases as wind speed increases
-  // Using 30mph as the upper threshold where score becomes 0
-  return Math.max(0, 100 - (windSpeed / 30) * 100);
+  return Math.max(0, 100 - (windSpeed / 30) * 100); // Assuming 30mph is the limit
 }
 
 export function calculateHumidityScore(humidity: number): number {
-  // Lower humidity is better for astronomy
-  // 0% humidity = 100 points, 100% humidity = 0 points
+  // 100 is dry (0% humidity), decreases as humidity increases
+  // Higher humidity is worse for astronomy
   return Math.max(0, 100 - humidity);
 }
 
 export function calculateMoonScore(moonPhase: number): number {
-  // 100 is new moon (0), 0 is full moon (0.5)
-  // This is a more accurate model: new moon (0) is best,
-  // full moon (0.5) is worst, then improves again toward new moon (1)
-  return Math.max(0, 100 - (Math.sin(moonPhase * Math.PI) * 100));
+  // 100 is new moon (0), decreases as moon gets fuller (0.5), back up at full moon (1)
+  // This is a simplified model - in reality new moon (0) and full moon (1) are best,
+  // and half moon (0.5) is worst for deep sky objects
+  const moonIllumination = Math.abs(moonPhase - 0.5) * 2; // Scale to 0-1
+  return Math.max(0, moonIllumination * 100);
 }
 
 export function calculateAQIScore(aqi: number): number {

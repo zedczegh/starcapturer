@@ -19,33 +19,6 @@ export const filterNighttimeForecasts = (forecasts: any[]): any[] => {
 };
 
 /**
- * Extract hourly forecast data and convert to a standard format for processing
- * @param forecastData Raw forecast data from API
- * @returns Array of standardized forecast items
- */
-export const extractHourlyForecastData = (forecastData: any): any[] => {
-  if (!forecastData?.hourly || !Array.isArray(forecastData.hourly.time)) {
-    return [];
-  }
-  
-  const hourlyData = forecastData.hourly;
-  const forecasts = [];
-  
-  for (let i = 0; i < hourlyData.time.length; i++) {
-    forecasts.push({
-      time: hourlyData.time[i],
-      cloudCover: hourlyData.cloud_cover?.[i] ?? 0,
-      windSpeed: hourlyData.wind_speed_10m?.[i] ?? 0,
-      humidity: hourlyData.relative_humidity_2m?.[i] ?? 0,
-      precipitation: hourlyData.precipitation?.[i] ?? 0,
-      weatherCode: hourlyData.weather_code?.[i] ?? 0
-    });
-  }
-  
-  return forecasts;
-};
-
-/**
  * Calculate SIQS based on nighttime forecasts
  * @param locationData Current location data with weather information
  * @param forecastData Hourly forecast data
@@ -60,11 +33,30 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
   }
   
   try {
-    // Extract and standardize hourly forecast data
-    const allHourlyForecasts = extractHourlyForecastData(forecastData);
+    // Extract nighttime forecasts from hourly data
+    const nightForecasts = [];
+    const hourlyData = forecastData.hourly;
     
-    // Filter to nighttime hours only
-    const nightForecasts = filterNighttimeForecasts(allHourlyForecasts);
+    // Safely check if we have time data available
+    if (Array.isArray(hourlyData.time)) {
+      for (let i = 0; i < hourlyData.time.length; i++) {
+        const time = hourlyData.time[i];
+        const date = new Date(time);
+        const hour = date.getHours();
+        
+        // Include hours between 6 PM (18) and 7 AM (7)
+        if (hour >= 18 || hour < 7) {
+          nightForecasts.push({
+            time,
+            cloudCover: hourlyData.cloud_cover?.[i] ?? 0,
+            windSpeed: hourlyData.wind_speed_10m?.[i] ?? 0,
+            humidity: hourlyData.relative_humidity_2m?.[i] ?? 0,
+            precipitation: hourlyData.precipitation?.[i] ?? 0,
+            weatherCondition: hourlyData.weather_code?.[i] ?? 0
+          });
+        }
+      }
+    }
     
     if (nightForecasts.length === 0) {
       console.log("No nighttime forecasts found in data");
@@ -74,7 +66,7 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     console.log(`Found ${nightForecasts.length} nighttime forecast hours`);
     
     // Calculate average values for cloud cover, wind speed, and humidity
-    const avgCloudCover = nightForecasts.reduce((sum, item) => sum + item.cloudCover, 0) / nightForecasts.length;
+    const avgCloudCover = calculateAverageCloudCover(nightForecasts);
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
     // Check if cloud cover is too high to make imaging possible (threshold at 50%)
@@ -96,8 +88,8 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
       };
     }
     
-    const avgWindSpeed = nightForecasts.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecasts.length;
-    const avgHumidity = nightForecasts.reduce((sum, item) => sum + item.humidity, 0) / nightForecasts.length;
+    const avgWindSpeed = calculateAverageWindSpeed(nightForecasts);
+    const avgHumidity = nightForecasts.reduce((sum, item) => sum + (item.humidity || 0), 0) / nightForecasts.length;
     
     // Calculate if any precipitation is expected
     const hasPrecipitation = nightForecasts.some(f => f.precipitation > 0);
@@ -108,7 +100,6 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     // Log calculation inputs for better debugging
     console.log("SIQS calculation with", nightForecasts.length, "nighttime forecast items");
     console.log("Using nighttime forecast data for SIQS calculation");
-    console.log(`Average values - Cloud: ${avgCloudCover.toFixed(1)}%, Wind: ${avgWindSpeed.toFixed(1)}km/h, Humidity: ${avgHumidity.toFixed(1)}%`);
     
     // Calculate SIQS with emphasis on nighttime conditions
     const siqs = calculateSIQS({
@@ -120,23 +111,13 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
       moonPhase: locationData.moonPhase || 0,
       precipitation: hasPrecipitation ? 0.1 : 0,
       aqi: currentWeather.aqi,
-      weatherCondition: nightForecasts[0]?.weatherCode || 0,
+      weatherCondition: nightForecasts[0]?.weatherCondition || 0,
       nightForecast: nightForecasts
     });
     
     console.log("Final SIQS score based on nighttime forecast:", siqs.score.toFixed(1));
     console.log("Calculated nighttime SIQS:", siqs.score);
-    
-    // Normalize all factor scores to 0-10 scale for consistent display
-    const normalizedFactors = siqs.factors.map(factor => ({
-      ...factor,
-      score: factor.score > 10 ? factor.score / 10 : factor.score
-    }));
-    
-    return {
-      ...siqs,
-      factors: normalizedFactors
-    };
+    return siqs;
   } catch (error) {
     console.error("Error calculating nighttime SIQS:", error);
     return null;
@@ -179,8 +160,8 @@ export const getAverageForecastSIQS = (forecastData: any): number => {
         if (forecastData.cloud_cover_mean && Array.isArray(forecastData.cloud_cover_mean) && 
             forecastData.cloud_cover_mean[i] !== undefined) {
           const cloudCover = forecastData.cloud_cover_mean[i];
-          if (cloudCover < 50) {
-            forecast.siqs.score = Math.max(0, 10 - (cloudCover * 0.2));
+          if (cloudCover < 40) {
+            forecast.siqs.score = Math.max(0, 10 - (cloudCover * 0.25));
           } else {
             forecast.siqs.score = 0;
           }
@@ -239,10 +220,10 @@ function getForecastSIQSFromArray(forecasts: any[]): number {
     } else if (forecast.cloudCover !== undefined || forecast.cloud_cover !== undefined) {
       // Fallback: calculate from cloud cover if available
       const cloudCover = forecast.cloudCover || forecast.cloud_cover;
-      if (cloudCover < 50) {
-        // Adjusted formula to match our new threshold
-        // 0% clouds = 10, 50% clouds = 0
-        const cloudScore = Math.max(0, 10 - (cloudCover * 0.2));
+      if (cloudCover < 40) {
+        // Simple formula: 10 - (cloudCover * 0.25)
+        // 0% clouds = 10, 40% clouds = 0
+        const cloudScore = Math.max(0, 10 - (cloudCover * 0.25));
         totalSIQS += cloudScore;
         count++;
       }
