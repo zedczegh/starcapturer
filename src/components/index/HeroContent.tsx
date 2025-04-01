@@ -1,8 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, Telescope, Satellite, MapPin } from "lucide-react";
+import { Star, Telescope, Satellite } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
@@ -31,15 +30,6 @@ const HeroContent: React.FC = () => {
             </span>
           </div>
         </motion.h1>
-        
-        <div className="mt-6">
-          <Button size="lg" className="bg-gradient-to-r from-primary/90 to-primary/70 hover:opacity-90" asChild>
-            <Link to="/photo-points">
-              <MapPin className="mr-2 h-4 w-4" />
-              {t("Find Photo Points Nearby", "查找附近的摄影点")}
-            </Link>
-          </Button>
-        </div>
       </div>
     </div>
   );
