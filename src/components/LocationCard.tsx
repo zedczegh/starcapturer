@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { siqsToColor } from "@/lib/calculateSIQS";
-import { CalendarClock, MapPin, Star } from "lucide-react";
+import { CalendarClock, MapPin, Star, Award, Park, Building, Globe, Moon } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { formatLocationName } from "@/utils/locationNameFormatter";
@@ -20,6 +20,8 @@ interface LocationCardProps {
   isViable: boolean;
   timestamp: string;
   className?: string;
+  certification?: string;
+  isDarkSkyReserve?: boolean;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -31,6 +33,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   isViable,
   timestamp,
   className,
+  certification,
+  isDarkSkyReserve,
 }) => {
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
@@ -55,6 +59,25 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const handleMouseEnter = useCallback(() => {
     prefetchSIQSDetails(queryClient, latitude, longitude);
   }, [latitude, longitude, queryClient]);
+  
+  // Determine certification icon based on certification type
+  const getCertificationIcon = () => {
+    if (!certification) return null;
+    
+    const certLower = certification.toLowerCase();
+    
+    if (certLower.includes('sanctuary')) {
+      return <Moon className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else if (certLower.includes('reserve') || isDarkSkyReserve) {
+      return <Globe className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else if (certLower.includes('park')) {
+      return <Park className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else if (certLower.includes('community')) {
+      return <Building className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else {
+      return <Award className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    }
+  };
   
   // Create a link with both the ID and the state to ensure consistent navigation
   return (
@@ -130,6 +153,15 @@ const LocationCard: React.FC<LocationCardProps> = ({
               )}
             </Badge>
           </div>
+          
+          {certification && (
+            <div className="mt-2 flex items-center">
+              {getCertificationIcon()}
+              <span className="text-xs text-blue-400 ml-1 line-clamp-1">
+                {certification}
+              </span>
+            </div>
+          )}
         </CardContent>
         
         <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
