@@ -9,7 +9,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
 import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { getLocationName } from '@/services/geocoding';
+import { getLocationNameForCoordinates } from '@/components/location/map/LocationNameService';
+import { extractNearestTownName } from '@/utils/locationNameFormatter';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -62,32 +63,36 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index, 
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
-          // Check if the location already has a nearest town name
-          if (location.description && location.description.includes("near")) {
-            const parts = location.description.split("near");
-            if (parts.length > 1) {
-              setNearestTown(parts[1].trim());
-              return;
-            }
+          // First check if location already has a name we can use
+          if (location.name && 
+              !location.name.includes("°") && 
+              !location.name.includes("Location at") &&
+              !location.name.includes("位置在") &&
+              !location.name.includes("Remote area") &&
+              !location.name.includes("偏远地区")) {
+            
+            const extractedName = extractNearestTownName(location.name, location.description, language);
+            setNearestTown(extractedName);
+            setLoadingTown(false);
+            return;
           }
           
-          // Otherwise fetch the nearest town
-          const townName = await getLocationName(
+          // Otherwise fetch from our location service
+          const townName = await getLocationNameForCoordinates(
             location.latitude,
             location.longitude,
-            language as any
+            language
           );
           
-          // Extract just the town name from the full address if possible
-          let simplifiedName = townName;
-          if (townName.includes(',')) {
-            const parts = townName.split(',');
-            simplifiedName = parts[0].trim();
+          if (townName) {
+            const extractedTownName = extractNearestTownName(townName, location.description, language);
+            setNearestTown(extractedTownName);
+          } else {
+            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
           }
-          
-          setNearestTown(simplifiedName);
         } catch (error) {
           console.error("Error fetching nearest town:", error);
+          setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
         } finally {
           setLoadingTown(false);
         }

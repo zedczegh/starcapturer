@@ -9,7 +9,7 @@ import { siqsToColor } from "@/lib/calculateSIQS";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
-import { formatLocationName } from "@/utils/locationNameFormatter";
+import { formatLocationName, extractTownName } from "@/utils/locationNameFormatter";
 
 interface LocationCardProps {
   id: string;
