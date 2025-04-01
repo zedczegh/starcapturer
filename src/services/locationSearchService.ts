@@ -1,3 +1,4 @@
+
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -16,27 +17,29 @@ import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValid
  * @param longitude Center longitude
  * @param radius Search radius in km
  * @param certifiedOnly Whether to return only certified locations
+ * @param limit Maximum number of locations to return (defaults to 50)
  * @returns Promise resolving to array of SharedAstroSpot
  */
 export async function findLocationsWithinRadius(
   latitude: number,
   longitude: number,
   radius: number,
-  certifiedOnly: boolean = false
+  certifiedOnly: boolean = false,
+  limit: number = 50
 ): Promise<SharedAstroSpot[]> {
   try {
     // Check cache first with more specific cache key
-    const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly ? 'certified' : 'all'}`;
+    const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly ? 'certified' : 'all'}-${limit}`;
     const cachedData = getCachedLocationSearch(latitude, longitude, radius, cacheKey);
     
     if (cachedData) {
-      console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km`);
+      console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km, limit: ${limit}`);
       return certifiedOnly 
         ? cachedData.filter(loc => loc.isDarkSkyReserve || loc.certification)
         : cachedData;
     }
     
-    console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, limit: ${limit}`);
     
     // If we're only looking for certified locations, we can also check the local database
     if (certifiedOnly) {
@@ -47,13 +50,13 @@ export async function findLocationsWithinRadius(
         console.log(`Found ${localDarkSkyLocations.length} local dark sky locations within radius`);
       }
       
-      // Get recommended points from API
+      // Get recommended points from API with provided limit
       const apiPoints = await getRecommendedPhotoPoints(
         latitude, 
         longitude, 
         radius,
         true, // certified only
-        50 // limit
+        limit // use passed limit
       );
       
       // Filter out water locations
@@ -78,13 +81,13 @@ export async function findLocationsWithinRadius(
       return combinedPoints;
     }
     
-    // For all locations (not just certified), get from API
+    // For all locations (not just certified), get from API with provided limit
     const points = await getRecommendedPhotoPoints(
       latitude, 
       longitude, 
       radius,
       certifiedOnly,
-      50 // limit
+      limit
     );
     
     if (!points || points.length === 0) {
@@ -185,17 +188,25 @@ function findLocalDarkSkyLocations(
  * @param longitude Center longitude
  * @param radius Search radius in km
  * @param tryLargerRadius Whether to try a larger radius if no results found
+ * @param limit Maximum number of locations to return (defaults to 10)
  * @returns Promise resolving to array of SharedAstroSpot
  */
 export async function findCalculatedLocations(
   latitude: number,
   longitude: number,
   radius: number,
-  tryLargerRadius: boolean = true
+  tryLargerRadius: boolean = true,
+  limit: number = 10
 ): Promise<SharedAstroSpot[]> {
   try {
-    // First try the specified radius
-    const points = await findLocationsWithinRadius(latitude, longitude, radius, false);
+    // First try the specified radius with limited locations
+    const points = await findLocationsWithinRadius(
+      latitude, 
+      longitude, 
+      radius, 
+      false, 
+      limit
+    );
     
     // Filter out certified locations to get only calculated ones
     const calculatedPoints = points.filter(point => 
@@ -219,7 +230,7 @@ export async function findCalculatedLocations(
       console.log(`No calculated locations found within ${radius}km, trying larger radius`);
       // Double the radius but cap at 10000km
       const newRadius = Math.min(radius * 2, 10000);
-      return findCalculatedLocations(latitude, longitude, newRadius, false);
+      return findCalculatedLocations(latitude, longitude, newRadius, false, limit);
     }
     
     return [];
@@ -234,16 +245,24 @@ export async function findCalculatedLocations(
  * @param latitude Center latitude
  * @param longitude Center longitude 
  * @param radius Search radius in km
+ * @param limit Maximum number of locations to return (defaults to 50)
  * @returns Promise resolving to array of SharedAstroSpot
  */
 export async function findCertifiedLocations(
   latitude: number,
   longitude: number,
-  radius: number
+  radius: number,
+  limit: number = 50
 ): Promise<SharedAstroSpot[]> {
   try {
     // Get locations with certified flag for better performance
-    const points = await findLocationsWithinRadius(latitude, longitude, radius, true);
+    const points = await findLocationsWithinRadius(
+      latitude, 
+      longitude, 
+      radius, 
+      true,
+      limit
+    );
     
     if (points.length > 0) {
       // Calculate SIQS scores for these locations

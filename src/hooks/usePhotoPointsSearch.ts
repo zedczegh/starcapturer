@@ -18,6 +18,8 @@ interface UsePhotoPointsSearchProps {
 
 // Maximum search distance
 const MAX_SEARCH_DISTANCE = 10000; // 10,000 km
+// Maximum calculated locations to request (reduced from 50 to 10)
+const MAX_CALCULATED_LOCATIONS = 10;
 
 export const usePhotoPointsSearch = ({
   userLocation,
@@ -57,12 +59,13 @@ export const usePhotoPointsSearch = ({
         clearLocationSearchCache();
       }
       
-      // Find locations within radius
+      // Find locations within radius - with limited locations requested
       const locations = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
         searchDistance,
-        false // Get all locations, not just certified
+        false, // Get all locations, not just certified
+        MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
       );
       
       if (locations.length === 0) {
@@ -72,7 +75,8 @@ export const usePhotoPointsSearch = ({
           userLocation.latitude,
           userLocation.longitude,
           searchDistance,
-          true // Allow expanding the search radius
+          true, // Allow expanding the search radius
+          MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
         );
         
         if (calculatedLocations.length > 0) {
@@ -195,3 +199,4 @@ export const usePhotoPointsSearch = ({
     refreshLocations
   };
 };
+

@@ -63,7 +63,7 @@ export async function getRecommendedPhotoPoints(
     // Normalize coordinates to ensure valid values
     const coords = normalizeCoordinates({ latitude, longitude });
     
-    console.log(`Fetching photo points around ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)} with radius ${radiusKm}km`);
+    console.log(`Fetching photo points around ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)} with radius ${radiusKm}km, limit: ${limit}`);
     
     // First, find real Dark Sky certified locations within the radius
     const certifiedLocations = getCertifiedLocationsNearby(coords.latitude, coords.longitude, radiusKm);
@@ -77,9 +77,11 @@ export async function getRecommendedPhotoPoints(
     // Calculate how many regular locations we need
     const regularLocationsNeeded = Math.max(0, limit - certifiedLocations.length);
     
-    // Generate additional calculated spots if needed
-    const calculatedSpots = regularLocationsNeeded > 0 
-      ? generateCalculatedSpots(coords.latitude, coords.longitude, regularLocationsNeeded, radiusKm, certifiedLocations)
+    // Generate additional calculated spots if needed (limited to 10 to avoid excessive API calls)
+    const calculatedLimit = Math.min(regularLocationsNeeded, 10); // Limit calculated spots to 10 max
+    
+    const calculatedSpots = calculatedLimit > 0 
+      ? generateCalculatedSpots(coords.latitude, coords.longitude, calculatedLimit, radiusKm, certifiedLocations)
       : [];
     
     // Combine certified and calculated locations and sort by nearest first
@@ -285,8 +287,6 @@ function generateCalculatedSpots(
     "沙漠观测站", "岩石观景点", "乡村天文点",
     "乡间观景区", "偏远观测站", "山顶观景点"
   ];
-  
-  // Replaced "Lake Viewpoint" and "Coastal Viewpoint" with land-based options
   
   // Create a grid of potential points to avoid duplicating locations
   const existingPositions = new Set();
