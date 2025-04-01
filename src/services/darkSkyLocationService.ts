@@ -1,3 +1,4 @@
+
 /**
  * Service for efficiently retrieving Dark Sky locations
  * Provides optimized access to the dark sky locations database
@@ -63,31 +64,6 @@ export function findDarkSkyLocationsWithinRadius(
 }
 
 /**
- * Determine certification type based on location name or properties
- * @param location The location entry
- * @returns Certification string
- */
-function determineCertificationType(location: LocationEntry): string {
-  const lowerName = location.name.toLowerCase();
-  
-  if (lowerName.includes('sanctuary')) {
-    return 'International Dark Sky Sanctuary';
-  } else if (lowerName.includes('reserve')) {
-    return 'International Dark Sky Reserve';
-  } else if (lowerName.includes('community') || 
-            lowerName.includes('village') || 
-            lowerName.includes('town') ||
-            lowerName.includes('city')) {
-    return 'International Dark Sky Community';
-  } else if (lowerName.includes('urban')) {
-    return 'Urban Night Sky Place';
-  } else {
-    // Default to park for national parks, state parks, etc.
-    return 'International Dark Sky Park';
-  }
-}
-
-/**
  * Convert LocationEntry to SharedAstroSpot format
  * @param entry LocationEntry from database
  * @param userLatitude User latitude for distance calculation
@@ -107,28 +83,18 @@ export function convertToSharedAstroSpot(
       entry.coordinates[1]
     );
     
-    // Determine certification type
-    const certification = determineCertificationType(entry);
-    const isDarkSkyReserve = certification === 'International Dark Sky Reserve';
-    
-    // Calculate a realistic SIQS score based on Bortle scale
-    const baseSiqs = Math.max(1, 10 - entry.bortleScale);
-    // Add some variability but keep scores high for certified locations
-    const siqs = Math.max(6, Math.min(9, baseSiqs + (Math.random() * 1.5)));
-    
     return {
       id: `local-${entry.name.replace(/\s+/g, '-').toLowerCase()}`,
       name: entry.name,
       latitude: entry.coordinates[0],
       longitude: entry.coordinates[1],
-      siqs: siqs,
+      siqs: Math.max(1, 10 - entry.bortleScale),
       bortleScale: entry.bortleScale,
-      isDarkSkyReserve: isDarkSkyReserve,
-      certification: certification,
+      isDarkSkyReserve: true,
+      certification: 'International Dark Sky Association',
       description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
       distance: distance,
       cloudCover: 0, // Will be calculated by SIQS service
-      isViable: true,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
