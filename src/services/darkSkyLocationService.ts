@@ -7,6 +7,7 @@
 import { locationDatabase, LocationEntry } from '@/data/locationDatabase';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { isWaterLocation } from '@/utils/locationValidator';
 
 // Cache of dark sky locations for quick access
 let cachedDarkSkyLocations: LocationEntry[] | null = null;
@@ -51,7 +52,19 @@ export function findDarkSkyLocationsWithinRadius(
           location.coordinates[1]
         );
         
-        return distance <= radius;
+        // Filter out locations that are too far away
+        if (distance > radius) {
+          return false;
+        }
+        
+        // Check if this is a water location
+        const isWater = isWaterLocation(location.coordinates[0], location.coordinates[1]);
+        if (isWater) {
+          console.log(`Filtered out water location: ${location.name}`);
+          return false;
+        }
+        
+        return true;
       } catch (error) {
         console.error(`Error calculating distance for location ${location.name}:`, error);
         return false;

@@ -1,3 +1,4 @@
+
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -6,6 +7,7 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -189,6 +191,12 @@ function getCertifiedLocationsNearby(
     );
     
     if (distance <= radiusKm) {
+      // Filter out water locations
+      if (isWaterLocation(location.coordinates[0], location.coordinates[1])) {
+        console.log(`Filtered out water location: ${location.name}`);
+        continue;
+      }
+      
       // Determine certification type based on location name or type
       let certification = '';
       let isDarkSkyReserve = false;
@@ -264,8 +272,8 @@ function generateCalculatedSpots(
     "Mountain Observation Point", "Valley Viewpoint", "Highland Observation Spot",
     "Ridge Viewpoint", "Observatory Site", "Canyon Overlook",
     "Peak Observation Area", "Plateau Viewpoint", "Hillside Overlook",
-    "Meadow Observation Point", "Forest Clearing", "Lake Viewpoint", 
-    "Desert Observation Site", "Coastal Viewpoint", "Rural Observatory Point",
+    "Meadow Observation Point", "Forest Clearing", "Grassland Viewpoint", 
+    "Desert Observation Site", "Rocky Viewpoint", "Rural Observatory Point",
     "Countryside Viewing Area", "Remote Viewing Site", "Hilltop Viewpoint"
   ];
   
@@ -273,10 +281,12 @@ function generateCalculatedSpots(
     "山区观测点", "山谷观景点", "高地观测点",
     "山脊观景台", "天文台址", "峡谷观景点",
     "峰顶观测区", "高原观景台", "山坡瞭望点",
-    "草地观测点", "林间空地", "湖泊观景点", 
-    "沙漠观测站", "海岸观景点", "乡村天文点",
+    "草地观测点", "林间空地", "草原观景点", 
+    "沙漠观测站", "岩石观景点", "乡村天文点",
     "乡间观景区", "偏远观测站", "山顶观景点"
   ];
+  
+  // Replaced "Lake Viewpoint" and "Coastal Viewpoint" with land-based options
   
   // Create a grid of potential points to avoid duplicating locations
   const existingPositions = new Set();
@@ -288,7 +298,7 @@ function generateCalculatedSpots(
   });
   
   let attemptsCount = 0;
-  const maxAttempts = count * 3; // Limit attempts to avoid infinite loops
+  const maxAttempts = count * 5; // Increased attempts to ensure we find enough valid locations
   
   while (spots.length < count && attemptsCount < maxAttempts) {
     attemptsCount++;
@@ -299,6 +309,11 @@ function generateCalculatedSpots(
     // Check if this position already exists (avoid duplicates)
     const posKey = `${randomPoint.latitude.toFixed(2)},${randomPoint.longitude.toFixed(2)}`;
     if (existingPositions.has(posKey)) {
+      continue;
+    }
+    
+    // Filter out water locations before adding
+    if (isWaterLocation(randomPoint.latitude, randomPoint.longitude)) {
       continue;
     }
     
