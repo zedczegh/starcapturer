@@ -10,102 +10,23 @@ import { getCachedLocationSearch, cacheLocationSearch } from '@/services/locatio
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 
+// Cache for frequent searches to avoid redundant processing
+const localSearchCache: Map<string, SharedAstroSpot[]> = new Map();
+
 /**
- * Find all locations within a radius of a center point
- * @param latitude Center latitude
- * @param longitude Center longitude
- * @param radius Search radius in km
- * @param certifiedOnly Whether to return only certified locations
- * @returns Promise resolving to array of SharedAstroSpot
+ * Generate cache key for location searches
  */
-export async function findLocationsWithinRadius(
-  latitude: number,
-  longitude: number,
-  radius: number,
+function generateCacheKey(
+  latitude: number, 
+  longitude: number, 
+  radius: number, 
   certifiedOnly: boolean = false
-): Promise<SharedAstroSpot[]> {
-  try {
-    // Check cache first with more specific cache key
-    const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly ? 'certified' : 'all'}`;
-    const cachedData = getCachedLocationSearch(latitude, longitude, radius, cacheKey);
-    
-    if (cachedData) {
-      console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km`);
-      return certifiedOnly 
-        ? cachedData.filter(loc => loc.isDarkSkyReserve || loc.certification)
-        : cachedData;
-    }
-    
-    console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-    
-    // If we're only looking for certified locations, we can also check the local database
-    if (certifiedOnly) {
-      // Find dark sky locations from our local database
-      const localDarkSkyLocations = findLocalDarkSkyLocations(latitude, longitude, radius);
-      
-      if (localDarkSkyLocations.length > 0) {
-        console.log(`Found ${localDarkSkyLocations.length} local dark sky locations within radius`);
-      }
-      
-      // Get recommended points from API
-      const apiPoints = await getRecommendedPhotoPoints(
-        latitude, 
-        longitude, 
-        radius,
-        true, // certified only
-        50 // limit
-      );
-      
-      // Combine results, removing duplicates (prefer API data)
-      const apiIds = new Set(apiPoints.map(p => p.name));
-      const combinedPoints = [
-        ...apiPoints,
-        ...localDarkSkyLocations.filter(loc => !apiIds.has(loc.name))
-      ];
-      
-      // Cache the results with the specific cache key
-      cacheLocationSearch(latitude, longitude, radius, combinedPoints, cacheKey);
-      
-      return combinedPoints;
-    }
-    
-    // For all locations (not just certified), get from API
-    const points = await getRecommendedPhotoPoints(
-      latitude, 
-      longitude, 
-      radius,
-      certifiedOnly,
-      50 // limit
-    );
-    
-    if (!points || points.length === 0) {
-      console.log("No photo points found within radius");
-      return [];
-    }
-    
-    // Cache the results with the specific cache key
-    cacheLocationSearch(latitude, longitude, radius, points, cacheKey);
-    
-    return points;
-  } catch (error) {
-    console.error("Error finding locations within radius:", error);
-    
-    // On API error, try to use local database as fallback
-    if (certifiedOnly) {
-      console.log("API error, using local dark sky database as fallback");
-      return findLocalDarkSkyLocations(latitude, longitude, radius);
-    }
-    
-    return [];
-  }
+): string {
+  return `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly ? 'certified' : 'all'}`;
 }
 
 /**
  * Find Dark Sky locations from local database within radius
- * @param latitude Center latitude
- * @param longitude Center longitude
- * @param radius Search radius in km
- * @returns Array of SharedAstroSpot
  */
 function findLocalDarkSkyLocations(
   latitude: number,
@@ -144,6 +65,126 @@ function findLocalDarkSkyLocations(
     });
   } catch (error) {
     console.error("Error finding local dark sky locations:", error);
+    return [];
+  }
+}
+
+/**
+ * Get locations from API with error handling
+ */
+async function getLocationsFromApi(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  certifiedOnly: boolean
+): Promise<SharedAstroSpot[]> {
+  try {
+    return await getRecommendedPhotoPoints(
+      latitude, 
+      longitude, 
+      radius,
+      certifiedOnly,
+      50 // limit
+    );
+  } catch (error) {
+    console.error("Error getting locations from API:", error);
+    return [];
+  }
+}
+
+/**
+ * Find all locations within a radius of a center point
+ * @param latitude Center latitude
+ * @param longitude Center longitude
+ * @param radius Search radius in km
+ * @param certifiedOnly Whether to return only certified locations
+ * @returns Promise resolving to array of SharedAstroSpot
+ */
+export async function findLocationsWithinRadius(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  certifiedOnly: boolean = false
+): Promise<SharedAstroSpot[]> {
+  try {
+    // Validate inputs
+    if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(radius)) {
+      console.error("Invalid coordinates or radius");
+      return [];
+    }
+    
+    // Generate cache key
+    const cacheKey = generateCacheKey(latitude, longitude, radius, certifiedOnly);
+    
+    // Check in-memory cache first (fastest)
+    const inMemoryCache = localSearchCache.get(cacheKey);
+    if (inMemoryCache) {
+      return inMemoryCache;
+    }
+    
+    // Check persistent cache next
+    const cachedData = getCachedLocationSearch(latitude, longitude, radius, cacheKey);
+    if (cachedData) {
+      console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km`);
+      
+      // Update in-memory cache with this data
+      localSearchCache.set(cacheKey, cachedData);
+      
+      return certifiedOnly 
+        ? cachedData.filter(loc => loc.isDarkSkyReserve || loc.certification)
+        : cachedData;
+    }
+    
+    console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    
+    // If we're only looking for certified locations, optimize the search
+    if (certifiedOnly) {
+      // Find dark sky locations from our local database
+      const localDarkSkyLocations = findLocalDarkSkyLocations(latitude, longitude, radius);
+      
+      if (localDarkSkyLocations.length > 0) {
+        console.log(`Found ${localDarkSkyLocations.length} local dark sky locations within radius`);
+      }
+      
+      // Get recommended points from API
+      const apiPoints = await getLocationsFromApi(latitude, longitude, radius, true);
+      
+      // Combine results, removing duplicates (prefer API data)
+      const apiIds = new Set(apiPoints.map(p => p.name));
+      const combinedPoints = [
+        ...apiPoints,
+        ...localDarkSkyLocations.filter(loc => !apiIds.has(loc.name))
+      ];
+      
+      // Cache the results
+      cacheLocationSearch(latitude, longitude, radius, combinedPoints, cacheKey);
+      localSearchCache.set(cacheKey, combinedPoints);
+      
+      return combinedPoints;
+    }
+    
+    // For all locations (not just certified), get from API
+    const points = await getLocationsFromApi(latitude, longitude, radius, certifiedOnly);
+    
+    if (!points || points.length === 0) {
+      console.log("No photo points found within radius");
+      return [];
+    }
+    
+    // Cache the results
+    cacheLocationSearch(latitude, longitude, radius, points, cacheKey);
+    localSearchCache.set(cacheKey, points);
+    
+    return points;
+  } catch (error) {
+    console.error("Error finding locations within radius:", error);
+    
+    // On API error, try to use local database as fallback
+    if (certifiedOnly) {
+      console.log("API error, using local dark sky database as fallback");
+      return findLocalDarkSkyLocations(latitude, longitude, radius);
+    }
+    
     return [];
   }
 }
@@ -211,12 +252,26 @@ export async function findCertifiedLocations(
   radius: number
 ): Promise<SharedAstroSpot[]> {
   try {
+    // Generate cache key for this specific search
+    const cacheKey = generateCacheKey(latitude, longitude, radius, true);
+    
+    // Check in-memory cache first
+    const inMemoryCache = localSearchCache.get(cacheKey);
+    if (inMemoryCache) {
+      return inMemoryCache;
+    }
+    
     // Get locations with certified flag for better performance
     const points = await findLocationsWithinRadius(latitude, longitude, radius, true);
     
     if (points.length > 0) {
       // Calculate SIQS scores for these locations
-      return await batchCalculateSiqs(points);
+      const locationsWithSiqs = await batchCalculateSiqs(points);
+      
+      // Update in-memory cache
+      localSearchCache.set(cacheKey, locationsWithSiqs);
+      
+      return locationsWithSiqs;
     }
     
     return [];
@@ -224,6 +279,13 @@ export async function findCertifiedLocations(
     console.error("Error finding certified locations:", error);
     return [];
   }
+}
+
+/**
+ * Clear the in-memory search cache
+ */
+export function clearLocationSearchCache(): void {
+  localSearchCache.clear();
 }
 
 /**

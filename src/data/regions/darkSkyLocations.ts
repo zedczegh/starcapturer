@@ -49,6 +49,8 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Winklmoosalm International Dark Sky Reserve", coordinates: [47.6500, 12.5833], bortleScale: 2, radius: 35, type: 'dark-site' },
   { name: "Mont-Mégantic International Dark Sky Reserve", coordinates: [45.4581, -71.1539], bortleScale: 2, radius: 45, type: 'dark-site' },
   { name: "Kielder International Dark Sky Reserve", coordinates: [55.2200, -2.5800], bortleScale: 2, radius: 40, type: 'dark-site' },
+  { name: "North York Moors National Park", coordinates: [54.3700, -0.8800], bortleScale: 2, radius: 45, type: 'dark-site' },
+  { name: "Åre-Storulvån Dark Sky Park", coordinates: [63.2500, 12.5000], bortleScale: 2, radius: 40, type: 'dark-site' },
 
   // DARK SKY PARKS
   { name: "Anza-Borrego Desert State Park", coordinates: [33.1269, -116.2991], bortleScale: 2, radius: 50, type: 'dark-site' },
@@ -117,6 +119,10 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Mayo Dark Sky Park", coordinates: [54.0166, -9.8166], bortleScale: 2, radius: 35, type: 'dark-site' },
   { name: "Eifel National Park", coordinates: [50.5833, 6.4333], bortleScale: 3, radius: 35, type: 'dark-site' },
   { name: "Tiveden National Park", coordinates: [58.7167, 14.6333], bortleScale: 2, radius: 35, type: 'dark-site' },
+  { name: "Kruger National Park", coordinates: [-24.2000, 31.5000], bortleScale: 2, radius: 60, type: 'dark-site' },
+  { name: "Glacier National Park", coordinates: [48.7596, -113.7870], bortleScale: 1, radius: 50, type: 'dark-site' },
+  { name: "Jasper National Park", coordinates: [52.8730, -117.9535], bortleScale: 1, radius: 55, type: 'dark-site' },
+  { name: "Banff National Park", coordinates: [51.4968, -115.9281], bortleScale: 2, radius: 50, type: 'dark-site' },
 
   // DARK SKY COMMUNITIES
   { name: "Flagstaff, Arizona", coordinates: [35.1983, -111.6513], bortleScale: 3, radius: 20, type: 'dark-site' },
@@ -139,6 +145,9 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Bon Accord, Alberta, Canada", coordinates: [53.8319, -113.4003], bortleScale: 4, radius: 10, type: 'dark-site' },
   { name: "Town of Canmore", coordinates: [51.0888, -115.3472], bortleScale: 3, radius: 15, type: 'dark-site' },
   { name: "Hanoi, Illinois", coordinates: [40.5332, -90.0262], bortleScale: 4, radius: 10, type: 'dark-site' },
+  { name: "Julian, California", coordinates: [33.0787, -116.6010], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Ketchum, Idaho", coordinates: [43.6807, -114.3636], bortleScale: 3, radius: 15, type: 'dark-site' },
+  { name: "Kaibab Paiute Indian Reservation", coordinates: [36.9008, -112.6647], bortleScale: 2, radius: 20, type: 'dark-site' },
   
   // URBAN NIGHT SKY PLACES
   { name: "Valle de Oro National Wildlife Refuge", coordinates: [35.0075, -106.6751], bortleScale: 5, radius: 8, type: 'dark-site' },
@@ -149,5 +158,8 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Lost Woods", coordinates: [39.7501, -84.2732], bortleScale: 5, radius: 5, type: 'dark-site' },
   { name: "The Conservation Center", coordinates: [37.8043, -87.0435], bortleScale: 5, radius: 8, type: 'dark-site' },
   { name: "Butler's Orchard", coordinates: [39.1610, -77.3855], bortleScale: 5, radius: 5, type: 'dark-site' },
-  { name: "Town of Los Alamos/Los Alamos Historic District", coordinates: [35.8800, -106.3031], bortleScale: 4, radius: 10, type: 'dark-site' }
+  { name: "Town of Los Alamos/Los Alamos Historic District", coordinates: [35.8800, -106.3031], bortleScale: 4, radius: 10, type: 'dark-site' },
+  { name: "Griffith Observatory", coordinates: [34.1184, -118.3004], bortleScale: 5, radius: 5, type: 'dark-site' },
+  { name: "Palomar Observatory", coordinates: [33.3564, -116.8644], bortleScale: 3, radius: 12, type: 'dark-site' },
+  { name: "McDonald Observatory", coordinates: [30.6714, -104.0225], bortleScale: 2, radius: 20, type: 'dark-site' }
 ];
