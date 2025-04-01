@@ -18,7 +18,7 @@ export function normalizeLongitude(longitude: number): number {
 
 /**
  * Get a location name for given coordinates with fallback mechanisms
- * Enhanced to better handle remote regions like Tibet and Xinjiang
+ * Enhanced to better handle remote regions and provide more useful names
  */
 export async function getLocationNameForCoordinates(
   latitude: number,
@@ -55,8 +55,22 @@ export async function getLocationNameForCoordinates(
       
       // For remote regions, enhance the name if needed
       let finalName = locationName;
-      if (isRemoteRegion) {
-        finalName = enhanceRemoteLocationName(latitude, normalizedLng, locationName, language);
+      
+      // If we get coordinates back or "Location at", try to improve the result
+      if (finalName.includes("°") || finalName.includes("Location at") || finalName.includes("位置在")) {
+        if (isRemoteRegion) {
+          finalName = enhanceRemoteLocationName(latitude, normalizedLng, null, language);
+        } else {
+          // Try database fallback
+          const nearest = findClosestLocation(latitude, longitude);
+          if (nearest && nearest.name) {
+            finalName = nearest.distance <= 50 
+              ? (language === 'en' ? `Near ${nearest.name}` : `靠近${nearest.name}`)
+              : (language === 'en' ? `Region of ${nearest.name}` : `${nearest.name}地区`);
+          } else {
+            finalName = language === 'en' ? 'Remote area' : '偏远地区';
+          }
+        }
       }
       
       // Cache successful result
@@ -93,7 +107,7 @@ export async function getLocationNameForCoordinates(
       if (nearest && nearest.name) {
         const fallbackName = nearest.distance <= 20 
           ? nearest.name 
-          : (language === 'en' ? `Near ${nearest.name}` : `${nearest.name}附近`);
+          : (language === 'en' ? `Near ${nearest.name}` : `靠近${nearest.name}`);
         
         // Cache this result too
         if (cacheService) {
@@ -106,9 +120,9 @@ export async function getLocationNameForCoordinates(
       console.error("Database fallback failed:", dbError);
     }
     
-    // Last resort: Use coordinates
+    // Last resort: More descriptive fallback
     return language === 'en'
-      ? `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`
-      : `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
+      ? `Remote area`
+      : `偏远地区`;
   }
 }
