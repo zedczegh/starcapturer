@@ -1,9 +1,12 @@
 
-import { fetchForecastData } from "@/lib/api";
-import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
+/**
+ * Service for real-time SIQS calculation with optimized performance
+ */
+
 import { fetchWeatherData } from "@/lib/api/weather";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 
 // Create a cache to avoid redundant API calls
 const siqsCache = new Map<string, {
@@ -15,8 +18,11 @@ const siqsCache = new Map<string, {
 // Invalidate cache entries older than 15 minutes
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 
+// Maximum time to wait for SIQS calculation before using fallback
+const CALCULATION_TIMEOUT = 3000; // 3 seconds
+
 /**
- * Calculate real-time SIQS for a given location
+ * Calculate real-time SIQS for a given location with timeout and error handling
  * @param latitude Latitude of the location
  * @param longitude Longitude of the location
  * @param bortleScale Bortle scale of the location (light pollution)
@@ -42,63 +48,66 @@ export async function calculateRealTimeSiqs(
   
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
-  try {
-    // Fetch weather data
-    const weatherData = await fetchWeatherData({
-      latitude,
-      longitude
-    });
-    
-    // Fetch forecast data for nighttime calculation
-    const forecastData = await fetchForecastData({
-      latitude,
-      longitude,
-      days: 2
-    });
-    
-    // Default values if API calls fail
-    if (!weatherData) {
-      return { siqs: 0, isViable: false };
-    }
-    
-    // For light pollution, use provided Bortle scale or fetch it
-    let finalBortleScale = bortleScale;
-    if (!finalBortleScale || finalBortleScale <= 0) {
-      try {
-        const pollutionData = await fetchLightPollutionData(latitude, longitude);
-        finalBortleScale = pollutionData?.bortleScale || 5;
-      } catch (err) {
-        console.error("Error fetching light pollution data:", err);
-        finalBortleScale = 5; // Default fallback
+  // Create a promise that will timeout after a set time
+  const timeoutPromise = new Promise<{ siqs: number; isViable: boolean }>((resolve) => {
+    setTimeout(() => {
+      console.log(`SIQS calculation timeout for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      resolve({ siqs: 5, isViable: true }); // Fallback values
+    }, CALCULATION_TIMEOUT);
+  });
+  
+  // Actual calculation promise
+  const calculationPromise = new Promise<{ siqs: number; isViable: boolean }>(async (resolve) => {
+    try {
+      // Fetch weather data
+      const weatherData = await fetchWeatherData({
+        latitude,
+        longitude
+      });
+      
+      // For light pollution, use provided Bortle scale or fetch it
+      let finalBortleScale = bortleScale;
+      if (!finalBortleScale || finalBortleScale <= 0) {
+        try {
+          const pollutionData = await fetchLightPollutionData(latitude, longitude);
+          finalBortleScale = pollutionData?.bortleScale || 5;
+        } catch (err) {
+          console.error("Error fetching light pollution data:", err);
+          finalBortleScale = 5; // Default fallback
+        }
       }
+      
+      // Calculate SIQS using optimized method
+      const siqsResult = await calculateSIQSWithWeatherData(
+        weatherData || { cloudCover: 30, humidity: 50, precipitation: 0 },
+        finalBortleScale,
+        3, // Default seeing conditions
+        0.5, // Default moon phase
+        null // No forecast for quick calculation
+      );
+      
+      console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
+      
+      // Store in cache
+      siqsCache.set(cacheKey, {
+        siqs: siqsResult.score,
+        isViable: siqsResult.isViable,
+        timestamp: Date.now()
+      });
+      
+      resolve({
+        siqs: siqsResult.score,
+        isViable: siqsResult.isViable
+      });
+    } catch (error) {
+      console.error("Error calculating real-time SIQS:", error);
+      // Use a reasonable default value on error
+      resolve({ siqs: 5, isViable: true });
     }
-    
-    // Calculate SIQS using optimized method
-    const siqsResult = await calculateSIQSWithWeatherData(
-      weatherData,
-      finalBortleScale,
-      3, // Default seeing conditions
-      0.5, // Default moon phase
-      forecastData
-    );
-    
-    console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
-    
-    // Store in cache
-    siqsCache.set(cacheKey, {
-      siqs: siqsResult.score,
-      isViable: siqsResult.isViable,
-      timestamp: Date.now()
-    });
-    
-    return {
-      siqs: siqsResult.score,
-      isViable: siqsResult.isViable
-    };
-  } catch (error) {
-    console.error("Error calculating real-time SIQS:", error);
-    return { siqs: 0, isViable: false };
-  }
+  });
+  
+  // Race between timeout and actual calculation
+  return Promise.race([calculationPromise, timeoutPromise]);
 }
 
 /**

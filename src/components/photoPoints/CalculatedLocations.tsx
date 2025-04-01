@@ -31,7 +31,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.1,
+        staggerChildren: 0.05, // Reduced from 0.1 for faster animation
         when: "beforeChildren" 
       } 
     }
@@ -39,8 +39,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      <div className="flex flex-col justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+        <p className="text-sm text-muted-foreground">
+          {t("Loading locations...", "正在加载位置...")}
+        </p>
       </div>
     );
   }
@@ -106,6 +109,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
+  // Limit initial rendering to improve performance
+  const initialRenderCount = Math.min(locations.length, 6);
+  const initialLocations = locations.slice(0, initialRenderCount);
+  const remainingLocations = locations.slice(initialRenderCount);
+  
   return (
     <>
       <motion.div
@@ -114,13 +122,24 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {locations.map((location, index) => (
+        {initialLocations.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `calc-loc-${index}`}
             location={location}
             index={index}
             showRealTimeSiqs={true}
           />
+        ))}
+        
+        {/* Render remaining locations without animation for better performance */}
+        {remainingLocations.map((location, index) => (
+          <div key={location.id || `calc-loc-remaining-${index}`}>
+            <PhotoLocationCard
+              location={location}
+              index={index + initialRenderCount}
+              showRealTimeSiqs={true}
+            />
+          </div>
         ))}
       </motion.div>
       

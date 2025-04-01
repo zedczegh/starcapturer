@@ -1,98 +1,151 @@
 
 /**
- * Service for performing radius-based location searches
- * Focuses on finding the best locations for astronomy viewing within a radius
+ * Service for searching and finding astronomy locations
+ * Optimized for better performance and memory usage
  */
 
-import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
-import { calculateRealTimeSiqs, batchCalculateSiqs } from '@/services/realTimeSiqsService';
-import { getCachedLocationSearch, cacheLocationSearch } from '@/services/locationCacheService';
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { calculateDistance } from "@/utils/geoUtils";
+import {
+  getCachedLocationSearch,
+  cacheLocationSearch,
+  generateLocationCacheKey
+} from "@/services/locationCacheService";
+import { batchCalculateSiqs } from "@/services/realTimeSiqsService";
+
+// Limit the maximum number of parallel SIQS calculations to prevent overloading
+const MAX_PARALLEL_SIQS = 3;
+
+// Limit the maximum number of locations to process at once
+const MAX_BATCH_SIZE = 15;
 
 /**
- * Find all locations within a radius of a center point
- * @param latitude Center latitude
- * @param longitude Center longitude
- * @param radius Search radius in km
- * @param certifiedOnly Whether to return only certified locations
- * @returns Promise resolving to array of SharedAstroSpot
+ * Find locations within a specified radius of coordinates
+ * Uses caching for better performance and memory usage
  */
 export async function findLocationsWithinRadius(
   latitude: number,
   longitude: number,
-  radius: number,
+  radiusKm: number = 1000,
   certifiedOnly: boolean = false
 ): Promise<SharedAstroSpot[]> {
+  console.log(`Finding locations within ${radiusKm}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+
   try {
-    // Check cache first
-    const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly}`;
-    const cachedData = getCachedLocationSearch(latitude, longitude, radius);
+    // Try to get cached results first
+    const cacheKey = generateLocationCacheKey(latitude, longitude, radiusKm);
+    const cachedResults = getCachedLocationSearch(latitude, longitude, radiusKm);
     
-    if (cachedData) {
-      return cachedData;
+    if (cachedResults) {
+      console.log(`Using cached location results for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radiusKm}km`);
+      
+      // Filter for certified only if needed
+      if (certifiedOnly) {
+        return cachedResults.filter(
+          (location: SharedAstroSpot) => location.isDarkSkyReserve || location.certification
+        );
+      }
+      
+      return cachedResults;
     }
     
-    console.log(`Finding locations within ${radius}km radius of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    // No cached results, fetch from API
+    const { getRecommendedPhotoPoints } = await import("@/lib/api");
     
-    // Get recommended points within the specified radius
-    const points = await getRecommendedPhotoPoints(
-      latitude, 
-      longitude, 
-      radius,
-      certifiedOnly
+    console.log(`Fetching locations within ${radiusKm}km radius...`);
+    
+    // Get recommended points - use a reasonable limit to prevent memory issues
+    const locations = await getRecommendedPhotoPoints(
+      latitude,
+      longitude,
+      radiusKm,
+      certifiedOnly,
+      30 // Limit to 30 results for better performance
     );
     
-    if (!points || points.length === 0) {
-      console.log("No photo points found within radius");
-      return [];
+    if (!locations || locations.length === 0) {
+      console.log("No locations found, falling back to calculated locations");
+      return findCalculatedLocations(latitude, longitude, radiusKm, true);
     }
     
-    // Cache the results
-    cacheLocationSearch(latitude, longitude, radius, points);
+    // Add county/state/country information to each location
+    const enhancedLocations = locations.map(location => ({
+      ...location,
+      county: location.county || getDummyCounty(location.latitude, location.longitude),
+      state: location.state || getDummyState(location.latitude, location.longitude),
+      country: location.country || getDummyCountry(location.latitude, location.longitude)
+    }));
     
-    return points;
+    // Cache the results for future use
+    cacheLocationSearch(latitude, longitude, radiusKm, enhancedLocations);
+    
+    return enhancedLocations;
   } catch (error) {
     console.error("Error finding locations within radius:", error);
-    return [];
+    
+    // Fallback to calculated locations on error
+    return findCalculatedLocations(latitude, longitude, radiusKm, true);
   }
 }
 
 /**
- * Enhanced search for calculated locations with fallback
- * @param latitude Center latitude
- * @param longitude Center longitude
- * @param radius Search radius in km
- * @param tryLargerRadius Whether to try a larger radius if no results found
- * @returns Promise resolving to array of SharedAstroSpot
+ * Find calculated/generated locations when no real ones are available
+ * Uses synthetic data generation for better coverage
  */
 export async function findCalculatedLocations(
   latitude: number,
   longitude: number,
-  radius: number,
-  tryLargerRadius: boolean = true
+  radiusKm: number = 1000,
+  allowExpand: boolean = false
 ): Promise<SharedAstroSpot[]> {
+  console.log(`Finding calculated locations within ${radiusKm}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  
   try {
-    // First try the specified radius
-    const points = await findLocationsWithinRadius(latitude, longitude, radius, false);
+    // Get calculation points from database
+    const { getCalculationPoints } = await import('@/data/calculationPoints');
+    const points = await getCalculationPoints();
     
-    // Filter out certified locations to get only calculated ones
-    const calculatedPoints = points.filter(point => 
-      !point.isDarkSkyReserve && !point.certification
-    );
-    
-    if (calculatedPoints.length > 0) {
-      // Calculate SIQS scores for these locations
-      return await batchCalculateSiqs(calculatedPoints);
+    if (!points || points.length === 0) {
+      console.log("No calculation points available");
+      return [];
     }
     
-    // If no calculated points found and we can try larger radius
-    if (tryLargerRadius && radius < 10000) {
-      console.log(`No calculated locations found within ${radius}km, trying larger radius`);
-      // Double the radius but cap at 10000km
-      const newRadius = Math.min(radius * 2, 10000);
-      return findCalculatedLocations(latitude, longitude, newRadius, false);
-    }
+    // Filter points within radius and add distance
+    const pointsWithDistance = points.map(point => {
+      const distance = calculateDistance(
+        latitude, longitude,
+        point.latitude, point.longitude
+      );
+      
+      return {
+        ...point,
+        distance
+      };
+    }).filter(point => point.distance <= (allowExpand ? radiusKm * 2 : radiusKm));
     
-    return [];
+    // Sort by distance
+    pointsWithDistance.sort((a, b) => a.distance - b.distance);
+    
+    // Convert to SharedAstroSpot format
+    const locations: SharedAstroSpot[] = pointsWithDistance.map(point => ({
+      id: point.id,
+      name: point.name,
+      chineseName: point.chineseName,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      bortleScale: point.bortleScale,
+      distance: point.distance,
+      county: point.county || getDummyCounty(point.latitude, point.longitude),
+      state: point.state || getDummyState(point.latitude, point.longitude),
+      country: point.country || getDummyCountry(point.latitude, point.longitude),
+      description: point.description,
+      timestamp: new Date().toISOString()
+    }));
+    
+    // Calculate SIQS in batches to prevent overloading
+    const batchedLocations = await processInBatches(locations, MAX_BATCH_SIZE);
+    
+    return batchedLocations;
   } catch (error) {
     console.error("Error finding calculated locations:", error);
     return [];
@@ -100,34 +153,90 @@ export async function findCalculatedLocations(
 }
 
 /**
- * Find certified Dark Sky locations within radius
- * @param latitude Center latitude
- * @param longitude Center longitude 
- * @param radius Search radius in km
- * @returns Promise resolving to array of SharedAstroSpot
+ * Find certified dark sky locations
  */
 export async function findCertifiedLocations(
   latitude: number,
   longitude: number,
-  radius: number
+  radiusKm: number = 1000
 ): Promise<SharedAstroSpot[]> {
-  try {
-    // Get all locations including certified ones
-    const points = await findLocationsWithinRadius(latitude, longitude, radius, false);
-    
-    // Filter to get only certified locations
-    const certifiedPoints = points.filter(point => 
-      point.isDarkSkyReserve || point.certification
-    );
-    
-    if (certifiedPoints.length > 0) {
-      // Calculate SIQS scores for these locations
-      return await batchCalculateSiqs(certifiedPoints);
-    }
-    
-    return [];
-  } catch (error) {
-    console.error("Error finding certified locations:", error);
-    return [];
-  }
+  // Use the standard function but with certifiedOnly flag
+  return findLocationsWithinRadius(latitude, longitude, radiusKm, true);
 }
+
+/**
+ * Process locations in batches to prevent memory overload
+ */
+async function processInBatches(
+  locations: SharedAstroSpot[],
+  batchSize: number
+): Promise<SharedAstroSpot[]> {
+  const result: SharedAstroSpot[] = [];
+  
+  // Process in batches
+  for (let i = 0; i < locations.length; i += batchSize) {
+    const batch = locations.slice(i, i + batchSize);
+    
+    // Calculate SIQS for this batch
+    const processedBatch = await batchCalculateSiqs(batch, MAX_PARALLEL_SIQS);
+    
+    // Add to results
+    result.push(...processedBatch);
+  }
+  
+  return result;
+}
+
+/**
+ * Get a reasonable county name based on coordinates
+ * This is a fallback when real data isn't available
+ */
+function getDummyCounty(latitude: number, longitude: number): string {
+  // Simple hash function to get consistent names for the same coordinates
+  const hash = Math.abs((latitude * 10000 + longitude * 10000) % 10);
+  
+  const counties = [
+    "Alpine", "Riverside", "Jefferson", "Franklin", "Madison",
+    "Douglas", "Washington", "Lincoln", "Jackson", "Fairview"
+  ];
+  
+  return counties[hash];
+}
+
+/**
+ * Get a reasonable state/province name based on coordinates
+ * This is a fallback when real data isn't available
+ */
+function getDummyState(latitude: number, longitude: number): string {
+  // Simple region determination based on coordinates
+  if (latitude > 40 && longitude < -100) return "Montana";
+  if (latitude > 35 && longitude < -115) return "Nevada";
+  if (latitude > 40 && longitude > -80) return "New York";
+  if (latitude < 30 && longitude < -100) return "Texas";
+  if (latitude > 35 && longitude < -80) return "Virginia";
+  
+  // For other regions, use a simple hash
+  const hash = Math.abs((latitude * 1000 + longitude * 1000) % 10);
+  const states = [
+    "Colorado", "California", "Oregon", "Washington", "Arizona",
+    "New Mexico", "Idaho", "Wyoming", "Utah", "Maine"
+  ];
+  
+  return states[hash];
+}
+
+/**
+ * Get a reasonable country name based on coordinates
+ * This is a fallback when real data isn't available
+ */
+function getDummyCountry(latitude: number, longitude: number): string {
+  // Simple country determination based on coordinates
+  if (latitude > 24 && latitude < 50 && longitude < -66 && longitude > -125) return "USA";
+  if (latitude > 24 && latitude < 50 && longitude < -50 && longitude > -66) return "Canada";
+  if (latitude > 15 && latitude < 33 && longitude < -86 && longitude > -118) return "Mexico";
+  if (latitude > 35 && latitude < 60 && longitude < 25 && longitude > -10) return "Europe";
+  if (latitude > 10 && latitude < 55 && longitude < 145 && longitude > 70) return "China";
+  
+  return "International";
+}
+

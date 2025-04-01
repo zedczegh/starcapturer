@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Loader2, AlertCircle, ThumbsUp, Rocket, Telescope, Globe, Target, Navigation, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,9 @@ import DarkSkyLocations from "@/components/photoPoints/DarkSkyLocations";
 import CalculatedLocations from "@/components/photoPoints/CalculatedLocations";
 import { useCertifiedLocations } from "@/hooks/location/useCertifiedLocations";
 import { toast } from "sonner";
+
+// Lazy load components that aren't immediately visible
+const LazyCalculatedLocations = React.lazy(() => import("@/components/photoPoints/CalculatedLocations"));
 
 const handleExpandSearchRadius = (event: any, setSearchDistance: any, refreshLocations: any) => {
   if (event.detail && event.detail.radius) {
@@ -64,12 +68,30 @@ const CurrentLocationDisplay = ({ coords, loading }: {
   );
 };
 
+// Loading state component
+const LoadingState = () => {
+  const { t } = useLanguage();
+  
+  return (
+    <div className="flex flex-col items-center justify-center py-16">
+      <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+      <h2 className="text-xl font-semibold mb-2">
+        {t("Loading Photo Points", "正在加载拍摄点")}
+      </h2>
+      <p className="text-muted-foreground text-sm">
+        {t("Finding the best viewing locations...", "正在查找最佳观测位置...")}
+      </p>
+    </div>
+  );
+};
+
 const PhotoPointsNearby: React.FC = () => {
   const { t, language } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const navigate = useNavigate();
   const [locationName, setLocationName] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   const { coords, getPosition, loading: geoLoading, error: geoError } = useGeolocation({
     enableHighAccuracy: true,
@@ -100,17 +122,20 @@ const PhotoPointsNearby: React.FC = () => {
     hasCertifiedLocations,
     hasCalculatedLocations,
     certifiedCount,
-    calculatedCount
+    calculatedCount,
+    loading: locationsLoading
   } = useCertifiedLocations(displayedLocations, searchDistance);
+  
+  // Mark initial load as complete after first data fetch
+  useEffect(() => {
+    if (!loading && !searching && !initialLoadComplete && displayedLocations.length > 0) {
+      setInitialLoadComplete(true);
+    }
+  }, [loading, searching, initialLoadComplete, displayedLocations]);
   
   useEffect(() => {
     const handleExpandRadius = (event: any) => {
-      if (event.detail && event.detail.radius) {
-        setSearchDistance(event.detail.radius);
-        setTimeout(() => {
-          refreshLocations();
-        }, 100);
-      }
+      handleExpandSearchRadius(event, setSearchDistance, refreshLocations);
     };
     
     document.addEventListener('expand-search-radius', handleExpandRadius);
@@ -197,6 +222,18 @@ const PhotoPointsNearby: React.FC = () => {
   const handleApplyRadiusChange = useCallback(() => {
     refreshLocations();
   }, [refreshLocations]);
+  
+  // Show loading state during initial page load
+  if ((loading || geoLoading) && !initialLoadComplete) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-cover bg-fixed bg-center bg-no-repeat">
+        <NavBar />
+        <div className="container mx-auto px-4 pt-24 pb-16 backdrop-blur-sm">
+          <LoadingState />
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-cosmic-900 bg-cover bg-fixed bg-center bg-no-repeat">
@@ -310,7 +347,7 @@ const PhotoPointsNearby: React.FC = () => {
             
             <DarkSkyLocations 
               locations={certifiedLocations}
-              loading={loading || searching}
+              loading={loading || searching || locationsLoading}
             />
           </div>
         ) : (
@@ -331,14 +368,20 @@ const PhotoPointsNearby: React.FC = () => {
               </div>
             </div>
             
-            <CalculatedLocations 
-              locations={calculatedLocations}
-              loading={loading || searching}
-              hasMore={hasMoreLocations}
-              onLoadMore={loadMoreLocations}
-              onRefresh={refreshLocations}
-              searchRadius={searchDistance}
-            />
+            <Suspense fallback={
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              </div>
+            }>
+              <LazyCalculatedLocations 
+                locations={calculatedLocations}
+                loading={loading || searching || locationsLoading}
+                hasMore={hasMoreLocations}
+                onLoadMore={loadMoreLocations}
+                onRefresh={refreshLocations}
+                searchRadius={searchDistance}
+              />
+            </Suspense>
           </div>
         )}
       </div>

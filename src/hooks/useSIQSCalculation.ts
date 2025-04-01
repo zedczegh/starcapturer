@@ -3,10 +3,10 @@ import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
-import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { fetchForecastData } from "@/lib/api";
+import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
@@ -91,7 +91,7 @@ export const useSIQSCalculation = (
       );
       
       // Validate Bortle scale before proceeding
-      const validBortleScale = (actualBortleScale < 1 || actualBortleScale > 9 || isNaN(actualBortleScale))
+      const validBortleScale = (actualBortleScale === null || actualBortleScale < 1 || actualBortleScale > 9 || isNaN(Number(actualBortleScale)))
         ? 5 // Default to moderate value if invalid
         : actualBortleScale;
       
