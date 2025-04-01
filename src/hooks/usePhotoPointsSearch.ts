@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +10,7 @@ import {
 import { clearSiqsCache } from '@/services/realTimeSiqsService';
 import { clearLocationSearchCache } from "@/services/locationCacheService";
 import { isWaterLocation, isValidAstronomyLocation } from "@/utils/locationValidator";
+import { currentSiqsStore } from "@/components/index/CalculatorSection";
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -333,6 +335,6 @@ export const usePhotoPointsSearch = ({
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs // Exposing currentSiqs in the return value
+    currentSiqs // Ensure currentSiqs is exposed in the return
   };
 };

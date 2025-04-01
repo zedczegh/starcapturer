@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -41,7 +40,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks,
-    currentSiqs // Use the current SIQS score for the reminder
+    currentSiqs // Get currentSiqs from the hook
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated

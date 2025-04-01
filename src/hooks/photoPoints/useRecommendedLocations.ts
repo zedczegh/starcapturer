@@ -5,6 +5,7 @@ import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 
 interface Location {
   latitude: number;
@@ -29,6 +30,9 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   // New state for "load more calculated" functionality
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
+  
+  // Get current SIQS score from the store
+  const currentSiqs = currentSiqsStore.getScore();
   
   // Extract location finding logic
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
@@ -300,6 +304,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS
+    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
+    currentSiqs // Add currentSiqs to the return value
   };
 };

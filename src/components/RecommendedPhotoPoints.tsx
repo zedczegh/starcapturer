@@ -2,7 +2,7 @@
 import React, { useMemo } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
-import { PhotoPoint } from "@/types/photoPoints";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Button } from "./ui/button";
 import { ChevronRight, MapPin, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -12,7 +12,7 @@ import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 
 interface RecommendedPhotoPointsProps {
-  onSelectPoint?: (point: PhotoPoint) => void;
+  onSelectPoint?: (point: SharedAstroSpot) => void;
   userLocation: { latitude: number; longitude: number } | null;
   limit?: number;
   hideEmptyMessage?: boolean;
@@ -88,6 +88,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               <PhotoPointCard
                 point={location}
                 onSelect={onSelectPoint}
+                onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}
               />
             </motion.div>

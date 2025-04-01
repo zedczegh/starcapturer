@@ -10,14 +10,16 @@ import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFor
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
-  onSelect: (point: SharedAstroSpot) => void;
+  onSelect?: (point: SharedAstroSpot) => void;
   onViewDetails: (point: SharedAstroSpot) => void;
+  userLocation: { latitude: number; longitude: number } | null;
 }
 
 const PhotoPointCard: React.FC<PhotoPointCardProps> = ({ 
   point, 
   onSelect,
-  onViewDetails 
+  onViewDetails,
+  userLocation
 }) => {
   const { language, t } = useLanguage();
   const [nearestTown, setNearestTown] = useState<string | null>(null);
@@ -93,7 +95,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   return (
     <div 
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
-      onClick={() => onSelect(point)}
+      onClick={() => onSelect?.(point)}
     >
       <div className="flex items-center justify-between mb-1">
         <h4 className="font-medium text-sm line-clamp-1">
