@@ -1,98 +1,99 @@
 
-import { fetchWeatherData } from "@/lib/api";
-
-// Default timeout for weather API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 5000;
-// Default cache lifetime for weather data (in milliseconds)
-const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
-// Maximum retry attempts
-const MAX_RETRIES = 2;
+/**
+ * Weather data interface
+ */
+export interface WeatherData {
+  temperature: number;
+  cloudCover: number;
+  humidity: number;
+  windSpeed: number;
+  visibility: number;
+  aqi?: number;
+  isNight: boolean;
+  moonPhase?: number;
+  precipitationProbability: number;
+}
 
 /**
- * Optimized service for retrieving weather data with better caching and error handling
+ * Generate random but realistic weather data for demo purposes
  */
-export const getWeatherData = async (
-  latitude: number,
-  longitude: number,
-  cacheKey: string,
-  getCachedData: (key: string, maxAge?: number) => any,
-  setCachedData: (key: string, data: any) => void,
-  displayOnly: boolean,
-  language: string = 'en',
-  setStatusMessage?: (message: string | null) => void,
-  timeout: number = DEFAULT_TIMEOUT
-): Promise<any> => {
-  // First try to use cached data
-  const cachedWeatherData = getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
-  if (cachedWeatherData) {
-    return cachedWeatherData;
-  }
+const generateRealisticWeather = (): WeatherData => {
+  // Generate moonphase (0-1, where 0 is new moon, 0.5 is full moon, 1 is new moon again)
+  const moonPhase = Math.random();
   
-  // Implement retry logic for better resilience
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      // Add timeout to prevent hanging
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      const data = await fetchWeatherData({
-        latitude,
-        longitude,
-        days: 3
-      }, controller.signal);
-      
-      clearTimeout(timeoutId);
-      
-      if (data) {
-        // Cache the weather data for future use
-        setCachedData(cacheKey, data);
-        return data;
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      // If this isn't our last attempt, try again with a slight delay
-      if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
-      }
-    }
-  }
+  // Generate cloud cover (0-100%)
+  const cloudCover = Math.floor(Math.random() * 100);
   
-  // All attempts failed - use fallback data
-  console.error("Failed to fetch weather data after retries:", lastError);
+  // Generate precipitation probability (0-100%)
+  // Higher cloud cover increases chances of precipitation
+  const precipitationProbability = cloudCover > 60 
+    ? Math.min(100, cloudCover + Math.floor(Math.random() * 30))
+    : Math.floor(Math.random() * cloudCover);
   
-  // Use fallback weather data
-  const fallbackData = {
-    temperature: 20,
-    humidity: 50,
-    cloudCover: 30,
-    windSpeed: 10,
-    precipitation: 0,
-    time: new Date().toISOString(),
-    condition: "Clear",
-    weatherCondition: "Clear",
-    aqi: 50
+  // Generate temperature (0-30°C)
+  const temperature = Math.floor(Math.random() * 30);
+  
+  // Generate humidity (30-100%)
+  // Higher precipitation probability means higher humidity
+  const humidity = 30 + Math.floor(Math.random() * 70);
+  
+  // Generate wind speed (0-30 km/h)
+  const windSpeed = Math.floor(Math.random() * 30);
+  
+  // Generate visibility (0-20 km)
+  // Lower cloud cover and precipitation means better visibility
+  const visibility = Math.max(1, 20 - (cloudCover / 10) - (precipitationProbability / 20));
+  
+  // Generate AQI (0-200)
+  const aqi = Math.floor(Math.random() * 150);
+  
+  // Determine if it's night (for demo purposes, 50% chance)
+  const isNight = Math.random() > 0.5;
+  
+  return {
+    temperature,
+    cloudCover,
+    humidity,
+    windSpeed,
+    visibility,
+    aqi,
+    isNight,
+    moonPhase,
+    precipitationProbability
   };
-  
-  // Show status message if needed
-  if (!displayOnly && setStatusMessage) {
-    setStatusMessage(language === 'en'
-      ? "Could not fetch real-time weather. Using offline data instead."
-      : "无法获取实时天气数据，使用离线数据替代。");
-  }
-  
-  // Even fallback data should be cached to prevent repeated failed requests
-  setCachedData(cacheKey, fallbackData);
-  return fallbackData;
 };
 
 /**
- * Get cached weather data with minimal processing
+ * Get current weather data for a location
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @returns Promise with weather data
  */
-export const getCachedWeatherData = (
-  cacheKey: string,
-  getCachedData: (key: string, maxAge?: number) => any
-): any => {
-  return getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
+export const getCurrentWeather = async (
+  latitude: number,
+  longitude: number
+): Promise<WeatherData> => {
+  // Check session storage cache first
+  const cacheKey = `weather-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      console.error("Error parsing cached weather:", e);
+    }
+  }
+  
+  // For demo purposes, generate realistic random weather
+  const weather = generateRealisticWeather();
+  
+  // Cache the result
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify(weather));
+  } catch (e) {
+    console.error("Error caching weather data:", e);
+  }
+  
+  return weather;
 };

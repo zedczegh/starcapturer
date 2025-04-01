@@ -6,9 +6,9 @@ import { Star, CloudRain, Wind, Compass, Zap, AlertTriangle, Loader2 } from 'luc
 import { motion } from 'framer-motion';
 import { formatSIQSScore } from '@/utils/geoUtils';
 
-interface LocationQualityProps {
+export interface LocationQualityProps {
   bortleScale: number | null;
-  siqs: number | null;
+  siqs: number | null | undefined;
   weather: any | null;
   isChecking: boolean;
 }
@@ -23,7 +23,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
   
   // Function to get color class based on SIQS score
   const getSiqsColorClass = () => {
-    if (siqs === null) return 'text-blue-400 bg-blue-950/30';
+    if (siqs === null || siqs === undefined) return 'text-blue-400 bg-blue-950/30';
     if (siqs > 8) return 'text-green-400 bg-green-950/30';
     if (siqs > 6) return 'text-purple-400 bg-purple-950/30';
     if (siqs > 4) return 'text-yellow-400 bg-yellow-950/30';
@@ -33,7 +33,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
   
   // Function to get quality text based on SIQS score
   const getQualityText = () => {
-    if (siqs === null) return t("Checking...", "正在检查...");
+    if (siqs === null || siqs === undefined) return t("Checking...", "正在检查...");
     if (siqs > 8) return t("Excellent", "极佳");
     if (siqs > 6) return t("Good", "良好");
     if (siqs > 4) return t("Fair", "一般");
@@ -62,7 +62,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
     <Card className="p-4 glassmorphism overflow-hidden">
       <h3 className="text-base font-medium mb-3">{t("Location Quality", "位置质量")}</h3>
       
-      {siqs !== null ? (
+      {siqs !== null && siqs !== undefined ? (
         <div className="space-y-3">
           <div className="relative flex items-center justify-between">
             <motion.div 

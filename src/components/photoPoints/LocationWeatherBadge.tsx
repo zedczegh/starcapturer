@@ -1,109 +1,64 @@
 
-import React, { memo } from 'react';
-import { Cloud, Sun, CloudSun, CloudRain, ThermometerSun, Wind } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { CloudSun, CloudRain, AlertTriangle, CheckCircle } from 'lucide-react';
 
-interface LocationWeatherBadgeProps {
-  cloudCover?: number;
-  temperature?: number;
-  weatherCondition?: string;
-  windSpeed?: number;
-  precipitation?: number;
+export interface LocationWeatherBadgeProps {
+  siqs: number | undefined | null;
+  isViable: boolean;
 }
 
-const LocationWeatherBadge: React.FC<LocationWeatherBadgeProps> = memo(({
-  cloudCover,
-  temperature,
-  weatherCondition,
-  windSpeed,
-  precipitation
+const LocationWeatherBadge: React.FC<LocationWeatherBadgeProps> = ({ 
+  siqs, 
+  isViable 
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   
-  // If we don't have any weather data
-  if (cloudCover === undefined && 
-      temperature === undefined && 
-      !weatherCondition && 
-      windSpeed === undefined) {
+  if (siqs === undefined || siqs === null) {
     return null;
   }
   
-  // Generate badge text based on available data
-  let badgeText = "";
-  let badgeClass = "";
-  let WeatherIcon = Cloud;
-  
-  // Use cloud cover as primary indicator if available
-  if (cloudCover !== undefined) {
-    if (cloudCover < 10) {
-      badgeText = t("Clear Sky", "晴朗天空");
-      badgeClass = "bg-blue-500/30 text-blue-200 border-blue-500/30";
-      WeatherIcon = Sun;
-    } else if (cloudCover < 30) {
-      badgeText = t("Partly Cloudy", "局部多云");
-      badgeClass = "bg-blue-400/30 text-blue-200 border-blue-400/30";
-      WeatherIcon = CloudSun;
-    } else if (cloudCover < 60) {
-      badgeText = t("Mostly Cloudy", "多云");
-      badgeClass = "bg-gray-500/30 text-gray-200 border-gray-500/30";
-      WeatherIcon = Cloud;
-    } else {
-      badgeText = t("Overcast", "阴天");
-      badgeClass = "bg-gray-600/30 text-gray-200 border-gray-600/30";
-      WeatherIcon = Cloud;
+  // Determine badge type based on SIQS and viability
+  const getBadgeType = () => {
+    if (!isViable) {
+      return {
+        icon: <AlertTriangle className="h-4 w-4 text-orange-400" />,
+        text: t("Poor Conditions", "条件不佳"),
+        className: "bg-cosmic-800/60 text-orange-400 border-orange-800/50"
+      };
     }
-  } 
-  // Fall back to weather condition if no cloud cover
-  else if (weatherCondition) {
-    const condition = weatherCondition.toLowerCase();
     
-    if (condition.includes('clear') || condition.includes('sunny')) {
-      badgeText = t("Clear", "晴朗");
-      badgeClass = "bg-blue-500/30 text-blue-200 border-blue-500/30";
-      WeatherIcon = Sun;
-    } else if (condition.includes('partly') || condition.includes('mostly clear')) {
-      badgeText = t("Partly Cloudy", "局部多云");
-      badgeClass = "bg-blue-400/30 text-blue-200 border-blue-400/30";
-      WeatherIcon = CloudSun;
-    } else if (condition.includes('cloud')) {
-      badgeText = t("Cloudy", "多云");
-      badgeClass = "bg-gray-500/30 text-gray-200 border-gray-500/30";
-      WeatherIcon = Cloud;
-    } else if (condition.includes('rain') || condition.includes('drizzle')) {
-      badgeText = t("Rain", "雨");
-      badgeClass = "bg-gray-600/40 text-gray-200 border-gray-600/30";
-      WeatherIcon = CloudRain;
-    } else {
-      badgeText = weatherCondition;
-      badgeClass = "bg-gray-500/30 text-gray-200 border-gray-500/30";
-      WeatherIcon = Cloud;
+    if (siqs >= 7) {
+      return {
+        icon: <CheckCircle className="h-4 w-4 text-green-400" />,
+        text: t("Excellent Viewing", "极佳观测"),
+        className: "bg-cosmic-800/60 text-green-400 border-green-800/50"
+      };
     }
-  }
-  // If no weather data, just return null
-  else {
-    return null;
-  }
+    
+    if (siqs >= 5) {
+      return {
+        icon: <CloudSun className="h-4 w-4 text-blue-400" />,
+        text: t("Good Conditions", "条件良好"),
+        className: "bg-cosmic-800/60 text-blue-400 border-blue-800/50"
+      };
+    }
+    
+    return {
+      icon: <CloudRain className="h-4 w-4 text-yellow-400" />,
+      text: t("Fair Conditions", "一般条件"),
+      className: "bg-cosmic-800/60 text-yellow-400 border-yellow-800/50"
+    };
+  };
   
-  // Handle special cases where precipitation overrides other conditions
-  if (precipitation !== undefined && precipitation > 0.1) {
-    badgeText = t("Rain", "雨");
-    badgeClass = "bg-gray-600/40 text-gray-200 border-gray-600/30";
-    WeatherIcon = CloudRain; 
-  }
+  const badge = getBadgeType();
   
   return (
-    <Badge variant="outline" className={`text-xs font-normal px-2 py-0 h-5 ${badgeClass}`}>
-      <WeatherIcon className="h-3 w-3 mr-1" />
-      {badgeText}
-      {temperature !== undefined && (
-        <span className="ml-1">{Math.round(temperature)}°</span>
-      )}
-      {windSpeed !== undefined && windSpeed > 20 && (
-        <Wind className="h-3 w-3 ml-1" />
-      )}
-    </Badge>
+    <div className={`flex items-center gap-2 py-1.5 px-2.5 rounded-md border ${badge.className}`}>
+      {badge.icon}
+      <span className="text-xs font-medium">{badge.text}</span>
+    </div>
   );
-});
+};
 
 export default LocationWeatherBadge;

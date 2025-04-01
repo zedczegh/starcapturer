@@ -4,7 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Award, MapPin, ArrowRight, CloudSun } from 'lucide-react';
+import { Award, MapPin, ArrowRight, CloudSun, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LocationQuality from './LocationQuality';
 import LocationWeatherBadge from './LocationWeatherBadge';
@@ -102,6 +102,24 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
     return null;
   };
+
+  // Format location details
+  const getLocationDetails = () => {
+    const details = [];
+    
+    if (location.county) details.push(location.county);
+    if (location.state) details.push(location.state);
+    if (location.country) details.push(location.country);
+    
+    if (details.length === 0) return null;
+    
+    return (
+      <div className="flex items-center text-xs text-cosmic-300 mb-2">
+        <Globe className="h-3 w-3 mr-1 flex-shrink-0" />
+        <span className="truncate">{details.join(', ')}</span>
+      </div>
+    );
+  };
   
   return (
     <motion.div
@@ -125,11 +143,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           )}
         </div>
         
+        {/* Location details (county, state, country) */}
+        {getLocationDetails()}
+        
         {/* Location quality indicator */}
         <div className="mb-4">
           <LocationQuality 
             bortleScale={location.bortleScale || 5} 
             siqs={showRealTimeSiqs ? realTimeSiqs : location.siqs}
+            weather={null}
+            isChecking={false}
           />
         </div>
         
