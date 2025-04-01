@@ -5,7 +5,6 @@ import { Star, Telescope, Satellite } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 
 const HeroContent: React.FC = () => {
   const { t } = useLanguage();
@@ -31,25 +30,6 @@ const HeroContent: React.FC = () => {
             </span>
           </div>
         </motion.h1>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-6"
-        >
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="border-cosmic-600/50 bg-cosmic-900/50 hover:bg-cosmic-800/70"
-            asChild
-          >
-            <Link to="/photo-points">
-              <Telescope className="mr-2 h-4 w-4 text-primary" />
-              {t("Explore Dark Sky Locations", "探索暗夜地点")}
-            </Link>
-          </Button>
-        </motion.div>
       </div>
     </div>
   );
