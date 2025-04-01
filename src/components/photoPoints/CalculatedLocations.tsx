@@ -81,8 +81,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
           <p className="text-sm text-primary">
             {searchRadius > 0 ? 
               t(
-                `Try increasing your search radius beyond ${searchRadius}km.`,
-                `尝试将搜索半径增加到${searchRadius}公里以上。`
+                `Try increasing your search radius beyond ${searchRadius/1000}km.`,
+                `尝试将搜索半径增加到${searchRadius/1000}公里以上。`
               ) :
               t(
                 "Try adjusting your search radius to find better viewing spots.",

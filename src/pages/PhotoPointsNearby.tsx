@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet-async'; // Just import Helmet
+import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -15,7 +15,9 @@ import BackButton from '@/components/navigation/BackButton';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
-  const { loading: locationLoading, coords, getPosition } = useGeolocation({ language: 'en' });
+  const { loading: locationLoading, coords, getPosition } = useGeolocation({
+    enableHighAccuracy: true
+  });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
 
   // Get user location from coordinates

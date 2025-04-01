@@ -233,12 +233,29 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
       return 1;
     }
     
-    // Then sort by SIQS score (higher is better)
-    if (a.siqs !== b.siqs) {
-      return b.siqs - a.siqs;
+    // If both are certified or both are not certified, check if they're in the same category
+    const aIsCertified = a.isDarkSkyReserve || a.certification;
+    const bIsCertified = b.isDarkSkyReserve || b.certification;
+    
+    if (aIsCertified && bIsCertified) {
+      // If both are certified, sort by SIQS score first
+      if (a.siqs !== b.siqs) {
+        return (b.siqs || 0) - (a.siqs || 0);
+      }
+      // Then by distance
+      return (a.distance || Infinity) - (b.distance || Infinity);
     }
     
-    // If equal SIQS, sort by distance
-    return (a.distance || Infinity) - (b.distance || Infinity);
+    if (!aIsCertified && !bIsCertified) {
+      // For calculated locations, sort by SIQS score first
+      if (a.siqs !== b.siqs) {
+        return (b.siqs || 0) - (a.siqs || 0);
+      }
+      // Then by distance
+      return (a.distance || Infinity) - (b.distance || Infinity);
+    }
+    
+    // Default case: sort by SIQS score
+    return (b.siqs || 0) - (a.siqs || 0);
   });
 }
