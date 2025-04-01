@@ -22,6 +22,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const [searchRadius, setSearchRadius] = useState<number>(1000);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [searching, setSearching] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
   const prevRadiusRef = useRef<number>(searchRadius);
@@ -148,7 +149,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     }
     
     try {
-      setLoading(true);
+      setSearching(true);
       console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
       
       // Get more calculated locations
@@ -200,7 +201,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         "加载更多位置失败"
       ));
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   }, [loadMoreClickCount, locations, searchRadius, t, userLocation]);
   
@@ -257,6 +258,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     setSearchRadius,
     locations,
     loading,
+    searching,
     hasMore,
     loadMore,
     refreshSiqsData,

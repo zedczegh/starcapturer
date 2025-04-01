@@ -38,7 +38,8 @@ const PhotoPointsNearby: React.FC = () => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks
+    maxLoadMoreClicks,
+    searching
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -86,6 +87,13 @@ const PhotoPointsNearby: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [loading, locationLoading, initialLoad]);
+
+  // Handle loading more calculated locations with proper async handling
+  const handleLoadMoreCalculated = useCallback(async () => {
+    if (loadMoreCalculatedLocations) {
+      await loadMoreCalculatedLocations();
+    }
+  }, [loadMoreCalculatedLocations]);
 
   // Page title - using Helmet for proper title handling
   const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
@@ -154,7 +162,7 @@ const PhotoPointsNearby: React.FC = () => {
               onViewChange={setActiveView}
               certifiedCount={certifiedCount}
               calculatedCount={calculatedCount}
-              loading={loading}
+              loading={searching}
             />
           </div>
           
@@ -175,7 +183,7 @@ const PhotoPointsNearby: React.FC = () => {
                 onRefresh={refreshSiqsData}
                 searchRadius={searchRadius}
                 initialLoad={initialLoad}
-                onLoadMoreCalculated={loadMoreCalculatedLocations}
+                onLoadMoreCalculated={handleLoadMoreCalculated}
                 canLoadMoreCalculated={canLoadMoreCalculated}
                 loadMoreClickCount={loadMoreClickCount}
                 maxLoadMoreClicks={maxLoadMoreClicks}

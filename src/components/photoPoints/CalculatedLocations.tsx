@@ -39,6 +39,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [showLoadMoreCalc, setShowLoadMoreCalc] = useState(false);
+  const [loadingCalculated, setLoadingCalculated] = useState(false);
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
@@ -87,27 +88,33 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   };
   
   // Handle load more calculated locations
-  const handleLoadMoreCalculated = () => {
+  const handleLoadMoreCalculated = async () => {
     if (onLoadMoreCalculated) {
-      onLoadMoreCalculated();
+      setLoadingCalculated(true);
       
-      // Show progress to the user
-      const remainingClicks = maxLoadMoreClicks - loadMoreClickCount - 1;
-      if (remainingClicks > 0) {
-        toast.info(t(
-          `Loading more locations... (${remainingClicks} more loads available)`,
-          `正在加载更多位置...（还可以加载${remainingClicks}次）`
-        ));
-      } else {
-        toast.info(t(
-          "Loading final batch of locations...",
-          "正在加载最后一批位置..."
-        ));
+      try {
+        await onLoadMoreCalculated();
+        
+        // Show progress to the user
+        const remainingClicks = maxLoadMoreClicks - loadMoreClickCount - 1;
+        if (remainingClicks > 0) {
+          toast.info(t(
+            `Loading more locations... (${remainingClicks} more loads available)`,
+            `正在加载更多位置...（还可以加载${remainingClicks}次）`
+          ));
+        } else {
+          toast.info(t(
+            "Loading final batch of locations...",
+            "正在加载最后一批位置..."
+          ));
+        }
+      } finally {
+        setLoadingCalculated(false);
       }
     }
   };
   
-  if (loading) {
+  if (loading && !loadingCalculated) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
@@ -203,10 +210,20 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
           <Button 
             variant="default" 
             onClick={handleLoadMoreCalculated}
+            disabled={loadingCalculated}
             className="group sci-fi-btn bg-cosmic-700/80 hover:bg-cosmic-600/90 transition-all duration-300"
           >
-            {t("Find More Locations", "查找更多位置")}
-            <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            {loadingCalculated ? (
+              <>
+                {t("Finding Locations...", "正在查找位置...")}
+                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+              </>
+            ) : (
+              <>
+                {t("Find More Locations", "查找更多位置")}
+                <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
           </Button>
         </div>
       )}
