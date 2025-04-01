@@ -1,39 +1,51 @@
 
-// SIQS = Stellar Imaging Quality Score
+/**
+ * Type definitions for SIQS (Stellar Imaging Quality Score)
+ */
 
+// Input factors for SIQS calculation
 export interface SIQSFactors {
-  cloudCover: number;  // percentage 0-100
-  bortleScale: number; // 1-9 scale
-  seeingConditions: number;  // 1-5 scale (lower is better)
-  windSpeed: number;  // mph
-  humidity: number;  // percentage 0-100
-  moonPhase?: number;  // 0-1 (0=new moon, 0.5=full moon, 1=new moon)
-  // Night forecast data
-  nightForecast?: Array<{
-    time: string;
-    cloudCover: number;
-    windSpeed: number;
-    humidity: number;
-  }>;
-  // Weather conditions
-  precipitation?: number; // mm
-  weatherCondition?: string; // e.g., "rain", "snow", "haze", "clear"
-  aqi?: number; // Air Quality Index (0-500)
+  cloudCover: number;
+  bortleScale: number;
+  seeingConditions: number;
+  windSpeed: number;
+  humidity: number;
+  moonPhase?: number;
+  precipitation?: number;
+  weatherCondition?: string | number;
+  aqi?: number;
+  nightForecast?: any[];
 }
 
+// Individual factor with name, score, and description
 export interface SIQSFactor {
   name: string;
-  score: number;  // 0-100 scale
+  score: number;
   description: string;
-  weight: number;
 }
 
+// SIQS calculation result
 export interface SIQSResult {
-  score: number;  // 0-10 final score
+  score: number;
   isViable: boolean;
-  factors: {
-    name: string;
-    score: number; // 0-100 scale
-    description: string;
-  }[];
+  factors: SIQSFactor[];
+}
+
+// Weather forecast item (for consistency)
+export interface ForecastItem {
+  time: string;
+  cloudCover: number;
+  windSpeed: number;
+  humidity: number;
+  precipitation?: number;
+  weatherCode?: number;
+}
+
+// Night forecast specifics
+export interface NightForecast {
+  items: ForecastItem[];
+  avgCloudCover: number;
+  avgWindSpeed: number;
+  avgHumidity: number;
+  hasPrecipitation: boolean;
 }

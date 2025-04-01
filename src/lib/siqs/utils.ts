@@ -1,48 +1,50 @@
-
 /**
- * Convert SIQS score to a color code
- * @param score SIQS score from 0-10
- * @param isViable Whether the conditions are viable for astrophotography
- * @returns CSS color string
+ * Utility functions for SIQS calculations and display
  */
-export function siqsToColor(score: number, isViable: boolean): string {
-  if (!isViable) return 'rgb(239, 68, 68)'; // red-500
-  if (score >= 8) return 'rgb(34, 197, 94)'; // green-500
-  if (score >= 6) return 'rgb(138, 154, 91)'; // brownish green
-  if (score >= 4) return 'rgb(250, 204, 21)'; // yellow-500
-  if (score >= 2) return 'rgb(249, 115, 22)'; // orange-500
-  return 'rgb(239, 68, 68)'; // red-500
+
+// Determine if imaging is impossible based on cloud cover
+export function isImagingImpossible(cloudCover: number): boolean {
+  return typeof cloudCover === 'number' && cloudCover > 50;
 }
 
-/**
- * Check if weather conditions make imaging impossible
- * @param cloudCover Cloud cover percentage
- * @param precipitation Precipitation amount
- * @param weatherCondition Weather condition string
- * @returns True if conditions make imaging impossible
- */
-export function isImagingImpossible(
-  cloudCover: number, 
-  precipitation?: number, 
-  weatherCondition?: string, 
-  aqi?: number
-): boolean {
-  // Per user requirement: if average cloud coverage is over 40%, SIQS should be 0
-  if (cloudCover > 40) return true;
+// Get color for SIQS score (0-10 scale)
+export function siqsToColor(score: number): string {
+  if (score >= 8) return '#10b981'; // green-500
+  if (score >= 6) return '#3b82f6'; // blue-500
+  if (score >= 4) return '#eab308'; // yellow-500
+  if (score >= 2) return '#f97316'; // orange-500
+  return '#ef4444'; // red-500
+}
+
+// Get the display level for a SIQS score
+export function getSIQSLevel(score: number): string {
+  if (score >= 8) return 'Excellent';
+  if (score >= 6) return 'Good';
+  if (score >= 4) return 'Average';
+  if (score >= 2) return 'Poor';
+  return 'Bad';
+}
+
+// Format SIQS score consistently for display
+export function formatSIQSScore(score: number): string {
+  // Round to 1 decimal place
+  return (Math.round(score * 10) / 10).toFixed(1);
+}
+
+// Convert factor scores to a consistent scale (0-10)
+export function normalizeFactorScores(factors: any[]): any[] {
+  if (!factors || !Array.isArray(factors)) return [];
   
-  // Check for precipitation (rain, snow)
-  if (precipitation && precipitation > 0.1) return true;
-  
-  // Check weather conditions (rain, snow, haze, etc.)
-  if (weatherCondition) {
-    const badConditions = ['rain', 'drizzle', 'snow', 'sleet', 'hail', 'thunderstorm', 'fog', 'haze', 'mist'];
-    for (const condition of badConditions) {
-      if (weatherCondition.toLowerCase().includes(condition)) return true;
-    }
-  }
-  
-  // Very poor air quality makes imaging impossible
-  if (aqi && aqi > 300) return true;
-  
-  return false;
+  return factors.map(factor => {
+    if (!factor) return factor;
+    
+    // If score is already on 0-10 scale, keep it as is
+    if (factor.score <= 10) return factor;
+    
+    // Otherwise, normalize from 0-100 to 0-10
+    return {
+      ...factor,
+      score: factor.score / 10
+    };
+  });
 }

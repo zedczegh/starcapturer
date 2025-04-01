@@ -18,7 +18,7 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   const normalizedScore = factor.score > 10 ? factor.score / 10 : factor.score;
   
   // Scale from 0-10 to 0-100 for the progress bar
-  const progressValue = factor.score > 10 ? factor.score : factor.score * 10;
+  const progressValue = normalizedScore * 10;
   
   // Get the appropriate color class based on the normalized score
   const colorClass = getProgressColorClass(normalizedScore);

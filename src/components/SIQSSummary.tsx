@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
+import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
 
 interface SIQSSummaryProps {
   siqsResult: any;
@@ -17,6 +18,7 @@ interface SIQSSummaryProps {
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, locationData }) => {
   const { t } = useLanguage();
   
+  // If no SIQS data available, show placeholder
   if (!siqsResult) {
     return (
       <Card className="glassmorphism-strong">
@@ -34,22 +36,23 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   }
   
   // Format the SIQS score for display
-  const siqsScore = typeof siqsResult.score === 'number' ? 
-    Math.round(siqsResult.score * 10) / 10 : 0;
+  const siqsScore = useMemo(() => {
+    return typeof siqsResult.score === 'number' ? 
+      Math.round(siqsResult.score * 10) / 10 : 0;
+  }, [siqsResult.score]);
     
   // Get color class based on score
   const scoreColorClass = getProgressColorClass(siqsScore);
   
-  // Determine quality level text
-  const getQualityText = (score: number) => {
-    if (score >= 8) return t("Excellent", "优秀");
-    if (score >= 6) return t("Good", "良好");
-    if (score >= 4) return t("Average", "一般");
-    if (score >= 2) return t("Poor", "较差");
-    return t("Bad", "很差");
-  };
-  
-  const qualityText = getQualityText(siqsScore);
+  // Get quality level text
+  const qualityText = useMemo(() => {
+    return t(getSIQSLevel(siqsScore), 
+      getSIQSLevel(siqsScore) === 'Excellent' ? "优秀" : 
+      getSIQSLevel(siqsScore) === 'Good' ? "良好" : 
+      getSIQSLevel(siqsScore) === 'Average' ? "一般" : 
+      getSIQSLevel(siqsScore) === 'Poor' ? "较差" : "很差"
+    );
+  }, [siqsScore, t]);
   
   return (
     <Card className="glassmorphism-strong">
@@ -65,7 +68,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">{t("Overall Score", "总分")}</h3>
             <span className={`text-xl font-bold px-2 py-1 rounded ${scoreColorClass.replace('bg-', 'text-')}`}>
-              {siqsScore.toFixed(1)}
+              {formatSIQSScore(siqsScore)}
             </span>
           </div>
           

@@ -1,6 +1,10 @@
-
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { calculateAverageCloudCover, calculateAverageWindSpeed } from "@/components/forecast/NightForecastUtils";
+import { 
+  calculateCloudScore, 
+  normalizeScore 
+} from "@/lib/siqs/factors";
+import { isImagingImpossible, normalizeFactorScores } from "@/lib/siqs/utils";
+import { getCloudDescription } from "@/lib/siqs/descriptions";
 
 /**
  * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
@@ -78,7 +82,7 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
     // Check if cloud cover is too high to make imaging possible (threshold at 50%)
-    if (avgCloudCover > 50) {
+    if (isImagingImpossible(avgCloudCover)) {
       console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
       return {
         score: 0,
@@ -128,10 +132,7 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     console.log("Calculated nighttime SIQS:", siqs.score);
     
     // Normalize all factor scores to 0-10 scale for consistent display
-    const normalizedFactors = siqs.factors.map(factor => ({
-      ...factor,
-      score: factor.score > 10 ? factor.score / 10 : factor.score
-    }));
+    const normalizedFactors = normalizeFactorScores(siqs.factors);
     
     return {
       ...siqs,

@@ -1,7 +1,8 @@
 
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
+import { normalizeFactorScores } from "@/lib/siqs/utils";
 
 interface SIQSFactorsListProps {
   factors?: Array<{
@@ -12,13 +13,18 @@ interface SIQSFactorsListProps {
 }
 
 const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
-  if (!factors || factors.length === 0) {
+  // Ensure all factors are normalized to 0-10 scale for consistent display
+  const normalizedFactors = useMemo(() => {
+    return normalizeFactorScores(factors);
+  }, [factors]);
+  
+  if (!normalizedFactors || normalizedFactors.length === 0) {
     return <EmptyFactors />;
   }
   
   return (
     <div className="space-y-4 mt-2">
-      {factors.map((factor, index) => (
+      {normalizedFactors.map((factor, index) => (
         <FactorItem 
           key={`factor-${factor.name}-${index}`}
           factor={factor}

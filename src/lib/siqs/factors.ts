@@ -15,13 +15,19 @@ export function calculateCloudScore(cloudCover: number): number {
 }
 
 export function calculateLightPollutionScore(bortleScale: number): number {
+  // Ensure bortleScale is within valid range (1-9)
+  const validBortleScale = Math.min(9, Math.max(1, bortleScale || 5));
+  
   // Inverted scale, 100 is dark (bortle 1), 0 is bright (bortle 9)
-  return Math.max(0, 100 - ((bortleScale - 1) / 8) * 100);
+  return Math.max(0, 100 - ((validBortleScale - 1) / 8) * 100);
 }
 
 export function calculateSeeingScore(seeingConditions: number): number {
+  // Ensure seeingConditions is within valid range (1-5)
+  const validSeeingConditions = Math.min(5, Math.max(1, seeingConditions || 3));
+  
   // Inverted scale, 100 is perfect (seeing 1), 0 is terrible (seeing 5)
-  return Math.max(0, 100 - ((seeingConditions - 1) / 4) * 100);
+  return Math.max(0, 100 - ((validSeeingConditions - 1) / 4) * 100);
 }
 
 export function calculateWindScore(windSpeed: number): number {
@@ -51,5 +57,23 @@ export function calculateAQIScore(aqi: number): number {
   if (aqi <= 150) return 60;
   if (aqi <= 200) return 40;
   if (aqi <= 300) return 20;
+  return 0;
+}
+
+/**
+ * Normalize scores to consistent scale (0-10) for display
+ * This ensures consistent display across the app
+ */
+export function normalizeScore(score: number): number {
+  // If score is already on 0-10 scale, return as is
+  if (score >= 0 && score <= 10) return score;
+  
+  // If score is on 0-100 scale, normalize to 0-10
+  if (score > 10 && score <= 100) return score / 10;
+  
+  // Cap at 10 for any value over 100
+  if (score > 100) return 10;
+  
+  // Handle negative scores
   return 0;
 }

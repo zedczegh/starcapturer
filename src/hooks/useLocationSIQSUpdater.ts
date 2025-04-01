@@ -96,7 +96,7 @@ export const useLocationSIQSUpdater = (
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: cloudScore / 10, // Convert to 0-10 scale for display
+                  score: estimatedScore, // Already on 0-10 scale
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
