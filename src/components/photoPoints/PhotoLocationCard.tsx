@@ -1,204 +1,137 @@
+import React from "react";
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { siqsToColor } from "@/lib/calculateSIQS";
+import { formatLocationName } from "@/utils/locationNameFormatter";
+import { formatDistance } from "@/utils/unitConversion";
+import { CalendarClock, MapPin, Award, Building, Globe, Moon } from "lucide-react";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { getRelativeTimeText } from "@/utils/dateUtils";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Ruler, Award, Star, TreeDeciduous, Moon, Building2, Landmark, Home } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { siqsToColor } from '@/lib/calculateSIQS';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { formatDistanceToNow } from 'date-fns';
-import { formatLocationName, getRegionalName } from '@/utils/locationNameFormatter';
-
-interface PhotoLocationCardProps {
+export interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
+  showRealTimeSiqs?: boolean;
 }
 
-// Map certification types to their respective icons
-const certificationIcons: Record<string, React.ReactNode> = {
-  'International Dark Sky Park': <TreeDeciduous className="h-3 w-3 mr-1" />,
-  'International Dark Sky Reserve': <Moon className="h-3 w-3 mr-1" />,
-  'International Dark Sky Sanctuary': <Star className="h-3 w-3 mr-1" />,
-  'International Dark Sky Community': <Landmark className="h-3 w-3 mr-1" />,
-  'Urban Night Sky Place': <Building2 className="h-3 w-3 mr-1" />,
-  'Dark Sky Friendly Development of Distinction': <Home className="h-3 w-3 mr-1" />
-};
-
-// Default icon if certification type doesn't match
-const defaultCertIcon = <Award className="h-3 w-3 mr-1" />;
-
-const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ location, index }) => {
+const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
+  location,
+  index,
+  showRealTimeSiqs = false
+}) => {
   const { t, language } = useLanguage();
   
-  // Animation variants for staggered list animation
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: index * 0.05,
-        duration: 0.5,
-        ease: [0.48, 0.15, 0.25, 0.96]
-      }
-    }
-  };
+  const scoreColor = siqsToColor(location.siqs || 0, location.isViable || false);
+  const displayName = formatLocationName(location.name, language as any);
+  const distance = formatDistance(location.distance || 0, language);
+  const relativeTime = getRelativeTimeText(location.timestamp, language === 'zh');
   
-  const scoreColor = location.siqs 
-    ? siqsToColor(location.siqs, location.isViable ?? (location.siqs >= 6.5)) 
-    : '#4a5568';
-  
-  // Format the relative time
-  const relativeTime = location.timestamp
-    ? formatDistanceToNow(new Date(location.timestamp), { addSuffix: true })
-    : '';
-  
-  // Format the distance if available
-  const formattedDistance = location.distance 
-    ? location.distance < 1 
-      ? `${(location.distance * 1000).toFixed(0)} m`
-      : `${location.distance.toFixed(1)} km`
-    : '';
-    
-  // Format location name, using regional naming for remote locations
-  let displayName = formatLocationName(location.name, language as any);
-  
-  // Use regional naming for remote areas or coordinates
-  if (
-    displayName === "Remote area" || 
-    displayName === "Remote location" || 
-    displayName === "偏远地区" || 
-    displayName.includes("°") || 
-    displayName.includes("Location at") || 
-    displayName.includes("位置在")
-  ) {
-    // Try regional naming like "Northwest Yunnan"
-    const regionalName = getRegionalName(location.latitude, location.longitude, language as any);
-    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-      displayName = regionalName;
-    }
-  }
-
-  // Use Chinese name if available and language is Chinese
-  if (language === 'zh' && location.chineseName) {
-    displayName = location.chineseName;
-  }
-
-  // Get appropriate certification icon
+  // Get certification icon
   const getCertificationIcon = () => {
-    if (!location.certification) return defaultCertIcon;
+    if (!location.certification) return null;
     
-    // Try to match the certification with our known types
-    for (const [certType, icon] of Object.entries(certificationIcons)) {
-      if (location.certification.includes(certType)) {
-        return icon;
-      }
+    const certLower = location.certification.toLowerCase();
+    
+    if (certLower.includes('sanctuary')) {
+      return <Moon className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else if (certLower.includes('reserve') || location.isDarkSkyReserve) {
+      return <Globe className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else if (certLower.includes('park')) {
+      return <Award className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else if (certLower.includes('community')) {
+      return <Building className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
+    } else {
+      return <Award className="h-3.5 w-3.5 text-blue-400" fill="rgba(96, 165, 250, 0.3)" />;
     }
-    
-    return defaultCertIcon;
   };
   
   return (
-    <motion.div variants={item} initial="hidden" animate="visible">
-      <Link to={`/location/${location.id}`} state={{ ...location }}>
-        <Card className="h-full overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-          {/* Dark blue background with gradient */}
-          <div 
-            className="h-24 relative flex items-center justify-center"
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: {
+            delay: index * 0.05,
+            duration: 0.3,
+            type: "spring",
+            stiffness: 150,
+          },
+        },
+      }}
+      className="w-full"
+    >
+      <Link to={`/location/${location.id}`} state={location}>
+        <Card className="h-full overflow-hidden transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg">
+          <div
+            className="h-24 bg-cosmic-800 flex items-center justify-center relative"
             style={{
-              background: "linear-gradient(135deg, rgba(16,18,64,1) 0%, rgba(36,42,107,1) 100%)"
+              background: "linear-gradient(135deg, rgba(16,18,64,1) 0%, rgba(36,42,107,1) 100%)",
             }}
           >
-            {/* Add stars background */}
             <div
               className="absolute inset-0 opacity-30"
               style={{
                 backgroundImage: "url('/images/stars.png')",
-                backgroundSize: "cover"
+                backgroundSize: "cover",
               }}
             />
-            
-            {/* SIQS score display with color-coded rings */}
             <div className="relative z-10 flex items-center justify-center">
-              <div 
-                className="rounded-full p-3 flex items-center justify-center" 
+              <div
+                className="rounded-full p-3 flex items-center justify-center"
                 style={{ backgroundColor: scoreColor, opacity: 0.2 }}
               >
-                <div 
+                <div
                   className="rounded-full p-6 flex items-center justify-center"
                   style={{ backgroundColor: scoreColor, opacity: 0.4 }}
                 />
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl font-bold">
-                  {location.siqs ? location.siqs.toFixed(1) : '?'}
-                </span>
+                <span className="text-3xl font-bold">{(location.siqs || 0).toFixed(1)}</span>
               </div>
             </div>
           </div>
           
           <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
-                
                 <div className="flex items-center text-sm text-muted-foreground mt-1">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
                   <span>
-                    {location.latitude.toFixed(2)}, {location.longitude.toFixed(2)}
+                    {distance}
                   </span>
                 </div>
               </div>
-              
-              {/* Show certification badge for dark sky reserves */}
-              {(location.isDarkSkyReserve || location.certification) && (
-                <Badge className="bg-blue-500 hover:bg-blue-600 whitespace-nowrap">
-                  {getCertificationIcon()}
-                  {t("Certified", "已认证")}
-                </Badge>
-              )}
-              
-              {/* Viable badge */}
-              {location.isViable !== undefined && (
-                <Badge 
-                  variant={location.isViable ? "default" : "destructive"}
-                  className="whitespace-nowrap"
-                >
-                  {location.isViable ? (
-                    <span className="flex items-center">
-                      <Star className="h-3 w-3 mr-1" />
-                      {t("Viable", "可行")}
-                    </span>
-                  ) : (
-                    t("Not Viable", "不可行")
-                  )}
-                </Badge>
-              )}
+              <Badge
+                className="ml-2"
+                variant={location.isViable ? "default" : "destructive"}
+              >
+                {location.isViable ? t("Viable", "可行") : t("Not Viable", "不可行")}
+              </Badge>
             </div>
             
-            {/* Only show certification name if it exists */}
             {location.certification && (
-              <div className="mt-2">
-                <Badge variant="outline" className="bg-blue-950/30 text-xs">
+              <div className="mt-2 flex items-center">
+                {getCertificationIcon()}
+                <span className="text-xs text-blue-400 ml-1 line-clamp-1">
                   {location.certification}
-                </Badge>
+                </span>
               </div>
             )}
           </CardContent>
           
-          <CardFooter className="p-4 pt-0 text-xs text-muted-foreground flex justify-between items-center">
-            <div className="flex items-center">
-              {relativeTime}
-            </div>
-            
-            {formattedDistance && (
+          <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between w-full">
               <div className="flex items-center">
-                <Ruler className="h-3.5 w-3.5 mr-1.5" />
-                {formattedDistance}
+                <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
+                <span>{relativeTime}</span>
               </div>
-            )}
+            </div>
           </CardFooter>
         </Card>
       </Link>
