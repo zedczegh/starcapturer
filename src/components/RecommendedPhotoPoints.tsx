@@ -172,7 +172,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary hover:text-primary/90 hover:bg-primary/10"
+              className="text-primary/90 hover:text-primary hover:bg-primary/10"
             >
               {t("View All Photo Points", "查看所有摄影点")}
               <ChevronRight className="ml-1 h-4 w-4" />

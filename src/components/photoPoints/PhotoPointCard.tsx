@@ -10,6 +10,7 @@ import { getLocationNameForCoordinates } from "@/components/location/map/Locatio
 import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
 import { getCertificationInfo, getLocalizedCertText } from "./utils/certificationUtils";
 import { useNavigate } from "react-router-dom";
+import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -160,7 +161,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      <div className="flex flex-col space-y-2 mt-2">
+      <div className="flex justify-between items-center mt-2">
         <div className="flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
           <span className="text-sm text-muted-foreground font-medium">
@@ -168,20 +169,13 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           </span>
         </div>
         
-        <div className="flex items-center">
-          <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-sm text-muted-foreground line-clamp-1 font-medium">
-            {loadingTown ? (
-              <span className="text-muted-foreground/70">
-                {language === 'zh' ? "加载中..." : "Loading..."}
-              </span>
-            ) : nearestTown ? (
-              <>{t("Near ", "靠近 ")}{nearestTown}</>
-            ) : (
-              t("Remote area", "偏远地区")
-            )}
-          </span>
-        </div>
+        {/* Bortle Scale Indicator - Added to replace redundant info */}
+        <LightPollutionIndicator 
+          bortleScale={point.bortleScale || 4} 
+          size="sm" 
+          showBortleNumber={true}
+          className="text-xs"
+        />
       </div>
       
       <div className="mt-3 flex justify-end">
