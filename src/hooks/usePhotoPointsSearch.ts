@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -42,6 +41,10 @@ export const usePhotoPointsSearch = ({
   const [lastSearchParams, setLastSearchParams] = useState<string>('');
   const [loadMoreClickCount, setLoadMoreClickCount] = useState(0);
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState(false);
+  
+  // Always use the latest SIQS from the calculator store to ensure consistency
+  const latestSiqs = currentSiqsStore.getScore();
+  const siqsToUse = latestSiqs !== null ? latestSiqs : currentSiqs;
   
   // Load recommended locations based on user location and search radius
   const loadRecommendedLocations = useCallback(async (reset: boolean = true) => {
@@ -282,12 +285,12 @@ export const usePhotoPointsSearch = ({
   
   // Determine if current user location has good viewing conditions
   useEffect(() => {
-    if (!userLocation || currentSiqs === null) return;
+    if (!userLocation || siqsToUse === null) return;
     
     // Set threshold for "good" location
-    const userHasGoodSiqs = currentSiqs >= 6.0; 
+    const userHasGoodSiqs = siqsToUse >= 6.0; 
     setIsUserInGoodLocation(userHasGoodSiqs);
-  }, [userLocation, currentSiqs]);
+  }, [userLocation, siqsToUse]);
   
   // Load more locations from existing filteredLocations
   const loadMoreLocations = useCallback(() => {
@@ -335,6 +338,6 @@ export const usePhotoPointsSearch = ({
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs // Ensure currentSiqs is exposed in the return
+    currentSiqs: siqsToUse // Ensure consistent SIQS is exposed in the return
   };
 };

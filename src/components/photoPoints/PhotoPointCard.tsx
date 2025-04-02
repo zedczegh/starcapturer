@@ -145,7 +145,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           {pointName}
         </h4>
         
-        {/* SIQS Score - Now isolated at the top right */}
+        {/* SIQS Badge - Removed the word "score" */}
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>

@@ -69,8 +69,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             {showHighSiqsNotification ? (
               <span>
                 {t(
-                  "Your current location has a good SIQS score of ",
-                  "您当前位置的SIQS评分不错，为 "
+                  "Your current location has a good SIQS of ",
+                  "您当前位置的SIQS不错，为 "
                 )}
                 <span
                   className="font-semibold"
@@ -86,8 +86,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             ) : showLowSiqsEncouragement ? (
               <span>
                 {t(
-                  "Current conditions aren't ideal with a SIQS score of ",
-                  "当前条件不太理想，SIQS评分为 "
+                  "Current conditions aren't ideal with a SIQS of ",
+                  "当前条件不太理想，SIQS为 "
                 )}
                 <span
                   className="font-semibold"
@@ -103,8 +103,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             ) : (
               <span>
                 {t(
-                  "Your current location has a moderate SIQS score of ",
-                  "您当前位置的SIQS评分一般，为 "
+                  "Your current location has a moderate SIQS of ",
+                  "您当前位置的SIQS一般，为 "
                 )}
                 <span
                   className="font-semibold"

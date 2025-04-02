@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,6 +14,7 @@ import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationRem
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -25,6 +27,9 @@ const PhotoPointsNearby: React.FC = () => {
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
+  
+  // Get the current SIQS from the calculator store for consistency
+  const currentSiqs = currentSiqsStore.getScore();
 
   // Set up recommended locations with userLocation
   const {
@@ -39,8 +44,7 @@ const PhotoPointsNearby: React.FC = () => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks,
-    currentSiqs // Get currentSiqs from the hook
+    maxLoadMoreClicks
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
