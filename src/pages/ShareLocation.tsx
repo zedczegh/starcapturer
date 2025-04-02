@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ const ShareLocation: React.FC = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">{t("Share a Location", "分享一个位置")}</h1>
+      <h1 className="text-2xl font-bold mb-4">{t("Bortle Now", "实时光污染")}</h1>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <form onSubmit={handleSubmit} className="max-w-md mx-auto">
         <div className="grid gap-4">

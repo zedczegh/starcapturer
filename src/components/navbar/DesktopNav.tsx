@@ -29,7 +29,7 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
           {t("Photo Points Nearby", "周边拍摄点")}
         </NavLink>
         <NavLink to="/share" active={location.pathname === "/share"}>
-          {t("Share Location", "分享位置")}
+          {t("Bortle Now", "实时光污染")}
         </NavLink>
       </nav>
       
