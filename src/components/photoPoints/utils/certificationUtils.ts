@@ -1,52 +1,92 @@
 
-import React from 'react';
-import { Award, Globe, ShieldCheck, Trees } from 'lucide-react';
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Globe, Trees, Building2, ShieldCheck } from "lucide-react";
+import React from "react";
 
 /**
- * Custom hook to determine certification info for display
+ * Determine certification icon and details
  */
-export function useCertificationInfo(certification: string | undefined, isDarkSkyReserve: boolean | undefined) {
-  if (isDarkSkyReserve) {
-    return {
-      text: "Dark Sky Reserve",
-      color: "bg-blue-500/20 text-blue-300 border-blue-500/40",
-      icon: <Globe className="h-3 w-3 mr-1 text-blue-400" />
-    };
+export const useCertificationInfo = (certification?: string, isDarkSkyReserve?: boolean) => {
+  const { t } = useLanguage();
+  
+  if (!certification && !isDarkSkyReserve) {
+    return null;
   }
   
-  if (!certification) return null;
+  const certText = (certification || '').toLowerCase();
   
-  if (certification.includes("IDA")) {
+  if (certText.includes('sanctuary') || certText.includes('reserve')) {
     return {
-      text: "IDA Certified",
-      color: "bg-blue-500/20 text-blue-300 border-blue-500/40",
-      icon: <ShieldCheck className="h-3 w-3 mr-1 text-blue-400" />
+      icon: <Globe className="h-3.5 w-3.5 mr-1.5" />,
+      text: t('Dark Sky Reserve', '暗夜保护区'),
+      color: 'text-blue-400 border-blue-400/30 bg-blue-400/10'
+    };
+  } else if (certText.includes('park')) {
+    return {
+      icon: <Trees className="h-3.5 w-3.5 mr-1.5" />,
+      text: t('Dark Sky Park', '暗夜公园'),
+      color: 'text-green-400 border-green-400/30 bg-green-400/10'
+    };
+  } else if (certText.includes('community')) {
+    return {
+      icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
+      text: t('Dark Sky Community', '暗夜社区'),
+      color: 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+    };
+  } else if (certText.includes('urban')) {
+    return {
+      icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
+      text: t('Urban Night Sky', '城市夜空'),
+      color: 'text-purple-400 border-purple-400/30 bg-purple-400/10'
+    };
+  } else {
+    return {
+      icon: <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />,
+      text: t('Certified Location', '认证地点'),
+      color: 'text-blue-300 border-blue-300/30 bg-blue-300/10'
     };
   }
+};
+
+/**
+ * Format distance for display
+ */
+export const useDistanceFormatter = () => {
+  const { t } = useLanguage();
   
-  if (certification.includes("Nature")) {
-    return {
-      text: "Nature Reserve",
-      color: "bg-green-500/20 text-green-300 border-green-500/40",
-      icon: <Trees className="h-3 w-3 mr-1 text-green-400" />
-    };
-  }
+  return (distance?: number) => {
+    if (!distance) return t("Unknown distance", "未知距离");
+    
+    if (distance < 1) {
+      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+    }
+    
+    if (distance < 10) {
+      return t(`${distance.toFixed(1)} km away`, `距离 ${distance.toFixed(1)} 公里`);
+    }
+    
+    return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+  };
+};
+
+/**
+ * Format date for display
+ */
+export const useDateFormatter = () => {
+  const { language } = useLanguage();
   
-  if (certification.includes("Park")) {
-    return {
-      text: "National Park",
-      color: "bg-green-500/20 text-green-300 border-green-500/40",
-      icon: <Trees className="h-3 w-3 mr-1 text-green-400" />
-    };
-  }
-  
-  if (certification.includes("Certified")) {
-    return {
-      text: "Certified Site",
-      color: "bg-purple-500/20 text-purple-300 border-purple-500/40",
-      icon: <Award className="h-3 w-3 mr-1 text-purple-400" />
-    };
-  }
-  
-  return null;
-}
+  return (dateString?: string) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'zh-CN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).format(date);
+    } catch (error) {
+      return '';
+    }
+  };
+};

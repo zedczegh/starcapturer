@@ -1,8 +1,10 @@
 
 import React from 'react';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, ArrowUpRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { isGoodViewingCondition } from '@/hooks/siqs/siqsCalculationUtils';
 
 interface CurrentLocationReminderProps {
@@ -25,10 +27,10 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   return (
     <AnimatePresence>
       <motion.div 
-        className={`rounded-lg mb-3 p-2 shadow-sm ${
+        className={`rounded-lg mb-6 p-4 shadow-lg ${
           isGoodSiqs 
-            ? 'bg-gradient-to-r from-green-900/15 to-blue-900/15 border border-green-500/10' 
-            : 'bg-gradient-to-r from-amber-900/15 to-red-900/15 border border-amber-500/10'
+            ? 'bg-gradient-to-r from-green-900/40 to-blue-900/40 border border-green-500/20' 
+            : 'bg-gradient-to-r from-amber-900/40 to-red-900/40 border border-amber-500/20'
         }`}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -39,33 +41,47 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
           damping: 30 
         }}
       >
-        <div className="flex items-start gap-2">
-          <div className={`rounded-full p-1.5 ${
-            isGoodSiqs ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'
+        <div className="flex items-start gap-3">
+          <div className={`rounded-full p-2 ${
+            isGoodSiqs ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
           }`}>
-            {isGoodSiqs ? <Star className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+            {isGoodSiqs ? <Star className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
           </div>
           
           <div className="flex-1">
-            <h3 className="text-sm font-medium">
+            <h3 className="text-lg font-medium mb-1">
               {isGoodSiqs 
-                ? t("Good imaging conditions", "良好的成像条件")
+                ? t("Good imaging conditions at your location", "您所在位置的成像条件良好")
                 : t("Consider finding a better location", "考虑寻找更好的位置")
               }
             </h3>
             
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-3">
               {isGoodSiqs 
                 ? t(
-                    `Current location has a good SIQS of ${currentSiqs.toFixed(1)}. Better results may be found in darker locations.`,
-                    `当前位置SIQS为 ${currentSiqs.toFixed(1)}，条件良好。在光污染较低的地区可获得更好效果。`
+                    `Your current location has a good SIQS of ${currentSiqs.toFixed(1)}. However, for the best astrophotography results, consider a rural location with lower light pollution.`,
+                    `您当前位置的SIQS为 ${currentSiqs.toFixed(1)}，条件良好。但是，为了获得最佳天文摄影效果，请考虑前往光污染较低的乡村地区。`
                   )
                 : t(
-                    `Current location SIQS is ${currentSiqs.toFixed(1)}. Locations below offer better viewing conditions.`,
-                    `当前位置SIQS为 ${currentSiqs.toFixed(1)}。以下位置提供更佳观测条件。`
+                    `Your current location has a SIQS of ${currentSiqs.toFixed(1)}, which is not ideal for astrophotography. The locations shown below offer better viewing conditions.`,
+                    `您当前位置的SIQS为 ${currentSiqs.toFixed(1)}，不太适合天文摄影。以下显示的位置提供了更好的观测条件。`
                   )
               }
             </p>
+            
+            <div className="flex justify-end">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link to="/">
+                  <Button variant="ghost" size="sm" className="text-xs group">
+                    {t("Return to calculator", "返回计算器")}
+                    <ArrowUpRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </Button>
+                </Link>
+              </motion.div>
+            </div>
           </div>
         </div>
       </motion.div>

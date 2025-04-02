@@ -18,19 +18,12 @@ export const useLocationSIQSUpdater = (
   const forceUpdateRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const lastForecastTimestampRef = useRef<string | null>(null);
-  const updateTimeoutRef = useRef<number | null>(null);
   
   // Reset update state for new calculations
   const resetUpdateState = useCallback(() => {
     updateAttemptedRef.current = false;
     forceUpdateRef.current = true;
     console.log("SIQS update state reset");
-    
-    // Clear any pending timeout
-    if (updateTimeoutRef.current) {
-      window.clearTimeout(updateTimeoutRef.current);
-      updateTimeoutRef.current = null;
-    }
   }, []);
   
   // Update SIQS score when forecast data becomes available or changes
@@ -67,76 +60,60 @@ export const useLocationSIQSUpdater = (
       (!updateAttemptedRef.current || forceUpdateRef.current)
     );
     
-    // Schedule an update with a slight delay to allow other data to load
     if (shouldUpdate) {
-      if (updateTimeoutRef.current) {
-        window.clearTimeout(updateTimeoutRef.current);
-      }
+      console.log("Updating SIQS based on hourly forecast data");
+      forceUpdateRef.current = false;
       
-      updateTimeoutRef.current = window.setTimeout(() => {
-        console.log("Updating SIQS based on hourly forecast data");
-        forceUpdateRef.current = false;
+      try {
+        // Calculate new SIQS based on nighttime conditions
+        const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
-        try {
-          // Calculate new SIQS based on nighttime conditions
-          const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
+        if (freshSIQSResult) {
+          console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
           
-          if (freshSIQSResult) {
-            console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
-            
-            // Update the SIQS result with the fresh calculation
-            setLocationData({
-              ...locationData,
-              siqsResult: freshSIQSResult
-            });
-            
-            updateAttemptedRef.current = true;
-          } else if (locationData.weatherData?.cloudCover !== undefined) {
-            // Fallback to current weather if nighttime forecast is unavailable
-            console.log("Using fallback SIQS calculation based on current weather");
-            const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
-            
-            // Special handling for 0% cloud cover - should be score 10
-            const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
-            const estimatedScore = cloudScore / 10;
-            
-            console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
-            
-            setLocationData({
-              ...locationData,
-              siqsResult: {
-                score: estimatedScore,
-                isViable: estimatedScore > 2,
-                factors: [
-                  {
-                    name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                    score: estimatedScore, // Already on 0-10 scale
-                    description: t 
-                      ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
-                        `${currentCloudCover}%的云量影响成像质量`) 
-                      : `Cloud cover of ${currentCloudCover}% affects imaging quality`
-                  }
-                ]
-              }
-            });
-            
-            updateAttemptedRef.current = true;
-          }
-        } catch (error) {
-          console.error("Error updating SIQS with forecast data:", error);
-          toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
+          // Update the SIQS result with the fresh calculation
+          setLocationData({
+            ...locationData,
+            siqsResult: freshSIQSResult
+          });
+          
+          updateAttemptedRef.current = true;
+        } else if (locationData.weatherData?.cloudCover !== undefined) {
+          // Fallback to current weather if nighttime forecast is unavailable
+          console.log("Using fallback SIQS calculation based on current weather");
+          const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
+          
+          // Special handling for 0% cloud cover - should be score 10
+          const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
+          const estimatedScore = cloudScore / 10;
+          
+          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          
+          setLocationData({
+            ...locationData,
+            siqsResult: {
+              score: estimatedScore,
+              isViable: estimatedScore > 2,
+              factors: [
+                {
+                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+                  score: estimatedScore, // Already on 0-10 scale
+                  description: t 
+                    ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
+                      `${currentCloudCover}%的云量影响成像质量`) 
+                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
+                }
+              ]
+            }
+          });
+          
+          updateAttemptedRef.current = true;
         }
-        
-        updateTimeoutRef.current = null;
-      }, 300); // Small delay to allow other data to load
-    }
-    
-    // Cleanup on unmount
-    return () => {
-      if (updateTimeoutRef.current) {
-        window.clearTimeout(updateTimeoutRef.current);
+      } catch (error) {
+        console.error("Error updating SIQS with forecast data:", error);
+        toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
       }
-    };
+    }
   }, [forecastData, locationData, setLocationData, t, resetUpdateState]);
   
   return { resetUpdateState };
