@@ -1,69 +1,62 @@
 
-import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
+import React, { useState, useCallback } from "react";
+import { LazyMapComponent } from "../lazy";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader } from "lucide-react";
-
-// Lazy load the Leaflet map components to improve initial page load
-const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapIcon } from "lucide-react";
 
 interface MapDisplayProps {
-  position: [number, number];
+  latitude: number;
+  longitude: number;
   locationName: string;
-  editable?: boolean;
-  onMapReady: () => void;
-  onMapClick: (lat: number, lng: number) => void;
-  showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
-  position,
+  latitude,
+  longitude,
   locationName,
-  editable = false,
-  onMapReady,
-  onMapClick,
-  showInfoPanel = false,
   isDarkSkyReserve = false,
-  certification = ''
+  certification = ""
 }) => {
   const { t } = useLanguage();
-
-  // Memoize position to prevent unnecessary rerenders
-  const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
+  const [mapReady, setMapReady] = useState(false);
   
-  // Format location name for display
-  const displayName = useMemo(() => {
-    // If the name is too long, truncate it for the map display
-    if (locationName && locationName.length > 50) {
-      return locationName.substring(0, 47) + '...';
-    }
-    return locationName;
-  }, [locationName]);
-
+  // Handle map ready event
+  const handleMapReady = useCallback(() => {
+    setMapReady(true);
+  }, []);
+  
+  // Handle map click event (not used in this component, but required for props)
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    // This is just a placeholder - not used in this read-only map
+    console.log("Map clicked at:", lat, lng);
+  }, []);
+  
   return (
-    <div className="z-0 h-full w-full">
-      <Suspense fallback={
-        <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
-          <div className="flex flex-col items-center gap-3">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-primary-foreground/90">{t("Loading map...", "正在加载地图...")}</p>
-          </div>
-        </div>
-      }>
-        <LazyMapComponent
-          position={memoizedPosition}
-          locationName={displayName}
-          editable={editable}
-          onMapReady={onMapReady}
-          onMapClick={onMapClick}
-          showInfoPanel={showInfoPanel}
+    <Card className="bg-cosmic-800/50 border-cosmic-700 h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg flex items-center">
+          <MapIcon className="w-5 h-5 mr-2 text-primary" />
+          {t("Location", "位置")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-2 h-[320px]">
+        <LazyMapComponent 
+          latitude={latitude}
+          longitude={longitude}
+          locationName={locationName}
+          editable={false}
+          onMapReady={handleMapReady}
+          onMapClick={handleMapClick}
+          showInfoPanel={true}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
         />
-      </Suspense>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
-export default memo(MapDisplay);
+export default MapDisplay;

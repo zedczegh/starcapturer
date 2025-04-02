@@ -5,7 +5,7 @@ import { getProgressColor, getProgressColorClass, getProgressTextColorClass } fr
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface SIQSScoreProps {
@@ -116,9 +116,12 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           >
             <Button 
               size="md" 
-              className="bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
+              className="bg-primary/90 hover:bg-primary shadow-lg hover:shadow-xl transition-all duration-300 text-primary-foreground group"
             >
-              {t("See More Details", "查看更多详情")}
+              <span className="flex items-center">
+                <Star className="h-3.5 w-3.5 mr-1.5 text-yellow-300" />
+                {t("See More Details", "查看更多详情")}
+              </span>
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
             </Button>
           </Link>

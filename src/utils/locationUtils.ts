@@ -20,16 +20,27 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
   // First try the quick database for better performance
   if (quickLocationDatabase && quickLocationDatabase.length) {
     try {
-      // Find closest location in the quick database
-      let closestLocation = quickLocationDatabase[0];
+      // Enhanced search with spatial optimization
+      // Sort locations by rough distance first to optimize the search
+      const sortedLocations = quickLocationDatabase
+        .map(location => {
+          const roughDistance = Math.abs(latitude - location.coordinates[0]) + 
+                               Math.abs(longitude - location.coordinates[1]);
+          return { location, roughDistance };
+        })
+        .sort((a, b) => a.roughDistance - b.roughDistance)
+        .slice(0, 50); // Take top 50 closest by rough calculation
+        
+      // Now do precise calculation only on the shortlist
+      let closestLocation = sortedLocations[0].location;
       let shortestDistance = calculateDistance(
         latitude, longitude, 
-        quickLocationDatabase[0].coordinates[0], 
-        quickLocationDatabase[0].coordinates[1]
+        closestLocation.coordinates[0], 
+        closestLocation.coordinates[1]
       );
 
-      for (let i = 1; i < quickLocationDatabase.length; i++) {
-        const location = quickLocationDatabase[i];
+      for (let i = 1; i < sortedLocations.length; i++) {
+        const location = sortedLocations[i].location;
         const distance = calculateDistance(
           latitude, longitude, 
           location.coordinates[0], 
@@ -70,16 +81,26 @@ export function findClosestKnownLocation(latitude: number, longitude: number): {
   }
 
   try {
-    // Find closest location in the database
-    let closestLocation = locationDatabase[0];
+    // Enhanced search with distance optimization for the legacy database
+    const sortedLocations = locationDatabase
+      .map(location => {
+        const roughDistance = Math.abs(latitude - location.coordinates[0]) + 
+                             Math.abs(longitude - location.coordinates[1]);
+        return { location, roughDistance };
+      })
+      .sort((a, b) => a.roughDistance - b.roughDistance)
+      .slice(0, 50); // Take top 50 closest by rough calculation
+    
+    // Now do precise calculation only on the shortlist
+    let closestLocation = sortedLocations[0].location;
     let shortestDistance = calculateDistance(
       latitude, longitude, 
-      locationDatabase[0].coordinates[0], 
-      locationDatabase[0].coordinates[1]
+      closestLocation.coordinates[0], 
+      closestLocation.coordinates[1]
     );
 
-    for (let i = 1; i < locationDatabase.length; i++) {
-      const location = locationDatabase[i];
+    for (let i = 1; i < sortedLocations.length; i++) {
+      const location = sortedLocations[i].location;
       const distance = calculateDistance(
         latitude, longitude, 
         location.coordinates[0], 
