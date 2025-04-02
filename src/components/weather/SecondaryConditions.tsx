@@ -25,13 +25,13 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
 }) => {
   const { t, language } = useLanguage();
   
-  // AQI display with conditional rendering
+  // AQI display with conditional rendering and enhanced sizing
   const aqiValue = aqi !== undefined ? (
     <>
-      <span className={getAQIColor(aqi)}>
+      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
         {aqi} 
       </span> 
-      <span className="text-sm ml-1">({getAQIDescription(aqi, t)})</span>
+      <span className="text-sm ml-1.5">({getAQIDescription(aqi, t)})</span>
     </>
   ) : '--';
   
@@ -39,31 +39,31 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   const bortleValue = formatBortleScale(bortleScale, t);
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <ConditionItem
-        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
+        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} size="md" />}
         label={t("Cloud Cover", "云层覆盖")}
-        value={`${cloudCover}%`}
+        value={<span className="text-base font-medium">{cloudCover}%</span>}
       />
       
       <ConditionItem
-        icon={<DynamicMoonIcon phase={moonPhase} />}
+        icon={<DynamicMoonIcon phase={moonPhase} size="md" />}
         label={t("Moon Phase", "月相")}
-        value={moonPhase}
+        value={<span className="text-base font-medium">{moonPhase}</span>}
       />
       
       {aqi !== undefined && (
         <ConditionItem
-          icon={<Gauge className="h-4 w-4 text-primary" />}
+          icon={<Gauge className="h-5 w-5 text-primary" />}
           label={t("Air Quality", "空气质量")}
           value={aqiValue}
         />
       )}
       
       <ConditionItem
-        icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
+        icon={<DynamicLightbulbIcon bortleScale={bortleScale} size="md" />}
         label={t("Bortle Scale", "光污染等级")}
-        value={bortleValue}
+        value={<span className="text-base font-medium">{bortleValue}</span>}
         tooltip={bortleScale === null ? (language === 'en' ? 
           "Bortle scale could not be determined for this location" : 
           "无法确定此位置的光污染等级") : undefined}

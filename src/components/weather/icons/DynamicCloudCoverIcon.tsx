@@ -18,11 +18,11 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
   className,
   size = 'sm'
 }) => {
-  // Calculate different sizes
+  // Enhanced size mapping with larger values
   const sizeMap = {
-    sm: 'h-3.5 w-3.5',
-    md: 'h-4.5 w-4.5',
-    lg: 'h-5.5 w-5.5'
+    sm: 'h-4 w-4',
+    md: 'h-5 w-5',
+    lg: 'h-6 w-6'
   };
   
   const iconSize = sizeMap[size] || sizeMap.sm;
@@ -30,10 +30,10 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
   // Calculate fill based on cloud cover percentage
   const fillOpacity = Math.min(1, cloudCover / 100);
   
-  // Add red glow for rainy conditions - smaller and more aesthetic
+  // Add red glow for rainy conditions - enhanced for better visibility
   const hasRain = precipitation > 0;
   const rainGlowStyle = hasRain ? {
-    filter: "drop-shadow(0 0 1.5px rgba(234, 56, 76, 0.5))",
+    filter: "drop-shadow(0 0 2px rgba(234, 56, 76, 0.6))",
     transition: "all 0.3s ease"
   } : {};
   
@@ -100,7 +100,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
         <Sun 
           className={cn(iconSize, "text-yellow-400")} 
           style={{
-            filter: "drop-shadow(0 0 2px rgba(250, 204, 21, 0.4))"
+            filter: "drop-shadow(0 0 3px rgba(250, 204, 21, 0.5))"
           }}
         />
       );

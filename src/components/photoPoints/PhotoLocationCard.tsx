@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -139,33 +140,33 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     
     if (certification.includes('sanctuary') || certification.includes('reserve')) {
       return {
-        icon: <Globe className="h-3 w-3 mr-1" />,
+        icon: <Globe className="h-3.5 w-3.5 mr-1.5" />,
         text: t('Dark Sky Reserve', '暗夜保护区'),
-        color: 'text-blue-400'
+        color: 'text-blue-400 border-blue-400/30 bg-blue-400/10'
       };
     } else if (certification.includes('park')) {
       return {
-        icon: <Trees className="h-3 w-3 mr-1" />,
+        icon: <Trees className="h-3.5 w-3.5 mr-1.5" />,
         text: t('Dark Sky Park', '暗夜公园'),
-        color: 'text-green-400'
+        color: 'text-green-400 border-green-400/30 bg-green-400/10'
       };
     } else if (certification.includes('community')) {
       return {
-        icon: <Building2 className="h-3 w-3 mr-1" />,
+        icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
         text: t('Dark Sky Community', '暗夜社区'),
-        color: 'text-amber-400'
+        color: 'text-amber-400 border-amber-400/30 bg-amber-400/10'
       };
     } else if (certification.includes('urban')) {
       return {
-        icon: <Building2 className="h-3 w-3 mr-1" />,
+        icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
         text: t('Urban Night Sky', '城市夜空'),
-        color: 'text-purple-400'
+        color: 'text-purple-400 border-purple-400/30 bg-purple-400/10'
       };
     } else {
       return {
-        icon: <ShieldCheck className="h-3 w-3 mr-1" />,
+        icon: <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />,
         text: t('Certified Location', '认证地点'),
-        color: 'text-blue-300'
+        color: 'text-blue-300 border-blue-300/30 bg-blue-300/10'
       };
     }
   };
@@ -215,56 +216,59 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
         
-        <div className="flex items-center">
-          {certInfo ? (
-            <Badge variant="secondary" className="mr-2 bg-blue-500/20 text-blue-300 border-blue-500/40">
-              {certInfo.icon}
-              <span className="text-xs">{certInfo.text}</span>
-            </Badge>
-          ) : null}
-          
-          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-            {loadingSiqs ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <Star className="h-3 w-3 mr-1 text-yellow-400" fill="#facc15" />
-            )}
-            <span className="text-xs font-medium">
-              {loadingSiqs ? '...' : formatSIQSScoreForDisplay(displaySiqs)}
-            </span>
-          </div>
+        {/* SIQS Score Badge */}
+        <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-full border border-yellow-500/40">
+          {loadingSiqs ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Star className="h-3.5 w-3.5 mr-1.5 text-yellow-400" fill="#facc15" />
+          )}
+          <span className="text-sm font-medium">
+            {loadingSiqs ? '...' : formatSIQSScoreForDisplay(displaySiqs)}
+          </span>
         </div>
       </div>
       
-      {/* Light pollution indicator */}
-      <div className="mb-3">
+      {/* Certification Badge - Now BELOW the SIQS score */}
+      {certInfo && (
+        <div className="mb-3 mt-1.5">
+          <Badge variant="outline" className={`${certInfo.color} px-2.5 py-1.5 rounded-full flex items-center`}>
+            {certInfo.icon}
+            <span className="text-sm">{certInfo.text}</span>
+          </Badge>
+        </div>
+      )}
+      
+      {/* Light pollution indicator with larger text */}
+      <div className="mb-4 mt-2">
         <LightPollutionIndicator 
           bortleScale={location.bortleScale || 5} 
-          size="sm" 
-          compact={true} 
+          size="md"
+          showBortleNumber={true}
+          className="text-base"
         />
       </div>
       
-      <div className="flex flex-col space-y-1.5 mt-2">
-        <div className="flex items-center text-xs text-muted-foreground">
-          <MapPin className="h-3 w-3 mr-1.5" />
-          {formatDistance(location.distance)}
+      <div className="flex flex-col space-y-2.5 mt-3">
+        <div className="flex items-center text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+          <span className="font-medium">{formatDistance(location.distance)}</span>
         </div>
         
         {location.date && (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Clock className="h-3 w-3 mr-1.5" />
-            {formatDate(location.date)}
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+            <span className="font-medium">{formatDate(location.date)}</span>
           </div>
         )}
       </div>
       
-      <div className="mt-3 flex justify-end">
+      <div className="mt-4 flex justify-end">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleViewDetails}
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-xs"
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm"
         >
           {t("View Details", "查看详情")}
         </Button>

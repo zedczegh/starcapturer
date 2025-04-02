@@ -31,11 +31,11 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   const colorBg = typeof colorData === 'string' ? colorData : colorData.bg;
   const colorBorder = typeof colorData === 'string' ? colorData : colorData.border;
   
-  // Get size class
+  // Enhanced size classes for more dynamic appearance
   const sizeClass = {
-    sm: 'h-4 w-4 text-xs',
-    md: 'h-5 w-5 text-sm',
-    lg: 'h-6 w-6 text-base'
+    sm: 'h-5 w-5 text-xs',
+    md: 'h-6 w-6 text-sm',
+    lg: 'h-7 w-7 text-base'
   }[size];
   
   const description = getBortleScaleDescription(bortleScale);
@@ -45,24 +45,24 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
     return Number.isInteger(value) ? value.toString() : value.toFixed(1);
   };
 
-  // Compact mode for sidebar widgets
+  // Compact mode for sidebar widgets - with larger font
   if (compact) {
     return (
       <div className={cn("flex items-center", className)}>
         <div className="flex items-center">
           <div 
             className={cn(
-              "rounded-full mr-1.5 flex items-center justify-center border shadow-sm", 
-              "h-4.5 w-4.5",
+              "rounded-full mr-2 flex items-center justify-center border shadow-sm", 
+              "h-5 w-5",
               colorBg,
               colorBorder
             )}
           >
-            <span className={cn("font-bold text-[0.7em]", colorText)}>
+            <span className={cn("font-bold text-[0.8em]", colorText)}>
               {formatBortleScale(bortleScale)}
             </span>
           </div>
-          <span className="text-xs font-medium">
+          <span className="text-sm font-medium">
             {t("Bortle", "波特尔")}
           </span>
         </div>
@@ -74,14 +74,14 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
     <div className={cn("flex items-center", className)}>
       <div 
         className={cn(
-          "rounded-full mr-2 flex items-center justify-center border shadow-sm", 
+          "rounded-full mr-2.5 flex items-center justify-center border shadow-sm", 
           sizeClass,
           colorBg,
           colorBorder
         )}
       >
         {showBortleNumber && (
-          <span className={cn("font-bold text-[0.8em]", colorText)}>
+          <span className={cn("font-bold", colorText)}>
             {formatBortleScale(bortleScale)}
           </span>
         )}

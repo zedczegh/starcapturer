@@ -130,7 +130,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
               
               {/* Category moved below the SIQS score */}
               {certification && (
-                <span className="text-xs mt-1 px-2 py-0.5 bg-indigo-600/80 rounded-full text-white">
+                <span className="text-xs mt-1.5 px-2.5 py-0.5 bg-indigo-600/80 rounded-full text-white font-medium">
                   {certification}
                 </span>
               )}
@@ -143,8 +143,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
             <div>
               <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
               <div className="flex items-center text-sm text-muted-foreground mt-1">
-                <MapPin className="h-3.5 w-3.5 mr-1" />
-                <span>
+                <MapPin className="h-4 w-4 mr-1.5" />
+                <span className="font-medium">
                   {latitude.toFixed(4)}, {longitude.toFixed(4)}
                 </span>
               </div>
@@ -155,7 +155,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
             >
               {isViable ? (
                 <span className="flex items-center">
-                  <Star className="h-3 w-3 mr-1" />
+                  <Star className="h-3.5 w-3.5 mr-1.5" />
                   {t("Viable", "可行")}
                 </span>
               ) : (
@@ -165,20 +165,20 @@ const LocationCard: React.FC<LocationCardProps> = ({
           </div>
           
           {/* Bortle scale indicator with improved visibility */}
-          <div className="mt-3">
+          <div className="mt-4">
             <LightPollutionIndicator 
               bortleScale={bortleScale} 
-              size="sm" 
+              size="md"
               showBortleNumber={true}
-              className="text-sm"
+              className="text-base"
             />
           </div>
         </CardContent>
         
-        <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
+        <CardFooter className="p-4 pt-0 text-sm text-muted-foreground">
           <div className="flex items-center">
-            <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
-            <span>{formattedDate} at {formattedTime}</span>
+            <CalendarClock className="h-4 w-4 mr-2" />
+            <span className="font-medium">{formattedDate} at {formattedTime}</span>
           </div>
         </CardFooter>
       </Card>
