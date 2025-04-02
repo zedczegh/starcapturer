@@ -1,6 +1,6 @@
 
 import { fetchLightPollutionData } from "@/lib/api";
-import { findClosestKnownLocation, estimateBortleScaleByLocation } from "@/utils/locationUtils";
+import { estimateBortleScaleByLocation, findClosestKnownLocation } from "@/utils/locationUtils";
 
 // Default timeout for light pollution API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;

@@ -3,37 +3,6 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 
 /**
- * Process a single location for SIQS calculation
- * @param location The location to process
- * @returns The location with updated SIQS data
- */
-async function processSingleLocation(location: SharedAstroSpot): Promise<SharedAstroSpot> {
-  try {
-    if (!location.latitude || !location.longitude) {
-      return location;
-    }
-    
-    const siqsResult = await calculateRealTimeSiqs(
-      location.latitude,
-      location.longitude,
-      location.bortleScale || 5
-    );
-    
-    // Return location with updated SIQS
-    return {
-      ...location,
-      siqs: siqsResult.siqs,
-      isViable: siqsResult.isViable,
-      // Use factors array instead of siqsFactors
-      siqsFactors: siqsResult.factors 
-    };
-  } catch (err) {
-    console.error(`Error processing location ${location.name}:`, err);
-    return location; // Return original location on error
-  }
-}
-
-/**
  * Processes locations in batches with improved error handling and performance
  * @param locations Array of locations to process
  * @param batchSize Number of locations to process in parallel
@@ -66,16 +35,30 @@ export async function processBatchedSiqs(
     // Process this batch in parallel
     const batchPromises = batch.map(async (location) => {
       try {
-        const processed = await processSingleLocation(location);
-        if (processed.siqs !== undefined) {
-          successCount++;
+        if (!location.latitude || !location.longitude) {
+          return location;
         }
-        processedCount++;
-        return processed;
+        
+        const siqsResult = await calculateRealTimeSiqs(
+          location.latitude,
+          location.longitude,
+          location.bortleScale || 5
+        );
+        
+        successCount++;
+        
+        // Return location with updated SIQS
+        return {
+          ...location,
+          siqs: siqsResult.siqs,
+          isViable: siqsResult.isViable,
+          siqsFactors: siqsResult.factors
+        };
       } catch (err) {
+        console.error(`Error processing location ${location.name}:`, err);
+        return location; // Return original location on error
+      } finally {
         processedCount++;
-        console.error(`Unexpected error processing location ${location.name}:`, err);
-        return location;
       }
     });
     

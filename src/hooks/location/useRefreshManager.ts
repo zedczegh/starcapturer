@@ -1,58 +1,54 @@
 
-import { useState, useEffect, useCallback } from 'react';
-
-interface UseRefreshManagerProps {
-  locationData: any;
-  interval?: number;
-}
+import { useEffect, useState } from "react";
+import { usePhotoPointsNavigation } from "./usePhotoPointsNavigation";
 
 /**
- * A hook to manage refresh intervals and states for location data
+ * Custom hook to manage refresh logic for location details page
+ * Controls when the page should refresh data based on navigation source
  */
-export function useRefreshManager({ 
-  locationData, 
-  interval = 60000 // Default 1 minute
-}: UseRefreshManagerProps) {
-  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+export function useRefreshManager(locationData: any) {
   const [shouldRefresh, setShouldRefresh] = useState<boolean>(true);
+  const [refreshCount, setRefreshCount] = useState<number>(0);
   
-  // Check if data should be refreshed based on timestamp
+  // Get the locationId from the data
+  const locationId = locationData?.id;
+  
+  // Use the navigation hook to detect if we came from photo points
+  const { needsRefresh } = usePhotoPointsNavigation(locationId);
+  
+  // Initial check for refresh conditions
   useEffect(() => {
-    if (!locationData) {
-      setShouldRefresh(true);
-      return;
-    }
+    // Determine if we should refresh based on different scenarios
+    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
+    const fromCalculator = locationData?.fromCalculator === true;
+    const noSiqsData = !locationData?.siqsResult?.score || 
+                       locationData?.siqsResult?.score === 0;
     
-    const now = Date.now();
-    const timestamp = locationData.timestamp || 0;
-    const timeSinceLastUpdate = now - timestamp;
+    const shouldTriggerRefresh = fromPhotoPoints || fromCalculator || 
+                                 noSiqsData || needsRefresh || refreshCount === 0;
     
-    // If data is older than the refresh interval, mark for refresh
-    if (timeSinceLastUpdate > interval) {
+    if (shouldTriggerRefresh) {
+      console.log("Setting refresh flag based on conditions:", {
+        fromPhotoPoints,
+        fromCalculator,
+        noSiqsData,
+        needsRefresh,
+        refreshCount
+      });
       setShouldRefresh(true);
     }
-    
-    // Special case: if location came from photo points or calculator
-    if (locationData.fromPhotoPoints || locationData.fromCalculator) {
-      setShouldRefresh(true);
-    }
-  }, [locationData, interval]);
+  }, [locationData, needsRefresh, refreshCount]);
   
-  // Mark a refresh as complete
-  const markRefreshComplete = useCallback(() => {
-    setLastRefreshTime(Date.now());
+  // Function to mark refresh as complete
+  const markRefreshComplete = () => {
     setShouldRefresh(false);
-  }, []);
-  
-  // Force a refresh
-  const forceRefresh = useCallback(() => {
-    setShouldRefresh(true);
-  }, []);
+    setRefreshCount(prev => prev + 1);
+  };
   
   return {
     shouldRefresh,
-    lastRefreshTime,
     markRefreshComplete,
-    forceRefresh
+    // Expose the refresh count for debugging
+    refreshCount
   };
 }

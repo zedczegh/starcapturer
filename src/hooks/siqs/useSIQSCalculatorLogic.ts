@@ -1,40 +1,25 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateSIQSWithWeatherData } from '@/hooks/siqs/siqsCalculationUtils';
 import { fetchWeatherData, fetchForecastData } from '@/lib/api';
 import { Language } from '@/services/geocoding/types';
-import { useSIQSCalculation } from './useSIQSCalculation';
+import { toast } from 'sonner';
 
 interface UseSIQSCalculatorLogicProps {
   setCachedData: (key: string, data: any) => void;
   getCachedData: (key: string) => any;
 }
 
-// Create wrapper functions that match the expected parameter types
-const fetchWeatherWrapper = (lat: number, lng: number) => {
-  return fetchWeatherData({ latitude: lat, longitude: lng });
-};
-
-const fetchForecastWrapper = (params: { latitude: number; longitude: number; days: number }) => {
-  return fetchForecastData(params);
-};
-
-/**
- * Hook to handle SIQS calculator logic with caching
- */
 export const useSIQSCalculatorLogic = ({
   setCachedData,
   getCachedData
 }: UseSIQSCalculatorLogicProps) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const [isCalculating, setIsCalculating] = useState(false);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [siqsFactors, setSiqsFactors] = useState<any[]>([]);
-  
-  // Use the SIQS calculation hook with wrapped functions
-  const { calculateSIQS, isCalculating } = useSIQSCalculation({
-    fetchWeatherFn: fetchWeatherData,
-    fetchForecastFn: fetchForecastData
-  });
   
   // Calculate SIQS for a given location
   const calculateSIQSForLocation = useCallback(async (
@@ -49,35 +34,59 @@ export const useSIQSCalculatorLogic = ({
     lang?: Language,
     cameraMeasurement?: number | null
   ) => {
-    // Check cache first
-    const cacheKey = `siqs_${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
-    const cachedResult = getCachedData(cacheKey);
-    
-    if (cachedResult && Date.now() - cachedResult.timestamp < 15 * 60 * 1000) {
-      console.log("Using cached SIQS result:", cachedResult);
-      setSiqsScore(cachedResult.score);
-      setSiqsFactors(cachedResult.factors || []);
-      
-      if (setStatusMessage) {
-        setStatusMessage(null);
-      }
-      
-      return cachedResult.score;
+    setIsCalculating(true);
+    if (setStatusMessage) {
+      setStatusMessage(t(
+        "Fetching weather data for your location...",
+        "正在获取您所在位置的天气数据..."
+      ));
     }
     
-    // Calculate fresh SIQS
-    const result = await calculateSIQS(
-      latitude,
-      longitude,
-      bortleScale !== undefined && bortleScale !== null ? bortleScale : 4,
-      seeingConditions || 3,
-      moonPhase || 0.5,
-      setStatusMessage,
-      cameraMeasurement
-    );
-    
-    // Save result
-    if (result.score !== null) {
+    try {
+      // Check cache first
+      const cacheKey = `siqs_${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
+      const cachedResult = getCachedData(cacheKey);
+      
+      if (cachedResult && Date.now() - cachedResult.timestamp < 15 * 60 * 1000) {
+        console.log("Using cached SIQS result:", cachedResult);
+        setSiqsScore(cachedResult.score);
+        setSiqsFactors(cachedResult.factors || []);
+        
+        if (setStatusMessage) {
+          setStatusMessage(null);
+        }
+        
+        return cachedResult.score;
+      }
+      
+      // Fetch weather and forecast data in parallel
+      const [weatherResponse, forecastResponse] = await Promise.all([
+        fetchWeatherData(latitude, longitude),
+        fetchForecastData({ latitude, longitude, days: 3 })
+      ]);
+      
+      if (!weatherResponse) {
+        throw new Error("Failed to fetch weather data");
+      }
+      
+      if (setStatusMessage) {
+        setStatusMessage(t(
+          "Calculating SIQS score...",
+          "正在计算SIQS得分..."
+        ));
+      }
+      
+      // Calculate SIQS using our advanced algorithm
+      const result = await calculateSIQSWithWeatherData(
+        weatherResponse.weatherData,
+        bortleScale !== undefined && bortleScale !== null ? bortleScale : 4,
+        seeingConditions || 3,
+        moonPhase || 0.5,
+        forecastResponse,
+        cameraMeasurement
+      );
+      
+      // Save result
       setSiqsScore(result.score);
       setSiqsFactors(result.factors || []);
       
@@ -90,11 +99,26 @@ export const useSIQSCalculatorLogic = ({
         });
       }
       
+      if (setStatusMessage) {
+        setStatusMessage(null);
+      }
+      
       return result.score;
+    } catch (error) {
+      console.error("Error calculating SIQS:", error);
+      
+      if (setStatusMessage) {
+        setStatusMessage(t(
+          "Error calculating SIQS. Please try again.",
+          "计算SIQS时出错。请重试。"
+        ));
+      }
+      
+      return null;
+    } finally {
+      setIsCalculating(false);
     }
-    
-    return null;
-  }, [t, getCachedData, setCachedData, calculateSIQS]);
+  }, [t, getCachedData, setCachedData]);
   
   return {
     isCalculating,

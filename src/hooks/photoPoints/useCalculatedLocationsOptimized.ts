@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { processPrioritizedBatchedSiqs } from '@/utils/siqsBatchProcessor';
-import { calculateDistance } from '@/utils/locationUtils';
 
 const MAX_CALCULATED_POINTS = 50;
 const MIN_DISTANCE_BETWEEN_POINTS = 5; // km
@@ -126,59 +125,71 @@ export function useCalculatedLocationsOptimized() {
       // Process points in smaller batches for faster evaluation
       for (let i = 0; i < prioritizedPoints.length && pointsAdded < limit; i++) {
         const point = prioritizedPoints[i];
-        const coordKey = `${point.lat.toFixed(4)},${point.lng.toFixed(4)}`;
         
-        // Skip if already in our set
+        // Skip if point is already in existing locations
+        const coordKey = `${point.lat.toFixed(4)},${point.lng.toFixed(4)}`;
         if (existingCoords.has(coordKey)) {
           continue;
         }
         
-        try {
-          // Check if point is on water (skip if it is)
-          const isWater = await isWaterLocation(point.lat, point.lng);
-          if (isWater) {
-            console.log(`Skipping water location at ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}`);
-            continue;
-          }
-          
-          // Create a basic astro spot object
-          const spot: SharedAstroSpot = {
-            id: `calc-${point.lat.toFixed(4)}-${point.lng.toFixed(4)}`,
-            name: `Spot at ${point.lat.toFixed(2)}, ${point.lng.toFixed(2)}`,
-            latitude: point.lat,
-            longitude: point.lng,
-            distance: calculateDistance(centerLat, centerLng, point.lat, point.lng),
-            bortleScale: 4,  // Will be updated by SIQS calculation
-            timestamp: new Date().toISOString(),
-            // Don't include isCalculated property (not in interface)
-          };
-          
-          validPoints.push(spot);
-          existingCoords.add(coordKey);
-          pointsAdded++;
-          
-        } catch (error) {
-          console.error(`Error processing point ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}:`, error);
+        // Quick check for water/ocean location
+        if (await isWaterLocation(point.lat, point.lng)) {
+          continue;
         }
+        
+        // Calculate distance from center in km
+        const distance = calculateDistance(centerLat, centerLng, point.lat, point.lng);
+        
+        // Estimate Bortle scale based on distance from civilization
+        // This is just an initial estimate - real-time SIQS will calculate actual value
+        let estimatedBortle = 4;
+        if (distance > radius * 0.8) estimatedBortle = 3;
+        if (distance > radius * 0.9) estimatedBortle = 2;
+        
+        // Create a new calculated location
+        const newLocation: SharedAstroSpot = {
+          id: `calc-${Date.now()}-${i}`,
+          name: `Calculated Dark Sky Site ${pointsAdded + 1}`,
+          latitude: point.lat,
+          longitude: point.lng,
+          bortleScale: estimatedBortle,
+          // Start with estimated SIQS based on Bortle scale
+          siqs: Math.max(0, 10 - estimatedBortle),
+          distance: distance,
+          isCalculated: true
+        };
+        
+        validPoints.push(newLocation);
+        existingCoords.add(coordKey);
+        pointsAdded++;
       }
       
-      console.log(`Found ${validPoints.length} valid calculated locations`);
-      
-      // Run SIQS calculation for all valid points
-      if (validPoints.length > 0) {
-        try {
-          const enhancedLocations = await processPrioritizedBatchedSiqs(validPoints);
-          calculatedLocations = [...calculatedLocations, ...enhancedLocations];
-        } catch (error) {
-          console.error("Error processing batch SIQS:", error);
-          calculatedLocations = [...calculatedLocations, ...validPoints];
-        }
+      // If we don't have enough points and expandRadius is true, expand and try again
+      if (validPoints.length < limit * 0.5 && expandRadius && radius < 10000) {
+        console.log(`Found only ${validPoints.length} valid points, expanding radius from ${radius}km to ${radius * 1.5}km`);
+        
+        // Recursively call with expanded radius
+        const expandedPoints = await findCalculatedLocations(
+          centerLat,
+          centerLng,
+          radius * 1.5,
+          false, // Don't expand again
+          limit,
+          true, // Preserve what we found so far
+          [...calculatedLocations, ...validPoints]
+        );
+        
+        return expandedPoints;
       }
       
-      return calculatedLocations
-        .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
-        .slice(0, limit);
+      // Combine existing and new calculated locations
+      calculatedLocations = [...calculatedLocations, ...validPoints];
       
+      // Process SIQS in batches
+      const processedLocations = await processPrioritizedBatchedSiqs(calculatedLocations);
+      
+      console.log(`Returning ${processedLocations.length} calculated dark sky locations`);
+      return processedLocations;
     } catch (error) {
       console.error("Error finding calculated locations:", error);
       return [];
@@ -191,4 +202,24 @@ export function useCalculatedLocationsOptimized() {
     findCalculatedLocations,
     searchingCalculated
   };
+}
+
+/**
+ * Calculate distance between two points in km using Haversine formula
+ * @param lat1 Latitude of first point
+ * @param lng1 Longitude of first point
+ * @param lat2 Latitude of second point
+ * @param lng2 Longitude of second point
+ * @returns Distance in kilometers
+ */
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
