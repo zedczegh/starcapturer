@@ -8,6 +8,7 @@ import { useLocation } from "@/contexts/LocationContext";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { rawBrightnessToMpsas } from "@/utils/darkSkyMeterUtils";
+import { cameraBrightnessToBortleEnhanced, cameraBrightnessToMpsasEnhanced } from "@/utils/bortleNowUtils";
 
 interface UseSIQSCalculationProps {
   latitude?: number | null;
@@ -57,38 +58,43 @@ export function useSIQSCalculation({
     isLoading: weatherLoading,
     error: weatherError,
     refetch: refetchWeather
-  } = useQuery(
-    ["weather", debouncedLatitude, debouncedLongitude],
-    () => {
+  } = useQuery({
+    queryKey: ["weather", debouncedLatitude, debouncedLongitude],
+    queryFn: () => {
       if (debouncedLatitude && debouncedLongitude) {
         return fetchWeatherData(debouncedLatitude, debouncedLongitude);
       }
       return null;
     },
-    {
-      enabled: !noAutoLocationRequest && !!debouncedLatitude && !!debouncedLongitude,
-      retry: false,
-      refetchOnWindowFocus: false,
-      onSuccess: (data) => {
-        setWeatherData(data?.weatherData || null);
-        setForecastData(data?.forecastData || null);
-      },
-      onError: (error) => {
-        console.error("Error fetching weather data:", error);
-      }
+    enabled: !noAutoLocationRequest && !!debouncedLatitude && !!debouncedLongitude,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    onSuccess: (data) => {
+      setWeatherData(data?.weatherData || null);
+      setForecastData(data?.forecastData || null);
+    },
+    onError: (error) => {
+      console.error("Error fetching weather data:", error);
     }
-  );
+  });
   
   /**
    * Updates the sky brightness measurement and saves it to local storage
+   * Enhanced with MPSAS and Bortle conversion
    */
   const updateSkyBrightness = useCallback((value: number) => {
-    const mpsas = rawBrightnessToMpsas(value);
+    // Use our enhanced algorithms for more accurate conversions
+    const mpsas = cameraBrightnessToMpsasEnhanced(value);
+    const bortle = cameraBrightnessToBortleEnhanced(value);
     const timestamp = new Date().toISOString();
+    
+    console.log(`Camera measurement: ${value}, MPSAS: ${mpsas.toFixed(2)}, Bortle: ${bortle.toFixed(1)}`);
     
     const newSkyBrightness = {
       value,
       mpsas,
+      bortle,
       timestamp
     };
     
@@ -96,6 +102,11 @@ export function useSIQSCalculation({
     
     // Save to local storage
     localStorage.setItem('sky_brightness_measurement', JSON.stringify(newSkyBrightness));
+    
+    // Update Bortle scale to use the camera measurement
+    setBortleScale(bortle);
+    
+    return bortle;
   }, []);
   
   /**
@@ -108,12 +119,34 @@ export function useSIQSCalculation({
         const parsedBrightness = JSON.parse(storedBrightness);
         if (parsedBrightness && typeof parsedBrightness.value === 'number') {
           setSkyBrightness(parsedBrightness);
+          
+          // If no camera measurement is provided, use the stored one
+          if (cameraMeasurement === null) {
+            // If the stored brightness has a bortle value, use it
+            if (parsedBrightness.bortle) {
+              setBortleScale(parsedBrightness.bortle);
+            } 
+            // Otherwise calculate it
+            else {
+              const bortle = cameraBrightnessToBortleEnhanced(parsedBrightness.value);
+              setBortleScale(bortle);
+            }
+          }
         }
       } catch (e) {
         console.error("Error parsing sky brightness measurement:", e);
       }
     }
-  }, []);
+  }, [cameraMeasurement]);
+  
+  // Handle updates when cameraMeasurement changes
+  useEffect(() => {
+    if (cameraMeasurement !== null) {
+      const bortle = updateSkyBrightness(cameraMeasurement);
+      // Update bortle scale from camera measurement
+      setBortleScale(bortle);
+    }
+  }, [cameraMeasurement, updateSkyBrightness]);
   
   /**
    * Updates the SIQS result based on weather data, Bortle scale, seeing conditions, and moon phase
@@ -145,9 +178,25 @@ export function useSIQSCalculation({
   
   /**
    * Updates the Bortle scale based on location and camera measurement
+   * Now prioritizes camera measurements over database lookups
    */
   useEffect(() => {
     const updateBortle = async () => {
+      // If we have a camera measurement, it takes precedence
+      if (cameraMeasurement !== null) {
+        const bortle = cameraBrightnessToBortleEnhanced(cameraMeasurement);
+        setBortleScale(bortle);
+        return;
+      }
+      
+      // If we have a stored sky brightness, use it as a priority
+      if (skyBrightness?.value !== undefined) {
+        const bortle = cameraBrightnessToBortleEnhanced(skyBrightness.value);
+        setBortleScale(bortle);
+        return;
+      }
+      
+      // Only fall back to location-based Bortle if no direct measurements are available
       if (debouncedLatitude && debouncedLongitude && locationName) {
         try {
           const newBortleScale = await updateBortleScale(
@@ -155,7 +204,7 @@ export function useSIQSCalculation({
             debouncedLongitude,
             locationName,
             bortleScale,
-            cameraMeasurement !== null ? cameraMeasurement : (skyBrightness?.value || null)
+            null // No camera measurement here, we handled that above
           );
           
           if (newBortleScale !== null) {
