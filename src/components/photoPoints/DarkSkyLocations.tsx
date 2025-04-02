@@ -106,7 +106,7 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
           <p className="text-sm text-muted-foreground">
             {t(
               "Try the 'Calculated' tab to find locations with good viewing conditions.",
-              "尝试"计算"选项卡，寻找具有良好观测条件的地点。"
+              "尝试\"计算\"选项卡，寻找具有良好观测条件的地点。"
             )}
           </p>
         </div>
