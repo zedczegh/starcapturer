@@ -23,12 +23,19 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Prevent tab switching while loading
+  const handleViewChange = (view: PhotoPointsViewMode) => {
+    if (!loading) {
+      onViewChange(view);
+    }
+  };
+  
   return (
     <div className="flex items-center justify-center bg-cosmic-900/40 rounded-lg p-1.5 max-w-sm mx-auto gap-3">
       <Toggle
         variant="outline"
         pressed={activeView === 'certified'}
-        onPressedChange={() => onViewChange('certified')}
+        onPressedChange={() => handleViewChange('certified')}
         disabled={loading}
         className={`flex-1 gap-1.5 ${
           activeView === 'certified' 
@@ -42,14 +49,14 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           ({certifiedCount})
         </span>
         {loading && activeView === 'certified' && (
-          <Loader2 className="ml-1 h-3 w-3 animate-spin" />
+          <span className="ml-1 h-3 w-3">•</span>
         )}
       </Toggle>
       
       <Toggle
         variant="outline"
         pressed={activeView === 'calculated'}
-        onPressedChange={() => onViewChange('calculated')}
+        onPressedChange={() => handleViewChange('calculated')}
         disabled={loading}
         className={`flex-1 gap-1.5 ${
           activeView === 'calculated' 
@@ -63,7 +70,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           ({calculatedCount})
         </span>
         {loading && activeView === 'calculated' && (
-          <Loader2 className="ml-1 h-3 w-3 animate-spin" />
+          <span className="ml-1 h-3 w-3">•</span>
         )}
       </Toggle>
     </div>

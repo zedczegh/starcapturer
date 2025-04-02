@@ -1,56 +1,54 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from "react";
+import { usePhotoPointsNavigation } from "./usePhotoPointsNavigation";
 
 /**
- * Hook to manage refresh state for location data
- * Ensures only one refresh when the location details page is opened
+ * Custom hook to manage refresh logic for location details page
+ * Controls when the page should refresh data based on navigation source
  */
 export function useRefreshManager(locationData: any) {
-  const [shouldRefresh, setShouldRefresh] = useState(false);
-  const refreshedRef = useRef(false);
-  const locationSignatureRef = useRef<string | null>(null);
-  const pageLoadRefreshedRef = useRef(false);
+  const [shouldRefresh, setShouldRefresh] = useState<boolean>(true);
+  const [refreshCount, setRefreshCount] = useState<number>(0);
   
-  // Calculate a unique signature for this location
-  const getLocationSignature = () => {
-    if (!locationData) return null;
-    return `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}`;
-  };
+  // Get the locationId from the data
+  const locationId = locationData?.id;
   
-  // Reset refresh state when location changes or on first page load
+  // Use the navigation hook to detect if we came from photo points
+  const { needsRefresh } = usePhotoPointsNavigation(locationId);
+  
+  // Initial check for refresh conditions
   useEffect(() => {
-    const currentSignature = getLocationSignature();
+    // Determine if we should refresh based on different scenarios
+    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
+    const fromCalculator = locationData?.fromCalculator === true;
+    const noSiqsData = !locationData?.siqsResult?.score || 
+                       locationData?.siqsResult?.score === 0;
     
-    // Check for location change or first load
-    if (
-      // First page load for any location
-      !pageLoadRefreshedRef.current ||
-      // Location has changed significantly
-      (currentSignature && currentSignature !== locationSignatureRef.current) ||
-      // Coming from PhotoPoints page (special case)
-      (locationData?.fromPhotoPoints === true)
-    ) {
-      console.log("Refresh triggered: new location or initial page load");
-      locationSignatureRef.current = currentSignature;
+    const shouldTriggerRefresh = fromPhotoPoints || fromCalculator || 
+                                 noSiqsData || needsRefresh || refreshCount === 0;
+    
+    if (shouldTriggerRefresh) {
+      console.log("Setting refresh flag based on conditions:", {
+        fromPhotoPoints,
+        fromCalculator,
+        noSiqsData,
+        needsRefresh,
+        refreshCount
+      });
       setShouldRefresh(true);
-      pageLoadRefreshedRef.current = true;
     }
-  }, [locationData]);
+  }, [locationData, needsRefresh, refreshCount]);
   
   // Function to mark refresh as complete
   const markRefreshComplete = () => {
-    refreshedRef.current = true;
     setShouldRefresh(false);
-  };
-  
-  // Function to reset page load refresh flag (for testing purposes)
-  const resetPageLoadFlag = () => {
-    pageLoadRefreshedRef.current = false;
+    setRefreshCount(prev => prev + 1);
   };
   
   return {
     shouldRefresh,
     markRefreshComplete,
-    resetPageLoadFlag
+    // Expose the refresh count for debugging
+    refreshCount
   };
 }

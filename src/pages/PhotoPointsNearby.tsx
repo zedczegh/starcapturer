@@ -1,27 +1,27 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { useLanguage } from '@/contexts/LanguageContext';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
+import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
+import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
-import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
-import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationReminder';
-import { MapPin, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import BackButton from '@/components/navigation/BackButton';
-import { currentSiqsStore } from '@/components/index/CalculatorSection';
+import PageLoader from '@/components/loaders/PageLoader';
+
+// Lazy load components that are not immediately visible
+const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
+const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 
 const PhotoPointsNearby: React.FC = () => {
-  const { t } = useLanguage();
-  const isMobile = useIsMobile();
+  // Get user location
   const { loading: locationLoading, coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
   });
+  
+  // UI state
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -99,116 +99,77 @@ const PhotoPointsNearby: React.FC = () => {
       await loadMoreCalculatedLocations();
     }
   }, [loadMoreCalculatedLocations]);
-
-  // Page title - using Helmet for proper title handling
-  const pageTitle = t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
-  // Determine loading state for current active view
-  const isCurrentViewLoading = loading || searching && 
+  // Determine loading state for current active view - avoid spinner flashing
+  const isCurrentViewLoading = loading && 
     ((activeView === 'certified' && certifiedCount === 0) || 
      (activeView === 'calculated' && calculatedCount === 0));
   
   return (
-    <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
-      {/* Use Helmet component for setting page title */}
-      <Helmet>
-        <title>{pageTitle}</title>
-      </Helmet>
+    <PhotoPointsLayout>
+      <PhotoPointsHeader 
+        userLocation={userLocation}
+        locationLoading={locationLoading}
+        getPosition={getPosition}
+      />
       
-      <div className={`pt-20 md:pt-28 pb-20 ${isMobile ? 'will-change-auto' : ''}`}>
-        <div className="container mx-auto px-4">
-          {/* Back Button */}
-          <div className="mb-6">
-            <BackButton destination="/" />
-          </div>
-          
-          <div className="flex flex-col items-center text-center mb-8">
-            <h1 className="text-3xl font-bold mb-3">
-              {t("Astronomy Photo Points", "天文摄影点")}
-            </h1>
-            <p className="text-muted-foreground max-w-xl">
-              {t(
-                "Discover the best locations for astrophotography near you. Filter by certified dark sky areas or algorithmically calculated spots.",
-                "发现您附近最佳的天文摄影地点。按认证暗夜区域或算法计算的位置进行筛选。"
-              )}
-            </p>
-          </div>
-          
-          {/* Add the reminder component with currentSiqs from store */}
-          <CurrentLocationReminder 
-            currentSiqs={currentSiqs}
-            isVisible={!!userLocation && !loading}
+      {/* Add the reminder component with currentSiqs from store */}
+      <CurrentLocationReminder 
+        currentSiqs={currentSiqs}
+        isVisible={!!userLocation && !loading}
+      />
+      
+      {/* Distance filter */}
+      {userLocation && (
+        <div className="max-w-xl mx-auto mb-8">
+          <DistanceRangeSlider
+            currentValue={searchRadius}
+            onValueChange={handleRadiusChange}
+            minValue={100}
+            maxValue={10000}
+            stepValue={100}
           />
-          
-          {/* User location section */}
-          {!userLocation && (
-            <div className="flex justify-center mb-8">
-              <Button
-                onClick={getPosition}
-                className="flex items-center gap-2"
-                disabled={locationLoading}
-              >
-                {locationLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MapPin className="h-4 w-4" />
-                )}
-                {t("Use My Location", "使用我的位置")}
-              </Button>
-            </div>
-          )}
-          
-          {/* Distance filter */}
-          {userLocation && (
-            <div className="max-w-xl mx-auto mb-8">
-              <DistanceRangeSlider
-                currentValue={searchRadius}
-                onValueChange={handleRadiusChange}
-                minValue={100}
-                maxValue={10000}
-                stepValue={100}
-              />
-            </div>
-          )}
-          
-          {/* Tab toggle */}
-          <div className="mb-6">
-            <ViewToggle
-              activeView={activeView}
-              onViewChange={setActiveView}
-              certifiedCount={certifiedCount}
-              calculatedCount={calculatedCount}
-              loading={isCurrentViewLoading}
-            />
-          </div>
-          
-          {/* Content based on active view */}
-          <div className={isMobile ? 'transform-gpu' : ''}>
-            {activeView === 'certified' ? (
-              <DarkSkyLocations
-                locations={certifiedLocations}
-                loading={loading && !locationLoading}
-                initialLoad={initialLoad}
-              />
-            ) : (
-              <CalculatedLocations
-                locations={calculatedLocations}
-                loading={loading && !locationLoading}
-                hasMore={hasMore}
-                onLoadMore={loadMore}
-                onRefresh={refreshSiqsData}
-                searchRadius={searchRadius}
-                initialLoad={initialLoad}
-                onLoadMoreCalculated={handleLoadMoreCalculated}
-                canLoadMoreCalculated={canLoadMoreCalculated}
-                loadMoreClickCount={loadMoreClickCount}
-                maxLoadMoreClicks={maxLoadMoreClicks}
-              />
-            )}
-          </div>
         </div>
+      )}
+      
+      {/* Tab toggle - with stable positioning to prevent layout shifts */}
+      <div className="mb-6">
+        <ViewToggle
+          activeView={activeView}
+          onViewChange={setActiveView}
+          certifiedCount={certifiedCount}
+          calculatedCount={calculatedCount}
+          loading={isCurrentViewLoading}
+        />
       </div>
-    </div>
+      
+      {/* Content based on active view with suspense handling */}
+      <Suspense fallback={<PageLoader />}>
+        <div className="min-h-[300px]"> {/* Fixed height container prevents layout shift */}
+          {activeView === 'certified' ? (
+            <DarkSkyLocations
+              locations={certifiedLocations}
+              loading={loading && !locationLoading}
+              initialLoad={initialLoad}
+            />
+          ) : (
+            <CalculatedLocations
+              locations={calculatedLocations}
+              loading={loading && !locationLoading}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              onRefresh={refreshSiqsData}
+              searchRadius={searchRadius}
+              initialLoad={initialLoad}
+              onLoadMoreCalculated={handleLoadMoreCalculated}
+              canLoadMoreCalculated={canLoadMoreCalculated}
+              loadMoreClickCount={loadMoreClickCount}
+              maxLoadMoreClicks={maxLoadMoreClicks}
+            />
+          )}
+        </div>
+      </Suspense>
+    </PhotoPointsLayout>
   );
 };
 

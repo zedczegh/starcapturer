@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Building2, Loader2 } from "lucide-react";
+import { MapPin, Star, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
 import { getCertificationInfo, getLocalizedCertText } from "./utils/certificationUtils";
+import { useNavigate } from "react-router-dom";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -24,6 +25,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   userLocation
 }) => {
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
 
@@ -92,6 +94,41 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
 
+  // Create a stable location ID for navigation
+  const getLocationId = () => {
+    if (!point || !point.latitude || !point.longitude) return null;
+    return `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+  };
+
+  // Handle view details click with proper navigation
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!point || !point.latitude || !point.longitude) return;
+    
+    const locationId = getLocationId();
+    if (!locationId) return;
+    
+    // Navigate programmatically to ensure proper state passing
+    navigate(`/location/${locationId}`, {
+      state: {
+        id: locationId,
+        name: point.name,
+        chineseName: point.chineseName,
+        latitude: point.latitude,
+        longitude: point.longitude,
+        bortleScale: point.bortleScale || 4,
+        siqsResult: {
+          score: point.siqs || 0
+        },
+        certification: point.certification,
+        isDarkSkyReserve: point.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true // Add flag to indicate source
+      }
+    });
+  };
+
   // Get certification info using our utility function
   const certInfo = getCertificationInfo(point);
   const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
@@ -135,8 +172,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
           <span className="text-sm text-muted-foreground line-clamp-1 font-medium">
             {loadingTown ? (
-              <span className="flex items-center">
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              <span className="text-muted-foreground/70">
                 {language === 'zh' ? "加载中..." : "Loading..."}
               </span>
             ) : nearestTown ? (
@@ -153,10 +189,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           size="sm" 
           variant="ghost" 
           className="h-7 text-sm px-2.5 text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewDetails(point);
-          }}
+          onClick={handleViewDetails}
         >
           {t("View", "查看")}
         </Button>

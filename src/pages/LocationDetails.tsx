@@ -2,7 +2,6 @@
 import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
-import PageLoader from "@/components/loaders/PageLoader";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
 import { prefetchLocationData } from "@/lib/queryPrefetcher";
@@ -12,6 +11,8 @@ import { isInChina } from "@/utils/chinaBortleData";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import PageLoader from "@/components/loaders/PageLoader";
+import NavBar from "@/components/navigation/NavBar";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -26,6 +27,7 @@ const LocationDetails = () => {
   const { updateBortleScale } = useBortleUpdater();
   const { t } = useLanguage();
   const siqsUpdateRequiredRef = useRef(true);
+  const initialRenderRef = useRef(true);
   
   const {
     locationData, 
@@ -48,6 +50,34 @@ const LocationDetails = () => {
     setLocationData,
     t
   );
+
+  // Run once on initial render to trigger page refresh
+  useEffect(() => {
+    if (initialRenderRef.current && locationData) {
+      initialRenderRef.current = false;
+      console.log("Initial render, triggering forced refresh");
+      
+      // Small delay to ensure everything is loaded
+      const timer = setTimeout(() => {
+        try {
+          // Reset SIQS update state to force recalculation
+          resetUpdateState();
+          siqsUpdateRequiredRef.current = true;
+          
+          // Trigger a refresh event on the viewport
+          const viewport = document.querySelector('[data-refresh-trigger]');
+          if (viewport) {
+            viewport.dispatchEvent(new CustomEvent('forceRefresh'));
+            console.log("Force refresh event dispatched");
+          }
+        } catch (error) {
+          console.error("Error triggering refresh:", error);
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [locationData, resetUpdateState]);
 
   // Handle back navigation to ensure clean return to home page
   useEffect(() => {
@@ -142,28 +172,39 @@ const LocationDetails = () => {
   }, [locationData, resetUpdateState]);
 
   if (isLoading) {
-    return <PageLoader />;
+    return (
+      <>
+        <NavBar />
+        <PageLoader />
+      </>
+    );
   }
 
   if (!locationData) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <LocationError />
-      </Suspense>
+      <>
+        <NavBar />
+        <Suspense fallback={<PageLoader />}>
+          <LocationError />
+        </Suspense>
+      </>
     );
   }
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <LocationDetailsViewport 
-        locationData={locationData}
-        setLocationData={setLocationData}
-        statusMessage={statusMessage}
-        messageType={messageType}
-        setStatusMessage={setStatusMessage}
-        handleUpdateLocation={handleUpdateLocation}
-      />
-    </Suspense>
+    <>
+      <NavBar />
+      <Suspense fallback={<PageLoader />}>
+        <LocationDetailsViewport 
+          locationData={locationData}
+          setLocationData={setLocationData}
+          statusMessage={statusMessage}
+          messageType={messageType}
+          setStatusMessage={setStatusMessage}
+          handleUpdateLocation={handleUpdateLocation}
+        />
+      </Suspense>
+    </>
   );
 };
 
