@@ -25,36 +25,29 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   return (
     <AnimatePresence>
       <motion.div 
-        className={`rounded-lg mb-4 p-3 shadow-sm backdrop-blur-sm ${
+        className={`rounded-lg mb-3 px-3 py-2 shadow-sm backdrop-blur-sm ${
           isGoodSiqs 
-            ? 'bg-gradient-to-r from-green-900/50 to-blue-900/50 border border-green-500/20' 
-            : 'bg-gradient-to-r from-amber-900/50 to-red-900/50 border border-amber-500/20'
+            ? 'bg-gradient-to-r from-green-900/40 to-blue-900/40 border border-green-500/20' 
+            : 'bg-gradient-to-r from-amber-900/40 to-red-900/40 border border-amber-500/20'
         }`}
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        exit={{ opacity: 0, y: -10 }}
         transition={{ 
           type: "spring", 
           stiffness: 500, 
           damping: 30 
         }}
       >
-        <div className="flex items-start gap-3">
-          <div className={`rounded-full p-2 ${
+        <div className="flex items-center gap-2">
+          <div className={`rounded-full p-1.5 ${
             isGoodSiqs ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'
           }`}>
-            {isGoodSiqs ? <Star className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+            {isGoodSiqs ? <Star className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
           </div>
           
           <div className="flex-1">
-            <h3 className="text-sm font-medium mb-1">
-              {isGoodSiqs 
-                ? t("Good imaging conditions at your location", "您所在位置的成像条件良好")
-                : t("Consider finding a better location", "考虑寻找更好的位置")
-              }
-            </h3>
-            
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs">
               {isGoodSiqs 
                 ? t(
                     `Your current location has a good SIQS of ${currentSiqs.toFixed(1)}. The points below offer premium viewing conditions.`,
