@@ -4,13 +4,17 @@ import { Lightbulb } from "lucide-react";
 
 interface DynamicLightbulbIconProps {
   bortleScale: number | null;
+  value?: number | null; // Alternative prop name for flexibility
   className?: string;
 }
 
-const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale, className }) => {
+const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale, value, className }) => {
+  // Allow using either bortleScale or value prop
+  const actualValue = value !== undefined ? value : bortleScale;
+  
   // If Bortle scale is null or invalid, use a default fallback value instead of showing a question mark
-  const validBortleScale = bortleScale !== null && bortleScale >= 1 && bortleScale <= 9 
-    ? bortleScale 
+  const validBortleScale = actualValue !== null && actualValue >= 1 && actualValue <= 9 
+    ? actualValue 
     : 4; // Default to 4 (moderate light pollution) instead of showing unknown
   
   // Higher Bortle scale = more light pollution = brighter bulb

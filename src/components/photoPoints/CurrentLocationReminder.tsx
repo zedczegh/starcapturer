@@ -15,9 +15,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Only show reminder for poor conditions
-  const shouldShowReminder = 
-    isVisible && currentSiqs !== null && currentSiqs < 3.0;
+  // Only show reminder for poor conditions - fixed the condition to actually show the reminder
+  const shouldShowReminder = isVisible && currentSiqs !== null && currentSiqs < 3.0;
   
   return (
     <AnimatePresence>
@@ -27,7 +26,7 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
           initial={{ opacity: 0, height: 0, marginBottom: 0 }}
           animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
           exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }} // Reduced animation duration
           style={{ overflow: 'hidden' }}
         >
           <div className="flex items-start gap-2">

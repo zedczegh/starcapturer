@@ -296,7 +296,8 @@ const BortleNow: React.FC = () => {
 
   // Calculate a visual representation of the Bortle scale
   const getBortleVisualValue = (scale: number) => {
-    // Map Bortle scale 1-9 to percentage 100%-0% (inverted, since lower Bortle is better)
+    // Invert the mapping: Bortle scale 1-9 to percentage 100%-0% 
+    // Lower Bortle = better (1 = dark skies = 100%, 9 = light pollution = 0%)
     return Math.max(0, Math.min(100, 100 - ((scale - 1) / 8) * 100));
   };
 
@@ -376,13 +377,13 @@ const BortleNow: React.FC = () => {
                       {t("Light Pollution Level", "光污染水平")}
                     </h3>
                     
-                    {/* Quality meter visualization */}
+                    {/* Quality meter visualization - IMPROVED LAYOUT */}
                     <div className="w-full max-w-xs mt-2 mb-4">
                       <div className="relative h-3 bg-cosmic-800/80 rounded-full overflow-hidden">
                         <motion.div 
                           className="absolute inset-0 h-full rounded-full"
                           style={{ 
-                            background: `linear-gradient(to right, #075985, #0ea5e9, #7dd3fc)`,
+                            background: `linear-gradient(to right, #22c55e, #3b82f6, #f97316)`,
                             width: `${getBortleVisualValue(bortleScale)}%` 
                           }}
                           initial={{ width: 0 }}
@@ -391,9 +392,12 @@ const BortleNow: React.FC = () => {
                         />
                       </div>
                       <div className="flex justify-between mt-1 text-xs text-cosmic-400">
-                        <span>{t("Urban (9)", "城市 (9)")}</span>
-                        <span>{t("Rural (5)", "乡村 (5)")}</span>
-                        <span>{t("Dark (1)", "黑暗 (1)")}</span>
+                        <div className="flex items-center gap-1">
+                          <span>{t("Urban", "城市")}</span>
+                          <span className="text-[0.65rem] text-cosmic-500">(9)</span>
+                        </div>
+                        <span>{t("Rural", "乡村")}</span>
+                        <span>{t("Dark", "黑暗")}</span>
                       </div>
                     </div>
                   </div>
