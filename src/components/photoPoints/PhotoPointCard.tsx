@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Loader2 } from "lucide-react";
+import { MapPin, Star, Award, Building2, Loader2, Trees, Globe, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
@@ -105,16 +105,16 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           {pointName}
         </h4>
         
-        {/* SIQS Score */}
+        {/* SIQS - Now isolated at the top right */}
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
         </div>
       </div>
       
-      {/* Certification Badge */}
+      {/* Certification Badge - Now BELOW the SIQS */}
       {certInfo && (
-        <div className="flex items-center mt-1 mb-1.5">
+        <div className={`flex items-center mt-1.5 mb-2`}>
           <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
             {certInfo.icon}
             <span className="text-xs">{certInfo.text}</span>
@@ -122,16 +122,17 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      <div className="flex flex-col space-y-1.5 mt-2">
+      <div className="flex flex-col space-y-2 mt-2">
         <div className="flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-xs text-muted-foreground font-medium">
+          <span className="text-sm text-muted-foreground font-medium">
             {formatDistance(point.distance)}
           </span>
         </div>
         
         <div className="flex items-center">
-          <span className="text-xs text-muted-foreground line-clamp-1 font-medium">
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
+          <span className="text-sm text-muted-foreground line-clamp-1 font-medium">
             {loadingTown ? (
               <span className="flex items-center">
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -150,7 +151,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <Button 
           size="sm" 
           variant="ghost" 
-          className="h-7 text-xs px-2.5 text-primary hover:text-primary/90 hover:bg-cosmic-800/50 transition-all duration-300"
+          className="h-7 text-sm px-2.5 text-primary hover:text-primary/90 hover:bg-cosmic-800/50 transition-all duration-300"
           onClick={(e) => {
             e.stopPropagation();
             onViewDetails(point);

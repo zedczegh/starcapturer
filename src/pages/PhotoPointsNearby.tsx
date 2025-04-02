@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,7 +14,7 @@ import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationRem
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
-import { currentSiqsStore } from '@/stores/siqsStore';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();

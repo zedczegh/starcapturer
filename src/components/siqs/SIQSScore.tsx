@@ -1,5 +1,5 @@
 
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Progress } from "@/components/ui/progress";
 import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { currentSiqsStore } from "@/stores/siqsStore";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -23,13 +22,6 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   longitude
 }) => {
   const { t } = useLanguage();
-  
-  // Update the global SIQS store when this component renders with a valid score
-  useEffect(() => {
-    if (siqsScore > 0) {
-      currentSiqsStore.set(siqsScore);
-    }
-  }, [siqsScore]);
   
   // Create memoized values to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
@@ -65,7 +57,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   
   // Create a URL-friendly location ID
   const locationId = useMemo(() => {
-    return `calculated-${Date.now()}`;
+    return `temp-${Date.now().toString()}`;
   }, []);
   
   return (
@@ -117,8 +109,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
               latitude: latitude,
               longitude: longitude,
               siqsResult: {
-                score: memoizedValues.displayValue,
-                factors: [] // Will be calculated on the location page
+                score: memoizedValues.displayValue
               },
               timestamp: new Date().toISOString(),
               fromCalculator: true // Add a flag to indicate source
@@ -127,7 +118,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group px-6 py-6 text-base"
+              className="w-full sm:w-auto bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group px-6 py-3"
             >
               {t("See More Details", "查看更多详情")}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />

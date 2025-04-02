@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -13,7 +14,7 @@ import { Language } from "@/services/geocoding/types";
 import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
 import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
 import { motion } from "framer-motion";
-import { currentSiqsStore } from '@/stores/siqsStore';
+import { currentSiqsStore } from './index/CalculatorSection';
 
 interface SIQSCalculatorProps {
   className?: string;
