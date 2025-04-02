@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
@@ -570,3 +571,361 @@ const AboutSIQS = () => {
       level: 6,
       name: language === 'en' ? "Bright suburban sky" : "明亮的郊区天空",
       mlky: language === 'en' ? "Milky Way only visible at zenith" : "银河仅在天顶处可见",
+      color: "bg-yellow-700",
+      textColor: "text-yellow-100"
+    },
+    {
+      level: 7,
+      name: language === 'en' ? "Suburban/urban transition" : "郊区/城市过渡",
+      mlky: language === 'en' ? "Milky Way invisible" : "银河不可见",
+      color: "bg-orange-700",
+      textColor: "text-orange-100"
+    },
+    {
+      level: 8,
+      name: language === 'en' ? "City sky" : "城市天空",
+      mlky: language === 'en' ? "Only brightest stars visible" : "仅最亮的星星可见",
+      color: "bg-red-700",
+      textColor: "text-red-100"
+    },
+    {
+      level: 9,
+      name: language === 'en' ? "Inner-city sky" : "城市中心天空",
+      mlky: language === 'en' ? "No stars visible" : "看不到星星",
+      color: "bg-red-900",
+      textColor: "text-red-100"
+    }
+  ];
+
+  return (
+    <>
+      <NavBar />
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 text-gradient-blue">
+            {t("About SIQS", "关于SIQS")}
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            {t(
+              "Learn more about the Sky Imaging Quality Score and related resources for astrophotography.",
+              "了解更多关于天空成像质量评分以及天文摄影相关资源。"
+            )}
+          </p>
+        </div>
+        
+        <Tabs defaultValue="siqs" className="mb-12">
+          <TabsList className="mb-6 bg-cosmic-800/50 backdrop-blur-sm border border-cosmic-700/30">
+            <TabsTrigger value="siqs" className="data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground">
+              {t("What is SIQS?", "什么是SIQS？")}
+            </TabsTrigger>
+            <TabsTrigger value="darksky" className="data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground">
+              {t("Dark Sky Knowledge", "暗夜知识")}
+            </TabsTrigger>
+            <TabsTrigger value="links" className="data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground">
+              {t("Useful Links", "有用链接")}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="siqs" className="space-y-6 mt-4">
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl text-primary">
+                  {t("Sky Imaging Quality Score (SIQS)", "天空成像质量评分 (SIQS)")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  {t(
+                    "SIQS (Sky Imaging Quality Score) is an integrated evaluation system designed specifically for astrophotography. It helps you determine the optimal viewing and imaging conditions for a specific location.",
+                    "SIQS（天空成像质量评分）是专为天文摄影设计的综合评估系统。它帮助您确定特定位置的最佳观测和成像条件。"
+                  )}
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <div className="bg-blue-600/20 p-2 rounded-full mr-3">
+                        <Star className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <h3 className="font-medium text-lg">
+                        {t("Light Pollution", "光污染")}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t(
+                        "Measures artificial light that brightens the night sky, based on Bortle scale and light pollution databases.",
+                        "测量使夜空变亮的人工光，基于Bortle等级和光污染数据库。"
+                      )}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <div className="bg-teal-600/20 p-2 rounded-full mr-3">
+                        <CloudRain className="h-5 w-5 text-teal-400" />
+                      </div>
+                      <h3 className="font-medium text-lg">
+                        {t("Cloud Coverage", "云层覆盖")}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t(
+                        "Evaluates the percentage of sky covered by clouds, greatly affecting visibility and imaging quality.",
+                        "评估云层覆盖天空的百分比，极大影响能见度和成像质量。"
+                      )}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <div className="bg-indigo-600/20 p-2 rounded-full mr-3">
+                        <Wind className="h-5 w-5 text-indigo-400" />
+                      </div>
+                      <h3 className="font-medium text-lg">
+                        {t("Wind Speed", "风速")}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t(
+                        "Strong winds cause telescope vibrations, resulting in blurred images and reduced detail clarity.",
+                        "强风会导致望远镜振动，导致图像模糊且细节清晰度降低。"
+                      )}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <div className="bg-purple-600/20 p-2 rounded-full mr-3">
+                        <Thermometer className="h-5 w-5 text-purple-400" />
+                      </div>
+                      <h3 className="font-medium text-lg">
+                        {t("Temperature", "温度")}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t(
+                        "Rapid temperature changes affect image quality; stable temperatures are ideal for astrophotography.",
+                        "温度的快速变化会影响图像质量；稳定的温度是天文摄影的理想条件。"
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <div className="bg-amber-600/20 p-2 rounded-full mr-3">
+                        <CloudRain className="h-5 w-5 text-amber-400" />
+                      </div>
+                      <h3 className="font-medium text-lg">
+                        {t("Humidity", "湿度")}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t(
+                        "High humidity can create haze, reduce contrast, and cause dew on optical equipment.",
+                        "高湿度会产生雾霾，降低对比度，并在光学设备上形成露水。"
+                      )}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
+                    <div className="flex items-center mb-2">
+                      <div className="bg-green-600/20 p-2 rounded-full mr-3">
+                        <Award className="h-5 w-5 text-green-400" />
+                      </div>
+                      <h3 className="font-medium text-lg">
+                        {t("Seeing", "视宁度")}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {t(
+                        "Atmospheric turbulence that affects image sharpness; better seeing means sharper astronomical images.",
+                        "影响图像清晰度的大气湍流；更好的视宁度意味着更清晰的天文图像。"
+                      )}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-6 bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3 text-primary">
+                    {t("SIQS Scoring System", "SIQS评分系统")}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <div className="bg-green-900/30 border border-green-700/30 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-green-400">8-10</div>
+                      <div className="text-sm text-green-300">
+                        {t("Excellent", "优秀")}
+                      </div>
+                    </div>
+                    <div className="bg-teal-900/30 border border-teal-700/30 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-teal-400">6-8</div>
+                      <div className="text-sm text-teal-300">
+                        {t("Good", "良好")}
+                      </div>
+                    </div>
+                    <div className="bg-blue-900/30 border border-blue-700/30 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-blue-400">4-6</div>
+                      <div className="text-sm text-blue-300">
+                        {t("Average", "一般")}
+                      </div>
+                    </div>
+                    <div className="bg-amber-900/30 border border-amber-700/30 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-amber-400">2-4</div>
+                      <div className="text-sm text-amber-300">
+                        {t("Poor", "较差")}
+                      </div>
+                    </div>
+                    <div className="bg-red-900/30 border border-red-700/30 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-red-400">0-2</div>
+                      <div className="text-sm text-red-300">
+                        {t("Bad", "很差")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="darksky" className="space-y-6 mt-4">
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg mb-6">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl text-primary">
+                  {t("Dark Sky Certifications", "暗夜认证")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  {t(
+                    "The International Dark-Sky Association (IDA) designates locations worldwide that preserve and protect dark sites through responsible lighting policies and public education.",
+                    "国际暗夜协会（IDA）通过负责任的照明政策和公共教育，在全球范围内指定保护暗夜地点的位置。"
+                  )}
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                  {idaCertifications.map((cert, index) => (
+                    <div 
+                      key={index} 
+                      className={`bg-gradient-to-br ${cert.bgColor} border ${cert.borderColor} rounded-lg p-4 flex flex-col h-full`}
+                    >
+                      <div className="flex items-center mb-3">
+                        <div className={`bg-gradient-to-r ${cert.color} p-2 rounded-full mr-3`}>
+                          <cert.icon className={`h-5 w-5 ${cert.textColor}`} />
+                        </div>
+                        <h3 className={`font-medium text-lg ${cert.textColor}`}>
+                          {cert.title}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground flex-grow">
+                        {cert.description}
+                      </p>
+                      <div className={`mt-3 pt-3 border-t ${cert.borderColor} flex justify-between items-center`}>
+                        <span className={`text-sm ${cert.textColor}`}>
+                          {t("Global Count", "全球数量")}:
+                        </span>
+                        <span className="text-lg font-semibold">
+                          {cert.count}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl text-primary">
+                  {t("Bortle Dark-Sky Scale", "波特尔暗夜等级")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p>
+                  {t(
+                    "The Bortle scale is a nine-level numeric scale that measures the night sky's brightness of a particular location. It quantifies the astronomical observability of celestial objects and the interference caused by light pollution.",
+                    "波特尔等级是一个九级数字等级，用于衡量特定位置夜空的亮度。它量化了天体的天文可观测性以及光污染造成的干扰。"
+                  )}
+                </p>
+                
+                <div className="overflow-x-auto mt-4">
+                  <div className="inline-block min-w-full align-middle">
+                    <div className="overflow-hidden border border-cosmic-700/30 rounded-lg">
+                      <table className="min-w-full divide-y divide-cosmic-700/30">
+                        <thead className="bg-cosmic-700/30">
+                          <tr>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              {t("Class", "等级")}
+                            </th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              {t("Title", "标题")}
+                            </th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              {t("Milky Way", "银河")}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-cosmic-700/30">
+                          {bortleScaleInfo.map((level) => (
+                            <tr key={level.level} className={level.color}>
+                              <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${level.textColor}`}>
+                                {level.level}
+                              </td>
+                              <td className={`px-4 py-3 whitespace-nowrap text-sm ${level.textColor}`}>
+                                {level.name}
+                              </td>
+                              <td className={`px-4 py-3 text-sm ${level.textColor}`}>
+                                {level.mlky}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="links" className="space-y-6 mt-4">
+            <div className="grid grid-cols-1 gap-6">
+              {Object.keys(resources).map((category) => (
+                <Card key={category} className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xl text-primary">
+                      {getTranslatedCategory(category)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {resources[category as keyof typeof resources].map((resource, index) => (
+                        <a 
+                          key={index}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center p-3 bg-cosmic-700/30 hover:bg-cosmic-700/50 border border-cosmic-600/30 rounded-lg transition-colors"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">
+                              {getTranslatedResourceName(resource)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {resource.subcategory}
+                            </p>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </>
+  );
+};
+
+export default AboutSIQS;
