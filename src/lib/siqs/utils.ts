@@ -1,100 +1,112 @@
 /**
- * Utility functions for SIQS (Stellar Imaging Quality Score)
+ * Utility functions for SIQS calculations
  */
 
-/**
- * Converts a SIQS score (0-10) to a representative color
- * @param score SIQS score between 0 and 10
- * @returns CSS color string
- */
-export function siqsToColor(score: number): string {
-  if (score >= 8) return "#10B981"; // emerald-500 - Excellent
-  if (score >= 6) return "#22D3EE"; // cyan-400 - Very Good
-  if (score >= 4) return "#3B82F6"; // blue-500 - Good
-  if (score >= 2) return "#F59E0B"; // amber-500 - Moderate
-  if (score >= 1) return "#F97316"; // orange-500 - Poor
-  return "#EF4444"; // red-500 - Very Poor
-}
+import { SIQSFactors } from "./types";
 
 /**
- * Check if cloud cover is too high for imaging
- * Note: Function kept for compatibility, but no longer enforces a strict cutoff
- * @param cloudCover Cloud cover percentage
- * @returns Boolean indicating if imaging is technically impossible
+ * Check if imaging conditions are impossible
+ * @param factors Weather and location factors
+ * @returns True if conditions make imaging impossible
  */
-export function isImagingImpossible(cloudCover: number): boolean {
-  // We've removed the strict cutoff, but keep the function to avoid breaking existing code
-  // Now returning false to allow the calculation to proceed
+export function isImagingImpossible(factors: SIQSFactors): boolean {
+  const { cloudCover, precipitation, weatherCondition } = factors;
+  
+  // Cloud cover over 95% makes imaging impossible
+  if (cloudCover >= 95) return true;
+  
+  // Heavy precipitation makes imaging impossible
+  if (precipitation > 5) return true;
+  
+  // Certain weather conditions make imaging impossible
+  const impossibleConditions = [
+    "Thunderstorm", "Heavy rain", "Blizzard", 
+    "Heavy snow", "Fog", "Freezing fog"
+  ];
+  
+  if (typeof weatherCondition === 'string' && 
+      impossibleConditions.some(cond => weatherCondition.includes(cond))) {
+    return true;
+  }
+  
   return false;
 }
 
 /**
- * Get display text for SIQS level based on score
- * @param score SIQS score between 0 and 10
- * @returns Text representation of SIQS level
+ * Convert SIQS score to color string
+ * @param siqs SIQS score (0-10)
+ * @returns HEX color string
  */
-export function getSIQSLevel(score: number): string {
-  if (score >= 8) return "Excellent";
-  if (score >= 6) return "Good";
-  if (score >= 4) return "Average";
-  if (score >= 2) return "Poor";
-  return "Very Poor";
-}
-
-/**
- * Format SIQS score for display with proper precision
- * @param score SIQS score to format
- * @returns Formatted score string
- */
-export function formatSIQSScore(score: number): string {
-  return score.toFixed(1);
+export function siqsToColor(siqs: number): string {
+  // Ensure SIQS is on 0-10 scale
+  const normalizedSiqs = siqs > 10 ? siqs / 10 : siqs;
+  
+  if (normalizedSiqs >= 8) return "#22c55e"; // green-500
+  if (normalizedSiqs >= 6) return "#3b82f6"; // blue-500
+  if (normalizedSiqs >= 4) return "#eab308"; // yellow-500
+  if (normalizedSiqs >= 2) return "#f97316"; // orange-500
+  return "#ef4444"; // red-500
 }
 
 /**
  * Validate and normalize cloud cover percentage
- * @param cloudCover Raw cloud cover percentage
- * @returns Validated cloud cover (0-100)
+ * @param cloudCover Cloud cover percentage
+ * @returns Validated cloud cover percentage
  */
 export function validateCloudCover(cloudCover: number): number {
   if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
     return 50; // Default to 50% if invalid
   }
+  
+  // Ensure cloud cover is within 0-100 range
   return Math.max(0, Math.min(100, cloudCover));
 }
 
 /**
- * Normalize factor scores to a consistent 0-10 scale for display
+ * Normalize factor scores to 0-10 scale for consistent display
  * @param factors Array of factors with scores
  * @returns Array of factors with normalized scores
  */
-export function normalizeFactorScores(factors: Array<{ name: string; score: number; description: string }>) {
+export function normalizeFactorScores(factors: Array<{ name: string; score: number; description: string }>): Array<{ name: string; score: number; description: string }> {
   if (!factors || !Array.isArray(factors)) return [];
   
   return factors.map(factor => {
-    // If score is already on 0-10 scale, return as is
+    // If score is already on 0-10 scale, keep it as is
     if (factor.score >= 0 && factor.score <= 10) {
       return factor;
     }
     
     // If score is on 0-100 scale, normalize to 0-10
-    let normalizedScore = factor.score;
     if (factor.score > 10 && factor.score <= 100) {
-      normalizedScore = factor.score / 10;
-    }
-    
-    // Cap at 10 for any value over 100
-    if (factor.score > 100) {
-      normalizedScore = 10;
+      // For cloud cover, we need special handling
+      if (factor.name === "Cloud Cover" || factor.name === "云层覆盖") {
+        const cloudCoverPercentage = parseFloat(factor.description.match(/(\d+\.?\d*)%/)?.[1] || "0");
+        
+        // For high cloud cover, ensure score is appropriately low
+        if (cloudCoverPercentage > 70) {
+          return {
+            ...factor,
+            score: Math.min(factor.score / 10, 3) // Cap at 3 for high cloud cover
+          };
+        } else if (cloudCoverPercentage > 50) {
+          return {
+            ...factor,
+            score: Math.min(factor.score / 10, 5) // Cap at 5 for moderate cloud cover
+          };
+        }
+      }
+      
+      // Normal normalization for non-cloud cover factors
+      return {
+        ...factor,
+        score: factor.score / 10
+      };
     }
     
     // Handle negative scores
-    if (factor.score < 0) {
-      normalizedScore = 0;
-    }
-    
     return {
       ...factor,
-      score: normalizedScore
+      score: 0
     };
   });
 }

@@ -1,28 +1,36 @@
 
-import { Language } from "@/contexts/LanguageContext";
-
-// Cache for description translations
-const descriptionCache: Record<string, Record<Language, string>> = {};
+// Cache for storing translated descriptions
+const descriptionCache: Record<string, Record<string, string>> = {};
 
 /**
- * Cache a description translation
- * @param description Original description text
- * @param language Target language
- * @param translation Translated text
+ * Get a cached description translation
+ * @param description The original English description
+ * @param language The target language
+ * @returns The cached translation or null if not found
  */
-export function cacheDescription(description: string, language: Language, translation: string) {
-  if (!descriptionCache[description]) {
-    descriptionCache[description] = {} as Record<Language, string>;
+export const getCachedDescription = (description: string, language: string): string | null => {
+  if (!descriptionCache[language]) return null;
+  return descriptionCache[language][description] || null;
+};
+
+/**
+ * Cache a translated description
+ * @param description The original English description
+ * @param language The target language
+ * @param translation The translated text
+ */
+export const cacheDescription = (description: string, language: string, translation: string): void => {
+  if (!descriptionCache[language]) {
+    descriptionCache[language] = {};
   }
-  descriptionCache[description][language] = translation;
-}
+  descriptionCache[language][description] = translation;
+};
 
 /**
- * Get a cached description translation if available
- * @param description Original description text
- * @param language Target language
- * @returns Cached translation or undefined if not in cache
+ * Clear the description cache
  */
-export function getCachedDescription(description: string, language: Language): string | undefined {
-  return descriptionCache[description]?.[language];
-}
+export const clearDescriptionCache = (): void => {
+  Object.keys(descriptionCache).forEach(key => {
+    delete descriptionCache[key];
+  });
+};
