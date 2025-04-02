@@ -2,7 +2,7 @@
 import React, { ReactNode } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
-import NavBar from '@/components/navigation/NavBar';
+import NavBar from '@/components/NavBar';
 
 interface PhotoPointsLayoutProps {
   children: ReactNode;

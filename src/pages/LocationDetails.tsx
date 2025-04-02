@@ -12,7 +12,7 @@ import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import PageLoader from "@/components/loaders/PageLoader";
-import NavBar from "@/components/navigation/NavBar";
+import NavBar from "@/components/NavBar";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
