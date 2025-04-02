@@ -79,7 +79,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         type="button" 
         onClick={handleUseCurrentLocation}
         disabled={loading}
-        className={`w-full transition-all duration-300 bg-gradient-to-r from-blue-500/80 to-green-500/80 hover:from-blue-500/90 hover:to-green-500/90 ${
+        className={`w-full transition-all duration-300 bg-gradient-to-r from-cyan-600/30 to-teal-600/30 hover:from-cyan-600/40 hover:to-teal-600/40 border border-cosmic-700/40 hover:border-cosmic-700/70 ${
           locationName 
             ? 'shadow-md hover:shadow-lg hover:translate-y-[-1px]'
             : 'hover:bg-primary/10'
