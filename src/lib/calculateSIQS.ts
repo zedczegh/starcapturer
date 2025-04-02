@@ -57,12 +57,13 @@ function filterNightTimeForecast(forecast: any[]): any[] {
 }
 
 /**
- * Check if cloud cover exceeds the threshold (modified from 40% to 50%)
+ * Check if cloud cover exceeds the threshold
+ * MODIFIED: Now we just flag if it's very poor for imaging (>80%)
  * @param cloudCover Cloud cover percentage
- * @returns True if cloud cover is over threshold
+ * @returns True if cloud cover is extremely high
  */
 function isCloudCoverTooHigh(cloudCover: number): boolean {
-  return typeof cloudCover === 'number' && cloudCover > 50;
+  return typeof cloudCover === 'number' && cloudCover > 80;
 }
 
 /**
@@ -100,17 +101,45 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     // Calculate average cloud cover from nighttime forecast
     const avgCloudCover = tonightForecast.reduce((sum, item) => sum + (item.cloudCover || 0), 0) / tonightForecast.length;
     
-    // STRICT ENFORCEMENT of cloud cover > 50% = 0 rule (modified from 40% to 50%)
-    if (isCloudCoverTooHigh(avgCloudCover)) {
-      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
+    // MODIFIED: We still calculate score even with high cloud cover
+    // instead of returning 0 immediately
+    const cloudScore = calculateCloudScore(avgCloudCover);
+    const isVeryPoorConditions = isCloudCoverTooHigh(avgCloudCover);
+    
+    // Add encouraging message for poor conditions
+    let encouragementMessage = null;
+    if (avgCloudCover > 50) {
+      encouragementMessage = "Don't worry, clear skies will eventually come! Try our Photo Points Nearby feature to find ideal astro-spots!";
+    }
+    
+    // For extremely poor conditions, we'll still provide a minimal score
+    // but mark it as non-viable for imaging
+    if (isVeryPoorConditions) {
+      console.log(`Average cloud cover is ${avgCloudCover}%, which is very poor for imaging. Limited SIQS score.`);
+      
+      // Calculate basic weather factors anyway
+      const avgWindSpeed = tonightForecast.reduce((sum, item) => sum + (item.windSpeed || 0), 0) / tonightForecast.length;
+      const avgHumidity = tonightForecast.reduce((sum, item) => sum + (item.humidity || 0), 0) / tonightForecast.length;
+      
       return {
-        score: 0,
+        score: cloudScore / 10, // Convert to 0-10 scale (will be 0.5 or less)
         isViable: false,
+        encouragementMessage,
         factors: [
           {
             name: "Cloud Cover",
-            score: 0,
+            score: cloudScore,
             description: getCloudDescription(avgCloudCover)
+          },
+          {
+            name: "Wind",
+            score: calculateWindScore(avgWindSpeed),
+            description: getWindDescription(avgWindSpeed)
+          },
+          {
+            name: "Humidity",
+            score: calculateHumidityScore(avgHumidity),
+            description: getHumidityDescription(avgHumidity)
           }
         ]
       };
@@ -121,7 +150,6 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     const avgHumidity = tonightForecast.reduce((sum, item) => sum + (item.humidity || 0), 0) / tonightForecast.length;
     
     // Calculate individual factor scores using nighttime data
-    const cloudScore = calculateCloudScore(avgCloudCover);
     const lightPollutionScore = calculateLightPollutionScore(bortleScale);
     const seeingScore = calculateSeeingScore(seeingConditions);
     const windScore = calculateWindScore(avgWindSpeed);
@@ -200,6 +228,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     return {
       score: finalScore,
       isViable,
+      encouragementMessage,
       factors: factorsList
     };
   }
@@ -207,24 +236,44 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   // If no nighttime forecast is available, fall back to current conditions
   console.log("No nighttime forecast available, using current conditions for SIQS");
   
-  // STRICT ENFORCEMENT of cloud cover > 50% = 0 rule for current conditions (modified from 40% to 50%)
-  if (isCloudCoverTooHigh(cloudCover)) {
-    console.log(`Current cloud cover is ${cloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
+  // MODIFIED: We still calculate score even with high cloud cover
+  const cloudScore = calculateCloudScore(cloudCover);
+  const isVeryPoorConditions = isCloudCoverTooHigh(cloudCover);
+  
+  // Add encouraging message for poor conditions
+  let encouragementMessage = null;
+  if (cloudCover > 50) {
+    encouragementMessage = "Don't worry, clear skies will eventually come! Try our Photo Points Nearby feature to find ideal astro-spots!";
+  }
+  
+  // For extremely poor conditions, we'll still provide a minimal score
+  if (isVeryPoorConditions) {
+    console.log(`Current cloud cover is ${cloudCover}%, which is very poor for imaging. Limited SIQS score.`);
     return {
-      score: 0,
+      score: cloudScore / 10, // Convert to 0-10 scale (will be 0.5 or less)
       isViable: false,
+      encouragementMessage,
       factors: [
         {
           name: "Cloud Cover",
-          score: 0,
+          score: cloudScore,
           description: getCloudDescription(cloudCover)
+        },
+        {
+          name: "Wind",
+          score: calculateWindScore(windSpeed),
+          description: getWindDescription(windSpeed)
+        },
+        {
+          name: "Humidity",
+          score: calculateHumidityScore(humidity),
+          description: getHumidityDescription(humidity)
         }
       ]
     };
   }
   
   // Calculate individual factor scores for current conditions
-  const cloudScore = calculateCloudScore(cloudCover);
   const lightPollutionScore = calculateLightPollutionScore(bortleScale);
   const seeingScore = calculateSeeingScore(seeingConditions);
   const windScore = calculateWindScore(windSpeed);
@@ -303,6 +352,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   return {
     score: finalScore,
     isViable,
+    encouragementMessage,
     factors: factorsList
   };
 }
