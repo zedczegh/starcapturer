@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getBortleScaleDescription, getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
 import { cn } from '@/lib/utils';
-import { getSIQSColorClass, formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 
 interface LightPollutionIndicatorProps {
   bortleScale: number;
@@ -11,7 +9,6 @@ interface LightPollutionIndicatorProps {
   size?: 'sm' | 'md' | 'lg';
   showBortleNumber?: boolean;
   className?: string;
-  siqs?: number;
   compact?: boolean;
 }
 
@@ -21,7 +18,6 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   size = 'md',
   showBortleNumber = true,
   className,
-  siqs,
   compact = false
 }) => {
   const { t, language } = useLanguage();
@@ -48,45 +44,25 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
     return Number.isInteger(value) ? value.toString() : value.toFixed(1);
   };
 
-  // Display SIQS score alongside Bortle scale if provided
-  const hasSIQS = siqs !== undefined && siqs !== null;
-  
   // Compact mode for sidebar widgets
-  if (compact && hasSIQS) {
+  if (compact) {
     return (
-      <div className={cn("flex items-center space-x-2", className)}>
+      <div className={cn("flex items-center", className)}>
         <div className="flex items-center">
           <div 
             className={cn(
               "rounded-full mr-1.5 flex items-center justify-center border", 
-              "h-3 w-3",
+              "h-3.5 w-3.5",
               colorBg,
               colorBorder
             )}
           >
-            <span className={cn("font-semibold text-[0.65em]", colorText)}>
+            <span className={cn("font-semibold text-[0.7em]", colorText)}>
               {formatBortleScale(bortleScale)}
             </span>
           </div>
           <span className="text-xs text-muted-foreground">
             {t("Bortle", "波特尔")}
-          </span>
-        </div>
-        
-        <div className="flex items-center">
-          <div 
-            className={cn(
-              "rounded-full mr-1.5 flex items-center justify-center border", 
-              "h-3 w-3",
-              getSIQSColorClass(siqs)
-            )}
-          >
-            <span className="font-semibold text-[0.65em] text-white">
-              {formatSIQSScoreForDisplay(siqs)}
-            </span>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {t("SIQS", "SIQS")}
           </span>
         </div>
       </div>
@@ -104,7 +80,7 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
         )}
       >
         {showBortleNumber && (
-          <span className={cn("font-semibold text-[0.65em]", colorText)}>
+          <span className={cn("font-semibold text-[0.7em]", colorText)}>
             {formatBortleScale(bortleScale)}
           </span>
         )}
@@ -114,26 +90,6 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
         <span className="text-sm text-muted-foreground">
           {t(description, language === 'en' ? description : getBortleScaleDescription(bortleScale, 'zh'))}
         </span>
-      )}
-      
-      {/* Show SIQS score if provided */}
-      {hasSIQS && !compact && (
-        <div className="ml-3 flex items-center">
-          <div 
-            className={cn(
-              "rounded-full mr-2 flex items-center justify-center border", 
-              sizeClass,
-              getSIQSColorClass(siqs)
-            )}
-          >
-            <span className={cn("font-semibold text-[0.65em] text-white")}>
-              {formatSIQSScoreForDisplay(siqs)}
-            </span>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {t("SIQS Score", "SIQS 评分")}
-          </span>
-        </div>
       )}
     </div>
   );

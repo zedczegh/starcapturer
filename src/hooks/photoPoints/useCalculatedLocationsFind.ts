@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/lib/api';
@@ -121,7 +120,54 @@ export const useCalculatedLocationsFind = () => {
     
     return points;
   };
-  
+
+  // Fix function implementation where the type error occurs
+  const convertToAstroSpot = (location: any): SharedAstroSpot => {
+    return {
+      id: location.id || `calc-loc-${Date.now()}`, // Generate id if none exists
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortleScale,
+      timestamp: location.timestamp || new Date().toISOString(),
+      distance: location.distance,
+      siqs: location.siqs,
+      // Add other required SharedAstroSpot properties with defaults
+      certification: location.certification || '',
+      chineseName: location.chineseName || '',
+      description: location.description || '',
+      isViable: location.isViable || true,
+      isDarkSkyReserve: location.isDarkSkyReserve || false,
+      date: location.date || new Date().toISOString()
+    };
+  };
+
+  // Update the function to use the converter when creating calculated locations
+  const createCalculatedLocation = (
+    lat: number, 
+    lng: number, 
+    bortleScale: number, 
+    distance: number, 
+    counter: number,
+    siqs: number
+  ): SharedAstroSpot => {
+    const enName = `Potential ideal dark site ${counter}`;
+    const zhName = `潜在理想暗夜地点 ${counter}`;
+    
+    return convertToAstroSpot({
+      name: enName,
+      chineseName: zhName,
+      latitude: lat,
+      longitude: lng,
+      bortleScale: bortleScale,
+      distance: distance,
+      siqs: siqs,
+      isViable: siqs > 3,
+      timestamp: new Date().toISOString(),
+      date: new Date().toISOString()
+    });
+  };
+
   return {
     findCalculatedLocations,
     calculatingLocations

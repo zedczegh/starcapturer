@@ -9,7 +9,7 @@ import { siqsToColor } from "@/lib/siqs/utils";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
-import { formatLocationName, getRegionalName } from "@/utils/locationNameFormatter";
+import { formatLocationName } from "@/utils/locationNameFormatter";
 import LightPollutionIndicator from "./location/LightPollutionIndicator";
 
 interface LocationCardProps {
@@ -51,10 +51,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   const scoreColor = siqsToColor(siqs);
 
-  // Format name more nicely, try regional format if default name is unclear
+  // Format name more nicely
   let displayName = formatLocationName(name, language as any);
   
-  // If the display name is just "Remote area" or contains coordinates, try using regional naming
+  // Check if the name contains coordinates or is a remote area
   if (
     displayName === "Remote area" || 
     displayName === "偏远地区" || 
@@ -62,9 +62,13 @@ const LocationCard: React.FC<LocationCardProps> = ({
     displayName.includes("Location at") || 
     displayName.includes("位置在")
   ) {
-    const regionalName = getRegionalName(latitude, longitude, language as any);
-    if (regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-      displayName = regionalName;
+    // Use a generic name for calculated locations
+    const locationMatch = displayName.match(/calc-loc-(\d+)/);
+    if (locationMatch) {
+      const locationNumber = parseInt(locationMatch[1]) || 1;
+      displayName = language === 'en' 
+        ? `Potential ideal dark site ${locationNumber}`
+        : `潜在理想暗夜地点 ${locationNumber}`;
     }
   }
   
@@ -153,8 +157,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
             <LightPollutionIndicator 
               bortleScale={bortleScale} 
               size="sm" 
-              siqs={siqs}
-              compact={true}
+              compact={true} 
             />
           </div>
         </CardContent>

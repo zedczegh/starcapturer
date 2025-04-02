@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -31,8 +30,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
-  const [nearestTown, setNearestTown] = useState<string | null>(null);
-  const [loadingTown, setLoadingTown] = useState(false);
   const [locationCounter] = useState(() => {
     // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
@@ -76,61 +73,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   };
   
-  // Get nearest town name
-  useEffect(() => {
-    if (location.latitude && location.longitude) {
-      const fetchNearestTown = async () => {
-        setLoadingTown(true);
-        try {
-          // First check if location already has a name we can use
-          if (location.name && 
-              !location.name.includes("°") && 
-              !location.name.includes("Location at") &&
-              !location.name.includes("位置在") &&
-              !location.name.includes("Remote area") &&
-              !location.name.includes("偏远地区")) {
-            
-            const extractedName = extractNearestTownName(location.name, location.description, language);
-            setNearestTown(extractedName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // Try directional region naming first (e.g., "Northwest Yunnan")
-          const regionalName = getRegionalName(location.latitude, location.longitude, language);
-          
-          // If we got a valid region name, use it
-          if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-            setNearestTown(regionalName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // Otherwise fetch from our location service
-          const townName = await getLocationNameForCoordinates(
-            location.latitude,
-            location.longitude,
-            language
-          );
-          
-          if (townName) {
-            const extractedTownName = extractNearestTownName(townName, location.description, language);
-            setNearestTown(extractedTownName);
-          } else {
-            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-          }
-        } catch (error) {
-          console.error("Error fetching nearest town:", error);
-          setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-        } finally {
-          setLoadingTown(false);
-        }
-      };
-      
-      fetchNearestTown();
-    }
-  }, [location, language]);
-  
   // Load real-time SIQS data if requested
   useEffect(() => {
     if (showRealTimeSiqs && location.latitude && location.longitude) {
@@ -166,14 +108,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
 
-  // Get display name based on language
-  let displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+  // Get display name based on language and location type
+  let displayName;
   
-  // Simplify name for calculated locations
+  // If it's a calculated location, use the "Potential ideal dark site" format
   if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
     displayName = language === 'en' 
       ? `Potential ideal dark site ${locationCounter}`
       : `潜在理想暗夜地点 ${locationCounter}`;
+  } else {
+    // Otherwise use the provided name
+    displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   }
   
   // Get SIQS score to display (real-time or stored)
@@ -228,7 +173,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const handleViewDetails = () => {
     // Prepare location data for details page
     const locationData = {
-      id: location.id,
+      id: location.id || `calc-loc-${Date.now()}`,
       name: displayName,
       latitude: location.latitude,
       longitude: location.longitude,
@@ -243,7 +188,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     saveLocationFromPhotoPoints(locationData);
     
     // Navigate to location details with state
-    navigate(`/location/${location.id}`, { state: { fromPhotoPoints: true, ...locationData } });
+    navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
   };
   
   // Animation variants - reduced for mobile
@@ -268,7 +213,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       layout={!isMobile}
     >
       <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-medium line-clamp-1">{displayName}</h3>
+        <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
         
         <div className="flex items-center">
           {certInfo ? (
@@ -295,7 +240,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       <div className="mb-3">
         <LightPollutionIndicator 
           bortleScale={location.bortleScale || 5} 
-          siqs={displaySiqs}
           size="sm" 
           compact={true} 
         />
@@ -305,21 +249,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         <div className="flex items-center text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 mr-1.5" />
           {formatDistance(location.distance)}
-        </div>
-        
-        {/* Nearest town information */}
-        <div className="flex items-center text-xs text-muted-foreground">
-          <Building2 className="h-3 w-3 mr-1.5" />
-          {loadingTown ? (
-            <span className="flex items-center">
-              <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
-              {t("Loading...", "加载中...")}
-            </span>
-          ) : nearestTown ? (
-            <span className="line-clamp-1">{t("Near ", "靠近 ")}{nearestTown}</span>
-          ) : (
-            <span>{t("Remote location", "偏远位置")}</span>
-          )}
         </div>
         
         {location.date && (
