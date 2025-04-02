@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { createCustomMarker } from './MapMarkerUtils';
 
 // Fix Leaflet icon issue
 // This is necessary because Leaflet's default icon paths are different in a bundled environment
@@ -70,6 +71,12 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     }
   }, [editable, onMapClick]);
 
+  // Get custom marker icon - red for editable, blue for non-editable
+  const markerIcon = React.useMemo(() => {
+    const markerColor = editable ? '#ea384c' : '#3b82f6';
+    return createCustomMarker(markerColor);
+  }, [editable]);
+  
   return (
     <MapContainer
       center={position}
@@ -82,7 +89,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={position}>
+      <Marker position={position} icon={markerIcon}>
         <Popup>
           <div className="p-1">
             <strong>{locationName || t("Selected Location", "所选位置")}</strong>
