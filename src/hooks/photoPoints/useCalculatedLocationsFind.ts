@@ -7,7 +7,7 @@ import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 export const useCalculatedLocationsFind = () => {
   const [calculatingLocations, setCalculatingLocations] = useState(false);
 
-  // Enhanced algorithm to find or calculate locations for astrophotography
+  // Find or calculate locations that might be good for astrophotography
   const findCalculatedLocations = useCallback(async (
     latitude: number,
     longitude: number,
@@ -26,39 +26,33 @@ export const useCalculatedLocationsFind = () => {
       
       // Generate calculated locations if we need more
       if (allLocations.length < limit) {
-        // Enhanced grid with more intelligent distribution
-        // Calculate points in a grid around the user location with adaptive density
-        const gridPoints = generateSmartGridPoints(latitude, longitude, searchRadius);
+        // Calculate points in a grid around the user location
+        const gridPoints = generateGridPoints(latitude, longitude, searchRadius);
         
         // Calculate SIQS for each grid point (up to our limit)
-        const promises = gridPoints.slice(0, limit * 3).map(async (point) => {
+        const promises = gridPoints.slice(0, limit * 2).map(async (point) => {
           try {
-            // Calculate real-time SIQS for this location with improved accuracy
+            // Calculate real-time SIQS for this location
             const result = await calculateRealTimeSiqs(
               point.latitude, 
               point.longitude,
               point.bortleScale || 5
             );
             
-            // Enhanced viability check
-            if (result.isViable && result.siqs >= 2.5) {
-              // Generate a better name based on estimated location quality
-              const qualityIndicator = getQualityIndicator(result.siqs);
-              
+            // If the location is viable for astrophotography
+            if (result.isViable && result.siqs > 2) {
               return {
                 ...point,
                 id: `calc-loc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 siqs: result.siqs,
                 isViable: result.isViable,
-                name: `${qualityIndicator} Dark Sky Location`,
-                chineseName: `${getChineseQualityIndicator(result.siqs)}暗夜地点`,
                 distance: calculateDistance(latitude, longitude, point.latitude, point.longitude),
                 timestamp: new Date().toISOString(),
                 date: new Date().toISOString(),
                 certification: '',
+                chineseName: '',
                 description: '',
-                isDarkSkyReserve: false,
-                siqsFactors: result.factors // Store factors for display
+                isDarkSkyReserve: false
               } as SharedAstroSpot;
             }
             return null;
@@ -72,22 +66,21 @@ export const useCalculatedLocationsFind = () => {
         
         // Add calculated locations that aren't duplicates of existing ones
         if (calculatedResults.length > 0) {
-          // Enhanced filtering with improved coordinate precision
+          // Filter out duplicates (same approximate coordinates)
           const existingCoords = new Set(allLocations.map(loc => 
-            `${loc.latitude.toFixed(5)},${loc.longitude.toFixed(5)}`
+            `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
           ));
           
           const newLocations = calculatedResults.filter(loc => {
-            const coordKey = `${loc.latitude.toFixed(5)},${loc.longitude.toFixed(5)}`;
+            const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
             return !existingCoords.has(coordKey);
           });
           
-          // Add new locations with proper sorting by quality
           allLocations = [...allLocations, ...newLocations];
         }
       }
       
-      // Return sorted locations limited to requested amount, prioritizing higher SIQS scores
+      // Return sorted locations limited to requested amount
       return allLocations
         .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
         .slice(0, limit);
@@ -99,39 +92,33 @@ export const useCalculatedLocationsFind = () => {
     }
   }, []);
 
-  // Enhanced grid generation with better distribution
-  const generateSmartGridPoints = (latitude: number, longitude: number, radius: number): Partial<SharedAstroSpot>[] => {
+  // Generate a grid of points around the given coordinates
+  const generateGridPoints = (latitude: number, longitude: number, radius: number): Partial<SharedAstroSpot>[] => {
     const points: Partial<SharedAstroSpot>[] = [];
-    
-    // Create a denser grid for better coverage
-    const gridSize = Math.min(8, Math.ceil(radius / 60)); 
+    // Increase grid density for better coverage
+    const gridSize = Math.min(6, Math.ceil(radius / 80)); 
     
     // Convert radius from km to degrees (approximate)
     const latDelta = radius / 111; // 1 degree latitude is about 111km
     const lonDelta = radius / (111 * Math.cos(latitude * Math.PI / 180));
     
-    // Create points in multiple patterns: grid, spiral, and random
-    
-    // 1. Grid pattern with varying density
     for (let i = -gridSize; i <= gridSize; i++) {
       for (let j = -gridSize; j <= gridSize; j++) {
-        // Skip the center point (user location)
+        // Skip the center point
         if (i === 0 && j === 0) continue;
         
-        // Make grid denser on edges to find edges of good viewing areas
-        const density = Math.abs(i) + Math.abs(j) > gridSize ? 1.2 : 1.0;
+        const lat = latitude + (i * latDelta / gridSize);
+        const lon = longitude + (j * lonDelta / gridSize);
         
-        const lat = latitude + (i * latDelta / gridSize) * density;
-        const lon = longitude + (j * lonDelta / gridSize) * density;
-        
-        // Enhanced bortle scale estimation that takes into account distance from urban areas
+        // Estimate a Bortle scale based on distance from center
+        // Further from urban areas generally means darker skies
         const distance = Math.sqrt(i*i + j*j) / gridSize;
-        // Bortle scale is 1-9, with lower being better - invert relationship with distance
-        // Areas further from center are likely to have lower light pollution
-        const estimatedBortle = Math.max(1, Math.min(9, Math.round(6 - 4 * distance)));
+        // Bortle scale is 1-9, with lower being better
+        // Estimate lower Bortle as we go further from center
+        const estimatedBortle = Math.max(1, Math.min(8, Math.round(5 - 3 * distance)));
         
         points.push({
-          name: `Potential Dark Sky Location`,
+          name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`,
           latitude: lat,
           longitude: lon,
           bortleScale: estimatedBortle,
@@ -141,65 +128,54 @@ export const useCalculatedLocationsFind = () => {
       }
     }
     
-    // 2. Add some random points for diversity
-    for (let i = 0; i < gridSize * 2; i++) {
-      // Random angle and distance
-      const angle = Math.random() * 2 * Math.PI;
-      const dist = Math.random() * radius;
-      
-      // Convert to x, y
-      const x = Math.cos(angle) * dist;
-      const y = Math.sin(angle) * dist;
-      
-      // Convert to lat, lon
-      const latOffset = y / 111;
-      const lonOffset = x / (111 * Math.cos(latitude * Math.PI / 180));
-      
-      const lat = latitude + latOffset;
-      const lon = longitude + lonOffset;
-      
-      // Estimated bortle - random points tend to be better at finding dark sky pockets
-      const distanceFactor = dist / radius;
-      const estimatedBortle = Math.max(1, Math.min(8, Math.round(5 - 3 * distanceFactor)));
-      
-      points.push({
-        name: `Random Dark Sky Location`,
-        latitude: lat,
-        longitude: lon,
-        bortleScale: estimatedBortle,
-        id: `calc-loc-${Date.now()}-r-${i}`,
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // De-duplicate by coordinates (5 decimal places)
-    const uniquePoints = new Map<string, Partial<SharedAstroSpot>>();
-    points.forEach(point => {
-      const key = `${point.latitude?.toFixed(5)},${point.longitude?.toFixed(5)}`;
-      if (!uniquePoints.has(key)) {
-        uniquePoints.set(key, point);
-      }
-    });
-    
-    return Array.from(uniquePoints.values());
+    return points;
   };
 
-  // Helper for quality indicator based on SIQS score
-  const getQualityIndicator = (siqs: number): string => {
-    if (siqs >= 8) return "Premium";
-    if (siqs >= 6.5) return "Excellent";
-    if (siqs >= 5) return "Great";
-    if (siqs >= 4) return "Good";
-    return "Decent";
+  // Convert to proper AstroSpot
+  const convertToAstroSpot = (location: any): SharedAstroSpot => {
+    return {
+      id: location.id || `calc-loc-${Date.now()}`, // Generate id if none exists
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortleScale,
+      timestamp: location.timestamp || new Date().toISOString(),
+      distance: location.distance,
+      siqs: location.siqs,
+      // Add other required SharedAstroSpot properties with defaults
+      certification: location.certification || '',
+      chineseName: location.chineseName || '',
+      description: location.description || '',
+      isViable: location.isViable || true,
+      isDarkSkyReserve: location.isDarkSkyReserve || false,
+      date: location.date || new Date().toISOString()
+    };
   };
-  
-  // Helper for Chinese quality indicator
-  const getChineseQualityIndicator = (siqs: number): string => {
-    if (siqs >= 8) return "顶级";
-    if (siqs >= 6.5) return "极佳";
-    if (siqs >= 5) return "优良";
-    if (siqs >= 4) return "良好";
-    return "尚可";
+
+  // Update the function to use the converter when creating calculated locations
+  const createCalculatedLocation = (
+    lat: number, 
+    lng: number, 
+    bortleScale: number, 
+    distance: number, 
+    counter: number,
+    siqs: number
+  ): SharedAstroSpot => {
+    const enName = `Potential ideal dark site ${counter}`;
+    const zhName = `潜在理想暗夜地点 ${counter}`;
+    
+    return convertToAstroSpot({
+      name: enName,
+      chineseName: zhName,
+      latitude: lat,
+      longitude: lng,
+      bortleScale: bortleScale,
+      distance: distance,
+      siqs: siqs,
+      isViable: siqs > 3,
+      timestamp: new Date().toISOString(),
+      date: new Date().toISOString()
+    });
   };
 
   return {

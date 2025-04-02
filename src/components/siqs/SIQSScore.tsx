@@ -5,7 +5,7 @@ import { getProgressColor, getProgressColorClass, getProgressTextColorClass } fr
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface SIQSScoreProps {
@@ -99,6 +99,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          className="w-full sm:w-auto"
         >
           <Link 
             to={`/location/${locationId}`}
@@ -113,16 +114,14 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
               timestamp: new Date().toISOString(),
               fromCalculator: true // Add a flag to indicate source
             }}
+            className="w-full block"
           >
             <Button 
-              size="md" 
-              className="bg-primary/90 hover:bg-primary shadow-lg hover:shadow-xl transition-all duration-300 text-primary-foreground group"
+              size="lg" 
+              className="w-full sm:w-auto bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group px-6 py-3"
             >
-              <span className="flex items-center">
-                <Star className="h-3.5 w-3.5 mr-1.5 text-yellow-300" />
-                {t("See More Details", "查看更多详情")}
-              </span>
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+              {t("See More Details", "查看更多详情")}
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
             </Button>
           </Link>
         </motion.div>

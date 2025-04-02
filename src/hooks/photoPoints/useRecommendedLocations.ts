@@ -13,7 +13,7 @@ interface Location {
 }
 
 // Maximum number of "load more" clicks allowed
-const MAX_LOAD_MORE_CLICKS = 3;
+const MAX_LOAD_MORE_CLICKS = 2;
 
 export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
@@ -31,7 +31,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
-  // Get current SIQS from the store
+  // Get current SIQS from the store - Fix: use getValue instead of getScore
   const currentSiqs = currentSiqsStore.getValue();
   
   // Extract location finding logic
@@ -59,29 +59,28 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       
       console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease}`);
       
-      // Get all locations within radius - enhanced with more parameters
+      // Get all locations within radius
       const results = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        isRadiusIncrease ? previousLocationsRef.current : []
+        searchRadius
       );
       
       if (results.length === 0) {
         console.log("No locations found, trying to find calculated locations...");
-        // If no results at all, try to find some calculated locations with expanded radius
+        // If no results at all, try to find some calculated locations
         const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
           Math.min(searchRadius * 1.5, 10000),
           true, // Allow expansion
-          15,  // Increased limit for better diversity
+          10,  // Limit
           isRadiusIncrease, // Preserve previous locations if radius increased
           isRadiusIncrease ? previousLocationsRef.current : []
         );
         
         if (calculatedResults.length > 0) {
-          // Sort by quality and distance with enhanced algorithm
+          // Sort by quality and distance
           const sortedResults = sortLocationsByQuality(calculatedResults);
           setLocations(sortedResults);
           previousLocationsRef.current = sortedResults;
@@ -142,8 +141,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       const results = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        locations // Pass current locations to avoid duplicates
+        searchRadius
       );
       
       // Filter out locations we already have
@@ -173,7 +171,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     }
   }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
   
-  // Enhanced load more calculated locations with improved diversity
+  // Load more calculated locations (new function)
   const loadMoreCalculatedLocations = useCallback(async () => {
     if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
       return;
@@ -184,41 +182,30 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
       
       // Get more calculated locations, preserving existing ones
-      // Enhanced with adaptive radius parameters
-      const expandRadius = (loadMoreClickCount + 1) * 1.15; // Gradually expand radius with each click
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        Math.min(searchRadius * expandRadius, 10000), // Dynamically expand radius
+        searchRadius,
         true, // Allow radius expansion
-        10 + (loadMoreClickCount * 2), // Increase results per click
+        10, // Get 10 more locations
         true, // Always preserve previous locations
         locations // Pass current locations
       );
       
-      // Enhanced filtering with improved coordinate precision to avoid near-duplicates
+      // Filter out locations we already have
       const existingCoords = new Set(locations.map(loc => 
-        `${loc.latitude.toFixed(5)},${loc.longitude.toFixed(5)}`
+        `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
       ));
       
       const newResults = calculatedResults.filter(loc => {
-        const coordKey = `${loc.latitude.toFixed(5)},${loc.longitude.toFixed(5)}`;
+        const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
         return !existingCoords.has(coordKey);
       });
       
       if (newResults.length > 0) {
-        // Sort by quality and distance with improved algorithm that factors in diversity
+        // Sort by quality and distance
         const allLocations = [...locations, ...newResults];
-        
-        // Enhanced sorting that prioritizes diverse Bortle scales
-        const bortleDistribution = new Map<number, number>();
-        locations.forEach(loc => {
-          const bortle = loc.bortleScale || 5;
-          bortleDistribution.set(bortle, (bortleDistribution.get(bortle) || 0) + 1);
-        });
-        
-        // Sort results to prioritize underrepresented Bortle scales
-        const sortedResults = sortLocationsByQuality(allLocations, bortleDistribution);
+        const sortedResults = sortLocationsByQuality(allLocations);
         
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;

@@ -31,135 +31,167 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
 }) => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const { language, t } = useLanguage();
+  const { loading, handleRefreshAll } = useWeatherUpdater();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initialRefreshDoneRef = useRef(false);
   
-  // Handle refreshing of data
-  const handleRefresh = useCallback(async () => {
-    try {
-      setStatusMessage(t("Refreshing data...", "正在刷新数据..."));
-      await handleUpdateLocation(locationData);
-      setStatusMessage(null);
-    } catch (error) {
-      console.error("Failed to refresh:", error);
-      setStatusMessage(t("Failed to refresh data", "刷新数据失败"));
-    }
-  }, [handleUpdateLocation, locationData, setStatusMessage, t]);
-  
-  // Weather updates
-  const { 
-    updateWeatherWithForecast,
-    shouldDisplayRefreshButton,
-    getLastWeatherUpdateTime 
-  } = useWeatherUpdater();
-  
-  // Forecast management
-  const { 
-    forecast, 
-    loading: forecastLoading, 
-    error: forecastError,
-    fetchForecast
+  const {
+    forecastData,
+    longRangeForecast,
+    forecastLoading,
+    longRangeLoading,
+    weatherAlerts,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
-  
-  // SIQS updater
-  const { updateSIQS, siqs: updatedSiqs } = useLocationSIQSUpdater();
-  
-  // Auto refresh when needed
+
+  // Use the refresh manager hook for controlled refreshes
   const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
   
-  // Update SIQS when forecast changes
-  useEffect(() => {
-    if (forecast && locationData) {
-      updateSIQS(locationData, forecast);
-    }
-  }, [forecast, locationData, updateSIQS]);
-  
-  // Update locationData when SIQS changes
-  useEffect(() => {
-    if (updatedSiqs && locationData) {
-      setLocationData(prev => ({
-        ...prev,
-        siqsResult: updatedSiqs
-      }));
-    }
-  }, [updatedSiqs, locationData, setLocationData]);
-  
-  // Auto refresh when navigating to this component
-  useEffect(() => {
-    if (shouldRefresh && locationData) {
-      console.log("Auto-refreshing location data due to navigation");
-      handleRefresh();
-      markRefreshComplete();
-    }
-  }, [shouldRefresh, locationData, handleRefresh, markRefreshComplete]);
-  
-  // Format the last update time
-  const lastUpdateTimeString = locationData?.weatherData?.timestamp 
-    ? `${formatDate(new Date(locationData.weatherData.timestamp), language)} ${formatTime(new Date(locationData.weatherData.timestamp), language)}`
-    : null;
-  
-  // Format weather alerts if present
-  const weatherAlertsCount = locationData?.weatherData?.alerts?.length || 0;
-  
-  // Handle the weather update using forecast data
-  const handleWeatherUpdate = useCallback(async () => {
-    if (!locationData || !forecast) return;
-    
-    try {
-      setStatusMessage(t("Updating weather conditions...", "正在更新天气条件..."));
-      
-      // Update the locationData with forecast-based weather
-      const updatedData = await updateWeatherWithForecast(locationData, forecast);
-      
-      if (updatedData) {
-        setLocationData(updatedData);
-        setStatusMessage(t("Weather updated with forecast data", "已使用预报数据更新天气"));
-        
-        // Clear status message after 3 seconds
-        setTimeout(() => {
-          setStatusMessage(null);
-        }, 3000);
-      } else {
-        setStatusMessage(t("No forecast data available", "没有可用的预报数据"));
-      }
-    } catch (error) {
-      console.error("Error updating weather with forecast:", error);
-      setStatusMessage(t("Failed to update weather", "更新天气失败"));
-    }
-  }, [locationData, forecast, updateWeatherWithForecast, setLocationData, setStatusMessage, t]);
-  
-  // Fetch forecast when locationData changes
+  // Use the dedicated SIQS updater
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData,
+    forecastData,
+    setLocationData,
+    t
+  );
+
+  // Reset SIQS update state when location changes
   useEffect(() => {
     if (locationData?.latitude && locationData?.longitude) {
-      fetchForecast(locationData.latitude, locationData.longitude);
+      resetUpdateState();
     }
-  }, [locationData?.latitude, locationData?.longitude, fetchForecast]);
-  
+  }, [locationData?.latitude, locationData?.longitude, resetUpdateState]);
+
+  // Single refresh effect that runs only once when the page is loaded
+  useEffect(() => {
+    if (shouldRefresh && locationData && !initialRefreshDoneRef.current) {
+      console.log("Performing one-time refresh on location details page load");
+      
+      // Mark as done before the refresh to prevent double refreshes
+      initialRefreshDoneRef.current = true;
+      
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        handleRefresh();
+        // Mark refresh as complete to prevent further refreshes
+        markRefreshComplete();
+        
+        // Update locationData to remove fromPhotoPoints flag
+        if (locationData.fromPhotoPoints) {
+          setLocationData(prev => ({
+            ...prev,
+            fromPhotoPoints: false
+          }));
+        }
+      }, 600);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete, setLocationData]);
+
+  // Handle forced refresh event from parent component
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const handleForceRefresh = () => {
+      console.log("Force refresh triggered from parent component");
+      initialRefreshDoneRef.current = false; // Reset to allow refresh
+      handleRefresh();
+    };
+    
+    container.addEventListener('forceRefresh', handleForceRefresh);
+    
+    return () => {
+      container.removeEventListener('forceRefresh', handleForceRefresh);
+    };
+  }, [locationData]);
+
+  const handleRefresh = useCallback(async () => {
+    // Reset SIQS update state before refreshing
+    resetUpdateState();
+    
+    await handleRefreshAll(
+      locationData, 
+      setLocationData, 
+      () => {
+        handleRefreshForecast(locationData.latitude, locationData.longitude);
+        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+      },
+      setStatusMessage
+    );
+  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
+
+  // Reset the initial refresh flag when component unmounts
+  useEffect(() => {
+    return () => {
+      initialRefreshDoneRef.current = false;
+    };
+  }, []);
+
   return (
-    <div className="container mx-auto pb-20 md:pb-16 pt-6 md:pt-8 px-4">
-      <BackButton destination="/" />
+    <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 
+         ref={containerRef} 
+         data-refresh-trigger>
+      {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
       
-      <LocationStatusMessage 
-        message={statusMessage}
-        type={messageType}
-      />
-      
-      {weatherAlertsCount > 0 && (
-        <div className="mb-6">
-          <WeatherAlerts alerts={locationData.weatherData.alerts} />
+      {/* Add top padding to create space for the navbar */}
+      <div className="pt-24 md:pt-28">
+        {/* Back button positioned in the top-left corner */}
+        <div className="fixed top-24 left-4 md:top-28 md:left-8 z-50">
+          <BackButton 
+            destination="/"
+            replace={true}
+            variant="secondary"
+            size="sm"
+            className="hover:bg-primary/20 transition-colors duration-300 hover:opacity-85"
+          />
         </div>
-      )}
-      
-      <LocationDetailsHeader 
-        locationData={locationData}
-        onRefresh={handleRefresh}
-        onUpdateWeather={handleWeatherUpdate}
-        shouldShowRefreshButton={shouldDisplayRefreshButton(locationData)}
-        lastUpdated={lastUpdateTimeString}
-      />
-      
-      <LocationContentGrid 
-        locationData={locationData}
-        forecast={forecast}
-      />
+        
+        <div className="container mx-auto px-4 mt-4 mb-6">
+          <div className="text-center my-8 pt-6">
+            <LocationDetailsHeader 
+              name={locationData?.name}
+              timestamp={locationData?.timestamp}
+              onRefresh={handleRefresh}
+              loading={loading}
+              className="mx-auto transition-all hover:scale-[1.01] duration-300"
+            />
+          </div>
+        </div>
+        
+        <LocationStatusMessage 
+          message={statusMessage} 
+          type={messageType} 
+        />
+        
+        {weatherAlerts && weatherAlerts.length > 0 && (
+          <div className="container mx-auto px-4 mb-6 animate-fade-in">
+            <WeatherAlerts 
+              alerts={weatherAlerts}
+              formatTime={formatTime}
+              formatDate={formatDate}
+            />
+          </div>
+        )}
+        
+        <div className="container mx-auto px-4 pb-24 pt-4 backdrop-blur-sm bg-cosmic-950/50 rounded-lg shadow-lg">
+          <LocationContentGrid
+            locationData={locationData}
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            gettingUserLocation={gettingUserLocation}
+            onLocationUpdate={handleUpdateLocation}
+            setGettingUserLocation={setGettingUserLocation}
+            setStatusMessage={setStatusMessage}
+            onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
+            onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
+          />
+        </div>
+      </div>
     </div>
   );
 };
