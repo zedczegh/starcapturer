@@ -1,6 +1,7 @@
 
 import React, { Suspense, lazy } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { Circle } from 'react-leaflet'; // Import Circle instead of CircleMarker
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2 } from 'lucide-react';
@@ -15,18 +16,8 @@ const customIcon = new Icon({
   shadowAnchor: [12, 41]
 });
 
-// Event handler component for map clicks
-const MapEventHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
-  useMapEvents({
-    click: (e) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    }
-  });
-  return null;
-};
-
 interface LazyMapComponentProps {
-  position: [number, number];
+  position: [number, number];  // Changed from latitude/longitude to position
   locationName: string;
   editable?: boolean;
   onMapReady?: () => void;
@@ -58,10 +49,8 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         style={{ height: '300px', width: '100%' }}
         className="rounded-lg"
         whenReady={onMapReady}
+        onClick={(e) => onMapClick(e.latlng.lat, e.latlng.lng)}
       >
-        {/* Add event handler for map clicks */}
-        <MapEventHandler onMapClick={onMapClick} />
-        
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
