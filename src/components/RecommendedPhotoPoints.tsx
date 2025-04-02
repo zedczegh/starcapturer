@@ -141,9 +141,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   
   return (
     <div className="mt-2">
+      {/* IMPORTANT: Make sure the reminder is always visible when we have currentSiqs data */}
       <CurrentLocationReminder 
         currentSiqs={currentSiqs}
-        isVisible={limitedLocations.length > 0}
+        isVisible={true} // Always show on homepage when we have SIQS data
       />
       
       <AnimatePresence>

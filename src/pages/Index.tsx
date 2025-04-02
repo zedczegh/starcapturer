@@ -70,6 +70,23 @@ const Index = () => {
         }, 100);
       }
     }
+    
+    // Update the currentSiqsStore value to make sure reminder is always visible
+    const updateCurrentSiqs = () => {
+      try {
+        const savedLocationString = localStorage.getItem('latest_siqs_location');
+        if (savedLocationString) {
+          const savedLocation = JSON.parse(savedLocationString);
+          if (savedLocation && savedLocation.siqs) {
+            currentSiqsStore.setValue(savedLocation.siqs);
+          }
+        }
+      } catch (error) {
+        console.error("Error updating current SIQS:", error);
+      }
+    };
+    
+    updateCurrentSiqs();
   }, [queryClient, t]);
 
   return (

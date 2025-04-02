@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import ConditionItem from "@/components/weather/ConditionItem";
-import { DynamicMoonIcon, DynamicLightbulbIcon } from "@/components/weather/DynamicIcons";
+import { DynamicMoonIcon } from "@/components/weather/DynamicIcons";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -54,35 +54,12 @@ const BortleNow: React.FC = () => {
       if (updatedBortle) {
         setBortleScale(updatedBortle);
         console.log("Updated Bortle scale from location:", updatedBortle);
-        
-        // Store measurement in database (will implement with Supabase)
-        saveMeasurementToDatabase(lat, lng, updatedBortle, "location");
       }
     } catch (err) {
       console.error("Error updating Bortle scale:", err);
     } finally {
       setIsMeasuringRealtime(false);
     }
-  };
-
-  // Function to save measurements to our database (placeholder for Supabase integration)
-  const saveMeasurementToDatabase = (
-    latitude: number, 
-    longitude: number, 
-    bortleValue: number,
-    source: "camera" | "location"
-  ) => {
-    // This will be implemented with Supabase later
-    console.log("Saving measurement to database:", {
-      latitude,
-      longitude,
-      bortleValue,
-      source,
-      timestamp: new Date().toISOString(),
-      deviceInfo: navigator.userAgent
-    });
-    
-    // Future Supabase integration will be added here
   };
 
   const getCurrentLocation = useCallback(() => {
@@ -163,10 +140,6 @@ const BortleNow: React.FC = () => {
         resolve(true);
       }, 600));
       
-      // In a real implementation, you'd use:
-      // - navigator.mediaDevices.getUserMedia to access camera
-      // - Capture frames and analyze dark current noise
-      
       toast({
         title: t("Dark Frame Captured", "暗帧已捕获"),
         description: t("Dark frame baseline established.", "暗帧基准已建立。"),
@@ -224,31 +197,15 @@ const BortleNow: React.FC = () => {
         resolve(true);
       }, 600));
       
-      // In a real implementation:
-      // 1. Use camera API to take photo of night sky, pointed zenith
-      // 2. Process pixel data to derive average sky brightness
-      // 3. Apply dark frame correction by subtracting dark frame values
-      // 4. Convert sky brightness to magnitudes per square arcsecond
-      // 5. Map to Bortle scale (typically 21.7+ mag/arcsec² = Bortle 1, <18 = Bortle 9)
-      
       // For simulation, generate a reasonable Bortle value
-      // In reality, would compute from pixel luminance values
       const baseLocationBortle = bortleScale || 5;
       
       // Simulate slight improvement from camera measurement
-      // (real measurement would be based on actual sky brightness calculation)
       const measuredBortle = Math.max(1, Math.min(9, baseLocationBortle * 0.8 + Math.random() * 0.8));
       
       setBortleScale(measuredBortle);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
       setMeasurementProgress(0);
-      
-      // Save camera measurement to database
-      if (latitude && longitude) {
-        const lat = parseFloat(latitude);
-        const lng = parseFloat(longitude);
-        saveMeasurementToDatabase(lat, lng, measuredBortle, "camera");
-      }
       
       toast({
         title: t("Measurement Complete", "测量完成"),
@@ -292,6 +249,14 @@ const BortleNow: React.FC = () => {
         repeatType: "reverse" as const
       }
     }
+  };
+
+  // Simple linear color gradient: red (9) → yellow → green (1)
+  const getBortleColorGradient = (scale: number): string => {
+    // Map from Bortle scale (1-9) to a color from red to green
+    if (scale <= 3) return '#22c55e'; // Green for good conditions (1-3)
+    if (scale <= 6) return '#3b82f6'; // Blue for moderate conditions (4-6)
+    return '#ef4444'; // Red for poor conditions (7-9)
   };
 
   // Calculate a visual representation of the Bortle scale
@@ -365,12 +330,6 @@ const BortleNow: React.FC = () => {
                           <div className="w-3 h-3 rounded-full bg-blue-500 absolute top-0 left-0" />
                         </div>
                       )}
-                      
-                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-cosmic-800/80 text-cosmic-300">
-                          {t("Bortle Scale", "波尔特尔等级")}
-                        </span>
-                      </div>
                     </div>
                     
                     <h3 className="text-lg font-semibold text-gradient-primary mb-1">
@@ -383,7 +342,7 @@ const BortleNow: React.FC = () => {
                         <motion.div 
                           className="absolute inset-0 h-full rounded-full"
                           style={{ 
-                            background: `linear-gradient(to right, #22c55e, #3b82f6, #f97316)`,
+                            background: `linear-gradient(to right, #22c55e, #eab308, #ef4444)`,
                             width: `${getBortleVisualValue(bortleScale)}%` 
                           }}
                           initial={{ width: 0 }}
@@ -392,12 +351,9 @@ const BortleNow: React.FC = () => {
                         />
                       </div>
                       <div className="flex justify-between mt-1 text-xs text-cosmic-400">
-                        <div className="flex items-center gap-1">
-                          <span>{t("Urban", "城市")}</span>
-                          <span className="text-[0.65rem] text-cosmic-500">(9)</span>
-                        </div>
-                        <span>{t("Rural", "乡村")}</span>
                         <span>{t("Dark", "黑暗")}</span>
+                        <span>{t("Rural", "乡村")}</span>
+                        <span>{t("Urban", "城市")}</span>
                       </div>
                     </div>
                   </div>
@@ -410,13 +366,6 @@ const BortleNow: React.FC = () => {
                   
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <ConditionItem
-                      icon={<DynamicLightbulbIcon value={bortleScale} className="h-5 w-5 text-yellow-400" />}
-                      label={t("Light Pollution", "光污染")}
-                      value={`${t("Class", "等级")} ${bortleScale.toFixed(1)}`}
-                      tooltip={t("Bortle Scale: 1 (darkest) to 9 (brightest)", "波尔特尔等级：1（最暗）至9（最亮）")}
-                    />
-                    
-                    <ConditionItem
                       icon={<Star className="h-5 w-5 text-primary" />}
                       label={t("Visible Stars", "可见星星")}
                       value={bortleScale <= 3 
@@ -425,6 +374,17 @@ const BortleNow: React.FC = () => {
                           ? t("Some", "一些") 
                           : t("Few", "很少")}
                       tooltip={t("Estimated visible stars at zenith", "天顶处估计可见星星")}
+                    />
+                    
+                    <ConditionItem
+                      icon={<Moon className="h-5 w-5 text-sky-200" />}
+                      label={t("Sky Quality", "夜空质量")}
+                      value={bortleScale <= 3 
+                        ? t("Excellent", "极好") 
+                        : bortleScale <= 6 
+                          ? t("Moderate", "中等") 
+                          : t("Poor", "较差")}
+                      tooltip={t("Overall sky darkness level", "整体夜空黑暗程度")}
                     />
                   </div>
                   
@@ -639,16 +599,6 @@ const BortleNow: React.FC = () => {
                       <p className="text-xs">{t("Click the button to capture and analyze the sky brightness", "点击按钮捕获并分析天空亮度")}</p>
                     </div>
                   </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t border-cosmic-800/30 flex items-center justify-between text-xs text-cosmic-400">
-                <div className="flex items-center gap-1">
-                  <Cloud size={12} />
-                  <span>{t("Dark Sky Meter compatible", "兼容暗空测量仪")}</span>
-                </div>
-                <div>
-                  {t("Data contributes to global light pollution map", "数据贡献到全球光污染地图")}
                 </div>
               </div>
             </div>
