@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,6 +14,7 @@ import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationRem
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -39,8 +41,7 @@ const PhotoPointsNearby: React.FC = () => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks,
-    currentSiqs // Get currentSiqs from the hook
+    maxLoadMoreClicks
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -50,6 +51,9 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
+
+  // Get the current SIQS value from the store
+  const currentSiqs = currentSiqsStore.getValue();
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -130,9 +134,9 @@ const PhotoPointsNearby: React.FC = () => {
             </p>
           </div>
           
-          {/* Add the reminder component */}
+          {/* Add the reminder component with currentSiqs from store */}
           <CurrentLocationReminder 
-            currentSiqs={currentSiqs} 
+            currentSiqs={currentSiqs}
             isVisible={!!userLocation && !loading}
           />
           

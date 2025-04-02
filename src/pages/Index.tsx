@@ -34,7 +34,7 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          // Updated threshold from 3 to 5 for showing notification
+          // Using threshold of 5 for showing notification
           if (savedLocation.siqs && savedLocation.siqs > 5) {
             // Show notification for ideal astrophotography location
             setTimeout(() => {

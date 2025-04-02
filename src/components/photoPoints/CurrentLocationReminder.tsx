@@ -20,13 +20,13 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   const { t } = useLanguage();
   const [hasShownToast, setHasShownToast] = useState(false);
   
-  // Determine if we should show the high SIQS notification - Changed threshold from 3 to 5
+  // Determine if we should show the high SIQS notification - Using threshold of 5
   const showHighSiqsNotification = currentSiqs !== null && currentSiqs > 5;
   
   // Determine if we should show the low SIQS encouragement
   const showLowSiqsEncouragement = currentSiqs !== null && currentSiqs <= 1.5;
   
-  // Show a toast notification if SIQS is over 5 (changed from 3) and we haven't shown it yet
+  // Show a toast notification if SIQS is over 5 and we haven't shown it yet
   useEffect(() => {
     if (showHighSiqsNotification && !hasShownToast) {
       toast.info(
@@ -48,7 +48,7 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
     return null;
   }
   
-  // Don't show the box for low SIQS scores, only the toast for high scores
+  // Don't show the box for moderate SIQS values between 1.5 and 2
   if (currentSiqs > 1.5 && currentSiqs <= 2) {
     return null;
   }
@@ -57,20 +57,20 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   const siqsColor = siqsToColor(currentSiqs);
   
   return (
-    <div className="mb-4 p-3 rounded-lg glassmorphism bg-cosmic-800/30 border border-cosmic-700/30">
+    <div className="mb-4 p-4 rounded-lg glassmorphism bg-cosmic-800/30 border border-cosmic-700/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in">
       <div className="flex items-center">
         {showLowSiqsEncouragement ? (
-          <CloudRain className="text-blue-400 mr-2 h-5 w-5 flex-shrink-0" />
+          <CloudRain className="text-blue-400 mr-3 h-6 w-6 flex-shrink-0 animate-pulse" />
         ) : (
-          <Info className="text-primary mr-2 h-5 w-5 flex-shrink-0" />
+          <Info className="text-primary mr-3 h-6 w-6 flex-shrink-0" />
         )}
         <div className="space-y-2 w-full">
           <p className="text-sm">
             {showHighSiqsNotification ? (
               <span>
                 {t(
-                  "Your current location has a good SIQS score of ",
-                  "您当前位置的SIQS评分不错，为 "
+                  "Your current location has a good SIQS of ",
+                  "您当前位置的SIQS不错，为 "
                 )}
                 <span
                   className="font-semibold"
@@ -86,8 +86,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             ) : showLowSiqsEncouragement ? (
               <span>
                 {t(
-                  "Current conditions aren't ideal with a SIQS score of ",
-                  "当前条件不太理想，SIQS评分为 "
+                  "Current conditions aren't ideal with a SIQS of ",
+                  "当前条件不太理想，SIQS为 "
                 )}
                 <span
                   className="font-semibold"
@@ -103,8 +103,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             ) : (
               <span>
                 {t(
-                  "Your current location has a moderate SIQS score of ",
-                  "您当前位置的SIQS评分一般，为 "
+                  "Your current location has a moderate SIQS of ",
+                  "您当前位置的SIQS一般，为 "
                 )}
                 <span
                   className="font-semibold"
@@ -121,11 +121,11 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
           </p>
           
           {showLowSiqsEncouragement && (
-            <div className="mt-2">
+            <div className="mt-3">
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="mt-1 text-sm bg-primary/10 border-primary/20 hover:bg-primary/20"
+                className="mt-1 text-sm bg-primary/10 border-primary/20 hover:bg-primary/20 transform hover:scale-105 transition-all duration-300"
                 asChild
               >
                 <Link to="/photo-points">

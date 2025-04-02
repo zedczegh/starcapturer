@@ -1,31 +1,30 @@
-
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 
-// Create a global object to store the current SIQS score
+// Create a global object to store the current SIQS value
 export const currentSiqsStore = {
-  score: null as number | null,
-  setScore: (score: number | null) => {
-    currentSiqsStore.score = score;
+  value: null as number | null,
+  setValue: (value: number | null) => {
+    currentSiqsStore.value = value;
     // Also save to localStorage for persistence
-    if (score !== null) {
-      localStorage.setItem('current_siqs_score', score.toString());
+    if (value !== null) {
+      localStorage.setItem('current_siqs_value', value.toString());
     }
   },
-  getScore: () => {
-    // If no score in memory, try localStorage
-    if (currentSiqsStore.score === null) {
-      const storedScore = localStorage.getItem('current_siqs_score');
-      if (storedScore) {
-        const parsedScore = parseFloat(storedScore);
-        if (!isNaN(parsedScore)) {
-          currentSiqsStore.score = parsedScore;
+  getValue: () => {
+    // If no value in memory, try localStorage
+    if (currentSiqsStore.value === null) {
+      const storedValue = localStorage.getItem('current_siqs_value');
+      if (storedValue) {
+        const parsedValue = parseFloat(storedValue);
+        if (!isNaN(parsedValue)) {
+          currentSiqsStore.value = parsedValue;
         }
       }
     }
-    return currentSiqsStore.score;
+    return currentSiqsStore.value;
   }
 };
 
@@ -37,7 +36,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   noAutoLocationRequest = false 
 }) => {
   const { t } = useLanguage();
-  const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getScore());
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
   
   // Define animations
   const containerVariants = {
@@ -65,10 +64,10 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
     }
   };
   
-  // Update current SIQS score when calculated
-  const handleSiqsCalculated = (score: number | null) => {
-    setCurrentSiqs(score);
-    currentSiqsStore.setScore(score);
+  // Update current SIQS value when calculated
+  const handleSiqsCalculated = (value: number | null) => {
+    setCurrentSiqs(value);
+    currentSiqsStore.setValue(value);
   };
   
   return (
