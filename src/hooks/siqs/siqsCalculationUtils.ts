@@ -3,7 +3,7 @@ import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 
 /**
- * Ensure SIQS score is always on a 0-10 scale
+ * Ensure SIQS value is always on a 0-10 scale
  * Optimized for better precision
  */
 export const normalizeScore = (score: number): number => {
@@ -58,57 +58,57 @@ export async function calculateSIQSWithWeatherData(
 }
 
 /**
- * Get descriptive text for SIQS score
+ * Get descriptive text for SIQS value
  */
-export function getSIQSDescription(score: number): string {
-  if (score >= 8) return "Excellent";
-  if (score >= 6) return "Good";  
-  if (score >= 4) return "Average";
-  if (score >= 2) return "Poor";
+export function getSIQSDescription(value: number): string {
+  if (value >= 8) return "Excellent";
+  if (value >= 6) return "Good";  
+  if (value >= 4) return "Average";
+  if (value >= 2) return "Poor";
   return "Bad";
 }
 
 /**
  * Get translated SIQS description
  */
-export function getTranslatedSIQSDescription(score: number, language: 'en' | 'zh' = 'en'): string {
+export function getTranslatedSIQSDescription(value: number, language: 'en' | 'zh' = 'en'): string {
   if (language === 'en') {
-    return getSIQSDescription(score);
+    return getSIQSDescription(value);
   }
   
   // Chinese translations
-  if (score >= 8) return "极佳";
-  if (score >= 6) return "良好";  
-  if (score >= 4) return "一般";
-  if (score >= 2) return "较差";
+  if (value >= 8) return "极佳";
+  if (value >= 6) return "良好";  
+  if (value >= 4) return "一般";
+  if (value >= 2) return "较差";
   return "糟糕";
 }
 
 /**
- * Get CSS color class for SIQS score
+ * Get CSS color class for SIQS value
  */
-export function getSIQSColorClass(score: number): string {
-  if (score >= 8) return "bg-green-500/80 border-green-400/50";
-  if (score >= 6) return "bg-blue-500/80 border-blue-400/50";
-  if (score >= 4) return "bg-yellow-500/80 border-yellow-400/50";
-  if (score >= 2) return "bg-orange-500/80 border-orange-400/50";
+export function getSIQSColorClass(value: number): string {
+  if (value >= 8) return "bg-green-500/80 border-green-400/50";
+  if (value >= 6) return "bg-blue-500/80 border-blue-400/50";
+  if (value >= 4) return "bg-yellow-500/80 border-yellow-400/50";
+  if (value >= 2) return "bg-orange-500/80 border-orange-400/50";
   return "bg-red-500/80 border-red-400/50";
 }
 
 /**
  * Determine if viewing conditions are good for astrophotography
  */
-export function isGoodViewingCondition(score: number): boolean {
-  return score >= 6.0;
+export function isGoodViewingCondition(value: number): boolean {
+  return value >= 5.0; // Updated threshold to 5.0
 }
 
 /**
- * Format SIQS score for display with consistent decimal places
+ * Format SIQS value for display with consistent decimal places
  */
-export function formatSIQSScoreForDisplay(score: number): string {
+export function formatSIQSScoreForDisplay(value: number): string {
   // Handle undefined or null
-  if (score === undefined || score === null) return "0.0";
+  if (value === undefined || value === null) return "0.0";
   
   // Always show one decimal place
-  return score.toFixed(1);
+  return value.toFixed(1);
 }

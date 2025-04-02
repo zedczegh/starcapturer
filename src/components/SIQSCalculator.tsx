@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -13,12 +14,13 @@ import { Language } from "@/services/geocoding/types";
 import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
 import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
 import { motion } from "framer-motion";
+import { currentSiqsStore } from './index/CalculatorSection';
 
 interface SIQSCalculatorProps {
   className?: string;
   hideRecommendedPoints?: boolean;
   noAutoLocationRequest?: boolean;
-  onSiqsCalculated?: (siqsScore: number | null) => void;
+  onSiqsCalculated?: (siqsValue: number | null) => void;
 }
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
@@ -191,6 +193,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   useEffect(() => {
     if (onSiqsCalculated) {
       onSiqsCalculated(siqsScore);
+      // Also update the global store
+      currentSiqsStore.setValue(siqsScore);
     }
   }, [siqsScore, onSiqsCalculated]);
   

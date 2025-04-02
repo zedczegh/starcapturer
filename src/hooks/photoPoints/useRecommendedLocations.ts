@@ -31,8 +31,8 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
-  // Get current SIQS score from the store
-  const currentSiqs = currentSiqsStore.getScore();
+  // Get current SIQS from the store - Fix: use getValue instead of getScore
+  const currentSiqs = currentSiqsStore.getValue();
   
   // Extract location finding logic
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();

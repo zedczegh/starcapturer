@@ -26,7 +26,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 }) => {
   const { t } = useLanguage();
   const [isInitialized, setIsInitialized] = useState(false);
-  const currentSiqs = currentSiqsStore.getScore();
+  const currentSiqs = currentSiqsStore.getValue();
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
   

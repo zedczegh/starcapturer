@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsHeader from "./LocationDetailsHeader";
@@ -33,7 +34,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { loading, handleRefreshAll } = useWeatherUpdater();
   const containerRef = useRef<HTMLDivElement>(null);
   const initialRefreshDoneRef = useRef(false);
-  const lastLocationUpdateTimestampRef = useRef<string | null>(null);
   
   const {
     forecastData,
@@ -45,8 +45,10 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     handleRefreshLongRangeForecast
   } = useForecastManager(locationData);
 
+  // Use the refresh manager hook for controlled refreshes
   const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
   
+  // Use the dedicated SIQS updater
   const { resetUpdateState } = useLocationSIQSUpdater(
     locationData,
     forecastData,
@@ -54,22 +56,28 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     t
   );
 
+  // Reset SIQS update state when location changes
   useEffect(() => {
     if (locationData?.latitude && locationData?.longitude) {
       resetUpdateState();
     }
   }, [locationData?.latitude, locationData?.longitude, resetUpdateState]);
 
+  // Single refresh effect that runs only once when the page is loaded
   useEffect(() => {
     if (shouldRefresh && locationData && !initialRefreshDoneRef.current) {
       console.log("Performing one-time refresh on location details page load");
       
+      // Mark as done before the refresh to prevent double refreshes
       initialRefreshDoneRef.current = true;
       
+      // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
         handleRefresh();
+        // Mark refresh as complete to prevent further refreshes
         markRefreshComplete();
         
+        // Update locationData to remove fromPhotoPoints flag
         if (locationData.fromPhotoPoints) {
           setLocationData(prev => ({
             ...prev,
@@ -82,13 +90,14 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete, setLocationData]);
 
+  // Handle forced refresh event from parent component
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     
     const handleForceRefresh = () => {
       console.log("Force refresh triggered from parent component");
-      initialRefreshDoneRef.current = false;
+      initialRefreshDoneRef.current = false; // Reset to allow refresh
       handleRefresh();
     };
     
@@ -99,24 +108,8 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     };
   }, [locationData]);
 
-  useEffect(() => {
-    if (!locationData) return;
-    
-    const currentTimestamp = locationData.timestamp;
-    
-    if (currentTimestamp && currentTimestamp !== lastLocationUpdateTimestampRef.current) {
-      console.log("Location was updated, scheduling refresh");
-      lastLocationUpdateTimestampRef.current = currentTimestamp;
-      
-      const timer = setTimeout(() => {
-        handleRefresh();
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [locationData?.timestamp, handleRefresh]);
-
   const handleRefresh = useCallback(async () => {
+    // Reset SIQS update state before refreshing
     resetUpdateState();
     
     await handleRefreshAll(
@@ -130,6 +123,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     );
   }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
 
+  // Reset the initial refresh flag when component unmounts
   useEffect(() => {
     return () => {
       initialRefreshDoneRef.current = false;
@@ -140,7 +134,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 
          ref={containerRef} 
          data-refresh-trigger>
+      {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
+      
+      {/* Add top padding to create space for the navbar */}
       <div className="pt-24 md:pt-28">
+        {/* Back button positioned in the top-left corner */}
         <div className="fixed top-24 left-4 md:top-28 md:left-8 z-50">
           <BackButton 
             destination="/"

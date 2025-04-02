@@ -25,24 +25,24 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   
   // Create memoized values to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
-    // Round score to 1 decimal place
-    const displayScore = Math.round(siqsScore * 10) / 10;
+    // Round value to 1 decimal place
+    const displayValue = Math.round(siqsScore * 10) / 10;
     
-    // Determine score interpretation
+    // Determine value interpretation
     let interpretation;
-    if (displayScore >= 8) interpretation = t("Excellent", "优秀");
-    else if (displayScore >= 6) interpretation = t("Good", "良好");
-    else if (displayScore >= 4) interpretation = t("Average", "一般");
-    else if (displayScore >= 2) interpretation = t("Poor", "较差");
+    if (displayValue >= 8) interpretation = t("Excellent", "优秀");
+    else if (displayValue >= 6) interpretation = t("Good", "良好");
+    else if (displayValue >= 4) interpretation = t("Average", "一般");
+    else if (displayValue >= 2) interpretation = t("Poor", "较差");
     else interpretation = t("Bad", "很差");
     
     // Get appropriate color classes
-    const progressColor = getProgressColor(displayScore);
-    const colorClass = getProgressColorClass(displayScore);
-    const textColorClass = getProgressTextColorClass(displayScore);
+    const progressColor = getProgressColor(displayValue);
+    const colorClass = getProgressColorClass(displayValue);
+    const textColorClass = getProgressTextColorClass(displayValue);
     
     return {
-      displayScore,
+      displayValue,
       interpretation,
       progressColor,
       colorClass,
@@ -72,7 +72,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           {t("Estimated SIQS", "预估SIQS")}
         </h3>
         <span className={`text-xl font-bold px-2 py-1 rounded ${memoizedValues.textColorClass}`}>
-          {memoizedValues.displayScore.toFixed(1)}
+          {memoizedValues.displayValue.toFixed(1)}
         </span>
       </div>
       
@@ -94,26 +94,35 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         </span>
       </div>
       
-      <div className="mt-6 flex justify-end">
-        <Link 
-          to={`/location/${locationId}`}
-          state={{
-            id: locationId,
-            name: locationName,
-            latitude: latitude,
-            longitude: longitude,
-            siqsResult: {
-              score: memoizedValues.displayScore
-            },
-            timestamp: new Date().toISOString(),
-            fromCalculator: true // Add a flag to indicate source
-          }}
+      <div className="mt-6 flex justify-center">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
         >
-          <Button size="sm" className="bg-primary/80 hover:bg-primary/90 text-primary-foreground transition-all duration-300 hover:shadow-md">
-            {t("See More Details", "查看更多详情")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
+          <Link 
+            to={`/location/${locationId}`}
+            state={{
+              id: locationId,
+              name: locationName,
+              latitude: latitude,
+              longitude: longitude,
+              siqsResult: {
+                score: memoizedValues.displayValue
+              },
+              timestamp: new Date().toISOString(),
+              fromCalculator: true // Add a flag to indicate source
+            }}
+          >
+            <Button 
+              size="md" 
+              className="bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
+            >
+              {t("See More Details", "查看更多详情")}
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </motion.div>
   );
