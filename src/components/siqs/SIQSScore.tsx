@@ -106,7 +106,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           timestamp: new Date().toISOString(),
           fromCalculator: true // Add a flag to indicate source
         }}>
-            <Button size="lg" className="w-full py-6 bg-gradient-to-r from-primary/90 to-primary/70 hover:from-primary hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300 group bg-slate-800 hover:bg-slate-700 text-lime-400">
+            <Button size="lg" className="w-full py-6 bg-gradient-to-r from-primary/90 to-primary/70 hover:from-primary hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300 group bg-slate-800 hover:bg-slate-700 text-gray-50">
               {t("See More Details", "查看更多详情")}
               <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
             </Button>
