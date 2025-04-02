@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Star } from "lucide-react";
+import { MoonStar } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Footer: React.FC = () => {
@@ -12,8 +12,8 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-6 md:mb-0">
-            <Star className="h-6 w-6 text-primary mr-2" />
-            <span className="text-xl font-bold">
+            <MoonStar className="h-6 w-6 text-primary mr-2" />
+            <span className="text-xl font-bold tracking-tight">
               Astro<span className="text-primary">SIQS</span>
             </span>
           </div>
@@ -27,9 +27,6 @@ const Footer: React.FC = () => {
             </Link>
             <Link to="/photo-points" className="text-sm text-foreground/70 hover:text-primary transition-colors">
               {t("Explore Locations", "探索地点")}
-            </Link>
-            <Link to="/community" className="text-sm text-foreground/70 hover:text-primary transition-colors">
-              {t("Community", "社区")}
             </Link>
           </div>
           
