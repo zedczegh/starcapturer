@@ -28,7 +28,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   // AQI display with conditional rendering and enhanced sizing
   const aqiValue = aqi !== undefined ? (
     <>
-      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
+      <span className={`${getAQIColor(aqi)} text-lg font-medium`}>
         {aqi} 
       </span> 
       <span className="text-sm ml-1.5">({getAQIDescription(aqi, t)})</span>
