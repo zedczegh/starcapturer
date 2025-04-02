@@ -1,10 +1,9 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Star, Telescope, Satellite } from "lucide-react";
+import { Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Link } from "react-router-dom";
 
 const HeroContent: React.FC = () => {
   const { t } = useLanguage();
@@ -16,20 +15,6 @@ const HeroContent: React.FC = () => {
           <Star className="h-3.5 w-3.5 mr-1" />
           <span>{t("Stellar Imaging Quality Scores", "恒星成像质量分数")}</span>
         </Badge>
-        
-        <motion.h1 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-white drop-shadow-lg"
-        >
-          <div className="inline-flex items-center">
-            <Satellite className="h-8 w-8 mr-2 text-primary" />
-            <span className="text-gradient-blue">
-              {t("SIQS Calculator", "SIQS计算器")}
-            </span>
-          </div>
-        </motion.h1>
       </div>
     </div>
   );
