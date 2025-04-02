@@ -7,6 +7,11 @@ import { getWeatherData, getBortleScaleData } from "@/services/environmentalData
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { fetchForecastData } from "@/lib/api";
+import { 
+  rawBrightnessToMpsas, 
+  mpsasToBortle,
+  getBortleBasedSIQS
+} from "@/utils/darkSkyMeterUtils";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
@@ -14,7 +19,8 @@ import { fetchForecastForLocation } from "./siqs/forecastFetcher";
 // Extract scoring and normalization logic
 import { 
   normalizeScore, 
-  calculateSIQSWithWeatherData 
+  calculateSIQSWithWeatherData,
+  bortleToSIQSComponent 
 } from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
@@ -39,7 +45,8 @@ export const useSIQSCalculation = (
     seeingConditions: number, 
     setLoading?: (loading: boolean) => void, 
     setStatusMessage?: (message: string | null) => void,
-    language: string = 'en'
+    language: string = 'en',
+    cameraMeasurement: number | null = null
   ) => {
     if (isCalculating) return;
     
@@ -47,6 +54,20 @@ export const useSIQSCalculation = (
     displayOnly ? null : setLoading && setLoading(true);
     
     try {
+      // If we have camera measurement, convert it to MPSAS and Bortle scale
+      let measuredBortleScale = null;
+      let measuredMPSAS = null;
+      
+      if (cameraMeasurement !== null) {
+        measuredMPSAS = rawBrightnessToMpsas(cameraMeasurement);
+        measuredBortleScale = mpsasToBortle(measuredMPSAS);
+        
+        console.log(`Using camera measurement: ${measuredMPSAS.toFixed(2)} MPSAS, Bortle ${measuredBortleScale.toFixed(1)}`);
+        
+        // Prioritize measured Bortle scale over database/estimated values
+        bortleScale = measuredBortleScale;
+      }
+      
       // Get weather data
       const cacheKey = `weather-${lat.toFixed(4)}-${lng.toFixed(4)}`;
       const data = await getWeatherData(
@@ -69,6 +90,15 @@ export const useSIQSCalculation = (
         return;
       }
       
+      // If we have camera measurement, add it to weather data
+      if (measuredMPSAS !== null && measuredBortleScale !== null) {
+        data.skyBrightness = {
+          mpsas: measuredMPSAS,
+          bortleScale: measuredBortleScale,
+          raw: cameraMeasurement
+        };
+      }
+      
       setWeatherData(data);
       
       // Fetch forecast data to get night conditions
@@ -77,23 +107,27 @@ export const useSIQSCalculation = (
         setForecastData(forecastResult);
       }
       
-      // Get Bortle scale data
-      const actualBortleScale = await getBortleScaleData(
-        lat,
-        lng,
-        name,
-        bortleScale,
-        displayOnly,
-        getCachedData,
-        setCachedData,
-        language,
-        setStatusMessage
-      );
-      
-      // Validate Bortle scale before proceeding
-      const validBortleScale = (actualBortleScale < 1 || actualBortleScale > 9 || isNaN(actualBortleScale))
-        ? 5 // Default to moderate value if invalid
-        : actualBortleScale;
+      // If we don't have a camera measurement, get Bortle scale from database/API
+      if (measuredBortleScale === null) {
+        const actualBortleScale = await getBortleScaleData(
+          lat,
+          lng,
+          name,
+          bortleScale,
+          displayOnly,
+          getCachedData,
+          setCachedData,
+          language,
+          setStatusMessage
+        );
+        
+        // Validate Bortle scale before proceeding
+        const validBortleScale = (actualBortleScale < 1 || actualBortleScale > 9 || isNaN(actualBortleScale))
+          ? 5 // Default to moderate value if invalid
+          : actualBortleScale;
+          
+        bortleScale = validBortleScale;
+      }
       
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
@@ -101,7 +135,7 @@ export const useSIQSCalculation = (
       // Calculate SIQS score using utility function
       const siqsResult = await calculateSIQSWithWeatherData(
         data,
-        validBortleScale,
+        bortleScale,
         seeingConditions,
         freshMoonPhase,
         forecastResult
@@ -125,7 +159,7 @@ export const useSIQSCalculation = (
         name: name,
         latitude: lat,
         longitude: lng,
-        bortleScale: validBortleScale,
+        bortleScale: bortleScale,
         seeingConditions,
         weatherData: data,
         siqsResult: {
@@ -135,6 +169,16 @@ export const useSIQSCalculation = (
         moonPhase: freshMoonPhase,
         timestamp: new Date().toISOString(),
       };
+      
+      // If we have camera measurement data, include it
+      if (measuredMPSAS !== null && measuredBortleScale !== null) {
+        locationData.skyBrightness = {
+          mpsas: measuredMPSAS,
+          bortleScale: measuredBortleScale,
+          raw: cameraMeasurement,
+          timestamp: new Date().toISOString()
+        };
+      }
       
       console.log("Navigating to location details with data:", locationData);
       
@@ -151,7 +195,15 @@ export const useSIQSCalculation = (
           name,
           latitude: lat,
           longitude: lng,
-          bortleScale: validBortleScale
+          bortleScale: bortleScale,
+          // Add camera measurement data if available
+          ...(cameraMeasurement !== null ? {
+            skyBrightness: {
+              raw: cameraMeasurement,
+              mpsas: measuredMPSAS,
+              bortleScale: measuredBortleScale
+            }
+          } : {})
         }));
       } catch (e) {
         console.error("Failed to save to localStorage", e);

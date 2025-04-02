@@ -2,24 +2,40 @@
 import { useCallback } from "react";
 import { fetchLightPollutionData } from "@/lib/api";
 import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
+import { cameraBrightnessToBortle, rawBrightnessToMpsas } from "@/utils/darkSkyMeterUtils";
 
 /**
  * Hook for optimized Bortle scale updates with better handling for all Chinese regions
+ * and integration with device-measured sky brightness
  */
 export function useBortleUpdater() {
   /**
    * Updates Bortle scale with proper handling for all Chinese regions
+   * and integration with device measurements
    */
   const updateBortleScale = useCallback(async (
     latitude: number,
     longitude: number,
     locationName: string,
-    existingBortleScale: number | null
+    existingBortleScale: number | null,
+    cameraMeasurement: number | null = null
   ): Promise<number | null> => {
     try {
       // Check if coordinates are valid
       if (!isFinite(latitude) || !isFinite(longitude)) {
         return existingBortleScale;
+      }
+      
+      // Check if we have a direct camera measurement of sky brightness
+      if (cameraMeasurement !== null) {
+        // Convert raw brightness (0-255) to Bortle scale using our enhanced algorithm
+        const measuredBortle = cameraBrightnessToBortle(cameraMeasurement);
+        const mpsas = rawBrightnessToMpsas(cameraMeasurement);
+        
+        console.log(`Using camera-measured sky brightness: ${mpsas.toFixed(2)} MPSAS, Bortle ${measuredBortle.toFixed(1)}`);
+        
+        // Always prioritize direct measurements over database/API values
+        return measuredBortle;
       }
       
       // First check for specific Chinese cities using our comprehensive database

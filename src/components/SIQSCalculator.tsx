@@ -21,13 +21,15 @@ interface SIQSCalculatorProps {
   hideRecommendedPoints?: boolean;
   noAutoLocationRequest?: boolean;
   onSiqsCalculated?: (siqsValue: number | null) => void;
+  cameraMeasurement?: number | null;
 }
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
   className,
   hideRecommendedPoints = false,
   noAutoLocationRequest = false,
-  onSiqsCalculated
+  onSiqsCalculated,
+  cameraMeasurement = null
 }) => {
   const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -36,18 +38,41 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [isMounted, setIsMounted] = useState(false);
   const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
   const [shouldAutoRequest, setShouldAutoRequest] = useState(!noAutoLocationRequest);
+  const [localCameraMeasurement, setLocalCameraMeasurement] = useState<number | null>(cameraMeasurement);
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
+  // When camera measurement is passed in as prop, update local state
+  useEffect(() => {
+    if (cameraMeasurement !== null && cameraMeasurement !== localCameraMeasurement) {
+      setLocalCameraMeasurement(cameraMeasurement);
+      console.log("Camera measurement updated:", cameraMeasurement);
+    }
+  }, [cameraMeasurement, localCameraMeasurement]);
+  
   useEffect(() => {
     if (!isMounted) {
+      // Check for stored camera measurement
+      try {
+        const skyBrightness = localStorage.getItem('sky_brightness_measurement');
+        if (skyBrightness && !cameraMeasurement) {
+          const measurement = JSON.parse(skyBrightness);
+          if (measurement && typeof measurement.value === 'number') {
+            console.log("Using stored camera measurement:", measurement.value);
+            setLocalCameraMeasurement(measurement.value);
+          }
+        }
+      } catch (e) {
+        console.error("Error retrieving sky brightness measurement:", e);
+      }
+      
       const savedLocation = getSavedLocation();
       if (savedLocation) {
         console.log("Found saved location:", savedLocation.name);
         setShouldAutoRequest(false);
       }
     }
-  }, [isMounted]);
+  }, [isMounted, cameraMeasurement]);
   
   useEffect(() => {
     setIsMounted(true);
@@ -172,13 +197,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         seeingConditions,
         undefined,
         setStatusMessage,
-        language as Language
+        language as Language,
+        localCameraMeasurement
       )
       .finally(() => {
         setCalculationInProgress(false);
       });
     }
-  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage, localCameraMeasurement]);
   
   useEffect(() => {
     if (!isMounted || !locationName) return;
@@ -188,7 +214,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }, 500);
     
     return () => clearTimeout(handler);
-  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted, localCameraMeasurement]);
   
   useEffect(() => {
     if (onSiqsCalculated) {

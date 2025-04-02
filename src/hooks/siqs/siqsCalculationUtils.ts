@@ -1,6 +1,11 @@
 
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { 
+  mpsasToBortle, 
+  bortleToMpsas, 
+  getBortleBasedSIQS 
+} from "@/utils/darkSkyMeterUtils";
 
 /**
  * Ensure SIQS value is always on a 0-10 scale
@@ -13,7 +18,7 @@ export const normalizeScore = (score: number): number => {
 };
 
 /**
- * Optimized function to calculate SIQS with weather data
+ * Enhanced function to calculate SIQS with weather data and improved sky quality measurements
  */
 export async function calculateSIQSWithWeatherData(
   weatherData: any,
@@ -22,7 +27,46 @@ export async function calculateSIQSWithWeatherData(
   moonPhase: number,
   forecastData: any | null
 ): Promise<any> {
-  // First try to calculate SIQS using nighttime forecast data
+  // First check if we have camera-based MPSAS measurements from the device
+  const hasMeasuredData = weatherData?.skyBrightness?.mpsas || false;
+  
+  // If we have direct sky measurements, prioritize them
+  if (hasMeasuredData) {
+    // Use measured sky brightness as highest priority
+    const measuredMpsas = weatherData.skyBrightness.mpsas;
+    const measuredBortle = mpsasToBortle(measuredMpsas);
+    
+    console.log(`Using device-measured sky brightness: ${measuredMpsas} MPSAS (Bortle ${measuredBortle.toFixed(1)})`);
+    
+    // Override the provided Bortle scale with the measured one
+    bortleScale = measuredBortle;
+    
+    // Calculate SIQS using the measured Bortle scale
+    const cameraSIQS = getBortleBasedSIQS(measuredBortle, weatherData.cloudCover);
+    
+    // If we have a valid SIQS from camera, return it with the factors
+    if (cameraSIQS > 0) {
+      return {
+        score: cameraSIQS,
+        isViable: cameraSIQS >= 4.0,
+        factors: [
+          {
+            name: "Sky Brightness",
+            score: 10 - (measuredBortle - 1) * (10/8),
+            description: `Measured sky brightness: ${measuredMpsas.toFixed(2)} MPSAS (Bortle ${measuredBortle.toFixed(1)})`
+          },
+          {
+            name: "Cloud Cover",
+            score: 10 - (weatherData.cloudCover / 10),
+            description: `Cloud cover: ${weatherData.cloudCover}%`
+          }
+        ],
+        method: "camera-measurement"
+      };
+    }
+  }
+
+  // Try to calculate SIQS using nighttime forecast data if no direct measurement
   if (forecastData && forecastData.hourly) {
     try {
       const locationWithWeather = {
@@ -35,7 +79,10 @@ export async function calculateSIQSWithWeatherData(
       const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
       if (nighttimeSIQS) {
         console.log("Using nighttime forecast for SIQS calculation:", nighttimeSIQS.score);
-        return nighttimeSIQS;
+        return {
+          ...nighttimeSIQS,
+          method: "forecast-based"
+        };
       }
     } catch (error) {
       console.error("Error calculating nighttime SIQS:", error);
@@ -44,7 +91,7 @@ export async function calculateSIQSWithWeatherData(
   
   // Fall back to standard calculation if nighttime calculation failed
   console.log("Falling back to standard SIQS calculation");
-  return calculateSIQS({
+  const standardSIQS = calculateSIQS({
     cloudCover: weatherData.cloudCover,
     bortleScale,
     seeingConditions,
@@ -55,6 +102,11 @@ export async function calculateSIQSWithWeatherData(
     weatherCondition: weatherData.weatherCondition,
     aqi: weatherData.aqi
   });
+  
+  return {
+    ...standardSIQS,
+    method: "standard"
+  };
 }
 
 /**
@@ -114,4 +166,32 @@ export function formatSIQSScoreForDisplay(value: number): string {
   
   // Always show one decimal place
   return value.toFixed(1);
+}
+
+/**
+ * Convert Bortle scale to a standardized SIQS component
+ * This ensures consistent SIQS calculations from Bortle values
+ */
+export function bortleToSIQSComponent(bortleScale: number): number {
+  // Bortle scale is 1-9, with 1 being best (darkest)
+  // SIQS is 0-10, with 10 being best
+  
+  // Ensure valid Bortle value
+  const validBortle = Math.min(9, Math.max(1, bortleScale));
+  
+  // Non-linear conversion to prioritize darker skies
+  // Bortle 1-3 (dark) get high SIQS values (8-10)
+  // Bortle 4-6 (moderate) get medium SIQS values (4-7)
+  // Bortle 7-9 (bright) get low SIQS values (0-3)
+  
+  if (validBortle <= 3) {
+    // Dark skies (high quality)
+    return 10 - (validBortle - 1) * 0.7;
+  } else if (validBortle <= 6) {
+    // Moderate light pollution
+    return 7.9 - (validBortle - 3) * 1.3;
+  } else {
+    // Heavy light pollution
+    return 4 - (validBortle - 6) * 1.3;
+  }
 }
