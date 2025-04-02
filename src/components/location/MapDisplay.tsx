@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 
 // Lazy load the Leaflet map component to improve initial page load
-const LazyMapComponent = lazy(() => import('./map/LazyMapComponent').then(module => ({ default: module.default })));
+const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
 
 interface MapDisplayProps {
   position: [number, number];

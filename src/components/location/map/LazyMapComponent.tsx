@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,6 +13,27 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
+
+// Map Events component to handle click events
+const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    };
+    
+    map.on('click', handleClick);
+    
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onMapClick]);
+  
+  return null;
+};
 
 interface LazyMapComponentProps {
   position: [number, number];
@@ -38,14 +59,14 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   const { t } = useLanguage();
   
   // Call the onMapReady callback when the component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     onMapReady();
   }, [onMapReady]);
 
   // Handle map click events
-  const handleMapClick = React.useCallback((e: L.LeafletMouseEvent) => {
+  const handleMapClick = useCallback((lat: number, lng: number) => {
     if (editable) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
+      onMapClick(lat, lng);
     }
   }, [editable, onMapClick]);
 
@@ -56,7 +77,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       scrollWheelZoom={false}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       whenReady={() => onMapReady()}
-      onClick={handleMapClick}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -82,6 +102,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           </div>
         </Popup>
       </Marker>
+      
+      {/* Add MapEvents component to handle clicks */}
+      {editable && <MapEvents onMapClick={handleMapClick} />}
     </MapContainer>
   );
 };
