@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
@@ -249,7 +250,7 @@ const AboutSIQS = () => {
       },
       { 
         category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Weather" : "气��", 
+        subcategory: language === 'en' ? "Weather" : "气象", 
         name: language === 'en' ? "Historical Weather Query" : "历史天气查询", 
         url: "https://lishi.tianqi.com/" 
       },
@@ -600,6 +601,18 @@ const AboutSIQS = () => {
     <>
       <NavBar />
       <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 text-gradient-blue">
+            {t("About SIQS", "关于SIQS")}
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            {t(
+              "Learn more about the Sky Imaging Quality Score and related resources for astrophotography.",
+              "了解更多关于天空成像质量评分以及天文摄影相关资源。"
+            )}
+          </p>
+        </div>
+        
         <Tabs defaultValue="siqs" className="mb-12">
           <TabsList className="mb-6 bg-cosmic-800/50 backdrop-blur-sm border border-cosmic-700/30">
             <TabsTrigger value="siqs" className="data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground">
