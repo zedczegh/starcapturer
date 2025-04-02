@@ -513,7 +513,7 @@ const AboutSIQS = () => {
               <TabsTrigger value="siqs" className="data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground text-sm px-[30px] py-[2px]">
                 {t("What is SIQS?", "什么是SIQS？")}
               </TabsTrigger>
-              <TabsTrigger value="darksky" className="data-[state=active]:text-primary-foreground text-sm px-[30px] text-center bg-gray-900 hover:bg-gray-800 py-[2px]">
+              <TabsTrigger value="darksky" className="text-sm px-[30px] text-center bg-gray-900 hover:bg-gray-800 py-[2px] text-green-400">
                 {t("Dark Sky Knowledge", "暗夜知识")}
               </TabsTrigger>
               <TabsTrigger value="links" className="data-[state=active]:text-primary-foreground text-sm px-[30px] font-semibold bg-cyan-950 hover:bg-cyan-800 py-[2px]">
