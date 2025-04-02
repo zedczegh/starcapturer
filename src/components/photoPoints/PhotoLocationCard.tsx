@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -31,7 +32,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [locationCounter] = useState(() => {
+    // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
+      // Get or set a counter for potential dark sites
       const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
       const newCounter = storedCounter + 1;
       localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
@@ -40,6 +43,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
+  // Format the distance for display
   const formatDistance = (distance?: number) => {
     if (!distance) return t("Unknown distance", "未知距离");
     
@@ -54,6 +58,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
   };
   
+  // Format the date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     
@@ -69,6 +74,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   };
   
+  // Load real-time SIQS data if requested
   useEffect(() => {
     if (showRealTimeSiqs && location.latitude && location.longitude) {
       const fetchSiqs = async () => {
@@ -80,9 +86,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             location.bortleScale || 5
           );
           
+          // Only update if SIQS is greater than 0
           if (result.siqs > 0) {
             setRealTimeSiqs(result.siqs);
           } else {
+            // If we got a zero score, hide this card
             setRealTimeSiqs(0);
           }
         } catch (error) {
@@ -96,26 +104,33 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [location, showRealTimeSiqs]);
 
+  // If we have a real-time SIQS of 0, don't render this card
   if (realTimeSiqs === 0) {
     return null;
   }
 
+  // Get display name based on language and location type
   let displayName;
   
+  // If it's a calculated location, use the "Potential ideal dark site" format
   if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
     displayName = language === 'en' 
       ? `Potential ideal dark site ${locationCounter}`
       : `潜在理想暗夜地点 ${locationCounter}`;
   } else {
+    // Otherwise use the provided name
     displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   }
   
+  // Get SIQS score to display (real-time or stored)
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
   
+  // If the SIQS score is 0 and we're not currently loading, don't render
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
+  // Determine certification icon and details
   const getCertificationInfo = () => {
     if (!location.certification && !location.isDarkSkyReserve) {
       return null;
@@ -157,6 +172,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   };
   
   const handleViewDetails = () => {
+    // Prepare location data for details page
     const locationData = {
       id: location.id || `calc-loc-${Date.now()}`,
       name: displayName,
@@ -169,11 +185,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       certification: location.certification
     };
     
+    // Save to localStorage to ensure proper refresh handling
     saveLocationFromPhotoPoints(locationData);
     
+    // Navigate to location details with state
     navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
   };
   
+  // Animation variants - reduced for mobile
   const cardVariants = {
     hidden: { opacity: 0, y: isMobile ? 10 : 20 },
     visible: { 
@@ -197,6 +216,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
         
+        {/* SIQS Score Badge */}
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-full border border-yellow-500/40">
           {loadingSiqs ? (
             <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -209,6 +229,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         </div>
       </div>
       
+      {/* Certification Badge - Now BELOW the SIQS score */}
       {certInfo && (
         <div className="mb-3 mt-1.5">
           <Badge variant="outline" className={`${certInfo.color} px-2.5 py-1.5 rounded-full flex items-center`}>
@@ -218,6 +239,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         </div>
       )}
       
+      {/* Light pollution indicator with larger text */}
       <div className="mb-4 mt-2">
         <LightPollutionIndicator 
           bortleScale={location.bortleScale || 5} 
