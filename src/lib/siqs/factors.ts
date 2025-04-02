@@ -1,3 +1,4 @@
+
 /**
  * Factor score calculation functions for SIQS
  */
@@ -14,17 +15,13 @@ export function calculateCloudScore(cloudCover: number): number {
     return 100;
   }
   
-  // Improved scaling for cloud cover:
-  // 0-25% cloud cover: Score ranges from 100-70 (more generous for light cloud)
-  // 25-50% cloud cover: Score ranges from 70-0 (steeper penalty for heavier cloud)
-  if (cloudCover <= 25) {
-    return 100 - (30 * cloudCover / 25); // Gentle slope: 0% -> 100, 25% -> 70
-  } else if (cloudCover <= 50) {
-    return 70 - (70 * (cloudCover - 25) / 25); // Steeper slope: 25% -> 70, 50% -> 0
-  }
+  // If cloud cover is above 50%, score should be very low
+  if (cloudCover > 50) return 0;
   
-  // If cloud cover is above 50%, score should be 0
-  return 0;
+  // Otherwise, linear scale from 0-50%
+  // 0% cloud cover should be 100 points
+  // 50% cloud cover should be 0 points
+  return Math.max(0, 100 - (cloudCover * 2));
 }
 
 export function calculateLightPollutionScore(bortleScale: number): number {

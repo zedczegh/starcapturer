@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLocationFind } from './useLocationFind';
@@ -33,11 +34,11 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   // Get current SIQS score from the store
   const currentSiqs = currentSiqsStore.getScore();
   
-  // Extract location finding logic with parallel processing
+  // Extract location finding logic
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
   
-  // Function to load locations with optimized parallel processing
+  // Function to load locations
   const loadLocations = useCallback(async () => {
     if (!userLocation) {
       return;
@@ -58,85 +59,57 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       
       console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease}`);
       
-      // Store previous locations if we're increasing radius
-      let existingLocations: SharedAstroSpot[] = [];
-      if (isRadiusIncrease) {
-        existingLocations = [...previousLocationsRef.current];
-        console.log(`Preserving ${existingLocations.length} existing locations`);
-      }
+      // Get all locations within radius
+      const results = await findLocationsWithinRadius(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius
+      );
       
-      // Perform parallel API calls for faster loading
-      const [existingResults, calculatedResults] = await Promise.all([
-        // Get existing database locations
-        findLocationsWithinRadius(
-          userLocation.latitude,
-          userLocation.longitude,
-          searchRadius
-        ),
-        // Simultaneously find calculated locations
-        findCalculatedLocations(
+      if (results.length === 0) {
+        console.log("No locations found, trying to find calculated locations...");
+        // If no results at all, try to find some calculated locations
+        const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
           Math.min(searchRadius * 1.5, 10000),
           true, // Allow expansion
           10,  // Limit
           isRadiusIncrease, // Preserve previous locations if radius increased
-          existingLocations
-        )
-      ]);
-      
-      // Combine all results, ensuring we don't have duplicates
-      let combinedResults: SharedAstroSpot[] = [];
-      
-      // Add existing database results
-      if (existingResults.length > 0) {
-        combinedResults = [...existingResults];
-      }
-      
-      // Add calculated results, ensuring no duplicates by coordinates
-      if (calculatedResults.length > 0) {
-        const existingCoords = new Set(combinedResults.map(loc => 
-          `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
-        ));
+          isRadiusIncrease ? previousLocationsRef.current : []
+        );
         
-        calculatedResults.forEach(loc => {
-          const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
-          if (!existingCoords.has(coordKey)) {
-            combinedResults.push(loc);
-            existingCoords.add(coordKey);
+        if (calculatedResults.length > 0) {
+          // Sort by quality and distance
+          const sortedResults = sortLocationsByQuality(calculatedResults);
+          setLocations(sortedResults);
+          previousLocationsRef.current = sortedResults;
+          setHasMore(sortedResults.length >= 20);
+          setCanLoadMoreCalculated(true);
+          setLoadMoreClickCount(0); // Reset click counter
+          
+          // If we preserved locations, show a notification
+          if (isRadiusIncrease && previousLocationsRef.current.length > 0) {
+            toast.info(t(
+              "Search radius increased, previous locations preserved",
+              "搜索半径已增加，保留了之前的位置"
+            ));
           }
-        });
-      }
-      
-      // If we're increasing radius, make sure we're preserving previous locations
-      if (isRadiusIncrease && existingLocations.length > 0) {
-        const existingCoords = new Set(combinedResults.map(loc => 
-          `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
-        ));
-        
-        existingLocations.forEach(loc => {
-          const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
-          if (!existingCoords.has(coordKey)) {
-            combinedResults.push(loc);
-            existingCoords.add(coordKey);
-          }
-        });
-      }
-      
-      // Sort by quality and distance
-      const sortedResults = sortLocationsByQuality(combinedResults);
-      setLocations(sortedResults);
-      previousLocationsRef.current = sortedResults;
-      setHasMore(sortedResults.length >= 20);
-      setCanLoadMoreCalculated(true);
-      setLoadMoreClickCount(0); // Reset click counter
-      
-      // If we preserved locations, show a notification
-      if (isRadiusIncrease && existingLocations.length > 0) {
-        toast.info(t(
-          "Search radius increased, previous locations preserved",
-          "搜索半径已增加，保留了之前的位置"
-        ));
+        } else {
+          setLocations([]);
+          previousLocationsRef.current = [];
+          setHasMore(false);
+          setCanLoadMoreCalculated(false);
+        }
+      } else {
+        // For standard locations, we always apply the full algorithm
+        // Sort by quality and distance
+        const sortedResults = sortLocationsByQuality(results);
+        setLocations(sortedResults);
+        previousLocationsRef.current = sortedResults;
+        setHasMore(sortedResults.length >= 20);
+        setCanLoadMoreCalculated(true);
+        setLoadMoreClickCount(0); // Reset click counter
       }
       
       setPage(1);
@@ -146,14 +119,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         "Failed to load recommended locations. Please try again.",
         "加载推荐位置失败。请重试。"
       ));
-      
-      // On error, still keep existing locations
-      if (previousLocationsRef.current.length > 0) {
-        setLocations(previousLocationsRef.current);
-      } else {
-        setLocations([]);
-      }
-      
+      setLocations([]);
       setHasMore(false);
       setCanLoadMoreCalculated(false);
     } finally {
