@@ -204,24 +204,25 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         ))}
       </motion.div>
       
-      {/* New button for loading more calculated locations */}
+      {/* Enhanced Load More Calculated Locations button */}
       {showLoadMoreCalc && (
         <div className="flex justify-center mt-8">
           <Button 
             variant="default" 
             onClick={handleLoadMoreCalculated}
             disabled={loadingCalculated}
-            className="group sci-fi-btn bg-cosmic-700/80 hover:bg-cosmic-600/90 transition-all duration-300"
+            className="group sci-fi-btn bg-cosmic-700/80 hover:bg-cosmic-600/90 transition-all duration-300 py-2.5"
+            size="lg"
           >
             {loadingCalculated ? (
               <>
                 {t("Finding Locations...", "正在查找位置...")}
-                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                <Loader2 className="ml-2.5 h-5 w-5 animate-spin" />
               </>
             ) : (
               <>
                 {t("Find More Locations", "查找更多位置")}
-                <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <Calculator className="ml-2.5 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </>
             )}
           </Button>
@@ -238,20 +239,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
           >
             {t("Load More Locations", "加载更多位置")}
             <Calculator className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
-        </div>
-      )}
-      
-      {onRefresh && (
-        <div className="flex justify-center mt-4">
-          <Button 
-            variant="ghost" 
-            onClick={onRefresh}
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-primary"
-          >
-            <RefreshCw className="mr-1.5 h-3 w-3" />
-            {t("Refresh with new SIQS data", "使用新的SIQS数据刷新")}
           </Button>
         </div>
       )}

@@ -53,8 +53,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: limit + 5, // Request more to ensure we have enough even after filtering
-    initialLoadDelay: 500 // Shorter delay for faster initial load
+    maxInitialResults: limit + 5 // Request more to ensure we have enough even after filtering
   });
 
   // Mark as initialized after initial load and save to cache
@@ -152,9 +151,9 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           {limitedLocations.map((location, index) => (
             <motion.div
               key={`${location.id || location.latitude}-${location.longitude}`}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: index * 0.05 }} // Faster animations
+              transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
             >
               <PhotoPointCard
                 point={location}

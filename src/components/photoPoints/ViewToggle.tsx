@@ -24,7 +24,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   const { t } = useLanguage();
   
   return (
-    <div className="flex items-center justify-center bg-cosmic-900/40 rounded-lg p-1 max-w-sm mx-auto">
+    <div className="flex items-center justify-center bg-cosmic-900/40 rounded-lg p-1.5 max-w-sm mx-auto gap-3">
       <Toggle
         variant="outline"
         pressed={activeView === 'certified'}
@@ -36,8 +36,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
             : 'bg-transparent hover:bg-cosmic-800/40'
         }`}
       >
-        <Award className="h-4 w-4 text-blue-400" />
-        {t("Certified", "认证地点")}
+        <Award className="h-4.5 w-4.5 text-blue-400" />
+        <span className="text-sm">{t("Certified", "认证地点")}</span>
         <span className="ml-1 text-xs text-muted-foreground">
           ({certifiedCount})
         </span>
@@ -57,8 +57,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
             : 'bg-transparent hover:bg-cosmic-800/40'
         }`}
       >
-        <Calculator className="h-4 w-4 text-yellow-400" />
-        {t("Calculated", "计算地点")}
+        <Calculator className="h-4.5 w-4.5 text-yellow-400" />
+        <span className="text-sm">{t("Calculated", "计算地点")}</span>
         <span className="ml-1 text-xs text-muted-foreground">
           ({calculatedCount})
         </span>

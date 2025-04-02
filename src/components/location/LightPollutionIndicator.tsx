@@ -34,8 +34,8 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   // Enhanced size classes for more dynamic appearance
   const sizeClass = {
     sm: 'h-5 w-5 text-xs',
-    md: 'h-6 w-6 text-sm',
-    lg: 'h-7 w-7 text-base'
+    md: 'h-7 w-7 text-sm',
+    lg: 'h-8 w-8 text-base'
   }[size];
   
   const description = getBortleScaleDescription(bortleScale);
@@ -53,12 +53,12 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
           <div 
             className={cn(
               "rounded-full mr-2 flex items-center justify-center border shadow-sm", 
-              "h-5 w-5",
+              "h-6 w-6",
               colorBg,
               colorBorder
             )}
           >
-            <span className={cn("font-bold text-[0.8em]", colorText)}>
+            <span className={cn("font-bold text-[0.85em]", colorText)}>
               {formatBortleScale(bortleScale)}
             </span>
           </div>
@@ -81,7 +81,7 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
         )}
       >
         {showBortleNumber && (
-          <span className={cn("font-bold", colorText)}>
+          <span className={cn("font-bold text-[0.95em]", colorText)}>
             {formatBortleScale(bortleScale)}
           </span>
         )}

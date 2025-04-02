@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/lib/api';
@@ -42,10 +43,17 @@ export const useCalculatedLocationsFind = () => {
             if (result.isViable && result.siqs > 2) {
               return {
                 ...point,
+                id: `calc-loc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 siqs: result.siqs,
                 isViable: result.isViable,
-                distance: calculateDistance(latitude, longitude, point.latitude, point.longitude)
-              };
+                distance: calculateDistance(latitude, longitude, point.latitude, point.longitude),
+                timestamp: new Date().toISOString(),
+                date: new Date().toISOString(),
+                certification: '',
+                chineseName: '',
+                description: '',
+                isDarkSkyReserve: false
+              } as SharedAstroSpot;
             }
             return null;
           } catch (error) {
@@ -85,8 +93,8 @@ export const useCalculatedLocationsFind = () => {
   }, []);
 
   // Generate a grid of points around the given coordinates
-  const generateGridPoints = (latitude: number, longitude: number, radius: number): SharedAstroSpot[] => {
-    const points: SharedAstroSpot[] = [];
+  const generateGridPoints = (latitude: number, longitude: number, radius: number): Partial<SharedAstroSpot>[] => {
+    const points: Partial<SharedAstroSpot>[] = [];
     // Increase grid density for better coverage
     const gridSize = Math.min(6, Math.ceil(radius / 80)); 
     
@@ -113,7 +121,9 @@ export const useCalculatedLocationsFind = () => {
           name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`,
           latitude: lat,
           longitude: lon,
-          bortleScale: estimatedBortle
+          bortleScale: estimatedBortle,
+          id: `calc-loc-${Date.now()}-${i}-${j}`,
+          timestamp: new Date().toISOString()
         });
       }
     }
@@ -121,7 +131,7 @@ export const useCalculatedLocationsFind = () => {
     return points;
   };
 
-  // Fix function implementation where the type error occurs
+  // Convert to proper AstroSpot
   const convertToAstroSpot = (location: any): SharedAstroSpot => {
     return {
       id: location.id || `calc-loc-${Date.now()}`, // Generate id if none exists

@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
@@ -88,73 +89,29 @@ export async function findBestViewingLocations(
       return point;
     });
     
-    const sortedByDistance = [...pointsWithDistance].sort((a, b) => 
-      (a.distance || 0) - (b.distance || 0)
+    const sortedByDistance = pointsWithDistance.sort((a, b) => 
+      (a.distance || Infinity) - (b.distance || Infinity)
     );
     
-    const candidateLimit = Math.min(25, sortedByDistance.length);
-    const candidateLocations = sortedByDistance.slice(0, candidateLimit);
+    // Limit the number of locations to process for performance
+    const locationsToProcess = sortedByDistance.slice(0, limit * 3);
     
-    console.log(`Selected ${candidateLocations.length} candidate locations for SIQS calculation`);
+    // Calculate SIQS for each location
+    const locationsWithSiqs = await batchCalculateSiqs(locationsToProcess);
     
-    const locationsNeedingSIQS = [];
-    const locationsWithSiqs = [];
+    // Sort by SIQS (highest first) and limit to requested number
+    const sortedLocations = locationsWithSiqs
+      .filter(loc => loc.siqs > 0)
+      .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
+      .slice(0, limit);
     
-    for (const location of candidateLocations) {
-      const locKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-      const existingLocation = allDiscoveredLocations.get(locKey);
-      
-      if (existingLocation && 
-          existingLocation.siqs !== undefined && 
-          existingLocation.isViable !== undefined) {
-        locationsWithSiqs.push({
-          ...location,
-          siqs: existingLocation.siqs,
-          isViable: existingLocation.isViable,
-          siqsFactors: existingLocation.siqsFactors
-        });
-      } else {
-        locationsNeedingSIQS.push(location);
-      }
-    }
-    
-    console.log(`Reusing SIQS data for ${locationsWithSiqs.length} locations, calculating for ${locationsNeedingSIQS.length} new locations`);
-    
-    let newLocationsWithSiqs = [];
-    if (locationsNeedingSIQS.length > 0) {
-      newLocationsWithSiqs = await batchCalculateSiqs(locationsNeedingSIQS);
-      
-      newLocationsWithSiqs.forEach(location => {
-        const locKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-        allDiscoveredLocations.set(locKey, location);
-      });
-    }
-    
-    const allLocationsWithSiqs = [...locationsWithSiqs, ...newLocationsWithSiqs];
-    
-    const viableLocations = allLocationsWithSiqs
-      .filter(loc => loc.siqs > 3.0)
-      .sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
-    
-    const resultLocations = viableLocations.length > 0 
-      ? viableLocations 
-      : allLocationsWithSiqs.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
-    
+    // Update cache
     locationCache.set(cacheKey, {
-      locations: resultLocations,
+      locations: sortedLocations,
       timestamp: Date.now()
     });
     
-    if (viableLocations.length === 0) {
-      console.log("No viable viewing locations found, returning best available");
-      return allLocationsWithSiqs
-        .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
-        .slice(0, limit);
-    }
-    
-    console.log(`Found ${viableLocations.length} viable viewing locations`);
-    
-    return viableLocations.slice(0, limit);
+    return sortedLocations;
   } catch (error) {
     console.error("Error finding best viewing locations:", error);
     return [];
@@ -162,64 +119,32 @@ export async function findBestViewingLocations(
 }
 
 /**
- * Get a list of locations with good SIQS scores within maximum range
- * This is used as a fallback when no good locations are found nearby
+ * Find the nearest dark sky reserves or parks
+ * @param userLat User's latitude
+ * @param userLng User's longitude
+ * @param radius Search radius in km
+ * @param limit Maximum number of locations to return
+ * @returns Promise resolving to array of dark sky locations
  */
-export async function getFallbackLocations(
+export async function findNearestDarkSkyLocations(
   userLat: number,
   userLng: number,
-  maxRange: number = 10000
+  radius: number,
+  limit: number = 5
 ): Promise<SharedAstroSpot[]> {
   try {
-    console.log(`Finding fallback locations within ${maxRange}km radius`);
-    
-    const cacheKey = `fallback-${userLat.toFixed(2)}-${userLng.toFixed(2)}-${maxRange}`;
-    
-    const cachedData = locationCache.get(cacheKey);
-    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_LIFETIME) {
-      console.log(`Using cached fallback locations`);
-      return cachedData.locations;
-    }
-    
-    const points = await findLocationsWithinRadius(
-      userLat,
-      userLng, 
-      maxRange,
-      false
-    );
-    
-    if (!points || points.length === 0) {
-      return [];
-    }
-    
-    const sortedByDistance = [...points]
-      .sort((a, b) => (b.distance || 0) - (a.distance || 0))
-      .slice(0, 15);
-    
-    const locationsWithSiqs = await batchCalculateSiqs(sortedByDistance);
-    
-    const result = locationsWithSiqs
-      .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
-      .slice(0, 9);
-    
-    locationCache.set(cacheKey, {
-      locations: result,
-      timestamp: Date.now()
-    });
-    
-    return result;
+    // Use the bestViewingLocations function with certifiedOnly=true
+    return findBestViewingLocations(userLat, userLng, radius, limit, true);
   } catch (error) {
-    console.error("Error finding fallback locations:", error);
+    console.error("Error finding nearest dark sky locations:", error);
     return [];
   }
 }
 
+/**
+ * Clear the location cache for testing or debugging
+ */
 export function clearLocationCache(): void {
-  const cacheSize = locationCache.size;
   locationCache.clear();
-  console.log(`Location cache cleared (${cacheSize} entries removed)`);
-}
-
-export function getLocationCacheSize(): number {
-  return locationCache.size;
+  console.log("Location cache cleared");
 }

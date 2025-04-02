@@ -41,13 +41,13 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   return (
     <div className="space-y-7">
       <ConditionItem
-        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} size="md" />}
+        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
         label={t("Cloud Cover", "云层覆盖")}
         value={<span className="text-base font-medium">{cloudCover}%</span>}
       />
       
       <ConditionItem
-        icon={<DynamicMoonIcon phase={moonPhase} size="md" />}
+        icon={<DynamicMoonIcon phase={moonPhase} />}
         label={t("Moon Phase", "月相")}
         value={<span className="text-base font-medium">{moonPhase}</span>}
       />
@@ -61,7 +61,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       )}
       
       <ConditionItem
-        icon={<DynamicLightbulbIcon bortleScale={bortleScale} size="md" />}
+        icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
         label={t("Bortle Scale", "光污染等级")}
         value={<span className="text-base font-medium">{bortleValue}</span>}
         tooltip={bortleScale === null ? (language === 'en' ? 
