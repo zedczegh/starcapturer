@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -14,7 +15,6 @@ import { getLocationNameForCoordinates } from "./location/map/LocationNameServic
 import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
 import { motion } from "framer-motion";
 import { currentSiqsStore } from './index/CalculatorSection';
-import { useSIQSCalculatorLogic } from "@/hooks/siqs/useSIQSCalculatorLogic";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -41,13 +41,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const [localCameraMeasurement, setLocalCameraMeasurement] = useState<number | null>(cameraMeasurement);
   
   const { setCachedData, getCachedData } = useLocationDataCache();
-  
-  // Use our new hook for SIQS calculation logic
-  const {
-    isCalculating,
-    siqsScore,
-    calculateSIQSForLocation
-  } = useSIQSCalculatorLogic({ setCachedData, getCachedData });
   
   // When camera measurement is passed in as prop, update local state
   useEffect(() => {
@@ -120,13 +113,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       setLocalBortleScale(bortleScale);
     }
   }, [bortleScale]);
+
+  const {
+    isCalculating,
+    siqsScore,
+    calculateSIQSForLocation
+  } = useSIQSCalculation(setCachedData, getCachedData);
   
   useEffect(() => {
-    setCalculationInProgress(isCalculating);
-  }, [isCalculating]);
-  
-  useEffect(() => {
-    if (!isMounted || !locationName || !latitude || !longitude) return;
+    if (!isMounted || !latitude || !longitude || !locationName) return;
     
     if (locationName === "北京" || locationName === "Beijing") return;
     
@@ -154,6 +149,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     
     updateLocationNameForLanguage();
   }, [language, latitude, longitude, locationName, setCachedData, getCachedData, setLocationName, isMounted]);
+  
+  useEffect(() => {
+    setCalculationInProgress(isCalculating);
+  }, [isCalculating]);
   
   useEffect(() => {
     if (!isMounted || !locationName || !latitude || !longitude) return;

@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
-import useDebounce from "@/hooks/useDebounce";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "@/contexts/LocationContext";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
@@ -71,24 +70,14 @@ export function useSIQSCalculation({
     retry: false,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    meta: {
-      onSuccess: (data: any) => {
-        setWeatherData(data?.weatherData || null);
-        setForecastData(data?.forecastData || null);
-      },
-      onError: (error: any) => {
-        console.error("Error fetching weather data:", error);
-      }
+    onSuccess: (data) => {
+      setWeatherData(data?.weatherData || null);
+      setForecastData(data?.forecastData || null);
+    },
+    onError: (error) => {
+      console.error("Error fetching weather data:", error);
     }
   });
-  
-  // Handle the onSuccess and onError effects manually
-  useEffect(() => {
-    if (weatherQueryData) {
-      setWeatherData(weatherQueryData?.weatherData || null);
-      setForecastData(weatherQueryData?.forecastData || null);
-    }
-  }, [weatherQueryData]);
   
   /**
    * Updates the sky brightness measurement and saves it to local storage
