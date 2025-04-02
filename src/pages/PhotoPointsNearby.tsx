@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useLocationSync } from '@/hooks/location/useLocationSync';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
 import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
@@ -23,23 +22,9 @@ const PhotoPointsNearby: React.FC = () => {
   });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
-  
-  // Get synced location from homepage
-  const { syncedLocation, hasSyncedLocation } = useLocationSync();
-  
-  // Use synced location if available, otherwise use geolocation
-  const userLocation = useMemo(() => {
-    if (syncedLocation) {
-      console.log("Using synced location:", syncedLocation);
-      return syncedLocation;
-    }
-    
-    if (coords) {
-      return { latitude: coords.latitude, longitude: coords.longitude };
-    }
-    
-    return null;
-  }, [syncedLocation, coords]);
+
+  // Get user location from coordinates
+  const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
   // Set up recommended locations with userLocation
   const {
@@ -55,7 +40,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks,
-    currentSiqs
+    currentSiqs // Get currentSiqs from the hook
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -88,10 +73,10 @@ const PhotoPointsNearby: React.FC = () => {
 
   // Call getUserLocation when the component mounts
   useEffect(() => {
-    if (!userLocation && !hasSyncedLocation) {
+    if (!userLocation) {
       getPosition();
     }
-  }, [getPosition, userLocation, hasSyncedLocation]);
+  }, [getPosition, userLocation]);
 
   // Mark initial load as complete after everything is loaded
   useEffect(() => {
