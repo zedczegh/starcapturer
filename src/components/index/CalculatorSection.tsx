@@ -1,8 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
+import { publishLocationUpdate } from '@/services/locationSyncService';
 
 // Create a global object to store the current SIQS score
 export const currentSiqsStore = {
@@ -38,6 +39,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 }) => {
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getScore());
+  const [latestLocation, setLatestLocation] = useState<any>(null);
   
   // Define animations
   const containerVariants = {
@@ -66,9 +68,24 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   };
   
   // Update current SIQS score when calculated
-  const handleSiqsCalculated = (score: number | null) => {
+  const handleSiqsCalculated = (score: number | null, locationData?: any) => {
     setCurrentSiqs(score);
     currentSiqsStore.setScore(score);
+    
+    // If we have location data, publish it for other components
+    if (locationData && locationData.latitude && locationData.longitude) {
+      // Publish the location update so other components can sync
+      publishLocationUpdate({
+        name: locationData.name || 'Unknown Location',
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        timestamp: new Date().toISOString(),
+        source: 'calculator'
+      });
+      
+      // Store the latest location
+      setLatestLocation(locationData);
+    }
   };
   
   return (

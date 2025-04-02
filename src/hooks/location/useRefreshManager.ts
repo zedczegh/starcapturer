@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * Hook to manage refresh state for location data
  * Ensures only one refresh when the location details page is opened
+ * and properly handles location changes
  */
 export function useRefreshManager(locationData: any) {
   const [shouldRefresh, setShouldRefresh] = useState(false);
   const refreshedRef = useRef(false);
   const locationSignatureRef = useRef<string | null>(null);
   const pageLoadRefreshedRef = useRef(false);
+  const forceRefreshRef = useRef(false);
   
   // Calculate a unique signature for this location
   const getLocationSignature = () => {
@@ -28,12 +30,15 @@ export function useRefreshManager(locationData: any) {
       // Location has changed significantly
       (currentSignature && currentSignature !== locationSignatureRef.current) ||
       // Coming from PhotoPoints page (special case)
-      (locationData?.fromPhotoPoints === true)
+      (locationData?.fromPhotoPoints === true) ||
+      // Force refresh requested
+      forceRefreshRef.current
     ) {
-      console.log("Refresh triggered: new location or initial page load");
+      console.log("Refresh triggered: new location, initial page load, or force refresh");
       locationSignatureRef.current = currentSignature;
       setShouldRefresh(true);
       pageLoadRefreshedRef.current = true;
+      forceRefreshRef.current = false;
     }
   }, [locationData]);
   
@@ -41,6 +46,12 @@ export function useRefreshManager(locationData: any) {
   const markRefreshComplete = () => {
     refreshedRef.current = true;
     setShouldRefresh(false);
+  };
+  
+  // Function to force a refresh regardless of state
+  const forceRefresh = () => {
+    forceRefreshRef.current = true;
+    setShouldRefresh(true);
   };
   
   // Function to reset page load refresh flag (for testing purposes)
@@ -51,6 +62,7 @@ export function useRefreshManager(locationData: any) {
   return {
     shouldRefresh,
     markRefreshComplete,
+    forceRefresh,
     resetPageLoadFlag
   };
 }

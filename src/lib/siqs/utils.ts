@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for SIQS (Stellar Imaging Quality Score)
  */
@@ -14,6 +15,15 @@ export function siqsToColor(score: number): string {
   if (score >= 2) return "#F59E0B"; // amber-500 - Moderate
   if (score >= 1) return "#F97316"; // orange-500 - Poor
   return "#EF4444"; // red-500 - Very Poor
+}
+
+/**
+ * Get a random score between 1.1 and 1.3 for 100% cloud cover
+ * Ensures extremely poor condition representation for full cloud cover
+ * @returns Random score between 1.1 and 1.3
+ */
+export function getRandomCloudCoverScore(): number {
+  return 1.1 + Math.random() * 0.2;
 }
 
 /**
@@ -97,4 +107,40 @@ export function normalizeFactorScores(factors: Array<{ name: string; score: numb
       score: normalizedScore
     };
   });
+}
+
+/**
+ * Calculate SIQS score based on cloud cover, with special handling for 100% cloud cover
+ * @param cloudCover Cloud cover percentage (0-100)
+ * @returns Score for cloud cover factor (0-10)
+ */
+export function calculateCloudCoverScore(cloudCover: number): number {
+  // Special handling for 100% cloud cover - return a low random score
+  if (cloudCover >= 99.5) {
+    return getRandomCloudCoverScore();
+  }
+  
+  // For lower cloud cover, use a curved scale - higher cloud cover impacts score more severely
+  if (cloudCover >= 80) {
+    // Scale from 2.0 down to 1.4 for 80-99% cloud cover
+    return 2.0 - ((cloudCover - 80) / 20) * 0.6;
+  }
+  
+  if (cloudCover >= 60) {
+    // Scale from 4.0 down to 2.0 for 60-80% cloud cover
+    return 4.0 - ((cloudCover - 60) / 20) * 2.0;
+  }
+  
+  if (cloudCover >= 40) {
+    // Scale from 6.0 down to 4.0 for 40-60% cloud cover
+    return 6.0 - ((cloudCover - 40) / 20) * 2.0;
+  }
+  
+  if (cloudCover >= 20) {
+    // Scale from 8.0 down to 6.0 for 20-40% cloud cover
+    return 8.0 - ((cloudCover - 20) / 20) * 2.0;
+  }
+  
+  // Scale from 10.0 down to 8.0 for 0-20% cloud cover
+  return 10.0 - (cloudCover / 20) * 2.0;
 }
