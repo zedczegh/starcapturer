@@ -4,7 +4,7 @@ import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Button } from "./ui/button";
-import { ChevronRight, MapPin, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";

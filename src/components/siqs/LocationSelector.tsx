@@ -119,7 +119,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
             <div className="p-4 border-b border-cosmic-700">
               <h3 className="text-lg font-medium">{t("Search for a Location", "搜索位置")}</h3>
             </div>
-            <div className="h-[60vh]">
+            <div className="p-6">
               <MapSelector 
                 onSelectLocation={handleLocationSelected}
               />

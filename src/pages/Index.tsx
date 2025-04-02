@@ -35,15 +35,7 @@ const Index = () => {
       console.error("Error checking for location restoration:", error);
     }
     
-    // Scroll directly to calculator section on load
-    const calculatorSection = document.getElementById('calculator');
-    if (calculatorSection) {
-      setTimeout(() => {
-        calculatorSection.scrollIntoView({ behavior: 'smooth' });
-      }, 200);
-    }
-    
-    // Scroll to section if hash is present in URL
+    // Scroll to calculator section or hash if present in URL
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
@@ -51,6 +43,14 @@ const Index = () => {
         setTimeout(() => {
           element.scrollIntoView({ behavior: 'smooth' });
         }, 100);
+      }
+    } else {
+      // If no hash, scroll to calculator section
+      const calculatorSection = document.getElementById('calculator');
+      if (calculatorSection) {
+        setTimeout(() => {
+          calculatorSection.scrollIntoView({ behavior: 'smooth' });
+        }, 200);
       }
     }
   }, [queryClient]);
