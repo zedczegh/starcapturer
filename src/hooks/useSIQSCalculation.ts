@@ -1,238 +1,216 @@
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchWeatherData } from "@/lib/api";
+import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocation } from "@/contexts/LocationContext";
+import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
+import { currentSiqsStore } from "@/components/index/CalculatorSection";
+import { rawBrightnessToMpsas } from "@/utils/darkSkyMeterUtils";
 
-import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { calculateSIQS } from "@/lib/calculateSIQS";
-import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
-import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
-import { v4 as uuidv4 } from "uuid";
-import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
-import { fetchForecastData } from "@/lib/api";
-import { 
-  rawBrightnessToMpsas, 
-  mpsasToBortle,
-  getBortleBasedSIQS
-} from "@/utils/darkSkyMeterUtils";
+interface UseSIQSCalculationProps {
+  latitude?: number | null;
+  longitude?: number | null;
+  locationName?: string | null;
+  noAutoLocationRequest?: boolean;
+  cameraMeasurement?: number | null;
+}
 
-// Extract forecast fetching logic
-import { fetchForecastForLocation } from "./siqs/forecastFetcher";
-
-// Extract scoring and normalization logic
-import { 
-  normalizeScore, 
-  calculateSIQSWithWeatherData,
-  bortleToSIQSComponent 
-} from "./siqs/siqsCalculationUtils";
-
-export const useSIQSCalculation = (
-  setCachedData: (key: string, data: any) => void,
-  getCachedData: (key: string, maxAge?: number) => any
-) => {
-  const navigate = useNavigate();
-  const [isCalculating, setIsCalculating] = useState(false);
+/**
+ * Hook for calculating SIQS (Sky Quality Index for Stargazing) based on weather data,
+ * location, and user preferences. It uses React Query for efficient data fetching and caching.
+ */
+export function useSIQSCalculation({
+  latitude,
+  longitude,
+  locationName,
+  noAutoLocationRequest = false,
+  cameraMeasurement = null
+}: UseSIQSCalculationProps) {
+  const { t } = useLanguage();
+  const {
+    bortleScale: contextBortleScale,
+    seeingConditions: contextSeeingConditions,
+    moonPhase: contextMoonPhase,
+    updateLocationData,
+    locationData
+  } = useLocation();
+  
+  const { updateBortleScale } = useBortleUpdater();
+  
+  const [bortleScale, setBortleScale] = useState<number | null>(contextBortleScale || null);
+  const [seeingConditions, setSeeingConditions] = useState<number>(contextSeeingConditions);
+  const [moonPhase, setMoonPhase] = useState<number>(contextMoonPhase);
+  const [siqsResult, setSiqsResult] = useState<any>(null);
   const [weatherData, setWeatherData] = useState<any>(null);
-  const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [forecastData, setForecastData] = useState<any>(null);
+  const [skyBrightness, setSkyBrightness] = useState<{ value: number; mpsas?: number; timestamp?: string } | null>(null);
   
-  // Pre-compute moon phase for better performance - refreshed on component mount
-  const currentMoonPhase = useMemo(() => calculateMoonPhase(), []);
+  // Debounced updates for location data
+  const debouncedLatitude = useDebounce(latitude, 500);
+  const debouncedLongitude = useDebounce(longitude, 500);
   
-  const calculateSIQSForLocation = useCallback(async (
-    lat: number, 
-    lng: number, 
-    name: string, 
-    displayOnly: boolean = false, 
-    bortleScale: number, 
-    seeingConditions: number, 
-    setLoading?: (loading: boolean) => void, 
-    setStatusMessage?: (message: string | null) => void,
-    language: string = 'en',
-    cameraMeasurement: number | null = null
-  ) => {
-    if (isCalculating) return;
+  // Fetch weather data using React Query
+  const {
+    data: weatherQueryData,
+    isLoading: weatherLoading,
+    error: weatherError,
+    refetch: refetchWeather
+  } = useQuery(
+    ["weather", debouncedLatitude, debouncedLongitude],
+    () => {
+      if (debouncedLatitude && debouncedLongitude) {
+        return fetchWeatherData(debouncedLatitude, debouncedLongitude);
+      }
+      return null;
+    },
+    {
+      enabled: !noAutoLocationRequest && !!debouncedLatitude && !!debouncedLongitude,
+      retry: false,
+      refetchOnWindowFocus: false,
+      onSuccess: (data) => {
+        setWeatherData(data?.weatherData || null);
+        setForecastData(data?.forecastData || null);
+      },
+      onError: (error) => {
+        console.error("Error fetching weather data:", error);
+      }
+    }
+  );
+  
+  /**
+   * Updates the sky brightness measurement and saves it to local storage
+   */
+  const updateSkyBrightness = useCallback((value: number) => {
+    const mpsas = rawBrightnessToMpsas(value);
+    const timestamp = new Date().toISOString();
     
-    setIsCalculating(true);
-    displayOnly ? null : setLoading && setLoading(true);
+    const newSkyBrightness = {
+      value,
+      mpsas,
+      timestamp
+    };
     
-    try {
-      // If we have camera measurement, convert it to MPSAS and Bortle scale
-      let measuredBortleScale = null;
-      let measuredMPSAS = null;
-      
-      if (cameraMeasurement !== null) {
-        measuredMPSAS = rawBrightnessToMpsas(cameraMeasurement);
-        measuredBortleScale = mpsasToBortle(measuredMPSAS);
-        
-        console.log(`Using camera measurement: ${measuredMPSAS.toFixed(2)} MPSAS, Bortle ${measuredBortleScale.toFixed(1)}`);
-        
-        // Prioritize measured Bortle scale over database/estimated values
-        bortleScale = measuredBortleScale;
+    setSkyBrightness(newSkyBrightness);
+    
+    // Save to local storage
+    localStorage.setItem('sky_brightness_measurement', JSON.stringify(newSkyBrightness));
+  }, []);
+  
+  /**
+   * Load sky brightness measurement from local storage on component mount
+   */
+  useEffect(() => {
+    const storedBrightness = localStorage.getItem('sky_brightness_measurement');
+    if (storedBrightness) {
+      try {
+        const parsedBrightness = JSON.parse(storedBrightness);
+        if (parsedBrightness && typeof parsedBrightness.value === 'number') {
+          setSkyBrightness(parsedBrightness);
+        }
+      } catch (e) {
+        console.error("Error parsing sky brightness measurement:", e);
       }
-      
-      // Get weather data
-      const cacheKey = `weather-${lat.toFixed(4)}-${lng.toFixed(4)}`;
-      const data = await getWeatherData(
-        lat, 
-        lng, 
-        cacheKey, 
-        getCachedData, 
-        setCachedData, 
-        displayOnly,
-        language,
-        setStatusMessage
-      );
-      
-      if (!data) {
-        setStatusMessage && setStatusMessage(language === 'en' ? 
-          "Could not retrieve weather data. Please try again." : 
-          "无法获取天气数据，请重试。");
-        setIsCalculating(false);
-        displayOnly ? null : setLoading && setLoading(false);
-        return;
-      }
-      
-      // If we have camera measurement, add it to weather data
-      if (measuredMPSAS !== null && measuredBortleScale !== null) {
-        data.skyBrightness = {
-          mpsas: measuredMPSAS,
-          bortleScale: measuredBortleScale,
-          raw: cameraMeasurement
-        };
-      }
-      
-      setWeatherData(data);
-      
-      // Fetch forecast data to get night conditions
-      const forecastResult = await fetchForecastForLocation(lat, lng);
-      if (forecastResult) {
-        setForecastData(forecastResult);
-      }
-      
-      // If we don't have a camera measurement, get Bortle scale from database/API
-      if (measuredBortleScale === null) {
-        const actualBortleScale = await getBortleScaleData(
-          lat,
-          lng,
-          name,
-          bortleScale,
-          displayOnly,
-          getCachedData,
-          setCachedData,
-          language,
-          setStatusMessage
-        );
-        
-        // Validate Bortle scale before proceeding
-        const validBortleScale = (actualBortleScale < 1 || actualBortleScale > 9 || isNaN(actualBortleScale))
-          ? 5 // Default to moderate value if invalid
-          : actualBortleScale;
+    }
+  }, []);
+  
+  /**
+   * Updates the SIQS result based on weather data, Bortle scale, seeing conditions, and moon phase
+   */
+  useEffect(() => {
+    if (weatherData && bortleScale !== null) {
+      const calculateSIQS = async () => {
+        try {
+          const siqs = await calculateSIQSWithWeatherData(
+            weatherData,
+            bortleScale,
+            seeingConditions,
+            moonPhase,
+            forecastData
+          );
           
-        bortleScale = validBortleScale;
-      }
-      
-      // We need to recalculate moon phase to ensure it's fresh
-      const freshMoonPhase = calculateMoonPhase();
-      
-      // Calculate SIQS score using utility function
-      const siqsResult = await calculateSIQSWithWeatherData(
-        data,
-        bortleScale,
-        seeingConditions,
-        freshMoonPhase,
-        forecastResult
-      );
-      
-      // Ensure SIQS score is consistently on a 0-10 scale
-      const normalizedScore = normalizeScore(siqsResult.score);
-      
-      if (displayOnly) {
-        // For consistency, always store the 0-10 scale value
-        setSiqsScore(normalizedScore);
-        setIsCalculating(false);
-        return;
-      }
-      
-      // Generate a stable, unique ID using UUID
-      const locationId = uuidv4();
-      
-      const locationData = {
-        id: locationId,
-        name: name,
-        latitude: lat,
-        longitude: lng,
-        bortleScale: bortleScale,
-        seeingConditions,
-        weatherData: data,
-        siqsResult: {
-          ...siqsResult,
-          score: normalizedScore // Ensure the score is on a 0-10 scale
-        },
-        moonPhase: freshMoonPhase,
-        timestamp: new Date().toISOString(),
+          if (siqs) {
+            setSiqsResult(siqs);
+            currentSiqsStore.setValue(siqs.score);
+          }
+        } catch (error) {
+          console.error("Error calculating SIQS:", error);
+        }
       };
       
-      // If we have camera measurement data, include it
-      if (measuredMPSAS !== null && measuredBortleScale !== null) {
-        locationData.skyBrightness = {
-          mpsas: measuredMPSAS,
-          bortleScale: measuredBortleScale,
-          raw: cameraMeasurement,
-          timestamp: new Date().toISOString()
-        };
-      }
-      
-      console.log("Navigating to location details with data:", locationData);
-      
-      // Ensure navigation happens immediately to prevent data loss
-      navigate(`/location/${locationId}`, { 
-        state: locationData,
-        replace: false
-      });
-      
-      // Also save to localStorage as a backup with UUID as key
-      try {
-        localStorage.setItem(`location_${locationId}`, JSON.stringify(locationData));
-        localStorage.setItem('latest_siqs_location', JSON.stringify({
-          name,
-          latitude: lat,
-          longitude: lng,
-          bortleScale: bortleScale,
-          // Add camera measurement data if available
-          ...(cameraMeasurement !== null ? {
-            skyBrightness: {
-              raw: cameraMeasurement,
-              mpsas: measuredMPSAS,
-              bortleScale: measuredBortleScale
-            }
-          } : {})
-        }));
-      } catch (e) {
-        console.error("Failed to save to localStorage", e);
-      }
-      
-      // Wait a small delay to ensure the state is updated
-      setTimeout(() => {
-        setIsCalculating(false);
-        displayOnly ? null : setLoading && setLoading(false);
-      }, 300);
-      
-    } catch (error) {
-      console.error("Error calculating SIQS:", error);
-      setStatusMessage && setStatusMessage(language === 'en' ? 
-        "An error occurred while calculating SIQS. Please try again." : 
-        "计算SIQS时发生错误，请重试。");
-      setIsCalculating(false);
-      displayOnly ? null : setLoading && setLoading(false);
+      calculateSIQS();
     }
-  }, [isCalculating, navigate, getCachedData, setCachedData]);
+  }, [weatherData, bortleScale, seeingConditions, moonPhase, forecastData]);
+  
+  /**
+   * Updates the Bortle scale based on location and camera measurement
+   */
+  useEffect(() => {
+    const updateBortle = async () => {
+      if (debouncedLatitude && debouncedLongitude && locationName) {
+        try {
+          const newBortleScale = await updateBortleScale(
+            debouncedLatitude,
+            debouncedLongitude,
+            locationName,
+            bortleScale,
+            cameraMeasurement !== null ? cameraMeasurement : (skyBrightness?.value || null)
+          );
+          
+          if (newBortleScale !== null) {
+            setBortleScale(newBortleScale);
+          }
+        } catch (error) {
+          console.error("Error updating Bortle scale:", error);
+        }
+      }
+    };
+    
+    updateBortle();
+  }, [debouncedLatitude, debouncedLongitude, locationName, cameraMeasurement, skyBrightness?.value, updateBortleScale, bortleScale]);
+  
+  /**
+   * Updates the location data in the context
+   */
+  useEffect(() => {
+    if (debouncedLatitude && debouncedLongitude && locationName) {
+      updateLocationData({
+        latitude: debouncedLatitude,
+        longitude: debouncedLongitude,
+        name: locationName,
+        bortleScale: bortleScale || 4,
+        seeingConditions: seeingConditions,
+        weatherData: weatherData,
+        siqsResult: siqsResult,
+        moonPhase: moonPhase,
+        skyBrightness: skyBrightness
+      });
+    }
+  }, [debouncedLatitude, debouncedLongitude, locationName, bortleScale, seeingConditions, weatherData, siqsResult, moonPhase, skyBrightness, updateLocationData]);
+  
+  /**
+   * Provides a function to manually refetch weather data
+   */
+  const manualRefetchWeather = useCallback(async () => {
+    if (debouncedLatitude && debouncedLongitude) {
+      await refetchWeather();
+    }
+  }, [debouncedLatitude, debouncedLongitude, refetchWeather]);
   
   return {
-    isCalculating,
+    bortleScale: bortleScale,
+    setBortleScale,
+    seeingConditions,
+    setSeeingConditions,
+    moonPhase,
+    setMoonPhase,
+    siqsResult,
     weatherData,
-    siqsScore,
-    forecastData,
-    currentMoonPhase,
-    setSiqsScore,
-    validateInputs,
-    calculateSIQSForLocation
+    weatherLoading,
+    weatherError,
+    manualRefetchWeather,
+    skyBrightness,
+    updateSkyBrightness
   };
-};
+}

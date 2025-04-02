@@ -1,56 +1,42 @@
+declare interface WeatherData {
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+  cloudCover: number;
+  precipitation: number;
+  weatherCondition: string;
+  aqi?: number;
+  skyBrightness?: {
+    value: number;
+    mpsas?: number;
+    timestamp?: string;
+  };
+}
 
-declare module "@/types/weather" {
-  export interface WeatherData {
-    temperature: number;
-    humidity: number;
-    cloudCover: number;
-    windSpeed: number;
-    precipitation: number;
-    time: string;
-    condition: string;
-    aqi?: number;
-    weatherCondition?: string | number;
-  }
+declare interface ForecastData {
+  hourly: any[];
+  daily: any[];
+}
 
-  export interface LocationData {
-    id: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    bortleScale: number;
-    seeingConditions: number;
-    weatherData: WeatherData;
-    siqsResult?: SIQSData;
-    moonPhase?: number;
-    timestamp: string;
-  }
+declare interface LocationData {
+  latitude: number;
+  longitude: number;
+}
 
-  export interface SIQSData {
-    score: number;
-    isViable: boolean;
-    factors?: Array<{
-      name: string;
-      score: number;
-      description: string;
-    }>;
-  }
-
-  export interface SharedAstroSpot {
-    id: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    bortleScale: number;
-    description?: string;
-    imageURL?: string;
-    rating?: number;
-    timestamp: string;
-    chineseName?: string;
-    siqs?: number | {
-      score: number;
-      isViable: boolean;
-    };
-    distance?: number;
-    isViable?: boolean;
-  }
+declare interface LocationWithWeather {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  bortleScale: number;
+  seeingConditions: number;
+  weatherData: any;
+  siqsResult: any;
+  moonPhase: number;
+  timestamp: string;
+  skyBrightness?: {
+    value: number;
+    mpsas?: number;
+    timestamp?: string;
+  };
 }
