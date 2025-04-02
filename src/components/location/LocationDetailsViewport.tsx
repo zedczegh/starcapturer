@@ -54,6 +54,20 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     t
   );
 
+  const handleRefresh = useCallback(async () => {
+    resetUpdateState();
+    
+    await handleRefreshAll(
+      locationData, 
+      setLocationData, 
+      () => {
+        handleRefreshForecast(locationData.latitude, locationData.longitude);
+        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+      },
+      setStatusMessage
+    );
+  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
+
   useEffect(() => {
     if (locationData?.latitude && locationData?.longitude) {
       resetUpdateState();
@@ -80,7 +94,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete, setLocationData]);
+  }, [shouldRefresh, locationData, handleRefresh, markRefreshComplete, setLocationData]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -97,7 +111,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     return () => {
       container.removeEventListener('forceRefresh', handleForceRefresh);
     };
-  }, [locationData]);
+  }, [locationData, handleRefresh]);
 
   useEffect(() => {
     if (!locationData) return;
@@ -115,20 +129,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       return () => clearTimeout(timer);
     }
   }, [locationData?.timestamp, handleRefresh]);
-
-  const handleRefresh = useCallback(async () => {
-    resetUpdateState();
-    
-    await handleRefreshAll(
-      locationData, 
-      setLocationData, 
-      () => {
-        handleRefreshForecast(locationData.latitude, locationData.longitude);
-        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-      },
-      setStatusMessage
-    );
-  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
 
   useEffect(() => {
     return () => {

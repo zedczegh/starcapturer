@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { useLocationData } from "@/hooks/useLocationData";
+import { useLocationDataCache } from "@/hooks/useLocationData"; // Fixed import
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateMoonPhase } from "@/utils/siqsValidation";
 import { formatSIQSScore } from "@/lib/siqs/utils";
@@ -64,7 +64,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
     enableHighAccuracy: true,
   });
   
-  // Set up location data hook
+  // Set up location data hook - fixed the import and usage
   const { 
     loading, 
     error, 
@@ -73,7 +73,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
     locationData,
     weatherData,
     bortleScale
-  } = useLocationData();
+  } = useLocationDataCache();
   
   // Set up form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -116,19 +116,38 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
       setLocationName(result.name);
       setUserCoords({ latitude: result.latitude, longitude: result.longitude });
       
-      // Calculate SIQS score
+      // Modified: Check if cloud cover is 100% and set a random lower score between 1.1-1.3
+      const cloudCover = weatherData?.cloudCover || 0;
       const moonPhase = calculateMoonPhase();
-      const siqsResult = calculateSIQS({
-        cloudCover: weatherData?.cloudCover || 0,
-        bortleScale: bortleScale || 4,
-        seeingConditions: 3, // Default seeing conditions
-        windSpeed: weatherData?.windSpeed || 0,
-        humidity: weatherData?.humidity || 0,
-        moonPhase,
-        aqi: weatherData?.aqi,
-        weatherCondition: weatherData?.weatherCondition,
-        precipitation: weatherData?.precipitation || 0
-      });
+      
+      let siqsResult;
+      if (cloudCover === 100) {
+        // Generate a random score between 1.1 and 1.3 for 100% cloud cover
+        const randomScore = 1.1 + (Math.random() * 0.2);
+        siqsResult = {
+          score: randomScore,
+          factors: [
+            {
+              name: "Cloud Cover",
+              score: 1.5, // Very low score for cloud cover
+              description: t("Complete cloud cover severely limits visibility", "云层完全覆盖严重限制了可见度")
+            }
+          ]
+        };
+      } else {
+        // Normal SIQS calculation for other cases
+        siqsResult = calculateSIQS({
+          cloudCover: cloudCover,
+          bortleScale: bortleScale || 4,
+          seeingConditions: 3, // Default seeing conditions
+          windSpeed: weatherData?.windSpeed || 0,
+          humidity: weatherData?.humidity || 0,
+          moonPhase,
+          aqi: weatherData?.aqi,
+          weatherCondition: weatherData?.weatherCondition,
+          precipitation: weatherData?.precipitation || 0
+        });
+      }
       
       // Update state with results
       setSiqsScore(siqsResult.score);
@@ -136,13 +155,13 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
       setHasCalculatedOnce(true);
       setShowPhotoPoints(true);
       
-      // Save location for future use
+      // Save location for future use (fixed property name)
       saveLocation({
         name: result.name,
         latitude: result.latitude,
         longitude: result.longitude,
         bortleScale,
-        siqs: siqsResult.score
+        siqsScore: siqsResult.score // Changed from 'siqs' to 'siqsScore'
       });
 
       // After successful location update:
@@ -187,19 +206,38 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
         // Get weather and light pollution data
         await getLocationData(null, coords.latitude, coords.longitude);
         
-        // Calculate SIQS score
+        // Modified: Check if cloud cover is 100% and set a random lower score between 1.1-1.3
+        const cloudCover = weatherData?.cloudCover || 0;
         const moonPhase = calculateMoonPhase();
-        const siqsResult = calculateSIQS({
-          cloudCover: weatherData?.cloudCover || 0,
-          bortleScale: bortleScale || 4,
-          seeingConditions: 3, // Default seeing conditions
-          windSpeed: weatherData?.windSpeed || 0,
-          humidity: weatherData?.humidity || 0,
-          moonPhase,
-          aqi: weatherData?.aqi,
-          weatherCondition: weatherData?.weatherCondition,
-          precipitation: weatherData?.precipitation || 0
-        });
+        
+        let siqsResult;
+        if (cloudCover === 100) {
+          // Generate a random score between 1.1 and 1.3 for 100% cloud cover
+          const randomScore = 1.1 + (Math.random() * 0.2);
+          siqsResult = {
+            score: randomScore,
+            factors: [
+              {
+                name: "Cloud Cover",
+                score: 1.5, // Very low score for cloud cover
+                description: t("Complete cloud cover severely limits visibility", "云层完全覆盖严重限制了可见度")
+              }
+            ]
+          };
+        } else {
+          // Normal SIQS calculation for other cases
+          siqsResult = calculateSIQS({
+            cloudCover: cloudCover,
+            bortleScale: bortleScale || 4,
+            seeingConditions: 3, // Default seeing conditions
+            windSpeed: weatherData?.windSpeed || 0,
+            humidity: weatherData?.humidity || 0,
+            moonPhase,
+            aqi: weatherData?.aqi,
+            weatherCondition: weatherData?.weatherCondition,
+            precipitation: weatherData?.precipitation || 0
+          });
+        }
         
         // Update state with results
         setSiqsScore(siqsResult.score);
@@ -207,13 +245,13 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
         setHasCalculatedOnce(true);
         setShowPhotoPoints(true);
         
-        // Save location for future use
+        // Save location for future use (fixed property name)
         saveLocation({
           name: locationName || t("Current Location", "当前位置"),
           latitude: coords.latitude,
           longitude: coords.longitude,
           bortleScale,
-          siqs: siqsResult.score
+          siqsScore: siqsResult.score // Changed from 'siqs' to 'siqsScore'
         });
         
         // Publish location update
