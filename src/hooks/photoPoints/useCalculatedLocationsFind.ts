@@ -18,6 +18,12 @@ export const useCalculatedLocationsFind = () => {
     existingLocations: SharedAstroSpot[] = []
   ): Promise<SharedAstroSpot[]> => {
     try {
+      // Validate inputs
+      if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(searchRadius)) {
+        console.error("Invalid parameters provided to findCalculatedLocations");
+        return preserveExisting ? existingLocations : [];
+      }
+      
       setCalculatingLocations(true);
       console.log(`Calculating locations around ${latitude}, ${longitude} with radius ${searchRadius}km`);
       
@@ -47,7 +53,7 @@ export const useCalculatedLocationsFind = () => {
               // Create location with enhanced metadata
               return {
                 ...point,
-                id: `calc-loc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                id: `calc-loc-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
                 name: `${qualityLabel} Viewing Site (${point.latitude.toFixed(3)}, ${point.longitude.toFixed(3)})`,
                 chineseName: `${getChineseQualityLabel(result.siqs)}观测点 (${point.latitude.toFixed(3)}, ${point.longitude.toFixed(3)})`,
                 siqs: result.siqs,
@@ -67,22 +73,28 @@ export const useCalculatedLocationsFind = () => {
           }
         });
         
-        const calculatedResults = (await Promise.all(promises)).filter(Boolean) as SharedAstroSpot[];
-        
-        // Add calculated locations that aren't duplicates of existing ones
-        if (calculatedResults.length > 0) {
-          // Filter out duplicates with improved proximity checking
-          const existingCoords = new Set(allLocations.map(loc => 
-            `${Math.floor(loc.latitude * 100) / 100},${Math.floor(loc.longitude * 100) / 100}`
-          ));
+        try {
+          const calculatedResults = (await Promise.allSettled(promises))
+            .filter(result => result.status === 'fulfilled' && result.value)
+            .map(result => (result as PromiseFulfilledResult<SharedAstroSpot>).value);
           
-          const newLocations = calculatedResults.filter(loc => {
-            // Round to 2 decimal places for proximity check (about 1km precision)
-            const coordKey = `${Math.floor(loc.latitude * 100) / 100},${Math.floor(loc.longitude * 100) / 100}`;
-            return !existingCoords.has(coordKey);
-          });
-          
-          allLocations = [...allLocations, ...newLocations];
+          // Add calculated locations that aren't duplicates of existing ones
+          if (calculatedResults.length > 0) {
+            // Filter out duplicates with improved proximity checking
+            const existingCoords = new Set(allLocations.map(loc => 
+              `${Math.floor(loc.latitude * 100) / 100},${Math.floor(loc.longitude * 100) / 100}`
+            ));
+            
+            const newLocations = calculatedResults.filter(loc => {
+              // Round to 2 decimal places for proximity check (about 1km precision)
+              const coordKey = `${Math.floor(loc.latitude * 100) / 100},${Math.floor(loc.longitude * 100) / 100}`;
+              return !existingCoords.has(coordKey);
+            });
+            
+            allLocations = [...allLocations, ...newLocations];
+          }
+        } catch (error) {
+          console.error("Error processing calculated locations:", error);
         }
       }
       
@@ -112,9 +124,10 @@ export const useCalculatedLocationsFind = () => {
     
     // Adjust grid density based on radius
     // Smaller radius = denser grid, larger radius = sparser grid
-    const gridSize = radius <= 200 ? 8 : 
-                    radius <= 500 ? 6 : 
-                    radius <= 1000 ? 5 : 4;
+    const gridSize = radius <= 100 ? 8 : 
+                     radius <= 300 ? 7 :
+                     radius <= 500 ? 6 : 
+                     radius <= 1000 ? 5 : 4;
     
     // Convert radius from km to degrees (approximate)
     const latDelta = radius / 111; // 1 degree latitude is about 111km
@@ -125,6 +138,9 @@ export const useCalculatedLocationsFind = () => {
       for (let j = -gridSize; j <= gridSize; j++) {
         // Skip the center point (user's location)
         if (i === 0 && j === 0) continue;
+        
+        // Skip points that are too close to each other to avoid clustering
+        if (Math.abs(i) + Math.abs(j) < 2 && gridSize > 5) continue;
         
         // Calculate point coordinates with adaptive spacing
         // Points farther from center are spaced more widely
@@ -138,6 +154,7 @@ export const useCalculatedLocationsFind = () => {
         // Further from urban areas generally means darker skies
         const estimatedBortle = Math.max(1, Math.min(8, Math.round(5 - 3 * distanceFromCenter)));
         
+        // Add points with timestamps for improved sorting
         points.push({
           latitude: lat,
           longitude: lon,
@@ -148,28 +165,27 @@ export const useCalculatedLocationsFind = () => {
       }
     }
     
-    // Add some additional strategic points in likely good directions
-    // (Usually away from population centers and toward nature)
-    const randomOffset = Math.random() * 0.2 - 0.1; // -0.1 to +0.1
+    // Add strategic points in likely good directions
+    // Using golden ratio to distribute points more naturally
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
     
-    // North point (likely darker skies in Northern Hemisphere)
-    points.push({
-      latitude: latitude + (latDelta * 0.6),
-      longitude: longitude + randomOffset,
-      bortleScale: 3,
-      id: `calc-loc-${Date.now()}-north`,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Add a point toward mountains or wilderness if we can estimate a direction
-    // (This is a simple approximation - in real app, use terrain data)
-    points.push({
-      latitude: latitude + (latDelta * 0.35),
-      longitude: longitude + (lonDelta * 0.35),
-      bortleScale: 2,
-      id: `calc-loc-${Date.now()}-wilderness`,
-      timestamp: new Date().toISOString()
-    });
+    for (let i = 0; i < 8; i++) {
+      // Calculate position on a spiral using golden angle for natural distribution
+      const angle = i * goldenAngle;
+      const distance = (0.3 + (i / 12)) * latDelta; // Increasing distance
+      
+      const lat = latitude + distance * Math.cos(angle);
+      const lon = longitude + distance * Math.sin(angle) / Math.cos(latitude * Math.PI / 180);
+      
+      // Add strategic points with decreasing Bortle scale (darker as we get further out)
+      points.push({
+        latitude: lat,
+        longitude: lon,
+        bortleScale: Math.max(1, Math.min(7, 7 - Math.floor(i / 2))),
+        id: `calc-loc-${Date.now()}-strategic-${i}`,
+        timestamp: new Date().toISOString()
+      });
+    }
     
     return points;
   };

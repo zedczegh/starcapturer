@@ -1,3 +1,4 @@
+
 /**
  * Factor score calculation functions for SIQS
  */
@@ -14,7 +15,7 @@ export function calculateCloudScore(cloudCover: number): number {
     return 100;
   }
   
-  // Stricter cloud cover scoring:
+  // Improved cloud cover scoring with smoother transitions:
   // 0-20% cloud cover = Outstanding (80-100 points)
   // 20-35% cloud cover = Very Good (65-80 points)
   // 35-50% cloud cover = Good (50-65 points)
@@ -47,46 +48,92 @@ export function calculateLightPollutionScore(bortleScale: number): number {
   // Ensure bortleScale is within valid range (1-9)
   const validBortleScale = Math.min(9, Math.max(1, bortleScale || 5));
   
-  // Inverted scale, 100 is dark (bortle 1), 0 is bright (bortle 9)
-  return Math.max(0, 100 - ((validBortleScale - 1) / 8) * 100);
+  // Improved light pollution scoring curve
+  // Not strictly linear, giving more weight to darker skies
+  const percentage = (validBortleScale - 1) / 8;
+  
+  // Modified exponential function to emphasize darker skies
+  return 100 * Math.pow(1 - percentage, 1.2);
 }
 
 export function calculateSeeingScore(seeingConditions: number): number {
   // Ensure seeingConditions is within valid range (1-5)
   const validSeeingConditions = Math.min(5, Math.max(1, seeingConditions || 3));
   
+  // Improved curve for seeing conditions
   // Inverted scale, 100 is perfect (seeing 1), 0 is terrible (seeing 5)
-  return Math.max(0, 100 - ((validSeeingConditions - 1) / 4) * 100);
+  const percentage = (validSeeingConditions - 1) / 4;
+  return 100 * Math.pow(1 - percentage, 1.3);
 }
 
 export function calculateWindScore(windSpeed: number): number {
-  // 100 is calm (0 mph), decreases as wind speed increases
-  // Using 30mph as the upper threshold where score becomes 0
-  return Math.max(0, 100 - (windSpeed / 30) * 100);
+  // More nuanced wind speed scoring
+  // 0-5 km/h: Excellent (100-80)
+  // 5-15 km/h: Good (80-60)
+  // 15-25 km/h: Fair (60-30)
+  // 25-35 km/h: Poor (30-0)
+  // >35 km/h: Very poor (0)
+  
+  if (windSpeed <= 5) {
+    return 100 - (windSpeed * 4);
+  } else if (windSpeed <= 15) {
+    return 80 - ((windSpeed - 5) * 2);
+  } else if (windSpeed <= 25) {
+    return 60 - ((windSpeed - 15) * 3);
+  } else if (windSpeed <= 35) {
+    return 30 - ((windSpeed - 25) * 3);
+  } else {
+    return 0;
+  }
 }
 
 export function calculateHumidityScore(humidity: number): number {
-  // Lower humidity is better for astronomy
-  // 0% humidity = 100 points, 100% humidity = 0 points
-  return Math.max(0, 100 - humidity);
+  // Improved humidity scoring with more realistic impact on observation
+  // Low humidity is better for astronomy, but not strictly linear
+  // <40%: Excellent
+  // 40-60%: Good
+  // 60-80%: Fair
+  // 80-100%: Poor
+  
+  if (humidity < 40) {
+    return 100 - (humidity * 0.5);
+  } else if (humidity < 60) {
+    return 80 - ((humidity - 40) * 1.0);
+  } else if (humidity < 80) {
+    return 60 - ((humidity - 60) * 1.5);
+  } else {
+    return 30 - ((humidity - 80) * 1.5);
+  }
 }
 
 export function calculateMoonScore(moonPhase: number): number {
-  // 100 is new moon (0), 0 is full moon (0.5)
-  // This is a more accurate model: new moon (0) is best,
-  // full moon (0.5) is worst, then improves again toward new moon (1)
-  return Math.max(0, 100 - (Math.sin(moonPhase * Math.PI) * 100));
+  // Improved moon phase scoring with more accurate astronomical impact
+  // 100 is new moon (0), 0 is full moon (0.5), improves again toward new moon (1)
+  
+  // Convert moon phase to radians for proper sinusoidal calculation
+  const phaseInRadians = moonPhase * Math.PI * 2;
+  
+  // Cosine gives us proper curve with minimum at full moon (0.5)
+  // Scale from -1,1 to 0,1 range
+  const moonImpact = (Math.cos(phaseInRadians) + 1) / 2;
+  
+  // Scale to 0-100 range and invert (higher score is better)
+  return moonImpact * 100;
 }
 
 export function calculateAQIScore(aqi: number): number {
+  // Improved AQI scoring with smoother transitions
   // AQI scale: 0-50 (Good), 51-100 (Moderate), 101-150 (Unhealthy for Sensitive Groups), 
   // 151-200 (Unhealthy), 201-300 (Very Unhealthy), 301-500 (Hazardous)
-  if (aqi <= 50) return 100;
-  if (aqi <= 100) return 80;
-  if (aqi <= 150) return 60;
-  if (aqi <= 200) return 40;
-  if (aqi <= 300) return 20;
-  return 0;
+  
+  if (aqi <= 25) return 100;
+  if (aqi <= 50) return 90 - ((aqi - 25) * 0.4);  // 90-80
+  if (aqi <= 100) return 80 - ((aqi - 50) * 0.4); // 80-60
+  if (aqi <= 150) return 60 - ((aqi - 100) * 0.4); // 60-40
+  if (aqi <= 200) return 40 - ((aqi - 150) * 0.2); // 40-30
+  if (aqi <= 300) return 30 - ((aqi - 200) * 0.1); // 30-20
+  if (aqi <= 400) return 20 - ((aqi - 300) * 0.05); // 20-15
+  return Math.max(0, 15 - ((aqi - 400) * 0.03)); // 15-0
 }
 
 /**
@@ -94,6 +141,9 @@ export function calculateAQIScore(aqi: number): number {
  * This ensures consistent display across the app
  */
 export function normalizeScore(score: number): number {
+  // Handle invalid inputs
+  if (score === null || score === undefined || isNaN(score)) return 0;
+  
   // If score is already on 0-10 scale, return as is
   if (score >= 0 && score <= 10) return score;
   

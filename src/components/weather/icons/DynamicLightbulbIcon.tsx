@@ -79,7 +79,7 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({
   };
   
   // Create a gradient effect based on Bortle scale
-  const gradientId = `lightbulb-gradient-${validBortleScale.toFixed(1)}`;
+  const gradientId = `lightbulb-gradient-${validBortleScale.toFixed(1).replace('.', '-')}`;
   
   return (
     <div className={`relative ${className || ''}`} title={getBortleDescription()}>

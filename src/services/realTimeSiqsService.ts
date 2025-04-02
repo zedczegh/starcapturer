@@ -5,7 +5,7 @@ import { fetchWeatherData } from "@/lib/api/weather";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
-// Create a cache to avoid redundant API calls
+// Create a cache to avoid redundant API calls with improved invalidation strategy
 const siqsCache = new Map<string, {
   siqs: number;
   timestamp: number;
@@ -13,8 +13,9 @@ const siqsCache = new Map<string, {
   factors?: any[];
 }>();
 
-// Invalidate cache entries older than 15 minutes
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+// Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
+const NIGHT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+const DAY_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 /**
  * Calculate real-time SIQS for a given location
@@ -28,12 +29,26 @@ export async function calculateRealTimeSiqs(
   longitude: number, 
   bortleScale: number
 ): Promise<{ siqs: number; isViable: boolean; factors?: any[] }> {
+  // Validate inputs
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    console.error("Invalid coordinates provided to calculateRealTimeSiqs");
+    return { siqs: 0, isViable: false };
+  }
+  
   // Generate cache key
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   
-  // Check cache first
+  // Determine if it's nighttime for cache duration
+  const isNighttime = () => {
+    const hour = new Date().getHours();
+    return hour >= 18 || hour < 6; // 6 PM to 6 AM
+  };
+  
+  const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+  
+  // Check cache first with improved cache key strategy
   const cachedData = siqsCache.get(cacheKey);
-  if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+  if (cachedData && (Date.now() - cachedData.timestamp) < cacheDuration) {
     console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
     return {
       siqs: cachedData.siqs,
@@ -45,18 +60,11 @@ export async function calculateRealTimeSiqs(
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
-    // Fetch weather data
-    const weatherData = await fetchWeatherData({
-      latitude,
-      longitude
-    });
-    
-    // Fetch forecast data for nighttime calculation
-    const forecastData = await fetchForecastData({
-      latitude,
-      longitude,
-      days: 2
-    });
+    // Parallel data fetching for improved performance
+    const [weatherData, forecastData] = await Promise.all([
+      fetchWeatherData({ latitude, longitude }),
+      fetchForecastData({ latitude, longitude, days: 2 })
+    ]);
     
     // Default values if API calls fail
     if (!weatherData) {
@@ -65,7 +73,7 @@ export async function calculateRealTimeSiqs(
     
     // For light pollution, use provided Bortle scale or fetch it
     let finalBortleScale = bortleScale;
-    if (!finalBortleScale || finalBortleScale <= 0) {
+    if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
       try {
         const pollutionData = await fetchLightPollutionData(latitude, longitude);
         finalBortleScale = pollutionData?.bortleScale || 5;
@@ -127,9 +135,26 @@ export async function batchCalculateSiqs(
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
   
-  // Process locations in chunks to avoid too many parallel requests
-  for (let i = 0; i < updatedLocations.length; i += maxParallel) {
-    const chunk = updatedLocations.slice(i, i + maxParallel);
+  // Enhanced error handling: filter out invalid locations
+  const validLocations = updatedLocations.filter(loc => 
+    loc && isFinite(loc.latitude) && isFinite(loc.longitude)
+  );
+  
+  // Prioritize locations - process most important first
+  const prioritizedLocations = [...validLocations].sort((a, b) => {
+    // Prioritize dark sky reserves and certified locations
+    if (a.isDarkSkyReserve && !b.isDarkSkyReserve) return -1;
+    if (!a.isDarkSkyReserve && b.isDarkSkyReserve) return 1;
+    if (a.certification && !b.certification) return -1;
+    if (!a.certification && b.certification) return 1;
+    
+    // Then prioritize by darkest skies
+    return (a.bortleScale || 5) - (b.bortleScale || 5);
+  });
+  
+  // Process locations in chunks to avoid too many parallel requests with improved error handling
+  for (let i = 0; i < prioritizedLocations.length; i += maxParallel) {
+    const chunk = prioritizedLocations.slice(i, i + maxParallel);
     const promises = chunk.map(async (location) => {
       if (!location.latitude || !location.longitude) return location;
       
@@ -160,17 +185,31 @@ export async function batchCalculateSiqs(
       }
     });
     
-    // Wait for the current chunk to complete before processing next chunk
-    const results = await Promise.all(promises);
-    
-    // Update the locations array with the results
-    results.forEach((result, idx) => {
-      updatedLocations[i + idx] = result;
-    });
+    try {
+      // Wait for the current chunk to complete before processing next chunk
+      const results = await Promise.allSettled(promises);
+      
+      // Update the locations array with the results, handling potential rejections
+      results.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          const locationIndex = updatedLocations.findIndex(loc => 
+            loc.id === prioritizedLocations[i + idx].id
+          );
+          if (locationIndex >= 0) {
+            updatedLocations[locationIndex] = result.value;
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error in batch processing chunk:", error);
+      // Continue with next chunk if one fails
+    }
   }
   
-  // Filter out any locations with SIQS = 0
-  return updatedLocations.filter(loc => loc.siqs > 0);
+  // Filter out any locations with SIQS = 0 and sort by SIQS (highest first)
+  return updatedLocations
+    .filter(loc => loc.siqs > 0)
+    .sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
 }
 
 /**
@@ -198,5 +237,31 @@ export function clearLocationSiqsCache(latitude: number, longitude: number): voi
   if (siqsCache.has(cacheKey)) {
     siqsCache.delete(cacheKey);
     console.log(`Cleared SIQS cache for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  }
+}
+
+/**
+ * Clear all expired cache entries to free memory
+ */
+export function cleanupExpiredCache(): void {
+  const now = Date.now();
+  let expiredCount = 0;
+  
+  for (const [key, data] of siqsCache.entries()) {
+    const isNighttime = () => {
+      const hour = new Date().getHours();
+      return hour >= 18 || hour < 6; // 6 PM to 6 AM
+    };
+    
+    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+    
+    if (now - data.timestamp > cacheDuration) {
+      siqsCache.delete(key);
+      expiredCount++;
+    }
+  }
+  
+  if (expiredCount > 0) {
+    console.log(`Cleaned up ${expiredCount} expired SIQS cache entries`);
   }
 }
