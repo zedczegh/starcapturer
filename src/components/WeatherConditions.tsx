@@ -75,15 +75,12 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
-  const [updateKey, setUpdateKey] = useState(0);
   
   // Ensure weather data is stable and validated
   useEffect(() => {
     // Only update stable weather data if we have valid new data
     if (validateWeatherData(weatherData)) {
       setStableWeatherData(weatherData);
-      // Increment update key to force re-render of components
-      setUpdateKey(prev => prev + 1);
     } else {
       console.warn("Received invalid weather data, keeping previous stable data");
     }
@@ -125,7 +122,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
 
   return (
     <motion.div
-      key={`weather-container-${updateKey}`}
       initial="hidden"
       animate="visible"
       variants={containerVariants}

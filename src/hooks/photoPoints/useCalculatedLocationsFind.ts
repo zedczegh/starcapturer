@@ -26,17 +26,12 @@ export const useCalculatedLocationsFind = () => {
       
       // Generate calculated locations if we need more
       if (allLocations.length < limit) {
-        // Calculate points in a grid around the user location, avoiding water
+        // Calculate points in a grid around the user location
         const gridPoints = generateGridPoints(latitude, longitude, searchRadius);
         
         // Calculate SIQS for each grid point (up to our limit)
-        const promises = gridPoints.slice(0, limit * 3).map(async (point) => {
+        const promises = gridPoints.slice(0, limit * 2).map(async (point) => {
           try {
-            // Check if the point might be in water (very basic check)
-            if (isLikelyWater(point.latitude, point.longitude, latitude, longitude)) {
-              return null;
-            }
-            
             // Calculate real-time SIQS for this location
             const result = await calculateRealTimeSiqs(
               point.latitude, 
@@ -107,18 +102,13 @@ export const useCalculatedLocationsFind = () => {
     const latDelta = radius / 111; // 1 degree latitude is about 111km
     const lonDelta = radius / (111 * Math.cos(latitude * Math.PI / 180));
     
-    // Add some randomization to the grid to avoid perfect grid patterns
     for (let i = -gridSize; i <= gridSize; i++) {
       for (let j = -gridSize; j <= gridSize; j++) {
         // Skip the center point
         if (i === 0 && j === 0) continue;
         
-        // Add slight randomization to grid points
-        const randomLatOffset = (Math.random() - 0.5) * (latDelta / gridSize / 2);
-        const randomLonOffset = (Math.random() - 0.5) * (lonDelta / gridSize / 2);
-        
-        const lat = latitude + (i * latDelta / gridSize) + randomLatOffset;
-        const lon = longitude + (j * lonDelta / gridSize) + randomLonOffset;
+        const lat = latitude + (i * latDelta / gridSize);
+        const lon = longitude + (j * lonDelta / gridSize);
         
         // Estimate a Bortle scale based on distance from center
         // Further from urban areas generally means darker skies
@@ -127,11 +117,8 @@ export const useCalculatedLocationsFind = () => {
         // Estimate lower Bortle as we go further from center
         const estimatedBortle = Math.max(1, Math.min(8, Math.round(5 - 3 * distance)));
         
-        // Generate a name based on direction from the center
-        const directionName = getDirectionName(i, j);
-        
         points.push({
-          name: `Dark site ${directionName} of ${lat.toFixed(2)}, ${lon.toFixed(2)}`,
+          name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`,
           latitude: lat,
           longitude: lon,
           bortleScale: estimatedBortle,
@@ -144,43 +131,51 @@ export const useCalculatedLocationsFind = () => {
     return points;
   };
 
-  // Basic check to see if a point is likely in water
-  // This is a very naive approach that helps avoid coastal areas and large bodies of water
-  const isLikelyWater = (lat: number, lon: number, originLat: number, originLon: number): boolean => {
-    // Avoid points that are too far from land - simplified check
-    // If the point is very far from the origin and in a different direction than land masses,
-    // it's more likely to be water
-    const distance = calculateDistance(originLat, originLon, lat, lon);
-    
-    // Special case for known water regions (roughly)
-    // Pacific Ocean region
-    if ((lon < -120 && lon > -170) && (lat > 0 && lat < 60)) return true;
-    // Atlantic Ocean region
-    if ((lon < -30 && lon > -70) && (lat > 0 && lat < 50)) return true;
-    // Indian Ocean region
-    if ((lon > 50 && lon < 100) && (lat > -40 && lat < 0)) return true;
-    
-    // If the point and origin have a substantial water gap (like a strait or bay)
-    // Check if midpoint is likely water by using simple latitude/longitude thresholds
-    // This simple check helps with coastal areas
-    const midLat = (originLat + lat) / 2;
-    const midLon = (originLon + lon) / 2;
-    
-    // If it's far from the origin, it's more likely to be water
-    return distance > 200 && ((lat - originLat) * (lon - originLon) > 0);
+  // Convert to proper AstroSpot
+  const convertToAstroSpot = (location: any): SharedAstroSpot => {
+    return {
+      id: location.id || `calc-loc-${Date.now()}`, // Generate id if none exists
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortleScale,
+      timestamp: location.timestamp || new Date().toISOString(),
+      distance: location.distance,
+      siqs: location.siqs,
+      // Add other required SharedAstroSpot properties with defaults
+      certification: location.certification || '',
+      chineseName: location.chineseName || '',
+      description: location.description || '',
+      isViable: location.isViable || true,
+      isDarkSkyReserve: location.isDarkSkyReserve || false,
+      date: location.date || new Date().toISOString()
+    };
   };
 
-  // Get a human-readable direction name based on grid position
-  const getDirectionName = (x: number, y: number): string => {
-    if (y > 0 && Math.abs(x) < Math.abs(y)/2) return "north";
-    if (y < 0 && Math.abs(x) < Math.abs(y)/2) return "south";
-    if (x > 0 && Math.abs(y) < Math.abs(x)/2) return "east";
-    if (x < 0 && Math.abs(y) < Math.abs(x)/2) return "west";
-    if (x > 0 && y > 0) return "northeast";
-    if (x > 0 && y < 0) return "southeast";
-    if (x < 0 && y > 0) return "northwest";
-    if (x < 0 && y < 0) return "southwest";
-    return "";
+  // Update the function to use the converter when creating calculated locations
+  const createCalculatedLocation = (
+    lat: number, 
+    lng: number, 
+    bortleScale: number, 
+    distance: number, 
+    counter: number,
+    siqs: number
+  ): SharedAstroSpot => {
+    const enName = `Potential ideal dark site ${counter}`;
+    const zhName = `潜在理想暗夜地点 ${counter}`;
+    
+    return convertToAstroSpot({
+      name: enName,
+      chineseName: zhName,
+      latitude: lat,
+      longitude: lng,
+      bortleScale: bortleScale,
+      distance: distance,
+      siqs: siqs,
+      isViable: siqs > 3,
+      timestamp: new Date().toISOString(),
+      date: new Date().toISOString()
+    });
   };
 
   return {

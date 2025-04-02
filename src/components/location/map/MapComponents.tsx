@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
@@ -105,7 +106,8 @@ export const DarkSkyOverlay = ({
 }) => {
   const map = useMap();
   
-  // NOTE: The Circle feature is implemented using Leaflet directly
+  // NOTE: The Circle feature is disabled due to import errors
+  // Instead, we'll create a custom circle using Leaflet directly
   useEffect(() => {
     if (isDarkSkyReserve && position) {
       // Create a circle overlay for dark sky areas

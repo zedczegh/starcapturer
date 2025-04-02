@@ -1,11 +1,11 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useLocationSync } from '@/hooks/location/useLocationSync';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
 import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
@@ -14,7 +14,6 @@ import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationRem
 import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
-import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -24,9 +23,23 @@ const PhotoPointsNearby: React.FC = () => {
   });
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
-
-  // Get user location from coordinates
-  const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
+  
+  // Get synced location from homepage
+  const { syncedLocation, hasSyncedLocation } = useLocationSync();
+  
+  // Use synced location if available, otherwise use geolocation
+  const userLocation = useMemo(() => {
+    if (syncedLocation) {
+      console.log("Using synced location:", syncedLocation);
+      return syncedLocation;
+    }
+    
+    if (coords) {
+      return { latitude: coords.latitude, longitude: coords.longitude };
+    }
+    
+    return null;
+  }, [syncedLocation, coords]);
 
   // Set up recommended locations with userLocation
   const {
@@ -41,7 +54,8 @@ const PhotoPointsNearby: React.FC = () => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks
+    maxLoadMoreClicks,
+    currentSiqs
   } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
@@ -51,9 +65,6 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
-
-  // Get the current SIQS value from the store
-  const currentSiqs = currentSiqsStore.getValue();
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -77,10 +88,10 @@ const PhotoPointsNearby: React.FC = () => {
 
   // Call getUserLocation when the component mounts
   useEffect(() => {
-    if (!userLocation) {
+    if (!userLocation && !hasSyncedLocation) {
       getPosition();
     }
-  }, [getPosition, userLocation]);
+  }, [getPosition, userLocation, hasSyncedLocation]);
 
   // Mark initial load as complete after everything is loaded
   useEffect(() => {
@@ -134,10 +145,10 @@ const PhotoPointsNearby: React.FC = () => {
             </p>
           </div>
           
-          {/* Add the reminder component with hasLocation instead of currentSiqs */}
+          {/* Add the reminder component */}
           <CurrentLocationReminder 
-            hasLocation={!!userLocation}
-            isVisible={!loading}
+            currentSiqs={currentSiqs} 
+            isVisible={!!userLocation && !loading}
           />
           
           {/* User location section */}

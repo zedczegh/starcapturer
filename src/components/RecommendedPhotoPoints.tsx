@@ -26,7 +26,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 }) => {
   const { t } = useLanguage();
   const [isInitialized, setIsInitialized] = useState(false);
-  const currentSiqs = currentSiqsStore.getValue();
+  const currentSiqs = currentSiqsStore.getScore();
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
   
@@ -142,7 +142,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   return (
     <div className="mt-2">
       <CurrentLocationReminder 
-        hasLocation={!!userLocation}
+        currentSiqs={currentSiqs}
         isVisible={limitedLocations.length > 0}
       />
       
@@ -156,7 +156,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
             >
               <PhotoPointCard
-                location={location}
+                point={location}
                 onSelect={onSelectPoint}
                 onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}

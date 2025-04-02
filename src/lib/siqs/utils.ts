@@ -18,13 +18,13 @@ export function siqsToColor(score: number): string {
 
 /**
  * Check if cloud cover is too high for imaging
- * Note: Function kept for compatibility, but no longer enforces a strict cutoff
+ * Note: We no longer enforce a strict cutoff for high cloud cover
  * @param cloudCover Cloud cover percentage
  * @returns Boolean indicating if imaging is technically impossible
  */
 export function isImagingImpossible(cloudCover: number): boolean {
-  // We've removed the strict cutoff, but keep the function to avoid breaking existing code
-  // Now returning false to allow the calculation to proceed
+  // We've removed the strict cutoff, always returning false to allow
+  // at least some score even in poor conditions
   return false;
 }
 
@@ -97,4 +97,23 @@ export function normalizeFactorScores(factors: Array<{ name: string; score: numb
       score: normalizedScore
     };
   });
+}
+
+/**
+ * Get a scaled cloud cover score that provides a small score even for poor conditions
+ * @param cloudCover Cloud cover percentage
+ * @returns Score between 0 and 10
+ */
+export function getScaledCloudCoverScore(cloudCover: number): number {
+  // Validate input
+  const validCloudCover = validateCloudCover(cloudCover);
+  
+  if (validCloudCover <= 50) {
+    // For good conditions (0-50%), use linear scale from 10 to 5
+    return 10 - (validCloudCover / 10);
+  } else {
+    // For poor conditions (50-100%), give a small score between 1.5 and 0
+    // This helps users feel better even in poor conditions
+    return Math.max(0, 1.5 * (1 - ((validCloudCover - 50) / 50)));
+  }
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -14,13 +13,12 @@ import { Language } from "@/services/geocoding/types";
 import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
 import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
 import { motion } from "framer-motion";
-import { currentSiqsStore } from './index/CalculatorSection';
 
 interface SIQSCalculatorProps {
   className?: string;
   hideRecommendedPoints?: boolean;
   noAutoLocationRequest?: boolean;
-  onSiqsCalculated?: (siqsValue: number | null) => void;
+  onSiqsCalculated?: (siqsScore: number | null) => void;
 }
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
@@ -193,8 +191,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   useEffect(() => {
     if (onSiqsCalculated) {
       onSiqsCalculated(siqsScore);
-      // Also update the global store
-      currentSiqsStore.setValue(siqsScore);
     }
   }, [siqsScore, onSiqsCalculated]);
   
@@ -233,8 +229,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           transition={{ delay: 0.2 }}
         >
           <SIQSScore 
-            score={siqsScore} 
-            label={locationName}
+            siqsScore={siqsScore} 
+            latitude={parseFloat(latitude)}
+            longitude={parseFloat(longitude)}
+            locationName={locationName}
           />
         </motion.div>
       )}

@@ -10,8 +10,6 @@ import Footer from "@/components/index/Footer";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
-import { currentSiqsStore } from "@/components/index/CalculatorSection";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -36,10 +34,8 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          const currentSiqs = savedLocation.siqs || (currentSiqsStore?.getValue ? currentSiqsStore.getValue() : null);
-          
-          // Using threshold of 5 for showing notification about good conditions
-          if (currentSiqs && isGoodViewingCondition(currentSiqs)) {
+          // Check if there's a SIQS score saved and it's over 3, show notification
+          if (savedLocation.siqs && savedLocation.siqs > 3) {
             // Show notification for ideal astrophotography location
             setTimeout(() => {
               toast.info(
