@@ -3,8 +3,8 @@ import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 
-// Lazy load the Leaflet map components to improve initial page load
-const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
+// Lazy load the Leaflet map component to improve initial page load
+const LazyMapComponent = lazy(() => import('./map/LazyMapComponent').then(module => ({ default: module.default })));
 
 interface MapDisplayProps {
   position: [number, number];
