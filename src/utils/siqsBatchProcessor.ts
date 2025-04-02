@@ -24,7 +24,8 @@ async function processSingleLocation(location: SharedAstroSpot): Promise<SharedA
       ...location,
       siqs: siqsResult.siqs,
       isViable: siqsResult.isViable,
-      siqsFactors: siqsResult.factors
+      // Use factors array instead of siqsFactors
+      siqsFactors: siqsResult.factors 
     };
   } catch (err) {
     console.error(`Error processing location ${location.name}:`, err);

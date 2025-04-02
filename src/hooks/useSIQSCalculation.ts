@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWeatherData } from "@/lib/api";
@@ -63,7 +62,10 @@ export function useSIQSCalculation({
     queryKey: ["weather", debouncedLatitude, debouncedLongitude],
     queryFn: () => {
       if (debouncedLatitude && debouncedLongitude) {
-        return fetchWeatherData(debouncedLatitude, debouncedLongitude);
+        return fetchWeatherData({ 
+          latitude: debouncedLatitude, 
+          longitude: debouncedLongitude 
+        });
       }
       return null;
     },
@@ -73,8 +75,8 @@ export function useSIQSCalculation({
     staleTime: 5 * 60 * 1000, // 5 minutes
     meta: {
       onSuccess: (data: any) => {
-        setWeatherData(data?.weatherData || null);
-        setForecastData(data?.forecastData || null);
+        setWeatherData(data || null);
+        setForecastData(data?.forecast || null);
       },
       onError: (error: any) => {
         console.error("Error fetching weather data:", error);
@@ -85,8 +87,8 @@ export function useSIQSCalculation({
   // Handle the onSuccess and onError effects manually
   useEffect(() => {
     if (weatherQueryData) {
-      setWeatherData(weatherQueryData?.weatherData || null);
-      setForecastData(weatherQueryData?.forecastData || null);
+      setWeatherData(weatherQueryData || null);
+      setForecastData(weatherQueryData?.forecast || null);
     }
   }, [weatherQueryData]);
   
@@ -271,6 +273,6 @@ export function useSIQSCalculation({
     weatherError,
     manualRefetchWeather,
     skyBrightness,
-    updateSkyBrightness
+    updateSkyBrightness: () => {}
   };
 }

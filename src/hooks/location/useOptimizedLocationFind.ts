@@ -53,6 +53,7 @@ export function useOptimizedLocationFind() {
               isDarkSkyPark: location.name.includes("Park"),
               isDarkSkySanctuary: location.name.includes("Sanctuary"),
               type: location.type,
+              timestamp: new Date().toISOString() // Add the required timestamp
             } as SharedAstroSpot;
           }
           return null;

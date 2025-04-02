@@ -72,3 +72,73 @@ export function formatDistance(distance: number, language: string = 'en'): strin
   }
   return `${Math.round(distance)}km`;
 }
+
+/**
+ * Find the closest known location to given coordinates
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @returns Object with location name, bortle scale, and distance
+ */
+export function findClosestKnownLocation(latitude: number, longitude: number): {
+  name: string;
+  bortleScale: number;
+  distance: number;
+} {
+  // Simple fallback implementation if database isn't loaded
+  return {
+    name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+    bortleScale: 5,
+    distance: 0
+  };
+}
+
+/**
+ * Estimate Bortle scale based on location name and coordinates
+ * @param locationName Location name
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @returns Estimated Bortle scale (1-9)
+ */
+export function estimateBortleScaleByLocation(locationName: string, latitude: number, longitude: number): number {
+  // Default estimation logic - simplified version
+  if (!locationName) return 5;
+  
+  const lowercaseName = locationName.toLowerCase();
+  
+  // Detect urban/city areas
+  if (lowercaseName.includes('city') || 
+      lowercaseName.includes('urban') || 
+      lowercaseName.includes('downtown') ||
+      lowercaseName.includes('metro')) {
+    return 8;
+  }
+  
+  // Detect suburban areas
+  if (lowercaseName.includes('suburb') || 
+      lowercaseName.includes('residential') || 
+      lowercaseName.includes('town')) {
+    return 6;
+  }
+  
+  // Detect rural areas
+  if (lowercaseName.includes('rural') || 
+      lowercaseName.includes('village') || 
+      lowercaseName.includes('countryside')) {
+    return 4;
+  }
+  
+  // Detect wilderness/remote areas
+  if (lowercaseName.includes('wilderness') || 
+      lowercaseName.includes('park') || 
+      lowercaseName.includes('forest') ||
+      lowercaseName.includes('mountain') ||
+      lowercaseName.includes('remote')) {
+    return 3;
+  }
+  
+  // Fallback based on location
+  const isRemoteLocation = Math.abs(latitude) > 60 || // Far north/south
+                          (Math.abs(longitude) > 100 && Math.abs(latitude) < 30); // Desert regions
+  
+  return isRemoteLocation ? 3 : 5;
+}

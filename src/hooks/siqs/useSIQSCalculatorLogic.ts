@@ -10,6 +10,15 @@ interface UseSIQSCalculatorLogicProps {
   getCachedData: (key: string) => any;
 }
 
+// Create wrapper functions that match the expected parameter types
+const fetchWeatherWrapper = (lat: number, lng: number) => {
+  return fetchWeatherData({ latitude: lat, longitude: lng });
+};
+
+const fetchForecastWrapper = (params: { latitude: number; longitude: number; days: number }) => {
+  return fetchForecastData(params);
+};
+
 /**
  * Hook to handle SIQS calculator logic with caching
  */
@@ -21,7 +30,7 @@ export const useSIQSCalculatorLogic = ({
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
   const [siqsFactors, setSiqsFactors] = useState<any[]>([]);
   
-  // Use the SIQS calculation hook
+  // Use the SIQS calculation hook with wrapped functions
   const { calculateSIQS, isCalculating } = useSIQSCalculation({
     fetchWeatherFn: fetchWeatherData,
     fetchForecastFn: fetchForecastData

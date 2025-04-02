@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateSIQSWithWeatherData } from '@/hooks/siqs/siqsCalculationUtils';
 
 interface UseSIQSCalculationProps {
-  fetchWeatherFn: (lat: number, lng: number) => Promise<any>;
+  fetchWeatherFn: (params: { latitude: number; longitude: number; days?: number }) => Promise<any>;
   fetchForecastFn: (params: { latitude: number; longitude: number; days: number }) => Promise<any>;
 }
 
@@ -42,7 +42,7 @@ export const useSIQSCalculation = ({
     try {
       // Fetch weather and forecast data in parallel
       const [weatherResponse, forecastResponse] = await Promise.all([
-        fetchWeatherFn(latitude, longitude),
+        fetchWeatherFn({ latitude, longitude }),
         fetchForecastFn({ latitude, longitude, days: 3 })
       ]);
       
@@ -59,7 +59,7 @@ export const useSIQSCalculation = ({
       
       // Calculate SIQS using our advanced algorithm
       const result = await calculateSIQSWithWeatherData(
-        weatherResponse.weatherData,
+        weatherResponse, // Changed from weatherResponse.weatherData
         bortleScale,
         seeingConditions,
         moonPhase,

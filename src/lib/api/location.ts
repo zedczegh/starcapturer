@@ -1,6 +1,6 @@
-
 import { normalizeLongitude } from './coordinates';
 import { Language } from '@/services/geocoding/types';
+import { findClosestKnownLocation } from '@/utils/locationUtils';
 
 /**
  * Format location address based on language-specific patterns
@@ -112,8 +112,7 @@ export async function getLocationNameFromCoordinates(
       console.error("Error using Nominatim API:", error);
     }
     
-    // Fallback to our database
-    const { findClosestKnownLocation } = await import('../../utils/locationUtils');
+    // Fallback to our database - now using the imported function
     const closestLocation = findClosestKnownLocation(validLat, validLng);
     
     // If we're close to a known location, use its name or "Near X"
