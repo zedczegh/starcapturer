@@ -23,11 +23,17 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
   }
   
   // Special handling for cloud cover - ensure 0% cloud cover always shows score 10.0
+  // and don't penalize too harshly for high cloud cover
   const finalFactors = normalizedFactors.map(factor => {
     if (factor.name === "Cloud Cover" || factor.name === "云层覆盖") {
       // If description mentions 0%, ensure score is 10
       if (factor.description.includes("0%")) {
         return { ...factor, score: 10 };
+      }
+      
+      // For high cloud cover, ensure we show the actual score (could be very low)
+      if (factor.description.includes("over 50%") || factor.description.includes("超过50%")) {
+        return factor;
       }
     }
     return factor;

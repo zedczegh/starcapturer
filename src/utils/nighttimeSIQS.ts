@@ -1,4 +1,3 @@
-
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { 
   calculateCloudScore, 
@@ -84,24 +83,8 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     );
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
-    // Check if cloud cover is too high to make imaging possible (threshold at 50%)
-    if (isImagingImpossible(avgCloudCover)) {
-      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
-      return {
-        score: 0,
-        isViable: false,
-        factors: [
-          {
-            name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-            score: 0,
-            description: t ? 
-              t(`Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`, 
-                `${Math.round(avgCloudCover)}%的云量使成像不可能`) : 
-              `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`
-          }
-        ]
-      };
-    }
+    // Removed the imaging impossible check - we'll calculate a score regardless of cloud cover
+    // and let the calculateSIQS function handle scoring appropriately
     
     const avgWindSpeed = nightForecasts.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecasts.length;
     const avgHumidity = nightForecasts.reduce((sum, item) => sum + item.humidity, 0) / nightForecasts.length;

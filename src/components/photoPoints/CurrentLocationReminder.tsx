@@ -1,10 +1,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Info, Star } from "lucide-react";
+import { Info, Star, CloudRain, MapPin } from "lucide-react";
 import { siqsToColor } from "@/lib/siqs/utils";
 import { formatSIQSScoreForDisplay } from "@/hooks/siqs/siqsCalculationUtils";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface CurrentLocationReminderProps {
   currentSiqs: number | null;
@@ -20,6 +22,9 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   
   // Determine if we should show the high SIQS notification
   const showHighSiqsNotification = currentSiqs !== null && currentSiqs > 3;
+  
+  // Determine if we should show the low SIQS encouragement
+  const showLowSiqsEncouragement = currentSiqs !== null && currentSiqs <= 1.5;
   
   // Show a toast notification if SIQS is over 3 and we haven't shown it yet
   useEffect(() => {
@@ -44,7 +49,7 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   }
   
   // Don't show the box for low SIQS scores, only the toast for high scores
-  if (currentSiqs <= 2) {
+  if (currentSiqs > 1.5 && currentSiqs <= 2) {
     return null;
   }
   
@@ -54,8 +59,12 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   return (
     <div className="mb-4 p-3 rounded-lg glassmorphism bg-cosmic-800/30 border border-cosmic-700/30">
       <div className="flex items-center">
-        <Info className="text-primary mr-2 h-5 w-5 flex-shrink-0" />
-        <div>
+        {showLowSiqsEncouragement ? (
+          <CloudRain className="text-blue-400 mr-2 h-5 w-5 flex-shrink-0" />
+        ) : (
+          <Info className="text-primary mr-2 h-5 w-5 flex-shrink-0" />
+        )}
+        <div className="space-y-2 w-full">
           <p className="text-sm">
             {showHighSiqsNotification ? (
               <span>
@@ -72,6 +81,23 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
                 {t(
                   ". For best results, consider a rural location with lower light pollution.",
                   "。为获得最佳效果，请考虑光污染较少的乡村地点。"
+                )}
+              </span>
+            ) : showLowSiqsEncouragement ? (
+              <span>
+                {t(
+                  "Current conditions aren't ideal with a SIQS score of ",
+                  "当前条件不太理想，SIQS评分为 "
+                )}
+                <span
+                  className="font-semibold"
+                  style={{ color: siqsColor }}
+                >
+                  {formatSIQSScoreForDisplay(currentSiqs)}
+                </span>
+                {t(
+                  ". Don't worry, the clear skies will eventually come! Try our Photo Points feature to find better spots nearby.",
+                  "。别担心，晴朗的天空终会到来！尝试我们的拍摄点功能来寻找附近更好的地点。"
                 )}
               </span>
             ) : (
@@ -93,6 +119,22 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
               </span>
             )}
           </p>
+          
+          {showLowSiqsEncouragement && (
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-1 text-sm bg-primary/10 border-primary/20 hover:bg-primary/20"
+                asChild
+              >
+                <Link to="/photo-points">
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  {t("Find Nearby Photo Points", "查找附近拍摄点")}
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

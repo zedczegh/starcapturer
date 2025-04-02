@@ -15,16 +15,13 @@ export function calculateCloudScore(cloudCover: number): number {
     return 100;
   }
   
-  // If cloud cover is above 80%, score should be very low
-  if (cloudCover > 80) return 0;
-  
-  // Improved weighting that better rewards lower cloud coverage:
+  // Modified cloud cover scoring:
   // 0-20% cloud cover = Outstanding (80-100 points)
   // 20-35% cloud cover = Very Good (65-80 points)
   // 35-50% cloud cover = Good (50-65 points)
   // 50-65% cloud cover = Fair (25-50 points)
   // 65-80% cloud cover = Poor (0-25 points)
-  // >80% cloud cover = 0 points
+  // >80% cloud cover = Very Poor (0-15 points on a more lenient scale)
   
   if (cloudCover <= 20) {
     // Outstanding conditions: 0-20% -> 80-100 points
@@ -38,9 +35,13 @@ export function calculateCloudScore(cloudCover: number): number {
   } else if (cloudCover <= 65) {
     // Fair conditions: 50-65% -> 25-50 points
     return 50 - ((cloudCover - 50) * 1.67);
-  } else {
+  } else if (cloudCover <= 80) {
     // Poor conditions: 65-80% -> 0-25 points
     return Math.max(0, 25 - ((cloudCover - 65) * 1.67));
+  } else {
+    // Very Poor conditions: 80-100% -> 0-15 points (more lenient)
+    // This provides a small non-zero score (up to 1.5 on the final 0-10 scale)
+    return Math.max(0, 15 * (1 - ((cloudCover - 80) / 20)));
   }
 }
 

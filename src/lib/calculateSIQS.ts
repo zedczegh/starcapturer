@@ -57,7 +57,9 @@ function filterNightTimeForecast(forecast: any[]): any[] {
 }
 
 /**
- * Check if cloud cover exceeds the threshold (modified from 40% to 50%)
+ * Check if cloud cover exceeds the threshold (50%)
+ * Note: We've removed the early return of 0 score for high cloud cover
+ * to provide more encouraging feedback
  * @param cloudCover Cloud cover percentage
  * @returns True if cloud cover is over threshold
  */
@@ -100,21 +102,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     // Calculate average cloud cover from nighttime forecast
     const avgCloudCover = tonightForecast.reduce((sum, item) => sum + (item.cloudCover || 0), 0) / tonightForecast.length;
     
-    // STRICT ENFORCEMENT of cloud cover > 50% = 0 rule (modified from 40% to 50%)
-    if (isCloudCoverTooHigh(avgCloudCover)) {
-      console.log(`Average cloud cover is ${avgCloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
-      return {
-        score: 0,
-        isViable: false,
-        factors: [
-          {
-            name: "Cloud Cover",
-            score: 0,
-            description: getCloudDescription(avgCloudCover)
-          }
-        ]
-      };
-    }
+    // Removed the strict enforcement of 0 score for cloud cover over 50%
+    // Now we'll allow the calculateCloudScore function to determine the appropriate score
     
     // Calculate average values for other factors
     const avgWindSpeed = tonightForecast.reduce((sum, item) => sum + (item.windSpeed || 0), 0) / tonightForecast.length;
@@ -207,21 +196,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   // If no nighttime forecast is available, fall back to current conditions
   console.log("No nighttime forecast available, using current conditions for SIQS");
   
-  // STRICT ENFORCEMENT of cloud cover > 50% = 0 rule for current conditions (modified from 40% to 50%)
-  if (isCloudCoverTooHigh(cloudCover)) {
-    console.log(`Current cloud cover is ${cloudCover}%, which exceeds 50% threshold. SIQS score = 0`);
-    return {
-      score: 0,
-      isViable: false,
-      factors: [
-        {
-          name: "Cloud Cover",
-          score: 0,
-          description: getCloudDescription(cloudCover)
-        }
-      ]
-    };
-  }
+  // Removed the strict enforcement of 0 score for cloud cover over 50%
+  // for current conditions as well
   
   // Calculate individual factor scores for current conditions
   const cloudScore = calculateCloudScore(cloudCover);
