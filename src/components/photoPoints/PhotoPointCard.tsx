@@ -110,8 +110,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
                 {!isPreview && (
                   <Button
                     size="sm"
-                    className="px-4 h-8 text-sm hover:bg-primary hover:text-primary-foreground transition-colors duration-500"
-                    variant="outline"
+                    className="px-4 h-8 text-sm bg-blue-600/40 hover:bg-blue-600/60 text-white hover:text-white transition-colors"
                     onClick={() => {
                       if (onSelect) onSelect(point);
                       if (onViewDetails) onViewDetails();

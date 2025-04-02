@@ -40,7 +40,8 @@ export const handleLocationChange = async (
       weatherData,
       bortleScale,
       3, // Default seeing conditions
-      moonPhase
+      moonPhase,
+      language // Pass language parameter
     );
     
     // Return the updated location data with SIQS included
