@@ -1,928 +1,572 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import NavBar from "@/components/NavBar";
-import { useLanguage } from "@/contexts/LanguageContext";
+
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ExternalLink, Globe, Star, Moon, CloudRain, Wind, Thermometer, Award, Check, MapPin, Shield } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle2, Link as LinkIcon, Star, Sun, CloudMoon, Telescope, Wind, Droplets, Compass, AlertCircle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { motion } from "framer-motion";
 
 const AboutSIQS = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState("what-is-siqs");
   
-  // Organize resources by category for better presentation
-  const resources = {
-    darkSky: [
-      { 
-        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
-        subcategory: language === 'en' ? "Official" : "官方", 
-        name: language === 'en' ? "IDA Official Website" : "IDA官方网站", 
-        url: "https://www.darksky.org/" 
-      },
-      { 
-        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Find an International Dark Sky Place" : "查找国际暗夜地点", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/finder/" 
-      },
-      { 
-        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
-        subcategory: language === 'en' ? "Education" : "教育", 
-        name: language === 'en' ? "Light Pollution Effects on Wildlife and Ecosystems" : "光污染对野生动物和生态系统的影响", 
-        url: "https://www.darksky.org/light-pollution/wildlife/" 
-      },
-      { 
-        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
-        subcategory: language === 'en' ? "Education" : "教育", 
-        name: language === 'en' ? "Lighting Basics" : "照明基础知识", 
-        url: "https://www.darksky.org/our-work/lighting/lighting-basics/" 
-      },
-      { 
-        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "IDA Dark Sky Places Program" : "IDA暗夜地点计划", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/" 
-      },
-      { 
-        category: language === 'en' ? "Conservation" : "保护", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Dark Sky Reserve Guidelines" : "暗夜保护区指南", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/reserves/" 
-      },
-      { 
-        category: language === 'en' ? "Conservation" : "保护", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Dark Sky Park Guidelines" : "暗夜公园指南", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/parks/" 
-      },
-      { 
-        category: language === 'en' ? "Conservation" : "保护", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Dark Sky Sanctuary Guidelines" : "暗夜保护区指南", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/sanctuaries/" 
-      },
-      { 
-        category: language === 'en' ? "Dark Sky Certification" : "暗夜认证", 
-        subcategory: language === 'en' ? "Guidelines" : "指南", 
-        name: language === 'en' ? "IDA Dark Sky Places Criteria" : "IDA暗夜地点标准", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/become-a-dark-sky-place/" 
-      },
-      { 
-        category: language === 'en' ? "Dark Sky Certification" : "暗夜认证", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Dark Sky Places Annual Reports" : "暗夜地点年度报���", 
-        url: "https://www.darksky.org/our-work/conservation/idsp/annual-reports/" 
-      },
-      { 
-        category: language === 'en' ? "Dark Sky Data" : "暗夜数据", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "World Atlas of Artificial Night Sky Brightness" : "世界人工夜空亮度图集", 
-        url: "https://cires.colorado.edu/artificial-sky" 
-      }
-    ],
-    software: [
-      { 
-        category: "NINA", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: language === 'en' ? "NINA Precise Backlash Measurement and Electronic Adjustment" : "NINA精细测量回差并设置电调参数", 
-        url: "https://istarshooter.com/article/detail/73" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Software" : "软件", 
-        name: "PixInsight", 
-        url: "https://www.pixinsight.com/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: "PixInsight Workflows-chaoticnebula", 
-        url: "https://chaoticnebula.com/pixinsight-lrgb-workflow/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: "Cosmic Photons – Astrophotography", 
-        url: "https://cosmicphotons.com/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: language === 'en' ? "Astronomy Software - The Backyard Astronomy Space" : "天文软件 - 后院天文空间", 
-        url: "https://www.backyardastro.org/forum/17-astronomy-software/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: language === 'en' ? "AstroProcessing: NSG, PMM apps" : "天文处理: NSG, PMM 应用", 
-        url: "https://www.astroprocessing.com/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: "PixInsight-Scripts / Toolbox", 
-        url: "https://gitlab.com/pixinsight-scripts/toolbox" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: language === 'en' ? "New Foraxx script for PixInsight" : "PixInsight的新Foraxx脚本", 
-        url: "https://www.astroworldcreations.com/news/new-foraxx-script-for-pixinsight" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: "pixinsight scripts — Seti Astro", 
-        url: "https://www.setiastro.com/pjsr-scripts" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: "PixInsight Toolbox", 
-        url: "https://www.ideviceapps.de/pixinsight-toolbox.html" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: language === 'en' ? "GHS Stretching" : "GHS拉伸", 
-        url: "https://github.com/mikec1485/GHS" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: language === 'en' ? "RC Three-piece Set" : "RC三件套", 
-        url: "https://www.rc-astro.com/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Plugins" : "插件", 
-        name: "Herbert Walter PixInsight Scripts", 
-        url: "https://www.skypixels.at/pixinsight_scripts.html" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: "Adam Block Studios", 
-        url: "https://www.adamblockstudios.com/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: language === 'en' ? "Fernando Yang's Main Site" : "肥尔腩多的主站", 
-        url: "https://fernandoyang.pt/" 
-      },
-      { 
-        category: "PixInsight", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: language === 'en' ? "Deep Space King PixInsight Tutorials" : "深空之王PixInsight教程", 
-        url: "https://space.bilibili.com/244743682/lists/467029?type=season" 
-      }
-    ],
-    maps: [
-      { 
-        category: language === 'en' ? "Maps" : "地图", 
-        subcategory: language === 'en' ? "Satellite" : "卫星", 
-        name: language === 'en' ? "Satellite Map" : "satellitemap卫星地图", 
-        url: "https://satellitemap.space/?constellation=starlink" 
-      },
-      { 
-        category: language === 'en' ? "Maps" : "地图", 
-        subcategory: language === 'en' ? "Star Charts" : "星图", 
-        name: "China-VO SkyView", 
-        url: "https://nadc.china-vo.org/skyview/" 
-      },
-      { 
-        category: language === 'en' ? "Maps" : "地图", 
-        subcategory: language === 'en' ? "Star Charts" : "星图", 
-        name: language === 'en' ? "Virtual Observatory Online Map" : "虚拟天文馆在线地图", 
-        url: "https://stellarium-web.org/" 
-      },
-      { 
-        category: language === 'en' ? "Maps" : "地图", 
-        subcategory: language === 'en' ? "Star Charts" : "星图", 
-        name: "Online Star Maps", 
-        url: "https://theskylive.com/planetarium?obj=2024pt5#ra|15.79058679773252|dec|73.00498667294666|fov|80" 
-      }
-    ],
-    weather: [
-      { 
-        category: language === 'en' ? "Weather" : "气象", 
-        subcategory: language === 'en' ? "Weather" : "气象", 
-        name: "Windy", 
-        url: "https://www.windy.com" 
-      },
-      { 
-        category: language === 'en' ? "Weather" : "气象", 
-        subcategory: language === 'en' ? "Weather" : "气象", 
-        name: language === 'en' ? "China Meteorological Administration Typhoon Network" : "中央气象台台风网", 
-        url: "http://typhoon.nmc.cn/web.html" 
-      }
-    ],
-    data: [
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Tools" : "工具", 
-        name: language === 'en' ? "Calculate SNR (Signal-to-Noise Ratio)" : "计算SNR信噪比", 
-        url: "https://deepskydetail.shinyapps.io/Calculate_SNR/" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Tools" : "工具", 
-        name: language === 'en' ? "Astronomy Tools Website" : "天文工具网", 
-        url: "https://astronomy.tools/" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Light Pollution" : "光污染", 
-        name: language === 'en' ? "Dark Sky Map - Light Pollution Map" : "darkskymap-光污染地图", 
-        url: "https://www.darkskymap.com/map" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Light Pollution" : "光污染", 
-        name: language === 'en' ? "Light Pollution Map" : "光污染地图", 
-        url: "https://www.lightpollutionmap.info/" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Imaging Data" : "拍摄数据", 
-        name: language === 'en' ? "Open Datasets – Erellaz" : "开放数据集 – Erellaz", 
-        url: "https://erellaz.com/moana/open-datasets/" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Weather" : "气象", 
-        name: language === 'en' ? "Historical Weather Query" : "历史天气查询", 
-        url: "https://lishi.tianqi.com/" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Weather" : "气象", 
-        name: "OpenWeatherMap", 
-        url: "https://openweathermap.org/api" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Database" : "数据库", 
-        name: language === 'en' ? "Major Astronomical Data Centers Domestic and International" : "国内外主要天文数据中心", 
-        url: "https://astro.bnu.edu.cn/Computational_Astronomy/html/7ziyuan/1canshu/canshu.htm" 
-      },
-      { 
-        category: language === 'en' ? "Data" : "数据", 
-        subcategory: language === 'en' ? "Database" : "数据库", 
-        name: language === 'en' ? "National Astronomical Science Data Center" : "国家天文科学数据中心", 
-        url: "https://nadc.china-vo.org/data/" 
-      }
-    ],
-    forums: [
-      { 
-        category: language === 'en' ? "Astronomy Forums" : "天文论坛", 
-        subcategory: language === 'en' ? "Forums" : "论坛", 
-        name: language === 'en' ? "Mufu Network" : "牧夫网", 
-        url: "https://bbs.imufu.cn/" 
-      },
-      { 
-        category: language === 'en' ? "Astronomy Forums" : "天文论坛", 
-        subcategory: language === 'en' ? "Forums" : "论坛", 
-        name: language === 'en' ? "PixInsight Official Community" : "PixInsight官方社区", 
-        url: "https://pixinsight.com/forum/index.php" 
-      }
-    ],
-    observatories: [
-      { 
-        category: language === 'en' ? "Observatories" : "天文台", 
-        subcategory: language === 'en' ? "Rental" : "租赁", 
-        name: language === 'en' ? "Telescope Live Observatory Rental" : "Telescope Live天文台租赁", 
-        url: "https://app.telescope.live/login" 
-      }
-    ],
-    beginners: [
-      { 
-        category: language === 'en' ? "Beginners" : "新手", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: language === 'en' ? "QHYCCD Astrophotography Station" : "QHYCCD天文摄影小站", 
-        url: "https://www.bilibili.com/opus/679310616214634529?spm_id_from=333.999.0.0" 
-      },
-      { 
-        category: language === 'en' ? "Beginners" : "新手", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: language === 'en' ? "Bringing Billions of Kilometers Closer! What Can Ordinary People Photograph with a Telescope?" : "拉近几十亿公里！普通人用天文望远镜能拍到什么？", 
-        url: "https://www.bilibili.com/video/BV1y84y147YW/?spm_id_from=333.1387.favlist.content.click" 
-      }
-    ],
-    hardware: [
-      { 
-        category: language === 'en' ? "Hardware" : "硬件", 
-        subcategory: language === 'en' ? "Cooled Cameras" : "冷冻相机", 
-        name: "QHYCCD", 
-        url: "https://www.qhyccd.cn/" 
-      },
-      { 
-        category: language === 'en' ? "Hardware" : "硬件", 
-        subcategory: language === 'en' ? "Cooled Cameras" : "冷冻相机", 
-        name: language === 'en' ? "ToupTek Astronomy" : "图谱天文", 
-        url: "https://www.touptek-astro.com.cn/" 
-      },
-      { 
-        category: language === 'en' ? "Hardware" : "硬件", 
-        subcategory: language === 'en' ? "Cooled Cameras" : "冷冻相机", 
-        name: language === 'en' ? "ZWO" : "ZWO", 
-        url: "https://www.zwoastro.cn/" 
-      },
-      { 
-        category: language === 'en' ? "Hardware" : "硬件", 
-        subcategory: language === 'en' ? "Telescopes" : "望远镜", 
-        name: language === 'en' ? "SharpStar Optics" : "锐星光学", 
-        url: "https://www.sharpstar-optics.com/" 
-      },
-      { 
-        category: language === 'en' ? "Hardware" : "硬件", 
-        subcategory: language === 'en' ? "Telescopes" : "望远镜", 
-        name: language === 'en' ? "Sky-Rover Optics" : "裕众光学", 
-        url: "http://www.sky-rover.cn/projectlist.asp?LarCode=%D4%CB%B6%AF-%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5&Midcode=%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5" 
-      },
-      { 
-        category: language === 'en' ? "Hardware" : "硬件", 
-        subcategory: language === 'en' ? "Telescopes" : "望远镜", 
-        name: "Sky-Watcher", 
-        url: "https://www.skywatcher.com/" 
-      }
-    ],
-    games: [
-      { 
-        category: language === 'en' ? "Games" : "游戏", 
-        subcategory: language === 'en' ? "Simulators" : "模拟器", 
-        name: language === 'en' ? "SPACEX International Space Station Docking Simulator" : "SPACEX 国际空间站对接模拟器", 
-        url: "https://iss-sim.spacex.com/" 
-      }
-    ],
-    resources: [
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Maps" : "地图", 
-        name: language === 'en' ? "Stellarium" : "虚拟天文馆", 
-        url: "https://stellarium.org/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Siril Post-processing Software" : "siril后期软件", 
-        url: "https://siril.org/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: language === 'en' ? "Siril Tutorials" : "siril教程", 
-        url: "https://siril.org/tutorials/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: "DIY", 
-        name: language === 'en' ? "Portable Display with Power Bank Functionality" : "带充电宝功能的便携显示器", 
-        url: "https://github.com/peng-zhihui/PocketLCD" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Reviews" : "测评", 
-        name: language === 'en' ? "Filter Comparison" : "滤镜比较", 
-        url: "https://www.researchgate.net/profile/James-Thompson-32" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Tutorials" : "教程", 
-        name: language === 'en' ? "PC Mobile Hotspot" : "PC移动热点", 
-        url: "https://blog.csdn.net/qq_36349997/article/details/140780453" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Open Source Projects" : "开源项目", 
-        name: "QHYCCD-QUARCS", 
-        url: "https://github.com/QHYCCD-QUARCS" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Gallery" : "欣赏", 
-        name: language === 'en' ? "ESA/Hubble Images" : "ESA/Hubble图片", 
-        url: "https://esahubble.org/images/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Gallery" : "欣赏", 
-        name: language === 'en' ? "Jet Propulsion Laboratory" : "喷气推进实验室", 
-        url: "https://www.spitzer.caltech.edu/images" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Gallery" : "欣赏", 
-        name: language === 'en' ? "High Resolution Imaging Science Experiment" : "高分辨率成像科学实验", 
-        url: "https://www.uahirise.org/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Gallery" : "欣赏", 
-        name: "In-The-Sky.org", 
-        url: "https://in-the-sky.org/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: "Nighttime Imaging 'N' Astronomy", 
-        url: "https://nighttime-imaging.eu/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: "TheSky Astronomy Software", 
-        url: "https://www.bisque.com/product-category/software/" 
-      },
-      { 
-        category: language === 'en' ? "Resources" : "资源", 
-        subcategory: language === 'en' ? "Resources" : "资源", 
-        name: "Astroberry Server", 
-        url: "https://www.astroberry.io/" 
-      }
-    ]
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
   };
-  
-  // Function to get translated category name
-  const getTranslatedCategory = (category: string): string => {
-    switch (category) {
-      case 'darkSky': return language === 'en' ? "Dark Sky Information" : "暗夜信息";
-      case 'software': return language === 'en' ? "Software & Tools" : "软件和工具";
-      case 'maps': return language === 'en' ? "Maps & Charts" : "地图和星图";
-      case 'weather': return language === 'en' ? "Weather Resources" : "气象资源";
-      case 'data': return language === 'en' ? "Data Resources" : "数据资源";
-      case 'forums': return language === 'en' ? "Forums & Communities" : "论坛和社区";
-      case 'observatories': return language === 'en' ? "Observatories" : "天文台";
-      case 'beginners': return language === 'en' ? "Beginner Guides" : "新手指南";
-      case 'hardware': return language === 'en' ? "Hardware" : "硬件";
-      case 'games': return language === 'en' ? "Simulations & Games" : "模拟和游戏";
-      case 'resources': return language === 'en' ? "Other Resources" : "其他资源";
-      default: return category;
-    }
-  };
-  
-  // Function to get translated name if available
-  const getTranslatedResourceName = (resource: any): string => {
-    return resource.name;
-  };
-
-  // Dark Sky Certification Types
-  const idaCertifications = [
-    {
-      title: language === 'en' ? "Dark Sky Reserve" : "暗夜保护区",
-      description: language === 'en' ? 
-        "A Dark Sky Reserve is a public or private land possessing an exceptional quality of starry nights and nocturnal environment that is specifically protected for its scientific, natural, educational, cultural, heritage and/or public enjoyment." :
-        "暗夜保护区是拥有优质星空和夜间环境的公共或私人土地，专门为科学、自然、教育、文化、遗产和/或公众享受而保护。",
-      icon: Globe,
-      color: "from-blue-600 to-blue-400",
-      textColor: "text-blue-300",
-      bgColor: "bg-blue-900/20",
-      borderColor: "border-blue-600/30",
-      count: 21
-    },
-    {
-      title: language === 'en' ? "Dark Sky Park" : "暗夜公园",
-      description: language === 'en' ? 
-        "A Dark Sky Park is a land possessing an exceptional quality of starry nights and a nocturnal environment that is specifically protected for its scientific, natural, educational, and cultural heritage, and/or for public enjoyment." :
-        "暗夜公园是拥有优质星空和夜间环境的土地，专门为其科学、自然、教育和文化遗产，和/或为公众享受而受到保护。",
-      icon: Star,
-      color: "from-green-600 to-green-400",
-      textColor: "text-green-300",
-      bgColor: "bg-green-900/20",
-      borderColor: "border-green-600/30",
-      count: 114
-    },
-    {
-      title: language === 'en' ? "Dark Sky Sanctuary" : "暗夜圣地",
-      description: language === 'en' ? 
-        "A Dark Sky Sanctuary is a public or private land that has an exceptional quality of starry nights and a nocturnal environment that is protected for its scientific, natural, or educational value, its cultural heritage and/or public enjoyment." :
-        "暗夜圣地是拥有优质星空和夜间环境的公共或私人土地，为其科学、自然或教育价值、文化遗产和/或公众享受而受到保护。",
-      icon: Moon,
-      color: "from-indigo-600 to-indigo-400",
-      textColor: "text-indigo-300",
-      bgColor: "bg-indigo-900/20",
-      borderColor: "border-indigo-600/30",
-      count: 19
-    },
-    {
-      title: language === 'en' ? "Dark Sky Community" : "暗夜社区",
-      description: language === 'en' ? 
-        "A Dark Sky Community is a town, city, municipality, or other legally organized community that has shown exceptional dedication to the preservation of the night sky through the implementation and enforcement of quality lighting ordinances, dark sky education, and citizen support of dark skies." :
-        "暗夜社区是通过实施和执行高质量照明条例、暗夜教育和公民支持暗夜而表现出对夜空保护的特殊奉献精神的城镇、城市、市政当局或其他合法组织的社区。",
-      icon: MapPin,
-      color: "from-amber-600 to-amber-400",
-      textColor: "text-amber-300",
-      bgColor: "bg-amber-900/20",
-      borderColor: "border-amber-600/30",
-      count: 33
-    },
-    {
-      title: language === 'en' ? "Urban Night Sky Place" : "城市夜空地点",
-      description: language === 'en' ? 
-        "An Urban Night Sky Place is a municipal park, open space, observatory, or other similar property near or surrounded by large urban environs whose planning and design actively promote an authentic nighttime experience in the midst of significant artificial light." :
-        "城市夜空地点是市政公园、开放空间、天文台或其他类似的靠近或被大型城市环境包围的场所，其规划和设计积极促进在显著人工光照中的真实夜间体验。",
-      icon: Shield,
-      color: "from-violet-600 to-violet-400",
-      textColor: "text-violet-300",
-      bgColor: "bg-violet-900/20",
-      borderColor: "border-violet-600/30",
-      count: 5
-    }
-  ];
-
-  // Bortle Scale information for Dark Sky understanding
-  const bortleScaleInfo = [
-    {
-      level: 1,
-      name: language === 'en' ? "Excellent dark-sky site" : "极佳暗夜地点",
-      mlky: language === 'en' ? "Milky Way casts shadows" : "银河能投下影子",
-      color: "bg-blue-950",
-      textColor: "text-blue-100"
-    },
-    {
-      level: 2,
-      name: language === 'en' ? "Truly dark site" : "真正的暗夜地点",
-      mlky: language === 'en' ? "Summer Milky Way highly structured" : "夏季银河结构清晰可见",
-      color: "bg-blue-900",
-      textColor: "text-blue-200"
-    },
-    {
-      level: 3,
-      name: language === 'en' ? "Rural sky" : "乡村天空",
-      mlky: language === 'en' ? "Some light pollution evident at horizon" : "地平线处有一些光污染迹象",
-      color: "bg-blue-800",
-      textColor: "text-blue-200"
-    },
-    {
-      level: 4,
-      name: language === 'en' ? "Rural/suburban transition" : "乡村/郊区过渡",
-      mlky: language === 'en' ? "Milky Way still impressive but lacks detail" : "银河仍然令人印象深刻但缺乏细节",
-      color: "bg-green-800",
-      textColor: "text-green-200"
-    },
-    {
-      level: 5,
-      name: language === 'en' ? "Suburban sky" : "郊区天空",
-      mlky: language === 'en' ? "Milky Way washed out except at zenith" : "除了天顶处，银河已被冲淡",
-      color: "bg-green-700",
-      textColor: "text-green-100"
-    },
-    {
-      level: 6,
-      name: language === 'en' ? "Bright suburban sky" : "明亮的郊区天空",
-      mlky: language === 'en' ? "Milky Way only visible at zenith" : "银河仅在天顶处可见",
-      color: "bg-yellow-700",
-      textColor: "text-yellow-100"
-    },
-    {
-      level: 7,
-      name: language === 'en' ? "Suburban/urban transition" : "郊区/城市过渡",
-      mlky: language === 'en' ? "Milky Way invisible" : "银河不可见",
-      color: "bg-orange-700",
-      textColor: "text-orange-100"
-    },
-    {
-      level: 8,
-      name: language === 'en' ? "City sky" : "城市天空",
-      mlky: language === 'en' ? "Only brightest stars visible" : "仅最亮的星星可见",
-      color: "bg-red-700",
-      textColor: "text-red-100"
-    },
-    {
-      level: 9,
-      name: language === 'en' ? "Inner-city sky" : "城市中心天空",
-      mlky: language === 'en' ? "No stars visible" : "看不到星星",
-      color: "bg-red-900",
-      textColor: "text-red-100"
-    }
-  ];
 
   return (
-    <>
-      <NavBar />
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <Tabs defaultValue="siqs" className="mb-12">
-          <div className="flex justify-center mt-8 mb-10">
-            <TabsList className="w-auto bg-cosmic-800/50 backdrop-blur-sm border border-cosmic-700/30 p-2">
+    <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat py-12">
+      <div className="container mx-auto mt-32 px-4">
+        <Tabs 
+          defaultValue="what-is-siqs" 
+          className="w-full max-w-4xl mx-auto" 
+          onValueChange={handleTabChange}
+        >
+          <div className="flex justify-center mb-12">
+            <TabsList className="bg-cosmic-800/70 p-1 rounded-xl border border-cosmic-600/20 shadow-lg">
               <TabsTrigger 
-                value="siqs" 
-                className="text-lg px-6 py-3 data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground"
+                value="what-is-siqs" 
+                className={`text-lg px-6 py-3 rounded-lg transition-all duration-300 ${
+                  activeTab === "what-is-siqs" 
+                    ? "bg-primary text-primary-foreground shadow-md" 
+                    : "hover:bg-cosmic-700/50 hover:text-primary-foreground hover:scale-105"
+                }`}
               >
                 {t("What is SIQS?", "什么是SIQS？")}
               </TabsTrigger>
               <TabsTrigger 
-                value="darksky" 
-                className="text-lg px-6 py-3 data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground"
+                value="dark-sky-knowledge" 
+                className={`text-lg px-6 py-3 rounded-lg transition-all duration-300 ${
+                  activeTab === "dark-sky-knowledge" 
+                    ? "bg-primary text-primary-foreground shadow-md" 
+                    : "hover:bg-cosmic-700/50 hover:text-primary-foreground hover:scale-105"
+                }`}
               >
                 {t("Dark Sky Knowledge", "暗夜知识")}
               </TabsTrigger>
               <TabsTrigger 
-                value="links" 
-                className="text-lg px-6 py-3 data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground"
+                value="useful-links" 
+                className={`text-lg px-6 py-3 rounded-lg transition-all duration-300 ${
+                  activeTab === "useful-links" 
+                    ? "bg-primary text-primary-foreground shadow-md" 
+                    : "hover:bg-cosmic-700/50 hover:text-primary-foreground hover:scale-105"
+                }`}
               >
-                {t("Useful Links", "有用链接")}
+                {t("Useful Links", "实用链接")}
               </TabsTrigger>
             </TabsList>
           </div>
           
-          <TabsContent value="siqs" className="space-y-6 mt-4">
-            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-2xl text-primary">
-                  {t("Sky Imaging Quality Score (SIQS)", "天空成像质量评分 (SIQS)")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p>
-                  {t(
-                    "SIQS (Sky Imaging Quality Score) is an integrated evaluation system designed specifically for astrophotography. It helps you determine the optimal viewing and imaging conditions for a specific location.",
-                    "SIQS（天空成像质量评分）是专为天文摄影设计的综合评估系统。它帮助您确定特定位置的最佳观测和成像条件。"
-                  )}
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
-                    <div className="flex items-center mb-2">
-                      <div className="bg-blue-600/20 p-2 rounded-full mr-3">
-                        <Star className="h-5 w-5 text-blue-400" />
-                      </div>
-                      <h3 className="font-medium text-lg">
-                        {t("Light Pollution", "光污染")}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t(
-                        "Measures artificial light that brightens the night sky, based on Bortle scale and light pollution databases.",
-                        "测量使夜空变亮的人工光，基于Bortle等级和光污染数据库。"
-                      )}
-                    </p>
-                  </div>
+          {/* What is SIQS? content */}
+          <TabsContent value="what-is-siqs" className="animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-cosmic-900/80 border-cosmic-600/20 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-3xl text-center text-gradient-blue">
+                    {t("Sky Imaging Quality Score (SIQS)", "天空成像质量分数 (SIQS)")}
+                  </CardTitle>
+                  <CardDescription className="text-center text-lg">
+                    {t("A comprehensive metric for astrophotography conditions", "天文摄影条件的综合指标")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <p className="text-lg">
+                    {t(
+                      "SIQS is a comprehensive scoring system that evaluates and predicts the suitability of a location for astrophotography and night sky observation. It combines multiple environmental factors to provide a single, easy-to-understand score from 0-100.",
+                      "SIQS是一个综合评分系统，用于评估和预测某个位置对天文摄影和夜空观测的适宜性。它结合了多个环境因素，提供一个从0到100的简单易懂的分数。"
+                    )}
+                  </p>
                   
-                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
-                    <div className="flex items-center mb-2">
-                      <div className="bg-teal-600/20 p-2 rounded-full mr-3">
-                        <CloudRain className="h-5 w-5 text-teal-400" />
-                      </div>
-                      <h3 className="font-medium text-lg">
-                        {t("Cloud Coverage", "云层覆盖")}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t(
-                        "Evaluates the percentage of sky covered by clouds, greatly affecting visibility and imaging quality.",
-                        "评估云层覆盖天空的百分比，极大影响能见度和成像质量。"
-                      )}
-                    </p>
-                  </div>
-                  
-                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
-                    <div className="flex items-center mb-2">
-                      <div className="bg-indigo-600/20 p-2 rounded-full mr-3">
-                        <Wind className="h-5 w-5 text-indigo-400" />
-                      </div>
-                      <h3 className="font-medium text-lg">
-                        {t("Wind Speed", "风速")}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t(
-                        "Strong winds cause telescope vibrations, resulting in blurred images and reduced detail clarity.",
-                        "强风会导致望远镜振动，导致图像模糊且细节清晰度降低。"
-                      )}
-                    </p>
-                  </div>
-                  
-                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
-                    <div className="flex items-center mb-2">
-                      <div className="bg-purple-600/20 p-2 rounded-full mr-3">
-                        <Thermometer className="h-5 w-5 text-purple-400" />
-                      </div>
-                      <h3 className="font-medium text-lg">
-                        {t("Temperature", "温度")}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t(
-                        "Rapid temperature changes affect image quality; stable temperatures are ideal for astrophotography.",
-                        "温度的快速变化会影响图像质量；稳定的温度是天文摄影的理想条件。"
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
-                    <div className="flex items-center mb-2">
-                      <div className="bg-amber-600/20 p-2 rounded-full mr-3">
-                        <CloudRain className="h-5 w-5 text-amber-400" />
-                      </div>
-                      <h3 className="font-medium text-lg">
-                        {t("Humidity", "湿度")}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t(
-                        "High humidity can create haze, reduce contrast, and cause dew on optical equipment.",
-                        "高湿度会产生雾霾，降低对比度，并在光学设备上形成露水。"
-                      )}
-                    </p>
-                  </div>
-                  
-                  <div className="bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4 flex flex-col">
-                    <div className="flex items-center mb-2">
-                      <div className="bg-green-600/20 p-2 rounded-full mr-3">
-                        <Award className="h-5 w-5 text-green-400" />
-                      </div>
-                      <h3 className="font-medium text-lg">
-                        {t("Seeing", "视宁度")}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {t(
-                        "Atmospheric turbulence that affects image sharpness; better seeing means sharper astronomical images.",
-                        "影响图像清晰度的大气湍流；更好的视宁度意味着更清晰的天文图像。"
-                      )}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mt-6 bg-cosmic-700/30 border border-cosmic-600/30 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3 text-primary">
-                    {t("SIQS Scoring System", "SIQS评分系统")}
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                    <div className="bg-green-900/30 border border-green-700/30 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-green-400">8-10</div>
-                      <div className="text-sm text-green-300">
-                        {t("Excellent", "优秀")}
-                      </div>
-                    </div>
-                    <div className="bg-teal-900/30 border border-teal-700/30 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-teal-400">6-8</div>
-                      <div className="text-sm text-teal-300">
-                        {t("Good", "良好")}
-                      </div>
-                    </div>
-                    <div className="bg-blue-900/30 border border-blue-700/30 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-blue-400">4-6</div>
-                      <div className="text-sm text-blue-300">
-                        {t("Average", "一般")}
-                      </div>
-                    </div>
-                    <div className="bg-amber-900/30 border border-amber-700/30 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-amber-400">2-4</div>
-                      <div className="text-sm text-amber-300">
-                        {t("Poor", "较差")}
-                      </div>
-                    </div>
-                    <div className="bg-red-900/30 border border-red-700/30 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-red-400">0-2</div>
-                      <div className="text-sm text-red-300">
-                        {t("Bad", "很差")}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="darksky" className="space-y-6 mt-4">
-            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg mb-6">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-2xl text-primary">
-                  {t("Dark Sky Certifications", "暗夜认证")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p>
-                  {t(
-                    "The International Dark-Sky Association (IDA) designates locations worldwide that preserve and protect dark sites through responsible lighting policies and public education.",
-                    "国际暗夜协会（IDA）通过负责任的照明政策和公共教育，在全球范围内指定保护暗夜地点的位置。"
-                  )}
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  {idaCertifications.map((cert, index) => (
-                    <div 
-                      key={index} 
-                      className={`bg-gradient-to-br ${cert.bgColor} border ${cert.borderColor} rounded-lg p-4 flex flex-col h-full`}
-                    >
-                      <div className="flex items-center mb-3">
-                        <div className={`bg-gradient-to-r ${cert.color} p-2 rounded-full mr-3`}>
-                          <cert.icon className={`h-5 w-5 ${cert.textColor}`} />
-                        </div>
-                        <h3 className={`font-medium text-lg ${cert.textColor}`}>
-                          {cert.title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground flex-grow">
-                        {cert.description}
-                      </p>
-                      <div className={`mt-3 pt-3 border-t ${cert.borderColor} flex justify-between items-center`}>
-                        <span className={`text-sm ${cert.textColor}`}>
-                          {t("Global Count", "全球数量")}:
-                        </span>
-                        <span className="text-lg font-semibold">
-                          {cert.count}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-2xl text-primary">
-                  {t("Bortle Dark-Sky Scale", "波特尔暗夜等级")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p>
-                  {t(
-                    "The Bortle scale is a nine-level numeric scale that measures the night sky's brightness of a particular location. It quantifies the astronomical observability of celestial objects and the interference caused by light pollution.",
-                    "波特尔等级是一个九级数字等级，用于衡量特定位置夜空的亮度。它量化了天体的天文可观测性以及光污染造成的干扰。"
-                  )}
-                </p>
-                
-                <div className="overflow-x-auto mt-4">
-                  <div className="inline-block min-w-full align-middle">
-                    <div className="overflow-hidden border border-cosmic-700/30 rounded-lg">
-                      <table className="min-w-full divide-y divide-cosmic-700/30">
-                        <thead className="bg-cosmic-700/30">
-                          <tr>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              {t("Class", "等级")}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              {t("Title", "标题")}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              {t("Milky Way", "银河")}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-cosmic-700/30">
-                          {bortleScaleInfo.map((level) => (
-                            <tr key={level.level} className={level.color}>
-                              <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${level.textColor}`}>
-                                {level.level}
-                              </td>
-                              <td className={`px-4 py-3 whitespace-nowrap text-sm ${level.textColor}`}>
-                                {level.name}
-                              </td>
-                              <td className={`px-4 py-3 text-sm ${level.textColor}`}>
-                                {level.mlky}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="links" className="space-y-6 mt-4">
-            <div className="grid grid-cols-1 gap-6">
-              {Object.keys(resources).map((category) => (
-                <Card key={category} className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl text-primary">
-                      {getTranslatedCategory(category)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4 text-primary">
+                      {t("Key Factors in SIQS Calculation", "SIQS计算中的关键因素")}
+                    </h3>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {resources[category as keyof typeof resources].map((resource, index) => (
-                        <a 
-                          key={index}
-                          href={resource.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center p-3 bg-cosmic-700/30 hover:bg-cosmic-700/50 border border-cosmic-600/30 rounded-lg transition-colors"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">
-                              {getTranslatedResourceName(resource)}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {resource.subcategory}
-                            </p>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        </a>
-                      ))}
+                      <div className="flex items-start space-x-3 p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-600/10">
+                        <Sun className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="font-medium">{t("Light Pollution", "光污染")}</h4>
+                          <p className="text-sm text-muted-foreground">{t("Measures artificial light that obscures celestial objects", "测量遮挡天体的人工光源")}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3 p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-600/10">
+                        <CloudMoon className="h-5 w-5 text-blue-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="font-medium">{t("Cloud Cover", "云层覆盖")}</h4>
+                          <p className="text-sm text-muted-foreground">{t("Percentage of sky obscured by clouds", "被云层遮挡的天空百分比")}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3 p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-600/10">
+                        <Telescope className="h-5 w-5 text-purple-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="font-medium">{t("Seeing", "视宁度")}</h4>
+                          <p className="text-sm text-muted-foreground">{t("Atmospheric stability affecting image sharpness", "影响图像清晰度的大气稳定性")}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3 p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-600/10">
+                        <Wind className="h-5 w-5 text-teal-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="font-medium">{t("Wind Speed", "风速")}</h4>
+                          <p className="text-sm text-muted-foreground">{t("Affects equipment stability and image quality", "影响设备稳定性和图像质量")}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3 p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-600/10">
+                        <Droplets className="h-5 w-5 text-blue-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="font-medium">{t("Humidity", "湿度")}</h4>
+                          <p className="text-sm text-muted-foreground">{t("Can cause condensation on optical equipment", "可能导致光学设备上的冷凝")}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-3 p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-600/10">
+                        <Compass className="h-5 w-5 text-orange-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="font-medium">{t("Transparency", "透明度")}</h4>
+                          <p className="text-sm text-muted-foreground">{t("Clarity of the atmosphere for observing", "观测大气的清晰度")}</p>
+                        </div>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  </div>
+                  
+                  <div className="bg-cosmic-800/50 p-5 rounded-lg border border-cosmic-600/30">
+                    <h3 className="text-xl font-semibold mb-3 text-primary">
+                      {t("Interpreting SIQS Scores", "解读SIQS分数")}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="p-3 bg-green-900/20 border border-green-500/20 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg font-bold text-green-400">90-100</span>
+                          <span className="bg-green-500/30 rounded px-2 py-0.5 text-xs">{t("Excellent", "极佳")}</span>
+                        </div>
+                        <p className="text-sm">{t("Ideal conditions for all types of astrophotography", "适合所有类型天文摄影的理想条件")}</p>
+                      </div>
+                      
+                      <div className="p-3 bg-emerald-900/20 border border-emerald-500/20 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg font-bold text-emerald-400">75-89</span>
+                          <span className="bg-emerald-500/30 rounded px-2 py-0.5 text-xs">{t("Very Good", "非常好")}</span>
+                        </div>
+                        <p className="text-sm">{t("Great for detailed imaging of most deep sky objects", "非常适合大多数深空天体的详细成像")}</p>
+                      </div>
+                      
+                      <div className="p-3 bg-yellow-900/20 border border-yellow-500/20 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg font-bold text-yellow-400">60-74</span>
+                          <span className="bg-yellow-500/30 rounded px-2 py-0.5 text-xs">{t("Good", "良好")}</span>
+                        </div>
+                        <p className="text-sm">{t("Suitable for many types of astrophotography", "适合多种类型的天文摄影")}</p>
+                      </div>
+                      
+                      <div className="p-3 bg-orange-900/20 border border-orange-500/20 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg font-bold text-orange-400">40-59</span>
+                          <span className="bg-orange-500/30 rounded px-2 py-0.5 text-xs">{t("Fair", "一般")}</span>
+                        </div>
+                        <p className="text-sm">{t("Challenging for deep sky, usable for moon and bright planets", "深空观测有挑战，可用于月球和明亮行星")}</p>
+                      </div>
+                      
+                      <div className="p-3 bg-red-900/20 border border-red-500/20 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg font-bold text-red-400">20-39</span>
+                          <span className="bg-red-500/30 rounded px-2 py-0.5 text-xs">{t("Poor", "较差")}</span>
+                        </div>
+                        <p className="text-sm">{t("Limited to basic moon photographs and brightest planets", "仅限于基本的月球照片和最亮的行星")}</p>
+                      </div>
+                      
+                      <div className="p-3 bg-red-950/30 border border-red-800/20 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg font-bold text-red-500">0-19</span>
+                          <span className="bg-red-800/30 rounded px-2 py-0.5 text-xs">{t("Very Poor", "很差")}</span>
+                        </div>
+                        <p className="text-sm">{t("Not recommended for any astrophotography", "不建议进行任何天文摄影")}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-center border-t border-cosmic-600/10 pt-4">
+                  <p className="text-sm text-center text-muted-foreground max-w-md">
+                    {t(
+                      "SIQS is calculated using real-time weather data, light pollution maps, and astronomical models to help you find the perfect time and place for your astrophotography session.",
+                      "SIQS使用实时天气数据、光污染地图和天文模型计算，帮助您找到天文摄影的最佳时间和地点。"
+                    )}
+                  </p>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          </TabsContent>
+          
+          {/* Dark Sky Knowledge content */}
+          <TabsContent value="dark-sky-knowledge" className="animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-cosmic-900/80 border-cosmic-600/20 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-3xl text-center text-gradient-blue">
+                    {t("Dark Sky Knowledge", "暗夜知识")}
+                  </CardTitle>
+                  <CardDescription className="text-center text-lg">
+                    {t("Essential information for astronomy enthusiasts", "天文爱好者的重要信息")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4 text-primary flex items-center">
+                      <Star className="h-5 w-5 mr-2 text-yellow-400" />
+                      {t("Light Pollution & Bortle Scale", "光污染与波特尔等级")}
+                    </h3>
+                    <p className="mb-4">
+                      {t(
+                        "Light pollution is one of the most significant factors affecting astronomical observation. The Bortle Scale is a nine-level numeric scale that measures the night sky's brightness at a particular location.",
+                        "光污染是影响天文观测的最重要因素之一。波特尔等级是一个九级数字等级，用于测量特定位置的夜空亮度。"
+                      )}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gradient-to-br from-cosmic-800/90 to-cosmic-700/50 p-4 rounded-lg border border-cosmic-600/10">
+                        <div className="text-center mb-2">
+                          <span className="inline-block w-8 h-8 rounded-full bg-blue-900 mb-2"></span>
+                          <h4 className="font-medium">{t("Bortle 1-2", "波特尔 1-2")}</h4>
+                        </div>
+                        <p className="text-xs text-center">{t("Excellent dark skies, Milky Way casts shadows", "极佳的暗夜天空，银河能投射阴影")}</p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-cosmic-800/90 to-cosmic-700/50 p-4 rounded-lg border border-cosmic-600/10">
+                        <div className="text-center mb-2">
+                          <span className="inline-block w-8 h-8 rounded-full bg-blue-800 mb-2"></span>
+                          <h4 className="font-medium">{t("Bortle 3-4", "波特尔 3-4")}</h4>
+                        </div>
+                        <p className="text-xs text-center">{t("Rural skies, Milky Way details visible", "乡村天空，可见银河细节")}</p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-cosmic-800/90 to-cosmic-700/50 p-4 rounded-lg border border-cosmic-600/10">
+                        <div className="text-center mb-2">
+                          <span className="inline-block w-8 h-8 rounded-full bg-indigo-500 mb-2"></span>
+                          <h4 className="font-medium">{t("Bortle 5-6", "波特尔 5-6")}</h4>
+                        </div>
+                        <p className="text-xs text-center">{t("Suburban skies, Milky Way faint", "郊区天空，银河模糊")}</p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-cosmic-800/90 to-cosmic-700/50 p-4 rounded-lg border border-cosmic-600/10">
+                        <div className="text-center mb-2">
+                          <span className="inline-block w-8 h-8 rounded-full bg-purple-500 mb-2"></span>
+                          <h4 className="font-medium">{t("Bortle 7", "波特尔 7")}</h4>
+                        </div>
+                        <p className="text-xs text-center">{t("Suburban/urban transition, Milky Way barely visible", "郊区/城市过渡，银河几乎不可见")}</p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-cosmic-800/90 to-cosmic-700/50 p-4 rounded-lg border border-cosmic-600/10">
+                        <div className="text-center mb-2">
+                          <span className="inline-block w-8 h-8 rounded-full bg-pink-600 mb-2"></span>
+                          <h4 className="font-medium">{t("Bortle 8", "波特尔 8")}</h4>
+                        </div>
+                        <p className="text-xs text-center">{t("Urban skies, only brightest stars visible", "城市天空，仅可见最亮的恒星")}</p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-cosmic-800/90 to-cosmic-700/50 p-4 rounded-lg border border-cosmic-600/10">
+                        <div className="text-center mb-2">
+                          <span className="inline-block w-8 h-8 rounded-full bg-red-500 mb-2"></span>
+                          <h4 className="font-medium">{t("Bortle 9", "波特尔 9")}</h4>
+                        </div>
+                        <p className="text-xs text-center">{t("Inner-city skies, few stars visible", "市中心天空，几乎看不到恒星")}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4 text-primary flex items-center">
+                      <AlertCircle className="h-5 w-5 mr-2 text-blue-400" />
+                      {t("Seeing & Transparency", "视宁度与透明度")}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                      <div>
+                        <h4 className="font-medium text-lg mb-2">{t("Seeing", "视宁度")}</h4>
+                        <p className="mb-2 text-sm">
+                          {t(
+                            "Seeing refers to the steadiness of Earth's atmosphere, which affects how clearly we can observe celestial objects. Poor seeing causes stars to 'twinkle' more and reduces image sharpness.",
+                            "视宁度指地球大气的稳定性，它影响我们观察天体的清晰度。不良的视宁度会导致恒星'闪烁'更多，降低图像清晰度。"
+                          )}
+                        </p>
+                        <div className="bg-cosmic-800/40 p-3 rounded-lg text-sm border border-cosmic-600/10">
+                          <p className="font-medium">{t("Factors affecting Seeing:", "影响视宁度的因素：")}</p>
+                          <ul className="list-disc list-inside space-y-1 mt-1 text-xs text-muted-foreground">
+                            <li>{t("Temperature differentials in the atmosphere", "大气中的温度差异")}</li>
+                            <li>{t("Turbulence at different heights", "不同高度的湍流")}</li>
+                            <li>{t("Proximity to mountains or large water bodies", "靠近山脉或大型水体")}</li>
+                            <li>{t("Local heat sources", "本地热源")}</li>
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-lg mb-2">{t("Transparency", "透明度")}</h4>
+                        <p className="mb-2 text-sm">
+                          {t(
+                            "Transparency describes how clear the atmosphere is and how well light from distant objects can pass through it. High transparency allows for better observation of faint objects like distant galaxies and nebulae.",
+                            "透明度描述大气的清晰程度以及远处天体的光线通过的情况。高透明度可以更好地观察到像遥远星系和星云这样的暗淡天体。"
+                          )}
+                        </p>
+                        <div className="bg-cosmic-800/40 p-3 rounded-lg text-sm border border-cosmic-600/10">
+                          <p className="font-medium">{t("Factors affecting Transparency:", "影响透明度的因素：")}</p>
+                          <ul className="list-disc list-inside space-y-1 mt-1 text-xs text-muted-foreground">
+                            <li>{t("Water vapor content in the atmosphere", "大气中的水蒸气含量")}</li>
+                            <li>{t("Dust, pollen, and aerosols", "灰尘、花粉和气溶胶")}</li>
+                            <li>{t("Air pollution and smog", "空气污染和烟雾")}</li>
+                            <li>{t("Altitude (higher is generally better)", "海拔（通常越高越好）")}</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4 text-primary flex items-center">
+                      <CheckCircle2 className="h-5 w-5 mr-2 text-green-400" />
+                      {t("Dark Sky Preservation", "暗夜保护")}
+                    </h3>
+                    <p className="mb-4">
+                      {t(
+                        "Dark sky preservation involves efforts to reduce light pollution to protect the ability to view the night sky and for the benefit of nocturnal ecosystems.",
+                        "暗夜保护涉及减少光污染的努力，以保护观察夜空的能力，并有利于夜间生态系统。"
+                      )}
+                    </p>
+                    <div className="bg-cosmic-800/50 p-4 rounded-lg border border-cosmic-600/20">
+                      <h4 className="font-medium mb-2">{t("International Dark Sky Places", "国际暗夜地点")}</h4>
+                      <p className="text-sm mb-3">
+                        {t(
+                          "The International Dark-Sky Association (IDA) designates locations with exceptional starry nights and protected nocturnal environments.",
+                          "国际暗夜协会(IDA)指定具有卓越星空和受保护夜间环境的地点。"
+                        )}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="bg-cosmic-700/30 p-3 rounded-lg">
+                          <h5 className="font-medium">{t("Dark Sky Parks", "暗夜公园")}</h5>
+                          <p className="text-xs text-muted-foreground">{t("Public lands with exceptional starry skies", "拥有卓越星空的公共土地")}</p>
+                        </div>
+                        <div className="bg-cosmic-700/30 p-3 rounded-lg">
+                          <h5 className="font-medium">{t("Dark Sky Reserves", "暗夜保护区")}</h5>
+                          <p className="text-xs text-muted-foreground">{t("Larger areas with central dark zone and buffer region", "具有中央黑暗区和缓冲区的较大区域")}</p>
+                        </div>
+                        <div className="bg-cosmic-700/30 p-3 rounded-lg">
+                          <h5 className="font-medium">{t("Dark Sky Sanctuaries", "暗夜圣地")}</h5>
+                          <p className="text-xs text-muted-foreground">{t("Most remote and darkest locations globally", "全球最偏远和最黑暗的地点")}</p>
+                        </div>
+                        <div className="bg-cosmic-700/30 p-3 rounded-lg">
+                          <h5 className="font-medium">{t("Urban Night Sky Places", "城市夜空地点")}</h5>
+                          <p className="text-xs text-muted-foreground">{t("Sites near urban areas that protect dark skies", "靠近城市区域但保护黑暗天空的地点")}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+          
+          {/* Useful Links content */}
+          <TabsContent value="useful-links" className="animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-cosmic-900/80 border-cosmic-600/20 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-3xl text-center text-gradient-blue">
+                    {t("Useful Resources", "实用资源")}
+                  </CardTitle>
+                  <CardDescription className="text-center text-lg">
+                    {t("Essential tools and websites for astrophotography enthusiasts", "天文摄影爱好者的重要工具和网站")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-cosmic-800/40 rounded-xl p-5 border border-cosmic-600/10 hover:shadow-md hover:bg-cosmic-800/60 transition-all duration-300">
+                      <h3 className="text-xl font-semibold mb-3 text-primary flex items-center">
+                        <LinkIcon className="h-5 w-5 mr-2 text-blue-400" />
+                        {t("Light Pollution Maps & Tools", "光污染地图和工具")}
+                      </h3>
+                      <ul className="space-y-3">
+                        <li className="hover:translate-x-1 transition-transform duration-200">
+                          <a 
+                            href="https://www.lightpollutionmap.info" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200"
+                          >
+                            <span className="block text-primary">Light Pollution Map</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("Interactive world atlas of artificial night sky brightness", "人工夜空亮度的交互式世界地图")}
+                            </span>
+                          </a>
+                        </li>
+                        <li className="hover:translate-x-1 transition-transform duration-200">
+                          <a 
+                            href="https://darksitefinder.com" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200"
+                          >
+                            <span className="block text-primary">Dark Site Finder</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("Find dark sky locations for stargazing worldwide", "在全球范围内寻找观星的黑暗天空位置")}
+                            </span>
+                          </a>
+                        </li>
+                        <li className="hover:translate-x-1 transition-transform duration-200">
+                          <a 
+                            href="https://clearoutside.com" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200"
+                          >
+                            <span className="block text-primary">Clear Outside</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("Astronomer's forecast tool with cloud coverage data", "带有云层覆盖数据的天文学家预报工具")}
+                            </span>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-cosmic-800/40 rounded-xl p-5 border border-cosmic-600/10 hover:shadow-md hover:bg-cosmic-800/60 transition-all duration-300">
+                      <h3 className="text-xl font-semibold mb-3 text-primary flex items-center">
+                        <LinkIcon className="h-5 w-5 mr-2 text-blue-400" />
+                        {t("Astronomy Planning Tools", "天文规划工具")}
+                      </h3>
+                      <ul className="space-y-3">
+                        <li className="hover:translate-x-1 transition-transform duration-200">
+                          <a 
+                            href="https://stellarium.org" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200"
+                          >
+                            <span className="block text-primary">Stellarium</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("Free open source planetarium software", "免费开源的天文馆软件")}
+                            </span>
+                          </a>
+                        </li>
+                        <li className="hover:translate-x-1 transition-transform duration-200">
+                          <a 
+                            href="https://telescopius.com" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200"
+                          >
+                            <span className="block text-primary">Telescopius</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("Deep sky object planning and visualization", "深空天体规划和可视化")}
+                            </span>
+                          </a>
+                        </li>
+                        <li className="hover:translate-x-1 transition-transform duration-200">
+                          <a 
+                            href="https://www.timeanddate.com/astronomy" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200"
+                          >
+                            <span className="block text-primary">Time and Date Astronomy</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {t("Sun, moon, planet rise and set times, eclipses", "日、月、行星升落时间，日食和月食")}
+                            </span>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-cosmic-800/40 rounded-xl p-5 border border-cosmic-600/10 hover:shadow-md hover:bg-cosmic-800/60 transition-all duration-300">
+                    <h3 className="text-xl font-semibold mb-3 text-primary flex items-center">
+                      <LinkIcon className="h-5 w-5 mr-2 text-blue-400" />
+                      {t("Astrophotography Communities", "天文摄影社区")}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <a 
+                        href="https://www.reddit.com/r/astrophotography" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200 hover:scale-105 transform"
+                      >
+                        <h4 className="font-medium text-primary">r/astrophotography</h4>
+                        <p className="text-xs text-muted-foreground">{t("Reddit community for sharing and learning", "分享和学习的Reddit社区")}</p>
+                      </a>
+                      
+                      <a 
+                        href="https://www.astrobin.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200 hover:scale-105 transform"
+                      >
+                        <h4 className="font-medium text-primary">AstroBin</h4>
+                        <p className="text-xs text-muted-foreground">{t("Image hosting and community for astrophotographers", "天文摄影师的图像托管和社区")}</p>
+                      </a>
+                      
+                      <a 
+                        href="https://www.cloudynights.com/forum/101-ccd-digital-astro-imaging" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200 hover:scale-105 transform"
+                      >
+                        <h4 className="font-medium text-primary">Cloudy Nights</h4>
+                        <p className="text-xs text-muted-foreground">{t("Forum with expert discussions and advice", "有专家讨论和建议的论坛")}</p>
+                      </a>
+                      
+                      <a 
+                        href="https://telescopius.com/community" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200 hover:scale-105 transform"
+                      >
+                        <h4 className="font-medium text-primary">Telescopius Community</h4>
+                        <p className="text-xs text-muted-foreground">{t("Share images and observation plans", "分享图像和观测计划")}</p>
+                      </a>
+                      
+                      <a 
+                        href="https://stargazerslounge.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200 hover:scale-105 transform"
+                      >
+                        <h4 className="font-medium text-primary">Stargazers Lounge</h4>
+                        <p className="text-xs text-muted-foreground">{t("UK-based astronomy community with global users", "以英国为基地的全球天文社区")}</p>
+                      </a>
+                      
+                      <a 
+                        href="https://www.flickr.com/groups/astromeeting" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 rounded-lg bg-cosmic-700/30 hover:bg-cosmic-700/50 transition-colors duration-200 hover:scale-105 transform"
+                      >
+                        <h4 className="font-medium text-primary">Flickr Astrophotography</h4>
+                        <p className="text-xs text-muted-foreground">{t("Group for sharing astronomy photos", "分享天文照片的群组")}</p>
+                      </a>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </TabsContent>
         </Tabs>
       </div>
-    </>
+    </div>
   );
 };
 
