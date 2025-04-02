@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import ConditionItem from "@/components/weather/ConditionItem";
 import { DynamicLightbulbIcon } from "@/components/weather/DynamicIcons";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -28,7 +28,6 @@ const BortleNow: React.FC = () => {
   
   // Bortle scale states
   const [bortleScale, setBortleScale] = useState<number | null>(null);
-  const [measurementProgress, setMeasurementProgress] = useState(0);
   const [cameraReadings, setCameraReadings] = useState<{
     darkFrame: boolean;
     lightFrame: boolean;
@@ -36,6 +35,11 @@ const BortleNow: React.FC = () => {
     darkFrame: false,
     lightFrame: false,
   });
+  
+  // Camera permission dialog state
+  const [showCameraPermissionDialog, setShowCameraPermissionDialog] = useState(false);
+  const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"dark" | "light" | null>(null);
   
   // When location changes, update Bortle scale
   const onLocationChange = useCallback((lat: number, lng: number) => {
@@ -105,13 +109,67 @@ const BortleNow: React.FC = () => {
     getCurrentLocation();
   }, []);
 
+  // Request camera permission before capture
+  const requestCameraPermission = async (mode: "dark" | "light") => {
+    setCameraMode(mode);
+    
+    // Check if permissions were already granted
+    if (cameraPermissionGranted) {
+      if (mode === "dark") {
+        captureDarkFrame();
+      } else {
+        captureLightFrame();
+      }
+      return;
+    }
+    
+    // Show permission dialog
+    setShowCameraPermissionDialog(true);
+  };
+  
+  const handlePermissionResponse = async (granted: boolean) => {
+    setShowCameraPermissionDialog(false);
+    
+    if (granted) {
+      setCameraPermissionGranted(true);
+      
+      try {
+        // Actually request browser permission
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        
+        // Stop the stream immediately, we just needed to trigger the permission
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Proceed with capture based on mode
+        if (cameraMode === "dark") {
+          captureDarkFrame();
+        } else if (cameraMode === "light") {
+          captureLightFrame();
+        }
+      } catch (err) {
+        console.error("Camera permission error:", err);
+        setError(t("Camera access was denied", "相机访问被拒绝"));
+        toast({
+          variant: "destructive",
+          title: t("Camera Error", "相机错误"),
+          description: t("Please allow camera access to use this feature", "请允许访问相机以使用此功能"),
+        });
+      }
+    } else {
+      toast({
+        variant: "destructive",
+        title: t("Permission Denied", "权限被拒绝"),
+        description: t("Camera access is required for this feature", "此功能需要相机访问权限"),
+      });
+    }
+  };
+
   // Simulate Dark Sky Meter camera process to measure actual Bortle scale
   const captureDarkFrame = async () => {
     try {
       setError(null);
       setCameraReadings(prev => ({ ...prev, darkFrame: false }));
       setIsProcessingImage(true);
-      setMeasurementProgress(10);
       
       // Check if we have location data
       if (!latitude || !longitude) {
@@ -125,17 +183,14 @@ const BortleNow: React.FC = () => {
       
       // Simulate camera capture with progress updates
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(30);
         resolve(true);
       }, 700));
       
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(60);
         resolve(true);
       }, 700));
       
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(100);
         resolve(true);
       }, 600));
       
@@ -145,7 +200,6 @@ const BortleNow: React.FC = () => {
       });
       
       setCameraReadings(prev => ({ ...prev, darkFrame: true }));
-      setMeasurementProgress(0);
     } catch (error) {
       setError((error as Error).message);
       toast({
@@ -163,7 +217,6 @@ const BortleNow: React.FC = () => {
       setError(null);
       setCameraReadings(prev => ({ ...prev, lightFrame: false }));
       setIsProcessingImage(true);
-      setMeasurementProgress(10);
       
       // Check if dark frame was captured
       if (!cameraReadings.darkFrame) {
@@ -177,22 +230,18 @@ const BortleNow: React.FC = () => {
       
       // Simulate camera processing with progress updates
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(25);
         resolve(true);
       }, 800));
       
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(50);
         resolve(true);
       }, 800));
       
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(75);
         resolve(true);
       }, 800));
       
       await new Promise(resolve => setTimeout(() => {
-        setMeasurementProgress(100);
         resolve(true);
       }, 600));
       
@@ -204,7 +253,6 @@ const BortleNow: React.FC = () => {
       
       setBortleScale(measuredBortle);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
-      setMeasurementProgress(0);
       
       toast({
         title: t("Measurement Complete", "测量完成"),
@@ -287,6 +335,39 @@ const BortleNow: React.FC = () => {
     <>
       <NavBar />
       <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
+        {/* Camera Permission Dialog */}
+        <Dialog open={showCameraPermissionDialog} onOpenChange={open => !open && setShowCameraPermissionDialog(false)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("Camera Permission Required", "需要相机权限")}</DialogTitle>
+              <DialogDescription>
+                {t(
+                  "This feature needs to access your camera to measure light levels. No images will be stored or shared.",
+                  "此功能需要访问您的相机来测量光线水平。不会存储或共享任何图像。"
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center p-4">
+              <Camera className="h-16 w-16 text-primary opacity-80" />
+            </div>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => handlePermissionResponse(false)}
+                className="sm:w-full"
+              >
+                {t("Deny", "拒绝")}
+              </Button>
+              <Button 
+                onClick={() => handlePermissionResponse(true)}
+                className="sm:w-full"
+              >
+                {t("Allow", "允许")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <motion.div 
           className="relative z-10"
           initial={{ opacity: 0, y: -10 }}
@@ -522,26 +603,10 @@ const BortleNow: React.FC = () => {
                   )}
                 </p>
                 
-                {measurementProgress > 0 && (
-                  <div className="mb-4">
-                    <div className="relative h-2 bg-cosmic-700/50 rounded-full overflow-hidden">
-                      <motion.div 
-                        className="absolute top-0 left-0 h-full bg-primary/80"
-                        initial={{ width: "0%" }}
-                        animate={{ width: `${measurementProgress}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                    <div className="text-xs text-center mt-1 text-cosmic-400">
-                      {t("Processing", "处理中")}...
-                    </div>
-                  </div>
-                )}
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Button
                     variant={cameraReadings.darkFrame ? "outline" : "default"}
-                    onClick={captureDarkFrame}
+                    onClick={() => requestCameraPermission("dark")}
                     disabled={isProcessingImage || isMeasuringRealtime}
                     className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.darkFrame ? 'bg-cosmic-800/60 border-primary/50' : 'bg-cosmic-800 hover:bg-cosmic-700'}`}
                   >
@@ -563,7 +628,7 @@ const BortleNow: React.FC = () => {
                   
                   <Button
                     variant={cameraReadings.lightFrame ? "outline" : "secondary"}
-                    onClick={captureLightFrame}
+                    onClick={() => requestCameraPermission("light")}
                     disabled={isProcessingImage || !cameraReadings.darkFrame || isMeasuringRealtime}
                     className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.lightFrame ? 'bg-cosmic-800/60 border-primary/50' : 'bg-cosmic-700/80 hover:bg-cosmic-700'}`}
                   >

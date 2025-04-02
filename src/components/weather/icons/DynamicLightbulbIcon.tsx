@@ -24,30 +24,23 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({
     ? actualValue 
     : 4; // Default to 4 (moderate light pollution) instead of showing unknown
   
-  // Higher Bortle scale = more light pollution = brighter bulb
-  const fillOpacity = Math.min(validBortleScale / 9, 1);
-  
-  // Color changes with Bortle scale - using more accurate color representations
-  let fillColor = "";
+  // Simplified color logic - Bortle scale gradient from blue (1) to green (5) to red (9)
   let gradientColors = { from: "", to: "" };
   
   if (validBortleScale >= 7) {
     // High light pollution (7-9): orange to red
-    fillColor = `rgba(239, 68, 68, ${fillOpacity})`;
     gradientColors = { 
       from: "rgba(249, 115, 22, 0.9)", 
       to: "rgba(239, 68, 68, 0.9)" 
     };
   } else if (validBortleScale >= 4) {
     // Moderate light pollution (4-6): yellow to green
-    fillColor = `rgba(234, 179, 8, ${fillOpacity * 0.9})`;
     gradientColors = { 
       from: "rgba(234, 179, 8, 0.85)", 
       to: "rgba(132, 204, 22, 0.85)" 
     };
   } else {
     // Low light pollution (1-3): blue to cyan
-    fillColor = `rgba(59, 130, 246, ${fillOpacity * 0.8})`;
     gradientColors = { 
       from: "rgba(59, 130, 246, 0.8)", 
       to: "rgba(6, 182, 212, 0.8)" 
@@ -65,10 +58,10 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({
     }
   };
 
-  // Animation variants for the icon
+  // Animation variants for the icon - made more subtle
   const pulseAnimation = {
     pulse: {
-      scale: [1, 1.05, 1],
+      scale: [1, 1.03, 1],
       opacity: [0.9, 1, 0.9],
       transition: { 
         duration: 2.5,

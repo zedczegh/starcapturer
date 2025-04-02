@@ -109,8 +109,9 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
   }, [forecastData, generateFallbackForecasts]);
 
   const getWeatherClass = useCallback((precipitation: number, cloudCover: number) => {
-    if (precipitation > 0.5) return "bg-red-500/10 animate-pulse";
-    if (cloudCover < 20) return "bg-green-500/10 animate-pulse";
+    // Toned down animation effects to match 15-day forecast
+    if (precipitation > 0.5) return "bg-red-500/10";
+    if (cloudCover < 20) return "bg-green-500/10";
     return "";
   }, []);
   
@@ -216,12 +217,12 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
       </CardHeader>
       
       {extremeWeatherAlerts.length > 0 && (
-        <div className="px-4 pt-3 animate-fade-in">
+        <div className="px-4 pt-3">
           {extremeWeatherAlerts.map((alert, index) => (
             <Alert 
               key={index} 
               variant={alert.type === "severe" ? "destructive" : "warning"}
-              className="mb-2 animate-pulse border border-amber-500/50 bg-amber-500/10"
+              className="mb-2 border border-amber-500/50 bg-amber-500/10"
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               <AlertDescription className="flex items-center">
@@ -327,7 +328,7 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                     </TableCell>
                     <TableCell className="text-center border-b border-cosmic-700/20">
                       <div className={`px-2 py-1 rounded-full text-xs font-medium ${siqs.color} bg-opacity-20 text-white inline-flex items-center justify-center min-w-[40px] ${
-                        isNighttime ? 'animate-pulse' : ''
+                        isNighttime ? 'opacity-90' : 'opacity-80'
                       }`}>
                         {forecast.cloudCover >= 40 ? '0.0' : siqs.score.toFixed(1)}
                       </div>
