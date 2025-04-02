@@ -1,356 +1,188 @@
-import React from 'react';
-import { Helmet } from 'react-helmet-async';
-import { useLanguage } from '@/contexts/LanguageContext';
-import BackButton from '@/components/navigation/BackButton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+import React from "react";
+import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, Star, Moon, SunMoon, Lightbulb } from "lucide-react";
 import { 
-  Star, 
-  Shield, 
-  Award, 
-  Moon, 
-  Globe, 
-  Info, 
-  MapPin, 
-  BookOpen,
-  Cloud,
-  Wind,
-  Droplets,
-  MoonStar,
-  Eye,
-  Calculator,
-  Lightbulb,
-  ExternalLink
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const About = () => {
   const { t } = useLanguage();
-
+  
   return (
-    <div className="min-h-screen bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat">
-      <Helmet>
-        <title>{t("About Sky Viewer", "关于天空观测")}</title>
-      </Helmet>
-
-      <div className="pt-20 md:pt-28 pb-20">
-        <div className="container mx-auto px-4">
-          <div className="mb-6">
-            <BackButton destination="/" />
+    <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-20">
+      <div className="container max-w-4xl mx-auto px-4 py-12">
+        <h1 className="text-3xl font-bold mb-8 text-center">
+          {t("About Bortle Now", "关于 Bortle Now")}
+        </h1>
+        
+        <div className="bg-cosmic-900 rounded-lg p-6 mb-8 shadow-md shadow-cosmic-800/50">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <SunMoon className="text-cosmic-400" />
+            {t("Our Mission", "我们的使命")}
+          </h2>
+          <p className="mb-4 text-cosmic-200">
+            {t("Bortle Now helps astrophotographers find ideal viewing conditions by providing real-time Sky Quality Index (SIQS) scores. Our platform combines light pollution data, weather forecasts, and astronomical conditions to help you plan perfect stargazing sessions.", 
+              "Bortle Now 通过提供实时天空质量指数（SIQS）评分，帮助天文摄影师找到理想的观测条件。我们的平台结合了光污染数据、天气预报和天文条件，帮助您规划完美的观星活动。")}
+          </p>
+          <p className="text-cosmic-200">
+            {t("We're passionate about making astronomy accessible to everyone, from beginners to professionals. Our goal is to create a global community of stargazers who can share their experiences and dark sky locations.", 
+              "我们热衷于让天文学变得人人可及，从初学者到专业人士。我们的目标是创建一个全球观星者社区，人们可以在这里分享他们的经验和暗空地点。")}
+          </p>
+        </div>
+        
+        <div className="bg-cosmic-900 rounded-lg p-6 mb-8 shadow-md shadow-cosmic-800/50">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <Lightbulb className="text-cosmic-400" />
+            {t("What is Bortle Now?", "什么是 Bortle Now？")}
+          </h2>
+          <p className="mb-4 text-cosmic-200">
+            {t("Bortle Now is a comprehensive application that helps astrophotographers and stargazers find the best locations and times for observing the night sky. Our platform uses the Bortle scale (a measure of light pollution) combined with real-time weather data to calculate the Sky Quality Index for Stargazing (SIQS).", 
+              "Bortle Now 是一个综合应用程序，帮助天文摄影师和观星者找到观测夜空的最佳位置和时间。我们的平台使用波特尔量表（一种光污染测量方法）结合实时天气数据来计算观星天空质量指数（SIQS）。")}
+          </p>
+          <p className="mb-4 text-cosmic-200">
+            {t("Our algorithm processes multiple factors including:", 
+              "我们的算法处理多种因素，包括：")}
+          </p>
+          <ul className="list-disc list-inside space-y-2 mb-4 text-cosmic-200 ml-4">
+            <li>{t("Light pollution levels (Bortle scale)", "光污染水平（波特尔量表）")}</li>
+            <li>{t("Cloud cover percentage", "云层覆盖百分比")}</li>
+            <li>{t("Humidity levels", "湿度水平")}</li>
+            <li>{t("Wind speed", "风速")}</li>
+            <li>{t("Seeing conditions (atmospheric stability)", "视宁度（大气稳定性）")}</li>
+            <li>{t("Moon phase and position", "月相和位置")}</li>
+            <li>{t("Air quality index", "空气质量指数")}</li>
+          </ul>
+          <p className="text-cosmic-200">
+            {t("The result is a single score from 0-10 that represents how ideal conditions are for astrophotography and stargazing at any given location and time.", 
+              "结果是一个从0-10的单一分数，代表任何给定位置和时间的天文摄影和观星条件有多理想。")}
+          </p>
+        </div>
+        
+        <div className="bg-cosmic-900 rounded-lg p-6 mb-8 shadow-md shadow-cosmic-800/50">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <Star className="text-cosmic-400" />
+            {t("Features", "功能")}
+          </h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1">
+              <AccordionTrigger className="text-cosmic-100">
+                {t("Real-time SIQS Calculation", "实时SIQS计算")}
+              </AccordionTrigger>
+              <AccordionContent className="text-cosmic-200">
+                {t("Get instant Sky Quality Index scores for your current location or any place worldwide. Our algorithm processes multiple environmental factors to provide accurate stargazing forecasts.", 
+                  "获取您当前位置或世界任何地方的即时天空质量指数评分。我们的算法处理多种环境因素，提供准确的观星预报。")}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-2">
+              <AccordionTrigger className="text-cosmic-100">
+                {t("Light Pollution Mapping", "光污染地图")}
+              </AccordionTrigger>
+              <AccordionContent className="text-cosmic-200">
+                {t("Accurate Bortle scale measurements help you understand light pollution levels in your area. Our database includes thousands of locations globally with verified Bortle scale readings.", 
+                  "准确的波特尔量表测量帮助您了解您所在地区的光污染水平。我们的数据库包括全球数千个具有经过验证的波特尔量表读数的位置。")}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-3">
+              <AccordionTrigger className="text-cosmic-100">
+                {t("Weather Integration", "天气集成")}
+              </AccordionTrigger>
+              <AccordionContent className="text-cosmic-200">
+                {t("Our platform incorporates real-time weather data including cloud cover, humidity, wind speed, and air quality to provide comprehensive viewing condition forecasts.", 
+                  "我们的平台集成了实时天气数据，包括云层覆盖、湿度、风速和空气质量，以提供全面的观测条件预报。")}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-4">
+              <AccordionTrigger className="text-cosmic-100">
+                {t("Dark Sky Camera", "暗空相机")}
+              </AccordionTrigger>
+              <AccordionContent className="text-cosmic-200">
+                {t("Measure the actual brightness of your night sky using your device's camera. This feature helps calibrate our estimates and provides you with real-time sky brightness measurements.", 
+                  "使用您设备的相机测量夜空的实际亮度。此功能有助于校准我们的估计，并为您提供实时的天空亮度测量。")}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-5">
+              <AccordionTrigger className="text-cosmic-100">
+                {t("Astro Spot Sharing", "天文点分享")}
+              </AccordionTrigger>
+              <AccordionContent className="text-cosmic-200">
+                {t("Discover and share dark sky locations with the community. Find verified dark sky reserves, astronomy parks, and user-recommended viewing spots.", 
+                  "与社区发现和分享暗空位置。查找经过验证的暗空保护区、天文公园和用户推荐的观测点。")}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        
+        <div className="bg-cosmic-900 rounded-lg p-6 mb-8 shadow-md shadow-cosmic-800/50">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <Moon className="text-cosmic-400" />
+            {t("The Science Behind Bortle Now", "Bortle Now背后的科学")}
+          </h2>
+          <p className="mb-4 text-cosmic-200">
+            {t("The Bortle scale, developed by John Bortle in 2001, is a nine-level numeric scale that measures the night sky's brightness at a particular location. It ranges from Class 1 (excellent dark-sky sites) to Class 9 (inner-city skies).", 
+              "波特尔量表由John Bortle于2001年开发，是一个九级数字量表，用于测量特定位置的夜空亮度。它的范围从1级（优秀的暗空地点）到9级（市中心天空）。")}
+          </p>
+          <p className="mb-4 text-cosmic-200">
+            {t("Our SIQS algorithm builds upon the Bortle scale by incorporating dynamic factors like weather conditions, moon phase, and seeing conditions. This provides a more comprehensive and real-time assessment of stargazing quality.", 
+              "我们的SIQS算法在波特尔量表的基础上，结合了天气条件、月相和视宁度等动态因素。这提供了更全面和实时的观星质量评估。")}
+          </p>
+          <p className="text-cosmic-200">
+            {t("We've calibrated our measurements against professional sky quality meters (SQMs) and the Dark Sky Meter app to ensure our results align with industry standards while making them accessible to everyone without specialized equipment.", 
+              "我们已经根据专业的天空质量仪（SQMs）和Dark Sky Meter应用程序校准了我们的测量，以确保我们的结果与行业标准一致，同时使它们对没有专业设备的每个人都可以使用。")}
+          </p>
+        </div>
+        
+        <div className="bg-cosmic-900 rounded-lg p-6 shadow-md shadow-cosmic-800/50">
+          <h2 className="text-2xl font-semibold mb-4">
+            {t("Useful Links", "有用链接")}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
+              <span>{t("International Dark-Sky Association", "国际暗空协会")}</span>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
+              <span>{t("Globe at Night Project", "Globe at Night 项目")}</span>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
+              <span>{t("Dark Sky Meter App", "暗空测量应用")}</span>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
+              <span>{t("Light Pollution Map", "光污染地图")}</span>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
+              <span>{t("Clear Dark Sky Charts", "晴朗暗空图表")}</span>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
+              <span>{t("Bortle Now Mobile App", "Bortle Now 移动应用")}</span>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
           </div>
-
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-3xl font-bold mb-3">{t("About Sky Viewer", "关于天空观测")}</h1>
-              <p className="text-muted-foreground">
-                {t(
-                  "Learn about the Sky Viewer app, the SIQS calculation, and dark sky preservation efforts.",
-                  "了解天空观测应用程序、SIQS计算和暗夜保护工作。"
-                )}
-              </p>
-            </div>
-
-            <Tabs defaultValue="about" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-8">
-                <TabsTrigger value="about" className="data-[state=active]:bg-primary/20">
-                  <Info className="h-4 w-4 mr-2" />
-                  {t("About App", "关于应用")}
-                </TabsTrigger>
-                <TabsTrigger value="ida" className="data-[state=active]:bg-primary/20">
-                  <Shield className="h-4 w-4 mr-2" />
-                  {t("IDA", "IDA")}
-                </TabsTrigger>
-                <TabsTrigger value="siqs" className="data-[state=active]:bg-primary/20">
-                  <Star className="h-4 w-4 mr-2" />
-                  {t("SIQS", "SIQS")}
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="about" className="space-y-6">
-                <Card className="bg-cosmic-800/50 border-cosmic-700">
-                  <CardHeader>
-                    <CardTitle>{t("Sky Viewer App", "天空观测应用")}</CardTitle>
-                    <CardDescription>
-                      {t("Your companion for astrophotography", "您的天文摄影伴侣")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p>
-                      {t(
-                        "Sky Viewer is a tool designed to help astrophotographers find the best conditions and locations for their craft. By combining weather data, light pollution information, and other astronomical factors, we provide a comprehensive analysis of viewing conditions.",
-                        "天空观测是一个旨在帮助天文摄影师找到最佳条件和位置的工具。通过结合天气数据、光污染信息和其他天文因素，我们提供全面的观测条件分析。"
-                      )}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="p-4 bg-cosmic-700/30 rounded-lg flex items-start gap-3">
-                        <Star className="h-5 w-5 text-yellow-400 mt-1" />
-                        <div>
-                          <h3 className="font-medium mb-1">{t("SIQS Calculator", "SIQS计算器")}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {t(
-                              "Calculate the Stellar Imaging Quality Score for any location",
-                              "计算任何位置的恒星成像质量评分"
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-cosmic-700/30 rounded-lg flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-blue-400 mt-1" />
-                        <div>
-                          <h3 className="font-medium mb-1">{t("Location Finder", "位置查找器")}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {t(
-                              "Discover optimal astrophotography locations nearby",
-                              "发现附近最佳的天文摄影地点"
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Bortle Now Information */}
-                    <div className="mt-6 p-5 bg-cosmic-700/40 border border-cosmic-600 rounded-lg">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Lightbulb className="h-6 w-6 text-yellow-400" />
-                        <h3 className="text-lg font-medium">{t("Bortle Now Tool", "Bortle实时工具")}</h3>
-                      </div>
-                      <p className="mb-4 text-sm text-muted-foreground">
-                        {t(
-                          "Our Bortle Now feature helps you understand the current light pollution levels at your location using the Bortle scale (1-9), with lower numbers indicating darker skies that are better for astrophotography.",
-                          "我们的Bortle实时功能帮助您了解您所在位置的当前光污染水平，使用Bortle量表（1-9），数字越低表示天空越暗，越适合天文摄影。"
-                        )}
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <Button asChild variant="outline" size="sm" className="flex items-center gap-2">
-                          <Link to="/bortle-now">
-                            <Lightbulb className="h-4 w-4 text-yellow-400" />
-                            {t("Check Bortle Now", "查看实时Bortle指数")}
-                          </Link>
-                        </Button>
-                        <Button asChild variant="ghost" size="sm" className="flex items-center gap-2">
-                          <a href="https://en.wikipedia.org/wiki/Bortle_scale" target="_blank" rel="noopener noreferrer">
-                            <BookOpen className="h-4 w-4" />
-                            {t("Learn About Bortle Scale", "了解Bortle量表")}
-                            <ExternalLink className="h-3 w-3 ml-1" />
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6">
-                      <h3 className="text-lg font-medium mb-3">{t("Useful Links", "实用链接")}</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/" className="flex items-center gap-2">
-                            <Calculator className="h-4 w-4 text-primary" />
-                            {t("SIQS Calculator", "SIQS计算器")}
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/photo-points" className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-blue-400" />
-                            {t("Find Dark Sky Locations", "查找暗空地点")}
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="justify-start">
-                          <a href="https://www.darksky.org/our-work/conservation/idsp/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                            <Globe className="h-4 w-4 text-blue-400" />
-                            {t("Dark Sky Places", "暗空保护地")}
-                            <ExternalLink className="h-3 w-3 ml-auto" />
-                          </a>
-                        </Button>
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/bortle-now" className="flex items-center gap-2">
-                            <Lightbulb className="h-4 w-4 text-yellow-400" />
-                            {t("Bortle Now", "实时Bortle指数")}
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="ida" className="space-y-6">
-                <Card className="bg-cosmic-800/50 border-cosmic-700">
-                  <CardHeader>
-                    <CardTitle>{t("International Dark-Sky Association", "国际暗夜协会")}</CardTitle>
-                    <CardDescription>
-                      {t("Protecting the night skies for present and future generations", "为当代和子孙后代保护夜空")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p>
-                      {t(
-                        "The International Dark-Sky Association (IDA) is the recognized authority on light pollution and is the leading organization combating light pollution worldwide.",
-                        "国际暗夜协会（IDA）是光污染方面的公认权威，是全球抗击光污染的领先组织。"
-                      )}
-                    </p>
-                    
-                    <div className="mt-6 space-y-4">
-                      <h3 className="text-lg font-medium">{t("IDA Designations", "IDA认证")}</h3>
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="p-4 bg-cosmic-700/30 rounded-lg flex items-start gap-3">
-                          <Globe className="h-5 w-5 text-blue-400 mt-1" />
-                          <div>
-                            <h4 className="font-medium mb-1">{t("Dark Sky Reserve", "暗夜保护区")}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {t(
-                                "A public or private land possessing an exceptional quality of starry nights and nocturnal environment that is specifically protected for its scientific, natural, educational, or cultural heritage, and/or for public enjoyment.",
-                                "拥有出色的星空夜景和夜间环境的公共或私人土地，专门为其科学、自然、教育或文化遗产和/或公众享受而受到保护。"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="p-4 bg-cosmic-700/30 rounded-lg flex items-start gap-3">
-                          <Star className="h-5 w-5 text-green-400 mt-1" />
-                          <div>
-                            <h4 className="font-medium mb-1">{t("Dark Sky Park", "暗夜公园")}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {t(
-                                "A park or other public land possessing exceptional starry skies and natural nocturnal habitat where light pollution is mitigated and natural darkness is valuable as an important educational, cultural, scenic, and natural resource.",
-                                "拥有杰出星空和自然夜间栖息地的公园或其他公共土地，在那里光污染得到缓解，自然黑暗作为重要的教育、文化、风景和自然资源而受到珍视。"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="p-4 bg-cosmic-700/30 rounded-lg flex items-start gap-3">
-                          <Award className="h-5 w-5 text-amber-400 mt-1" />
-                          <div>
-                            <h4 className="font-medium mb-1">{t("Dark Sky Sanctuary", "暗夜保护地")}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {t(
-                                "A public or private land that has an exceptional or distinguished quality of starry nights and a nocturnal environment that is protected for its scientific, natural, or educational value, its cultural heritage and/or public enjoyment.",
-                                "拥有出色或卓越的星空夜景和夜间环境的公共或私人土地，因其科学、自然或教育价值、文化遗产和/或公众享受而受到保护。"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex justify-center">
-                      <Button asChild variant="outline">
-                        <a href="https://www.darksky.org/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          {t("Visit IDA Website", "访问IDA网站")}
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="siqs" className="space-y-6">
-                <Card className="bg-cosmic-800/50 border-cosmic-700">
-                  <CardHeader>
-                    <CardTitle>{t("Stellar Imaging Quality Score (SIQS)", "恒星成像质量评分 (SIQS)")}</CardTitle>
-                    <CardDescription>
-                      {t("Understanding the factors that affect astrophotography", "了解影响天文摄影的因素")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p>
-                      {t(
-                        "The Stellar Imaging Quality Score (SIQS) is a comprehensive metric developed to evaluate the quality of astronomical viewing and imaging conditions at a specific location and time.",
-                        "恒星成像质量评分 (SIQS) 是一种综合指标，用于评估特定位置和时间的天文观测和成像条件的质量。"
-                      )}
-                    </p>
-                    
-                    <h3 className="text-lg font-medium mt-4">{t("SIQS Factors", "SIQS因素")}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-3 bg-cosmic-700/30 rounded-lg">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Moon className="h-4 w-4 text-blue-300" />
-                          {t("Light Pollution", "光污染")}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t(
-                            "Measured by the Bortle scale (1-9), with lower numbers indicating darker skies.",
-                            "由Bortle比例尺（1-9）衡量，较低的数字表示更暗的天空。"
-                          )}
-                        </p>
-                      </div>
-                      
-                      <div className="p-3 bg-cosmic-700/30 rounded-lg">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Cloud className="h-4 w-4 text-gray-300" />
-                          {t("Cloud Coverage", "云层覆盖")}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t(
-                            "The percentage of sky covered by clouds, with lower percentages being better.",
-                            "被云层覆盖的天空百分比，百分比越低越好。"
-                          )}
-                        </p>
-                      </div>
-                      
-                      <div className="p-3 bg-cosmic-700/30 rounded-lg">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Wind className="h-4 w-4 text-cyan-300" />
-                          {t("Wind Speed", "风速")}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t(
-                            "Higher winds can cause vibrations in equipment, resulting in blurry images.",
-                            "较高的风速会导致设备振动，从而产生模糊的图像。"
-                          )}
-                        </p>
-                      </div>
-                      
-                      <div className="p-3 bg-cosmic-700/30 rounded-lg">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Droplets className="h-4 w-4 text-blue-300" />
-                          {t("Humidity", "湿度")}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t(
-                            "High humidity can create haze and reduce visibility of celestial objects.",
-                            "高湿度会产生薄雾并降低天体的可见度。"
-                          )}
-                        </p>
-                      </div>
-                      
-                      <div className="p-3 bg-cosmic-700/30 rounded-lg">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <MoonStar className="h-4 w-4 text-yellow-300" />
-                          {t("Moon Phase", "月相")}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t(
-                            "A full moon creates additional light that can wash out faint objects.",
-                            "满月会产生额外的光线，可能会淡化微弱的天体。"
-                          )}
-                        </p>
-                      </div>
-                      
-                      <div className="p-3 bg-cosmic-700/30 rounded-lg">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Eye className="h-4 w-4 text-purple-300" />
-                          {t("Seeing Conditions", "视宁度")}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t(
-                            "Atmospheric turbulence affecting the steadiness of the image.",
-                            "影响图像稳定性的大气湍流。"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex justify-center">
-                      <Link to="/">
-                        <Button variant="default" className="flex items-center gap-2">
-                          <Calculator className="h-4 w-4" />
-                          {t("Try SIQS Calculator", "试用SIQS计算器")}
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+          
+          <div className="mt-8">
+            <Link to="/">
+              <Button className="w-full bg-cosmic-700 hover:bg-cosmic-600">
+                {t("Return to Home", "返回首页")}
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
