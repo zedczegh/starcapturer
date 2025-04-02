@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,7 +18,9 @@ import {
   Droplets,
   MoonStar,
   Eye,
-  Calculator
+  Calculator,
+  Lightbulb,
+  ExternalLink
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -105,6 +106,66 @@ const About = () => {
                             )}
                           </p>
                         </div>
+                      </div>
+                    </div>
+                    
+                    {/* Bortle Now Information */}
+                    <div className="mt-6 p-5 bg-cosmic-700/40 border border-cosmic-600 rounded-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Lightbulb className="h-6 w-6 text-yellow-400" />
+                        <h3 className="text-lg font-medium">{t("Bortle Now Tool", "Bortle实时工具")}</h3>
+                      </div>
+                      <p className="mb-4 text-sm text-muted-foreground">
+                        {t(
+                          "Our Bortle Now feature helps you understand the current light pollution levels at your location using the Bortle scale (1-9), with lower numbers indicating darker skies that are better for astrophotography.",
+                          "我们的Bortle实时功能帮助您了解您所在位置的当前光污染水平，使用Bortle量表（1-9），数字越低表示天空越暗，越适合天文摄影。"
+                        )}
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Button asChild variant="outline" size="sm" className="flex items-center gap-2">
+                          <Link to="/bortle-now">
+                            <Lightbulb className="h-4 w-4 text-yellow-400" />
+                            {t("Check Bortle Now", "查看实时Bortle指数")}
+                          </Link>
+                        </Button>
+                        <Button asChild variant="ghost" size="sm" className="flex items-center gap-2">
+                          <a href="https://en.wikipedia.org/wiki/Bortle_scale" target="_blank" rel="noopener noreferrer">
+                            <BookOpen className="h-4 w-4" />
+                            {t("Learn About Bortle Scale", "了解Bortle量表")}
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h3 className="text-lg font-medium mb-3">{t("Useful Links", "实用链接")}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/" className="flex items-center gap-2">
+                            <Calculator className="h-4 w-4 text-primary" />
+                            {t("SIQS Calculator", "SIQS计算器")}
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/photo-points" className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-blue-400" />
+                            {t("Find Dark Sky Locations", "查找暗空地点")}
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="justify-start">
+                          <a href="https://www.darksky.org/our-work/conservation/idsp/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-blue-400" />
+                            {t("Dark Sky Places", "暗空保护地")}
+                            <ExternalLink className="h-3 w-3 ml-auto" />
+                          </a>
+                        </Button>
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/bortle-now" className="flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4 text-yellow-400" />
+                            {t("Bortle Now", "实时Bortle指数")}
+                          </Link>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

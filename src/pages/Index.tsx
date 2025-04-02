@@ -12,7 +12,6 @@ import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
-import CurrentLocationReminder from "@/components/photoPoints/CurrentLocationReminder";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -74,7 +73,7 @@ const Index = () => {
       }
     }
     
-    // Update the currentSiqsStore value to make sure reminder is always visible
+    // Update the currentSiqsStore value
     const updateCurrentSiqs = () => {
       try {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
@@ -98,12 +97,6 @@ const Index = () => {
       <HeroSection />
       <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
       <ScienceSection />
-      <div className="container mx-auto px-4 py-8">
-        <CurrentLocationReminder 
-          currentSiqs={currentSiqs} 
-          isVisible={true} 
-        />
-      </div>
       <PhotoPointsSection />
       <Footer />
     </div>
