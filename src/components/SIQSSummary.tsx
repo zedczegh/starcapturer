@@ -1,5 +1,5 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,19 +17,27 @@ interface SIQSSummaryProps {
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, locationData }) => {
   const { t } = useLanguage();
+  const [key, setKey] = useState(0); // Force re-render when data changes
+  
+  // Force re-render when significant data changes
+  useEffect(() => {
+    if (siqsResult && siqsResult.score) {
+      setKey(prev => prev + 1);
+    }
+  }, [siqsResult?.score, locationData?.latitude, locationData?.longitude]);
   
   // If no SIQS data available, show placeholder
-  if (!siqsResult) {
+  if (!siqsResult || typeof siqsResult.score !== 'number') {
     return (
       <Card className="glassmorphism-strong">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Info className="w-4 h-4" />
-            {t("No SIQS Data Available", "无SIQS数据")}
+            {t("SIQS Data Loading", "SIQS数据加载中")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的SIQS评分。")}
+          {t("Please wait while we calculate SIQS for this location.", "请等待我们计算此位置的SIQS评分。")}
         </CardContent>
       </Card>
     );
@@ -55,7 +63,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   }, [siqsScore, t]);
   
   return (
-    <Card className="glassmorphism-strong">
+    <Card className="glassmorphism-strong" key={key}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Gauge className="w-5 h-5 text-primary" />
