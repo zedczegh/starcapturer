@@ -10,6 +10,8 @@ import Footer from "@/components/index/Footer";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
+import { currentSiqsStore } from "@/components/index/CalculatorSection";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -34,8 +36,10 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          // Using threshold of 5 for showing notification
-          if (savedLocation.siqs && savedLocation.siqs > 5) {
+          const currentSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          
+          // Using threshold of 5 for showing notification about good conditions
+          if (currentSiqs && isGoodViewingCondition(currentSiqs)) {
             // Show notification for ideal astrophotography location
             setTimeout(() => {
               toast.info(

@@ -99,7 +99,7 @@ export function getSIQSColorClass(value: number): string {
  * Determine if viewing conditions are good for astrophotography
  */
 export function isGoodViewingCondition(value: number): boolean {
-  return value >= 6.0;
+  return value >= 5.0; // Updated threshold to 5.0
 }
 
 /**

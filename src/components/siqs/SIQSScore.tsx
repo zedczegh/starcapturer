@@ -95,28 +95,34 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       </div>
       
       <div className="mt-6 flex justify-center">
-        <Link 
-          to={`/location/${locationId}`}
-          state={{
-            id: locationId,
-            name: locationName,
-            latitude: latitude,
-            longitude: longitude,
-            siqsResult: {
-              score: memoizedValues.displayValue
-            },
-            timestamp: new Date().toISOString(),
-            fromCalculator: true // Add a flag to indicate source
-          }}
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
         >
-          <Button 
-            size="sm" 
-            className="bg-primary/80 hover:bg-primary shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-primary-foreground"
+          <Link 
+            to={`/location/${locationId}`}
+            state={{
+              id: locationId,
+              name: locationName,
+              latitude: latitude,
+              longitude: longitude,
+              siqsResult: {
+                score: memoizedValues.displayValue
+              },
+              timestamp: new Date().toISOString(),
+              fromCalculator: true // Add a flag to indicate source
+            }}
           >
-            {t("See More Details", "查看更多详情")}
-            <ArrowRight className="ml-2 h-4 w-4 animate-pulse" />
-          </Button>
-        </Link>
+            <Button 
+              size="md" 
+              className="bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
+            >
+              {t("See More Details", "查看更多详情")}
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </motion.div>
   );
