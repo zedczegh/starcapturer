@@ -1,13 +1,24 @@
 
 import { toast } from "sonner";
-import { NavigateFunction } from "react-router-dom";
-import { getLocationDetailsById } from "@/utils/locationStorage";
 import { calculateMoonPhase } from "@/utils/siqsValidation";
+import { NavigateFunction } from "react-router-dom";
+import { getLatestLocation, dispatchLatestLocationUpdate } from "@/services/locationSyncService";
+
+interface InitializeLocationDataProps {
+  id: string | undefined;
+  initialState: any;
+  navigate: NavigateFunction;
+  toast: any;
+  t: (en: string, zh: string) => string;
+  language: string;
+  setLocationData: (data: any) => void;
+  setIsLoading: (isLoading: boolean) => void;
+}
 
 /**
- * Centralized function to initialize location data from various sources
+ * Initialize location data from state, localStorage, or redirect
  */
-export const initializeLocationData = async ({
+export const initializeLocationData = ({
   id,
   initialState,
   navigate,
@@ -16,75 +27,73 @@ export const initializeLocationData = async ({
   language,
   setLocationData,
   setIsLoading
-}: {
-  id: string | undefined;
-  initialState: any;
-  navigate: NavigateFunction;
-  toast: any;
-  t: any;
-  language: string;
-  setLocationData: (data: any) => void;
-  setIsLoading: (loading: boolean) => void;
-}) => {
+}: InitializeLocationDataProps) => {
   try {
-    // Check if id is valid
-    if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
-      console.error("Invalid or missing location ID:", id);
-      navigate("/"); // Redirect to home page if invalid ID
-      setIsLoading(false);
-      return;
-    }
-
-    // Priority 1: Use data from route state if it exists
-    if (initialState?.locationData) {
-      console.log("Using location data from route state");
-      setLocationData(initialState.locationData);
-      setIsLoading(false);
-      return;
-    }
-
-    // Priority 2: Try to load from localStorage by id
-    const storedData = getLocationDetailsById(id);
-    if (storedData) {
-      console.log(`Found stored location: ${storedData.name}`);
+    // Check if ID is missing or invalid
+    if (!id) {
+      console.error("Invalid or missing location ID:", { _type: typeof id, value: id });
       
-      // Update moon phase calculation if needed
-      if (!storedData.moonPhase) {
-        storedData.moonPhase = calculateMoonPhase();
+      // Attempt to recover from localStorage
+      const savedLocation = getLatestLocation();
+      if (savedLocation) {
+        console.log("Redirecting to home page with saved location");
+        navigate("/");
+        
+        // Ensure latest location is dispatched to update other components
+        dispatchLatestLocationUpdate();
+      } else {
+        // No saved location, redirect to home
+        navigate("/");
       }
       
-      setLocationData(storedData);
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if we have initialState from navigation
+    if (initialState?.locationData) {
+      console.log("Using location data from navigation state");
+      setLocationData(initialState.locationData);
+      setIsLoading(false);
+      
+      // Cache the data for future use
+      try {
+        localStorage.setItem(`location_${id}`, JSON.stringify(initialState.locationData));
+      } catch (e) {
+        console.error("Failed to save location data to localStorage", e);
+      }
+      return;
+    }
+
+    // Try to load data from localStorage
+    const savedLocationData = localStorage.getItem(`location_${id}`);
+    if (savedLocationData) {
+      console.log("Using location data from localStorage");
+      const parsedData = JSON.parse(savedLocationData);
+      
+      // Update moonPhase as it may have changed
+      parsedData.moonPhase = calculateMoonPhase();
+      
+      setLocationData(parsedData);
       setIsLoading(false);
       return;
     }
 
     // If we get here, we couldn't find the location
     console.error("Location not found");
+    navigate("/");
+    
+    // Show error toast
     toast({
-      title: t("Location not found", "找不到位置"),
-      description: t(
-        "The location you requested could not be found. Redirecting to home page.",
-        "无法找到您请求的位置。正在重定向到主页。"
-      ),
-      duration: 3000,
-    });
-
-    // Redirect to home page
-    navigate("/", { replace: true });
-  } catch (error) {
-    console.error("Error initializing location data:", error);
-    toast({
-      title: t("Error", "错误"),
-      description: t(
-        "An error occurred while loading the location. Redirecting to home page.",
-        "加载位置时发生错误。正在重定向到主页。"
-      ),
-      duration: 3000,
+      title: t("Location not found", "未找到位置"),
+      description: t("Please try again", "请重试"),
+      variant: "destructive",
     });
     
-    // Redirect to home page
-    navigate("/", { replace: true });
-  } finally {
+    setIsLoading(false);
+  } catch (error) {
+    console.error("Error initializing location data:", error);
+    navigate("/");
     setIsLoading(false);
   }
 };

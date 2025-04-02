@@ -31,7 +31,7 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
         return { ...factor, score: 10 };
       }
       
-      // For 100% cloud cover, use a random low score
+      // For 100% cloud cover, use a random low score between 1.1-1.3
       if (factor.description.includes("100%")) {
         return { ...factor, score: getRandomCloudCoverScore() };
       }

@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
-import { subscribeToLocationUpdates, getLatestLocation, LocationUpdate } from '@/services/locationSyncService';
+import { subscribeToLocationUpdates, getLatestLocation, LocationUpdate, dispatchLatestLocationUpdate } from '@/services/locationSyncService';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -37,6 +37,12 @@ export function useLocationSync() {
     if (savedLocation && !syncedLocation) {
       console.log('Initializing with saved location:', savedLocation.name);
       setSyncedLocation(savedLocation);
+      
+      // Dispatch the saved location to ensure all components are synchronized
+      // Slight delay to ensure components are mounted
+      setTimeout(() => {
+        dispatchLatestLocationUpdate();
+      }, 100);
     }
   }, [syncedLocation]);
   
@@ -46,8 +52,14 @@ export function useLocationSync() {
     return unsubscribe;
   }, [handleLocationUpdate]);
   
+  // Force update function that can be called to refresh location
+  const forceLocationUpdate = useCallback(() => {
+    dispatchLatestLocationUpdate();
+  }, []);
+  
   return {
     syncedLocation,
-    lastSyncTime
+    lastSyncTime,
+    forceLocationUpdate
   };
 }

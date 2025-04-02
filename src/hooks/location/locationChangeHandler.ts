@@ -48,6 +48,20 @@ export const handleLocationChange = (
       source: 'location_change'
     });
     
+    // Store additional data in localStorage for persistence
+    try {
+      // Save current location for photo points and other pages to access
+      localStorage.setItem('latest_siqs_location', JSON.stringify({
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale,
+        timestamp
+      }));
+    } catch (e) {
+      console.error("Failed to save location to localStorage", e);
+    }
+    
     // Navigate to the location details page
     navigate(`/location/${id}`, {
       state: { locationData },

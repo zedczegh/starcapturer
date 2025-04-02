@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, Map, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,46 @@ import { useLocationSync } from '@/hooks/useLocationSync';
 interface RecommendedPhotoPointsProps {
   className?: string;
   siqs?: number | null;
+  onSelectPoint?: (point: { name: string; latitude: number; longitude: number }) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
+  hideEmptyMessage?: boolean;
 }
 
 const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({ 
   className = "",
-  siqs = null
+  siqs = null,
+  onSelectPoint,
+  userLocation = null,
+  hideEmptyMessage = false
 }) => {
   const { t } = useLanguage();
   const { syncedLocation } = useLocationSync();
   
+  // Use provided userLocation or fall back to syncedLocation
+  const currentLocation = userLocation || (syncedLocation ? {
+    latitude: syncedLocation.latitude,
+    longitude: syncedLocation.longitude
+  } : null);
+  
   // Only show if we have a location and SIQS score
-  if (!syncedLocation || !siqs) {
-    return null;
+  if (!currentLocation && !syncedLocation) {
+    if (hideEmptyMessage) return null;
+    
+    return (
+      <div className={`mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 ${className}`}>
+        <p className="text-sm text-center text-muted-foreground">
+          {t("Set a location to see recommended photo points", "设置位置以查看推荐的拍摄点")}
+        </p>
+      </div>
+    );
   }
+  
+  // Handle point selection if provided
+  const handleSelectPoint = useCallback((point: any) => {
+    if (onSelectPoint) {
+      onSelectPoint(point);
+    }
+  }, [onSelectPoint]);
   
   // Use CSS classes based on SIQS score
   const getScoreClasses = () => {
@@ -30,6 +57,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     if (siqs >= 3) return "text-blue-500";
     return "text-amber-500";
   };
+  
+  // Prepare location coordinates for the link
+  const locationCoords = currentLocation || (syncedLocation ? {
+    latitude: syncedLocation.latitude,
+    longitude: syncedLocation.longitude
+  } : { latitude: 0, longitude: 0 });
   
   return (
     <div className={`mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 ${className}`}>
@@ -43,7 +76,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         <div className="flex items-center gap-1">
           <Navigation className="h-4 w-4 text-primary/70" />
           <span className="text-xs text-primary/70">
-            {syncedLocation.latitude.toFixed(4)}, {syncedLocation.longitude.toFixed(4)}
+            {locationCoords.latitude.toFixed(4)}, {locationCoords.longitude.toFixed(4)}
           </span>
         </div>
       </div>
@@ -53,8 +86,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           "Discover photography spots near your current location. Current SIQS: ",
           "发现您当前位置附近的摄影地点。当前SIQS评分："
         )}
-        <span className={`font-medium ${getScoreClasses()}`}>
-          {siqs.toFixed(1)}
+        <span className={`font-medium ${siqs ? getScoreClasses() : ''}`}>
+          {siqs ? siqs.toFixed(1) : "N/A"}
         </span>
       </p>
       
@@ -66,7 +99,11 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       >
         <Link 
           to="/photo-points" 
-          state={{ fromCalculator: true, latitude: syncedLocation.latitude, longitude: syncedLocation.longitude }}
+          state={{ 
+            fromCalculator: true, 
+            latitude: locationCoords.latitude, 
+            longitude: locationCoords.longitude 
+          }}
         >
           <Map className="mr-2 h-4 w-4" />
           {t("View Nearby Photo Points", "查看附近的拍摄点")}

@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
  * and properly handles location changes
  */
 export function useRefreshManager(locationData: any) {
-  const [shouldRefresh, setShouldRefresh] = useState(false);
+  const [shouldRefresh, setShouldRefresh] = useState(true); // Start with true to trigger initial refresh
   const refreshedRef = useRef(false);
   const locationSignatureRef = useRef<string | null>(null);
   const pageLoadRefreshedRef = useRef(false);

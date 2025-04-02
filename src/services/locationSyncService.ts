@@ -13,12 +13,15 @@ export interface LocationUpdate {
   longitude: number;
   timestamp: string;
   source?: string;
+  bortleScale?: number | null;
 }
 
 /**
  * Publish a location update event that other components can listen for
  */
 export function publishLocationUpdate(locationData: LocationUpdate): void {
+  console.log(`Publishing location update: ${locationData.name}`);
+  
   // Create a custom event with the location data
   const event = new CustomEvent(LOCATION_UPDATE_EVENT, {
     detail: locationData,
@@ -31,7 +34,7 @@ export function publishLocationUpdate(locationData: LocationUpdate): void {
   // Also save to localStorage for persistence between page refreshes
   try {
     localStorage.setItem('latest_siqs_location', JSON.stringify(locationData));
-    console.log(`Location update published: ${locationData.name}`);
+    console.log(`Location update published and saved: ${locationData.name}`);
   } catch (error) {
     console.error('Failed to save location to localStorage', error);
   }
@@ -66,5 +69,20 @@ export function getLatestLocation(): LocationUpdate | null {
   } catch (error) {
     console.error('Failed to retrieve location from localStorage', error);
     return null;
+  }
+}
+
+/**
+ * Force dispatch a location update event with the latest saved location
+ * Useful for synchronizing pages when they first load
+ */
+export function dispatchLatestLocationUpdate(): void {
+  const latestLocation = getLatestLocation();
+  if (latestLocation) {
+    console.log('Dispatching latest saved location:', latestLocation.name);
+    publishLocationUpdate({
+      ...latestLocation,
+      source: 'location_reload'
+    });
   }
 }
