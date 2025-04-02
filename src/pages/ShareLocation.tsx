@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { getCurrentPosition, ExtendedGeolocationOptions } from "@/utils/geolocat
 import NavBar from "@/components/NavBar";
 import { getBortleScaleColor, getBortleScaleDescription } from "@/data/utils/bortleScaleUtils";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
-import { Camera, Clock, MapPin, Moon, Info, Shield, Star, Cloud, ArrowDown, ArrowUp, Pointer, CircleSlash } from "lucide-react";
+import { Camera, Clock, MapPin, Moon, Info, Shield, Star, Cloud, ArrowDown, ArrowUp, Pointer, CircleSlash, CheckCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import ConditionItem from "@/components/weather/ConditionItem";
@@ -40,6 +41,9 @@ const BortleNow: React.FC = () => {
   const [showCameraPermissionDialog, setShowCameraPermissionDialog] = useState(false);
   const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
   const [cameraMode, setCameraMode] = useState<"dark" | "light" | null>(null);
+  
+  // Countdown timer state
+  const [countdown, setCountdown] = useState<number | null>(null);
   
   // When location changes, update Bortle scale
   const onLocationChange = useCallback((lat: number, lng: number) => {
@@ -109,17 +113,31 @@ const BortleNow: React.FC = () => {
     getCurrentLocation();
   }, []);
 
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      // When countdown reaches zero, trigger the appropriate capture
+      if (cameraMode === "dark") {
+        performDarkFrameCapture();
+      } else if (cameraMode === "light") {
+        performLightFrameCapture();
+      }
+      setCountdown(null);
+    }
+  }, [countdown, cameraMode]);
+
   // Request camera permission before capture
   const requestCameraPermission = async (mode: "dark" | "light") => {
     setCameraMode(mode);
     
     // Check if permissions were already granted
     if (cameraPermissionGranted) {
-      if (mode === "dark") {
-        captureDarkFrame();
-      } else {
-        captureLightFrame();
-      }
+      startCountdown(mode);
       return;
     }
     
@@ -140,12 +158,8 @@ const BortleNow: React.FC = () => {
         // Stop the stream immediately, we just needed to trigger the permission
         stream.getTracks().forEach(track => track.stop());
         
-        // Proceed with capture based on mode
-        if (cameraMode === "dark") {
-          captureDarkFrame();
-        } else if (cameraMode === "light") {
-          captureLightFrame();
-        }
+        // Start the countdown for the appropriate mode
+        startCountdown(cameraMode);
       } catch (err) {
         console.error("Camera permission error:", err);
         setError(t("Camera access was denied", "相机访问被拒绝"));
@@ -164,8 +178,24 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  // Simulate Dark Sky Meter camera process to measure actual Bortle scale
-  const captureDarkFrame = async () => {
+  // Start a countdown for frame capture
+  const startCountdown = (mode: "dark" | "light" | null) => {
+    if (!mode) return;
+    
+    // Set initial countdown to 5 seconds
+    setCountdown(5);
+    
+    // Show toast for countdown
+    toast({
+      title: mode === "dark" 
+        ? t("Preparing to capture dark frame", "准备捕获暗帧") 
+        : t("Preparing to capture sky frame", "准备捕获天空帧"),
+      description: t("Get ready in 5 seconds...", "5秒后准备好..."),
+    });
+  };
+
+  // Perform the actual dark frame capture once countdown completes
+  const performDarkFrameCapture = async () => {
     try {
       setError(null);
       setCameraReadings(prev => ({ ...prev, darkFrame: false }));
@@ -212,7 +242,13 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  const captureLightFrame = async () => {
+  // Simulate Dark Sky Meter camera process to measure actual Bortle scale
+  const captureDarkFrame = () => {
+    requestCameraPermission("dark");
+  };
+
+  // Perform the actual light frame capture once countdown completes
+  const performLightFrameCapture = async () => {
     try {
       setError(null);
       setCameraReadings(prev => ({ ...prev, lightFrame: false }));
@@ -269,6 +305,10 @@ const BortleNow: React.FC = () => {
     } finally {
       setIsProcessingImage(false);
     }
+  };
+
+  const captureLightFrame = () => {
+    requestCameraPermission("light");
   };
 
   // Get Bortle scale color for UI display
@@ -397,6 +437,35 @@ const BortleNow: React.FC = () => {
           </motion.div>
         )}
         
+        {/* Countdown overlay */}
+        <AnimatePresence>
+          {countdown !== null && (
+            <motion.div 
+              className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div 
+                className="text-6xl font-bold text-white"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.2, opacity: 0 }}
+                key={countdown}
+              >
+                {countdown}
+              </motion.div>
+              <div className="absolute bottom-20 text-center text-white text-lg px-6">
+                {cameraMode === "dark" ? (
+                  <p>{t("Cover your camera lens completely", "完全遮盖相机镜头")}</p>
+                ) : (
+                  <p>{t("Point your camera at the sky (zenith)", "将相机指向天空（天顶）")}</p>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <div className="space-y-6">
           {/* Enhanced Bortle Scale Display with Dynamic Circle */}
           <AnimatePresence>
@@ -489,7 +558,7 @@ const BortleNow: React.FC = () => {
                   
                   {cameraReadings.lightFrame ? (
                     <div className="mt-3 flex items-center justify-center p-1 bg-green-950/30 rounded-full w-fit mx-auto">
-                      <div className="text-xs text-primary flex items-center gap-2 px-3 py-1">
+                      <div className="text-xs text-emerald-400 flex items-center gap-2 px-3 py-1">
                         <Shield size={14} className="text-emerald-400" />
                         {t("Camera-verified measurement", "相机验证的测量")}
                       </div>
@@ -606,16 +675,16 @@ const BortleNow: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Button
                     variant={cameraReadings.darkFrame ? "outline" : "default"}
-                    onClick={() => requestCameraPermission("dark")}
-                    disabled={isProcessingImage || isMeasuringRealtime}
-                    className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.darkFrame ? 'bg-cosmic-800/60 border-primary/50' : 'bg-cosmic-800 hover:bg-cosmic-700'}`}
+                    onClick={captureDarkFrame}
+                    disabled={isProcessingImage || isMeasuringRealtime || countdown !== null}
+                    className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.darkFrame ? 'bg-cosmic-800/60 border-emerald-500/50' : 'bg-cosmic-800 hover:bg-cosmic-700'}`}
                   >
                     <Moon size={16} />
                     {t("Capture Dark Frame", "捕获暗帧")}
                     
                     {cameraReadings.darkFrame && (
-                      <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center">
-                        <span className="text-xs text-green-500">✓</span>
+                      <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10">
+                        <CheckCircle className="h-8 w-8 text-emerald-500" />
                       </div>
                     )}
                     
@@ -628,16 +697,22 @@ const BortleNow: React.FC = () => {
                   
                   <Button
                     variant={cameraReadings.lightFrame ? "outline" : "secondary"}
-                    onClick={() => requestCameraPermission("light")}
-                    disabled={isProcessingImage || !cameraReadings.darkFrame || isMeasuringRealtime}
-                    className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.lightFrame ? 'bg-cosmic-800/60 border-primary/50' : 'bg-cosmic-700/80 hover:bg-cosmic-700'}`}
+                    onClick={captureLightFrame}
+                    disabled={isProcessingImage || !cameraReadings.darkFrame || isMeasuringRealtime || countdown !== null}
+                    className={`relative overflow-hidden flex items-center gap-2 ${
+                      cameraReadings.lightFrame 
+                        ? 'bg-cosmic-800/60 border-emerald-500/50 text-emerald-400' 
+                        : cameraReadings.darkFrame 
+                          ? 'bg-cosmic-700/80 hover:bg-cosmic-700' 
+                          : 'bg-cosmic-700/80 hover:bg-cosmic-700 opacity-50'
+                    }`}
                   >
                     <Clock size={16} />
                     {t("Measure Sky Brightness", "测量天空亮度")}
                     
                     {cameraReadings.lightFrame && (
-                      <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-                        <span className="text-xs text-primary">✓</span>
+                      <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10">
+                        <CheckCircle className="h-8 w-8 text-emerald-500" />
                       </div>
                     )}
                     
