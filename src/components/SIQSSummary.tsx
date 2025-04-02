@@ -1,13 +1,14 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gauge, Info } from "lucide-react";
+import { Gauge, Info, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Progress } from "@/components/ui/progress";
 import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
+import { Button } from "./ui/button";
 
 interface SIQSSummaryProps {
   siqsResult: any;
@@ -17,9 +18,16 @@ interface SIQSSummaryProps {
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, locationData }) => {
   const { t } = useLanguage();
+  const [localSiqsResult, setLocalSiqsResult] = useState(siqsResult);
+  const [refreshing, setRefreshing] = useState(false);
   
-  // If no SIQS data available, show placeholder
-  if (!siqsResult) {
+  // Update local state when siqsResult changes
+  useEffect(() => {
+    setLocalSiqsResult(siqsResult);
+  }, [siqsResult]);
+  
+  // If no SIQS data available, show a different UI with refresh option
+  if (!localSiqsResult) {
     return (
       <Card className="glassmorphism-strong">
         <CardHeader>
@@ -28,8 +36,36 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             {t("No SIQS Data Available", "无SIQS数据")}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的SIQS评分。")}
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {t("We need to calculate the SIQS score for this location.", "我们需要计算此位置的SIQS评分。")}
+          </p>
+          
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            disabled={refreshing}
+            onClick={() => {
+              // Dispatch custom event to trigger a refresh
+              const refreshEvent = new CustomEvent('forceRefresh');
+              document.dispatchEvent(refreshEvent);
+              setRefreshing(true);
+              setTimeout(() => setRefreshing(false), 3000);
+            }}
+            className="w-full"
+          >
+            {refreshing ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                {t("Calculating...", "计算中...")}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                {t("Calculate SIQS", "计算SIQS")}
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     );
@@ -37,9 +73,9 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   
   // Format the SIQS score for display
   const siqsScore = useMemo(() => {
-    return typeof siqsResult.score === 'number' ? 
-      Math.round(siqsResult.score * 10) / 10 : 0;
-  }, [siqsResult.score]);
+    return typeof localSiqsResult.score === 'number' ? 
+      Math.round(localSiqsResult.score * 10) / 10 : 0;
+  }, [localSiqsResult.score]);
     
   // Get color class based on score
   const scoreColorClass = getProgressColorClass(siqsScore);
@@ -76,6 +112,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             initial={{ width: 0 }}
             animate={{ width: "100%" }}
             transition={{ duration: 0.5 }}
+            key={`siqs-progress-${siqsScore}`}
           >
             <Progress 
               value={siqsScore * 10} 
@@ -98,10 +135,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         </div>
         
         {/* Contributing Factors */}
-        {siqsResult.factors && siqsResult.factors.length > 0 && (
+        {localSiqsResult.factors && localSiqsResult.factors.length > 0 && (
           <div className="mt-4 space-y-4">
             <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响SIQS的因素")}</h4>
-            <SIQSFactorsList factors={siqsResult.factors} />
+            <SIQSFactorsList factors={localSiqsResult.factors} />
           </div>
         )}
       </CardContent>

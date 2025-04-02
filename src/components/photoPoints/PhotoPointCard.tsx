@@ -1,207 +1,175 @@
 
-import React, { useState, useEffect } from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Award, Building2, Loader2, Trees, Globe, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { formatSIQSScore } from "@/utils/geoUtils";
-import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
+import React, { useState } from 'react';
+import { ArrowRight, MapPin, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCertificationInfo, useDistanceFormatter } from './utils/certificationUtils';
+import SIQSBadge from '@/components/siqs/SIQSBadge';
+import BortleBadge from '@/components/bortle/BortleBadge';
+import { isGoodViewingCondition } from '@/hooks/siqs/siqsCalculationUtils';
 
 interface PhotoPointCardProps {
-  point: SharedAstroSpot;
-  onSelect?: (point: SharedAstroSpot) => void;
-  onViewDetails: (point: SharedAstroSpot) => void;
+  point: any;
+  onSelect?: (point: any) => void;
+  onViewDetails?: () => void;
   userLocation: { latitude: number; longitude: number } | null;
+  isPreview?: boolean;
 }
 
-const PhotoPointCard: React.FC<PhotoPointCardProps> = ({ 
-  point, 
+const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
+  point,
   onSelect,
   onViewDetails,
-  userLocation
+  userLocation,
+  isPreview = false
 }) => {
   const { language, t } = useLanguage();
-  const [nearestTown, setNearestTown] = useState<string | null>(null);
-  const [loadingTown, setLoadingTown] = useState(false);
-
-  useEffect(() => {
-    if (point.latitude && point.longitude) {
-      const fetchNearestTown = async () => {
-        setLoadingTown(true);
-        try {
-          // First check if we already have a name from point data
-          if (point.name && 
-              !point.name.includes("°") && 
-              !point.name.includes("Location at") &&
-              !point.name.includes("位置在") &&
-              !point.name.includes("Remote area") &&
-              !point.name.includes("偏远地区")) {
-            
-            const extractedName = extractNearestTownName(point.name, point.description, language);
-            setNearestTown(extractedName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // Try directional region naming first (e.g., "Northwest Yunnan")
-          const regionalName = getRegionalName(point.latitude, point.longitude, language);
-          
-          // If we got a valid region name, use it
-          if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-            setNearestTown(regionalName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // Use enhanced location service as a fallback
-          const townName = await getLocationNameForCoordinates(
-            point.latitude,
-            point.longitude,
-            language
-          );
-          
-          if (townName) {
-            const extractedTownName = extractNearestTownName(townName, point.description, language);
-            setNearestTown(extractedTownName);
-          } else {
-            // Better fallback for remote areas
-            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-          }
-        } catch (error) {
-          console.error("Error fetching nearest town:", error);
-          setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-        } finally {
-          setLoadingTown(false);
-        }
-      };
-      
-      fetchNearestTown();
-    }
-  }, [point.latitude, point.longitude, point.description, point.name, language]);
-
-  const formatDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
+  const [isHovering, setIsHovering] = useState(false);
+  const formatDistance = useDistanceFormatter();
+  
+  const certificationInfo = point.certification || point.isDarkSkyReserve
+    ? useCertificationInfo(point.certification, point.isDarkSkyReserve)
+    : null;
+  
+  // Show placeholder if point is missing crucial info
+  if (!point || !point.latitude || !point.longitude) {
+    return <PhotoPointCardSkeleton />;
+  }
+  
+  const name = language === 'zh' && point.chineseName ? point.chineseName : point.name;
+  const distance = userLocation 
+    ? haversineDistance(
+        userLocation.latitude, 
+        userLocation.longitude, 
+        point.latitude, 
+        point.longitude
+      ) 
+    : null;
+  
+  const isGoodSiqs = typeof point.siqs === 'number' && isGoodViewingCondition(point.siqs);
     
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
-  };
-
-  // Determine certification icon and color
-  const getCertificationInfo = () => {
-    if (!point.certification && !point.isDarkSkyReserve) {
-      return null;
-    }
-    
-    const certification = (point.certification || '').toLowerCase();
-    
-    if (certification.includes('sanctuary') || certification.includes('reserve')) {
-      return {
-        icon: <Globe className="h-4 w-4 text-blue-400 mr-1.5" />,
-        text: t('Dark Sky Reserve', '暗夜保护区'),
-        color: 'text-blue-400 bg-blue-400/10 border-blue-400/30'
-      };
-    } else if (certification.includes('park')) {
-      return {
-        icon: <Trees className="h-4 w-4 text-green-400 mr-1.5" />,
-        text: t('Dark Sky Park', '暗夜公园'),
-        color: 'text-green-400 bg-green-400/10 border-green-400/30'
-      };
-    } else if (certification.includes('community')) {
-      return {
-        icon: <Building2 className="h-4 w-4 text-amber-400 mr-1.5" />,
-        text: t('Dark Sky Community', '暗夜社区'),
-        color: 'text-amber-400 bg-amber-400/10 border-amber-400/30'
-      };
-    } else if (certification.includes('urban')) {
-      return {
-        icon: <Building2 className="h-4 w-4 text-purple-400 mr-1.5" />,
-        text: t('Urban Night Sky', '城市夜空'),
-        color: 'text-purple-400 bg-purple-400/10 border-purple-400/30'
-      };
-    } else {
-      return {
-        icon: <ShieldCheck className="h-4 w-4 text-blue-300 mr-1.5" />,
-        text: t('Certified Location', '认证地点'),
-        color: 'text-blue-300 bg-blue-300/10 border-blue-300/30'
-      };
-    }
-  };
-
-  const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
-  const certInfo = getCertificationInfo();
-
   return (
-    <div 
-      className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
-      onClick={() => onSelect?.(point)}
+    <motion.div
+      className={`rounded-xl overflow-hidden group transition-all ${
+        isPreview ? 'border-0' : 'border border-cosmic-700/30'
+      }`}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <h4 className="font-medium text-sm line-clamp-1">
-          {pointName}
-        </h4>
-        
-        {/* SIQS Score - Now isolated at the top right */}
-        <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-          <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
+      <div className={`p-4 ${
+        isGoodSiqs 
+          ? 'bg-gradient-to-r from-cosmic-900/90 to-cosmic-800/90 hover:from-cosmic-900/95 hover:to-cosmic-800/95' 
+          : 'bg-gradient-to-r from-cosmic-900/80 to-cosmic-800/80 hover:from-cosmic-900/90 hover:to-cosmic-800/90'
+      } transition-all duration-300`}>
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className={`rounded-full p-2 flex-shrink-0 self-start ${
+            isGoodSiqs 
+              ? 'bg-green-500/10 text-green-400' 
+              : 'bg-amber-500/10 text-amber-400'
+          }`}>
+            {isGoodSiqs ? <Star className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <div>
+                <h3 className="text-lg font-semibold mb-1 text-gray-50 truncate">{name}</h3>
+                
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {distance !== null && (
+                    <Badge variant="outline" className="text-[0.65rem] py-0 font-normal text-gray-300 bg-gray-800/40">
+                      {formatDistance(distance)}
+                    </Badge>
+                  )}
+                  
+                  {certificationInfo && (
+                    <Badge
+                      className={`text-[0.65rem] py-0 flex items-center gap-1 font-normal ${certificationInfo.color}`}
+                    >
+                      {certificationInfo.icon}
+                      {certificationInfo.text}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex gap-2 ml-0 sm:ml-2">
+                {point.siqs && <SIQSBadge score={point.siqs} />}
+                {typeof point.bortleScale === 'number' && <BortleBadge value={point.bortleScale} />}
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between flex-row-reverse mt-2">
+              <AnimatePresence>
+                {!isPreview && (
+                  <Button
+                    size="sm"
+                    className="px-4 h-8 text-sm hover:bg-primary hover:text-primary-foreground transition-colors duration-500"
+                    variant="outline"
+                    onClick={() => {
+                      if (onSelect) onSelect(point);
+                      if (onViewDetails) onViewDetails();
+                    }}
+                  >
+                    {t("See More Details", "查看详情")}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </AnimatePresence>
+              
+              {point.description && (
+                <p className="text-xs text-muted-foreground line-clamp-1 mr-2 max-w-[70%]">
+                  {point.description}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Certification Badge - Now BELOW the SIQS score */}
-      {certInfo && (
-        <div className={`flex items-center mt-1.5 mb-2`}>
-          <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
-            {certInfo.icon}
-            <span className="text-xs">{certInfo.text}</span>
-          </Badge>
-        </div>
-      )}
-      
-      <div className="flex flex-col space-y-2 mt-2">
-        <div className="flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-sm text-muted-foreground font-medium">
-            {formatDistance(point.distance)}
-          </span>
-        </div>
-        
-        <div className="flex items-center">
-          <Building2 className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-sm text-muted-foreground line-clamp-1 font-medium">
-            {loadingTown ? (
-              <span className="flex items-center">
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                {language === 'zh' ? "加载中..." : "Loading..."}
-              </span>
-            ) : nearestTown ? (
-              <>{t("Near ", "靠近 ")}{nearestTown}</>
-            ) : (
-              t("Remote area", "偏远地区")
-            )}
-          </span>
-        </div>
-      </div>
-      
-      <div className="mt-3 flex justify-end">
-        <Button 
-          size="sm" 
-          variant="ghost" 
-          className="h-7 text-sm px-2.5 text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewDetails(point);
-          }}
-        >
-          {t("View", "查看")}
-        </Button>
-      </div>
-    </div>
+    </motion.div>
   );
 };
 
-export default PhotoPointCard;
+const PhotoPointCardSkeleton = () => (
+  <div className="rounded-xl overflow-hidden border border-cosmic-700/30">
+    <div className="p-4 bg-gradient-to-r from-cosmic-900/80 to-cosmic-800/80">
+      <div className="flex gap-3">
+        <Skeleton className="h-9 w-9 rounded-full flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-3/4" />
+          <div className="flex gap-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex justify-between pt-2">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-8 w-28" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Calculate haversine distance between two points
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+export default React.memo(PhotoPointCard);
