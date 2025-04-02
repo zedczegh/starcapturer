@@ -18,10 +18,20 @@ export function calculateCloudScore(cloudCover: number): number {
   // If cloud cover is above 50%, score should be very low
   if (cloudCover > 50) return 0;
   
-  // Otherwise, linear scale from 0-50%
-  // 0% cloud cover should be 100 points
-  // 50% cloud cover should be 0 points
-  return Math.max(0, 100 - (cloudCover * 2));
+  // Modified scale to be more generous for moderate cloud cover:
+  // 0% cloud cover = 100 points
+  // 25% cloud cover = 70 points (previously would have been 50 points)
+  // 50% cloud cover = 0 points
+  
+  // This creates a more gradual decline that gives better scores
+  // for moderate cloud cover in the 20-30% range
+  if (cloudCover <= 25) {
+    // More gradual decline for 0-25%
+    return 100 - (cloudCover * 1.2);
+  } else {
+    // Steeper decline from 25-50%
+    return Math.max(0, 70 - ((cloudCover - 25) * 2.8));
+  }
 }
 
 export function calculateLightPollutionScore(bortleScale: number): number {

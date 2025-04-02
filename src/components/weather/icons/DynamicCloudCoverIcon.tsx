@@ -8,16 +8,27 @@ interface DynamicCloudCoverIconProps {
   precipitation?: number;
   snowfall?: number;
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({ 
   cloudCover, 
   precipitation = 0, 
   snowfall = 0,
-  className 
+  className,
+  size = 'sm'
 }) => {
+  // Calculate different sizes
+  const sizeMap = {
+    sm: 'h-3.5 w-3.5',
+    md: 'h-4.5 w-4.5',
+    lg: 'h-5.5 w-5.5'
+  };
+  
+  const iconSize = sizeMap[size] || sizeMap.sm;
+  
   // Calculate fill based on cloud cover percentage
-  const fillOpacity = cloudCover / 100;
+  const fillOpacity = Math.min(1, cloudCover / 100);
   
   // Add red glow for rainy conditions - smaller and more aesthetic
   const hasRain = precipitation > 0;
@@ -32,7 +43,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (snowfall > 0.5) {
       return (
         <CloudSnow 
-          className={cn("h-3.5 w-3.5 text-primary", hasRain && "text-red-400")}
+          className={cn(iconSize, "text-primary", hasRain && "text-red-400")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor",
@@ -46,7 +57,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (precipitation > 0.5) {
       return (
         <CloudDrizzle 
-          className={cn("h-3.5 w-3.5", hasRain ? "text-red-400" : "text-primary")}
+          className={cn(iconSize, hasRain ? "text-red-400" : "text-primary")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor",
@@ -60,7 +71,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (precipitation > 0) {
       return (
         <CloudHail 
-          className={cn("h-3.5 w-3.5", "text-red-400")}
+          className={cn(iconSize, "text-red-400")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor",
@@ -74,7 +85,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (cloudCover > 80) {
       return (
         <CloudFog 
-          className="h-3.5 w-3.5 text-primary"
+          className={cn(iconSize, "text-primary")}
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor"
@@ -87,7 +98,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (cloudCover < 25) {
       return (
         <Sun 
-          className="h-3.5 w-3.5 text-yellow-400" 
+          className={cn(iconSize, "text-yellow-400")} 
           style={{
             filter: "drop-shadow(0 0 2px rgba(250, 204, 21, 0.4))"
           }}
@@ -99,7 +110,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     if (cloudCover >= 25 && cloudCover < 40) {
       return (
         <CloudSun 
-          className="h-3.5 w-3.5 text-primary" 
+          className={cn(iconSize, "text-primary")} 
           style={{
             fill: `rgba(148, 163, 184, ${fillOpacity})`,
             stroke: "currentColor"
@@ -111,7 +122,7 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     // Default cloud icon for other conditions
     return (
       <Cloud 
-        className="h-3.5 w-3.5 text-primary" 
+        className={cn(iconSize, "text-primary")} 
         style={{
           fill: `rgba(148, 163, 184, ${fillOpacity})`,
           stroke: "currentColor"

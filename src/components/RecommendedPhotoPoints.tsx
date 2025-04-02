@@ -27,6 +27,24 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const { t } = useLanguage();
   const [isInitialized, setIsInitialized] = useState(false);
   const currentSiqs = currentSiqsStore.getScore();
+  const [localLoading, setLocalLoading] = useState(true);
+  const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
+  
+  // Start with cached data if available from localStorage
+  useEffect(() => {
+    try {
+      const savedLocations = localStorage.getItem('cachedRecommendedLocations');
+      if (savedLocations) {
+        const parsed = JSON.parse(savedLocations);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCachedLocations(parsed);
+          setLocalLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cached locations:", error);
+    }
+  }, []);
   
   const {
     displayedLocations,
@@ -35,24 +53,36 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: limit + 2 // Request more to ensure we have enough even after filtering
+    maxInitialResults: limit + 5, // Request more to ensure we have enough even after filtering
+    initialLoadDelay: 500 // Shorter delay for faster initial load
   });
 
-  // Mark as initialized after initial load
+  // Mark as initialized after initial load and save to cache
   useEffect(() => {
-    if (!loading && !isInitialized) {
+    if (!loading && !isInitialized && displayedLocations.length > 0) {
       setIsInitialized(true);
+      setLocalLoading(false);
+      
+      // Save to localStorage for faster future loads
+      try {
+        localStorage.setItem('cachedRecommendedLocations', JSON.stringify(displayedLocations));
+      } catch (error) {
+        console.error("Error saving locations to cache:", error);
+      }
     }
-  }, [loading, isInitialized]);
+  }, [loading, isInitialized, displayedLocations]);
 
   // Only show limited number of locations
   const limitedLocations = useMemo(() => {
+    // Use fresh data if available, otherwise use cached data
+    const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
+    
     // Prioritize certified locations 
-    const certified = displayedLocations.filter(loc => 
+    const certified = locationsToUse.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
     
-    const nonCertified = displayedLocations.filter(loc => 
+    const nonCertified = locationsToUse.filter(loc => 
       !loc.isDarkSkyReserve && !loc.certification
     );
     
@@ -64,12 +94,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     ].slice(0, limit);
     
     return sortedLocations;
-  }, [displayedLocations, limit]);
+  }, [displayedLocations, cachedLocations, limit]);
 
-  if (loading) {
+  if (localLoading && cachedLocations.length === 0) {
     return (
-      <div className="mt-2 flex justify-center py-6">
-        <Loader2 className="w-6 h-6 animate-spin text-primary/60" />
+      <div className="mt-2 flex justify-center py-4">
+        <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
       </div>
     );
   }
@@ -124,7 +154,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               key={`${location.id || location.latitude}-${location.longitude}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              transition={{ duration: 0.2, delay: index * 0.05 }} // Faster animations
             >
               <PhotoPointCard
                 point={location}
@@ -153,8 +183,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       )}
 
       {searching && (
-        <div className="flex justify-center mt-3">
-          <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
+        <div className="flex justify-center mt-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary/60" />
         </div>
       )}
     </div>

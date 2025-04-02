@@ -1,8 +1,14 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
 import { batchCalculateSiqs, clearSiqsCache } from "./realTimeSiqsService";
+
+const locationCache = new Map<string, {
+  locations: SharedAstroSpot[];
+  timestamp: number;
+}>();
+
+const CACHE_LIFETIME = 30 * 60 * 1000;
 
 /**
  * Find the best viewing locations based on SIQS score
@@ -24,7 +30,29 @@ export async function findBestViewingLocations(
   try {
     console.log(`Finding best viewing locations within ${radius}km radius, certified only: ${certifiedOnly}`);
     
-    // Get recommended points within the specified radius
+    const cacheKey = `${userLat.toFixed(2)}-${userLng.toFixed(2)}-${radius}-${certifiedOnly}`;
+    
+    const cachedData = locationCache.get(cacheKey);
+    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_LIFETIME) {
+      console.log(`Using cached locations for ${radius}km radius`);
+      return cachedData.locations.slice(0, limit);
+    }
+    
+    const allDiscoveredLocations = new Map<string, SharedAstroSpot>();
+    
+    for (const [key, value] of locationCache.entries()) {
+      if ((Date.now() - value.timestamp) < CACHE_LIFETIME) {
+        value.locations.forEach(location => {
+          const locKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+          if (!allDiscoveredLocations.has(locKey)) {
+            allDiscoveredLocations.set(locKey, location);
+          }
+        });
+      }
+    }
+    
+    console.log(`Reusing ${allDiscoveredLocations.size} previously discovered locations`);
+    
     const points = await findLocationsWithinRadius(
       userLat, 
       userLng, 
@@ -37,7 +65,6 @@ export async function findBestViewingLocations(
       return [];
     }
     
-    // If certifiedOnly is true, filter out non-certified locations
     let filteredPoints = points;
     if (certifiedOnly) {
       filteredPoints = points.filter(point => 
@@ -53,7 +80,6 @@ export async function findBestViewingLocations(
     
     console.log(`Found ${filteredPoints.length} potential photo points within ${radius}km radius`);
     
-    // Calculate distances for each point if not already present
     const pointsWithDistance = filteredPoints.map(point => {
       if (typeof point.distance !== 'number') {
         const distance = calculateDistance(userLat, userLng, point.latitude, point.longitude);
@@ -62,36 +88,72 @@ export async function findBestViewingLocations(
       return point;
     });
     
-    // Sort by distance to find the closest locations
     const sortedByDistance = [...pointsWithDistance].sort((a, b) => 
       (a.distance || 0) - (b.distance || 0)
     );
     
-    // Take up to 20 closest locations for SIQS calculation
-    const candidateLimit = Math.min(20, sortedByDistance.length);
+    const candidateLimit = Math.min(25, sortedByDistance.length);
     const candidateLocations = sortedByDistance.slice(0, candidateLimit);
     
     console.log(`Selected ${candidateLocations.length} candidate locations for SIQS calculation`);
     
-    // Calculate SIQS for these locations
-    const locationsWithSiqs = await batchCalculateSiqs(candidateLocations);
+    const locationsNeedingSIQS = [];
+    const locationsWithSiqs = [];
     
-    // Filter for locations with decent viewing conditions 
-    const viableLocations = locationsWithSiqs
-      .filter(loc => loc.siqs > 3.0) // Lower threshold to show more options
+    for (const location of candidateLocations) {
+      const locKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+      const existingLocation = allDiscoveredLocations.get(locKey);
+      
+      if (existingLocation && 
+          existingLocation.siqs !== undefined && 
+          existingLocation.isViable !== undefined) {
+        locationsWithSiqs.push({
+          ...location,
+          siqs: existingLocation.siqs,
+          isViable: existingLocation.isViable,
+          siqsFactors: existingLocation.siqsFactors
+        });
+      } else {
+        locationsNeedingSIQS.push(location);
+      }
+    }
+    
+    console.log(`Reusing SIQS data for ${locationsWithSiqs.length} locations, calculating for ${locationsNeedingSIQS.length} new locations`);
+    
+    let newLocationsWithSiqs = [];
+    if (locationsNeedingSIQS.length > 0) {
+      newLocationsWithSiqs = await batchCalculateSiqs(locationsNeedingSIQS);
+      
+      newLocationsWithSiqs.forEach(location => {
+        const locKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+        allDiscoveredLocations.set(locKey, location);
+      });
+    }
+    
+    const allLocationsWithSiqs = [...locationsWithSiqs, ...newLocationsWithSiqs];
+    
+    const viableLocations = allLocationsWithSiqs
+      .filter(loc => loc.siqs > 3.0)
       .sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+    
+    const resultLocations = viableLocations.length > 0 
+      ? viableLocations 
+      : allLocationsWithSiqs.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+    
+    locationCache.set(cacheKey, {
+      locations: resultLocations,
+      timestamp: Date.now()
+    });
     
     if (viableLocations.length === 0) {
       console.log("No viable viewing locations found, returning best available");
-      // If no viable locations, return best available sorted by SIQS
-      return locationsWithSiqs
+      return allLocationsWithSiqs
         .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
         .slice(0, limit);
     }
     
     console.log(`Found ${viableLocations.length} viable viewing locations`);
     
-    // Return the top locations based on SIQS
     return viableLocations.slice(0, limit);
   } catch (error) {
     console.error("Error finding best viewing locations:", error);
@@ -109,10 +171,16 @@ export async function getFallbackLocations(
   maxRange: number = 10000
 ): Promise<SharedAstroSpot[]> {
   try {
-    // Try to find at least some locations with decent conditions
     console.log(`Finding fallback locations within ${maxRange}km radius`);
     
-    // Get more locations within the max range
+    const cacheKey = `fallback-${userLat.toFixed(2)}-${userLng.toFixed(2)}-${maxRange}`;
+    
+    const cachedData = locationCache.get(cacheKey);
+    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_LIFETIME) {
+      console.log(`Using cached fallback locations`);
+      return cachedData.locations;
+    }
+    
     const points = await findLocationsWithinRadius(
       userLat,
       userLng, 
@@ -124,20 +192,34 @@ export async function getFallbackLocations(
       return [];
     }
     
-    // Process a sample of the furthest locations to find good spots
     const sortedByDistance = [...points]
       .sort((a, b) => (b.distance || 0) - (a.distance || 0))
-      .slice(0, 15); // Take 15 furthest locations
+      .slice(0, 15);
     
-    // Calculate SIQS for these locations
     const locationsWithSiqs = await batchCalculateSiqs(sortedByDistance);
     
-    // Return best SIQS scores regardless of threshold
-    return locationsWithSiqs
+    const result = locationsWithSiqs
       .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
       .slice(0, 9);
+    
+    locationCache.set(cacheKey, {
+      locations: result,
+      timestamp: Date.now()
+    });
+    
+    return result;
   } catch (error) {
     console.error("Error finding fallback locations:", error);
     return [];
   }
+}
+
+export function clearLocationCache(): void {
+  const cacheSize = locationCache.size;
+  locationCache.clear();
+  console.log(`Location cache cleared (${cacheSize} entries removed)`);
+}
+
+export function getLocationCacheSize(): number {
+  return locationCache.size;
 }

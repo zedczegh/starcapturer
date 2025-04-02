@@ -4,7 +4,7 @@ import { fetchWeatherData } from "@/lib/api";
 // Default timeout for weather API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
 // Default cache lifetime for weather data (in milliseconds)
-const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
+const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // Reduced from 5 to 3 minutes for faster refreshes
 // Maximum retry attempts
 const MAX_RETRIES = 2;
 
@@ -22,8 +22,11 @@ export const getWeatherData = async (
   setStatusMessage?: (message: string | null) => void,
   timeout: number = DEFAULT_TIMEOUT
 ): Promise<any> => {
+  // Generate location-specific cache key to avoid using old data for new locations
+  const locationSpecificKey = `${cacheKey}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
   // First try to use cached data
-  const cachedWeatherData = getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
+  const cachedWeatherData = getCachedData(locationSpecificKey, WEATHER_CACHE_LIFETIME);
   if (cachedWeatherData) {
     return cachedWeatherData;
   }
@@ -46,7 +49,7 @@ export const getWeatherData = async (
       
       if (data) {
         // Cache the weather data for future use
-        setCachedData(cacheKey, data);
+        setCachedData(locationSpecificKey, data);
         return data;
       }
     } catch (error) {
@@ -83,7 +86,7 @@ export const getWeatherData = async (
   }
   
   // Even fallback data should be cached to prevent repeated failed requests
-  setCachedData(cacheKey, fallbackData);
+  setCachedData(locationSpecificKey, fallbackData);
   return fallbackData;
 };
 
@@ -92,7 +95,23 @@ export const getWeatherData = async (
  */
 export const getCachedWeatherData = (
   cacheKey: string,
+  latitude: number,
+  longitude: number,
   getCachedData: (key: string, maxAge?: number) => any
 ): any => {
-  return getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
+  const locationSpecificKey = `${cacheKey}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  return getCachedData(locationSpecificKey, WEATHER_CACHE_LIFETIME);
+};
+
+/**
+ * Clear weather data cache for a specific location
+ */
+export const clearWeatherCache = (
+  cacheKey: string,
+  latitude: number,
+  longitude: number,
+  clearCache: (key: string) => void
+): void => {
+  const locationSpecificKey = `${cacheKey}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  clearCache(locationSpecificKey);
 };

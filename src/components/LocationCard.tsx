@@ -22,6 +22,8 @@ interface LocationCardProps {
   timestamp: string;
   className?: string;
   bortleScale?: number;
+  certification?: string;
+  category?: string;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -34,6 +36,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   timestamp,
   className,
   bortleScale = 5,
+  certification,
+  category
 }) => {
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
@@ -110,6 +114,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
               backgroundSize: "cover",
             }}
           />
+          
           <div className="relative z-10 flex items-center justify-center">
             <div 
               className="rounded-full p-3 flex items-center justify-center" 
@@ -120,8 +125,15 @@ const LocationCard: React.FC<LocationCardProps> = ({
                 style={{ backgroundColor: scoreColor, opacity: 0.4 }}
               />
             </div>
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-bold">{siqs.toFixed(1)}</span>
+              
+              {/* Category moved below the SIQS score */}
+              {certification && (
+                <span className="text-xs mt-1 px-2 py-0.5 bg-indigo-600/80 rounded-full text-white">
+                  {certification}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -152,12 +164,13 @@ const LocationCard: React.FC<LocationCardProps> = ({
             </Badge>
           </div>
           
-          {/* Add light pollution indicator */}
+          {/* Bortle scale indicator with improved visibility */}
           <div className="mt-3">
             <LightPollutionIndicator 
               bortleScale={bortleScale} 
               size="sm" 
-              compact={true} 
+              showBortleNumber={true}
+              className="text-sm"
             />
           </div>
         </CardContent>
