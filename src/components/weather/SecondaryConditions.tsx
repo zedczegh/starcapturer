@@ -28,7 +28,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   // AQI display with conditional rendering and enhanced sizing
   const aqiValue = aqi !== undefined ? (
     <>
-      <span className={`${getAQIColor(aqi)} text-lg font-medium`}>
+      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
         {aqi} 
       </span> 
       <span className="text-sm ml-1.5">({getAQIDescription(aqi, t)})</span>
@@ -43,13 +43,13 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       <ConditionItem
         icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
         label={t("Cloud Cover", "云层覆盖")}
-        value={<span className="text-lg font-medium">{cloudCover}%</span>}
+        value={<span className="text-base font-medium">{cloudCover}%</span>}
       />
       
       <ConditionItem
         icon={<DynamicMoonIcon phase={moonPhase} />}
         label={t("Moon Phase", "月相")}
-        value={<span className="text-lg font-medium">{moonPhase}</span>}
+        value={<span className="text-base font-medium">{moonPhase}</span>}
       />
       
       {aqi !== undefined && (
@@ -63,7 +63,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       <ConditionItem
         icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
         label={t("Bortle Scale", "光污染等级")}
-        value={<span className="text-lg font-medium">{bortleValue}</span>}
+        value={<span className="text-base font-medium">{bortleValue}</span>}
         tooltip={bortleScale === null ? (language === 'en' ? 
           "Bortle scale could not be determined for this location" : 
           "无法确定此位置的光污染等级") : undefined}

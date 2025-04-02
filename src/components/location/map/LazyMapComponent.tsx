@@ -1,31 +1,16 @@
-import React, { useEffect, useState } from "react";
-import L from "leaflet";
-import { MapContainer, TileLayer, Marker, useMap, Popup } from "react-leaflet";
 
-// Import Circle properly from Leaflet directly
+import React, { useCallback, memo, useMemo, useRef, useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-
-// Custom implementation of Circle
-const CustomCircle = ({ center, radius, ...props }: any) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (!center || !radius) return;
-    
-    // Create circle using Leaflet's L.circle
-    const circle = L.circle(center, {
-      radius,
-      ...props
-    }).addTo(map);
-    
-    // Cleanup on unmount
-    return () => {
-      map.removeLayer(circle);
-    };
-  }, [map, center, radius, props]);
-  
-  return null;
-};
+import L from "leaflet";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { 
+  MapUpdater, 
+  MapEvents, 
+  MapStyles, 
+  createCustomMarker,
+  DarkSkyOverlay
+} from "./MapComponents";
 
 interface LazyMapComponentProps {
   position: [number, number];
@@ -167,7 +152,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           
           {/* Add a Circle for certified locations */}
           {isDarkSkyReserve && getCertificationDetails.overlayRadius > 0 && (
-            <CustomCircle 
+            <Circle 
               center={position}
               radius={getCertificationDetails.overlayRadius}
               pathOptions={{
