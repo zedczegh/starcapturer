@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getBortleScaleDescription, getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
@@ -32,9 +33,9 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   
   // Get size class
   const sizeClass = {
-    sm: 'h-3 w-3 text-xs',
-    md: 'h-4 w-4 text-sm',
-    lg: 'h-5 w-5 text-base'
+    sm: 'h-4 w-4 text-xs',
+    md: 'h-5 w-5 text-sm',
+    lg: 'h-6 w-6 text-base'
   }[size];
   
   const description = getBortleScaleDescription(bortleScale);
@@ -52,12 +53,12 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
           <div 
             className={cn(
               "rounded-full mr-1.5 flex items-center justify-center border", 
-              "h-3.5 w-3.5",
+              "h-4 w-4",
               colorBg,
               colorBorder
             )}
           >
-            <span className={cn("font-semibold text-[0.7em]", colorText)}>
+            <span className={cn("font-bold text-[0.75em]", colorText)}>
               {formatBortleScale(bortleScale)}
             </span>
           </div>
@@ -73,14 +74,14 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
     <div className={cn("flex items-center", className)}>
       <div 
         className={cn(
-          "rounded-full mr-2 flex items-center justify-center border", 
+          "rounded-full mr-2 flex items-center justify-center border shadow-sm", 
           sizeClass,
           colorBg,
           colorBorder
         )}
       >
         {showBortleNumber && (
-          <span className={cn("font-semibold text-[0.7em]", colorText)}>
+          <span className={cn("font-bold text-[0.8em]", colorText)}>
             {formatBortleScale(bortleScale)}
           </span>
         )}

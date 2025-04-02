@@ -4,7 +4,7 @@ import { fetchWeatherData } from "@/lib/api";
 // Default timeout for weather API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
 // Default cache lifetime for weather data (in milliseconds)
-const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
+const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // 3 minutes (reduced for fresher data)
 // Maximum retry attempts
 const MAX_RETRIES = 2;
 
@@ -20,12 +20,15 @@ export const getWeatherData = async (
   displayOnly: boolean,
   language: string = 'en',
   setStatusMessage?: (message: string | null) => void,
-  timeout: number = DEFAULT_TIMEOUT
+  timeout: number = DEFAULT_TIMEOUT,
+  forceRefresh: boolean = false // New parameter to force refresh
 ): Promise<any> => {
-  // First try to use cached data
-  const cachedWeatherData = getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
-  if (cachedWeatherData) {
-    return cachedWeatherData;
+  // First try to use cached data (unless force refresh is requested)
+  if (!forceRefresh) {
+    const cachedWeatherData = getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
+    if (cachedWeatherData) {
+      return cachedWeatherData;
+    }
   }
   
   // Implement retry logic for better resilience
@@ -95,4 +98,29 @@ export const getCachedWeatherData = (
   getCachedData: (key: string, maxAge?: number) => any
 ): any => {
   return getCachedData(cacheKey, WEATHER_CACHE_LIFETIME);
+};
+
+/**
+ * Force refresh weather data regardless of cache
+ */
+export const refreshWeatherData = async (
+  latitude: number,
+  longitude: number,
+  cacheKey: string,
+  getCachedData: (key: string, maxAge?: number) => any,
+  setCachedData: (key: string, data: any) => void,
+  language: string = 'en'
+): Promise<any> => {
+  return getWeatherData(
+    latitude, 
+    longitude,
+    cacheKey,
+    getCachedData,
+    setCachedData,
+    false,
+    language,
+    undefined,
+    DEFAULT_TIMEOUT,
+    true // Force refresh
+  );
 };

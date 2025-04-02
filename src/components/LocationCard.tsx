@@ -152,12 +152,13 @@ const LocationCard: React.FC<LocationCardProps> = ({
             </Badge>
           </div>
           
-          {/* Add light pollution indicator */}
+          {/* Light pollution indicator with improved visibility */}
           <div className="mt-3">
             <LightPollutionIndicator 
               bortleScale={bortleScale} 
               size="sm" 
-              compact={true} 
+              showBortleNumber={true}
+              compact={false} 
             />
           </div>
         </CardContent>
