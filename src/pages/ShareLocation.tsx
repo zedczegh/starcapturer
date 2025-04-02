@@ -11,9 +11,8 @@ import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 import { Camera, Clock, MapPin, Moon, Info, Shield, Star, Cloud, ArrowDown, ArrowUp, Pointer, CircleSlash } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
-import { Progress } from "@/components/ui/progress";
 import ConditionItem from "@/components/weather/ConditionItem";
-import { DynamicMoonIcon } from "@/components/weather/DynamicIcons";
+import { DynamicLightbulbIcon } from "@/components/weather/DynamicIcons";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -239,32 +238,50 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  const pulseAnimation = {
+  const circleAnimations = {
     pulse: {
       scale: [1, 1.03, 1],
-      opacity: [0.9, 1, 0.9],
+      boxShadow: [
+        "0 0 0 rgba(255, 255, 255, 0.1)",
+        "0 0 15px rgba(255, 255, 255, 0.3)",
+        "0 0 0 rgba(255, 255, 255, 0.1)"
+      ],
       transition: { 
-        duration: 2,
+        duration: 3,
         repeat: Infinity,
         repeatType: "reverse" as const
       }
     }
   };
 
-  // Simple linear color gradient: red (9) → yellow → green (1)
-  const getBortleColorGradient = (scale: number): string => {
-    // Map from Bortle scale (1-9) to a color from red to green
-    if (scale <= 3) return '#22c55e'; // Green for good conditions (1-3)
-    if (scale <= 6) return '#3b82f6'; // Blue for moderate conditions (4-6)
-    return '#ef4444'; // Red for poor conditions (7-9)
+  // Dynamic gradient and colors based on Bortle scale
+  const getBortleScaleGradient = (scale: number | null) => {
+    if (scale === null) return { bg: "", text: "" };
+    
+    // For high light pollution (7-9)
+    if (scale >= 7) {
+      return {
+        bg: "bg-gradient-to-br from-orange-500/80 to-red-500/80",
+        text: "text-white"
+      };
+    }
+    // For moderate light pollution (4-6)
+    else if (scale >= 4) {
+      return {
+        bg: "bg-gradient-to-br from-yellow-400/80 to-lime-500/80",
+        text: "text-cosmic-950"
+      };
+    }
+    // For low light pollution (1-3)
+    else {
+      return {
+        bg: "bg-gradient-to-br from-blue-500/80 to-cyan-500/80",
+        text: "text-white"
+      };
+    }
   };
 
-  // Calculate a visual representation of the Bortle scale
-  const getBortleVisualValue = (scale: number) => {
-    // Invert the mapping: Bortle scale 1-9 to percentage 100%-0% 
-    // Lower Bortle = better (1 = dark skies = 100%, 9 = light pollution = 0%)
-    return Math.max(0, Math.min(100, 100 - ((scale - 1) / 8) * 100));
-  };
+  const bortleGradient = bortleScale ? getBortleScaleGradient(bortleScale) : { bg: "", text: "" };
 
   return (
     <>
@@ -300,7 +317,7 @@ const BortleNow: React.FC = () => {
         )}
         
         <div className="space-y-6">
-          {/* Bortle Scale Display */}
+          {/* Enhanced Bortle Scale Display with Dynamic Circle */}
           <AnimatePresence>
             {bortleScale && (
               <motion.div 
@@ -312,49 +329,50 @@ const BortleNow: React.FC = () => {
               >
                 <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-cosmic-600/20 to-cosmic-900/20" />
                 
-                {/* Measurement results display */}
+                {/* Dynamic circle display with pulse animation */}
                 <div className="relative z-10">
-                  <div className="flex flex-col items-center mb-4">
-                    <div className="relative mb-3">
-                      <motion.div 
-                        className={`w-24 h-24 rounded-full flex items-center justify-center ${bortleColor?.bg} shadow-lg border-2 border-cosmic-700/30`}
-                        variants={pulseAnimation}
-                        animate={isMeasuringRealtime ? "pulse" : ""}
-                      >
-                        <span className="text-3xl font-bold">{bortleScale.toFixed(1)}</span>
-                      </motion.div>
+                  <div className="flex flex-col items-center mb-5">
+                    <motion.div 
+                      className={`relative w-32 h-32 rounded-full flex items-center justify-center ${bortleGradient.bg} backdrop-blur-sm shadow-lg border-2 border-cosmic-700/50`}
+                      variants={circleAnimations}
+                      animate="pulse"
+                    >
+                      <div className="absolute inset-0 rounded-full bg-cosmic-950/10 backdrop-blur-sm"></div>
+                      <div className="z-10 flex flex-col items-center">
+                        <span className={`text-4xl font-bold ${bortleGradient.text}`}>{bortleScale.toFixed(1)}</span>
+                        <span className={`text-xs mt-1 ${bortleGradient.text} opacity-80`}>{t("Bortle Scale", "伯特尔等级")}</span>
+                      </div>
                       
-                      {isMeasuringRealtime && (
-                        <div className="absolute -top-1 -right-1">
-                          <div className="w-3 h-3 rounded-full bg-blue-500 animate-ping" />
-                          <div className="w-3 h-3 rounded-full bg-blue-500 absolute top-0 left-0" />
-                        </div>
-                      )}
-                    </div>
+                      {/* Light pollution scale labels */}
+                      <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 flex items-center">
+                        <span className="text-xs text-blue-400">1</span>
+                      </div>
+                      <div className="absolute right-0 top-0 transform translate-x-1/2 -translate-y-1/2 flex items-center">
+                        <span className="text-xs text-red-400">9</span>
+                      </div>
+                    </motion.div>
                     
-                    <h3 className="text-lg font-semibold text-gradient-primary mb-1">
+                    {isMeasuringRealtime && (
+                      <div className="absolute top-0 right-0 mt-2 mr-2">
+                        <div className="flex items-center gap-1.5 bg-blue-500/20 px-2 py-1 rounded-full">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                          <span className="text-xs text-blue-300">{t("Measuring", "测量中")}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <h3 className="text-lg font-semibold text-gradient-primary mt-4 mb-1">
                       {t("Light Pollution Level", "光污染水平")}
                     </h3>
                     
-                    {/* Quality meter visualization - IMPROVED LAYOUT */}
-                    <div className="w-full max-w-xs mt-2 mb-4">
-                      <div className="relative h-3 bg-cosmic-800/80 rounded-full overflow-hidden">
-                        <motion.div 
-                          className="absolute inset-0 h-full rounded-full"
-                          style={{ 
-                            background: `linear-gradient(to right, #22c55e, #eab308, #ef4444)`,
-                            width: `${getBortleVisualValue(bortleScale)}%` 
-                          }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${getBortleVisualValue(bortleScale)}%` }}
-                          transition={{ duration: 1 }}
-                        />
-                      </div>
-                      <div className="flex justify-between mt-1 text-xs text-cosmic-400">
-                        <span>{t("Dark", "黑暗")}</span>
-                        <span>{t("Rural", "乡村")}</span>
-                        <span>{t("Urban", "城市")}</span>
-                      </div>
+                    <div className="mt-1 flex items-center justify-center text-sm">
+                      <span className="text-blue-400 mr-3">{t("Dark", "黑暗")}</span>
+                      <DynamicLightbulbIcon bortleScale={1} animated={true} />
+                      <span className="mx-2">→</span>
+                      <DynamicLightbulbIcon bortleScale={5} animated={true} />
+                      <span className="mx-2">→</span>
+                      <DynamicLightbulbIcon bortleScale={9} animated={true} />
+                      <span className="text-red-400 ml-3">{t("Urban", "城市")}</span>
                     </div>
                   </div>
                   
@@ -506,7 +524,14 @@ const BortleNow: React.FC = () => {
                 
                 {measurementProgress > 0 && (
                   <div className="mb-4">
-                    <Progress value={measurementProgress} className="h-2 bg-cosmic-700/50" />
+                    <div className="relative h-2 bg-cosmic-700/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="absolute top-0 left-0 h-full bg-primary/80"
+                        initial={{ width: "0%" }}
+                        animate={{ width: `${measurementProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
                     <div className="text-xs text-center mt-1 text-cosmic-400">
                       {t("Processing", "处理中")}...
                     </div>

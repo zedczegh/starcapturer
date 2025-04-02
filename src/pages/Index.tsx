@@ -12,11 +12,13 @@ import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
+import CurrentLocationReminder from "@/components/photoPoints/CurrentLocationReminder";
 
 const Index = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const { t } = useLanguage();
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   
   useEffect(() => {
     // Prefetch data for popular locations when the home page loads
@@ -36,10 +38,11 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          const currentSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          setCurrentSiqs(locationSiqs);
           
           // Using threshold of 5 for showing notification about good conditions
-          if (currentSiqs && isGoodViewingCondition(currentSiqs)) {
+          if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
             // Show notification for ideal astrophotography location
             setTimeout(() => {
               toast.info(
@@ -79,6 +82,7 @@ const Index = () => {
           const savedLocation = JSON.parse(savedLocationString);
           if (savedLocation && savedLocation.siqs) {
             currentSiqsStore.setValue(savedLocation.siqs);
+            setCurrentSiqs(savedLocation.siqs);
           }
         }
       } catch (error) {
@@ -94,6 +98,12 @@ const Index = () => {
       <HeroSection />
       <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
       <ScienceSection />
+      <div className="container mx-auto px-4 py-8">
+        <CurrentLocationReminder 
+          currentSiqs={currentSiqs} 
+          isVisible={true} 
+        />
+      </div>
       <PhotoPointsSection />
       <Footer />
     </div>
