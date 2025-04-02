@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Star, Award, Clock, Loader2, Building2, Trees, Globe, ShieldCheck } from 'lucide-react';
@@ -31,6 +30,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
+  const mountedRef = useRef(true);
+  const hasStartedLoadingRef = useRef(false);
+  
   const [locationCounter] = useState(() => {
     // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
@@ -74,35 +76,55 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   };
   
-  // Load real-time SIQS data if requested
   useEffect(() => {
-    if (showRealTimeSiqs && location.latitude && location.longitude) {
-      const fetchSiqs = async () => {
-        setLoadingSiqs(true);
-        try {
-          const result = await calculateRealTimeSiqs(
-            location.latitude,
-            location.longitude,
-            location.bortleScale || 5
-          );
-          
-          // Only update if SIQS is greater than 0
-          if (result.siqs > 0) {
-            setRealTimeSiqs(result.siqs);
-          } else {
-            // If we got a zero score, hide this card
-            setRealTimeSiqs(0);
+    mountedRef.current = true;
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  
+  // Implement intersection observer to load real-time SIQS only when card is visible
+  useEffect(() => {
+    if (showRealTimeSiqs && location.latitude && location.longitude && !hasStartedLoadingRef.current) {
+      // Set a timeout based on index to stagger API calls
+      const timeout = setTimeout(() => {
+        if (!mountedRef.current) return;
+        
+        const fetchSiqs = async () => {
+          hasStartedLoadingRef.current = true;
+          setLoadingSiqs(true);
+          try {
+            const result = await calculateRealTimeSiqs(
+              location.latitude,
+              location.longitude,
+              location.bortleScale || 5
+            );
+            
+            if (!mountedRef.current) return;
+            
+            // Only update if SIQS is greater than 0
+            if (result.siqs > 0) {
+              setRealTimeSiqs(result.siqs);
+            } else {
+              // If we got a zero score, hide this card
+              setRealTimeSiqs(0);
+            }
+          } catch (error) {
+            console.error("Error fetching real-time SIQS:", error);
+          } finally {
+            if (mountedRef.current) {
+              setLoadingSiqs(false);
+            }
           }
-        } catch (error) {
-          console.error("Error fetching real-time SIQS:", error);
-        } finally {
-          setLoadingSiqs(false);
-        }
-      };
+        };
+        
+        fetchSiqs();
+      }, index * 150); // Stagger requests by 150ms per item
       
-      fetchSiqs();
+      return () => clearTimeout(timeout);
     }
-  }, [location, showRealTimeSiqs]);
+  }, [location, showRealTimeSiqs, index]);
 
   // If we have a real-time SIQS of 0, don't render this card
   if (realTimeSiqs === 0) {
@@ -276,5 +298,51 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     </motion.div>
   );
 };
+
+// Helper function to get certification info - moved outside component to avoid re-creation
+function getCertificationInfo(location: SharedAstroSpot) {
+  if (!location.certification && !location.isDarkSkyReserve) {
+    return null;
+  }
+  
+  const certification = (location.certification || '').toLowerCase();
+  
+  if (certification.includes('sanctuary') || certification.includes('reserve')) {
+    return {
+      icon: <Globe className="h-3.5 w-3.5 mr-1.5" />,
+      text: 'Dark Sky Reserve',
+      textCn: '暗夜保护区',
+      color: 'text-blue-400 border-blue-400/30 bg-blue-400/10'
+    };
+  } else if (certification.includes('park')) {
+    return {
+      icon: <Trees className="h-3.5 w-3.5 mr-1.5" />,
+      text: 'Dark Sky Park',
+      textCn: '暗夜公园',
+      color: 'text-green-400 border-green-400/30 bg-green-400/10'
+    };
+  } else if (certification.includes('community')) {
+    return {
+      icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
+      text: 'Dark Sky Community',
+      textCn: '暗夜社区',
+      color: 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+    };
+  } else if (certification.includes('urban')) {
+    return {
+      icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
+      text: 'Urban Night Sky',
+      textCn: '城市夜空',
+      color: 'text-purple-400 border-purple-400/30 bg-purple-400/10'
+    };
+  } else {
+    return {
+      icon: <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />,
+      text: 'Certified Location',
+      textCn: '认证地点',
+      color: 'text-blue-300 border-blue-300/30 bg-blue-300/10'
+    };
+  }
+}
 
 export default PhotoLocationCard;
