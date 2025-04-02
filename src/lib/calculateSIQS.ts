@@ -95,15 +95,29 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   const now = new Date();
   const isCurrentlyNightTime = isNightTime(now);
   
+  // Special case for 100% cloud cover - provide a very low but non-zero score
+  if (cloudCover === 100) {
+    // Generate a random score between 1.1 and 1.3
+    const randomScore = 1.1 + (Math.random() * 0.2);
+    return {
+      score: randomScore,
+      isViable: false,
+      factors: [
+        {
+          name: "Cloud Cover",
+          score: 10, // On 0-100 scale
+          description: "Complete cloud cover severely limits visibility"
+        }
+      ]
+    };
+  }
+  
   // If we have nighttime forecast data, prioritize that for calculation
   if (tonightForecast.length > 0) {
     console.log("Using nighttime forecast data for SIQS calculation");
     
     // Calculate average cloud cover from nighttime forecast
     const avgCloudCover = tonightForecast.reduce((sum, item) => sum + (item.cloudCover || 0), 0) / tonightForecast.length;
-    
-    // Removed the strict enforcement of 0 score for cloud cover over 50%
-    // Now we'll allow the calculateCloudScore function to determine the appropriate score
     
     // Calculate average values for other factors
     const avgWindSpeed = tonightForecast.reduce((sum, item) => sum + (item.windSpeed || 0), 0) / tonightForecast.length;
@@ -196,9 +210,6 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
   // If no nighttime forecast is available, fall back to current conditions
   console.log("No nighttime forecast available, using current conditions for SIQS");
   
-  // Removed the strict enforcement of 0 score for cloud cover over 50%
-  // for current conditions as well
-  
   // Calculate individual factor scores for current conditions
   const cloudScore = calculateCloudScore(cloudCover);
   const lightPollutionScore = calculateLightPollutionScore(bortleScale);
@@ -230,10 +241,10 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     aqiScore * weights.aqi
   );
   
-  // Convert to 0-10 scale
+  // Convert to 0-10 scale for consistency
   const finalScore = weightedScore / 10;
   
-  // Determine if conditions are viable (SIQS >= 4.0)
+  // Determine if conditions are viable
   const isViable = finalScore >= 4.0;
   
   // Create factors array for the result

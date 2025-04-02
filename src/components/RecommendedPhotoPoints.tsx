@@ -8,7 +8,7 @@ import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { currentSiqsStore } from "./index/CalculatorSection";
+import { useSiqsStore } from "@/stores/siqsStore";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 
 interface RecommendedPhotoPointsProps {
@@ -26,7 +26,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 }) => {
   const { t } = useLanguage();
   const [isInitialized, setIsInitialized] = useState(false);
-  const currentSiqs = currentSiqsStore.getScore();
+  const currentSiqs = useSiqsStore.getState().score;
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
   

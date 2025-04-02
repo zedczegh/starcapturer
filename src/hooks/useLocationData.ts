@@ -1,111 +1,139 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { getWeatherData, getBortleScaleData } from '@/services/environmentalDataService';
+import { getLocationNameForCoordinates } from '@/components/location/map/LocationNameService';
+import { Language } from '@/services/geocoding/types';
 
-/**
- * Optimized location data cache hook with improved memory usage and performance
- */
+// Global cache to reduce API calls
+const dataCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes
+
 export const useLocationDataCache = () => {
-  // Use a global cache for better performance
-  const globalCache = useState<Map<string, { data: any; timestamp: number }>>(
-    () => new Map()
-  )[0];
-  
-  // Clear expired cache items periodically 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      const expiryTime = 24 * 60 * 60 * 1000; // 24 hours
-      
-      for (const [key, item] of globalCache.entries()) {
-        if (now - item.timestamp > expiryTime) {
-          globalCache.delete(key);
-        }
-      }
-    }, 60 * 60 * 1000); // Run cleanup hourly
-    
-    return () => clearInterval(intervalId);
-  }, [globalCache]);
-  
-  // Efficient cache retrieval function
-  const getCachedData = useCallback((key: string, maxAge: number = 30 * 60 * 1000) => {
-    const cachedItem = globalCache.get(key);
-    
-    if (!cachedItem) {
-      // Try localStorage as fallback
-      try {
-        const storedItem = localStorage.getItem(key);
-        if (storedItem) {
-          const parsedData = JSON.parse(storedItem);
-          // Add to memory cache for faster future access
-          globalCache.set(key, { data: parsedData, timestamp: Date.now() });
-          return parsedData;
-        }
-      } catch (e) {
-        console.error("Error retrieving from localStorage:", e);
-      }
-      return null;
-    }
-    
-    // Check if data is expired
-    if (Date.now() - cachedItem.timestamp > maxAge) {
-      return null;
-    }
-    
-    return cachedItem.data;
-  }, [globalCache]);
-  
-  // Cache data with current timestamp
-  const setCachedData = useCallback((key: string, data: any) => {
-    const timestamp = Date.now();
-    
-    // Update memory cache
-    globalCache.set(key, { data, timestamp });
-    
-    // Also store in localStorage for persistence
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.error("Error storing in localStorage:", e);
-    }
-  }, [globalCache]);
-  
-  // Clear cache items
-  const clearCache = useCallback((keys?: string[]) => {
-    if (keys && Array.isArray(keys)) {
-      // Clear specific keys
-      for (const key of keys) {
-        globalCache.delete(key);
-        try {
-          localStorage.removeItem(key);
-        } catch (e) {
-          console.error("Error removing from localStorage:", e);
-        }
-      }
-    } else {
-      // Clear all cache
-      globalCache.clear();
-      
-      try {
-        // Only clear our app-specific keys
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (
-            key.startsWith('weather-') || 
-            key.startsWith('bortle-') || 
-            key.startsWith('forecast-') || 
-            key.startsWith('location_')
-          )) {
-            localStorage.removeItem(key);
-          }
-        }
-      } catch (e) {
-        console.error("Error clearing localStorage:", e);
-      }
-    }
-  }, [globalCache]);
-  
-  return { getCachedData, setCachedData, clearCache };
-};
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [locationData, setLocationData] = useState<any>(null);
+  const [bortleScale, setBortleScale] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-// Export any other necessary functions
-export * from './location/useLocationCache';
+  // Cache management functions
+  const getCachedData = useCallback((key: string, maxAge: number = CACHE_LIFETIME) => {
+    const cached = dataCache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < maxAge) {
+      return cached.data;
+    }
+    return null;
+  }, []);
+
+  const setCachedData = useCallback((key: string, data: any) => {
+    dataCache.set(key, { data, timestamp: Date.now() });
+  }, []);
+
+  const clearCache = useCallback((keys?: string[]) => {
+    if (keys) {
+      keys.forEach(key => dataCache.delete(key));
+    } else {
+      dataCache.clear();
+    }
+  }, []);
+
+  // Get location name from coordinates
+  const getLocationName = useCallback(async (
+    latitude: number, 
+    longitude: number,
+    language: Language = 'en'
+  ): Promise<string> => {
+    try {
+      const locationName = await getLocationNameForCoordinates(
+        latitude, 
+        longitude, 
+        language,
+        { setCachedData, getCachedData }
+      );
+      return locationName || '';
+    } catch (err) {
+      console.error('Error getting location name:', err);
+      return '';
+    }
+  }, [getCachedData, setCachedData]);
+
+  // Get location data from name or coordinates
+  const getLocationData = useCallback(async (
+    locationName: string | null,
+    latitude?: number,
+    longitude?: number,
+    language: Language = 'en'
+  ) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // If we have coordinates, use them directly
+      if (latitude !== undefined && longitude !== undefined) {
+        // Fetch weather data for the coordinates
+        const weatherResponse = await getWeatherData(
+          latitude,
+          longitude,
+          'weather-data',
+          getCachedData,
+          setCachedData,
+          false,
+          language
+        );
+        
+        // Fetch Bortle scale data
+        const bortle = await getBortleScaleData(
+          latitude,
+          longitude,
+          locationName || await getLocationName(latitude, longitude, language),
+          null,
+          false,
+          getCachedData,
+          setCachedData,
+          language
+        );
+        
+        const result = {
+          name: locationName || await getLocationName(latitude, longitude, language),
+          latitude,
+          longitude,
+          bortleScale: bortle
+        };
+        
+        setWeatherData(weatherResponse);
+        setLocationData(result);
+        setBortleScale(bortle);
+        
+        setLoading(false);
+        return result;
+      }
+      
+      // If we only have location name, call geocode API
+      if (locationName) {
+        // TODO: Implement geocoding here
+        // This would convert a location name to coordinates
+        // For now we'll throw an error
+        throw new Error('Geocoding not implemented');
+      }
+      
+      throw new Error('Either location name or coordinates are required');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error occurred');
+      setError(error);
+      setLoading(false);
+      return null;
+    }
+  }, [getCachedData, setCachedData, getLocationName]);
+
+  return {
+    loading,
+    error,
+    weatherData,
+    locationData,
+    bortleScale,
+    getLocationData,
+    getLocationName,
+    getCachedData,
+    setCachedData,
+    clearCache
+  };
+};

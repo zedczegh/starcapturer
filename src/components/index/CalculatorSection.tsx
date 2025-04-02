@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { useLocationDataCache } from "@/hooks/useLocationData"; // Fixed import
+import { useLocationDataCache } from "@/hooks/useLocationData";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateMoonPhase } from "@/utils/siqsValidation";
 import { formatSIQSScore } from "@/lib/siqs/utils";
@@ -21,21 +21,8 @@ import { MapPin, Loader2, Search, Star, ArrowRight } from "lucide-react";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import SIQSGauge from "@/components/siqs/SIQSGauge";
 import RecommendedPhotoPoints from "@/components/RecommendedPhotoPoints";
-import { create } from "zustand";
+import { useSiqsStore } from "@/stores/siqsStore";
 import { publishLocationUpdate } from '@/services/locationSyncService';
-
-// Store for current SIQS score to share between components
-interface SIQSStore {
-  score: number | null;
-  setScore: (score: number | null) => void;
-  getScore: () => number | null;
-}
-
-export const currentSiqsStore = create<SIQSStore>((set, get) => ({
-  score: null,
-  setScore: (score) => set({ score }),
-  getScore: () => get().score,
-}));
 
 // Form schema
 const formSchema = z.object({
@@ -43,6 +30,14 @@ const formSchema = z.object({
     message: "Location must be at least 2 characters.",
   }),
 });
+
+interface SIQSLocation {
+  name: string;
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  siqs?: number;
+}
 
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
@@ -59,12 +54,15 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
   const [hasCalculatedOnce, setHasCalculatedOnce] = useState(false);
   const autoLocationRequestedRef = useRef(false);
   
+  // Access the global SIQS store
+  const setGlobalSiqsScore = useSiqsStore(state => state.setScore);
+  
   // Set up geolocation hook
   const { getPosition, loading: geoLoading, error: geoError, coords } = useGeolocation({
     enableHighAccuracy: true,
   });
   
-  // Set up location data hook - fixed the import and usage
+  // Set up location data hook
   const { 
     loading, 
     error, 
@@ -72,7 +70,9 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
     getLocationName,
     locationData,
     weatherData,
-    bortleScale
+    bortleScale,
+    getCachedData,
+    setCachedData
   } = useLocationDataCache();
   
   // Set up form
@@ -85,8 +85,8 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
   
   // Update the global SIQS store when score changes
   useEffect(() => {
-    currentSiqsStore.setScore(siqsScore);
-  }, [siqsScore]);
+    setGlobalSiqsScore(siqsScore);
+  }, [siqsScore, setGlobalSiqsScore]);
   
   // Auto-request location if enabled
   useEffect(() => {
@@ -155,13 +155,13 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
       setHasCalculatedOnce(true);
       setShowPhotoPoints(true);
       
-      // Save location for future use (fixed property name)
+      // Save location for future use
       saveLocation({
         name: result.name,
         latitude: result.latitude,
         longitude: result.longitude,
         bortleScale,
-        siqsScore: siqsResult.score // Changed from 'siqs' to 'siqsScore'
+        siqs: siqsResult.score
       });
 
       // After successful location update:
@@ -245,13 +245,13 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({ noAutoLocationReq
         setHasCalculatedOnce(true);
         setShowPhotoPoints(true);
         
-        // Save location for future use (fixed property name)
+        // Save location for future use
         saveLocation({
           name: locationName || t("Current Location", "当前位置"),
           latitude: coords.latitude,
           longitude: coords.longitude,
           bortleScale,
-          siqsScore: siqsResult.score // Changed from 'siqs' to 'siqsScore'
+          siqs: siqsResult.score
         });
         
         // Publish location update
