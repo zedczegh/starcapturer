@@ -1,16 +1,65 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Globe, Star, Moon, CloudRain, Wind, Thermometer, Award, Check } from "lucide-react";
 
 const AboutSIQS = () => {
   const { t, language } = useLanguage();
   
   // Organize resources by category for better presentation
   const resources = {
+    darkSky: [
+      { 
+        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
+        subcategory: language === 'en' ? "Official" : "官方", 
+        name: language === 'en' ? "IDA Official Website" : "IDA官方网站", 
+        url: "https://www.darksky.org/" 
+      },
+      { 
+        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "Find an International Dark Sky Place" : "查找国际暗夜地点", 
+        url: "https://www.darksky.org/our-work/conservation/idsp/finder/" 
+      },
+      { 
+        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
+        subcategory: language === 'en' ? "Education" : "教育", 
+        name: language === 'en' ? "Light Pollution Effects on Wildlife and Ecosystems" : "光污染对野生动物和生态系统的影响", 
+        url: "https://www.darksky.org/light-pollution/wildlife/" 
+      },
+      { 
+        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
+        subcategory: language === 'en' ? "Education" : "教育", 
+        name: language === 'en' ? "Lighting Basics" : "照明基础知识", 
+        url: "https://www.darksky.org/our-work/lighting/lighting-basics/" 
+      },
+      { 
+        category: language === 'en' ? "International Dark-Sky Association" : "国际暗夜协会", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "IDA Dark Sky Places Program" : "IDA暗夜地点计划", 
+        url: "https://www.darksky.org/our-work/conservation/idsp/" 
+      },
+      { 
+        category: language === 'en' ? "Conservation" : "保护", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "Dark Sky Reserve Guidelines" : "暗夜保护区指南", 
+        url: "https://www.darksky.org/our-work/conservation/idsp/reserves/" 
+      },
+      { 
+        category: language === 'en' ? "Conservation" : "保护", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "Dark Sky Park Guidelines" : "暗夜公园指南", 
+        url: "https://www.darksky.org/our-work/conservation/idsp/parks/" 
+      },
+      { 
+        category: language === 'en' ? "Conservation" : "保护", 
+        subcategory: language === 'en' ? "Resources" : "资源", 
+        name: language === 'en' ? "Dark Sky Sanctuary Guidelines" : "暗夜保护区指南", 
+        url: "https://www.darksky.org/our-work/conservation/idsp/sanctuaries/" 
+      }
+    ],
     software: [
       { 
         category: "NINA", 
@@ -378,6 +427,7 @@ const AboutSIQS = () => {
   // Function to get translated category name
   const getTranslatedCategory = (category: string): string => {
     switch (category) {
+      case 'darkSky': return language === 'en' ? "Dark Sky Information" : "暗夜信息";
       case 'software': return language === 'en' ? "Software & Tools" : "软件和工具";
       case 'maps': return language === 'en' ? "Maps & Charts" : "地图和星图";
       case 'weather': return language === 'en' ? "Weather Resources" : "气象资源";
@@ -394,25 +444,66 @@ const AboutSIQS = () => {
   
   // Function to get translated name if available
   const getTranslatedResourceName = (resource: any): string => {
-    // For simplicity, we're not implementing full translations for all resources
-    // Just returning the original name
     return resource.name;
   };
+
+  // IDA certification information
+  const idaCertifications = [
+    {
+      title: language === 'en' ? "Dark Sky Reserve" : "暗夜保护区",
+      description: language === 'en' ? 
+        "A Dark Sky Reserve is a public or private land possessing an exceptional quality of starry nights and nocturnal environment that is specifically protected for its scientific, natural, educational, cultural, heritage and/or public enjoyment." :
+        "暗夜保护区是拥有优质星空和夜间环境的公共或私人土地，专门为科学、自然、教育、文化、遗产和/或公众享受而保护。",
+      icon: Globe,
+      color: "from-blue-800 to-blue-600",
+      textColor: "text-blue-400"
+    },
+    {
+      title: language === 'en' ? "Dark Sky Park" : "暗夜公园",
+      description: language === 'en' ? 
+        "A Dark Sky Park is a land possessing an exceptional quality of starry nights and a nocturnal environment that is specifically protected for its scientific, natural, educational, and cultural heritage, and/or for public enjoyment." :
+        "暗夜公园是拥有优质星空和夜间环境的土地，专门为其科学、自然、教育和文化遗产，和/或为公众享受而受到保护。",
+      icon: Star,
+      color: "from-green-800 to-green-600",
+      textColor: "text-green-400"
+    },
+    {
+      title: language === 'en' ? "Dark Sky Sanctuary" : "暗夜圣地",
+      description: language === 'en' ? 
+        "A Dark Sky Sanctuary is a public or private land that has an exceptional quality of starry nights and a nocturnal environment that is protected for its scientific, natural, or educational value, its cultural heritage and/or public enjoyment." :
+        "暗夜圣地是拥有优质星空和夜间环境的公共或私人土地，为其科学、自然或教育价值、文化遗产和/或公众享受而受到保护。",
+      icon: Moon,
+      color: "from-purple-800 to-purple-600",
+      textColor: "text-purple-400"
+    },
+    {
+      title: language === 'en' ? "Dark Sky Community" : "暗夜社区",
+      description: language === 'en' ? 
+        "A Dark Sky Community is a town, city, municipality, or other legally organized community that has shown exceptional dedication to the preservation of the night sky through the implementation and enforcement of quality lighting ordinances, dark sky education, and citizen support of dark skies." :
+        "暗夜社区是通过实施和执行高质量照明条例、暗夜教育和公民支持暗夜而表现出对夜空保护的特殊奉献精神的城镇、城市、市政当局或其他合法组织的社区。",
+      icon: Check,
+      color: "from-amber-800 to-amber-600",
+      textColor: "text-amber-400"
+    }
+  ];
   
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-cosmic-950 pb-16">
       <NavBar />
       
       <main className="container mx-auto px-4 pt-24 pb-16">
-        <h1 className="text-3xl font-bold mb-6">{t("About Sky Image Quality Score (SIQS)", "关于天空图像质量评分 (SIQS)")}</h1>
+        <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-primary bg-clip-text text-transparent">
+          {t("About Sky Image Quality Score (SIQS)", "关于天空图像质量评分 (SIQS)")}
+        </h1>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-2 space-y-6">
-            <Card>
+            <Card className="bg-cosmic-800/60 border-cosmic-700 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-900/5 pointer-events-none" />
               <CardHeader>
-                <CardTitle>{t("What is SIQS?", "什么是SIQS？")}</CardTitle>
+                <CardTitle className="text-gradient-blue">{t("What is SIQS?", "什么是SIQS？")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 relative z-10">
                 <p>
                   {t(
                     "The Sky Image Quality Score (SIQS) is a comprehensive rating system designed specifically for astrophotographers to evaluate the quality of potential imaging locations based on multiple environmental factors.",
@@ -428,18 +519,19 @@ const AboutSIQS = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-cosmic-800/60 border-cosmic-700 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-900/5 pointer-events-none" />
               <CardHeader>
-                <CardTitle>{t("Key Factors Analyzed", "关键分析因素")}</CardTitle>
+                <CardTitle className="text-gradient-blue">{t("Key Factors Analyzed", "关键分析因素")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-4">
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">CC</span>
+                <ul className="space-y-6">
+                  <li className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-600/20 to-blue-400/10 flex items-center justify-center border border-blue-500/20">
+                      <CloudRain className="h-6 w-6 text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{t("Cloud Cover", "云层覆盖")}</h3>
+                      <h3 className="font-medium text-blue-300">{t("Cloud Cover", "云层覆盖")}</h3>
                       <p className="text-sm text-muted-foreground">
                         {t(
                           "The percentage of sky covered by clouds, directly impacting visibility of celestial objects.",
@@ -449,12 +541,12 @@ const AboutSIQS = () => {
                     </div>
                   </li>
                   
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">LP</span>
+                  <li className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-purple-600/20 to-purple-400/10 flex items-center justify-center border border-purple-500/20">
+                      <Moon className="h-6 w-6 text-purple-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{t("Light Pollution (Bortle Scale)", "光污染（波特尔量表）")}</h3>
+                      <h3 className="font-medium text-purple-300">{t("Light Pollution (Bortle Scale)", "光污染（波特尔量表）")}</h3>
                       <p className="text-sm text-muted-foreground">
                         {t(
                           "A numerical scale that quantifies the night sky's brightness due to artificial light.",
@@ -464,12 +556,12 @@ const AboutSIQS = () => {
                     </div>
                   </li>
                   
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">SC</span>
+                  <li className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-cyan-600/20 to-cyan-400/10 flex items-center justify-center border border-cyan-500/20">
+                      <Star className="h-6 w-6 text-cyan-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{t("Seeing Conditions", "视宁度")}</h3>
+                      <h3 className="font-medium text-cyan-300">{t("Seeing Conditions", "视宁度")}</h3>
                       <p className="text-sm text-muted-foreground">
                         {t(
                           "The steadiness of the atmosphere, measured in arcseconds, affecting image sharpness.",
@@ -479,12 +571,12 @@ const AboutSIQS = () => {
                     </div>
                   </li>
                   
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">WS</span>
+                  <li className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-teal-600/20 to-teal-400/10 flex items-center justify-center border border-teal-500/20">
+                      <Wind className="h-6 w-6 text-teal-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{t("Wind Speed", "风速")}</h3>
+                      <h3 className="font-medium text-teal-300">{t("Wind Speed", "风速")}</h3>
                       <p className="text-sm text-muted-foreground">
                         {t(
                           "Higher wind speeds can cause telescope vibration and degrade image quality.",
@@ -494,12 +586,12 @@ const AboutSIQS = () => {
                     </div>
                   </li>
                   
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">HM</span>
+                  <li className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-green-600/20 to-green-400/10 flex items-center justify-center border border-green-500/20">
+                      <Thermometer className="h-6 w-6 text-green-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{t("Humidity", "湿度")}</h3>
+                      <h3 className="font-medium text-green-300">{t("Humidity", "湿度")}</h3>
                       <p className="text-sm text-muted-foreground">
                         {t(
                           "Higher humidity increases dew risk on optical surfaces and can reduce transparency.",
@@ -509,12 +601,12 @@ const AboutSIQS = () => {
                     </div>
                   </li>
                   
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">MP</span>
+                  <li className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-amber-600/20 to-amber-400/10 flex items-center justify-center border border-amber-500/20">
+                      <Moon className="h-6 w-6 text-amber-400" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{t("Moon Phase", "月相")}</h3>
+                      <h3 className="font-medium text-amber-300">{t("Moon Phase", "月相")}</h3>
                       <p className="text-sm text-muted-foreground">
                         {t(
                           "The phase of the moon affects sky brightness and contrast for deep sky imaging.",
@@ -529,11 +621,12 @@ const AboutSIQS = () => {
           </div>
           
           <div className="space-y-6">
-            <Card>
+            <Card className="bg-cosmic-800/60 border-cosmic-700 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-900/5 pointer-events-none" />
               <CardHeader>
-                <CardTitle>{t("How SIQS Works", "SIQS的工作原理")}</CardTitle>
+                <CardTitle className="text-gradient-blue">{t("How SIQS Works", "SIQS的工作原理")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 relative z-10">
                 <p>
                   {t(
                     "SIQS analyzes multiple environmental factors and combines them using our proprietary algorithm to generate a single score from 0-10 that represents the overall quality of a location for astrophotography.",
@@ -555,58 +648,59 @@ const AboutSIQS = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-cosmic-800/60 border-cosmic-700 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-900/5 pointer-events-none" />
               <CardHeader>
-                <CardTitle>{t("Score Interpretation", "分数解释")}</CardTitle>
+                <CardTitle className="text-gradient-blue">{t("Score Interpretation", "分数解释")}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative z-10">
                 <div className="space-y-3">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{t("Exceptional (8.0-10.0)", "卓越 (8.0-10.0)")}</span>
+                      <span className="text-sm font-medium text-green-400">{t("Exceptional (8.0-10.0)", "卓越 (8.0-10.0)")}</span>
                     </div>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-green-500" style={{ width: "100%" }} />
+                    <div className="w-full h-2.5 bg-cosmic-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-green-600 to-green-400" style={{ width: "100%" }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{t("Perfect conditions for all types of astrophotography", "适合所有类型天文摄影的完美条件")}</p>
                   </div>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{t("Excellent (6.0-7.9)", "优秀 (6.0-7.9)")}</span>
+                      <span className="text-sm font-medium text-teal-400">{t("Excellent (6.0-7.9)", "优秀 (6.0-7.9)")}</span>
                     </div>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-[#8A9A5B] to-[#606C38]" style={{ width: "75%" }} />
+                    <div className="w-full h-2.5 bg-cosmic-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-teal-600 to-teal-400" style={{ width: "75%" }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{t("Very good conditions for most imaging targets", "对大多数成像目标而言非常好的条件")}</p>
                   </div>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{t("Good (4.0-5.9)", "良好 (4.0-5.9)")}</span>
+                      <span className="text-sm font-medium text-yellow-400">{t("Good (4.0-5.9)", "良好 (4.0-5.9)")}</span>
                     </div>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-yellow-400" style={{ width: "50%" }} />
+                    <div className="w-full h-2.5 bg-cosmic-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400" style={{ width: "50%" }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{t("Acceptable conditions for brighter objects", "适合较亮天体的可接受条件")}</p>
                   </div>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{t("Fair (2.0-3.9)", "一般 (2.0-3.9)")}</span>
+                      <span className="text-sm font-medium text-orange-400">{t("Fair (2.0-3.9)", "一般 (2.0-3.9)")}</span>
                     </div>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-orange-400" style={{ width: "30%" }} />
+                    <div className="w-full h-2.5 bg-cosmic-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400" style={{ width: "30%" }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{t("Limited imaging potential, consider planetary targets", "成像潜力有限，可考虑行星目标")}</p>
                   </div>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{t("Poor (0.0-1.9)", "较差 (0.0-1.9)")}</span>
+                      <span className="text-sm font-medium text-red-400">{t("Poor (0.0-1.9)", "较差 (0.0-1.9)")}</span>
                     </div>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-red-500" style={{ width: "15%" }} />
+                    <div className="w-full h-2.5 bg-cosmic-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-red-600 to-red-400" style={{ width: "15%" }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{t("Not recommended for imaging", "不推荐用于成像")}</p>
                   </div>
@@ -616,26 +710,88 @@ const AboutSIQS = () => {
           </div>
         </div>
         
+        {/* Dark Sky Certifications Section */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-primary bg-clip-text text-transparent">
+            {t("Dark Sky Certifications", "暗夜认证")}
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {idaCertifications.map((cert, index) => (
+              <Card key={index} className="bg-cosmic-800/60 border-cosmic-700 overflow-hidden">
+                <div className={`absolute inset-0 bg-gradient-to-br ${cert.color} opacity-5 pointer-events-none`} />
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`rounded-full p-2 bg-cosmic-700/50 ${cert.textColor}`}>
+                      <cert.icon className="h-5 w-5" />
+                    </div>
+                    <CardTitle className={`text-lg ${cert.textColor}`}>
+                      {cert.title}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <p>{cert.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <Card className="mt-6 bg-cosmic-800/60 border-cosmic-700 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-blue-400/5 pointer-events-none" />
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Award className="h-5 w-5 text-blue-400" />
+                <CardTitle className="text-lg text-blue-400">
+                  {t("About the International Dark-Sky Association (IDA)", "关于国际暗夜协会 (IDA)")}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 relative z-10">
+              <p>
+                {t(
+                  "The International Dark-Sky Association (IDA) is the recognized authority on light pollution and is the leading organization combating light pollution worldwide.",
+                  "国际暗夜协会（IDA）是公认的光污染权威机构，是全球领先的对抗光污染的组织。"
+                )}
+              </p>
+              <p>
+                {t(
+                  "Founded in 1988, IDA works to protect the night skies for present and future generations through their Dark Sky Places conservation program, which encourages communities, parks, and protected areas around the world to preserve and protect dark sites through responsible lighting policies and public education.",
+                  "IDA成立于1988年，通过其暗夜地点保护计划致力于为当代和后代保护夜空，鼓励世界各地的社区、公园和保护区通过负责任的照明政策和公众教育来保存和保护暗夜地点。"
+                )}
+              </p>
+              <p>
+                {t(
+                  "SIQS incorporates IDA certification status into its calculation to help astrophotographers find the best possible locations for imaging.",
+                  "SIQS将IDA认证状态纳入其计算中，以帮助天文摄影师找到最佳的成像位置。"
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        
         {/* Useful Links Section */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">
+          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-primary bg-clip-text text-transparent">
             {t("Useful Astrophotography Resources", "天文摄影资源")}
           </h2>
           
-          <Tabs defaultValue="software" className="w-full">
-            <TabsList className="grid grid-cols-2 md:grid-cols-5 mb-6">
-              <TabsTrigger value="software">{t("Software & Tools", "软件与工具")}</TabsTrigger>
-              <TabsTrigger value="hardware">{t("Hardware", "硬件")}</TabsTrigger>
-              <TabsTrigger value="data">{t("Data Resources", "数据资源")}</TabsTrigger>
-              <TabsTrigger value="maps">{t("Maps & Charts", "地图与星图")}</TabsTrigger>
-              <TabsTrigger value="resources">{t("Other Resources", "其他资源")}</TabsTrigger>
+          <Tabs defaultValue="darkSky" className="w-full">
+            <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-6 bg-cosmic-800/30">
+              <TabsTrigger value="darkSky" className="data-[state=active]:bg-primary/20">{t("Dark Sky Info", "暗夜信息")}</TabsTrigger>
+              <TabsTrigger value="software" className="data-[state=active]:bg-primary/20">{t("Software", "软件")}</TabsTrigger>
+              <TabsTrigger value="hardware" className="data-[state=active]:bg-primary/20">{t("Hardware", "硬件")}</TabsTrigger>
+              <TabsTrigger value="data" className="data-[state=active]:bg-primary/20">{t("Data Resources", "数据资源")}</TabsTrigger>
+              <TabsTrigger value="maps" className="data-[state=active]:bg-primary/20">{t("Maps", "地图")}</TabsTrigger>
+              <TabsTrigger value="weather" className="data-[state=active]:bg-primary/20">{t("Weather", "天气")}</TabsTrigger>
+              <TabsTrigger value="resources" className="data-[state=active]:bg-primary/20">{t("Other Resources", "其他资源")}</TabsTrigger>
             </TabsList>
             
             {Object.entries(resources).map(([category, items]) => (
               <TabsContent key={category} value={category} className="mt-0">
-                <Card>
+                <Card className="bg-cosmic-800/60 border-cosmic-700">
                   <CardHeader>
-                    <CardTitle>{getTranslatedCategory(category)}</CardTitle>
+                    <CardTitle className="text-gradient-blue">{getTranslatedCategory(category)}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -645,7 +801,7 @@ const AboutSIQS = () => {
                           href={resource.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="p-3 bg-cosmic-800/20 rounded-lg hover:bg-cosmic-700/30 transition-colors group flex flex-col"
+                          className="p-3 bg-cosmic-700/30 rounded-lg hover:bg-cosmic-700/40 transition-colors group flex flex-col border border-cosmic-700/50 hover:border-primary/30"
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-sm text-primary">{resource.subcategory}</span>

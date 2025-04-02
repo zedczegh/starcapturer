@@ -45,7 +45,7 @@ const PhotoPointsSection: React.FC = () => {
         </div>
         
         <div className="flex justify-center">
-          <Button size="lg" className="bg-gradient-to-r from-primary/90 to-primary/70 hover:opacity-90" asChild>
+          <Button size="lg" className="bg-gradient-to-r from-primary/90 to-primary/70 hover:opacity-90 shadow-md hover:shadow-lg transition-all" asChild>
             <Link to="/photo-points">
               <Camera className="mr-2 h-4 w-4" />
               {t("View All Photo Points", "查看所有拍摄点")}

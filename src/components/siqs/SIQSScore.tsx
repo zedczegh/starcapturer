@@ -116,7 +116,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
             }}
           >
             <Button 
-              size="md" 
+              size="lg" 
               className="bg-gradient-to-r from-primary/90 to-primary/70 hover:bg-primary hover:from-primary hover:to-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
             >
               {t("See More Details", "查看更多详情")}
