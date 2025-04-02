@@ -22,14 +22,14 @@ const PhotoPointsSection: React.FC = () => {
           <h2 className="text-3xl font-bold mb-4">
             {t("Explore ", "探索")}
             <span className="text-gradient-blue">
-              {t("Community Locations", "社区位置")}
+              {t("Premium Locations", "优质位置")}
             </span>
           </h2>
           
           <p className="text-muted-foreground max-w-2xl">
             {t(
-              "Browse through our curated collection of astrophotography locations shared by the community. Find hidden gems with perfect conditions for your next shoot.",
-              "浏览我们精选的社区分享的天文摄影地点。为你的下一次拍摄找到完美条件的隐藏宝地。"
+              "Find the perfect locations for astrophotography with optimal viewing conditions. Our algorithm identifies the best spots based on SIQS factors.",
+              "寻找具有最佳观测条件的天文摄影理想地点。我们的算法根据SIQS因素识别最佳地点。"
             )}
           </p>
           
@@ -37,8 +37,8 @@ const PhotoPointsSection: React.FC = () => {
             <Award className="h-4 w-4 text-blue-400" />
             <p className="text-sm text-blue-200">
               {t(
-                "Now featuring official Dark Sky certified locations from around the world!",
-                "现已收录来自世界各地的官方认证暗夜区域！"
+                "Featuring official Dark Sky certified locations from around the world!",
+                "收录来自世界各地的官方认证暗夜区域！"
               )}
             </p>
           </div>

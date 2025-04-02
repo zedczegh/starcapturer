@@ -5,7 +5,7 @@ import { getProgressColor, getProgressColorClass, getProgressTextColorClass } fr
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface SIQSScoreProps {
@@ -99,6 +99,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          className="relative"
         >
           <Link 
             to={`/location/${locationId}`}
@@ -116,10 +117,10 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           >
             <Button 
               size="md" 
-              className="bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
+              className="bg-gradient-to-r from-primary/90 to-primary/70 hover:bg-primary hover:from-primary hover:to-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
             >
               {t("See More Details", "查看更多详情")}
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+              <ChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
             </Button>
           </Link>
         </motion.div>

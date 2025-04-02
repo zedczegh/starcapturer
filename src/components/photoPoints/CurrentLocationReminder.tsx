@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MapPin, Star, ArrowUpRight } from 'lucide-react';
+import { MapPin, Star, ArrowUpRight, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,10 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   return (
     <AnimatePresence>
       <motion.div 
-        className={`rounded-lg mb-6 p-4 shadow-lg ${
+        className={`rounded-lg mb-6 p-4 shadow-lg backdrop-blur-sm ${
           isGoodSiqs 
-            ? 'bg-gradient-to-r from-green-900/40 to-blue-900/40 border border-green-500/20' 
-            : 'bg-gradient-to-r from-amber-900/40 to-red-900/40 border border-amber-500/20'
+            ? 'bg-gradient-to-r from-green-900/60 to-blue-900/60 border border-green-500/30' 
+            : 'bg-gradient-to-r from-amber-900/60 to-red-900/60 border border-amber-500/30'
         }`}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -42,10 +42,10 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
         }}
       >
         <div className="flex items-start gap-3">
-          <div className={`rounded-full p-2 ${
-            isGoodSiqs ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
+          <div className={`rounded-full p-2.5 ${
+            isGoodSiqs ? 'bg-green-500/30 text-green-300' : 'bg-amber-500/30 text-amber-300'
           }`}>
-            {isGoodSiqs ? <Star className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+            {isGoodSiqs ? <Star className="h-5 w-5" /> : <Info className="h-5 w-5" />}
           </div>
           
           <div className="flex-1">
@@ -59,8 +59,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             <p className="text-sm text-muted-foreground mb-3">
               {isGoodSiqs 
                 ? t(
-                    `Your current location has a good SIQS of ${currentSiqs.toFixed(1)}. However, for the best astrophotography results, consider a rural location with lower light pollution.`,
-                    `您当前位置的SIQS为 ${currentSiqs.toFixed(1)}，条件良好。但是，为了获得最佳天文摄影效果，请考虑前往光污染较低的乡村地区。`
+                    `Your current location has a good SIQS of ${currentSiqs.toFixed(1)}. For the best astrophotography results, consider one of the premium locations shown below.`,
+                    `您当前位置的SIQS为 ${currentSiqs.toFixed(1)}，条件良好。为了获得最佳天文摄影效果，请考虑下方显示的优质位置。`
                   )
                 : t(
                     `Your current location has a SIQS of ${currentSiqs.toFixed(1)}, which is not ideal for astrophotography. The locations shown below offer better viewing conditions.`,
@@ -75,7 +75,11 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
                 whileTap={{ scale: 0.95 }}
               >
                 <Link to="/">
-                  <Button variant="ghost" size="sm" className="text-xs group">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs group hover:bg-white/10"
+                  >
                     {t("Return to calculator", "返回计算器")}
                     <ArrowUpRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </Button>
