@@ -1,10 +1,10 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Button } from "./ui/button";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,6 +25,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   hideEmptyMessage = false,
 }) => {
   const { t } = useLanguage();
+  const [isInitialized, setIsInitialized] = useState(false);
   const currentSiqs = currentSiqsStore.getScore();
   
   const {
@@ -34,8 +35,15 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: limit
+    maxInitialResults: limit + 2 // Request more to ensure we have enough even after filtering
   });
+
+  // Mark as initialized after initial load
+  useEffect(() => {
+    if (!loading && !isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [loading, isInitialized]);
 
   // Only show limited number of locations
   const limitedLocations = useMemo(() => {
@@ -81,6 +89,23 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             "尝试扩大您的搜索半径。"
           )}
         </p>
+        
+        {userLocation && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="mt-4"
+            onClick={() => {
+              // Trigger event to find more locations
+              document.dispatchEvent(
+                new CustomEvent('expand-search-radius', { detail: { radius: 1000 } })
+              );
+            }}
+          >
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            {t("Expand Search", "扩大搜索")}
+          </Button>
+        )}
       </div>
     );
   }

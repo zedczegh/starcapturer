@@ -88,7 +88,8 @@ export const useCalculatedLocationsFind = () => {
   // Generate a grid of points around the given coordinates
   const generateGridPoints = (latitude: number, longitude: number, radius: number): SharedAstroSpot[] => {
     const points: SharedAstroSpot[] = [];
-    const gridSize = Math.min(5, Math.ceil(radius / 100)); // Adjust grid density based on radius
+    // Increase grid density for better coverage
+    const gridSize = Math.min(6, Math.ceil(radius / 80)); 
     
     // Convert radius from km to degrees (approximate)
     const latDelta = radius / 111; // 1 degree latitude is about 111km
@@ -110,11 +111,10 @@ export const useCalculatedLocationsFind = () => {
         const estimatedBortle = Math.max(1, Math.min(8, Math.round(5 - 3 * distance)));
         
         points.push({
-          name: `Calculated location ${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+          name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}`,
           latitude: lat,
           longitude: lon,
-          bortleScale: estimatedBortle,
-          calculated: true
+          bortleScale: estimatedBortle
         });
       }
     }

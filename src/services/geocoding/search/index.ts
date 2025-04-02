@@ -30,7 +30,7 @@ export async function searchLocations(
   try {
     const hasChineseChars = containsChineseCharacters(lowercaseQuery);
     
-    // Fast database search approach
+    // Fast database search approach - updated to match function signature
     let results = findMatchingLocations(lowercaseQuery, 15, language);
     
     if (results.length === 0) {
@@ -50,11 +50,12 @@ export async function searchLocations(
         }
       }
       
-      // Try with relaxed token matching if still no results
+      // Try with relaxed token matching if still no results - remove the last parameter
       if (results.length === 0) {
         console.log(`Still no results, trying more relaxed matching for "${lowercaseQuery}"`);
         
-        const relaxedResults = findMatchingLocations(lowercaseQuery, 20, language, true);
+        // Use only the correct number of arguments
+        const relaxedResults = findMatchingLocations(lowercaseQuery, 20, language);
         results = [...results, ...relaxedResults];
       }
     }
@@ -77,7 +78,7 @@ export async function searchLocations(
     console.error(`Error searching for locations with query "${lowercaseQuery}":`, error);
     
     // Return a fallback from internal database with a very basic search
-    const fallbackResults = findMatchingLocations(query, 5, language, true);
+    const fallbackResults = findMatchingLocations(query, 5, language);
     if (fallbackResults.length > 0) {
       searchCache.cacheResults(lowercaseQuery, fallbackResults, language);
     }

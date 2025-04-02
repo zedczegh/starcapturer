@@ -1,7 +1,7 @@
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, Loader2 } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Location as LocationType } from "@/services/geocoding/types";
@@ -17,8 +17,43 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationType[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<LocationType[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, language } = useLanguage();
+  
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const savedSearches = localStorage.getItem('recent_location_searches');
+      if (savedSearches) {
+        const parsedSearches = JSON.parse(savedSearches);
+        if (Array.isArray(parsedSearches)) {
+          setRecentSearches(parsedSearches.slice(0, 5)); // Show max 5 recent searches
+        }
+      }
+    } catch (error) {
+      console.error("Error loading recent searches:", error);
+    }
+  }, []);
+  
+  // Save a search to recent searches
+  const saveToRecentSearches = (location: LocationType) => {
+    try {
+      // Add the new location to the start of the array and remove dupes
+      const updatedSearches = [
+        location,
+        ...recentSearches.filter(item => 
+          item.latitude !== location.latitude || 
+          item.longitude !== location.longitude
+        )
+      ].slice(0, 5); // Keep only 5 most recent
+      
+      setRecentSearches(updatedSearches);
+      localStorage.setItem('recent_location_searches', JSON.stringify(updatedSearches));
+    } catch (error) {
+      console.error("Error saving recent search:", error);
+    }
+  };
   
   // Handle all location selections through this unified function
   const handleLocationSelection = (location: SIQSLocation) => {
@@ -38,9 +73,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
     if (searchInputRef.current) {
       searchInputRef.current.value = "";
     }
-  }
+  };
   
-  // Improved debounce search function with better handling
+  // Enhanced debounce search function with better handling
   const debouncedSearch = useMemo(() => {
     let timeoutId: NodeJS.Timeout;
     
@@ -57,6 +92,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
       
       timeoutId = setTimeout(async () => {
         try {
+          // Enhanced search with better parameters
           const results = await searchLocations(query, language);
           setSearchResults(results);
         } catch (error) {
@@ -84,6 +120,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
       longitude: location.longitude
     };
     
+    // Save to recent searches
+    saveToRecentSearches(location);
+    
     handleLocationSelection(siqsLocation);
   };
   
@@ -100,7 +139,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
         />
         <div className="absolute inset-y-0 right-3 flex items-center">
           {isSearching ? (
-            <div className="animate-spin h-4 w-4 border-2 border-primary border-opacity-50 border-t-primary rounded-full"></div>
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
           ) : (
             <SearchIcon className="h-5 w-5 text-gray-400" />
           )}
@@ -120,6 +159,24 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
             </li>
           ))}
         </ul>
+      )}
+      
+      {/* Recent Searches - Show when no current search in progress */}
+      {!searchQuery && recentSearches.length > 0 && (
+        <div className="absolute z-10 mt-2 w-full rounded-md shadow-lg bg-cosmic-800 border border-cosmic-700 divide-y divide-cosmic-700 max-h-60 overflow-auto">
+          <div className="px-4 py-2 text-sm text-muted-foreground">
+            {t("Recent Searches", "最近搜索")}
+          </div>
+          {recentSearches.map((result, index) => (
+            <li
+              key={`recent-${index}`}
+              className="px-4 py-2 text-white hover:bg-cosmic-700 cursor-pointer transition-colors duration-200 list-none"
+              onClick={() => handleSearchResultSelect(result)}
+            >
+              {result.name}
+            </li>
+          ))}
+        </div>
       )}
     </div>
   );

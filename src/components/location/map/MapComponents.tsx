@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { useMap, useMapEvents } from "react-leaflet";
+import { useMap } from "react-leaflet";
 import L from "leaflet";
 
 // Create custom markers without relying on external image files
@@ -45,11 +45,22 @@ export const MapUpdater = ({ position }: { position: [number, number] }) => {
 
 // Map Events Component - Handles map click events
 export const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
-  useMapEvents({
-    click: (e) => {
+  const map = useMap();
+  
+  // Use direct event listener instead of useMapEvents
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
-    }
-  });
+    };
+    
+    map.on('click', handleMapClick);
+    
+    return () => {
+      map.off('click', handleMapClick);
+    };
+  }, [map, onMapClick]);
   
   return null;
 };
@@ -57,7 +68,8 @@ export const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: numbe
 // Map Styles Component - Inserts required CSS for the map
 export const MapStyles = () => {
   return (
-    <style jsx="true">{`
+    <style>
+      {`
       .leaflet-container {
         background-color: #0f1729;
         border-radius: 0.5rem;
@@ -79,7 +91,8 @@ export const MapStyles = () => {
         color: white !important;
         border: 1px solid #334155 !important;
       }
-    `}</style>
+      `}
+    </style>
   );
 };
 
@@ -94,9 +107,20 @@ export const DarkSkyOverlay = ({
   const map = useMap();
   
   useEffect(() => {
-    if (isDarkSkyReserve) {
-      // Optional: Add additional dark sky visualization here
-      // For now we're using the Circle component in the parent component
+    if (isDarkSkyReserve && position) {
+      // Create a circle overlay for dark sky areas
+      const darkSkyCircle = L.circle(position, {
+        radius: 5000, // 5km radius
+        color: '#4a9eff',
+        fillColor: '#4a9eff',
+        fillOpacity: 0.15,
+        weight: 2,
+        dashArray: '5, 5',
+      }).addTo(map);
+      
+      return () => {
+        map.removeLayer(darkSkyCircle);
+      };
     }
   }, [isDarkSkyReserve, map, position]);
   

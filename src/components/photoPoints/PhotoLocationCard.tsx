@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Award, Clock, Loader2, Building2 } from 'lucide-react';
+import { MapPin, Star, Award, Clock, Loader2, Building2, Trees, Globe, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -12,6 +12,7 @@ import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { getLocationNameForCoordinates } from '@/components/location/map/LocationNameService';
 import { extractNearestTownName, getRegionalName } from '@/utils/locationNameFormatter';
+import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -32,6 +33,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
+  const [locationCounter] = useState(() => {
+    // Generate a counter for potential locations if this is a calculated location
+    if (!location.id && !location.certification && !location.isDarkSkyReserve) {
+      // Get or set a counter for potential dark sites
+      const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
+      const newCounter = storedCounter + 1;
+      localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
+      return newCounter;
+    }
+    return null;
+  });
   
   // Format the distance for display
   const formatDistance = (distance?: number) => {
@@ -155,7 +167,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   }
 
   // Get display name based on language
-  const displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+  let displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+  
+  // Simplify name for calculated locations
+  if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
+    displayName = language === 'en' 
+      ? `Potential ideal dark site ${locationCounter}`
+      : `潜在理想暗夜地点 ${locationCounter}`;
+  }
   
   // Get SIQS score to display (real-time or stored)
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
@@ -164,6 +183,47 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
+  
+  // Determine certification icon and details
+  const getCertificationInfo = () => {
+    if (!location.certification && !location.isDarkSkyReserve) {
+      return null;
+    }
+    
+    const certification = (location.certification || '').toLowerCase();
+    
+    if (certification.includes('sanctuary') || certification.includes('reserve')) {
+      return {
+        icon: <Globe className="h-3 w-3 mr-1" />,
+        text: t('Dark Sky Reserve', '暗夜保护区'),
+        color: 'text-blue-400'
+      };
+    } else if (certification.includes('park')) {
+      return {
+        icon: <Trees className="h-3 w-3 mr-1" />,
+        text: t('Dark Sky Park', '暗夜公园'),
+        color: 'text-green-400'
+      };
+    } else if (certification.includes('community')) {
+      return {
+        icon: <Building2 className="h-3 w-3 mr-1" />,
+        text: t('Dark Sky Community', '暗夜社区'),
+        color: 'text-amber-400'
+      };
+    } else if (certification.includes('urban')) {
+      return {
+        icon: <Building2 className="h-3 w-3 mr-1" />,
+        text: t('Urban Night Sky', '城市夜空'),
+        color: 'text-purple-400'
+      };
+    } else {
+      return {
+        icon: <ShieldCheck className="h-3 w-3 mr-1" />,
+        text: t('Certified Location', '认证地点'),
+        color: 'text-blue-300'
+      };
+    }
+  };
   
   const handleViewDetails = () => {
     // Prepare location data for details page
@@ -198,6 +258,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       }
     }
   };
+
+  const certInfo = getCertificationInfo();
   
   return (
     <motion.div
@@ -209,12 +271,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         <h3 className="text-lg font-medium line-clamp-1">{displayName}</h3>
         
         <div className="flex items-center">
-          {(location.isDarkSkyReserve || location.certification) && (
+          {certInfo ? (
             <Badge variant="secondary" className="mr-2 bg-blue-500/20 text-blue-300 border-blue-500/40">
-              <Award className="h-3 w-3 mr-1" />
-              {t("Certified", "认证")}
+              {certInfo.icon}
+              <span className="text-xs">{certInfo.text}</span>
             </Badge>
-          )}
+          ) : null}
           
           <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
             {loadingSiqs ? (
@@ -229,9 +291,15 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         </div>
       </div>
       
-      {location.description && (
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{location.description}</p>
-      )}
+      {/* Light pollution indicator */}
+      <div className="mb-3">
+        <LightPollutionIndicator 
+          bortleScale={location.bortleScale || 5} 
+          siqs={displaySiqs}
+          size="sm" 
+          compact={true} 
+        />
+      </div>
       
       <div className="flex flex-col space-y-1.5 mt-2">
         <div className="flex items-center text-xs text-muted-foreground">
