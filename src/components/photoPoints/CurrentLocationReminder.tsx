@@ -19,10 +19,6 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   const shouldShowReminder = 
     isVisible && currentSiqs !== null && currentSiqs < 3.0;
   
-  if (!shouldShowReminder) {
-    return null;
-  }
-  
   return (
     <AnimatePresence>
       {shouldShowReminder && (

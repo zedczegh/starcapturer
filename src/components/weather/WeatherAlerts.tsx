@@ -30,14 +30,14 @@ const WeatherAlerts: React.FC<WeatherAlertsProps> = ({ alerts, formatTime, forma
       {alerts.map((alert, index) => (
         <motion.div
           key={index}
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.1 }}
+          transition={{ duration: 0.4, delay: index * 0.1 }}
         >
           <Alert 
             variant={alert.type === "severe" ? "destructive" : "default"}
             className={`border ${alert.type === "severe" ? 
-              'border-red-500/50 bg-red-500/10 animate-pulse' : 
+              'border-red-500/50 bg-red-500/10' : 
               'border-amber-500/50 bg-amber-500/10'}`}
           >
             <div className="flex items-center">

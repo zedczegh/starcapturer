@@ -69,14 +69,6 @@ const Index = () => {
           element.scrollIntoView({ behavior: 'smooth' });
         }, 100);
       }
-    } else {
-      // If no hash, scroll to calculator section
-      const calculatorSection = document.getElementById('calculator');
-      if (calculatorSection) {
-        setTimeout(() => {
-          calculatorSection.scrollIntoView({ behavior: 'smooth' });
-        }, 200);
-      }
     }
   }, [queryClient, t]);
 

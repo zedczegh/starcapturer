@@ -4,9 +4,10 @@ import { Lightbulb } from "lucide-react";
 
 interface DynamicLightbulbIconProps {
   bortleScale: number | null;
+  className?: string;
 }
 
-const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale }) => {
+const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale, className }) => {
   // If Bortle scale is null or invalid, use a default fallback value instead of showing a question mark
   const validBortleScale = bortleScale !== null && bortleScale >= 1 && bortleScale <= 9 
     ? bortleScale 
@@ -51,7 +52,7 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({ bortleScale
   };
   
   return (
-    <div className="relative" title={getBortleDescription()}>
+    <div className={`relative ${className || ''}`} title={getBortleDescription()}>
       <Lightbulb 
         className="h-4 w-4 text-primary" 
         style={{

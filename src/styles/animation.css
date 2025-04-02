@@ -11,7 +11,7 @@
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(5px);
   }
   to {
     opacity: 1;
@@ -22,7 +22,7 @@
 @keyframes fadeSlideInRight {
   from {
     opacity: 0;
-    transform: translateX(10px);
+    transform: translateX(5px);
   }
   to {
     opacity: 1;
@@ -32,13 +32,13 @@
 
 @keyframes pulse {
   0% {
-    opacity: 0.6;
+    opacity: 0.8;
   }
   50% {
     opacity: 1;
   }
   100% {
-    opacity: 0.6;
+    opacity: 0.8;
   }
 }
 
@@ -47,7 +47,7 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
   }
   100% {
     transform: translateY(0px);
@@ -57,7 +57,7 @@
 @keyframes fadeScale {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.97);
   }
   to {
     opacity: 1;
@@ -67,28 +67,28 @@
 
 @keyframes glowPulse {
   0% {
-    box-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 3px rgba(139, 92, 246, 0.3);
   }
   50% {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
   }
   100% {
-    box-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 3px rgba(139, 92, 246, 0.3);
   }
 }
 
 @keyframes starTwinkle {
   0% {
-    opacity: 0.4;
-    transform: scale(0.8);
+    opacity: 0.6;
+    transform: scale(0.9);
   }
   50% {
     opacity: 1;
-    transform: scale(1.2);
+    transform: scale(1.1);
   }
   100% {
-    opacity: 0.4;
-    transform: scale(0.8);
+    opacity: 0.6;
+    transform: scale(0.9);
   }
 }
 
@@ -97,7 +97,7 @@
     background-size: 100% 100%;
   }
   50% {
-    background-size: 120% 120%;
+    background-size: 110% 110%;
   }
   100% {
     background-size: 100% 100%;
@@ -114,70 +114,70 @@
 }
 
 .night-row {
-  background-color: rgba(13, 23, 42, 0.3);
-  border-left: 2px solid #8B5CF6;
+  background-color: rgba(13, 23, 42, 0.2);
+  border-left: 2px solid rgba(139, 92, 246, 0.6);
 }
 
-/* Add animation classes */
+/* Add animation classes with reduced intensity */
 .animate-fade-in {
-  animation: fadeIn 0.5s ease-in-out;
+  animation: fadeIn 0.6s ease-in-out;
 }
 
 .animate-fade-slide-in {
-  animation: fadeSlideIn 0.5s ease-in-out;
+  animation: fadeSlideIn 0.6s ease-in-out;
 }
 
 .animate-fade-slide-in-right {
-  animation: fadeSlideInRight 0.5s ease-in-out;
+  animation: fadeSlideInRight 0.6s ease-in-out;
 }
 
 .animate-pulse {
-  animation: pulse 2s infinite ease-in-out;
+  animation: pulse 3s ease-in-out;
 }
 
 .animate-float {
-  animation: float 3s infinite ease-in-out;
+  animation: float 4s ease-in-out;
 }
 
 .animate-fade-scale {
-  animation: fadeScale 0.5s ease-out;
+  animation: fadeScale 0.6s ease-out;
 }
 
 .animate-glow {
-  animation: glowPulse 2s infinite ease-in-out;
+  animation: glowPulse 3s ease-in-out;
 }
 
 .animate-twinkle {
-  animation: starTwinkle 3s infinite ease-in-out;
+  animation: starTwinkle 4s ease-in-out;
 }
 
 .animate-radial-breathing {
-  animation: radialBreathing 4s infinite ease-in-out;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(13, 23, 42, 0) 70%);
+  animation: radialBreathing 5s ease-in-out;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(13, 23, 42, 0) 70%);
 }
 
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.03) 100%
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.02) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  animation: shimmer 3s linear infinite;
 }
 
-/* Shadow effects */
+/* Shadow effects - toned down */
 .shadow-glow {
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-
-.shadow-glow-light {
   box-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
 }
 
+.shadow-glow-light {
+  box-shadow: 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
 .shadow-glow-strong {
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.7);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 /* Transitions */
@@ -185,21 +185,21 @@
   transition: all 0.3s ease;
 }
 
-/* Hover effects */
+/* Hover effects - toned down */
 .hover-scale {
-  transition: transform 0.2s ease-out;
+  transition: transform 0.3s ease-out;
 }
 
 .hover-scale:hover {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
 }
 
 .pulse-glow {
-  animation: glowPulse 2s infinite ease-in-out;
+  animation: glowPulse 3s infinite ease-in-out;
 }
 
 /* Glassmorphism effect classes */
@@ -234,44 +234,44 @@
   inset: -3px;
   border-radius: 50%;
   z-index: -1;
-  opacity: 0.5;
-  filter: blur(4px);
+  opacity: 0.3;
+  filter: blur(3px);
 }
 
 .score-indicator.excellent {
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: rgba(34, 197, 94, 0.15);
   color: rgb(34, 197, 94);
 }
 
 .score-indicator.excellent::after {
-  background-color: rgba(34, 197, 94, 0.3);
+  background-color: rgba(34, 197, 94, 0.2);
 }
 
 .score-indicator.good {
-  background-color: rgba(250, 204, 21, 0.2);
+  background-color: rgba(250, 204, 21, 0.15);
   color: rgb(250, 204, 21);
 }
 
 .score-indicator.good::after {
-  background-color: rgba(250, 204, 21, 0.3);
+  background-color: rgba(250, 204, 21, 0.2);
 }
 
 .score-indicator.poor {
-  background-color: rgba(251, 146, 60, 0.2);
+  background-color: rgba(251, 146, 60, 0.15);
   color: rgb(251, 146, 60);
 }
 
 .score-indicator.poor::after {
-  background-color: rgba(251, 146, 60, 0.3);
+  background-color: rgba(251, 146, 60, 0.2);
 }
 
 .score-indicator.bad {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: rgba(239, 68, 68, 0.15);
   color: rgb(239, 68, 68);
 }
 
 .score-indicator.bad::after {
-  background-color: rgba(239, 68, 68, 0.3);
+  background-color: rgba(239, 68, 68, 0.2);
 }
 
 /* Mobile optimization */
