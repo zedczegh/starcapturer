@@ -6,19 +6,26 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
 interface CurrentLocationReminderProps {
-  hasLocation: boolean;
+  hasLocation?: boolean;
+  currentSiqs?: number | null;
+  isVisible?: boolean;
 }
 
-const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({ hasLocation }) => {
+const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({ 
+  hasLocation = true, 
+  currentSiqs = null,
+  isVisible = true
+}) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   
-  if (hasLocation) {
+  // Don't show if we have location or if the reminder isn't visible
+  if (hasLocation || !isVisible) {
     return null;
   }
   
   return (
-    <div className="bg-cosmic-900/50 backdrop-blur-sm px-4 py-3 rounded-lg border border-amber-500/20 shadow-md mb-4">
+    <div className="bg-cosmic-900/30 backdrop-blur-sm px-4 py-3 rounded-lg border border-amber-500/20 shadow-md mb-4">
       <div className="flex items-start gap-3">
         <AlertCircle className="text-amber-400 h-5 w-5 mt-0.5 flex-shrink-0" />
         <div className="space-y-2">

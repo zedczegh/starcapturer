@@ -134,10 +134,10 @@ const PhotoPointsNearby: React.FC = () => {
             </p>
           </div>
           
-          {/* Add the reminder component with currentSiqs from store */}
+          {/* Add the reminder component with hasLocation instead of currentSiqs */}
           <CurrentLocationReminder 
-            currentSiqs={currentSiqs}
-            isVisible={!!userLocation && !loading}
+            hasLocation={!!userLocation}
+            isVisible={!loading}
           />
           
           {/* User location section */}

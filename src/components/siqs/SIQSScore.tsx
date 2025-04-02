@@ -7,9 +7,18 @@ import { Separator } from "@/components/ui/separator";
 interface ScoreBadgeProps {
   score: number;
   label?: string;
+  locationName?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
-const ScoreBadge: React.FC<ScoreBadgeProps> = ({ score, label }) => {
+const ScoreBadge: React.FC<ScoreBadgeProps> = ({ 
+  score, 
+  label, 
+  locationName,
+  latitude,
+  longitude 
+}) => {
   const colorClass = getScoreColorClass(score);
   
   return (

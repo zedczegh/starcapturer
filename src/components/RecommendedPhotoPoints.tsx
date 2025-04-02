@@ -142,7 +142,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   return (
     <div className="mt-2">
       <CurrentLocationReminder 
-        currentSiqs={currentSiqs}
+        hasLocation={!!userLocation}
         isVisible={limitedLocations.length > 0}
       />
       
@@ -156,7 +156,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
             >
               <PhotoPointCard
-                point={location}
+                location={location}
                 onSelect={onSelectPoint}
                 onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}

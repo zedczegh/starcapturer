@@ -29,6 +29,8 @@ interface PhotoPointCardProps {
   className?: string;
   hideViewDetails?: boolean;
   onSelect?: (location: any) => void;
+  onViewDetails?: () => void;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
@@ -36,7 +38,9 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   compact = false,
   className = '',
   hideViewDetails = false,
-  onSelect
+  onSelect,
+  onViewDetails,
+  userLocation
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -44,6 +48,11 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const certificationInfo = useCertificationInfo(location.certification, location.isDarkSkyReserve);
   
   const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails();
+      return;
+    }
+    
     if (onSelect) {
       onSelect(location);
       return;

@@ -48,8 +48,7 @@ export const handleLocationChange = async (
       bortleScale,
       3, // Default seeing conditions
       moonPhase,
-      null, // No forecast data yet
-      language // Pass language parameter
+      null // No forecast data yet
     );
     
     console.log("Calculated SIQS result:", siqsResult);
