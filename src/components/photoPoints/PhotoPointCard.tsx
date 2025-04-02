@@ -169,20 +169,22 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           </span>
         </div>
         
-        {/* Bortle Scale Indicator - Added to replace redundant info */}
-        <LightPollutionIndicator 
-          bortleScale={point.bortleScale || 4} 
-          size="sm" 
-          showBortleNumber={true}
-          className="text-xs"
-        />
+        {/* Improved alignment for Bortle Scale Indicator */}
+        <div className="flex items-center">
+          <LightPollutionIndicator 
+            bortleScale={point.bortleScale || 4} 
+            size="sm" 
+            showBortleNumber={true}
+            className="text-xs"
+          />
+        </div>
       </div>
       
       <div className="mt-3 flex justify-end">
         <Button 
           size="sm" 
           variant="ghost" 
-          className="h-7 text-sm px-2.5 text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300"
+          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary hover:text-primary-focus transition-all duration-300"
           onClick={handleViewDetails}
         >
           {t("View", "查看")}

@@ -123,7 +123,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           <Button 
             variant="outline" 
             size="sm"
-            className="mt-4"
+            className="mt-4 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30"
             onClick={() => {
               // Trigger event to find more locations
               document.dispatchEvent(
@@ -172,7 +172,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary/90 hover:text-primary hover:bg-primary/10"
+              className="bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20 text-primary/90 hover:text-primary"
             >
               {t("View All Photo Points", "查看所有摄影点")}
               <ChevronRight className="ml-1 h-4 w-4" />

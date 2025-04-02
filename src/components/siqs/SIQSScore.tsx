@@ -114,7 +114,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           >
             <Button 
               size="lg" 
-              className="w-full bg-gradient-to-r from-primary/90 to-primary/70 hover:from-primary hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300 group bg-slate-800 hover:bg-slate-700 text-gray-50 py-0 text-sm font-medium"
+              className="w-full bg-gradient-to-r from-blue-500/90 to-green-500/90 hover:from-blue-500 hover:to-green-500 shadow-lg hover:shadow-xl transition-all duration-300 group text-gray-50 py-2 text-sm font-medium"
             >
               {t("See More Details", "查看更多详情")}
               <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
