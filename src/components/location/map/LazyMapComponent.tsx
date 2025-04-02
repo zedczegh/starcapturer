@@ -1,6 +1,5 @@
-
 import React, { useCallback, memo, useMemo, useRef, useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -152,17 +151,13 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
           
           {/* Add a Circle for certified locations */}
           {isDarkSkyReserve && getCertificationDetails.overlayRadius > 0 && (
-            <Circle 
-              center={position}
-              radius={getCertificationDetails.overlayRadius}
-              pathOptions={{
-                color: getCertificationDetails.markerColor || '#3b82f6',
-                fillColor: getCertificationDetails.overlayColor,
-                fillOpacity: 0.3,
-                weight: 2,
-                opacity: 0.5
-              }}
-            />
+            <>
+              {/* Circle is created in DarkSkyOverlay component using Leaflet directly */}
+              <DarkSkyOverlay 
+                isDarkSkyReserve={true}
+                position={position}
+              />
+            </>
           )}
           
           {markerIcon && (

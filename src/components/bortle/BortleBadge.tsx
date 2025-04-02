@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
 
 interface BortleBadgeProps {
   value: number;
@@ -9,13 +8,12 @@ interface BortleBadgeProps {
 }
 
 const BortleBadge: React.FC<BortleBadgeProps> = ({ value, size = 'md' }) => {
-  // Get color data for Bortle scale
-  const colorData = getBortleScaleColor(value);
-  
-  // Extract colors
-  const colorText = typeof colorData === 'string' ? colorData : colorData.text;
-  const colorBg = typeof colorData === 'string' ? colorData : colorData.bg;
-  const colorBorder = typeof colorData === 'string' ? colorData : colorData.border;
+  // Get color for Bortle scale
+  const getBortleColor = (value: number) => {
+    if (value <= 3) return 'text-green-400 bg-green-400/10 border-green-400/30'; // Good
+    if (value <= 5) return 'text-amber-400 bg-amber-400/10 border-amber-400/30'; // Average
+    return 'text-red-400 bg-red-400/10 border-red-400/30'; // Poor
+  };
   
   // Determine size classes
   const sizeClasses = {
@@ -29,7 +27,7 @@ const BortleBadge: React.FC<BortleBadgeProps> = ({ value, size = 'md' }) => {
   
   return (
     <Badge 
-      className={`font-medium ${sizeClasses} ${colorBg} ${colorBorder} ${colorText}`}
+      className={`font-medium ${sizeClasses} ${getBortleColor(value)}`}
     >
       B{formattedValue}
     </Badge>

@@ -36,7 +36,7 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          const currentSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          const currentSiqs = savedLocation.siqs || (currentSiqsStore?.getValue ? currentSiqsStore.getValue() : null);
           
           // Using threshold of 5 for showing notification about good conditions
           if (currentSiqs && isGoodViewingCondition(currentSiqs)) {

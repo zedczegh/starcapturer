@@ -1,75 +1,44 @@
 
 import React from 'react';
-import { MapPin, Star } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { isGoodViewingCondition } from '@/hooks/siqs/siqsCalculationUtils';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface CurrentLocationReminderProps {
-  currentSiqs: number | null;
-  isVisible: boolean;
+  hasLocation: boolean;
 }
 
-const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({ 
-  currentSiqs, 
-  isVisible 
-}) => {
+const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({ hasLocation }) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   
-  if (!isVisible || currentSiqs === null) {
+  if (hasLocation) {
     return null;
   }
   
-  const isGoodSiqs = isGoodViewingCondition(currentSiqs);
-  
   return (
-    <AnimatePresence>
-      <motion.div 
-        className={`rounded-lg mb-4 py-2.5 px-3.5 shadow-sm ${
-          isGoodSiqs 
-            ? 'bg-gradient-to-r from-green-900/15 to-blue-900/15 border border-green-500/5' 
-            : 'bg-gradient-to-r from-amber-900/15 to-red-900/15 border border-amber-500/5'
-        }`}
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 500, 
-          damping: 30 
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <div className={`rounded-full p-1.5 ${
-            isGoodSiqs ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'
-          }`}>
-            {isGoodSiqs ? <Star className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
-          </div>
-          
-          <div className="flex-1">
-            <h3 className="text-base font-medium mb-0.5">
-              {isGoodSiqs 
-                ? t("Good imaging conditions at your location", "您所在位置的成像条件良好")
-                : t("Consider finding a better location", "考虑寻找更好的位置")
-              }
-            </h3>
-            
-            <p className="text-xs text-muted-foreground">
-              {isGoodSiqs 
-                ? t(
-                    `Your current location has a good SIQS of ${currentSiqs.toFixed(1)}. For the best results, check locations below with lower light pollution.`,
-                    `您当前位置的SIQS为 ${currentSiqs.toFixed(1)}，条件良好。为了获得最佳效果，请查看下方光污染较低的位置。`
-                  )
-                : t(
-                    `Your current location has a SIQS of ${currentSiqs.toFixed(1)}, which is not ideal for astrophotography. The locations below offer better viewing conditions.`,
-                    `您当前位置的SIQS为 ${currentSiqs.toFixed(1)}，不太适合天文摄影。以下显示的位置提供了更好的观测条件。`
-                  )
-              }
-            </p>
-          </div>
+    <div className="bg-cosmic-900/50 backdrop-blur-sm px-4 py-3 rounded-lg border border-amber-500/20 shadow-md mb-4">
+      <div className="flex items-start gap-3">
+        <AlertCircle className="text-amber-400 h-5 w-5 mt-0.5 flex-shrink-0" />
+        <div className="space-y-2">
+          <p className="text-sm text-amber-100/90">
+            {t(
+              "For more accurate results, please enable location sharing or select a location.",
+              "要获得更准确的结果，请启用位置共享或选择位置。"
+            )}
+          </p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/20"
+            onClick={() => navigate("/#calculator")}
+          >
+            {t("Choose Location", "选择位置")}
+          </Button>
         </div>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+    </div>
   );
 };
 

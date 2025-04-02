@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { siqsToColor } from '@/lib/siqs/utils';
+import { getScoreColorClass } from './utils/scoreUtils';
 
 interface SIQSBadgeProps {
   score: number;
@@ -10,7 +10,7 @@ interface SIQSBadgeProps {
 
 const SIQSBadge: React.FC<SIQSBadgeProps> = ({ score, size = 'md' }) => {
   // Get color based on score
-  const color = siqsToColor(score);
+  const colorClass = getScoreColorClass(score);
   
   // Format score to one decimal place
   const formattedScore = score.toFixed(1);
@@ -24,12 +24,7 @@ const SIQSBadge: React.FC<SIQSBadgeProps> = ({ score, size = 'md' }) => {
   
   return (
     <Badge 
-      className={`font-medium ${sizeClasses} border border-white/10`}
-      style={{ 
-        backgroundColor: `${color}30`, 
-        color: color,
-        borderColor: `${color}40`
-      }}
+      className={`font-medium ${sizeClasses} border border-white/10 ${colorClass}`}
     >
       SIQS {formattedScore}
     </Badge>

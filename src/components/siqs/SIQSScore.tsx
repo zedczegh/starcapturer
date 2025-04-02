@@ -1,3 +1,4 @@
+
 import React, { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { getScoreColorClass } from "./utils/scoreUtils";

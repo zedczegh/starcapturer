@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -233,7 +232,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
           transition={{ delay: 0.2 }}
         >
           <SIQSScore 
-            siqsScore={siqsScore} 
+            score={siqsScore} 
             latitude={parseFloat(latitude)}
             longitude={parseFloat(longitude)}
             locationName={locationName}

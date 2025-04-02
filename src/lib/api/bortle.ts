@@ -1,5 +1,5 @@
 
-import { chinaBortleData } from '@/utils/chinaBortleData';
+import { isInChina, getCityBortleScale } from '@/utils/chinaBortleData';
 
 /**
  * Fetch Bortle scale data for a given location
@@ -33,7 +33,7 @@ function getBortleFromChinaData(latitude: number, longitude: number): number | n
     latitude >= 18 && latitude <= 53 &&
     longitude >= 73 && longitude <= 135
   ) {
-    return chinaBortleData.getBortleScale(latitude, longitude);
+    return getCityBortleScale(latitude, longitude);
   }
   return null;
 }
