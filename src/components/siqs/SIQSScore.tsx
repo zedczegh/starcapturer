@@ -99,6 +99,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          className="w-full sm:w-auto"
         >
           <Link 
             to={`/location/${locationId}`}
@@ -113,13 +114,14 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
               timestamp: new Date().toISOString(),
               fromCalculator: true // Add a flag to indicate source
             }}
+            className="w-full block"
           >
             <Button 
-              size="md" 
-              className="bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group"
+              size="lg" 
+              className="w-full sm:w-auto bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group px-6 py-3"
             >
               {t("See More Details", "查看更多详情")}
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
             </Button>
           </Link>
         </motion.div>
