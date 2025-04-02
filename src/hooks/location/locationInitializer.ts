@@ -1,10 +1,10 @@
 
-import { toast } from "sonner";
 import { calculateMoonPhase } from "@/utils/siqsValidation";
+import { fetchWeatherData } from "@/lib/api";
 import { NavigateFunction } from "react-router-dom";
-import { getLatestLocation, dispatchLatestLocationUpdate } from "@/services/locationSyncService";
+import { toast } from "@/hooks/use-toast";
 
-interface InitializeLocationDataProps {
+interface InitializeLocationDataParams {
   id: string | undefined;
   initialState: any;
   navigate: NavigateFunction;
@@ -12,13 +12,13 @@ interface InitializeLocationDataProps {
   t: (en: string, zh: string) => string;
   language: string;
   setLocationData: (data: any) => void;
-  setIsLoading: (isLoading: boolean) => void;
+  setIsLoading: (loading: boolean) => void;
 }
 
 /**
- * Initialize location data from state, localStorage, or redirect
+ * Initialize location data from either initialState or localStorage
  */
-export const initializeLocationData = ({
+export async function initializeLocationData({
   id,
   initialState,
   navigate,
@@ -27,73 +27,170 @@ export const initializeLocationData = ({
   language,
   setLocationData,
   setIsLoading
-}: InitializeLocationDataProps) => {
+}: InitializeLocationDataParams) {
   try {
-    // Check if ID is missing or invalid
-    if (!id) {
-      console.error("Invalid or missing location ID:", { _type: typeof id, value: id });
+    // First priority: use initialState passed from the router
+    if (initialState && initialState.latitude && initialState.longitude) {
+      console.log("Setting location data from state:", initialState);
       
-      // Attempt to recover from localStorage
-      const savedLocation = getLatestLocation();
-      if (savedLocation) {
-        console.log("Redirecting to home page with saved location");
-        navigate("/");
-        
-        // Ensure latest location is dispatched to update other components
-        dispatchLatestLocationUpdate();
-      } else {
-        // No saved location, redirect to home
-        navigate("/");
-      }
+      // Check if weatherData is missing or has zeros for critical values
+      const needsWeatherUpdate = 
+        !initialState.weatherData || 
+        initialState.weatherData.temperature === 0 || 
+        initialState.weatherData.humidity === 0 || 
+        initialState.weatherData.cloudCover === 0 || 
+        initialState.weatherData.windSpeed === 0;
       
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if we have initialState from navigation
-    if (initialState?.locationData) {
-      console.log("Using location data from navigation state");
-      setLocationData(initialState.locationData);
-      setIsLoading(false);
+      // Ensure location data has fresh moon phase
+      const dataWithFreshMoonPhase = {
+        ...initialState,
+        moonPhase: initialState.moonPhase || calculateMoonPhase(),
+        // Preserve fromPhotoPoints flag if it exists
+        fromPhotoPoints: initialState.fromPhotoPoints || false
+      };
       
-      // Cache the data for future use
+      setLocationData(dataWithFreshMoonPhase);
+      
+      // Also save to localStorage for persistence
       try {
-        localStorage.setItem(`location_${id}`, JSON.stringify(initialState.locationData));
+        if (id) {
+          localStorage.setItem(`location_${id}`, JSON.stringify(dataWithFreshMoonPhase));
+        }
       } catch (e) {
-        console.error("Failed to save location data to localStorage", e);
+        console.error("Failed to save to localStorage", e);
       }
-      return;
-    }
-
-    // Try to load data from localStorage
-    const savedLocationData = localStorage.getItem(`location_${id}`);
-    if (savedLocationData) {
-      console.log("Using location data from localStorage");
-      const parsedData = JSON.parse(savedLocationData);
       
-      // Update moonPhase as it may have changed
-      parsedData.moonPhase = calculateMoonPhase();
+      // If weatherData needs to be updated, trigger it immediately
+      if (needsWeatherUpdate && initialState.latitude && initialState.longitude) {
+        try {
+          console.log("Updating weather data for location:", initialState.name);
+          const freshWeatherData = await fetchWeatherData({
+            latitude: initialState.latitude,
+            longitude: initialState.longitude
+          });
+          
+          if (freshWeatherData) {
+            const updatedData = {
+              ...dataWithFreshMoonPhase,
+              weatherData: freshWeatherData,
+              timestamp: new Date().toISOString()
+            };
+            
+            setLocationData(updatedData);
+            
+            // Update localStorage
+            try {
+              if (id) {
+                localStorage.setItem(`location_${id}`, JSON.stringify(updatedData));
+              }
+            } catch (e) {
+              console.error("Failed to save updated data to localStorage", e);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to update weather data:", error);
+        }
+      }
       
-      setLocationData(parsedData);
-      setIsLoading(false);
-      return;
+      if (!initialState?.latitude || !initialState?.longitude) {
+        showErrorAndRedirect(toast, t, navigate, "Incomplete location data", "位置数据不完整");
+        return;
+      }
+    } else if (id) {
+      // Second priority: try to load data from localStorage if available
+      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language);
+    } else {
+      console.error("No way to initialize location data", { params: id, locationState: initialState });
+      showErrorAndRedirect(toast, t, navigate, "Cannot load location details", "无法加载位置详情");
     }
-
-    // If we get here, we couldn't find the location
-    console.error("Location not found");
-    navigate("/");
-    
-    // Show error toast
-    toast({
-      title: t("Location not found", "未找到位置"),
-      description: t("Please try again", "请重试"),
-      variant: "destructive",
-    });
-    
-    setIsLoading(false);
-  } catch (error) {
-    console.error("Error initializing location data:", error);
-    navigate("/");
+  } finally {
     setIsLoading(false);
   }
-};
+}
+
+/**
+ * Load location data from localStorage if available
+ */
+async function loadFromLocalStorage(
+  id: string,
+  setLocationData: (data: any) => void,
+  toast: any,
+  t: (en: string, zh: string) => string,
+  navigate: NavigateFunction,
+  language: string
+) {
+  console.log("Trying to load location data from localStorage for ID:", id);
+  const savedLocationData = localStorage.getItem(`location_${id}`);
+  
+  if (savedLocationData) {
+    const parsedData = JSON.parse(savedLocationData);
+    
+    // Ensure we have a fresh moon phase
+    parsedData.moonPhase = parsedData.moonPhase || calculateMoonPhase();
+    
+    // Check if we need to update weather data
+    const needsWeatherUpdate = 
+      !parsedData.weatherData || 
+      parsedData.weatherData.temperature === 0 || 
+      parsedData.weatherData.humidity === 0 || 
+      parsedData.weatherData.cloudCover === 0 || 
+      parsedData.weatherData.windSpeed === 0;
+    
+    setLocationData(parsedData);
+    
+    // If weatherData needs to be updated, trigger it immediately
+    if (needsWeatherUpdate && parsedData.latitude && parsedData.longitude) {
+      try {
+        console.log("Updating weather data for stored location:", parsedData.name);
+        const freshWeatherData = await fetchWeatherData({
+          latitude: parsedData.latitude,
+          longitude: parsedData.longitude
+        });
+        
+        if (freshWeatherData) {
+          const updatedData = {
+            ...parsedData,
+            weatherData: freshWeatherData,
+            timestamp: new Date().toISOString()
+          };
+          
+          setLocationData(updatedData);
+          
+          // Update localStorage
+          try {
+            localStorage.setItem(`location_${id}`, JSON.stringify(updatedData));
+          } catch (e) {
+            console.error("Failed to save updated data to localStorage", e);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to update weather data:", error);
+      }
+    }
+  } else {
+    console.error("Location data not found in localStorage", { id });
+    showErrorAndRedirect(toast, t, navigate, "Location data not found", "找不到位置数据");
+  }
+}
+
+/**
+ * Show error toast and redirect to home page
+ */
+function showErrorAndRedirect(
+  toast: any, 
+  t: (en: string, zh: string) => string, 
+  navigate: NavigateFunction,
+  errorEn: string,
+  errorZh: string
+) {
+  toast({
+    title: t("Error", "错误"),
+    description: t(errorEn, errorZh),
+    variant: "destructive"
+  });
+  
+  // Redirect after showing the error
+  setTimeout(() => {
+    navigate("/");
+  }, 2000);
+}

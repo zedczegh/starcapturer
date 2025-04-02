@@ -1,114 +1,191 @@
 
-import React, { useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Camera, Map, Navigation } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useLocationSync } from '@/hooks/useLocationSync';
+import React, { useMemo, useState, useEffect } from "react";
+import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
+import PhotoPointCard from "./photoPoints/PhotoPointCard";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { Button } from "./ui/button";
+import { ChevronRight, Loader2, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { currentSiqsStore } from "./index/CalculatorSection";
+import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 
 interface RecommendedPhotoPointsProps {
-  className?: string;
-  siqs?: number | null;
-  onSelectPoint?: (point: { name: string; latitude: number; longitude: number }) => void;
-  userLocation?: { latitude: number; longitude: number } | null;
+  onSelectPoint?: (point: SharedAstroSpot) => void;
+  userLocation: { latitude: number; longitude: number } | null;
+  limit?: number;
   hideEmptyMessage?: boolean;
 }
 
-const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({ 
-  className = "",
-  siqs = null,
+const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   onSelectPoint,
-  userLocation = null,
-  hideEmptyMessage = false
+  userLocation,
+  limit = 3,
+  hideEmptyMessage = false,
 }) => {
   const { t } = useLanguage();
-  const { syncedLocation } = useLocationSync();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const currentSiqs = currentSiqsStore.getScore();
+  const [localLoading, setLocalLoading] = useState(true);
+  const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Use provided userLocation or fall back to syncedLocation
-  const currentLocation = userLocation || (syncedLocation ? {
-    latitude: syncedLocation.latitude,
-    longitude: syncedLocation.longitude
-  } : null);
+  // Start with cached data if available from localStorage
+  useEffect(() => {
+    try {
+      const savedLocations = localStorage.getItem('cachedRecommendedLocations');
+      if (savedLocations) {
+        const parsed = JSON.parse(savedLocations);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCachedLocations(parsed);
+          setLocalLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cached locations:", error);
+    }
+  }, []);
   
-  // Only show if we have a location and SIQS score
-  if (!currentLocation && !syncedLocation) {
-    if (hideEmptyMessage) return null;
+  const {
+    displayedLocations,
+    loading,
+    searching
+  } = usePhotoPointsSearch({
+    userLocation,
+    currentSiqs,
+    maxInitialResults: limit + 5 // Request more to ensure we have enough even after filtering
+  });
+
+  // Mark as initialized after initial load and save to cache
+  useEffect(() => {
+    if (!loading && !isInitialized && displayedLocations.length > 0) {
+      setIsInitialized(true);
+      setLocalLoading(false);
+      
+      // Save to localStorage for faster future loads
+      try {
+        localStorage.setItem('cachedRecommendedLocations', JSON.stringify(displayedLocations));
+      } catch (error) {
+        console.error("Error saving locations to cache:", error);
+      }
+    }
+  }, [loading, isInitialized, displayedLocations]);
+
+  // Only show limited number of locations
+  const limitedLocations = useMemo(() => {
+    // Use fresh data if available, otherwise use cached data
+    const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
     
+    // Prioritize certified locations 
+    const certified = locationsToUse.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    );
+    
+    const nonCertified = locationsToUse.filter(loc => 
+      !loc.isDarkSkyReserve && !loc.certification
+    );
+    
+    // Combine with certified locations first, then add non-certified
+    // to fill up to the limit
+    const sortedLocations = [
+      ...certified,
+      ...nonCertified
+    ].slice(0, limit);
+    
+    return sortedLocations;
+  }, [displayedLocations, cachedLocations, limit]);
+
+  if (localLoading && cachedLocations.length === 0) {
     return (
-      <div className={`mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 ${className}`}>
-        <p className="text-sm text-center text-muted-foreground">
-          {t("Set a location to see recommended photo points", "设置位置以查看推荐的拍摄点")}
+      <div className="mt-2 flex justify-center py-4">
+        <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
+      </div>
+    );
+  }
+
+  if (limitedLocations.length === 0 && !hideEmptyMessage) {
+    return (
+      <div className="mt-2 text-center py-6">
+        <p className="text-muted-foreground text-sm">
+          {t(
+            "No recommended photo points found nearby.",
+            "在附近找不到推荐的摄影点。"
+          )}
         </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {t(
+            "Try expanding your search radius.",
+            "尝试扩大您的搜索半径。"
+          )}
+        </p>
+        
+        {userLocation && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="mt-4"
+            onClick={() => {
+              // Trigger event to find more locations
+              document.dispatchEvent(
+                new CustomEvent('expand-search-radius', { detail: { radius: 1000 } })
+              );
+            }}
+          >
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            {t("Expand Search", "扩大搜索")}
+          </Button>
+        )}
       </div>
     );
   }
   
-  // Handle point selection if provided
-  const handleSelectPoint = useCallback((point: any) => {
-    if (onSelectPoint) {
-      onSelectPoint(point);
-    }
-  }, [onSelectPoint]);
-  
-  // Use CSS classes based on SIQS score
-  const getScoreClasses = () => {
-    if (siqs >= 7) return "text-emerald-500";
-    if (siqs >= 5) return "text-cyan-400";
-    if (siqs >= 3) return "text-blue-500";
-    return "text-amber-500";
-  };
-  
-  // Prepare location coordinates for the link
-  const locationCoords = currentLocation || (syncedLocation ? {
-    latitude: syncedLocation.latitude,
-    longitude: syncedLocation.longitude
-  } : { latitude: 0, longitude: 0 });
-  
   return (
-    <div className={`mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 ${className}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Camera className="h-5 w-5 text-primary/80" />
-          <h3 className="font-medium">
-            {t("Find Photo Points", "寻找拍摄点")}
-          </h3>
-        </div>
-        <div className="flex items-center gap-1">
-          <Navigation className="h-4 w-4 text-primary/70" />
-          <span className="text-xs text-primary/70">
-            {locationCoords.latitude.toFixed(4)}, {locationCoords.longitude.toFixed(4)}
-          </span>
-        </div>
-      </div>
+    <div className="mt-2">
+      <CurrentLocationReminder 
+        currentSiqs={currentSiqs}
+        isVisible={limitedLocations.length > 0}
+      />
       
-      <p className="text-sm text-muted-foreground mb-3">
-        {t(
-          "Discover photography spots near your current location. Current SIQS: ",
-          "发现您当前位置附近的摄影地点。当前SIQS评分："
-        )}
-        <span className={`font-medium ${siqs ? getScoreClasses() : ''}`}>
-          {siqs ? siqs.toFixed(1) : "N/A"}
-        </span>
-      </p>
-      
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className="w-full justify-center hover:bg-primary/10 transition-colors"
-        asChild
-      >
-        <Link 
-          to="/photo-points" 
-          state={{ 
-            fromCalculator: true, 
-            latitude: locationCoords.latitude, 
-            longitude: locationCoords.longitude 
-          }}
-        >
-          <Map className="mr-2 h-4 w-4" />
-          {t("View Nearby Photo Points", "查看附近的拍摄点")}
-        </Link>
-      </Button>
+      <AnimatePresence>
+        <div className="space-y-3">
+          {limitedLocations.map((location, index) => (
+            <motion.div
+              key={`${location.id || location.latitude}-${location.longitude}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
+            >
+              <PhotoPointCard
+                point={location}
+                onSelect={onSelectPoint}
+                onViewDetails={() => onSelectPoint?.(location)}
+                userLocation={userLocation}
+              />
+            </motion.div>
+          ))}
+        </div>
+      </AnimatePresence>
+
+      {limitedLocations.length > 0 && (
+        <div className="mt-4 flex justify-center">
+          <Link to="/photo-points">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:text-primary/90 hover:bg-primary/10"
+            >
+              {t("View All Photo Points", "查看所有摄影点")}
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {searching && (
+        <div className="flex justify-center mt-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary/60" />
+        </div>
+      )}
     </div>
   );
 };

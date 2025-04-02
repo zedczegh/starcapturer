@@ -2,7 +2,7 @@
 import React, { memo, useMemo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
-import { normalizeFactorScores, getRandomCloudCoverScore } from "@/lib/siqs/utils";
+import { normalizeFactorScores } from "@/lib/siqs/utils";
 
 interface SIQSFactorsListProps {
   factors?: Array<{
@@ -23,17 +23,12 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
   }
   
   // Special handling for cloud cover - ensure 0% cloud cover always shows score 10.0
-  // and apply special scoring for 100% cloud cover
+  // and don't penalize too harshly for high cloud cover
   const finalFactors = normalizedFactors.map(factor => {
     if (factor.name === "Cloud Cover" || factor.name === "云层覆盖") {
       // If description mentions 0%, ensure score is 10
       if (factor.description.includes("0%")) {
         return { ...factor, score: 10 };
-      }
-      
-      // For 100% cloud cover, use a random low score between 1.1-1.3
-      if (factor.description.includes("100%")) {
-        return { ...factor, score: getRandomCloudCoverScore() };
       }
       
       // For high cloud cover, ensure we show the actual score (could be very low)

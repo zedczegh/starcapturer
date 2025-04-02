@@ -194,12 +194,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [siqsScore, onSiqsCalculated]);
   
-  const handleRecommendedPointSelection = useCallback((point: { name: string; latitude: number; longitude: number }) => {
-    if (handleRecommendedPointSelect) {
-      handleRecommendedPointSelect(point);
-    }
-  }, [handleRecommendedPointSelect]);
-  
   const animationVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -262,10 +256,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             transition={{ delay: 0.4 }}
           >
             <RecommendedPhotoPoints 
-              onSelectPoint={handleRecommendedPointSelection}
+              onSelectPoint={handleRecommendedPointSelect}
               userLocation={userLocation}
               hideEmptyMessage={true}
-              siqs={siqsScore}
             />
           </motion.div>
         )}

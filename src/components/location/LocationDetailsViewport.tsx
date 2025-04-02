@@ -33,6 +33,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { language, t } = useLanguage();
   const { loading, handleRefreshAll } = useWeatherUpdater();
   const containerRef = useRef<HTMLDivElement>(null);
+  const initialRefreshDoneRef = useRef(false);
   
   const {
     forecastData,
@@ -45,7 +46,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   } = useForecastManager(locationData);
 
   // Use the refresh manager hook for controlled refreshes
-  const { shouldRefresh, markRefreshComplete, forceRefresh } = useRefreshManager(locationData);
+  const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
   
   // Use the dedicated SIQS updater
   const { resetUpdateState } = useLocationSIQSUpdater(
@@ -59,16 +60,16 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   useEffect(() => {
     if (locationData?.latitude && locationData?.longitude) {
       resetUpdateState();
-      
-      // Force a refresh when location data changes
-      forceRefresh();
     }
-  }, [locationData?.latitude, locationData?.longitude, resetUpdateState, forceRefresh]);
+  }, [locationData?.latitude, locationData?.longitude, resetUpdateState]);
 
-  // Single refresh effect that runs when shouldRefresh is true
+  // Single refresh effect that runs only once when the page is loaded
   useEffect(() => {
-    if (shouldRefresh && locationData) {
-      console.log("Performing refresh on location details page");
+    if (shouldRefresh && locationData && !initialRefreshDoneRef.current) {
+      console.log("Performing one-time refresh on location details page load");
+      
+      // Mark as done before the refresh to prevent double refreshes
+      initialRefreshDoneRef.current = true;
       
       // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
@@ -76,14 +77,14 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         // Mark refresh as complete to prevent further refreshes
         markRefreshComplete();
         
-        // Update locationData to remove fromPhotoPoints flag if present
+        // Update locationData to remove fromPhotoPoints flag
         if (locationData.fromPhotoPoints) {
           setLocationData(prev => ({
             ...prev,
             fromPhotoPoints: false
           }));
         }
-      }, 300);
+      }, 600);
       
       return () => clearTimeout(timer);
     }
@@ -96,7 +97,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     
     const handleForceRefresh = () => {
       console.log("Force refresh triggered from parent component");
-      forceRefresh();
+      initialRefreshDoneRef.current = false; // Reset to allow refresh
       handleRefresh();
     };
     
@@ -105,7 +106,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     return () => {
       container.removeEventListener('forceRefresh', handleForceRefresh);
     };
-  }, [locationData, forceRefresh]);
+  }, [locationData]);
 
   const handleRefresh = useCallback(async () => {
     // Reset SIQS update state before refreshing
@@ -121,6 +122,13 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       setStatusMessage
     );
   }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
+
+  // Reset the initial refresh flag when component unmounts
+  useEffect(() => {
+    return () => {
+      initialRefreshDoneRef.current = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 

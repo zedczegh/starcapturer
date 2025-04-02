@@ -10,8 +10,6 @@ import Footer from "@/components/index/Footer";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getLatestLocation } from "@/services/locationSyncService";
-import { currentSiqsStore } from "@/components/index/CalculatorSection";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -24,32 +22,34 @@ const Index = () => {
     
     // Check if we need to restore previous location
     try {
-      // Check for saved location
-      const savedLocation = getLatestLocation();
+      // Check localStorage for saved location
+      const savedLocationString = localStorage.getItem('latest_siqs_location');
       
-      if (savedLocation) {
-        // We have a saved location, mark as restored
-        setHasRestoredLocation(true);
-        console.log("Found saved location, disabling auto location request");
+      if (savedLocationString) {
+        // We have a saved location, parse it and mark as restored
+        const savedLocation = JSON.parse(savedLocationString);
         
-        // Get current SIQS score if available
-        const currentSiqs = currentSiqsStore.getScore();
-        
-        // Check if SIQS score is over 6, show notification
-        if (currentSiqs && currentSiqs > 6) {
-          // Show notification for ideal astrophotography conditions
-          setTimeout(() => {
-            toast.info(
-              t(
-                "Current conditions are ideal for astrophotography tonight!",
-                "当前条件非常适合今晚进行天文摄影！"
-              ),
-              {
-                duration: 6000,
-                icon: <Star className="text-yellow-400" />,
-              }
-            );
-          }, 2000);
+        if (savedLocation && savedLocation.name) {
+          // Mark as restored to prevent auto-triggering current location
+          setHasRestoredLocation(true);
+          console.log("Found saved location, disabling auto location request");
+          
+          // Check if there's a SIQS score saved and it's over 3, show notification
+          if (savedLocation.siqs && savedLocation.siqs > 3) {
+            // Show notification for ideal astrophotography location
+            setTimeout(() => {
+              toast.info(
+                t(
+                  "Your current location is ideal for astrophotography tonight, please find a rural spot with lower light pollution to start imaging!",
+                  "您当前的位置今晚非常适合天文摄影，请寻找光污染较少的乡村地点开始拍摄！"
+                ),
+                {
+                  duration: 8000,
+                  icon: <Star className="text-yellow-400" />,
+                }
+              );
+            }, 2000);
+          }
         }
       }
     } catch (error) {
