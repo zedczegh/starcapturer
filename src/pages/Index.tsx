@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchPopularLocations } from '@/lib/queryPrefetcher';
@@ -11,7 +10,7 @@ import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
-import { currentSiqsStore } from "@/components/index/CalculatorSection";
+import { currentSiqsStore } from "@/stores/siqsStore";
 
 const Index = () => {
   const queryClient = useQueryClient();

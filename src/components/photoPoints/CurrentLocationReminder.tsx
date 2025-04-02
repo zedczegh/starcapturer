@@ -27,8 +27,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
       <motion.div 
         className={`rounded-lg mb-3 p-2 shadow-sm ${
           isGoodSiqs 
-            ? 'bg-gradient-to-r from-green-900/15 to-blue-900/15 border border-green-500/10' 
-            : 'bg-gradient-to-r from-amber-900/15 to-red-900/15 border border-amber-500/10'
+            ? 'bg-gradient-to-r from-green-900/10 to-blue-900/10 border border-green-500/10' 
+            : 'bg-gradient-to-r from-amber-900/10 to-red-900/10 border border-amber-500/10'
         }`}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -47,22 +47,22 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
           </div>
           
           <div className="flex-1">
-            <h3 className="text-sm font-medium">
+            <h3 className="text-xs font-medium">
               {isGoodSiqs 
                 ? t("Good imaging conditions", "良好的成像条件")
                 : t("Consider finding a better location", "考虑寻找更好的位置")
               }
             </h3>
             
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
               {isGoodSiqs 
                 ? t(
-                    `Current location has a good SIQS of ${currentSiqs.toFixed(1)}. Better results may be found in darker locations.`,
-                    `当前位置SIQS为 ${currentSiqs.toFixed(1)}，条件良好。在光污染较低的地区可获得更好效果。`
+                    `Current SIQS: ${currentSiqs.toFixed(1)}. Better results in darker areas.`,
+                    `当前SIQS: ${currentSiqs.toFixed(1)}，在光污染较低的地区可获更佳效果。`
                   )
                 : t(
-                    `Current location SIQS is ${currentSiqs.toFixed(1)}. Locations below offer better viewing conditions.`,
-                    `当前位置SIQS为 ${currentSiqs.toFixed(1)}。以下位置提供更佳观测条件。`
+                    `Current SIQS: ${currentSiqs.toFixed(1)}. Locations below offer better viewing.`,
+                    `当前SIQS: ${currentSiqs.toFixed(1)}。下方位置提供更佳观测条件。`
                   )
               }
             </p>

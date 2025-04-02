@@ -127,7 +127,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group px-6 py-3 text-base"
+              className="w-full sm:w-auto bg-primary/90 hover:bg-primary shadow-md hover:shadow-lg transition-all duration-300 text-primary-foreground group px-6 py-6 text-base"
             >
               {t("See More Details", "查看更多详情")}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />

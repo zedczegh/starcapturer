@@ -8,7 +8,7 @@ import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { currentSiqsStore } from "./index/CalculatorSection";
+import { currentSiqsStore } from "@/stores/siqsStore";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 
 interface RecommendedPhotoPointsProps {
