@@ -20,13 +20,13 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   const { t } = useLanguage();
   const [hasShownToast, setHasShownToast] = useState(false);
   
-  // Determine if we should show the high SIQS notification
-  const showHighSiqsNotification = currentSiqs !== null && currentSiqs > 3;
+  // Determine if we should show the high SIQS notification - Changed threshold from 3 to 5
+  const showHighSiqsNotification = currentSiqs !== null && currentSiqs > 5;
   
   // Determine if we should show the low SIQS encouragement
   const showLowSiqsEncouragement = currentSiqs !== null && currentSiqs <= 1.5;
   
-  // Show a toast notification if SIQS is over 3 and we haven't shown it yet
+  // Show a toast notification if SIQS is over 5 (changed from 3) and we haven't shown it yet
   useEffect(() => {
     if (showHighSiqsNotification && !hasShownToast) {
       toast.info(
@@ -103,8 +103,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
             ) : (
               <span>
                 {t(
-                  "Your current location has a SIQS score of ",
-                  "您当前位置的SIQS评分为 "
+                  "Your current location has a moderate SIQS score of ",
+                  "您当前位置的SIQS评分一般，为 "
                 )}
                 <span
                   className="font-semibold"
@@ -113,8 +113,8 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
                   {formatSIQSScoreForDisplay(currentSiqs)}
                 </span>
                 {t(
-                  ". Please check our recommended locations for better viewing conditions.",
-                  "。请查看我们推荐的位置以获得更好的观测条件。"
+                  ". Try our Photo Points feature to find better locations for imaging.",
+                  "。尝试我们的拍摄点功能来寻找更适合成像的位置。"
                 )}
               </span>
             )}

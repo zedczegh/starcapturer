@@ -34,8 +34,8 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          // Check if there's a SIQS score saved and it's over 3, show notification
-          if (savedLocation.siqs && savedLocation.siqs > 3) {
+          // Updated threshold from 3 to 5 for showing notification
+          if (savedLocation.siqs && savedLocation.siqs > 5) {
             // Show notification for ideal astrophotography location
             setTimeout(() => {
               toast.info(
