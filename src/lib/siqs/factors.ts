@@ -1,3 +1,4 @@
+
 /**
  * Factor score calculation functions for SIQS
  */
@@ -12,12 +13,6 @@ export function calculateCloudScore(cloudCover: number): number {
   // If cloud cover is 0%, score should be 100 points (perfect)
   if (cloudCover === 0) {
     return 100;
-  }
-
-  // Special case for 100% cloud cover - provide a very low but non-zero score
-  if (cloudCover === 100) {
-    // Return a value that will translate to 1.1-1.3 on the final 0-10 scale
-    return Math.floor(11 + (Math.random() * 2));
   }
   
   // Modified cloud cover scoring:
@@ -44,7 +39,7 @@ export function calculateCloudScore(cloudCover: number): number {
     // Poor conditions: 65-80% -> 0-25 points
     return Math.max(0, 25 - ((cloudCover - 65) * 1.67));
   } else {
-    // Very Poor conditions: 80-99% -> 0-15 points (more lenient)
+    // Very Poor conditions: 80-100% -> 0-15 points (more lenient)
     // This provides a small non-zero score (up to 1.5 on the final 0-10 scale)
     return Math.max(0, 15 * (1 - ((cloudCover - 80) / 20)));
   }
