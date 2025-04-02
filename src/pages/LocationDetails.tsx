@@ -26,6 +26,7 @@ const LocationDetails = () => {
   const { updateBortleScale } = useBortleUpdater();
   const { t } = useLanguage();
   const siqsUpdateRequiredRef = useRef(true);
+  const initialRenderRef = useRef(true);
   
   const {
     locationData, 
@@ -43,8 +44,8 @@ const LocationDetails = () => {
 
   // Use the SIQS updater to keep scores in sync with forecast data
   const { resetUpdateState } = useLocationSIQSUpdater(
-    locationData,
-    locationData?.forecastData,
+    locationData, 
+    locationData?.forecastData, 
     setLocationData,
     t
   );
@@ -75,8 +76,9 @@ const LocationDetails = () => {
     if (locationData && !isLoading && locationData.latitude && locationData.longitude) {
       prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
       
-      // Reset the SIQS update state when location changes to force recalculation
-      if (siqsUpdateRequiredRef.current) {
+      // Only force update on first render or location change
+      if (initialRenderRef.current) {
+        initialRenderRef.current = false;
         resetUpdateState();
         siqsUpdateRequiredRef.current = false;
         

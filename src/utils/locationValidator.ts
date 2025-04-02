@@ -1,3 +1,4 @@
+
 /**
  * Utilities for validating and filtering location data
  * Includes detection of water bodies and other unusable locations
@@ -78,42 +79,38 @@ const MAJOR_LAKES = [
   // Yellow Sea
   { minLat: 32, maxLat: 41, minLng: 118, maxLng: 127, name: "Yellow Sea" },
   
-  // Additional water bodies to filter out completely
-  
-  // Baltic Sea
+  // Additional water bodies
   { minLat: 53, maxLat: 66, minLng: 10, maxLng: 30, name: "Baltic Sea" },
-  
-  // North Sea
   { minLat: 51, maxLat: 62, minLng: -4, maxLng: 9, name: "North Sea" },
-  
-  // Sea of Okhotsk
   { minLat: 44, maxLat: 62, minLng: 135, maxLng: 156, name: "Sea of Okhotsk" },
-  
-  // Bering Sea
   { minLat: 52, maxLat: 66, minLng: 162, maxLng: -157, name: "Bering Sea" },
-  
-  // Arabian Sea
   { minLat: 5, maxLat: 23, minLng: 50, maxLng: 78, name: "Arabian Sea" },
-  
-  // Gulf of Alaska
   { minLat: 55, maxLat: 62, minLng: -155, maxLng: -130, name: "Gulf of Alaska" },
-  
-  // Barents Sea
   { minLat: 68, maxLat: 80, minLng: 20, maxLng: 60, name: "Barents Sea" },
-  
-  // Celebes Sea
   { minLat: 0, maxLat: 8, minLng: 118, maxLng: 125, name: "Celebes Sea" },
-  
-  // Great lakes of North America (combined for broader coverage)
-  { minLat: 41, maxLat: 49, minLng: -93, maxLng: -76, name: "Great Lakes Region" },
-  
-  // Great Salt Lake
   { minLat: 40.7, maxLat: 41.7, minLng: -113.1, maxLng: -112.0, name: "Great Salt Lake" },
 ];
 
+// Known coastal problem areas
+const COASTAL_PROBLEM_AREAS = [
+  // East Asia coast
+  { minLat: 30.8, maxLat: 31.4, minLng: 121.2, maxLng: 121.8, name: "Shanghai Coast" },
+  { minLat: 22.1, maxLat: 22.4, minLng: 113.8, maxLng: 114.4, name: "Hong Kong Coast" },
+  { minLat: 35.0, maxLat: 35.5, minLng: 129.8, maxLng: 130.0, name: "Busan Coast" },
+  { minLat: 34.5, maxLat: 35.0, minLng: 139.5, maxLng: 140.0, name: "Tokyo Bay" },
+  
+  // European coasts
+  { minLat: 43.0, maxLat: 43.5, minLng: 5.0, maxLng: 5.8, name: "Marseille Coast" },
+  { minLat: 41.7, maxLat: 42.0, minLng: 12.0, maxLng: 12.7, name: "Rome Coast" },
+  
+  // US coasts
+  { minLat: 37.7, maxLat: 37.9, minLng: -122.6, maxLng: -122.3, name: "San Francisco Bay" },
+  { minLat: 33.7, maxLat: 34.1, minLng: -118.5, maxLng: -118.1, name: "Los Angeles Coast" },
+  { minLat: 25.7, maxLat: 26.0, minLng: -80.3, maxLng: -79.9, name: "Miami Coast" },
+];
+
 /**
- * Check if a location is on water
- * Uses coordinate-based detection for oceans, seas, and major lakes
+ * Check if a location is on water using enhanced detection
  * @param latitude Location latitude
  * @param longitude Location longitude
  * @returns boolean indicating if location is on water
@@ -121,6 +118,19 @@ const MAJOR_LAKES = [
 export function isWaterLocation(latitude: number, longitude: number): boolean {
   // Normalize longitude to -180 to 180 range
   const normalizedLng = ((longitude + 540) % 360) - 180;
+  
+  // First check known coastal problem areas (higher precision)
+  for (const area of COASTAL_PROBLEM_AREAS) {
+    if (
+      latitude >= area.minLat &&
+      latitude <= area.maxLat &&
+      normalizedLng >= area.minLng &&
+      normalizedLng <= area.maxLng
+    ) {
+      console.log(`Location at ${latitude}, ${longitude} matched known coastal problem area: ${area.name}`);
+      return true;
+    }
+  }
   
   // Check if within any ocean region
   for (const region of OCEAN_REGIONS) {
@@ -131,8 +141,8 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
       normalizedLng <= region.maxLng
     ) {
       // For large regions, perform more precise checks
+      // Exclude major land masses in the Pacific
       if (region.name === "Pacific Ocean") {
-        // Exclude major land masses in the Pacific
         // North America west coast
         if (latitude >= 25 && latitude <= 60 && normalizedLng >= -130 && normalizedLng <= -115) {
           return false;
@@ -156,10 +166,9 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
       normalizedLng >= lake.minLng &&
       normalizedLng <= lake.maxLng
     ) {
-      // Perform more specific checks for some regions that contain land
+      // Perform more specific checks for regions that contain land
       if (lake.name === "Mediterranean Sea") {
-        // Exclude major islands and coastal areas
-        // Sicily, Sardinia, Corsica approximate area
+        // Exclude major islands
         if (latitude >= 36 && latitude <= 43 && normalizedLng >= 8 && normalizedLng <= 16) {
           return false;
         }
@@ -174,32 +183,33 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
     }
   }
   
-  // Enhanced grid-based detection for coastal areas
-  // Check specific coastal coordinates not covered by the above regions
-  
-  // Norwegian coastline and fjords
-  if (latitude >= 58 && latitude <= 71 && normalizedLng >= 4 && normalizedLng <= 31) {
-    // Narrow fjords - these long thin bodies of water are technically water but have good viewing
-    // from the shoreline, so we'll be selective in filtering
-    const distanceToLand = Math.min(
-      Math.abs(normalizedLng - 4),  // Distance to western coast
-      Math.abs(normalizedLng - 31)  // Distance to eastern coast
-    );
+  // Check for specific coastal coordinates using a high-precision grid
+  // For coastal areas with narrow water bodies
+  const gridCellKey = `${Math.round(latitude * 10) / 10},${Math.round(normalizedLng * 10) / 10}`;
+  const knownWaterGridCells = new Set([
+    // East Asia coastal cells
+    "31.1,121.6", "31.2,121.5", "31.3,121.4", "22.3,114.2", "22.2,114.3",
+    "35.2,129.9", "34.9,139.8", "35.0,139.7", "34.7,135.4", "35.4,139.9",
     
-    // If we're more than 0.5 degrees (~50km) from shore in this region, likely water
-    if (distanceToLand > 0.5) {
-      console.log(`Location at ${latitude}, ${longitude} is likely in Norwegian Sea`);
-      return true;
-    }
+    // Europe coastal cells
+    "43.2,5.4", "43.1,5.5", "41.9,12.5", "40.8,14.3", "38.7,-9.2",
+    "53.4,-3.1", "51.5,0.1", "59.9,10.7", "55.7,12.6", "45.5,-73.6",
+    
+    // US coastal cells
+    "37.8,-122.5", "37.7,-122.4", "34.0,-118.5", "33.9,-118.4",
+    "25.8,-80.2", "25.7,-80.1", "40.7,-74.1", "40.6,-74.0", "32.7,-117.2"
+  ]);
+  
+  if (knownWaterGridCells.has(gridCellKey)) {
+    console.log(`Location at ${latitude}, ${longitude} matched known water grid cell ${gridCellKey}`);
+    return true;
   }
   
-  // Additional check for common location names that indicate water
   return false;
 }
 
 /**
  * Validate if a location is suitable for astronomy
- * Filters out water bodies and other unsuitable areas
  * @param latitude Location latitude
  * @param longitude Location longitude
  * @param name Optional location name for additional checks
@@ -210,7 +220,7 @@ export function isValidAstronomyLocation(
   longitude: number,
   name?: string
 ): boolean {
-  // Check if on water
+  // Always apply water location check with enhanced algorithm
   if (isWaterLocation(latitude, longitude)) {
     console.log(`Location at ${latitude}, ${longitude} filtered out as water`);
     return false;
@@ -237,50 +247,11 @@ export function isValidAstronomyLocation(
     }
   }
   
-  // Extreme polar regions are also challenging for most astronomy
+  // Extreme polar regions are challenging for astronomy
   if (Math.abs(latitude) > 80) {
     console.log(`Location at ${latitude}, ${longitude} is in extreme polar region`);
     return false;
   }
   
   return true;
-}
-
-/**
- * Additional check for coastal locations
- * Uses a more sophisticated algorithm to determine if a point is likely on water
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns boolean indicating if location is likely on a coast
- */
-export function isLikelyCoastalWater(latitude: number, longitude: number): boolean {
-  // This function uses a different approach to check for coastal waters
-  // It's designed to catch locations that might be missed by the bounding box approach
-  
-  // Convert coordinates to 0.1 degree grid cell
-  const gridLat = Math.round(latitude * 10) / 10;
-  const gridLng = Math.round(longitude * 10) / 10;
-  
-  // Known problematic coastal grid cells (aggregated from reported issues)
-  // Format: "lat,lng"
-  const problematicCoastalCells = new Set([
-    // East China Sea coastal areas
-    "31.1,121.6", "31.2,121.5", "31.3,121.4", 
-    // Mediterranean problematic areas
-    "43.2,5.4", "43.1,5.5", "41.9,12.5",
-    // Caribbean problem spots
-    "18.5,-66.1", "18.4,-66.0", "25.8,-80.2",
-    // US West Coast
-    "37.8,-122.5", "37.7,-122.4", "34.0,-118.5",
-    // Other known water spots that may be missed
-    "22.3,114.2", "1.3,103.8", "59.9,10.7", "45.5,-73.6"
-  ]);
-  
-  const cellKey = `${gridLat},${gridLng}`;
-  if (problematicCoastalCells.has(cellKey)) {
-    console.log(`Location at ${latitude}, ${longitude} matched known coastal water cell ${cellKey}`);
-    return true;
-  }
-  
-  return false;
 }
