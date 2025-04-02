@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
-import { useCertificationInfo } from "./utils/certificationUtils";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -26,7 +25,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const { language, t } = useLanguage();
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
-  const certInfo = useCertificationInfo(point.certification, point.isDarkSkyReserve);
 
   useEffect(() => {
     if (point.latitude && point.longitude) {
@@ -93,7 +91,49 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
 
+  // Determine certification icon and color
+  const getCertificationInfo = () => {
+    if (!point.certification && !point.isDarkSkyReserve) {
+      return null;
+    }
+    
+    const certification = (point.certification || '').toLowerCase();
+    
+    if (certification.includes('sanctuary') || certification.includes('reserve')) {
+      return {
+        icon: <Globe className="h-4 w-4 text-blue-400 mr-1.5" />,
+        text: t('Dark Sky Reserve', '暗夜保护区'),
+        color: 'text-blue-400 bg-blue-400/10 border-blue-400/30'
+      };
+    } else if (certification.includes('park')) {
+      return {
+        icon: <Trees className="h-4 w-4 text-green-400 mr-1.5" />,
+        text: t('Dark Sky Park', '暗夜公园'),
+        color: 'text-green-400 bg-green-400/10 border-green-400/30'
+      };
+    } else if (certification.includes('community')) {
+      return {
+        icon: <Building2 className="h-4 w-4 text-amber-400 mr-1.5" />,
+        text: t('Dark Sky Community', '暗夜社区'),
+        color: 'text-amber-400 bg-amber-400/10 border-amber-400/30'
+      };
+    } else if (certification.includes('urban')) {
+      return {
+        icon: <Building2 className="h-4 w-4 text-purple-400 mr-1.5" />,
+        text: t('Urban Night Sky', '城市夜空'),
+        color: 'text-purple-400 bg-purple-400/10 border-purple-400/30'
+      };
+    } else {
+      return {
+        icon: <ShieldCheck className="h-4 w-4 text-blue-300 mr-1.5" />,
+        text: t('Certified Location', '认证地点'),
+        color: 'text-blue-300 bg-blue-300/10 border-blue-300/30'
+      };
+    }
+  };
+
   const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
+  const certInfo = getCertificationInfo();
 
   return (
     <div 
@@ -105,14 +145,14 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           {pointName}
         </h4>
         
-        {/* SIQS - Now isolated at the top right */}
+        {/* SIQS Score - Now isolated at the top right */}
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
         </div>
       </div>
       
-      {/* Certification Badge - Now BELOW the SIQS */}
+      {/* Certification Badge - Now BELOW the SIQS score */}
       {certInfo && (
         <div className={`flex items-center mt-1.5 mb-2`}>
           <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
@@ -151,7 +191,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <Button 
           size="sm" 
           variant="ghost" 
-          className="h-7 text-sm px-2.5 text-primary hover:text-primary/90 hover:bg-cosmic-800/50 transition-all duration-300"
+          className="h-7 text-sm px-2.5 text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300"
           onClick={(e) => {
             e.stopPropagation();
             onViewDetails(point);
