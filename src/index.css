@@ -60,6 +60,9 @@
   .score-good {
     background: linear-gradient(to right, #8A9A5B, #606C38);
   }
+  .score-above-average {
+    background-color: var(--olive-500); 
+  }
   .score-average {
     background-color: var(--yellow-400);
   }

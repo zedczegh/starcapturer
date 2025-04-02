@@ -63,6 +63,7 @@ export async function calculateSIQSWithWeatherData(
 export function getSIQSDescription(value: number): string {
   if (value >= 8) return "Excellent";
   if (value >= 6) return "Good";  
+  if (value >= 5) return "Above Average";
   if (value >= 4) return "Average";
   if (value >= 2) return "Poor";
   return "Bad";
@@ -79,6 +80,7 @@ export function getTranslatedSIQSDescription(value: number, language: 'en' | 'zh
   // Chinese translations
   if (value >= 8) return "极佳";
   if (value >= 6) return "良好";  
+  if (value >= 5) return "较好";
   if (value >= 4) return "一般";
   if (value >= 2) return "较差";
   return "糟糕";
@@ -90,6 +92,7 @@ export function getTranslatedSIQSDescription(value: number, language: 'en' | 'zh
 export function getSIQSColorClass(value: number): string {
   if (value >= 8) return "bg-green-500/80 border-green-400/50";
   if (value >= 6) return "bg-blue-500/80 border-blue-400/50";
+  if (value >= 5) return "bg-olive-500/80 border-olive-400/50"; // Olive for scores over 5
   if (value >= 4) return "bg-yellow-500/80 border-yellow-400/50";
   if (value >= 2) return "bg-orange-500/80 border-orange-400/50";
   return "bg-red-500/80 border-red-400/50";

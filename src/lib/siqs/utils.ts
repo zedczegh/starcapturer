@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for SIQS calculations
  */
@@ -43,9 +44,33 @@ export function siqsToColor(siqs: number): string {
   
   if (normalizedSiqs >= 8) return "#22c55e"; // green-500
   if (normalizedSiqs >= 6) return "#3b82f6"; // blue-500
+  if (normalizedSiqs >= 5) return "#808000"; // olive green
   if (normalizedSiqs >= 4) return "#eab308"; // yellow-500
   if (normalizedSiqs >= 2) return "#f97316"; // orange-500
   return "#ef4444"; // red-500
+}
+
+/**
+ * Format SIQS score for display
+ * @param score SIQS score
+ * @returns Formatted score with 1 decimal place
+ */
+export function formatSIQSScore(score: number): string {
+  return score.toFixed(1);
+}
+
+/**
+ * Get the quality level text based on SIQS score
+ * @param score SIQS score
+ * @returns Quality level text
+ */
+export function getSIQSLevel(score: number): string {
+  if (score >= 8) return "Excellent";
+  if (score >= 6) return "Good";
+  if (score >= 5) return "Above Average";
+  if (score >= 4) return "Average";
+  if (score >= 2) return "Poor";
+  return "Bad";
 }
 
 /**
