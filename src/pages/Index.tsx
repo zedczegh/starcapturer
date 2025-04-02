@@ -12,14 +12,12 @@ import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
-import { rawBrightnessToMpsas, mpsasToBortle } from "@/utils/darkSkyMeterUtils";
 
 const Index = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
-  const [cameraMeasurement, setCameraMeasurement] = useState<number | null>(null);
   
   useEffect(() => {
     // Prefetch data for popular locations when the home page loads
@@ -38,31 +36,6 @@ const Index = () => {
           // Mark as restored to prevent auto-triggering current location
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
-          
-          // Check if we have camera measurement data
-          const skyBrightness = localStorage.getItem('sky_brightness_measurement');
-          if (skyBrightness) {
-            try {
-              const measurement = JSON.parse(skyBrightness);
-              if (measurement && typeof measurement.value === 'number') {
-                console.log(`Using camera-measured sky brightness: ${measurement.value}`);
-                setCameraMeasurement(measurement.value);
-                
-                // Calculate MPSAS and Bortle scale from measurement
-                const mpsas = rawBrightnessToMpsas(measurement.value);
-                const bortle = mpsasToBortle(mpsas);
-                console.log(`Camera measurement: ${mpsas.toFixed(2)} MPSAS, Bortle ${bortle.toFixed(1)}`);
-                
-                // Update the saved location with measured Bortle scale
-                if (savedLocation && !savedLocation.hasOwnProperty('measuredBortleScale')) {
-                  savedLocation.measuredBortleScale = bortle;
-                  localStorage.setItem('latest_siqs_location', JSON.stringify(savedLocation));
-                }
-              }
-            } catch (e) {
-              console.error("Error parsing sky brightness measurement:", e);
-            }
-          }
           
           const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
           setCurrentSiqs(locationSiqs);
@@ -122,10 +95,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-cosmic-950">
       <HeroSection />
-      <CalculatorSection 
-        noAutoLocationRequest={hasRestoredLocation} 
-        cameraMeasurement={cameraMeasurement}
-      />
+      <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
       <ScienceSection />
       <PhotoPointsSection />
       <Footer />

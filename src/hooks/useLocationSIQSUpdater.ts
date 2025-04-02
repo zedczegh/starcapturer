@@ -3,7 +3,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
-import { rawBrightnessToMpsas, mpsasToBortle, getBortleBasedSIQS } from '@/utils/darkSkyMeterUtils';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
@@ -66,57 +65,6 @@ export const useLocationSIQSUpdater = (
       forceUpdateRef.current = false;
       
       try {
-        // First check if we have camera measurement data
-        const hasCameraMeasurement = locationData.skyBrightness && 
-                                    typeof locationData.skyBrightness.raw === 'number';
-                                    
-        if (hasCameraMeasurement) {
-          // Prioritize camera measurement for most accurate SIQS
-          const rawBrightness = locationData.skyBrightness.raw;
-          const mpsas = rawBrightnessToMpsas(rawBrightness);
-          const bortle = mpsasToBortle(mpsas);
-          
-          console.log(`Using camera-measured sky brightness: ${mpsas.toFixed(2)} MPSAS, Bortle ${bortle.toFixed(1)}`);
-          
-          // Calculate SIQS using camera-measured Bortle scale
-          const cloudCover = validateCloudCover(locationData.weatherData?.cloudCover || 0);
-          const siqs = getBortleBasedSIQS(bortle, cloudCover);
-          
-          console.log(`Camera-based SIQS: ${siqs.toFixed(1)}`);
-          
-          // Update the SIQS result with camera-based calculation
-          setLocationData({
-            ...locationData,
-            bortleScale: bortle, // Update Bortle scale with measured value
-            siqsResult: {
-              score: siqs,
-              isViable: siqs > 3,
-              method: "camera-measurement",
-              factors: [
-                {
-                  name: t ? t("Sky Brightness", "天空亮度") : "Sky Brightness",
-                  score: 10 - (bortle - 1) * (10/8),
-                  description: t 
-                    ? t(`Measured sky brightness: ${mpsas.toFixed(2)} MPSAS (Bortle ${bortle.toFixed(1)})`, 
-                      `测量的天空亮度：${mpsas.toFixed(2)} MPSAS（波特尔等级 ${bortle.toFixed(1)}）`) 
-                    : `Measured sky brightness: ${mpsas.toFixed(2)} MPSAS (Bortle ${bortle.toFixed(1)})`
-                },
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: 10 - (cloudCover / 10),
-                  description: t 
-                    ? t(`Cloud cover: ${cloudCover}%`, 
-                      `云层覆盖: ${cloudCover}%`) 
-                    : `Cloud cover: ${cloudCover}%`
-                }
-              ]
-            }
-          });
-          
-          updateAttemptedRef.current = true;
-          return;
-        }
-      
         // Calculate new SIQS based on nighttime conditions
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
