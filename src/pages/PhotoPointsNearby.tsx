@@ -15,7 +15,6 @@ import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import NavBar from '@/components/NavBar';
 
 const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
@@ -115,8 +114,6 @@ const PhotoPointsNearby: React.FC = () => {
       <Helmet>
         <title>{pageTitle}</title>
       </Helmet>
-      
-      <NavBar />
       
       <div className={`pt-20 md:pt-28 pb-20 ${isMobile ? 'will-change-auto' : ''}`}>
         <div className="container mx-auto px-4">
