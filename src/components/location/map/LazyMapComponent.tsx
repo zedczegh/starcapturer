@@ -1,4 +1,5 @@
-import React, { Suspense, lazy } from 'react';
+
+import React, { Suspense } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
