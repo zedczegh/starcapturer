@@ -28,6 +28,9 @@ const Footer: React.FC = () => {
             <Link to="/photo-points" className="text-sm text-foreground/70 hover:text-primary transition-colors">
               {t("Explore Locations", "探索地点")}
             </Link>
+            <Link to="/share" className="text-sm text-foreground/70 hover:text-primary transition-colors">
+              {t("Bortle Now", "实时光污染")}
+            </Link>
           </div>
           
           <div className="text-sm text-foreground/50">
