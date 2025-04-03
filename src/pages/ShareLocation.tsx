@@ -40,9 +40,11 @@ const BortleNow: React.FC = () => {
   const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
   const [cameraMode, setCameraMode] = useState<"dark" | "light" | null>(null);
   
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [exposureTime, setExposureTime] = useState<number>(2000);
+  const [preparationCountdown, setPreparationCountdown] = useState<number | null>(null);
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
+  const [captureDuration, setCaptureDuration] = useState<number>(2000);
   const [darkFrameBrightness, setDarkFrameBrightness] = useState<number | null>(null);
+  const [exposureTime, setExposureTime] = useState<number>(2000);
   
   const onLocationChange = useCallback((lat: number, lng: number) => {
     setLatitude(lat.toFixed(6));
@@ -156,26 +158,42 @@ const BortleNow: React.FC = () => {
   }, [getCurrentLocation]);
 
   useEffect(() => {
-    if (countdown !== null && countdown > 0) {
+    if (preparationCountdown !== null && preparationCountdown > 0) {
       const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
+        setPreparationCountdown(preparationCountdown - 1);
       }, 1000);
       return () => clearTimeout(timer);
-    } else if (countdown === 0) {
+    } else if (preparationCountdown === 0) {
+      if (cameraMode === "dark") {
+        startCaptureProcess("dark");
+      } else if (cameraMode === "light") {
+        startCaptureProcess("light");
+      }
+      setPreparationCountdown(null);
+    }
+  }, [preparationCountdown, cameraMode]);
+
+  useEffect(() => {
+    if (captureCountdown !== null && captureCountdown > 0) {
+      const timer = setTimeout(() => {
+        setCaptureCountdown(captureCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (captureCountdown === 0) {
       if (cameraMode === "dark") {
         performDarkFrameCapture();
       } else if (cameraMode === "light") {
         performLightFrameCapture();
       }
-      setCountdown(null);
+      setCaptureCountdown(null);
     }
-  }, [countdown, cameraMode]);
+  }, [captureCountdown, cameraMode]);
 
   const requestCameraPermission = async (mode: "dark" | "light") => {
     setCameraMode(mode);
     
     if (cameraPermissionGranted) {
-      startCountdown(mode);
+      startPreparationCountdown(mode);
       return;
     }
     
@@ -191,7 +209,7 @@ const BortleNow: React.FC = () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         stream.getTracks().forEach(track => track.stop());
-        startCountdown(cameraMode);
+        startPreparationCountdown(cameraMode);
       } catch (err) {
         console.error("Camera permission error:", err);
         setError(t("Camera access was denied", "相机访问被拒绝"));
@@ -210,18 +228,33 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  const startCountdown = (mode: "dark" | "light" | null) => {
+  const startPreparationCountdown = (mode: "dark" | "light" | null) => {
     if (!mode) return;
     
-    setCountdown(10);
+    setPreparationCountdown(5);
     
     toast({
       title: mode === "dark" 
-        ? t("Preparing to capture dark frame", "准备捕获暗帧") 
-        : t("Preparing to capture sky frame", "准备捕获天空帧"),
+        ? t("Get ready for dark frame capture", "准备捕获暗帧") 
+        : t("Get ready for sky frame capture", "准备捕获天空帧"),
       description: mode === "dark"
-        ? t("Cover camera lens completely for 10 seconds...", "完全遮盖相机镜头10秒...")
-        : t("Point camera at night sky (zenith) for 10 seconds...", "将相机指向夜空（天顶）10秒..."),
+        ? t("Cover camera lens completely in 5 seconds...", "5秒内完全遮盖相机镜头...")
+        : t("Point camera at night sky (zenith) in 5 seconds...", "5秒内将相机指向夜空（天顶）..."),
+    });
+  };
+
+  const startCaptureProcess = (mode: "dark" | "light") => {
+    const duration = mode === "dark" ? 3 : (exposureTime / 1000);
+    setCaptureCountdown(Math.ceil(duration));
+    setCaptureDuration(duration * 1000);
+    
+    toast({
+      title: mode === "dark" 
+        ? t("Capturing Dark Frame", "捕获暗帧中") 
+        : t("Capturing Sky Frame", "捕获天空帧中"),
+      description: mode === "dark"
+        ? t("Keep camera covered for calibration...", "保持相机遮盖以进行校准...")
+        : t("Hold steady and point at the night sky...", "保持稳定并指向夜空..."),
     });
   };
 
@@ -236,17 +269,8 @@ const BortleNow: React.FC = () => {
       }
       
       toast({
-        title: t("Capturing Dark Frame", "捕获暗帧"),
-        description: t("Capturing with 2 second exposure. Keep camera covered...", "使用2秒曝光进行捕获。保持相机遮盖..."),
-      });
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 700));
-      
-      toast({
-        title: t("Processing...", "处理中..."),
-        description: t("Analyzing dark frame data...", "分析暗帧数据..."),
+        title: t("Processing Dark Frame", "处理暗帧中"),
+        description: t("Analyzing sensor baseline...", "分析传感器基线..."),
       });
       
       await new Promise(resolve => setTimeout(() => {
@@ -290,16 +314,7 @@ const BortleNow: React.FC = () => {
       }
       
       toast({
-        title: t("Capturing Sky Frame", "捕获天空帧"),
-        description: t(`Using ${exposureTime/1000} second exposure. Hold steady...`, `使用${exposureTime/1000}秒曝光。保持稳定...`),
-      });
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 800));
-      
-      toast({
-        title: t("Processing...", "处理中..."),
+        title: t("Processing Sky Frame", "处理天空帧中"),
         description: t("Analyzing star patterns...", "分析星星模式..."),
       });
       
@@ -370,8 +385,15 @@ const BortleNow: React.FC = () => {
   };
 
   const calculateOptimalExposureTime = (darkFrameBrightness: number): number => {
-    // Simple algorithm to estimate optimal exposure time based on dark frame brightness
-    return Math.max(1000, Math.min(5000, darkFrameBrightness * 20));
+    const baseExposure = 2000;
+    
+    if (darkFrameBrightness < 10) {
+      return Math.min(5000, baseExposure + 1000);
+    } else if (darkFrameBrightness < 20) {
+      return baseExposure;
+    } else {
+      return Math.max(1000, baseExposure - 500);
+    }
   };
 
   const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
@@ -506,7 +528,7 @@ const BortleNow: React.FC = () => {
         )}
         
         <AnimatePresence>
-          {countdown !== null && (
+          {preparationCountdown !== null && (
             <motion.div 
               className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
               initial={{ opacity: 0 }}
@@ -518,15 +540,58 @@ const BortleNow: React.FC = () => {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 1.2, opacity: 0 }}
-                key={countdown}
+                key={preparationCountdown}
               >
-                {countdown}
+                {preparationCountdown}
               </motion.div>
               <div className="absolute bottom-20 text-center text-white text-lg px-6">
                 {cameraMode === "dark" ? (
-                  <p>{t("Cover camera lens completely for long exposure", "长时间曝光，完全遮盖相机镜头")}</p>
+                  <p>{t("Get ready to cover camera lens completely", "准备完全遮盖相机镜头")}</p>
                 ) : (
-                  <p>{t("Point camera at night sky - hold steady", "将相机指向夜空 - 保持稳定")}</p>
+                  <p>{t("Get ready to point camera at night sky", "准备将相机指向夜空")}</p>
+                )}
+              </div>
+            </motion.div>
+          )}
+          
+          {captureCountdown !== null && (
+            <motion.div 
+              className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div 
+                className="text-7xl font-bold text-white mb-4"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.2, opacity: 0 }}
+                key={captureCountdown}
+              >
+                {captureCountdown}
+              </motion.div>
+              
+              <motion.div
+                className="w-48 h-1.5 bg-gray-700 rounded-full overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <motion.div 
+                  className="h-full bg-primary rounded-full"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ 
+                    duration: captureDuration/1000,
+                    ease: "linear"
+                  }}
+                />
+              </motion.div>
+              
+              <div className="absolute bottom-20 text-center text-white text-lg px-6">
+                {cameraMode === "dark" ? (
+                  <p>{t("CAPTURING: Keep camera lens completely covered", "捕获中：保持相机镜头完全遮盖")}</p>
+                ) : (
+                  <p>{t("CAPTURING: Hold camera steady pointing at the sky", "捕获中：保持相机稳定指向天空")}</p>
                 )}
               </div>
             </motion.div>
@@ -705,7 +770,7 @@ const BortleNow: React.FC = () => {
               <div className="bg-cosmic-800/50 p-4 rounded-lg border border-cosmic-700/30 shadow-inner mb-4">
                 <p className="mb-4 text-sm text-cosmic-200">
                   {t(
-                    "Accurate measurements use your camera with extended exposure time to capture more stars. First capture a dark frame, then point your camera at the night sky.",
+                    "Accurate measurements use your camera with extended exposure to capture more stars. First capture a dark frame, then point your camera at the night sky.",
                     "精确测量使用相机与长时间曝光捕获更多星星。首先捕获暗帧，然后将相机指向夜空。"
                   )}
                 </p>
@@ -714,11 +779,11 @@ const BortleNow: React.FC = () => {
                   <Button
                     variant={cameraReadings.darkFrame ? "outline" : "default"}
                     onClick={captureDarkFrame}
-                    disabled={isProcessingImage || isMeasuringRealtime || countdown !== null}
+                    disabled={isProcessingImage || isMeasuringRealtime || preparationCountdown !== null || captureCountdown !== null}
                     className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.darkFrame ? 'bg-cosmic-800/60 border-emerald-500/50' : 'bg-cosmic-800 hover:bg-cosmic-700'}`}
                   >
                     <Moon size={16} />
-                    {t("Capture Dark Frame (2s)", "捕获暗帧 (2秒)")}
+                    {t("Capture Dark Frame", "捕获暗帧")}
                     
                     {cameraReadings.darkFrame && (
                       <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10">
@@ -736,7 +801,7 @@ const BortleNow: React.FC = () => {
                   <Button
                     variant={cameraReadings.lightFrame ? "outline" : "secondary"}
                     onClick={captureLightFrame}
-                    disabled={isProcessingImage || !cameraReadings.darkFrame || isMeasuringRealtime || countdown !== null}
+                    disabled={isProcessingImage || !cameraReadings.darkFrame || isMeasuringRealtime || preparationCountdown !== null || captureCountdown !== null}
                     className={`relative overflow-hidden flex items-center gap-2 ${
                       cameraReadings.lightFrame 
                         ? 'bg-cosmic-800/60 border-emerald-500/50 text-emerald-400' 
@@ -746,11 +811,7 @@ const BortleNow: React.FC = () => {
                     }`}
                   >
                     <Clock size={16} />
-                    {exposureTime ? (
-                      t(`Capture Stars (${exposureTime/1000}s)`, `捕获星星 (${exposureTime/1000}秒)`)
-                    ) : (
-                      t("Measure Sky Brightness", "测量天空亮度")
-                    )}
+                    {t("Capture Sky Frame", "捕获天空帧")}
                     
                     {cameraReadings.lightFrame && (
                       <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10">
@@ -777,8 +838,8 @@ const BortleNow: React.FC = () => {
                   <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
                     <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">1</div>
                     <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Cover Your Camera", "遮盖您的相机")}</p>
-                      <p className="text-xs">{t("Place your phone face down or cover the camera lens completely", "将手机正面朝下放置或完全遮盖相机镜头")}</p>
+                      <p className="font-medium text-cosmic-100 mb-1">{t("Prepare Your Camera", "准备您的相机")}</p>
+                      <p className="text-xs">{t("You'll see a 5-second countdown to get ready, then the actual measurement will begin", "您将看到5秒倒计时以准备就绪，然后开始实际测量")}</p>
                     </div>
                   </div>
                   
@@ -786,15 +847,15 @@ const BortleNow: React.FC = () => {
                     <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">2</div>
                     <div>
                       <p className="font-medium text-cosmic-100 mb-1">{t("Capture Dark Frame", "捕获暗帧")}</p>
-                      <p className="text-xs">{t("This sets the baseline for your camera sensor", "这为您的相机传感器设置基线")}</p>
+                      <p className="text-xs">{t("Cover camera lens completely during the full capture process (about 3 seconds)", "在整个捕获过程中完全遮盖相机镜头（约3秒）")}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
                     <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">3</div>
                     <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Point at Sky", "指向天空")}</p>
-                      <p className="text-xs">{t("Point your camera at the zenith (directly overhead) to measure light pollution and count stars", "将相机指向天顶（正上方）以测量光污染并计算星星")}</p>
+                      <p className="font-medium text-cosmic-100 mb-1">{t("Capture Sky Frame", "捕获天空帧")}</p>
+                      <p className="text-xs">{t("Point your camera at the zenith (directly overhead) and hold steady during the entire capture", "将相机指向天顶（正上方）并在整个捕获过程中保持稳定")}</p>
                     </div>
                   </div>
                 </div>
