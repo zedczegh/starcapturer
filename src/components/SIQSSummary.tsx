@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
@@ -75,6 +74,36 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`,
       });
     }
+    
+    // Sort factors to ensure Clear Sky Rate appears after Air Quality
+    factors.sort((a, b) => {
+      // Define the order of factors
+      const order = [
+        'Cloud Cover', '云层覆盖',
+        'Light Pollution', '光污染',
+        'Seeing Conditions', '视宁度',
+        'Wind Speed', '风速',
+        'Humidity', '湿度',
+        'Moon Phase', '月相',
+        'Air Quality', '空气质量',
+        'Clear Sky Rate', '晴空率'
+      ];
+      
+      const indexA = order.indexOf(a.name);
+      const indexB = order.indexOf(b.name);
+      
+      // If both factors are in the order array, sort by index
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      
+      // If only one factor is in the order array, prioritize it
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // Otherwise, keep original order
+      return 0;
+    });
     
     return factors.map(factor => ({
       ...factor,

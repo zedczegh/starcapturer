@@ -119,9 +119,9 @@ const PhotoPointsNearby: React.FC = () => {
         isVisible={!!userLocation && !loading}
       />
       
-      {/* Distance filter */}
+      {/* Distance filter with better spacing */}
       {userLocation && (
-        <div className="max-w-xl mx-auto mb-8">
+        <div className="max-w-xl mx-auto mb-10 mt-6">
           <DistanceRangeSlider
             currentValue={searchRadius}
             onValueChange={handleRadiusChange}
@@ -133,7 +133,7 @@ const PhotoPointsNearby: React.FC = () => {
       )}
       
       {/* Tab toggle - with stable positioning to prevent layout shifts */}
-      <div className="mb-6">
+      <div className="mb-8">
         <ViewToggle
           activeView={activeView}
           onViewChange={setActiveView}

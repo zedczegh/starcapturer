@@ -8,7 +8,6 @@ import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
 import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
 import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
-import BackButton from "@/components/navigation/BackButton";
 import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 
@@ -126,10 +125,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       ref={containerRef}
       data-refresh-trigger="true"
     >
-      <div className="mb-4">
-        <BackButton />
-      </div>
-      
       <LocationStatusMessage 
         message={statusMessage}
         type={messageType}
@@ -145,19 +140,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         </div>
       )}
       
-      <LocationDetailsHeader 
+      <LocationDetailsContent 
         locationData={locationData}
-        loading={loading}
-        // Remove the duplicate refresh button as requested
+        setLocationData={setLocationData}
+        onLocationUpdate={onLocationUpdate}
       />
-      
-      <div className="mt-8">
-        <LocationDetailsContent
-          locationData={locationData}
-          setLocationData={setLocationData}
-          onLocationUpdate={onLocationUpdate}
-        />
-      </div>
     </div>
   );
 };

@@ -128,7 +128,8 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         longitude={locationData.longitude}
         timestamp={locationData.timestamp}
         loading={loading}
-        onRefresh={handleRefreshAll}
+        bortleScale={locationData.bortleScale}
+        siqs={locationData.siqsResult?.score}
       />
       
       <Suspense fallback={

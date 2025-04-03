@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import BackButton from "@/components/navigation/BackButton";
 import { shareAstroSpot } from "@/lib/api/astroSpots";
 
 interface LocationHeaderProps {
@@ -80,15 +79,6 @@ const LocationHeader = ({
 
   return (
     <div className="mb-8">
-      <div className="flex justify-start mb-4">
-        <BackButton 
-          destination="/"
-          className="ml-0 mr-auto" 
-          variant="secondary"
-          size="sm"
-        />
-      </div>
-      
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h1 className="text-3xl font-bold text-center md:text-left">{name || t("Unnamed Location", "未命名位置")}</h1>
         
