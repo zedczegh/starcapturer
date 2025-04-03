@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { initializeCamera, stopMediaStream, captureVideoFrame } from '@/utils/cameraUtils';
+import { initializeCamera, stopMediaStream, captureVideoFrame, calculateAverageBrightness } from '@/utils/cameraUtils';
+import { countStarsInImage, calculateBortleFromStars } from '@/utils/starCountUtils';
 
 interface UseCameraCaptureProps {
   onCaptureComplete: (bortleScale: number, starCount: number) => void;
@@ -110,7 +111,7 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
                 completeDarkFrameCapture();
               } else {
                 setCaptureStage('processing');
-                processFrame();
+                processCapturedFrame();
               }
             }, 600);
           }, 500);
@@ -147,7 +148,7 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
   };
 
   // Process the captured frame (light/sky frame)
-  const processFrame = () => {
+  const processCapturedFrame = () => {
     setTimeout(() => {
       if (!videoRef.current || !canvasRef.current) {
         setCaptureStage('ready');
@@ -164,13 +165,15 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
         return;
       }
       
-      // Count stars based on image data
-      const result = processFrame(imageData);
+      // Count stars and calculate Bortle scale
+      const starCount = countStarsInImage(imageData);
+      const avgBrightness = calculateAverageBrightness(imageData.data);
+      const bortleScale = calculateBortleFromStars(starCount, avgBrightness);
       
       // Complete the capture process
       setCaptureStage('complete');
       setIsCapturing(false);
-      onCaptureComplete(result.bortleScale, result.starCount);
+      onCaptureComplete(bortleScale, starCount);
       
       // Reset for next capture
       setCaptureMode(null);
@@ -181,17 +184,6 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
         { description: t("Bortle scale calculated based on star visibility", "基于星星可见度计算的伯特尔等级") }
       );
     }, 800);
-  };
-
-  // Simulate processing frame since we can't actually count stars in the UI
-  const processFrame = (imageData: ImageData) => {
-    const starCount = Math.floor(Math.random() * 50) + 10;
-    const bortleScale = 9 - Math.floor(starCount / 10);
-    
-    return {
-      bortleScale: Math.max(1, Math.min(9, bortleScale)),
-      starCount
-    };
   };
 
   // Start a new capture with countdown
