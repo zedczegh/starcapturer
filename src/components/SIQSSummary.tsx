@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
@@ -173,6 +174,31 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
           <div className="mt-4 space-y-4">
             <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响SIQS的因素")}</h4>
             <SIQSFactorsList factors={translatedFactors} />
+          </div>
+        )}
+        
+        {/* Dedicated Clear Sky Rate section to ensure it's displayed */}
+        {weatherData?.clearSkyRate && !translatedFactors.some(f => 
+          f.name === 'Clear Sky Rate' || f.name === '晴空率'
+        ) && (
+          <div className="mt-6 pt-4 border-t border-border/30">
+            <h4 className="text-sm font-medium mb-3">{t("Clear Sky Rate", "晴空率")}</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">{t("Annual Rate", "年平均率")}</span>
+                <span className="font-medium">{weatherData.clearSkyRate}%</span>
+              </div>
+              <Progress 
+                value={weatherData.clearSkyRate} 
+                className="h-2"
+                colorClass="bg-blue-500/80"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === 'en' 
+                  ? `Historical clear sky average for this location`
+                  : `此位置的历史晴空平均值`}
+              </p>
+            </div>
           </div>
         )}
       </CardContent>

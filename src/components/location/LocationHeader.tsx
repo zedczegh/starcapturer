@@ -53,18 +53,47 @@ const LocationHeader = ({
         isViable: (siqs || 0) >= 5.0
       };
       
+      // Add SIQS validation - display a message based on the SIQS value
+      if ((siqs || 0) < 5.0) {
+        toast.warning(
+          language === 'en' 
+            ? 'Locations with low SIQS values are not recommended!' 
+            : 'SIQS值较低的位置不推荐分享！',
+          { 
+            duration: 5000,
+            description: language === 'en' 
+              ? `Current SIQS: ${siqs?.toFixed(1) || '0.0'}/10.0` 
+              : `当前SIQS: ${siqs?.toFixed(1) || '0.0'}/10.0`
+          }
+        );
+      }
+      
       // Share to the database
       const response = await shareAstroSpot(locationData);
       
       if (response.success) {
-        toast.success(
-          language === 'en' ? 'Location shared successfully!' : '位置共享成功！',
-          { 
-            description: language === 'en' 
-              ? 'This location has been added to our recommendations database'
-              : '此位置已添加到我们的推荐数据库中' 
-          }
-        );
+        // Display success message based on SIQS value
+        if ((siqs || 0) >= 5.0) {
+          toast.success(
+            language === 'en' 
+              ? 'Thanks for sharing your Astro Spot, we will show your current location to other astronomers!' 
+              : '感谢分享您的观星点，我们将向其他天文爱好者展示您的当前位置！',
+            { 
+              description: language === 'en' 
+                ? 'This location has been added to our recommendations database'
+                : '此位置已添加到我们的推荐数据库中' 
+            }
+          );
+        } else {
+          toast.success(
+            language === 'en' ? 'Location shared successfully!' : '位置共享成功！',
+            { 
+              description: language === 'en' 
+                ? 'This location has been added to our database'
+                : '此位置已添加到我们的数据库中' 
+            }
+          );
+        }
       } else {
         throw new Error(response.message || 'Unknown error');
       }
