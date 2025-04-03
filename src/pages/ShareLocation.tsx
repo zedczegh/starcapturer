@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ConditionItem from "@/components/weather/ConditionItem";
 import { DynamicLightbulbIcon } from "@/components/weather/DynamicIcons";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -45,6 +46,10 @@ const BortleNow: React.FC = () => {
   
   // Countdown timer state
   const [countdown, setCountdown] = useState<number | null>(null);
+  
+  // Progress bar state for capture
+  const [captureProgress, setCaptureProgress] = useState(0);
+  const [showCaptureProgress, setShowCaptureProgress] = useState(false);
   
   // When location changes, update Bortle scale
   const onLocationChange = useCallback((lat: number, lng: number) => {
@@ -177,13 +182,33 @@ const BortleNow: React.FC = () => {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (countdown === 0) {
-      // When countdown reaches zero, trigger the appropriate capture
-      if (cameraMode === "dark") {
-        performDarkFrameCapture();
-      } else if (cameraMode === "light") {
-        performLightFrameCapture();
-      }
+      // When countdown reaches zero, start the capture progress
       setCountdown(null);
+      setShowCaptureProgress(true);
+      setCaptureProgress(0);
+      
+      // Start progressing the capture bar
+      const captureInterval = setInterval(() => {
+        setCaptureProgress(prev => {
+          const newProgress = prev + 10;
+          if (newProgress >= 100) {
+            clearInterval(captureInterval);
+            setShowCaptureProgress(false);
+            
+            // When progress is complete, trigger the appropriate capture
+            if (cameraMode === "dark") {
+              performDarkFrameCapture();
+            } else if (cameraMode === "light") {
+              performLightFrameCapture();
+            }
+            
+            return 0;
+          }
+          return newProgress;
+        });
+      }, 200);
+      
+      return () => clearInterval(captureInterval);
     }
   }, [countdown, cameraMode]);
 
@@ -544,6 +569,15 @@ const BortleNow: React.FC = () => {
 
   const bortleGradient = bortleScale ? getBortleScaleGradient(bortleScale) : { bg: "", text: "" };
 
+  // Color mapping for progress bar based on frame type
+  const getCaptureProgressColor = () => {
+    if (cameraMode === "dark") {
+      return "bg-indigo-600";
+    } else {
+      return "bg-amber-500";
+    }
+  };
+
   return (
     <>
       <NavBar />
@@ -610,30 +644,63 @@ const BortleNow: React.FC = () => {
           </motion.div>
         )}
         
-        {/* Countdown overlay */}
+        {/* Countdown and capture progress overlay */}
         <AnimatePresence>
-          {countdown !== null && (
+          {(countdown !== null || showCaptureProgress) && (
             <motion.div 
-              className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+              className="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <motion.div 
-                className="text-6xl font-bold text-white"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 1.2, opacity: 0 }}
-                key={countdown}
-              >
-                {countdown}
-              </motion.div>
+              {countdown !== null ? (
+                <motion.div 
+                  className="text-6xl font-bold text-white"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 1.2, opacity: 0 }}
+                  key={countdown}
+                >
+                  {countdown}
+                </motion.div>
+              ) : showCaptureProgress ? (
+                <motion.div 
+                  className="flex flex-col items-center justify-center w-full px-8 max-w-md"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="text-2xl font-bold text-white mb-6">
+                    {cameraMode === "dark" 
+                      ? t("Capturing Dark Frame...", "捕获暗帧中...") 
+                      : t("Capturing Sky Image...", "捕获天空图像...")}
+                  </div>
+                  <Progress 
+                    value={captureProgress} 
+                    className="w-full h-3 bg-cosmic-800/80 backdrop-blur-sm" 
+                    colorClass={getCaptureProgressColor()}
+                  />
+                  <div className="text-sm text-cosmic-200 mt-2">
+                    {t("Hold steady your device", "请保持设备稳定")}
+                  </div>
+                </motion.div>
+              ) : null}
+              
               <div className="absolute bottom-20 text-center text-white text-lg px-6">
-                {cameraMode === "dark" ? (
-                  <p>{t("Cover your camera lens completely", "完全遮盖相机镜头")}</p>
-                ) : (
-                  <p>{t("Point your camera at the sky (zenith)", "将相机指向天空（天顶）")}</p>
-                )}
+                {countdown !== null ? (
+                  cameraMode === "dark" ? (
+                    <p>{t("Cover your camera lens completely", "完全遮盖相机镜头")}</p>
+                  ) : (
+                    <p>{t("Point your camera at the sky (zenith)", "将相机指向天空（天顶）")}</p>
+                  )
+                ) : showCaptureProgress ? (
+                  <div className="flex items-center text-cosmic-100 bg-cosmic-800/40 px-4 py-2 rounded-full">
+                    <Camera className="mr-2 h-4 w-4" />
+                    {cameraMode === "dark" 
+                      ? t("Keep lens covered", "保持镜头遮盖") 
+                      : t("Keep pointing at sky", "继续指向天空")}
+                  </div>
+                ) : null}
               </div>
             </motion.div>
           )}
@@ -915,3 +982,4 @@ const BortleNow: React.FC = () => {
 };
 
 export default BortleNow;
+
