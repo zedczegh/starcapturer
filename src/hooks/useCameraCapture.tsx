@@ -29,21 +29,29 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
   // Initialize camera on mount
   useEffect(() => {
     const initCamera = async () => {
-      if (captureStage === 'ready') {
-        const newStream = await initializeCamera();
-        
-        if (newStream) {
-          setStream(newStream);
+      try {
+        if (captureStage === 'ready' && !stream) {
+          const newStream = await initializeCamera();
           
-          if (videoRef.current) {
-            videoRef.current.srcObject = newStream;
+          if (newStream) {
+            setStream(newStream);
+            
+            if (videoRef.current) {
+              videoRef.current.srcObject = newStream;
+            }
+          } else {
+            setError(t(
+              "Camera access was denied. Please allow camera access to measure light pollution.",
+              "相机访问被拒绝。请允许相机访问以测量光污染。"
+            ));
           }
-        } else {
-          setError(t(
-            "Camera access was denied. Please allow camera access to measure light pollution.",
-            "相机访问被拒绝。请允许相机访问以测量光污染。"
-          ));
         }
+      } catch (err) {
+        console.error("Camera initialization error:", err);
+        setError(t(
+          "Error initializing camera. Please try again.",
+          "初始化相机时出错。请重试。"
+        ));
       }
     };
     
@@ -54,7 +62,7 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
       stopMediaStream(stream);
       setStream(null);
     };
-  }, [captureStage, t]);
+  }, [captureStage, t, stream]);
 
   // Handle countdown
   useEffect(() => {
@@ -78,7 +86,7 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
 
   // Handle capture progress animation
   useEffect(() => {
-    let progressTimer: number;
+    let progressTimer: number | null = null;
     
     if (captureStage === 'capturing') {
       // Reset progress
@@ -97,7 +105,10 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
         currentProgress += increment;
         
         if (currentProgress >= 90) {
-          clearInterval(progressTimer);
+          if (progressTimer) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+          }
           
           // Hold at 90% for a moment
           setTimeout(() => {
@@ -122,7 +133,10 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
     }
     
     return () => {
-      if (progressTimer) clearInterval(progressTimer);
+      if (progressTimer) {
+        clearInterval(progressTimer);
+        progressTimer = null;
+      }
     };
   }, [captureStage, captureMode]);
 
@@ -134,56 +148,79 @@ export const useCameraCapture = ({ onCaptureComplete }: UseCameraCaptureProps) =
 
   // Complete dark frame capture and return to ready state
   const completeDarkFrameCapture = () => {
-    // Simulate capturing a dark frame
-    setDarkFrameCaptured(true);
+    try {
+      // Simulate capturing a dark frame
+      setDarkFrameCaptured(true);
+      setCaptureStage('ready');
+      setCaptureDone(false);
+      setCaptureMode(null);
+      setIsCapturing(false);
+      
+      // Let the user know
+      toast.success(
+        t("Dark frame captured successfully", "暗帧已成功捕获"),
+        { description: t("Now you can measure the sky brightness", "现在您可以测量天空亮度") }
+      );
+    } catch (error) {
+      console.error("Error in dark frame capture:", error);
+      handleCaptureError("Error processing dark frame");
+    }
+  };
+
+  // Handle any capture errors
+  const handleCaptureError = (errorMsg: string) => {
+    setError(t(errorMsg, errorMsg));
     setCaptureStage('ready');
-    setCaptureDone(false);
+    setIsCapturing(false);
     setCaptureMode(null);
-    
-    // Let the user know
-    toast.success(
-      t("Dark frame captured successfully", "暗帧已成功捕获"),
-      { description: t("Now you can measure the sky brightness", "现在您可以测量天空亮度") }
-    );
+    setCaptureDone(false);
+    toast.error(t("Capture failed", "捕获失败"), { 
+      description: t(errorMsg, errorMsg) 
+    });
   };
 
   // Process the captured frame (light/sky frame)
   const processCapturedFrame = () => {
-    setTimeout(() => {
-      if (!videoRef.current || !canvasRef.current) {
-        setCaptureStage('ready');
-        setError(t("Error accessing camera elements", "访问相机元素时出错"));
-        return;
-      }
-      
-      // Capture the frame and process it
-      const imageData = captureVideoFrame(videoRef.current, canvasRef.current);
-      
-      if (!imageData) {
-        setCaptureStage('ready');
-        setError(t("Failed to capture image data", "无法捕获图像数据"));
-        return;
-      }
-      
-      // Count stars and calculate Bortle scale
-      const starCount = countStarsInImage(imageData);
-      const avgBrightness = calculateAverageBrightness(imageData.data);
-      const bortleScale = calculateBortleFromStars(starCount, avgBrightness);
-      
-      // Complete the capture process
-      setCaptureStage('complete');
-      setIsCapturing(false);
-      onCaptureComplete(bortleScale, starCount);
-      
-      // Reset for next capture
-      setCaptureMode(null);
-      
-      // Let the user know
-      toast.success(
-        t("Sky measurement complete", "天空测量完成"),
-        { description: t("Bortle scale calculated based on star visibility", "基于星星可见度计算的伯特尔等级") }
-      );
-    }, 800);
+    try {
+      setTimeout(() => {
+        if (!videoRef.current || !canvasRef.current) {
+          setCaptureStage('ready');
+          setError(t("Error accessing camera elements", "访问相机元素时出错"));
+          return;
+        }
+        
+        // Capture the frame and process it
+        const imageData = captureVideoFrame(videoRef.current, canvasRef.current);
+        
+        if (!imageData) {
+          setCaptureStage('ready');
+          setError(t("Failed to capture image data", "无法捕获图像数据"));
+          return;
+        }
+        
+        // Count stars and calculate Bortle scale
+        const starCount = countStarsInImage(imageData);
+        const avgBrightness = calculateAverageBrightness(imageData.data);
+        const bortleScale = calculateBortleFromStars(starCount, avgBrightness);
+        
+        // Complete the capture process
+        setCaptureStage('complete');
+        setIsCapturing(false);
+        onCaptureComplete(bortleScale, starCount);
+        
+        // Reset for next capture
+        setCaptureMode(null);
+        
+        // Let the user know
+        toast.success(
+          t("Sky measurement complete", "天空测量完成"),
+          { description: t("Bortle scale calculated based on star visibility", "基于星星可见度计算的伯特尔等级") }
+        );
+      }, 800);
+    } catch (error) {
+      console.error("Error processing captured frame:", error);
+      handleCaptureError("Error processing image data");
+    }
   };
 
   // Start a new capture with countdown
