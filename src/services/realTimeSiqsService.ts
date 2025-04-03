@@ -3,6 +3,7 @@ import { fetchForecastData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchWeatherData } from "@/lib/api/weather";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
+import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 
@@ -62,9 +63,10 @@ export async function calculateRealTimeSiqs(
   
   try {
     // Parallel data fetching for improved performance
-    const [weatherData, forecastData] = await Promise.all([
+    const [weatherData, forecastData, clearSkyData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
-      fetchForecastData({ latitude, longitude, days: 2 })
+      fetchForecastData({ latitude, longitude, days: 2 }),
+      fetchClearSkyRate(latitude, longitude)
     ]);
     
     // Default values if API calls fail
@@ -82,6 +84,11 @@ export async function calculateRealTimeSiqs(
         console.error("Error fetching light pollution data:", err);
         finalBortleScale = 5; // Default fallback
       }
+    }
+    
+    // Add clear sky rate to weather data if available
+    if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
+      weatherData.clearSkyRate = clearSkyData.annualRate;
     }
     
     // Calculate SIQS using the optimized method with nighttime forecasts

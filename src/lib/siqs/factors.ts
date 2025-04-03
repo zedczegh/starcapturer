@@ -137,6 +137,31 @@ export function calculateAQIScore(aqi: number): number {
 }
 
 /**
+ * Calculate clear sky rate score (0-100 scale)
+ * @param clearSkyRate Annual clear sky rate percentage
+ * @returns Score on 0-100 scale
+ */
+export function calculateClearSkyScore(clearSkyRate: number): number {
+  if (typeof clearSkyRate !== 'number' || isNaN(clearSkyRate)) {
+    return 50; // Default to moderate score if no data
+  }
+  
+  // Convert clear sky rate (usually 0-100%) to a 0-100 score
+  // Higher clear sky rate = better score
+  if (clearSkyRate >= 80) {
+    return 100; // Exceptional locations
+  } else if (clearSkyRate >= 60) {
+    return 80 + ((clearSkyRate - 60) * 1.0); // 80-100 range
+  } else if (clearSkyRate >= 40) {
+    return 60 + ((clearSkyRate - 40) * 1.0); // 60-80 range
+  } else if (clearSkyRate >= 20) {
+    return 30 + ((clearSkyRate - 20) * 1.5); // 30-60 range
+  } else {
+    return Math.max(0, clearSkyRate * 1.5); // 0-30 range
+  }
+}
+
+/**
  * Normalize scores to consistent scale (0-10) for display
  * This ensures consistent display across the app
  */

@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsHeader from "./LocationDetailsHeader";
-import LocationContentGrid from "./LocationContentGrid";
+import LocationDetailsContent from "./LocationDetailsContent";
 import LocationStatusMessage from "./LocationStatusMessage";
 import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
 import { useForecastManager } from "@/hooks/locationDetails/useForecastManager";
@@ -62,135 +62,87 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       resetUpdateState();
     }
   }, [locationData?.latitude, locationData?.longitude, resetUpdateState]);
-
-  // Single refresh effect that runs only once when the page is loaded
+  
+  // Function to handle the location update
+  const onLocationUpdate = useCallback(async (location: any) => {
+    try {
+      await handleUpdateLocation({
+        ...location,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Reset SIQS update state when location changes
+      resetUpdateState();
+      setStatusMessage(t ? t("Location updated successfully", "位置更新成功") : "Location updated successfully");
+    } catch (error) {
+      console.error("Error updating location:", error);
+      setStatusMessage(t ? t("Failed to update location", "更新位置失败") : "Failed to update location");
+    }
+  }, [handleUpdateLocation, resetUpdateState, setStatusMessage, t]);
+  
+  // Auto refresh on initial render
   useEffect(() => {
-    if (shouldRefresh && locationData && !initialRefreshDoneRef.current) {
-      console.log("Performing one-time refresh on location details page load");
-      
-      // Mark as done before the refresh to prevent double refreshes
+    if (locationData && !initialRefreshDoneRef.current) {
       initialRefreshDoneRef.current = true;
-      
-      // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
-        handleRefresh();
-        // Mark refresh as complete to prevent further refreshes
-        markRefreshComplete();
-        
-        // Update locationData to remove fromPhotoPoints flag
-        if (locationData.fromPhotoPoints) {
-          setLocationData(prev => ({
-            ...prev,
-            fromPhotoPoints: false
-          }));
-        }
-      }, 600);
+        handleRefreshAll();
+      }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [shouldRefresh, locationData, handleRefreshAll, markRefreshComplete, setLocationData]);
-
-  // Handle forced refresh event from parent component
+  }, [locationData, handleRefreshAll]);
+  
+  // Handle refresh events from external components
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    
     const handleForceRefresh = () => {
-      console.log("Force refresh triggered from parent component");
-      initialRefreshDoneRef.current = false; // Reset to allow refresh
-      handleRefresh();
+      console.log("Force refresh event received");
+      handleRefreshAll();
     };
     
-    container.addEventListener('forceRefresh', handleForceRefresh);
+    if (containerRef.current) {
+      containerRef.current.addEventListener('forceRefresh', handleForceRefresh);
+    }
     
     return () => {
-      container.removeEventListener('forceRefresh', handleForceRefresh);
+      if (containerRef.current) {
+        containerRef.current.removeEventListener('forceRefresh', handleForceRefresh);
+      }
     };
-  }, [locationData]);
-
-  const handleRefresh = useCallback(async () => {
-    // Reset SIQS update state before refreshing
-    resetUpdateState();
-    
-    await handleRefreshAll(
-      locationData, 
-      setLocationData, 
-      () => {
-        handleRefreshForecast(locationData.latitude, locationData.longitude);
-        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-      },
-      setStatusMessage
-    );
-  }, [locationData, setLocationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, resetUpdateState]);
-
-  // Reset the initial refresh flag when component unmounts
-  useEffect(() => {
-    return () => {
-      initialRefreshDoneRef.current = false;
-    };
-  }, []);
-
+  }, [handleRefreshAll]);
+  
   return (
-    <div className="min-h-screen animate-fade-in bg-cosmic-950 bg-[url('/src/assets/star-field-bg.jpg')] bg-cover bg-fixed bg-center bg-no-repeat" 
-         ref={containerRef} 
-         data-refresh-trigger>
-      {/* The navbar is part of the App.tsx and is rendered automatically for all routes */}
+    <div 
+      className="container mx-auto px-4 py-8 relative z-10"
+      ref={containerRef}
+      data-refresh-trigger="true"
+    >
+      <div className="mb-4">
+        <BackButton />
+      </div>
       
-      {/* Add top padding to create space for the navbar */}
-      <div className="pt-24 md:pt-28">
-        {/* Back button positioned in the top-left corner */}
-        <div className="fixed top-24 left-4 md:top-28 md:left-8 z-50">
-          <BackButton 
-            destination="/"
-            replace={true}
-            variant="secondary"
-            size="sm"
-            className="hover:bg-primary/20 transition-colors duration-300 hover:opacity-85"
-          />
+      <LocationStatusMessage 
+        message={statusMessage}
+        type={messageType}
+      />
+      
+      {weatherAlerts && weatherAlerts.length > 0 && (
+        <div className="mb-8">
+          <WeatherAlerts alerts={weatherAlerts} />
         </div>
-        
-        <div className="container mx-auto px-4 mt-4 mb-6">
-          <div className="text-center my-8 pt-6">
-            <LocationDetailsHeader 
-              name={locationData?.name}
-              timestamp={locationData?.timestamp}
-              onRefresh={handleRefresh}
-              loading={loading}
-              className="mx-auto transition-all hover:scale-[1.01] duration-300"
-            />
-          </div>
-        </div>
-        
-        <LocationStatusMessage 
-          message={statusMessage} 
-          type={messageType} 
+      )}
+      
+      <LocationDetailsHeader 
+        locationData={locationData}
+        loading={loading}
+        onRefresh={handleRefreshAll}
+      />
+      
+      <div className="mt-8">
+        <LocationDetailsContent
+          locationData={locationData}
+          setLocationData={setLocationData}
+          onLocationUpdate={onLocationUpdate}
         />
-        
-        {weatherAlerts && weatherAlerts.length > 0 && (
-          <div className="container mx-auto px-4 mb-6 animate-fade-in">
-            <WeatherAlerts 
-              alerts={weatherAlerts}
-              formatTime={formatTime}
-              formatDate={formatDate}
-            />
-          </div>
-        )}
-        
-        <div className="container mx-auto px-4 pb-24 pt-4 backdrop-blur-sm bg-cosmic-950/50 rounded-lg shadow-lg">
-          <LocationContentGrid
-            locationData={locationData}
-            forecastData={forecastData}
-            longRangeForecast={longRangeForecast}
-            forecastLoading={forecastLoading}
-            longRangeLoading={longRangeLoading}
-            gettingUserLocation={gettingUserLocation}
-            onLocationUpdate={handleUpdateLocation}
-            setGettingUserLocation={setGettingUserLocation}
-            setStatusMessage={setStatusMessage}
-            onRefreshForecast={() => handleRefreshForecast(locationData.latitude, locationData.longitude)}
-            onRefreshLongRange={() => handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)}
-          />
-        </div>
       </div>
     </div>
   );

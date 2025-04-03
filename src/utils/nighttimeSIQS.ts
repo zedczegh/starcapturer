@@ -1,228 +1,117 @@
 
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { 
-  calculateCloudScore, 
-  normalizeScore 
-} from "@/lib/siqs/factors";
-import { isImagingImpossible, normalizeFactorScores, validateCloudCover } from "@/lib/siqs/utils";
-import { getCloudDescription } from "@/lib/siqs/descriptions";
-import { extractNightForecasts, calculateAverageCloudCover, calculateAverageWindSpeed, calculateAverageHumidity, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
+import { extractNightForecasts, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 
 /**
- * Extract hourly forecast data and convert to a standard format for processing
- * @param forecastData Raw forecast data from API
- * @returns Array of standardized forecast items
- */
-export const extractHourlyForecastData = (forecastData: any): any[] => {
-  if (!forecastData?.hourly || !Array.isArray(forecastData.hourly.time)) {
-    return [];
-  }
-  
-  const hourlyData = forecastData.hourly;
-  const forecasts = [];
-  
-  for (let i = 0; i < hourlyData.time.length; i++) {
-    forecasts.push({
-      time: hourlyData.time[i],
-      cloudCover: hourlyData.cloud_cover?.[i] ?? 0,
-      windSpeed: hourlyData.wind_speed_10m?.[i] ?? 0,
-      humidity: hourlyData.relative_humidity_2m?.[i] ?? 0,
-      precipitation: hourlyData.precipitation?.[i] ?? 0,
-      weatherCode: hourlyData.weather_code?.[i] ?? 0
-    });
-  }
-  
-  return forecasts;
-};
-
-/**
- * Calculate SIQS based on nighttime forecasts (6 PM to 8 AM)
- * @param locationData Current location data with weather information
+ * Calculate SIQS based on nighttime forecasts
+ * @param locationData Location data including weather and Bortle scale
  * @param forecastData Hourly forecast data
  * @param t Translation function
- * @returns Updated SIQS score and factors
+ * @returns SIQS result object
  */
-export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: any) => {
-  console.log("Starting nighttime SIQS calculation");
+export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: any): any {
   if (!locationData || !forecastData?.hourly) {
-    console.log("Missing required data for nighttime SIQS calculation");
+    console.log("Insufficient data for nighttime SIQS calculation");
     return null;
   }
   
   try {
-    // Extract nighttime forecasts directly using the utility function
+    console.log("Starting nighttime SIQS calculation");
+    
+    // Extract nighttime forecasts
     const nightForecasts = extractNightForecasts(forecastData.hourly);
     
     if (nightForecasts.length === 0) {
-      console.log("No nighttime forecasts found in data");
+      console.log("No nighttime forecast data available");
       return null;
     }
     
     console.log(`Found ${nightForecasts.length} nighttime forecast hours (6 PM to 8 AM)`);
     
-    // Calculate average values for cloud cover, wind speed, and humidity
-    const avgCloudCover = validateCloudCover(
-      calculateAverageCloudCover(nightForecasts)
-    );
-    console.log(`Average cloud cover during nighttime (6 PM to 8 AM): ${avgCloudCover}%`);
+    // Calculate average cloud cover for the night
+    let totalCloudCover = 0;
+    let validCloudCoverCount = 0;
     
-    const avgWindSpeed = calculateAverageWindSpeed(nightForecasts);
-    const avgHumidity = calculateAverageHumidity(nightForecasts);
+    for (const forecast of nightForecasts) {
+      if (typeof forecast.cloudCover === 'number') {
+        totalCloudCover += forecast.cloudCover;
+        validCloudCoverCount++;
+      }
+    }
     
-    // Calculate if any precipitation is expected
-    const hasPrecipitation = nightForecasts.some(f => f.precipitation > 0);
+    const avgNightCloudCover = validCloudCoverCount > 0 
+      ? totalCloudCover / validCloudCoverCount 
+      : 50; // Default if no data
     
-    // Get current weather data for more accurate calculations
-    const currentWeather = locationData.weatherData || {};
+    console.log(`Average cloud cover during nighttime (6 PM to 8 AM): ${avgNightCloudCover}%`);
     
-    // Calculate SIQS with emphasis on nighttime conditions
-    const siqs = calculateSIQS({
-      cloudCover: avgCloudCover,
+    // Calculate average wind speed for the night
+    let totalWindSpeed = 0;
+    let validWindSpeedCount = 0;
+    
+    for (const forecast of nightForecasts) {
+      if (typeof forecast.windSpeed === 'number') {
+        totalWindSpeed += forecast.windSpeed;
+        validWindSpeedCount++;
+      }
+    }
+    
+    const avgNightWindSpeed = validWindSpeedCount > 0 
+      ? totalWindSpeed / validWindSpeedCount 
+      : 10; // Default if no data
+    
+    // Calculate average humidity for the night
+    let totalHumidity = 0;
+    let validHumidityCount = 0;
+    
+    for (const forecast of nightForecasts) {
+      if (typeof forecast.humidity === 'number') {
+        totalHumidity += forecast.humidity;
+        validHumidityCount++;
+      }
+    }
+    
+    const avgNightHumidity = validHumidityCount > 0 
+      ? totalHumidity / validHumidityCount 
+      : 50; // Default if no data
+    
+    // Use SIQS calculation with nighttime averages
+    const siqsResult = calculateSIQS({
+      cloudCover: avgNightCloudCover,
       bortleScale: locationData.bortleScale || 5,
       seeingConditions: locationData.seeingConditions || 3,
-      windSpeed: avgWindSpeed,
-      humidity: avgHumidity,
-      moonPhase: locationData.moonPhase || 0,
-      precipitation: hasPrecipitation ? 0.1 : 0,
-      aqi: currentWeather.aqi,
-      weatherCondition: nightForecasts[0]?.weatherCode || 0,
+      windSpeed: avgNightWindSpeed,
+      humidity: avgNightHumidity,
+      moonPhase: locationData.moonPhase || 0.5,
+      precipitation: locationData.weatherData?.precipitation || 0,
+      weatherCondition: locationData.weatherData?.weatherCondition || "",
+      aqi: locationData.weatherData?.aqi,
+      clearSkyRate: locationData.weatherData?.clearSkyRate,
       nightForecast: nightForecasts
     });
     
-    console.log("Final SIQS score based on nighttime forecast:", siqs.score.toFixed(1));
+    // Add nighttime data to the cloud cover factor
+    if (siqsResult && siqsResult.factors) {
+      siqsResult.factors = siqsResult.factors.map((factor: any) => {
+        if (factor.name === "Cloud Cover" || (t && factor.name === t("Cloud Cover", "云层覆盖"))) {
+          return {
+            ...factor,
+            nighttimeData: {
+              average: avgNightCloudCover,
+              timeRange: formatNighttimeHoursRange()
+            }
+          };
+        }
+        return factor;
+      });
+    }
     
-    // Normalize all factor scores to 0-10 scale for consistent display
-    const normalizedFactors = normalizeFactorScores(siqs.factors);
+    console.log(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
     
-    // Add nighttime data to cloud cover factor for UI display
-    const enhancedFactors = normalizedFactors.map(factor => {
-      if (factor.name === "Cloud Cover") {
-        return {
-          ...factor,
-          nighttimeData: {
-            average: avgCloudCover,
-            timeRange: formatNighttimeHoursRange()
-          }
-        };
-      }
-      return factor;
-    });
+    return siqsResult;
     
-    return {
-      ...siqs,
-      factors: enhancedFactors
-    };
   } catch (error) {
-    console.error("Error calculating nighttime SIQS:", error);
+    console.error("Error in nighttime SIQS calculation:", error);
     return null;
   }
-};
-
-/**
- * Get the average SIQS score from the forecast row SIQS values
- * @param forecastData Daily forecast data with SIQS ratings
- * @returns Average SIQS score from nighttime hours (0-10 scale)
- */
-export const getAverageForecastSIQS = (forecastData: any): number => {
-  if (!forecastData) {
-    return 0;
-  }
-  
-  try {
-    // If forecastData is an object with daily arrays instead of an array itself
-    if (forecastData && typeof forecastData === 'object' && forecastData.time && Array.isArray(forecastData.time)) {
-      // Check if we have SIQS values in the data structure
-      if (forecastData.siqs && Array.isArray(forecastData.siqs)) {
-        const validScores = forecastData.siqs.filter((score: any) => 
-          typeof score === 'number' && !isNaN(score)
-        );
-        
-        if (validScores.length > 0) {
-          return validScores.reduce((sum: number, score: number) => sum + score, 0) / validScores.length;
-        }
-      }
-      
-      // If no siqs array, check if we have a time array to match with
-      const forecasts = [];
-      for (let i = 0; i < forecastData.time.length; i++) {
-        const forecast = {
-          date: forecastData.time[i],
-          siqs: { score: null } as { score: number | null }
-        };
-        
-        // Calculate pseudo SIQS score based on cloud cover if available
-        if (forecastData.cloud_cover_mean && Array.isArray(forecastData.cloud_cover_mean) && 
-            forecastData.cloud_cover_mean[i] !== undefined) {
-          const cloudCover = forecastData.cloud_cover_mean[i];
-          if (cloudCover < 50) {
-            forecast.siqs.score = Math.max(0, 10 - (cloudCover * 0.2));
-          } else {
-            forecast.siqs.score = 0;
-          }
-        }
-        
-        forecasts.push(forecast);
-      }
-      
-      return getForecastSIQSFromArray(forecasts);
-    }
-    
-    // Standard array format processing
-    if (Array.isArray(forecastData)) {
-      return getForecastSIQSFromArray(forecastData);
-    }
-    
-    return 0;
-  } catch (error) {
-    console.error("Error in getAverageForecastSIQS:", error);
-    return 0;
-  }
-};
-
-/**
- * Helper function to calculate SIQS from an array of forecasts
- */
-function getForecastSIQSFromArray(forecasts: any[]): number {
-  if (!Array.isArray(forecasts) || forecasts.length === 0) {
-    return 0;
-  }
-  
-  // Filter to only include the first day's forecast (tonight)
-  const today = new Date();
-  const todayForecasts = forecasts.filter(forecast => {
-    if (!forecast.date) return false;
-    
-    const forecastDate = new Date(forecast.date);
-    return forecastDate.getDate() === today.getDate() || 
-           (forecastDate.getDate() === today.getDate() + 1 && 
-            new Date(forecast.date).getHours() < 8); // Changed to 8 AM to match new algorithm
-  });
-  
-  if (todayForecasts.length === 0) return 0;
-  
-  // Calculate average SIQS from forecast rows
-  let totalSIQS = 0;
-  let count = 0;
-  
-  todayForecasts.forEach(forecast => {
-    // Check different possible locations for SIQS data
-    const siqs = forecast.siqs?.score || forecast.siqsScore || forecast.siqs;
-    
-    if (siqs !== undefined && siqs !== null && !isNaN(parseFloat(siqs))) {
-      totalSIQS += parseFloat(siqs);
-      count++;
-    } else if (forecast.cloudCover !== undefined || forecast.cloud_cover !== undefined) {
-      // Fallback: calculate from cloud cover if available
-      const cloudCover = forecast.cloudCover || forecast.cloud_cover;
-      if (cloudCover < 50) {
-        // Adjusted formula to match our new threshold
-        // 0% clouds = 10, 50% clouds = 0
-        const cloudScore = Math.max(0, 10 - (cloudCover * 0.2));
-        totalSIQS += cloudScore;
-        count++;
-      }
-    }
-  });
-  
-  return count > 0 ? totalSIQS / count : 0;
 }

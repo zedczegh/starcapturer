@@ -12,6 +12,7 @@ export const commonPhrases: Record<string, string> = {
   "Seeing conditions": "视宁度",
   "Air quality": "空气质量",
   "Temperature": "温度",
+  "Clear sky rate": "晴空率",
   
   // Effects
   "affects imaging quality": "影响成像质量",
@@ -68,6 +69,8 @@ export const commonPhrases: Record<string, string> = {
   "may cause dew formation": "可能导致设备凝露",
   "Moderate air quality": "一般的空气质量",
   "slight effect on visibility": "对可见度有轻微影响",
+  "Annual clear sky rate": "年均晴空率",
+  "favorable for astrophotography": "有利于天文摄影",
   
   // Nighttime specific
   "nighttime average": "夜间平均",

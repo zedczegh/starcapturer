@@ -8,7 +8,8 @@ import {
   calculateWindScore,
   calculateHumidityScore,
   calculateMoonScore,
-  calculateAQIScore
+  calculateAQIScore,
+  calculateClearSkyScore
 } from './siqs/factors';
 import { 
   getCloudDescription,
@@ -16,7 +17,8 @@ import {
   getSeeingDescription,
   getWindDescription,
   getHumidityDescription,
-  getAQIDescription
+  getAQIDescription,
+  getClearSkyDescription
 } from './siqs/descriptions';
 import { isImagingImpossible, siqsToColor } from './siqs/utils';
 
@@ -29,6 +31,10 @@ type FactorData = {
   name: string;
   score: number;
   description: string;
+  nighttimeData?: {
+    average: number;
+    timeRange: string;
+  };
 };
 
 /**
@@ -110,7 +116,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       nightForecast = [],
       precipitation = 0,
       weatherCondition = "",
-      aqi
+      aqi,
+      clearSkyRate
     } = factors;
     
     // Validate critical inputs
@@ -173,16 +180,18 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       const humidityScore = calculateHumidityScore(avgHumidity);
       const moonScore = calculateMoonScore(moonPhase);
       const aqiScore = typeof aqi === 'number' && !isNaN(aqi) ? calculateAQIScore(aqi) : 100;
+      const clearSkyScore = typeof clearSkyRate === 'number' && !isNaN(clearSkyRate) ? calculateClearSkyScore(clearSkyRate) : 50;
       
       // Define weights for each factor
       const weights = {
-        cloud: 0.30,
-        lightPollution: 0.20,
-        seeing: 0.15,
-        wind: 0.10,
-        humidity: 0.10,
-        moon: 0.05,
-        aqi: 0.10
+        cloud: 0.27,         // Reduced from 0.30 to accommodate clear sky rate
+        lightPollution: 0.18, // Reduced from 0.20
+        seeing: 0.14,         // Reduced from 0.15 
+        wind: 0.09,          // Reduced from 0.10
+        humidity: 0.09,      // Reduced from 0.10
+        moon: 0.05,          // Unchanged
+        aqi: 0.08,           // Reduced from 0.10
+        clearSky: 0.10       // New factor with 10% weight
       };
       
       // Calculate weighted score
@@ -193,7 +202,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
         windScore * weights.wind +
         humidityScore * weights.humidity +
         moonScore * weights.moon +
-        aqiScore * weights.aqi
+        aqiScore * weights.aqi +
+        clearSkyScore * weights.clearSky
       );
       
       // Convert to 0-10 scale for consistency
@@ -206,36 +216,49 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       const factorsList: FactorData[] = [
         {
           name: "Cloud Cover",
-          score: cloudScore,
-          description: getCloudDescription(avgCloudCover)
+          score: cloudScore / 10,
+          description: getCloudDescription(avgCloudCover),
+          nighttimeData: {
+            average: avgCloudCover,
+            timeRange: "6PM to 8AM"
+          }
         },
         {
           name: "Light Pollution",
-          score: lightPollutionScore,
+          score: lightPollutionScore / 10,
           description: getLightPollutionDescription(validBortleScale)
         },
         {
           name: "Seeing Conditions",
-          score: seeingScore,
+          score: seeingScore / 10,
           description: getSeeingDescription(seeingConditions)
         },
         {
           name: "Wind",
-          score: windScore,
+          score: windScore / 10,
           description: getWindDescription(avgWindSpeed)
         },
         {
           name: "Humidity",
-          score: humidityScore,
+          score: humidityScore / 10,
           description: getHumidityDescription(avgHumidity)
         }
       ];
+      
+      // Add clear sky rate factor if available
+      if (clearSkyRate !== undefined) {
+        factorsList.push({
+          name: "Clear Sky Rate",
+          score: clearSkyScore / 10,
+          description: getClearSkyDescription(clearSkyRate)
+        });
+      }
       
       // Add AQI factor if available
       if (aqi !== undefined) {
         factorsList.push({
           name: "Air Quality",
-          score: aqiScore,
+          score: aqiScore / 10,
           description: getAQIDescription(aqi)
         });
       }
@@ -276,6 +299,10 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     const validAqi = typeof aqi === 'number' && !isNaN(aqi) 
       ? Math.max(0, aqi) 
       : undefined;
+      
+    const validClearSkyRate = typeof clearSkyRate === 'number' && !isNaN(clearSkyRate)
+      ? Math.max(0, Math.min(100, clearSkyRate))
+      : undefined;
     
     // Calculate individual factor scores for current conditions
     const cloudScore = calculateCloudScore(validCloudCover);
@@ -285,16 +312,18 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     const humidityScore = calculateHumidityScore(validHumidity);
     const moonScore = calculateMoonScore(validMoonPhase);
     const aqiScore = validAqi !== undefined ? calculateAQIScore(validAqi) : 100;
+    const clearSkyScore = validClearSkyRate !== undefined ? calculateClearSkyScore(validClearSkyRate) : 50;
     
     // Define weights for each factor
     const weights = {
-      cloud: 0.30,
-      lightPollution: 0.20,
-      seeing: 0.15,
-      wind: 0.10,
-      humidity: 0.10,
-      moon: 0.05,
-      aqi: 0.10
+      cloud: 0.27,         // Reduced from 0.30 to accommodate clear sky rate
+      lightPollution: 0.18, // Reduced from 0.20
+      seeing: 0.14,         // Reduced from 0.15 
+      wind: 0.09,          // Reduced from 0.10
+      humidity: 0.09,      // Reduced from 0.10
+      moon: 0.05,          // Unchanged
+      aqi: 0.08,           // Reduced from 0.10
+      clearSky: 0.10       // New factor with 10% weight
     };
     
     // Calculate weighted score
@@ -305,7 +334,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       windScore * weights.wind +
       humidityScore * weights.humidity +
       moonScore * weights.moon +
-      aqiScore * weights.aqi
+      aqiScore * weights.aqi +
+      clearSkyScore * weights.clearSky
     );
     
     // Convert to 0-10 scale
@@ -318,36 +348,45 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     const factorsList: FactorData[] = [
       {
         name: "Cloud Cover",
-        score: cloudScore,
+        score: cloudScore / 10,
         description: getCloudDescription(validCloudCover)
       },
       {
         name: "Light Pollution",
-        score: lightPollutionScore,
+        score: lightPollutionScore / 10,
         description: getLightPollutionDescription(validBortleScale)
       },
       {
         name: "Seeing Conditions",
-        score: seeingScore,
+        score: seeingScore / 10,
         description: getSeeingDescription(validSeeingConditions)
       },
       {
         name: "Wind",
-        score: windScore,
+        score: windScore / 10,
         description: getWindDescription(validWindSpeed)
       },
       {
         name: "Humidity",
-        score: humidityScore,
+        score: humidityScore / 10,
         description: getHumidityDescription(validHumidity)
       }
     ];
+    
+    // Add clear sky rate factor if available
+    if (validClearSkyRate !== undefined) {
+      factorsList.push({
+        name: "Clear Sky Rate",
+        score: clearSkyScore / 10,
+        description: getClearSkyDescription(validClearSkyRate)
+      });
+    }
     
     // Add AQI factor if available
     if (validAqi !== undefined) {
       factorsList.push({
         name: "Air Quality",
-        score: aqiScore,
+        score: aqiScore / 10,
         description: getAQIDescription(validAqi)
       });
     }
@@ -369,7 +408,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       factors: [
         {
           name: "Fallback Score",
-          score: 50,
+          score: 5.0,
           description: "Error occurred during calculation, showing estimated values"
         }
       ]

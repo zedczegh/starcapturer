@@ -2,6 +2,7 @@
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
+import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 
 /**
  * Ensure SIQS value is always on a 0-10 scale
@@ -23,11 +24,29 @@ export async function calculateSIQSWithWeatherData(
   moonPhase: number,
   forecastData: any | null
 ): Promise<any> {
+  // First try to fetch clear sky rate data
+  let clearSkyRate: number | undefined = undefined;
+  
+  try {
+    if (weatherData.latitude && weatherData.longitude) {
+      const clearSkyData = await fetchClearSkyRate(weatherData.latitude, weatherData.longitude);
+      if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
+        clearSkyRate = clearSkyData.annualRate;
+        console.log(`Retrieved clear sky rate for location: ${clearSkyRate}%`);
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching clear sky rate:", error);
+  }
+
   // First try to calculate SIQS using nighttime forecast data
   if (forecastData && forecastData.hourly) {
     try {
       const locationWithWeather = {
-        weatherData,
+        weatherData: {
+          ...weatherData,
+          clearSkyRate
+        },
         bortleScale,
         seeingConditions,
         moonPhase
@@ -60,7 +79,8 @@ export async function calculateSIQSWithWeatherData(
     moonPhase,
     precipitation: weatherData.precipitation,
     weatherCondition: weatherData.weatherCondition,
-    aqi: weatherData.aqi
+    aqi: weatherData.aqi,
+    clearSkyRate
   });
   
   // Cap standard result score too
