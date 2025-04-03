@@ -9,6 +9,20 @@ const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // Reduced from 5 to 3 minutes for
 // Maximum retry attempts
 const MAX_RETRIES = 2;
 
+// Define an extended weather data interface that includes clearSkyRate
+interface EnhancedWeatherData {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
+  time: string;
+  condition: string;
+  weatherCondition?: string;
+  aqi?: number;
+  clearSkyRate?: number;
+}
+
 /**
  * Optimized service for retrieving weather data with better caching and error handling
  */
@@ -22,14 +36,14 @@ export const getWeatherData = async (
   language: string = 'en',
   setStatusMessage?: (message: string | null) => void,
   timeout: number = DEFAULT_TIMEOUT
-): Promise<any> => {
+): Promise<EnhancedWeatherData> => {
   // Generate location-specific cache key to avoid using old data for new locations
   const locationSpecificKey = `${cacheKey}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   
   // First try to use cached data
   const cachedWeatherData = getCachedData(locationSpecificKey, WEATHER_CACHE_LIFETIME);
   if (cachedWeatherData) {
-    return cachedWeatherData;
+    return cachedWeatherData as EnhancedWeatherData;
   }
   
   // Implement retry logic for better resilience
@@ -54,7 +68,7 @@ export const getWeatherData = async (
       
       if (weatherData) {
         // Create a new object to include clearSkyRate
-        const enhancedWeatherData = { ...weatherData };
+        const enhancedWeatherData: EnhancedWeatherData = { ...weatherData };
         
         // Add clear sky rate to weather data if available
         if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
@@ -91,7 +105,7 @@ export const getWeatherData = async (
   }
   
   // Use fallback weather data
-  const fallbackData = {
+  const fallbackData: EnhancedWeatherData = {
     temperature: 20,
     humidity: 50,
     cloudCover: 30,

@@ -17,6 +17,7 @@ interface WeatherConditionsProps {
     time: string;
     condition: string;
     aqi?: number;
+    clearSkyRate?: number;
   };
   moonPhase: string | number;
   bortleScale: number | null;
@@ -140,6 +141,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
                 humidity={stableWeatherData.humidity}
                 windSpeed={stableWeatherData.windSpeed}
                 seeingConditions={translatedData.seeingConditions}
+                clearSkyRate={stableWeatherData.clearSkyRate}
               />
             </motion.div>
             

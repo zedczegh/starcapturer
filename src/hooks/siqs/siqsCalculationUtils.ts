@@ -3,6 +3,7 @@ import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
+import { calculateClearSkyScore } from "@/lib/siqs/factors";
 
 /**
  * Ensure SIQS value is always on a 0-10 scale
@@ -60,6 +61,23 @@ export async function calculateSIQSWithWeatherData(
         // Make sure score is never exaggerated
         if (nighttimeSIQS.score > 8.5) {
           nighttimeSIQS.score = 8.5; // Cap at 8.5 to avoid over-promising
+        }
+        
+        // Always ensure Clear Sky Rate is included as a factor with 10% weight
+        if (clearSkyRate !== undefined && !nighttimeSIQS.factors.some((f: any) => f.name === "Clear Sky Rate")) {
+          const clearSkyScore = Math.min(10, clearSkyRate / 10);
+          const clearSkyFactor = {
+            name: "Clear Sky Rate",
+            score: clearSkyScore,
+            description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`
+          };
+          
+          nighttimeSIQS.factors.push(clearSkyFactor);
+          
+          // Adjust overall score to include clear sky rate (10% weight)
+          const clearSkyScoreContribution = clearSkyScore * 0.1;
+          nighttimeSIQS.score = Math.min(10, nighttimeSIQS.score * 0.9 + clearSkyScoreContribution);
+          console.log(`Added clear sky rate (${clearSkyRate}%) to nighttime SIQS calculation, adjusted score: ${nighttimeSIQS.score.toFixed(2)}`);
         }
         
         return nighttimeSIQS;
@@ -120,16 +138,17 @@ export async function calculateSIQSWithWeatherData(
   
   // Add Clear Sky Rate factor if it's available but not already in factors
   if (clearSkyRate !== undefined && !result.factors.some((f: any) => f.name === "Clear Sky Rate")) {
+    const clearSkyScore = Math.min(10, clearSkyRate / 10);
     const clearSkyFactor = {
       name: "Clear Sky Rate",
-      score: Math.min(10, clearSkyRate / 10), 
+      score: clearSkyScore,
       description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`
     };
     
     result.factors.push(clearSkyFactor);
     
     // Adjust overall score to include clear sky rate (10% weight)
-    const clearSkyScoreContribution = (clearSkyRate / 100) * 10 * 0.1;
+    const clearSkyScoreContribution = clearSkyScore * 0.1;
     result.score = Math.min(10, result.score * 0.9 + clearSkyScoreContribution);
     console.log(`Added clear sky rate (${clearSkyRate}%) to SIQS calculation, adjusted score: ${result.score.toFixed(2)}`);
   }

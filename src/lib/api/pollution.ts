@@ -1,8 +1,6 @@
-
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 import { getCityBortleScale, isInChina, getChineseRegion } from "@/utils/chinaBortleData";
 
-// Add more detailed data for rural northern provinces
 const northernRuralAreas = [
   // Inner Mongolia rural areas
   { name: "Hulunbuir Grasslands", lat: 49.2122, lng: 119.7536, bortleScale: 2 },
@@ -45,7 +43,6 @@ const northernRuralAreas = [
   { name: "Zhangye Danxia", lat: 38.8456, lng: 100.4514, bortleScale: 2.3 }
 ];
 
-// Adding more international dark sky locations for improved global coverage
 const internationalDarkSkyAreas = [
   // North America
   { name: "Big Bend National Park", lat: 29.1275, lng: -103.2425, bortleScale: 1.2 },
@@ -67,6 +64,22 @@ const internationalDarkSkyAreas = [
   { name: "Yeongyang Firefly Eco Park", lat: 36.6626, lng: 129.1122, bortleScale: 2.5 },
   { name: "Iriomote-Ishigaki National Park", lat: 24.3787, lng: 124.1580, bortleScale: 2.0 }
 ];
+
+function isTemperateCoastalClimate(latitude: number, longitude: number, weatherData: any): boolean {
+  const temp = weatherData?.main?.temp;
+  const isModerateTemp = temp && temp > 283 && temp < 300; // 10°C to 27°C
+  const isHumid = weatherData?.main?.humidity > 60;
+  
+  // Check if location is near a coast (simplified)
+  const isCoastal = isNearCoast(latitude, longitude);
+  
+  return isModerateTemp && isHumid && isCoastal;
+}
+
+function isNearCoast(latitude: number, longitude: number): boolean {
+  // Simplified coast detection logic
+  return (longitude > 105 && longitude < 120) || (longitude < -105 && longitude > -120);
+}
 
 /**
  * Find the nearest special dark sky area and its Bortle scale
@@ -176,11 +189,11 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
           
           // More realistic light pollution falloff based on inverse square law
           // Larger cities affect farther distances
-          const falloffExponent = isUrban ? 1.5 : isSuburban ? 1.7 : 2.0;
+          const falloffExponent = isUrban ? 1.5 : (isSuburban ? 1.7 : 2.0);
           const lightFalloff = Math.pow(distancePercentage, falloffExponent);
           
           // Base reduction varies by city type
-          const baseReduction = isUrban ? 5 : isSuburban ? 4 : 3;
+          const baseReduction = isUrban ? 5 : (isSuburban ? 4 : 3);
           
           // Apply the adjusted formula
           const adjustedBortle = Math.max(
