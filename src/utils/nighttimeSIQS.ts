@@ -1,3 +1,4 @@
+
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { 
   calculateCloudScore, 
@@ -35,7 +36,7 @@ export const extractHourlyForecastData = (forecastData: any): any[] => {
 };
 
 /**
- * Calculate SIQS based on nighttime forecasts
+ * Calculate SIQS based on nighttime forecasts (6 PM to 8 AM)
  * @param locationData Current location data with weather information
  * @param forecastData Hourly forecast data
  * @param t Translation function
@@ -57,13 +58,13 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
       return null;
     }
     
-    console.log(`Found ${nightForecasts.length} nighttime forecast hours`);
+    console.log(`Found ${nightForecasts.length} nighttime forecast hours (6 PM to 8 AM)`);
     
     // Calculate average values for cloud cover, wind speed, and humidity
     const avgCloudCover = validateCloudCover(
       calculateAverageCloudCover(nightForecasts)
     );
-    console.log(`Average cloud cover: ${avgCloudCover}%`);
+    console.log(`Average cloud cover during nighttime (6 PM to 8 AM): ${avgCloudCover}%`);
     
     const avgWindSpeed = calculateAverageWindSpeed(nightForecasts);
     const avgHumidity = calculateAverageHumidity(nightForecasts);
@@ -194,7 +195,7 @@ function getForecastSIQSFromArray(forecasts: any[]): number {
     const forecastDate = new Date(forecast.date);
     return forecastDate.getDate() === today.getDate() || 
            (forecastDate.getDate() === today.getDate() + 1 && 
-            new Date(forecast.date).getHours() < 7);
+            new Date(forecast.date).getHours() < 8); // Changed to 8 AM to match new algorithm
   });
   
   if (todayForecasts.length === 0) return 0;

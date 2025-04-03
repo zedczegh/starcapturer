@@ -4,6 +4,7 @@ import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils"
 import { fetchWeatherData } from "@/lib/api/weather";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 
 // Create a cache to avoid redundant API calls with improved invalidation strategy
 const siqsCache = new Map<string, {
@@ -250,7 +251,7 @@ export function cleanupExpiredCache(): void {
   for (const [key, data] of siqsCache.entries()) {
     const isNighttime = () => {
       const hour = new Date().getHours();
-      return hour >= 18 || hour < 6; // 6 PM to 6 AM
+      return hour >= 18 || hour < 8; // 6 PM to 8 AM
     };
     
     const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;

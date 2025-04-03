@@ -18,7 +18,7 @@ export const commonPhrases: Record<string, string> = {
   "reduces contrast": "降低对比度",
   "affects visibility": "影响可见度",
   "impacts stability": "影响稳定性",
-  "may cause dew formation": "可能导致设备起雾",
+  "may cause dew formation": "可能导致设备凝露",
   "affects atmospheric stability": "影响大气稳定性",
   "may impact details": "可能影响细节",
   "impacts detail visibility": "影响细节可见度",
@@ -57,5 +57,20 @@ export const commonPhrases: Record<string, string> = {
   "challenging": "具有挑战性",
   "suitable": "适合",
   "clear": "晴朗",
-  "cloudy": "多云"
+  "cloudy": "多云",
+  
+  // Specific condition descriptions
+  "Average seeing conditions": "一般的视宁度",
+  "moderate effect on detail": "对细节有中等影响",
+  "Strong wind": "强风",
+  "challenging for stable imaging": "对稳定成像具有挑战性",
+  "High humidity": "高湿度",
+  "may cause dew formation": "可能导致设备凝露",
+  "Moderate air quality": "一般的空气质量",
+  "slight effect on visibility": "对可见度有轻微影响",
+  
+  // Nighttime specific
+  "nighttime average": "夜间平均",
+  "night hours": "夜间时段",
+  "6PM to 8AM": "18:00至次日08:00"
 };
