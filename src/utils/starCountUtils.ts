@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for star counting and sky brightness analysis
  * These help improve the accuracy of Bortle scale measurements
@@ -133,4 +132,57 @@ export function getStarVisibilityLabel(count: number): "exceptional" | "many" | 
   if (count >= 20) return "some";
   if (count >= 10) return "few";
   return "very few";
+}
+
+/**
+ * Process and analyze a sky image to maximize star detection
+ * @param imageData Raw image data from camera
+ * @param exposureTime Exposure time in milliseconds
+ * @returns Enhanced image data optimized for star detection
+ */
+export function enhanceImageForStarDetection(imageData: ImageData, exposureTime: number = 1000): ImageData {
+  // Create a new ImageData object to avoid modifying the original
+  const enhancedData = new ImageData(
+    new Uint8ClampedArray(imageData.data), 
+    imageData.width, 
+    imageData.height
+  );
+  
+  // Apply digital exposure compensation based on exposure time
+  const exposureFactor = Math.min(3.0, Math.max(1.0, exposureTime / 500));
+  
+  for (let i = 0; i < enhancedData.data.length; i += 4) {
+    // Apply noise reduction to better isolate stars
+    if (enhancedData.data[i] < 30 && enhancedData.data[i+1] < 30 && enhancedData.data[i+2] < 30) {
+      enhancedData.data[i] = 0;
+      enhancedData.data[i+1] = 0;
+      enhancedData.data[i+2] = 0;
+    } else {
+      // Apply digital exposure compensation with gamma correction
+      enhancedData.data[i] = Math.min(255, Math.pow(enhancedData.data[i] / 255, 1/exposureFactor) * 255);
+      enhancedData.data[i+1] = Math.min(255, Math.pow(enhancedData.data[i+1] / 255, 1/exposureFactor) * 255);
+      enhancedData.data[i+2] = Math.min(255, Math.pow(enhancedData.data[i+2] / 255, 1/exposureFactor) * 255);
+    }
+  }
+  
+  return enhancedData;
+}
+
+/**
+ * Determine optimal exposure time based on ambient light levels
+ * @param darkFrameBrightness Average brightness of dark frame
+ * @returns Optimal exposure time in milliseconds
+ */
+export function calculateOptimalExposureTime(darkFrameBrightness: number): number {
+  // Base exposure time - longer for darker conditions
+  const baseExposure = 1000; // 1 second base
+  
+  // If very dark (low noise in dark frame), use longer exposure
+  if (darkFrameBrightness < 10) {
+    return baseExposure * 3; // 3 seconds for very dark conditions
+  } else if (darkFrameBrightness < 30) {
+    return baseExposure * 2; // 2 seconds for moderately dark
+  } else {
+    return baseExposure; // 1 second for relatively bright conditions
+  }
 }
