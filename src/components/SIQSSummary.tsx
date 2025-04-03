@@ -115,6 +115,14 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             </span>
           </div>
           
+          {/* Progress bar for overall score only */}
+          <div className="w-full bg-background/50 rounded-full h-2.5 my-2">
+            <div 
+              className={`${scoreColorClass} h-2.5 rounded-full`} 
+              style={{ width: `${Math.min(100, siqsScore * 10)}%` }}
+            ></div>
+          </div>
+          
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t("Poor", "较差")}</span>
             <span className={`font-medium ${scoreColorClass.replace('bg-', 'text-')}`}>

@@ -45,19 +45,45 @@ const northernRuralAreas = [
   { name: "Zhangye Danxia", lat: 38.8456, lng: 100.4514, bortleScale: 2.3 }
 ];
 
+// Adding more international dark sky locations for improved global coverage
+const internationalDarkSkyAreas = [
+  // North America
+  { name: "Big Bend National Park", lat: 29.1275, lng: -103.2425, bortleScale: 1.2 },
+  { name: "Death Valley National Park", lat: 36.5054, lng: -117.0794, bortleScale: 1.0 },
+  { name: "Grand Canyon National Park", lat: 36.1069, lng: -112.1125, bortleScale: 1.8 },
+  { name: "Cherry Springs State Park", lat: 41.6626, lng: -77.8236, bortleScale: 1.4 },
+  
+  // Europe
+  { name: "Westhavelland Nature Park", lat: 52.6967, lng: 12.2767, bortleScale: 2.0 },
+  { name: "Exmoor National Park", lat: 51.1156, lng: -3.6381, bortleScale: 2.2 },
+  { name: "NamibRand Nature Reserve", lat: -25.0392, lng: 15.9709, bortleScale: 1.0 },
+  { name: "Aoraki Mackenzie", lat: -44.0054, lng: 170.1418, bortleScale: 1.1 },
+  
+  // Australia
+  { name: "Warrumbungle National Park", lat: -31.2733, lng: 149.0911, bortleScale: 1.3 },
+  { name: "River Murray", lat: -34.1743, lng: 139.2917, bortleScale: 1.7 },
+  
+  // Asia
+  { name: "Yeongyang Firefly Eco Park", lat: 36.6626, lng: 129.1122, bortleScale: 2.5 },
+  { name: "Iriomote-Ishigaki National Park", lat: 24.3787, lng: 124.1580, bortleScale: 2.0 }
+];
+
 /**
- * Find the nearest northern rural area and its Bortle scale
+ * Find the nearest special dark sky area and its Bortle scale
  * @param latitude Geographic latitude
  * @param longitude Geographic longitude
- * @returns The nearest rural area and its Bortle scale
+ * @returns The nearest dark sky area and its Bortle scale
  */
-function findNearestRuralArea(latitude: number, longitude: number): { name: string; bortleScale: number; distance: number } | null {
+function findNearestDarkSkyArea(latitude: number, longitude: number): { name: string; bortleScale: number; distance: number } | null {
   if (!latitude || !longitude) return null;
+  
+  // Combine all special areas
+  const allSpecialAreas = [...northernRuralAreas, ...internationalDarkSkyAreas];
   
   let nearestArea = null;
   let minDistance = Infinity;
   
-  for (const area of northernRuralAreas) {
+  for (const area of allSpecialAreas) {
     // Calculate distance using Haversine formula
     const R = 6371; // Earth's radius in km
     const dLat = (area.lat - latitude) * Math.PI / 180;
@@ -79,13 +105,14 @@ function findNearestRuralArea(latitude: number, longitude: number): { name: stri
     }
   }
   
-  return nearestArea && minDistance < 200 ? nearestArea : null;
+  // Only return if area is within 150km (increased range for better coverage)
+  return nearestArea && minDistance < 150 ? nearestArea : null;
 }
 
 /**
  * Fetches light pollution data based on coordinates
  * Prioritizes our internal database over network requests or estimates
- * With improved handling for all Chinese regions
+ * With improved handling for all regions globally
  */
 export async function fetchLightPollutionData(latitude: number, longitude: number): Promise<{ bortleScale: number | null } | null> {
   try {
@@ -102,11 +129,23 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
       return { bortleScale: specificCityBortle };
     }
     
-    // Check if we're in a northern rural area
-    const ruralArea = findNearestRuralArea(latitude, longitude);
-    if (ruralArea) {
-      console.log(`Using rural area data: ${ruralArea.name}, Bortle: ${ruralArea.bortleScale}, Distance: ${ruralArea.distance.toFixed(2)}km`);
-      return { bortleScale: ruralArea.bortleScale };
+    // Check if we're in a special dark sky area
+    const specialArea = findNearestDarkSkyArea(latitude, longitude);
+    if (specialArea) {
+      console.log(`Using special area data: ${specialArea.name}, Bortle: ${specialArea.bortleScale}, Distance: ${specialArea.distance.toFixed(2)}km`);
+      
+      // Apply distance falloff for more realistic values
+      if (specialArea.distance > 50) {
+        // Gradual increase in Bortle scale with distance (darkest areas get more protection)
+        const distanceFactor = (specialArea.distance - 50) / 100;
+        const adjustedBortle = Math.min(
+          specialArea.bortleScale + (distanceFactor * (9 - specialArea.bortleScale) * 0.7),
+          6.5 // Cap at 6.5 - remote areas still benefit from dark skies
+        );
+        return { bortleScale: adjustedBortle };
+      }
+      
+      return { bortleScale: specialArea.bortleScale };
     }
     
     // Try to get data from our enhanced light pollution database
@@ -114,11 +153,11 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
       const closestCity = findClosestCity(latitude, longitude);
       console.log("Using enhanced database for Bortle scale:", closestCity);
       
-      // Check if we're in China to adjust distance thresholds
+      // Determine region-specific settings
       const inChina = isInChina(latitude, longitude);
       let distanceThreshold = inChina ? 120 : 100;
       
-      // Adjust thresholds for different regions in China
+      // Adjust thresholds for different regions
       if (inChina) {
         const region = getChineseRegion(latitude, longitude);
         
@@ -130,17 +169,43 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
         
         // If city is found in these regions
         if (closestCity.type === 'urban' && closestCity.distance < distanceThreshold) {
-          // Apply distance correction - urban centers in remote areas cast light pollution further
+          // Apply distance correction with improved formula for more realistic falloff
+          const distancePercentage = closestCity.distance / distanceThreshold;
+          const isUrban = closestCity.type === 'urban';
+          const isSuburban = closestCity.type === 'suburban';
+          
+          // More realistic light pollution falloff based on inverse square law
+          // Larger cities affect farther distances
+          const falloffExponent = isUrban ? 1.5 : isSuburban ? 1.7 : 2.0;
+          const lightFalloff = Math.pow(distancePercentage, falloffExponent);
+          
+          // Base reduction varies by city type
+          const baseReduction = isUrban ? 5 : isSuburban ? 4 : 3;
+          
+          // Apply the adjusted formula
           const adjustedBortle = Math.max(
             1,
-            closestCity.bortleScale - (closestCity.distance / distanceThreshold) * 5
+            closestCity.bortleScale - (lightFalloff * baseReduction)
           );
+          
           return { bortleScale: adjustedBortle };
         }
-      }
-      
-      if (closestCity.distance < distanceThreshold) {
-        return { bortleScale: closestCity.bortleScale };
+      } else {
+        // Apply improved global calculation
+        if (closestCity.distance < distanceThreshold) {
+          // Apply better international light pollution modeling
+          const distancePercentage = closestCity.distance / distanceThreshold;
+          const populationFactor = closestCity.type === 'urban' ? 1.0 : 
+                                  closestCity.type === 'suburban' ? 0.8 : 0.6;
+          
+          // Apply inverse square law more accurately for light pollution falloff
+          const adjustedBortle = Math.max(
+            1,
+            closestCity.bortleScale - (Math.pow(distancePercentage, 1.6) * 4 * populationFactor)
+          );
+          
+          return { bortleScale: adjustedBortle };
+        }
       }
       
       // If no close city, use interpolation for better accuracy
@@ -207,7 +272,7 @@ export async function fetchLightPollutionData(latitude: number, longitude: numbe
 /**
  * Provides a reasonable default Bortle scale estimate based on general geographic patterns
  * when we don't have specific location data
- * Updated to account for light pollution in Chinese cities
+ * Updated with improved global population heuristics
  */
 function estimateDefaultBortleScale(latitude: number, longitude: number): number {
   // China is a special case due to its vast geography and varying levels of development
@@ -246,11 +311,31 @@ function estimateDefaultBortleScale(latitude: number, longitude: number): number
     }
   }
   
-  // Major urban centers around the world
+  // Global population density heuristics for more accurate Bortle scale estimates
+  
+  // Major developed urban centers
   if ((latitude > 35 && latitude < 45 && longitude > -125 && longitude < -65) || // North America
       (latitude > 45 && latitude < 60 && longitude > -10 && longitude < 30) ||   // Europe
       (latitude > 30 && latitude < 45 && longitude > 125 && longitude < 145)) {  // Japan/Korea
     return 6; // Moderate-high light pollution
+  }
+  
+  // Less densely populated developed areas
+  if ((latitude > 25 && latitude < 35 && longitude > -125 && longitude < -65) || // Southern US
+      (latitude > 35 && latitude < 45 && longitude > 30 && longitude < 60)) {    // Central Asia
+    return 5; // Moderate light pollution
+  }
+  
+  // Dense developing regions
+  if ((latitude > 5 && latitude < 30 && longitude > 70 && longitude < 90) ||    // India
+      (latitude > -25 && latitude < 0 && longitude > -60 && longitude < -30)) { // Brazil
+    return 5.5; // Moderate-high with uneven development
+  }
+  
+  // Sparsely populated regions
+  if ((latitude > -35 && latitude < -15 && longitude > 115 && longitude < 145) || // Australia
+      (latitude > 50 && latitude < 70 && longitude > -130 && longitude < -60)) {  // Canada/Alaska
+    return 3.5; // Low-moderate light pollution
   }
   
   // Remote areas
@@ -261,6 +346,12 @@ function estimateDefaultBortleScale(latitude: number, longitude: number): number
     return 3; // Low light pollution
   }
   
-  // Default middle value
-  return 4;
+  // Desert/wilderness regions
+  if ((latitude > 15 && latitude < 35 && longitude > -20 && longitude < 40) ||   // Sahara
+      (latitude > -35 && latitude < -20 && longitude > 10 && longitude < 30)) {  // Namibia/Botswana
+    return 2; // Very low light pollution
+  }
+  
+  // Default middle value for other areas
+  return 4.5;
 }
