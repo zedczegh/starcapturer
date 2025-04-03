@@ -44,6 +44,7 @@ const BortleNow: React.FC = () => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [captureProgress, setCaptureProgress] = useState(0);
   const [showCaptureProgress, setShowCaptureProgress] = useState(false);
+  const [captureDone, setCaptureDone] = useState(false);
   
   const onLocationChange = useCallback((lat: number, lng: number) => {
     setLatitude(lat.toFixed(6));
@@ -166,12 +167,17 @@ const BortleNow: React.FC = () => {
       setCountdown(null);
       setShowCaptureProgress(true);
       setCaptureProgress(0);
+      setCaptureDone(false);
       
+      let progress = 0;
       const captureInterval = setInterval(() => {
-        setCaptureProgress(prev => {
-          const newProgress = prev + 5;
-          if (newProgress >= 100) {
-            clearInterval(captureInterval);
+        progress += 2;
+        setCaptureProgress(progress);
+        
+        if (progress >= 100) {
+          clearInterval(captureInterval);
+          setTimeout(() => {
+            setCaptureDone(true);
             setTimeout(() => {
               setShowCaptureProgress(false);
               
@@ -181,11 +187,9 @@ const BortleNow: React.FC = () => {
                 performLightFrameCapture();
               }
             }, 300);
-            return 100;
-          }
-          return newProgress;
-        });
-      }, 200);
+          }, 200);
+        }
+      }, 80);
       
       return () => clearInterval(captureInterval);
     }
@@ -254,17 +258,17 @@ const BortleNow: React.FC = () => {
       }
       
       toast({
-        title: t("Capturing Dark Frame", "捕获暗帧"),
-        description: t("Please cover your camera lens completely...", "请完全遮盖相机镜头..."),
+        title: t("Processing Dark Frame", "处理暗帧中"),
+        description: t("Analyzing captured frame...", "正在分析捕获的帧..."),
       });
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       setCameraReadings(prev => ({ ...prev, darkFrame: true }));
       
       toast({
         title: t("Dark Frame Captured", "暗帧已捕获"),
-        description: t("Dark frame baseline established.", "暗帧基准已建立。"),
+        description: t("Dark frame baseline established. You can now measure the sky.", "暗帧基准已建立。现在您可以测量天空。"),
       });
     } catch (error) {
       setError((error as Error).message);
@@ -366,11 +370,11 @@ const BortleNow: React.FC = () => {
       }
       
       toast({
-        title: t("Capturing Sky Frame", "捕获天空帧"),
-        description: t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）..."),
+        title: t("Processing Sky Frame", "处理天空帧中"),
+        description: t("Analyzing captured image...", "正在分析捕获的图像..."),
       });
       
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const baseLocationBortle = bortleScale || 5;
       
@@ -470,9 +474,9 @@ const BortleNow: React.FC = () => {
 
   const getCaptureProgressColor = () => {
     if (cameraMode === "dark") {
-      return "bg-indigo-600";
+      return captureDone ? "bg-indigo-400" : "bg-indigo-600";
     } else {
-      return "bg-amber-500";
+      return captureDone ? "bg-amber-400" : "bg-amber-500";
     }
   };
 
@@ -577,7 +581,9 @@ const BortleNow: React.FC = () => {
                     colorClass={getCaptureProgressColor()}
                   />
                   <div className="text-sm text-cosmic-200 mt-2">
-                    {t("Hold steady your device", "请保持设备稳定")}
+                    {captureDone 
+                      ? t("Processing capture...", "正在处理捕获内容...") 
+                      : t("Hold steady your device", "请保持设备稳定")}
                   </div>
                 </motion.div>
               ) : null}
