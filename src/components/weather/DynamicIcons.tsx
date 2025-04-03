@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Cloud as CloudIcon, Moon, Sun, CloudLightning, CloudRain, CloudSnow, Wind, Lightbulb, LucideProps } from "lucide-react";
 
 // Import individual icon components for better organization and proper exports

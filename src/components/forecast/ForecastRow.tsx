@@ -50,11 +50,7 @@ const ForecastRow: React.FC<ForecastProps> = ({ forecast, index }) => {
       </TableCell>
       <TableCell className="text-center border-b border-cosmic-700/20">
         <div className="flex items-center justify-center">
-          <DynamicCloudCoverIcon 
-            cloudCover={forecast.cloudCover} 
-            className="mr-1 h-4 w-4" 
-            precipitation={forecast.precipitation}
-          />
+          <DynamicCloudCoverIcon cloudCover={forecast.cloudCover} className="mr-1 h-4 w-4" />
           <span className={forecast.cloudCover > 40 ? 'text-red-400' : ''}>
             {forecast.cloudCover}%
           </span>
