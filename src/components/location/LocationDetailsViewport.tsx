@@ -32,6 +32,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { loading, handleRefreshAll } = useWeatherUpdater();
   const containerRef = useRef<HTMLDivElement>(null);
   const initialRefreshDoneRef = useRef(false);
+  const refreshTriggerRef = useRef(false);
   
   const {
     forecastData,
@@ -78,32 +79,42 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [handleUpdateLocation, resetUpdateState, setStatusMessage, t]);
   
-  // Auto refresh on initial render
+  // Auto refresh on initial render - with debounce protection
   useEffect(() => {
-    if (locationData && !initialRefreshDoneRef.current) {
+    if (locationData && !initialRefreshDoneRef.current && !refreshTriggerRef.current) {
+      refreshTriggerRef.current = true;
       initialRefreshDoneRef.current = true;
+      
       const timer = setTimeout(() => {
         handleRefreshAll(locationData, setLocationData, () => {
           if (locationData.latitude && locationData.longitude) {
             handleRefreshForecast(locationData.latitude, locationData.longitude);
             handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
           }
+          refreshTriggerRef.current = false;
         }, setStatusMessage);
-      }, 500);
+      }, 800); // Increased delay to prevent flashing
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        refreshTriggerRef.current = false;
+      };
     }
   }, [locationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setLocationData, setStatusMessage]);
   
   // Handle refresh events from external components
   useEffect(() => {
     const handleForceRefresh = () => {
+      if (refreshTriggerRef.current) return; // Prevent multiple simultaneous refreshes
+      
       console.log("Force refresh event received");
+      refreshTriggerRef.current = true;
       handleRefreshAll(locationData, setLocationData, () => {
         if (locationData.latitude && locationData.longitude) {
           handleRefreshForecast(locationData.latitude, locationData.longitude);
           handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
         }
+        refreshTriggerRef.current = false;
       }, setStatusMessage);
     };
     

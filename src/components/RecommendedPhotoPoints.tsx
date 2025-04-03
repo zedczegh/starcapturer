@@ -150,7 +150,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       )}
       
       <AnimatePresence>
-        <div className="space-y-3">
+        <div className="space-y-3 mt-3"> {/* Added margin-top to fix layout conflicts */}
           {limitedLocations.map((location, index) => (
             <motion.div
               key={`${location.id || location.latitude}-${location.longitude}`}
