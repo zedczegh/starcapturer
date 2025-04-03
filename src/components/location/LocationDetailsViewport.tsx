@@ -34,6 +34,9 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const initialRefreshDoneRef = useRef(false);
   const refreshTriggerRef = useRef(false);
   
+  // Check if we came from a redirect
+  const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
+  
   const {
     forecastData,
     longRangeForecast,
@@ -79,8 +82,15 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [handleUpdateLocation, resetUpdateState, setStatusMessage, t]);
   
-  // Auto refresh on initial render - with debounce protection
+  // Auto refresh on initial render - with debounce protection and redirect awareness
   useEffect(() => {
+    // Skip auto-refresh if we're coming from a redirect and data is already present
+    if (isRedirect && locationData?.weatherData && locationData?.siqsResult) {
+      console.log("Skipping auto-refresh due to redirect with existing data");
+      initialRefreshDoneRef.current = true;
+      return;
+    }
+    
     if (locationData && !initialRefreshDoneRef.current && !refreshTriggerRef.current) {
       refreshTriggerRef.current = true;
       initialRefreshDoneRef.current = true;
@@ -100,7 +110,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         refreshTriggerRef.current = false;
       };
     }
-  }, [locationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setLocationData, setStatusMessage]);
+  }, [locationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setLocationData, setStatusMessage, isRedirect]);
   
   // Handle refresh events from external components
   useEffect(() => {

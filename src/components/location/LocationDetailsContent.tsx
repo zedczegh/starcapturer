@@ -27,6 +27,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const autoRefreshAttemptedRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Check if this is a redirect with data that doesn't need refresh
+  const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
+  const hasRequiredData = Boolean(locationData?.weatherData && locationData?.siqsResult);
+  
   const {
     forecastData,
     longRangeForecast,
@@ -72,17 +76,30 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   
   // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
-    // Check if we came from PhotoPoints or another source
-    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
+    // Skip auto-refresh if we're coming from a redirect with existing data
+    if (isRedirect && hasRequiredData) {
+      console.log("Skipping content refresh due to redirect with existing data");
+      autoRefreshAttemptedRef.current = true;
+      
+      // Clear any existing flag after redirect
+      if (locationData) {
+        const { fromPhotoPoints, fromCalculator, ...rest } = locationData;
+        if (fromPhotoPoints || fromCalculator) {
+          // Update the locationData to remove the flags but don't trigger a full refresh
+          setLocationData({
+            ...rest
+          });
+        }
+      }
+      
+      return;
+    }
     
     // Create a location signature to detect changes
     const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
     
-    // If location has changed or coming from PhotoPoints, refresh data
-    if (locationSignature !== lastLocationRef.current || 
-        fromPhotoPoints || 
-        !autoRefreshAttemptedRef.current) {
-      
+    // If location has changed or we haven't refreshed yet, refresh data
+    if (locationSignature !== lastLocationRef.current || !autoRefreshAttemptedRef.current) {
       lastLocationRef.current = locationSignature;
       autoRefreshAttemptedRef.current = true;
       
@@ -96,14 +113,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         console.log("Auto-refreshing data after location update or page load");
         handleRefreshAll();
         resetUpdateState(); // Reset SIQS updater state
-        
-        // Reset the fromPhotoPoints flag after refreshing
-        if (fromPhotoPoints && locationData) {
-          setLocationData({
-            ...locationData,
-            fromPhotoPoints: false
-          });
-        }
       }, 300); // Reduced from 500ms for faster refresh
     }
     
@@ -113,7 +122,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         window.clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
+  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState, isRedirect, hasRequiredData]);
 
   return (
     <div className="transition-all duration-300 animate-fade-in pt-10" ref={containerRef}> {/* Added padding to fix navbar overlap */}

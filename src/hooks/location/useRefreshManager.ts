@@ -7,7 +7,7 @@ import { usePhotoPointsNavigation } from "./usePhotoPointsNavigation";
  * Controls when the page should refresh data based on navigation source
  */
 export function useRefreshManager(locationData: any) {
-  const [shouldRefresh, setShouldRefresh] = useState<boolean>(true);
+  const [shouldRefresh, setShouldRefresh] = useState<boolean>(false);
   const [refreshCount, setRefreshCount] = useState<number>(0);
   
   // Get the locationId from the data
@@ -24,8 +24,12 @@ export function useRefreshManager(locationData: any) {
     const noSiqsData = !locationData?.siqsResult?.score || 
                        locationData?.siqsResult?.score === 0;
     
-    const shouldTriggerRefresh = fromPhotoPoints || fromCalculator || 
-                                 noSiqsData || needsRefresh || refreshCount === 0;
+    // If we're coming from photo points or calculator AND we already have data, don't refresh
+    const hasRequiredData = Boolean(locationData?.weatherData && locationData?.siqsResult?.score > 0);
+    const isRedirectWithData = (fromPhotoPoints || fromCalculator) && hasRequiredData;
+    
+    // Only trigger refresh if not a redirect with data or if explicitly needed
+    const shouldTriggerRefresh = (!isRedirectWithData && (noSiqsData || needsRefresh || refreshCount === 0));
     
     if (shouldTriggerRefresh) {
       console.log("Setting refresh flag based on conditions:", {
@@ -33,9 +37,13 @@ export function useRefreshManager(locationData: any) {
         fromCalculator,
         noSiqsData,
         needsRefresh,
-        refreshCount
+        refreshCount,
+        hasRequiredData
       });
       setShouldRefresh(true);
+    } else if (isRedirectWithData) {
+      console.log("Skipping refresh because we have redirect with existing data");
+      setShouldRefresh(false);
     }
   }, [locationData, needsRefresh, refreshCount]);
   
