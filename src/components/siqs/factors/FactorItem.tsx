@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getEnhancedCloudDescription, getChineseCloudDescription } from "../utils/descriptions";
+import { getEnhancedCloudDescription } from "../utils/descriptions";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface FactorItemProps {
@@ -18,10 +18,6 @@ interface FactorItemProps {
     nighttimeData?: {
       average: number;
       timeRange: string;
-      detail?: {
-        evening: number;
-        morning: number;
-      };
     };
   };
   index: number;
@@ -44,30 +40,13 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   const formattedScore = factor.score.toFixed(1);
   
   // Enhanced description for cloud cover with nighttime data
-  const getDescriptionWithNighttime = () => {
-    if (factor.name === "Cloud Cover" || factor.name === "云层覆盖") {
-      const cloudValue = parseFloat(factor.description.match(/\d+\.?\d*/)?.[0] || "0");
-      
-      // Use language-specific enhanced descriptions
-      if (language === 'zh') {
-        return getChineseCloudDescription(
-          cloudValue,
-          factor.nighttimeData?.average,
-          factor.nighttimeData?.detail
-        );
-      } else {
-        return getEnhancedCloudDescription(
-          cloudValue, 
-          factor.nighttimeData?.average,
-          factor.nighttimeData?.detail
-        );
-      }
-    }
-    
-    return factor.description;
-  };
-  
-  const enhancedDescription = getDescriptionWithNighttime();
+  const enhancedDescription = 
+    factor.name === "Cloud Cover" || factor.name === "云层覆盖" 
+      ? getEnhancedCloudDescription(
+          parseFloat(factor.description.match(/\d+\.?\d*/)?.[0] || "0"), 
+          factor.nighttimeData?.average
+        )
+      : factor.description;
   
   return (
     <motion.div 
@@ -108,35 +87,7 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
           >
             <p className="mb-1">{enhancedDescription}</p>
             
-            {/* Display evening and morning cloud cover separately */}
-            {factor.nighttimeData?.detail && (factor.name === "Cloud Cover" || factor.name === "云层覆盖") && (
-              <div className="mt-3 space-y-2 bg-background/20 p-2 rounded">
-                <h5 className="text-xs font-medium">
-                  {language === 'en' ? 'Detailed Nighttime Cloud Cover' : '详细夜间云层覆盖'}
-                </h5>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-primary-foreground/80">
-                      {language === 'en' ? 'Evening (6PM-12AM):' : '傍晚 (18:00-24:00):'}
-                    </span>
-                    <span className="float-right font-medium">
-                      {factor.nighttimeData.detail.evening.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-primary-foreground/80">
-                      {language === 'en' ? 'Morning (1AM-8AM):' : '清晨 (01:00-08:00):'}
-                    </span>
-                    <span className="float-right font-medium">
-                      {factor.nighttimeData.detail.morning.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Simple nighttime average */}
-            {factor.nighttimeData && !factor.nighttimeData.detail && (
+            {factor.nighttimeData && (
               <p className="text-xs mt-2 text-primary-foreground/70">
                 {language === 'en' 
                   ? `Nighttime average (${factor.nighttimeData.timeRange}): ${factor.nighttimeData.average.toFixed(1)}%` 

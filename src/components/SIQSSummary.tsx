@@ -26,11 +26,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Info className="w-4 h-4" />
-            {t("No SIQS Data Available", "无天文观测质量评分数据")}
+            {t("No SIQS Data Available", "无SIQS数据")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的天文观测质量评分。")}
+          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的SIQS评分。")}
         </CardContent>
       </Card>
     );
@@ -131,7 +131,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Gauge className="w-5 h-5 text-primary" />
-          {t("SIQS Summary", "天文观测质量评分摘要")}
+          {t("SIQS Summary", "SIQS 摘要")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -172,7 +172,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         {/* Contributing Factors */}
         {translatedFactors.length > 0 && (
           <div className="mt-4 space-y-4">
-            <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响天文观测质量的因素")}</h4>
+            <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响SIQS的因素")}</h4>
             <SIQSFactorsList factors={translatedFactors} />
           </div>
         )}

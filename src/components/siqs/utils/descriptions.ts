@@ -1,89 +1,97 @@
 
 /**
- * Utility functions for creating enhanced descriptions for SIQS factors
+ * Get cloud cover description with specific nighttime information
+ * @param cloudCover Cloud cover percentage
+ * @param nighttimeAvg Optional nighttime average cloud cover
  */
-
-/**
- * Create an enhanced description for cloud cover that includes nighttime data
- * @param currentCloudCover Current cloud cover percentage
- * @param nighttimeAverage Average nighttime cloud cover
- * @returns Enhanced description text
- */
-export function getEnhancedCloudDescription(
-  currentCloudCover: number, 
-  nighttimeAverage?: number, 
-  detail?: { evening: number, morning: number }
-): string {
-  // If no nighttime data, return basic description
-  if (nighttimeAverage === undefined) {
-    return getBasicCloudDescription(currentCloudCover);
+export function getEnhancedCloudDescription(cloudCover: number, nighttimeAvg?: number): string {
+  // Format cloud cover to one decimal place
+  const formattedCloudCover = cloudCover.toFixed(1);
+  
+  // Base description
+  let description = "";
+  
+  if (cloudCover <= 10) {
+    description = `Clear skies with ${formattedCloudCover}% cloud cover, excellent for imaging`;
+  } else if (cloudCover <= 25) {
+    description = `Mostly clear with ${formattedCloudCover}% cloud cover, good for imaging`;
+  } else if (cloudCover <= 40) {
+    description = `Partly cloudy with ${formattedCloudCover}% cloud cover, may affect quality`;
+  } else if (cloudCover <= 50) {
+    description = `Cloudy with ${formattedCloudCover}% cloud cover, challenging conditions`;
+  } else {
+    description = `Heavy cloud cover (${formattedCloudCover}%) makes imaging difficult`;
   }
   
-  // If nighttime average differs significantly from current, provide both
-  const difference = Math.abs(currentCloudCover - nighttimeAverage);
-  
-  if (difference > 15) {
-    if (detail) {
-      return `Current cloud cover is ${currentCloudCover}%. Nighttime forecast shows an average of ${nighttimeAverage.toFixed(1)}% (Evening: ${detail.evening.toFixed(1)}%, Morning: ${detail.morning.toFixed(1)}%)`;
+  // Add nighttime information if available
+  if (nighttimeAvg !== undefined) {
+    const nighttimeFormatted = nighttimeAvg.toFixed(1);
+    
+    if (Math.abs(cloudCover - nighttimeAvg) > 10) {
+      description += ` (nighttime average: ${nighttimeFormatted}%)`;
     }
-    return `Current cloud cover is ${currentCloudCover}%. Nighttime forecast shows an average of ${nighttimeAverage.toFixed(1)}%`;
   }
   
-  return getBasicCloudDescription(nighttimeAverage);
+  return description;
 }
 
 /**
- * Get basic cloud cover description
+ * Get cloud description in the appropriate language
  * @param cloudCover Cloud cover percentage
- * @returns Description text
+ * @param language Language code (en or zh)
+ * @param nighttimeAvg Optional nighttime average cloud cover
  */
-function getBasicCloudDescription(cloudCover: number): string {
-  if (cloudCover === 0) return "Perfect clear skies (0% cloud cover), ideal for astrophotography";
-  if (cloudCover < 10) return `Mostly clear skies (${cloudCover}% cloud cover), excellent for imaging`;
-  if (cloudCover < 30) return `Good conditions with ${cloudCover}% cloud cover, suitable for imaging`;
-  if (cloudCover < 50) return `Moderate cloud cover (${cloudCover}%), some limitations may apply`;
-  if (cloudCover < 70) return `Significant cloud cover (${cloudCover}%), challenging for imaging`;
-  return `Heavy cloud cover (${cloudCover}%), not recommended for imaging`;
-}
-
-/**
- * Get cloud description in Chinese
- * @param cloudCover Cloud cover percentage
- * @returns Chinese description text
- */
-export function getChineseCloudDescription(
-  cloudCover: number,
-  nighttimeAverage?: number,
-  detail?: { evening: number, morning: number }
-): string {
-  // If no nighttime data, return basic description
-  if (nighttimeAverage === undefined) {
-    return getBasicChineseCloudDescription(cloudCover);
-  }
+export function getLocalizedCloudDescription(cloudCover: number, language: 'en' | 'zh', nighttimeAvg?: number): string {
+  // Format cloud cover to one decimal place
+  const formattedCloudCover = cloudCover.toFixed(1);
   
-  // If nighttime average differs significantly from current, provide both
-  const difference = Math.abs(cloudCover - nighttimeAverage);
+  // Base description
+  let description = "";
   
-  if (difference > 15) {
-    if (detail) {
-      return `当前云层覆盖率为${cloudCover}%。夜间预报显示平均为${nighttimeAverage.toFixed(1)}%（晚上：${detail.evening.toFixed(1)}%，早晨：${detail.morning.toFixed(1)}%）`;
+  if (language === 'en') {
+    if (cloudCover <= 10) {
+      description = `Clear skies with ${formattedCloudCover}% cloud cover, excellent for imaging`;
+    } else if (cloudCover <= 25) {
+      description = `Mostly clear with ${formattedCloudCover}% cloud cover, good for imaging`;
+    } else if (cloudCover <= 40) {
+      description = `Partly cloudy with ${formattedCloudCover}% cloud cover, may affect quality`;
+    } else if (cloudCover <= 50) {
+      description = `Cloudy with ${formattedCloudCover}% cloud cover, challenging conditions`;
+    } else {
+      description = `Heavy cloud cover (${formattedCloudCover}%) makes imaging difficult`;
     }
-    return `当前云层覆盖率为${cloudCover}%。夜间预报显示平均为${nighttimeAverage.toFixed(1)}%`;
+    
+    // Add nighttime information if available
+    if (nighttimeAvg !== undefined) {
+      const nighttimeFormatted = nighttimeAvg.toFixed(1);
+      
+      if (Math.abs(cloudCover - nighttimeAvg) > 10) {
+        description += ` (nighttime average: ${nighttimeFormatted}%)`;
+      }
+    }
+  } else {
+    // Chinese descriptions
+    if (cloudCover <= 10) {
+      description = `晴朗天空，云量为${formattedCloudCover}%，非常适合成像`;
+    } else if (cloudCover <= 25) {
+      description = `大部分晴朗，云量为${formattedCloudCover}%，适合成像`;
+    } else if (cloudCover <= 40) {
+      description = `部分多云，云量为${formattedCloudCover}%，可能影响成像质量`;
+    } else if (cloudCover <= 50) {
+      description = `多云，云量为${formattedCloudCover}%，观测条件具有挑战性`;
+    } else {
+      description = `重度云层覆盖(${formattedCloudCover}%)使成像困难`;
+    }
+    
+    // Add nighttime information if available
+    if (nighttimeAvg !== undefined) {
+      const nighttimeFormatted = nighttimeAvg.toFixed(1);
+      
+      if (Math.abs(cloudCover - nighttimeAvg) > 10) {
+        description += ` (夜间平均: ${nighttimeFormatted}%)`;
+      }
+    }
   }
   
-  return getBasicChineseCloudDescription(nighttimeAverage);
-}
-
-/**
- * Get basic cloud cover description in Chinese
- * @param cloudCover Cloud cover percentage
- * @returns Chinese description text
- */
-function getBasicChineseCloudDescription(cloudCover: number): string {
-  if (cloudCover === 0) return "完美晴空（0%云量），天文摄影的理想条件";
-  if (cloudCover < 10) return `天空大部分晴朗（${cloudCover}%云量），成像效果极佳`;
-  if (cloudCover < 30) return `良好条件，${cloudCover}%云量，适合成像`;
-  if (cloudCover < 50) return `中等云层覆盖（${cloudCover}%），可能有一些限制`;
-  if (cloudCover < 70) return `显著云层覆盖（${cloudCover}%），成像具有挑战性`;
-  return `重度云层覆盖（${cloudCover}%），不建议进行成像`;
+  return description;
 }

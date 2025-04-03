@@ -1,10 +1,6 @@
 
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { 
-  extractNightForecasts, 
-  formatNighttimeHoursRange, 
-  calculateAverageCloudCover 
-} from "@/components/forecast/NightForecastUtils";
+import { extractNightForecasts, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 
 /**
  * Calculate SIQS based on nighttime forecasts
@@ -32,38 +28,22 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     
     console.log(`Found ${nightForecasts.length} nighttime forecast hours (6 PM to 8 AM)`);
     
-    // Group forecasts by time ranges - evening (6pm-12am) and early morning (1am-8am)
-    const eveningForecasts = nightForecasts.filter(forecast => {
-      const hour = new Date(forecast.time).getHours();
-      return hour >= 18 && hour <= 23;
-    });
+    // Calculate average cloud cover for the night
+    let totalCloudCover = 0;
+    let validCloudCoverCount = 0;
     
-    const morningForecasts = nightForecasts.filter(forecast => {
-      const hour = new Date(forecast.time).getHours();
-      return hour >= 0 && hour < 8;
-    });
+    for (const forecast of nightForecasts) {
+      if (typeof forecast.cloudCover === 'number') {
+        totalCloudCover += forecast.cloudCover;
+        validCloudCoverCount++;
+      }
+    }
     
-    console.log(`Evening forecasts (6PM-12AM): ${eveningForecasts.length}, Morning forecasts (1AM-8AM): ${morningForecasts.length}`);
+    const avgNightCloudCover = validCloudCoverCount > 0 
+      ? totalCloudCover / validCloudCoverCount 
+      : 50; // Default if no data
     
-    // Calculate average cloud cover for each time range
-    const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
-    const morningCloudCover = calculateAverageCloudCover(morningForecasts);
-    
-    console.log(`Average cloud cover - Evening: ${eveningCloudCover.toFixed(1)}%, Morning: ${morningCloudCover.toFixed(1)}%`);
-    
-    // Weight the cloud cover based on hours in each period
-    // Evening (6 hours) and morning (8 hours)
-    const eveningWeight = eveningForecasts.length / nightForecasts.length;
-    const morningWeight = morningForecasts.length / nightForecasts.length;
-    
-    // Calculate weighted average - if one period has no data, use the other
-    const avgNightCloudCover = 
-      (eveningForecasts.length === 0 && morningForecasts.length === 0) ? 50 :
-      (eveningForecasts.length === 0) ? morningCloudCover :
-      (morningForecasts.length === 0) ? eveningCloudCover :
-      (eveningCloudCover * eveningWeight) + (morningCloudCover * morningWeight);
-    
-    console.log(`Weighted average cloud cover for night: ${avgNightCloudCover.toFixed(1)}%`);
+    console.log(`Average cloud cover during nighttime (6 PM to 8 AM): ${avgNightCloudCover}%`);
     
     // Calculate average wind speed for the night
     let totalWindSpeed = 0;
@@ -110,7 +90,7 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       nightForecast: nightForecasts
     });
     
-    // Add detailed nighttime data to the cloud cover factor
+    // Add nighttime data to the cloud cover factor
     if (siqsResult && siqsResult.factors) {
       siqsResult.factors = siqsResult.factors.map((factor: any) => {
         if (factor.name === "Cloud Cover" || (t && factor.name === t("Cloud Cover", "云层覆盖"))) {
@@ -118,11 +98,7 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
             ...factor,
             nighttimeData: {
               average: avgNightCloudCover,
-              timeRange: formatNighttimeHoursRange(),
-              detail: {
-                evening: eveningCloudCover,
-                morning: morningCloudCover
-              }
+              timeRange: formatNighttimeHoursRange()
             }
           };
         }
