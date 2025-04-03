@@ -154,9 +154,9 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       </div>
       
-      {/* Certification Badge - Using memoized cert info to prevent flashing */}
+      {/* Certification Badge - Fixed mobile rendering with transform-gpu to force hardware acceleration */}
       {certInfo && (
-        <div className={`flex items-center mt-1.5 mb-2 ${isMobile ? 'will-change-transform' : ''}`}>
+        <div className={`flex items-center mt-1.5 mb-2 ${isMobile ? 'transform-gpu' : ''}`}>
           <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
             {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
             <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
@@ -187,7 +187,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <Button 
           size="sm" 
           variant="ghost" 
-          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary hover:text-primary-focus transition-all duration-300"
+          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary/90 hover:text-primary"
           onClick={handleViewDetails}
         >
           {t("View", "查看")}
