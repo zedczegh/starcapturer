@@ -77,6 +77,16 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       console.log(`Added Clear Sky Rate factor to SIQS factors, rate: ${clearSkyRate}%`);
     }
     
+    // Ensure cloud cover is the first factor by finding and moving it
+    let cloudCoverIndex = factors.findIndex(factor => 
+      factor.name === 'Cloud Cover' || factor.name === '云层覆盖');
+    
+    // If cloud cover exists, move it to the front
+    if (cloudCoverIndex > 0) {
+      const cloudCoverFactor = factors.splice(cloudCoverIndex, 1)[0];
+      factors.unshift(cloudCoverFactor);
+    }
+    
     return factors.map(factor => ({
       ...factor,
       description: language === 'zh' ? 

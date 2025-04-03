@@ -39,7 +39,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   const bortleValue = formatBortleScale(bortleScale, t);
   
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       <ConditionItem
         icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
         label={t("Cloud Cover", "云层覆盖")}

@@ -40,12 +40,27 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors }) => {
     );
   }
 
-  // Sort factors by score (highest first)
-  const sortedFactors = [...factors].sort((a, b) => b.score - a.score);
+  // First find if there's a Cloud Cover factor
+  const cloudCoverFactor = factors.find(f => 
+    f.name === "Cloud Cover" || f.name === "云层覆盖"
+  );
+  
+  // Remove cloud cover from the factors array (if exists)
+  const otherFactors = factors.filter(f => 
+    f.name !== "Cloud Cover" && f.name !== "云层覆盖"
+  );
+  
+  // Sort other factors by score (highest first)
+  const sortedOtherFactors = [...otherFactors].sort((a, b) => b.score - a.score);
+  
+  // Final array with Cloud Cover first, then other factors sorted by score
+  const finalFactors = cloudCoverFactor 
+    ? [cloudCoverFactor, ...sortedOtherFactors]
+    : sortedOtherFactors;
 
   return (
     <div className="space-y-3">
-      {sortedFactors.map((factor, index) => (
+      {finalFactors.map((factor, index) => (
         <motion.div
           key={factor.name}
           className="border border-cosmic-700/20 rounded-lg p-3 bg-cosmic-900/30 hover:bg-cosmic-800/20 transition-all duration-200"
