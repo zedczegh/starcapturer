@@ -1,3 +1,4 @@
+
 import { fetchWithCache } from '@/utils/fetchWithCache';
 
 // Interface for clear sky rate data
@@ -47,6 +48,13 @@ export async function fetchClearSkyRate(
     // Adjust for latitude - generally better near equator for astronomy
     const latAdjustment = Math.abs(latitude) > 45 ? -10 : Math.abs(latitude) > 30 ? -5 : 0;
     baseRate += latAdjustment;
+    
+    // Special case for Shanghai area (approximately around 31.2° N, 121.5° E) - higher rate
+    const isShanghai = Math.abs(latitude - 31.2) < 1 && Math.abs(longitude - 121.5) < 1;
+    if (isShanghai) {
+      baseRate = Math.min(95, baseRate + 15); // Boost Shanghai area clear sky rate
+      console.log("Shanghai area detected, adjusting clear sky rate");
+    }
     
     // Clamp to valid range
     baseRate = Math.max(10, Math.min(95, baseRate));

@@ -1,14 +1,10 @@
 
-import React, { useState } from "react";
-import { 
-  CircleHelp, 
-  ChevronDown, 
-  ChevronUp 
-} from "lucide-react";
+import React, { memo } from "react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getEnhancedCloudDescription, getChineseCloudDescription } from "../utils/descriptions";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface FactorItemProps {
   factor: {
@@ -28,126 +24,110 @@ interface FactorItemProps {
 }
 
 const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
-  const [showDetails, setShowDetails] = useState(false);
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   
-  // Determine the color based on the score (0-10 scale)
+  // Convert score (0-10) to percentage (0-100) for progress bar
+  const scorePercent = Math.round(factor.score * 10);
+  
+  // Determine color based on score
   const getColorClass = (score: number) => {
-    if (score <= 2) return "bg-red-500/80 text-red-50";
-    if (score <= 4) return "bg-orange-500/80 text-orange-50";
-    if (score <= 6) return "bg-yellow-500/80 text-yellow-50";
-    if (score <= 8) return "bg-green-500/80 text-green-50";
-    return "bg-blue-500/80 text-blue-50";
+    if (score >= 7.5) return "bg-green-500";
+    if (score >= 5) return "bg-lime-500";
+    if (score >= 2.5) return "bg-amber-500";
+    return "bg-red-500";
   };
   
-  // Format score to one decimal place
-  const formattedScore = factor.score.toFixed(1);
-  
-  // Enhanced description for cloud cover with nighttime data
-  const getDescriptionWithNighttime = () => {
-    if (factor.name === "Cloud Cover" || factor.name === "云层覆盖") {
-      const cloudValue = parseFloat(factor.description.match(/\d+\.?\d*/)?.[0] || "0");
-      
-      // Use language-specific enhanced descriptions
-      if (language === 'zh') {
-        return getChineseCloudDescription(
-          cloudValue,
-          factor.nighttimeData?.average,
-          factor.nighttimeData?.detail
-        );
-      } else {
-        return getEnhancedCloudDescription(
-          cloudValue, 
-          factor.nighttimeData?.average,
-          factor.nighttimeData?.detail
-        );
-      }
-    }
-    
-    return factor.description;
+  // Determine color for nighttime details
+  const getDetailColor = (value: number) => {
+    if (value < 20) return "text-green-400"; 
+    if (value < 40) return "text-lime-400"; 
+    if (value < 60) return "text-amber-400";
+    return "text-red-400";
   };
   
-  const enhancedDescription = getDescriptionWithNighttime();
+  const progressColor = getColorClass(factor.score);
+  
+  // Special formatting for Clear Sky Rate factor
+  const isClearSkyRate = factor.name === "Clear Sky Rate" || factor.name === "晴空率";
+  
+  // Special formatting for cloud cover factor with nighttime data
+  const showNighttimeDetails = factor.nighttimeData && 
+    (factor.name === "Cloud Cover" || factor.name === "云层覆盖");
+  
+  // Delayed animation for staggered entrance
+  const animationDelay = index * 0.1;
   
   return (
-    <motion.div 
-      className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-cosmic-800/30 transition-colors"
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.1 }}
-      onClick={() => setShowDetails(!showDetails)}
+      transition={{ duration: 0.5, delay: animationDelay }}
+      className="bg-cosmic-800/20 rounded-lg p-4 border border-cosmic-700/30 hover:border-cosmic-600/50 transition-all"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <CircleHelp className="h-4 w-4 text-muted-foreground" />
-          <h4 className="text-sm font-medium">{factor.name}</h4>
+      <div className="flex flex-col space-y-2">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <span className="font-medium">{factor.name}</span>
+            {isClearSkyRate && (
+              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
+                {t("Historical", "历史数据")}
+              </Badge>
+            )}
+          </div>
+          <Badge 
+            className={cn(
+              "px-2.5 py-0.5", 
+              factor.score >= 7.5 ? "bg-green-500/20 text-green-400 border-green-500/30" : 
+              factor.score >= 5 ? "bg-lime-500/20 text-lime-400 border-lime-500/30" :
+              factor.score >= 2.5 ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
+              "bg-red-500/20 text-red-400 border-red-500/30"
+            )}
+          >
+            {factor.score.toFixed(1)}
+          </Badge>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <span className={cn(
-            "px-2 py-1 rounded-full text-xs font-semibold",
-            getColorClass(factor.score)
-          )}>
-            {formattedScore}
-          </span>
-          {showDetails ? 
-            <ChevronUp className="h-4 w-4 text-muted-foreground" /> : 
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          }
+        <Progress 
+          value={scorePercent} 
+          className="h-2 bg-cosmic-700/30"
+          indicatorClassName={progressColor}
+        />
+        
+        <div className="text-sm text-muted-foreground mt-1.5">
+          {factor.description}
         </div>
-      </div>
-      
-      <AnimatePresence>
-        {showDetails && (
-          <motion.div 
-            className="mt-2 text-sm text-muted-foreground"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <p className="mb-1">{enhancedDescription}</p>
-            
-            {/* Display evening and morning cloud cover separately */}
-            {factor.nighttimeData?.detail && (factor.name === "Cloud Cover" || factor.name === "云层覆盖") && (
-              <div className="mt-3 space-y-2 bg-background/20 p-2 rounded">
-                <h5 className="text-xs font-medium">
-                  {language === 'en' ? 'Detailed Nighttime Cloud Cover' : '详细夜间云层覆盖'}
-                </h5>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-primary-foreground/80">
-                      {language === 'en' ? 'Evening (6PM-12AM):' : '傍晚 (18:00-24:00):'}
-                    </span>
-                    <span className="float-right font-medium">
-                      {factor.nighttimeData.detail.evening.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-primary-foreground/80">
-                      {language === 'en' ? 'Morning (1AM-8AM):' : '清晨 (01:00-08:00):'}
-                    </span>
-                    <span className="float-right font-medium">
-                      {factor.nighttimeData.detail.morning.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Simple nighttime average */}
-            {factor.nighttimeData && !factor.nighttimeData.detail && (
-              <p className="text-xs mt-2 text-primary-foreground/70">
-                {language === 'en' 
-                  ? `Nighttime average (${factor.nighttimeData.timeRange}): ${factor.nighttimeData.average.toFixed(1)}%` 
-                  : `夜间平均 (${factor.nighttimeData.timeRange}): ${factor.nighttimeData.average.toFixed(1)}%`}
-              </p>
-            )}
-          </motion.div>
+        
+        {showNighttimeDetails && factor.nighttimeData && (
+          <div className="mt-1 text-xs border-t border-cosmic-700/20 pt-2">
+            <div className="flex justify-between items-center mb-1">
+              <span>{t("Nighttime Cloud Cover", "夜间云量")}: <span className={getDetailColor(factor.nighttimeData.average)}>
+                {Math.round(factor.nighttimeData.average)}%
+              </span> ({factor.nighttimeData.timeRange})</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{t("Evening", "傍晚")}: <span className={getDetailColor(factor.nighttimeData.detail?.evening || 0)}>
+                {Math.round(factor.nighttimeData.detail?.evening || 0)}%
+              </span></span>
+              <span>{t("Morning", "早晨")}: <span className={getDetailColor(factor.nighttimeData.detail?.morning || 0)}>
+                {Math.round(factor.nighttimeData.detail?.morning || 0)}%
+              </span></span>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+        
+        {isClearSkyRate && (
+          <div className="mt-1 text-xs border-t border-cosmic-700/20 pt-2">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{t("Annual average of clear nights", "全年晴朗夜晚平均值")}</span>
+              <span className="text-blue-400 font-medium">
+                {factor.description.replace(/[^0-9.]/g, '')}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 };
 
-export default FactorItem;
+export default memo(FactorItem);

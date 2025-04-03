@@ -1,5 +1,6 @@
 
 import { fetchWeatherData } from "@/lib/api";
+import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 
 // Default timeout for weather API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
@@ -39,18 +40,28 @@ export const getWeatherData = async (
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       
-      const data = await fetchWeatherData({
-        latitude,
-        longitude,
-        days: 3
-      }, controller.signal);
+      // Fetch weather data and clear sky rate in parallel
+      const [weatherData, clearSkyData] = await Promise.all([
+        fetchWeatherData({
+          latitude,
+          longitude,
+          days: 3
+        }, controller.signal),
+        fetchClearSkyRate(latitude, longitude)
+      ]);
       
       clearTimeout(timeoutId);
       
-      if (data) {
+      if (weatherData) {
+        // Add clear sky rate to weather data if available
+        if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
+          weatherData.clearSkyRate = clearSkyData.annualRate;
+          console.log(`Added clear sky rate to weather data: ${clearSkyData.annualRate}%`);
+        }
+        
         // Cache the weather data for future use
-        setCachedData(locationSpecificKey, data);
-        return data;
+        setCachedData(locationSpecificKey, weatherData);
+        return weatherData;
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -65,6 +76,17 @@ export const getWeatherData = async (
   // All attempts failed - use fallback data
   console.error("Failed to fetch weather data after retries:", lastError);
   
+  // Try to get clear sky rate even if weather data failed
+  let clearSkyRate: number | undefined;
+  try {
+    const clearSkyData = await fetchClearSkyRate(latitude, longitude);
+    if (clearSkyData) {
+      clearSkyRate = clearSkyData.annualRate;
+    }
+  } catch (e) {
+    console.error("Failed to fetch clear sky rate:", e);
+  }
+  
   // Use fallback weather data
   const fallbackData = {
     temperature: 20,
@@ -75,7 +97,8 @@ export const getWeatherData = async (
     time: new Date().toISOString(),
     condition: "Clear",
     weatherCondition: "Clear",
-    aqi: 50
+    aqi: 50,
+    clearSkyRate: clearSkyRate || 65 // Add fallback clear sky rate
   };
   
   // Show status message if needed

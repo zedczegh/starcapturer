@@ -1,4 +1,3 @@
-
 import React, { memo, useMemo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
@@ -67,7 +66,7 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return factor;
   });
   
-  // Sort factors to ensure Clear Sky Rate appears after Air Quality
+  // Sort factors to ensure Clear Sky Rate appears in the right position
   const sortedFactors = [...finalFactors].sort((a, b) => {
     // Define the order of factors
     const order = [
