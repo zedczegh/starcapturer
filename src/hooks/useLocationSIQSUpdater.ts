@@ -65,8 +65,19 @@ export const useLocationSIQSUpdater = (
       forceUpdateRef.current = false;
       
       try {
-        // Calculate new SIQS based on nighttime conditions
-        const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
+        // Pass the clear sky rate to the SIQS calculation (10% weight)
+        const clearSkyRateParam = {
+          clearSkyRate: locationData.weatherData?.clearSkyRate,
+          clearSkyWeight: 0.1  // 10% weight as requested
+        };
+        
+        // Calculate new SIQS based on nighttime conditions with clear sky rate
+        const freshSIQSResult = calculateNighttimeSIQS(
+          locationData, 
+          forecastData, 
+          t,
+          clearSkyRateParam
+        );
         
         if (freshSIQSResult) {
           console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
@@ -83,25 +94,38 @@ export const useLocationSIQSUpdater = (
           console.log("Using fallback SIQS calculation based on current weather");
           const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
+          // Add clear sky rate into the fallback calculation (10% weight)
+          const clearSkyRate = locationData.weatherData?.clearSkyRate || 65;
+          const clearSkyScore = clearSkyRate / 10; // Convert to 0-10 scale
+          
           // Special handling for 0% cloud cover - should be score 10
           const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
-          const estimatedScore = cloudScore / 10;
+          // Combine cloud score (90%) with clear sky rate (10%)
+          const combinedScore = (cloudScore / 10 * 0.9) + (clearSkyScore * 0.1);
           
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          console.log(`Using current cloud cover (${currentCloudCover}%) and clear sky rate (${clearSkyRate}%) for SIQS: ${combinedScore.toFixed(2)}`);
           
           setLocationData({
             ...locationData,
             siqsResult: {
-              score: estimatedScore,
-              isViable: estimatedScore > 2,
+              score: combinedScore,
+              isViable: combinedScore > 2,
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
+                  score: cloudScore / 10, // Convert to 0-10 scale
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
                     : `Cloud cover of ${currentCloudCover}% affects imaging quality`
+                },
+                {
+                  name: t ? t("Clear Sky Rate", "晴空率") : "Clear Sky Rate",
+                  score: clearSkyScore,
+                  description: t
+                    ? t(`Annual clear sky rate of ${clearSkyRate}%`, 
+                      `年均晴空率为${clearSkyRate}%`)
+                    : `Annual clear sky rate of ${clearSkyRate}%`
                 }
               ]
             }
