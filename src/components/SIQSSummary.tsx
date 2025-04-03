@@ -8,6 +8,7 @@ import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
+import { getTranslatedDescription } from "@/components/siqs/utils/translations/descriptionTranslator";
 
 interface SIQSSummaryProps {
   siqsResult: any;
@@ -16,7 +17,7 @@ interface SIQSSummaryProps {
 }
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, locationData }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // If no SIQS data available, show placeholder
   if (!siqsResult) {
@@ -53,6 +54,29 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       getSIQSLevel(siqsScore) === 'Poor' ? "较差" : "很差"
     );
   }, [siqsScore, t]);
+  
+  // Translate factor descriptions if needed
+  const translatedFactors = useMemo(() => {
+    if (!siqsResult.factors || !Array.isArray(siqsResult.factors)) return [];
+    
+    return siqsResult.factors.map(factor => ({
+      ...factor,
+      description: language === 'zh' ? 
+        getTranslatedDescription(factor.description, 'zh') : 
+        factor.description,
+      // Also translate factor names
+      name: language === 'zh' ? 
+        (factor.name === 'Cloud Cover' ? '云层覆盖' :
+         factor.name === 'Light Pollution' ? '光污染' :
+         factor.name === 'Moon Phase' ? '月相' :
+         factor.name === 'Humidity' ? '湿度' :
+         factor.name === 'Wind Speed' ? '风速' :
+         factor.name === 'Seeing Conditions' ? '视宁度' :
+         factor.name === 'Air Quality' ? '空气质量' :
+         factor.name) : 
+        factor.name
+    }));
+  }, [siqsResult.factors, language]);
   
   return (
     <Card className="glassmorphism-strong">
@@ -98,10 +122,10 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         </div>
         
         {/* Contributing Factors */}
-        {siqsResult.factors && siqsResult.factors.length > 0 && (
+        {translatedFactors.length > 0 && (
           <div className="mt-4 space-y-4">
             <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响SIQS的因素")}</h4>
-            <SIQSFactorsList factors={siqsResult.factors} />
+            <SIQSFactorsList factors={translatedFactors} />
           </div>
         )}
       </CardContent>

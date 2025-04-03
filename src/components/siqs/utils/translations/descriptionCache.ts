@@ -1,36 +1,39 @@
 
-// Cache for storing translated descriptions
-const descriptionCache: Record<string, Record<string, string>> = {};
+interface DescriptionCache {
+  [key: string]: {
+    [language: string]: string;
+  };
+}
+
+// In-memory cache for translated descriptions
+const descriptionCache: DescriptionCache = {};
 
 /**
- * Get a cached description translation
- * @param description The original English description
- * @param language The target language
- * @returns The cached translation or null if not found
+ * Get a cached translation if available
  */
-export const getCachedDescription = (description: string, language: string): string | null => {
-  if (!descriptionCache[language]) return null;
-  return descriptionCache[language][description] || null;
-};
+export function getCachedDescription(
+  originalDescription: string,
+  language: string
+): string | null {
+  if (
+    descriptionCache[originalDescription] &&
+    descriptionCache[originalDescription][language]
+  ) {
+    return descriptionCache[originalDescription][language];
+  }
+  return null;
+}
 
 /**
  * Cache a translated description
- * @param description The original English description
- * @param language The target language
- * @param translation The translated text
  */
-export const cacheDescription = (description: string, language: string, translation: string): void => {
-  if (!descriptionCache[language]) {
-    descriptionCache[language] = {};
+export function cacheDescription(
+  originalDescription: string,
+  language: string,
+  translatedDescription: string
+): void {
+  if (!descriptionCache[originalDescription]) {
+    descriptionCache[originalDescription] = {};
   }
-  descriptionCache[language][description] = translation;
-};
-
-/**
- * Clear the description cache
- */
-export const clearDescriptionCache = (): void => {
-  Object.keys(descriptionCache).forEach(key => {
-    delete descriptionCache[key];
-  });
-};
+  descriptionCache[originalDescription][language] = translatedDescription;
+}

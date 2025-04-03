@@ -35,6 +35,12 @@ export async function calculateSIQSWithWeatherData(
       const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
       if (nighttimeSIQS) {
         console.log("Using nighttime forecast for SIQS calculation:", nighttimeSIQS.score);
+        
+        // Make sure score is never exaggerated
+        if (nighttimeSIQS.score > 8.5) {
+          nighttimeSIQS.score = 8.5; // Cap at 8.5 to avoid over-promising
+        }
+        
         return nighttimeSIQS;
       }
     } catch (error) {
@@ -44,7 +50,7 @@ export async function calculateSIQSWithWeatherData(
   
   // Fall back to standard calculation if nighttime calculation failed
   console.log("Falling back to standard SIQS calculation");
-  return calculateSIQS({
+  const result = calculateSIQS({
     cloudCover: weatherData.cloudCover,
     bortleScale,
     seeingConditions,
@@ -55,6 +61,13 @@ export async function calculateSIQSWithWeatherData(
     weatherCondition: weatherData.weatherCondition,
     aqi: weatherData.aqi
   });
+  
+  // Cap standard result score too
+  if (result.score > 8.5) {
+    result.score = 8.5;
+  }
+  
+  return result;
 }
 
 /**
@@ -102,7 +115,7 @@ export function getSIQSColorClass(value: number): string {
  * Determine if viewing conditions are good for astrophotography
  */
 export function isGoodViewingCondition(value: number): boolean {
-  return value >= 5.0; // Updated threshold to 5.0
+  return value >= 5.0; // Threshold is 5.0
 }
 
 /**

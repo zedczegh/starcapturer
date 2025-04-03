@@ -28,6 +28,9 @@ const PhotoPointsNearby: React.FC = () => {
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
 
+  // Get the current SIQS value from the store
+  const currentSiqs = currentSiqsStore.getValue();
+
   // Set up recommended locations with userLocation
   const {
     searchRadius,
@@ -51,9 +54,6 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
-
-  // Get the current SIQS value from the store
-  const currentSiqs = currentSiqsStore.getValue();
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {

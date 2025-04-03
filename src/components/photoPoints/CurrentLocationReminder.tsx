@@ -15,10 +15,10 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Show reminder if explicitly set to visible or if conditions are poor (SIQS < 3.0)
+  // Show reminder if explicitly set to visible AND if conditions are poor (SIQS < 5.0)
   const shouldShowReminder = 
     isVisible && (currentSiqs !== null) && 
-    (currentSiqs < 3.0 || isVisible === true);
+    (currentSiqs < 5.0);
   
   return (
     <AnimatePresence>

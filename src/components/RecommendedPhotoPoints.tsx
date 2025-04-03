@@ -106,7 +106,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   if (limitedLocations.length === 0 && !hideEmptyMessage) {
     return (
       <div className="mt-2 text-center py-6">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           {t(
             "No recommended photo points found nearby.",
             "在附近找不到推荐的摄影点。"
@@ -141,11 +141,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   
   return (
     <div className="mt-2">
-      {/* IMPORTANT: Make sure the reminder is always visible when we have currentSiqs data */}
-      <CurrentLocationReminder 
-        currentSiqs={currentSiqs}
-        isVisible={true} // Always show on homepage when we have SIQS data
-      />
+      {/* Show reminder based on actual current SIQS value */}
+      {currentSiqs !== null && (
+        <CurrentLocationReminder 
+          currentSiqs={currentSiqs}
+          isVisible={true} 
+        />
+      )}
       
       <AnimatePresence>
         <div className="space-y-3">
