@@ -32,15 +32,27 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     
     console.log(`Found ${nightForecasts.length} nighttime forecast hours (6 PM to 8 AM)`);
     
+    // Validate forecast data before processing
+    const validForecasts = nightForecasts.filter(forecast => 
+      forecast && 
+      forecast.time && 
+      typeof forecast.cloudCover === 'number'
+    );
+    
+    if (validForecasts.length === 0) {
+      console.log("No valid forecast data found after validation");
+      return null;
+    }
+    
+    console.log(`Valid forecast entries after validation: ${validForecasts.length}`);
+    
     // Group forecasts by time ranges with validation
-    const eveningForecasts = nightForecasts.filter(forecast => {
-      if (!forecast || !forecast.time) return false;
+    const eveningForecasts = validForecasts.filter(forecast => {
       const hour = new Date(forecast.time).getHours();
       return hour >= 18 && hour <= 23;
     });
     
-    const morningForecasts = nightForecasts.filter(forecast => {
-      if (!forecast || !forecast.time) return false;
+    const morningForecasts = validForecasts.filter(forecast => {
       const hour = new Date(forecast.time).getHours();
       return hour >= 0 && hour < 8;
     });
@@ -53,20 +65,14 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     
     console.log(`Average cloud cover - Evening: ${eveningCloudCover.toFixed(1)}%, Morning: ${morningCloudCover.toFixed(1)}%`);
     
-    // Weight the cloud cover based on actual number of hours in each period
+    // Calculate weighted average cloud cover based on number of hours in each period
+    let avgNightCloudCover;
     const totalHours = eveningForecasts.length + morningForecasts.length;
     
-    // Calculate weighted average with improved validation
-    let avgNightCloudCover;
-    if (eveningForecasts.length === 0 && morningForecasts.length === 0) {
+    if (totalHours === 0) {
       console.log("No valid hourly forecasts, using default cloud cover");
       avgNightCloudCover = locationData.weatherData?.cloudCover || 50;
-    } else if (eveningForecasts.length === 0) {
-      avgNightCloudCover = morningCloudCover;
-    } else if (morningForecasts.length === 0) {
-      avgNightCloudCover = eveningCloudCover;
     } else {
-      // Correctly weight by number of hours in each period
       avgNightCloudCover = (
         (eveningCloudCover * eveningForecasts.length) + 
         (morningCloudCover * morningForecasts.length)
@@ -79,8 +85,8 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     let totalWindSpeed = 0;
     let validWindSpeedCount = 0;
     
-    for (const forecast of nightForecasts) {
-      if (forecast && typeof forecast.windSpeed === 'number') {
+    for (const forecast of validForecasts) {
+      if (typeof forecast.windSpeed === 'number') {
         totalWindSpeed += forecast.windSpeed;
         validWindSpeedCount++;
       }
@@ -93,8 +99,8 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     let totalHumidity = 0;
     let validHumidityCount = 0;
     
-    for (const forecast of nightForecasts) {
-      if (forecast && typeof forecast.humidity === 'number') {
+    for (const forecast of validForecasts) {
+      if (typeof forecast.humidity === 'number') {
         totalHumidity += forecast.humidity;
         validHumidityCount++;
       }
@@ -104,7 +110,7 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       ? totalHumidity / validHumidityCount 
       : locationData.weatherData?.humidity || 50;
     
-    console.log(`SIQS calculation with ${nightForecasts.length} nighttime forecast items`);
+    console.log(`SIQS calculation with ${validForecasts.length} nighttime forecast items`);
     console.log(`Using nighttime forecast data for SIQS calculation`);
     console.log(`Average values - Cloud: ${avgNightCloudCover.toFixed(1)}%, Wind: ${avgNightWindSpeed.toFixed(1)}km/h, Humidity: ${avgNightHumidity.toFixed(1)}%`);
     
@@ -120,7 +126,7 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       weatherCondition: locationData.weatherData?.weatherCondition || "",
       aqi: locationData.weatherData?.aqi,
       clearSkyRate: locationData.weatherData?.clearSkyRate,
-      nightForecast: nightForecasts
+      nightForecast: validForecasts
     });
     
     // Add detailed nighttime data to the cloud cover factor
@@ -143,8 +149,7 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       });
     }
     
-    console.log(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
-    console.log(`Nighttime SIQS calculated: ${siqsResult.score}`);
+    console.log(`Final SIQS score based on nighttime forecast: ${siqsResult?.score?.toFixed(1) || "N/A"}`);
     
     return siqsResult;
     
