@@ -35,8 +35,14 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     </>
   ) : '--';
   
-  // Bortle scale value - now properly handles unknown values
+  // Bortle scale value - now properly handles unknown values with improved confidence indicator
   const bortleValue = formatBortleScale(bortleScale, t);
+  
+  // Add confidence indicator for Bortle scale value (high confidence when directly measured)
+  const hasHighConfidence = bortleScale !== null && 
+    Number.isInteger(bortleScale) && 
+    bortleScale >= 1 && 
+    bortleScale <= 9;
   
   return (
     <div className="space-y-7">
@@ -61,7 +67,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       )}
       
       <ConditionItem
-        icon={<DynamicLightbulbIcon bortleScale={bortleScale} />}
+        icon={<DynamicLightbulbIcon bortleScale={bortleScale} animated={hasHighConfidence} />}
         label={t("Bortle Scale", "光污染等级")}
         value={<span className="text-lg font-medium">{bortleValue}</span>}
         tooltip={bortleScale === null ? (language === 'en' ? 
