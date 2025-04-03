@@ -1,94 +1,113 @@
 
-import React from "react";
+import React, { memo, useMemo } from "react";
+import EmptyFactors from "./factors/EmptyFactors";
+import FactorItem from "./factors/FactorItem";
+import { normalizeFactorScores } from "@/lib/siqs/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { motion } from "framer-motion";
-
-interface SIQSFactor {
-  name: string;
-  score: number;
-  description: string;
-  nighttimeData?: {
-    average: number;
-    timeRange: string;
-  };
-}
 
 interface SIQSFactorsListProps {
-  factors: SIQSFactor[];
+  factors?: Array<{
+    name: string;
+    score: number;
+    description: string;
+    nighttimeData?: {
+      average: number;
+      timeRange: string;
+      detail?: {
+        evening: number;
+        morning: number;
+      };
+    };
+  }>;
 }
 
-const formatScoreValue = (score: number): string => {
-  return typeof score === 'number' ? score.toFixed(1) : '0.0';
-};
-
-const getScoreColor = (score: number): string => {
-  if (score >= 8) return "text-green-500";
-  if (score >= 6) return "text-blue-500";
-  if (score >= 4) return "text-yellow-500";
-  if (score >= 2) return "text-orange-500";
-  return "text-red-500";
-};
-
-const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors }) => {
-  const { t } = useLanguage();
-
-  if (!factors || factors.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground italic">
-        {t("No factor data available", "无因素数据可用")}
-      </div>
-    );
+const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
+  const { language } = useLanguage();
+  
+  // Ensure all factors are normalized to 0-10 scale for consistent display
+  const normalizedFactors = useMemo(() => {
+    return normalizeFactorScores(factors);
+  }, [factors]);
+  
+  if (!normalizedFactors || normalizedFactors.length === 0) {
+    return <EmptyFactors />;
   }
-
-  // First find if there's a Cloud Cover factor
-  const cloudCoverFactor = factors.find(f => 
-    f.name === "Cloud Cover" || f.name === "云层覆盖"
-  );
   
-  // Remove cloud cover from the factors array (if exists)
-  const otherFactors = factors.filter(f => 
-    f.name !== "Cloud Cover" && f.name !== "云层覆盖"
-  );
+  // Special handling for cloud cover - ensure 0% cloud cover always shows score 10.0
+  // and don't penalize too harshly for high cloud cover
+  const finalFactors = normalizedFactors.map(factor => {
+    // If it's the cloud cover factor
+    if ((factor.name === "Cloud Cover" || factor.name === "云层覆盖")) {
+      // If description mentions 0%, ensure score is 10
+      if (factor.description.includes("0%")) {
+        return { ...factor, score: 10 };
+      }
+      
+      // For high cloud cover, ensure we show the actual score (could be very low)
+      if (factor.description.includes("over 50%") || 
+          factor.description.includes("超过50%") ||
+          factor.description.includes("Heavy cloud") ||
+          factor.description.includes("重度云层")) {
+        return factor;
+      }
+    }
+    
+    // For Chinese UI, ensure factor names are translated
+    if (language === 'zh') {
+      if (factor.name === 'Cloud Cover') return { ...factor, name: '云层覆盖' };
+      if (factor.name === 'Light Pollution') return { ...factor, name: '光污染' };
+      if (factor.name === 'Moon Phase') return { ...factor, name: '月相' };
+      if (factor.name === 'Humidity') return { ...factor, name: '湿度' };
+      if (factor.name === 'Wind Speed') return { ...factor, name: '风速' };
+      if (factor.name === 'Seeing Conditions') return { ...factor, name: '视宁度' };
+      if (factor.name === 'Air Quality') return { ...factor, name: '空气质量' };
+      if (factor.name === 'Clear Sky Rate') return { ...factor, name: '晴空率' };
+    }
+    
+    return factor;
+  });
   
-  // Sort other factors by score (highest first)
-  const sortedOtherFactors = [...otherFactors].sort((a, b) => b.score - a.score);
+  // Sort factors to ensure Clear Sky Rate appears after Air Quality
+  const sortedFactors = [...finalFactors].sort((a, b) => {
+    // Define the order of factors
+    const order = [
+      'Cloud Cover', '云层覆盖',
+      'Light Pollution', '光污染',
+      'Seeing Conditions', '视宁度',
+      'Wind Speed', '风速',
+      'Humidity', '湿度',
+      'Moon Phase', '月相',
+      'Air Quality', '空气质量',
+      'Clear Sky Rate', '晴空率'
+    ];
+    
+    const indexA = order.indexOf(a.name);
+    const indexB = order.indexOf(b.name);
+    
+    // If both factors are in the order array, sort by index
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    }
+    
+    // If only one factor is in the order array, prioritize it
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    
+    // Otherwise, keep original order
+    return 0;
+  });
   
-  // Final array with Cloud Cover first, then other factors sorted by score
-  const finalFactors = cloudCoverFactor 
-    ? [cloudCoverFactor, ...sortedOtherFactors]
-    : sortedOtherFactors;
-
   return (
-    <div className="space-y-3">
-      {finalFactors.map((factor, index) => (
-        <motion.div
-          key={factor.name}
-          className="border border-cosmic-700/20 rounded-lg p-3 bg-cosmic-900/30 hover:bg-cosmic-800/20 transition-all duration-200"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
-        >
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-medium">{factor.name}</span>
-            <span className={`font-bold ${getScoreColor(factor.score)}`}>
-              {formatScoreValue(factor.score)}
-            </span>
-          </div>
-          
-          <p className="text-xs text-muted-foreground mt-1">
-            {factor.description}
-          </p>
-          
-          {/* Show nighttime data for cloud cover if available */}
-          {factor.nighttimeData && (
-            <div className="text-xs mt-2 text-blue-400/80 italic">
-              {t("Nighttime Avg", "夜间平均")}: {factor.nighttimeData.average}% ({factor.nighttimeData.timeRange})
-            </div>
-          )}
-        </motion.div>
+    <div className="space-y-4 mt-2">
+      {sortedFactors.map((factor, index) => (
+        <FactorItem 
+          key={`factor-${factor.name}-${index}`}
+          factor={factor}
+          index={index}
+        />
       ))}
     </div>
   );
 };
 
-export default SIQSFactorsList;
+export default memo(SIQSFactorsList);

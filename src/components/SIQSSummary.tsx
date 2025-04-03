@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Progress } from "@/components/ui/progress";
 import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
@@ -73,19 +74,37 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         score: clearSkyScore,
         description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`,
       });
+    }
+    
+    // Sort factors to ensure Clear Sky Rate appears after Air Quality
+    factors.sort((a, b) => {
+      // Define the order of factors
+      const order = [
+        'Cloud Cover', '云层覆盖',
+        'Light Pollution', '光污染',
+        'Seeing Conditions', '视宁度',
+        'Wind Speed', '风速',
+        'Humidity', '湿度',
+        'Moon Phase', '月相',
+        'Air Quality', '空气质量',
+        'Clear Sky Rate', '晴空率'
+      ];
       
-      console.log(`Added Clear Sky Rate factor to SIQS factors, rate: ${clearSkyRate}%`);
-    }
-    
-    // Ensure cloud cover is the first factor by finding and moving it
-    let cloudCoverIndex = factors.findIndex(factor => 
-      factor.name === 'Cloud Cover' || factor.name === '云层覆盖');
-    
-    // If cloud cover exists, move it to the front
-    if (cloudCoverIndex > 0) {
-      const cloudCoverFactor = factors.splice(cloudCoverIndex, 1)[0];
-      factors.unshift(cloudCoverFactor);
-    }
+      const indexA = order.indexOf(a.name);
+      const indexB = order.indexOf(b.name);
+      
+      // If both factors are in the order array, sort by index
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      
+      // If only one factor is in the order array, prioritize it
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // Otherwise, keep original order
+      return 0;
+    });
     
     return factors.map(factor => ({
       ...factor,
@@ -116,7 +135,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* SIQS Score Display */}
+        {/* SIQS Score with Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">{t("Overall Score", "总分")}</h3>
@@ -125,13 +144,17 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             </span>
           </div>
           
-          {/* Progress bar for overall score only */}
-          <div className="w-full bg-background/50 rounded-full h-2.5 my-2">
-            <div 
-              className={`${scoreColorClass} h-2.5 rounded-full`} 
-              style={{ width: `${Math.min(100, siqsScore * 10)}%` }}
-            ></div>
-          </div>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: "100%" }}
+            transition={{ duration: 0.5 }}
+          >
+            <Progress 
+              value={siqsScore * 10} 
+              className="h-3"
+              colorClass={scoreColorClass}
+            />
+          </motion.div>
           
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t("Poor", "较差")}</span>
@@ -151,6 +174,31 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
           <div className="mt-4 space-y-4">
             <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响天文观测质量的因素")}</h4>
             <SIQSFactorsList factors={translatedFactors} />
+          </div>
+        )}
+        
+        {/* Dedicated Clear Sky Rate section to ensure it's displayed */}
+        {weatherData?.clearSkyRate && !translatedFactors.some(f => 
+          f.name === 'Clear Sky Rate' || f.name === '晴空率'
+        ) && (
+          <div className="mt-6 pt-4 border-t border-border/30">
+            <h4 className="text-sm font-medium mb-3">{t("Clear Sky Rate", "晴空率")}</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">{t("Annual Rate", "年平均率")}</span>
+                <span className="font-medium">{weatherData.clearSkyRate}%</span>
+              </div>
+              <Progress 
+                value={weatherData.clearSkyRate} 
+                className="h-2"
+                colorClass="bg-blue-500/80"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === 'en' 
+                  ? `Historical clear sky average for this location`
+                  : `此位置的历史晴空平均值`}
+              </p>
+            </div>
           </div>
         )}
       </CardContent>

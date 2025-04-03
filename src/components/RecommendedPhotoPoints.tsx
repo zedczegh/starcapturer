@@ -141,8 +141,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   
   return (
     <div className="mt-2">
-      {/* Show reminder based on actual current SIQS value, but only if below 5.0 */}
-      {currentSiqs !== null && currentSiqs < 5.0 && (
+      {/* Show reminder based on actual current SIQS value */}
+      {currentSiqs !== null && (
         <CurrentLocationReminder 
           currentSiqs={currentSiqs}
           isVisible={true} 

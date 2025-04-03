@@ -45,19 +45,9 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     
     console.log(`Evening forecasts (6PM-12AM): ${eveningForecasts.length}, Morning forecasts (1AM-8AM): ${morningForecasts.length}`);
     
-    // Calculate accurate total cloud cover sums for each period
-    const eveningCloudTotal = eveningForecasts.reduce((sum, forecast) => 
-      typeof forecast.cloudCover === 'number' ? sum + forecast.cloudCover : sum, 0);
-    
-    const morningCloudTotal = morningForecasts.reduce((sum, forecast) => 
-      typeof forecast.cloudCover === 'number' ? sum + forecast.cloudCover : sum, 0);
-    
-    // Calculate accurate averages - only count valid entries
-    const eveningCloudCover = eveningForecasts.length > 0 ? 
-      eveningCloudTotal / eveningForecasts.length : 0;
-    
-    const morningCloudCover = morningForecasts.length > 0 ? 
-      morningCloudTotal / morningForecasts.length : 0;
+    // Calculate average cloud cover for each time range - only count valid entries
+    const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
+    const morningCloudCover = calculateAverageCloudCover(morningForecasts);
     
     console.log(`Average cloud cover - Evening: ${eveningCloudCover.toFixed(1)}%, Morning: ${morningCloudCover.toFixed(1)}%`);
     

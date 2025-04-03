@@ -1,75 +1,58 @@
 
-import React from "react";
+import React, { memo } from "react";
+import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { 
-  DynamicTemperatureIcon, 
   DynamicHumidityIcon, 
-  DynamicWindIcon, 
-  DynamicSeeingIcon, 
-  DynamicCloudCoverIcon 
+  DynamicTemperatureIcon,
+  DynamicWindIcon,
+  DynamicSeeingIcon
 } from "./DynamicIcons";
-import LabeledValue from "./LabeledValue";
-import { Sun } from "lucide-react";
 
 interface PrimaryConditionsProps {
   temperature: number;
   humidity: number;
   windSpeed: number;
   seeingConditions: string;
-  clearSkyRate?: number;
 }
 
-const PrimaryConditions: React.FC<PrimaryConditionsProps> = ({
+const PrimaryConditions = memo<PrimaryConditionsProps>(({
   temperature,
   humidity,
   windSpeed,
-  seeingConditions,
-  clearSkyRate
+  seeingConditions
 }) => {
   const { t } = useLanguage();
   
   return (
-    <div className="space-y-3">
-      {/* Cloud Cover moved to first position as most important factor */}
-      <LabeledValue
-        icon={<DynamicCloudCoverIcon cloudCover={0} className="h-4 w-4 text-blue-400" />}
-        label={t("Cloud Cover", "云层覆盖")}
-        value={`0%`}
-      />
-
-      <LabeledValue
-        icon={<DynamicTemperatureIcon temperature={temperature} className="h-4 w-4" />}
+    <div className="space-y-6">
+      <ConditionItem
+        icon={<DynamicTemperatureIcon temperature={temperature} />}
         label={t("Temperature", "温度")}
-        value={`${Math.round(temperature)}°C`}
+        value={`${temperature.toFixed(1)}°C`}
       />
       
-      <LabeledValue
-        icon={<DynamicHumidityIcon humidity={humidity} className="h-4 w-4" />}
+      <ConditionItem
+        icon={<DynamicHumidityIcon humidity={humidity} />}
         label={t("Humidity", "湿度")}
-        value={`${Math.round(humidity)}%`}
+        value={`${humidity}%`}
       />
       
-      <LabeledValue
-        icon={<DynamicWindIcon windSpeed={windSpeed} className="h-4 w-4" />}
+      <ConditionItem
+        icon={<DynamicWindIcon windSpeed={windSpeed} />}
         label={t("Wind Speed", "风速")}
-        value={`${Math.round(windSpeed)} km/h`}
+        value={`${windSpeed} ${t("km/h", "公里/小时")}`}
       />
       
-      <LabeledValue
-        icon={<DynamicSeeingIcon seeing={seeingConditions} className="h-4 w-4 text-amber-400" />}
+      <ConditionItem
+        icon={<DynamicSeeingIcon seeingConditions={seeingConditions} />}
         label={t("Seeing Conditions", "视宁度")}
         value={seeingConditions}
       />
-      
-      {clearSkyRate !== undefined && (
-        <LabeledValue
-          icon={<Sun className="h-4 w-4 text-yellow-400" />}
-          label={t("Annual Clear Sky Rate", "年均晴空率")}
-          value={`${Math.round(clearSkyRate)}%`}
-        />
-      )}
     </div>
   );
-};
+});
+
+PrimaryConditions.displayName = 'PrimaryConditions';
 
 export default PrimaryConditions;

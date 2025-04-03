@@ -70,28 +70,41 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     };
   }, [handleRefreshAll, resetUpdateState]);
   
-  // Fix: Controlled refresh to prevent flashing - Only refresh once when location changes
+  // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
+    // Check if we came from PhotoPoints or another source
+    const fromPhotoPoints = locationData?.fromPhotoPoints === true;
+    
     // Create a location signature to detect changes
     const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
     
-    // Only refresh if location has changed and we haven't already attempted a refresh
-    if (locationSignature !== lastLocationRef.current && !autoRefreshAttemptedRef.current) {
-      console.log("Location has changed, scheduling controlled refresh");
+    // If location has changed or coming from PhotoPoints, refresh data
+    if (locationSignature !== lastLocationRef.current || 
+        fromPhotoPoints || 
+        !autoRefreshAttemptedRef.current) {
+      
       lastLocationRef.current = locationSignature;
       autoRefreshAttemptedRef.current = true;
       
-      // Clear any existing timer to prevent multiple refreshes
+      // Clear any existing timer
       if (refreshTimerRef.current) {
         window.clearTimeout(refreshTimerRef.current);
       }
       
-      // Set a small delay before refreshing
+      // Set a small delay before refreshing to allow component to fully mount
       refreshTimerRef.current = window.setTimeout(() => {
-        console.log("Executing controlled refresh after location update");
+        console.log("Auto-refreshing data after location update or page load");
         handleRefreshAll();
         resetUpdateState(); // Reset SIQS updater state
-      }, 500);
+        
+        // Reset the fromPhotoPoints flag after refreshing
+        if (fromPhotoPoints && locationData) {
+          setLocationData({
+            ...locationData,
+            fromPhotoPoints: false
+          });
+        }
+      }, 300); // Reduced from 500ms for faster refresh
     }
     
     // Cleanup on unmount
@@ -100,7 +113,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         window.clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [locationData?.latitude, locationData?.longitude, handleRefreshAll, resetUpdateState]);
+  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
 
   return (
     <div className="transition-all duration-300 animate-fade-in pt-10" ref={containerRef}> {/* Added padding to fix navbar overlap */}

@@ -16,7 +16,7 @@ export {
 } from './api/forecast';
 
 export { getLocationNameFromCoordinates } from './api/location';
-export { fetchLightPollutionData, getLightPollutionType } from './api/pollution';
+export { fetchLightPollutionData } from './api/pollution';
 
 // Export types and functions related to shared astronomy spots
 export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';

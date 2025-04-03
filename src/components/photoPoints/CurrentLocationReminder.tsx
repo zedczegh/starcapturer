@@ -31,11 +31,11 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
     <AnimatePresence>
       {shouldShowReminder && (
         <motion.div 
-          className="mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm"
+          className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm"
           initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-          animate={{ opacity: 1, height: 'auto', marginBottom: 12 }}
+          animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
           exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.2 }} // Reduced animation duration
           style={{ overflow: 'hidden' }}
         >
           <div className="flex items-start gap-2">

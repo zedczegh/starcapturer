@@ -113,17 +113,15 @@ const PhotoPointsNearby: React.FC = () => {
         getPosition={getPosition}
       />
       
-      {/* Only show reminder if we have user location and search results */}
-      {userLocation && !loading && (
-        <CurrentLocationReminder 
-          currentSiqs={currentSiqs}
-          isVisible={!!userLocation && !loading}
-        />
-      )}
+      {/* Add the reminder component with currentSiqs from store */}
+      <CurrentLocationReminder 
+        currentSiqs={currentSiqs}
+        isVisible={!!userLocation && !loading}
+      />
       
       {/* Distance filter with better spacing */}
       {userLocation && (
-        <div className="max-w-xl mx-auto mb-8 mt-4">
+        <div className="max-w-xl mx-auto mb-10 mt-6">
           <DistanceRangeSlider
             currentValue={searchRadius}
             onValueChange={handleRadiusChange}

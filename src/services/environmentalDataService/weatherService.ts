@@ -1,6 +1,5 @@
 
 import { fetchWeatherData } from "@/lib/api";
-import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 
 // Default timeout for weather API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
@@ -8,20 +7,6 @@ const DEFAULT_TIMEOUT = 5000;
 const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // Reduced from 5 to 3 minutes for faster refreshes
 // Maximum retry attempts
 const MAX_RETRIES = 2;
-
-// Define an extended weather data interface that includes clearSkyRate
-interface EnhancedWeatherData {
-  temperature: number;
-  humidity: number;
-  cloudCover: number;
-  windSpeed: number;
-  precipitation: number;
-  time: string;
-  condition: string;
-  weatherCondition?: string;
-  aqi?: number;
-  clearSkyRate?: number;
-}
 
 /**
  * Optimized service for retrieving weather data with better caching and error handling
@@ -36,14 +21,14 @@ export const getWeatherData = async (
   language: string = 'en',
   setStatusMessage?: (message: string | null) => void,
   timeout: number = DEFAULT_TIMEOUT
-): Promise<EnhancedWeatherData> => {
+): Promise<any> => {
   // Generate location-specific cache key to avoid using old data for new locations
   const locationSpecificKey = `${cacheKey}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   
   // First try to use cached data
   const cachedWeatherData = getCachedData(locationSpecificKey, WEATHER_CACHE_LIFETIME);
   if (cachedWeatherData) {
-    return cachedWeatherData as EnhancedWeatherData;
+    return cachedWeatherData;
   }
   
   // Implement retry logic for better resilience
@@ -54,31 +39,18 @@ export const getWeatherData = async (
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       
-      // Fetch weather data and clear sky rate in parallel
-      const [weatherData, clearSkyData] = await Promise.all([
-        fetchWeatherData({
-          latitude,
-          longitude,
-          days: 3
-        }, controller.signal),
-        fetchClearSkyRate(latitude, longitude)
-      ]);
+      const data = await fetchWeatherData({
+        latitude,
+        longitude,
+        days: 3
+      }, controller.signal);
       
       clearTimeout(timeoutId);
       
-      if (weatherData) {
-        // Create a new object to include clearSkyRate
-        const enhancedWeatherData: EnhancedWeatherData = { ...weatherData };
-        
-        // Add clear sky rate to weather data if available
-        if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
-          enhancedWeatherData.clearSkyRate = clearSkyData.annualRate;
-          console.log(`Added clear sky rate to weather data: ${clearSkyData.annualRate}%`);
-        }
-        
+      if (data) {
         // Cache the weather data for future use
-        setCachedData(locationSpecificKey, enhancedWeatherData);
-        return enhancedWeatherData;
+        setCachedData(locationSpecificKey, data);
+        return data;
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -93,19 +65,8 @@ export const getWeatherData = async (
   // All attempts failed - use fallback data
   console.error("Failed to fetch weather data after retries:", lastError);
   
-  // Try to get clear sky rate even if weather data failed
-  let clearSkyRate: number | undefined;
-  try {
-    const clearSkyData = await fetchClearSkyRate(latitude, longitude);
-    if (clearSkyData) {
-      clearSkyRate = clearSkyData.annualRate;
-    }
-  } catch (e) {
-    console.error("Failed to fetch clear sky rate:", e);
-  }
-  
   // Use fallback weather data
-  const fallbackData: EnhancedWeatherData = {
+  const fallbackData = {
     temperature: 20,
     humidity: 50,
     cloudCover: 30,
@@ -114,8 +75,7 @@ export const getWeatherData = async (
     time: new Date().toISOString(),
     condition: "Clear",
     weatherCondition: "Clear",
-    aqi: 50,
-    clearSkyRate: clearSkyRate || 65 // Add fallback clear sky rate
+    aqi: 50
   };
   
   // Show status message if needed
