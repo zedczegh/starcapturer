@@ -1,14 +1,9 @@
 
-import React, { memo } from "react";
-import { Gauge } from "lucide-react";
-import ConditionItem from "./ConditionItem";
+import React from "react";
+import { DynamicMoonIcon, DynamicCloudCoverIcon } from "@/components/weather/DynamicIcons";
+import ConditionItem from "@/components/weather/ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
-import { 
-  DynamicMoonIcon, 
-  DynamicLightbulbIcon,
-  DynamicCloudCoverIcon
-} from "./DynamicIcons";
+import { Cloud, Moon, Gauge } from "lucide-react";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -17,67 +12,51 @@ interface SecondaryConditionsProps {
   aqi?: number;
 }
 
-const SecondaryConditions = memo<SecondaryConditionsProps>(({
+const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   cloudCover,
   moonPhase,
   bortleScale,
   aqi
 }) => {
-  const { t, language } = useLanguage();
-  
-  // AQI display with conditional rendering and enhanced sizing
-  const aqiValue = aqi !== undefined ? (
-    <>
-      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
-        {aqi} 
-      </span> 
-      <span className="text-sm ml-1.5">({getAQIDescription(aqi, t)})</span>
-    </>
-  ) : '--';
-  
-  // Bortle scale value - now properly handles unknown values with improved confidence indicator
-  const bortleValue = formatBortleScale(bortleScale, t);
-  
-  // Add confidence indicator for Bortle scale value (high confidence when directly measured)
-  const hasHighConfidence = bortleScale !== null && 
-    Number.isInteger(bortleScale) && 
-    bortleScale >= 1 && 
-    bortleScale <= 9;
+  const { t } = useLanguage();
   
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       <ConditionItem
-        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} />}
-        label={t("Cloud Cover", "云层覆盖")}
-        value={<span className="text-lg font-medium">{cloudCover}%</span>}
+        icon={<DynamicCloudCoverIcon cloudCover={cloudCover} className="h-8 w-8" />}
+        title={t("Cloud Cover", "云量")}
+        value={`${cloudCover}%`}
+        description={t("Percentage of sky covered by clouds", "天空被云层覆盖的百分比")}
+        warning={cloudCover > 60}
       />
       
       <ConditionItem
-        icon={<DynamicMoonIcon phase={moonPhase} />}
-        label={t("Moon Phase", "月相")}
-        value={<span className="text-lg font-medium">{moonPhase}</span>}
+        icon={<DynamicMoonIcon phase={moonPhase} className="h-8 w-8" />}
+        title={t("Moon Phase", "月相")}
+        value={moonPhase}
+        description={t("Current lunar phase", "当前月相")}
+        warning={moonPhase.toLowerCase().includes("full")}
+      />
+      
+      <ConditionItem
+        icon={<Gauge className="h-8 w-8 text-purple-400" />}
+        title={t("Bortle Scale", "波尔特尺度")}
+        value={bortleScale !== null ? bortleScale.toString() : "–"}
+        description={t("Light pollution scale (1-9)", "光污染程度 (1-9)")}
+        warning={bortleScale !== null && bortleScale > 5}
       />
       
       {aqi !== undefined && (
         <ConditionItem
-          icon={<Gauge className="h-5 w-5 text-primary" />}
-          label={t("Air Quality", "空气质量")}
-          value={aqiValue}
+          icon={<Gauge className="h-8 w-8 text-green-400" />}
+          title={t("Air Quality", "空气质量")}
+          value={`AQI: ${aqi}`}
+          description={t("Air quality index", "空气质量指数")}
+          warning={aqi > 100}
         />
       )}
-      
-      <ConditionItem
-        icon={<DynamicLightbulbIcon bortleScale={bortleScale} animated={hasHighConfidence} />}
-        label={t("Bortle Scale", "光污染等级")}
-        value={<span className="text-lg font-medium">{bortleValue}</span>}
-        tooltip={bortleScale === null ? (language === 'en' ? 
-          "Bortle scale could not be determined for this location" : 
-          "无法确定此位置的光污染等级") : undefined}
-      />
     </div>
   );
-});
-
-SecondaryConditions.displayName = 'SecondaryConditions';
+};
 
 export default SecondaryConditions;

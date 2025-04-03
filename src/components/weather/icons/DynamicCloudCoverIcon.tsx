@@ -23,8 +23,18 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
   
   return (
     <div className={`relative h-5 w-5 ${className}`}>
-      <Sun className="absolute h-5 w-5 text-yellow-400" />
-      <CloudIcon className={`absolute h-5 w-5 ${cloudColor}`} style={{ opacity }} />
+      {/* Show sun only for low cloud cover (less than 80%) */}
+      {cloudCover < 80 && (
+        <Sun className="absolute h-5 w-5 text-yellow-400" />
+      )}
+      <CloudIcon 
+        className={`absolute h-5 w-5 ${cloudColor}`} 
+        style={{ 
+          opacity: cloudCover < 10 ? 0.2 : opacity,
+          // Show cloud in front for high cloud cover
+          zIndex: cloudCover > 70 ? 10 : 1
+        }} 
+      />
     </div>
   );
 };
