@@ -6,12 +6,14 @@ interface DynamicPrecipitationIconProps {
   precipitation: number;
   weatherCode?: number;
   temperature?: number;
+  className?: string;
 }
 
 const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({ 
   precipitation, 
   weatherCode,
-  temperature = 0
+  temperature = 0,
+  className
 }) => {
   // Determine which icon to show based on precipitation and weather code
   // Weather codes from Open Meteo API:
@@ -32,7 +34,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
   if (weatherCode) {
     if (weatherCode >= 71 && weatherCode <= 77) {
       return (
-        <div className="relative inline-flex items-center justify-center w-5 h-5">
+        <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
           <CloudSnow className="w-4 h-4 text-blue-200" />
         </div>
       );
@@ -40,7 +42,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
     
     if (weatherCode >= 85 && weatherCode <= 86) {
       return (
-        <div className="relative inline-flex items-center justify-center w-5 h-5">
+        <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
           <CloudSnow className="w-4 h-4 text-blue-200" />
         </div>
       );
@@ -48,7 +50,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
     
     if ((weatherCode >= 61 && weatherCode <= 65) || (weatherCode >= 80 && weatherCode <= 82)) {
       return (
-        <div className="relative inline-flex items-center justify-center w-5 h-5">
+        <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
           <CloudRain 
             className="w-4 h-4 text-blue-400" 
             style={rainGlowStyle}
@@ -59,7 +61,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
     
     if (weatherCode >= 51 && weatherCode <= 55) {
       return (
-        <div className="relative inline-flex items-center justify-center w-5 h-5">
+        <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
           <CloudDrizzle 
             className="w-4 h-4 text-blue-300" 
             style={rainGlowStyle}
@@ -70,7 +72,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
     
     if ((weatherCode >= 66 && weatherCode <= 67) || (weatherCode >= 56 && weatherCode <= 57)) {
       return (
-        <div className="relative inline-flex items-center justify-center w-5 h-5">
+        <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
           <CloudHail 
             className="w-4 h-4 text-indigo-300" 
             style={rainGlowStyle}
@@ -83,13 +85,13 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
   // Fallback to precipitation amount logic
   if (precipitation > 0 && temperature < 0) {
     return (
-      <div className="relative inline-flex items-center justify-center w-5 h-5">
+      <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
         <CloudSnow className="w-4 h-4 text-blue-200" />
       </div>
     );
   } else if (precipitation >= 4) {
     return (
-      <div className="relative inline-flex items-center justify-center w-5 h-5">
+      <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
         <CloudRain 
           className="w-4 h-4 text-blue-400" 
           style={rainGlowStyle}
@@ -98,7 +100,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
     );
   } else if (precipitation > 0) {
     return (
-      <div className="relative inline-flex items-center justify-center w-5 h-5">
+      <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
         <CloudDrizzle 
           className="w-4 h-4 text-blue-300" 
           style={rainGlowStyle}
@@ -107,7 +109,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
     );
   } else if (precipitation === 0) {
     return (
-      <div className="relative inline-flex items-center justify-center w-5 h-5">
+      <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
         <Droplets className="w-4 h-4 text-blue-200 opacity-30" />
       </div>
     );
@@ -115,7 +117,7 @@ const DynamicPrecipitationIcon: React.FC<DynamicPrecipitationIconProps> = ({
   
   // Default case
   return (
-    <div className="relative inline-flex items-center justify-center w-5 h-5">
+    <div className={`relative inline-flex items-center justify-center w-5 h-5 ${className || ''}`}>
       <Cloud className="w-4 h-4 text-gray-400 opacity-30" />
     </div>
   );

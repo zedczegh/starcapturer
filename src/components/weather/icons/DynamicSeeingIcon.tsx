@@ -4,9 +4,10 @@ import { Eye } from "lucide-react";
 
 interface DynamicSeeingIconProps {
   seeingConditions: string;
+  className?: string;
 }
 
-const DynamicSeeingIcon: React.FC<DynamicSeeingIconProps> = ({ seeingConditions }) => {
+const DynamicSeeingIcon: React.FC<DynamicSeeingIconProps> = ({ seeingConditions, className }) => {
   // Extract numeric part from seeing conditions string if possible
   let seeingValue = 3; // Default middle value
   
@@ -40,7 +41,7 @@ const DynamicSeeingIcon: React.FC<DynamicSeeingIconProps> = ({ seeingConditions 
   const fillOpacity = (seeingValue - 1) / 4; // Scale 1-5 to 0-1
   
   return (
-    <div className="relative">
+    <div className={`relative ${className || ''}`}>
       <Eye 
         className="h-4 w-4 text-primary" 
         style={{

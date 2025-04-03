@@ -7,3 +7,5 @@ export { default as DynamicLightbulbIcon } from './icons/DynamicLightbulbIcon';
 export { default as DynamicHumidityIcon } from './icons/DynamicHumidityIcon';
 export { default as DynamicWindIcon } from './icons/DynamicWindIcon';
 export { default as DynamicTemperatureIcon } from './icons/DynamicTemperatureIcon';
+export { default as DynamicSeeingIcon } from './icons/DynamicSeeingIcon';
+export { default as DynamicPrecipitationIcon } from './icons/DynamicPrecipitationIcon';
