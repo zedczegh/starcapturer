@@ -44,6 +44,7 @@ const BortleNow: React.FC = () => {
   const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
   const [captureDuration, setCaptureDuration] = useState<number>(2000);
   const [darkFrameBrightness, setDarkFrameBrightness] = useState<number | null>(null);
+  const [exposureTime, setExposureTime] = useState<number>(2000);
   
   const onLocationChange = useCallback((lat: number, lng: number) => {
     setLatitude(lat.toFixed(6));
@@ -547,7 +548,7 @@ const BortleNow: React.FC = () => {
                 {cameraMode === "dark" ? (
                   <p>{t("Get ready to cover camera lens completely", "准备完全遮盖相机镜头")}</p>
                 ) : (
-                  <p>{t("Get ready to point camera at night sky", "准��将相机指向夜空")}</p>
+                  <p>{t("Get ready to point camera at night sky", "准备将相机指向夜空")}</p>
                 )}
               </div>
             </motion.div>
