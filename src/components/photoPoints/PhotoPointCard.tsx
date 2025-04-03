@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Building2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFor
 import { getCertificationInfo, getLocalizedCertText } from "./utils/certificationUtils";
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -27,9 +28,13 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
 
+  // Pre-compute certification info to avoid recalculations and flash
+  const certInfo = useMemo(() => getCertificationInfo(point), [point]);
+  
   useEffect(() => {
     if (point.latitude && point.longitude) {
       const fetchNearestTown = async () => {
@@ -130,8 +135,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  // Get certification info using our utility function
-  const certInfo = getCertificationInfo(point);
   const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
 
   return (
@@ -144,16 +147,16 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           {pointName}
         </h4>
         
-        {/* SIQS Score - Now with improved styling */}
+        {/* SIQS Score */}
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
         </div>
       </div>
       
-      {/* Certification Badge - Using our utility function */}
+      {/* Certification Badge - Using memoized cert info to prevent flashing */}
       {certInfo && (
-        <div className="flex items-center mt-1.5 mb-2">
+        <div className={`flex items-center mt-1.5 mb-2 ${isMobile ? 'will-change-transform' : ''}`}>
           <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
             {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
             <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
@@ -194,4 +197,4 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   );
 };
 
-export default PhotoPointCard;
+export default React.memo(PhotoPointCard);
