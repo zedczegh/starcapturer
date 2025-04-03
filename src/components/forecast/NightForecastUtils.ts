@@ -1,42 +1,36 @@
+
 /**
- * Utility functions for extracting nighttime forecasts
+ * Utility functions for working with nighttime forecast data
  */
 
 /**
- * Extract nighttime forecasts from hourly forecasts
- * Specifically targeting hours from 6 PM to 8 AM of the next day
+ * Extract the nighttime hours (6 PM to 8 AM) from forecast data
  * @param hourlyData Hourly forecast data
- * @returns Array of forecast objects during nighttime
+ * @returns Array of nighttime forecast entries
  */
-export function extractNightForecasts(hourlyData: any) {
+export function extractNightForecasts(hourlyData: any): any[] {
   if (!hourlyData || !hourlyData.time || !Array.isArray(hourlyData.time)) {
     return [];
   }
   
   const nightForecasts = [];
   
+  // Process each hour
   for (let i = 0; i < hourlyData.time.length; i++) {
-    // Create date object from forecast time
-    const date = new Date(hourlyData.time[i]);
+    const timeStr = hourlyData.time[i];
+    const date = new Date(timeStr);
     const hour = date.getHours();
     
-    // Include hours that are after 6 PM (18:00) or before 8 AM (8:00)
+    // Consider night hours from 6 PM to 8 AM
     if (hour >= 18 || hour < 8) {
-      // Extract all available data for this hour
       const forecast = {
-        time: hourlyData.time[i],
-        cloudCover: hourlyData.cloud_cover?.[i] !== undefined ? hourlyData.cloud_cover[i] : null,
-        windSpeed: hourlyData.wind_speed_10m?.[i] !== undefined ? hourlyData.wind_speed_10m[i] : null,
-        humidity: hourlyData.relative_humidity_2m?.[i] !== undefined ? hourlyData.relative_humidity_2m[i] : null,
-        precipitation: hourlyData.precipitation?.[i] !== undefined ? hourlyData.precipitation[i] : 0,
-        weatherCode: hourlyData.weather_code?.[i] !== undefined ? hourlyData.weather_code[i] : null,
-        temperature: hourlyData.temperature_2m?.[i] !== undefined ? hourlyData.temperature_2m[i] : null
+        time: timeStr,
+        cloudCover: hourlyData.cloud_cover?.[i] || 0,
+        windSpeed: hourlyData.wind_speed_10m?.[i] || hourlyData.windspeed_10m?.[i],
+        humidity: hourlyData.relative_humidity_2m?.[i]
       };
       
-      // Add forecast to array if it has cloud cover data
-      if (forecast.cloudCover !== null) {
-        nightForecasts.push(forecast);
-      }
+      nightForecasts.push(forecast);
     }
   }
   
@@ -44,8 +38,8 @@ export function extractNightForecasts(hourlyData: any) {
 }
 
 /**
- * Calculate average cloud cover from nighttime forecasts
- * @param forecasts Array of forecast objects
+ * Calculate average cloud cover from forecast entries
+ * @param forecasts Array of forecast entries
  * @returns Average cloud cover percentage
  */
 export function calculateAverageCloudCover(forecasts: any[]): number {
@@ -53,140 +47,105 @@ export function calculateAverageCloudCover(forecasts: any[]): number {
     return 0;
   }
   
-  // Filter for forecasts with valid cloud cover data
-  const validForecasts = forecasts.filter(f => 
-    f.cloudCover !== null && 
-    f.cloudCover !== undefined &&
-    !isNaN(f.cloudCover)
-  );
+  let totalCloudCover = 0;
+  let validEntries = 0;
   
-  if (validForecasts.length === 0) {
-    return 0;
+  for (const forecast of forecasts) {
+    if (forecast && typeof forecast.cloudCover === 'number') {
+      totalCloudCover += forecast.cloudCover;
+      validEntries++;
+    }
   }
   
-  // Calculate average cloud cover
-  const sum = validForecasts.reduce((acc, f) => acc + f.cloudCover, 0);
-  return sum / validForecasts.length;
+  return validEntries > 0 ? (totalCloudCover / validEntries) : 0;
 }
 
 /**
- * Calculate average for specific time range
- * @param forecasts Array of forecast objects
- * @param startHour Start hour (0-23)
- * @param endHour End hour (0-23)
- * @returns Cloud cover percentage for that time range
- */
-export function calculateTimeRangeCloudCover(forecasts: any[], startHour: number, endHour: number): number {
-  if (!forecasts || forecasts.length === 0) {
-    return 0;
-  }
-  
-  const rangeForecasts = forecasts.filter(f => {
-    const hour = new Date(f.time).getHours();
-    return hour >= startHour && hour <= endHour;
-  });
-  
-  return calculateAverageCloudCover(rangeForecasts);
-}
-
-/**
- * Calculate average wind speed from nighttime forecasts
- * @param forecasts Array of forecast objects
- * @returns Average wind speed in km/h
- */
-export function calculateAverageWindSpeed(forecasts: any[]): number {
-  if (!forecasts || forecasts.length === 0) {
-    return 0;
-  }
-  
-  // Filter for forecasts with valid wind speed data
-  const validForecasts = forecasts.filter(f => 
-    f.windSpeed !== null && 
-    f.windSpeed !== undefined &&
-    !isNaN(f.windSpeed)
-  );
-  
-  if (validForecasts.length === 0) {
-    return 0;
-  }
-  
-  // Calculate average wind speed
-  const sum = validForecasts.reduce((acc, f) => acc + f.windSpeed, 0);
-  return sum / validForecasts.length;
-}
-
-/**
- * Calculate average humidity from nighttime forecasts
- * @param forecasts Array of forecast objects
- * @returns Average humidity percentage
- */
-export function calculateAverageHumidity(forecasts: any[]): number {
-  if (!forecasts || forecasts.length === 0) {
-    return 0;
-  }
-  
-  // Filter for forecasts with valid humidity data
-  const validForecasts = forecasts.filter(f => 
-    f.humidity !== null && 
-    f.humidity !== undefined &&
-    !isNaN(f.humidity)
-  );
-  
-  if (validForecasts.length === 0) {
-    return 0;
-  }
-  
-  // Calculate average humidity
-  const sum = validForecasts.reduce((acc, f) => acc + f.humidity, 0);
-  return sum / validForecasts.length;
-}
-
-/**
- * Format the nighttime hours range for display in UI
- * @returns Formatted string showing time range
+ * Format nighttime hours range as a readable string
+ * @returns Formatted time range string
  */
 export function formatNighttimeHoursRange(): string {
-  return "6PM to 8AM";
+  return "6PM-8AM";
 }
 
 /**
- * Format the nighttime hours range in the current language
- * @param language Current language code
- * @returns Localized time range string
+ * Calculate sunset and sunrise times for a location
+ * @param lat Latitude
+ * @param lng Longitude
+ * @param date Date to calculate for
+ * @returns Object with sunset and sunrise times
  */
-export function formatLocalizedNighttimeRange(language: 'en' | 'zh'): string {
-  return language === 'en' ? "6PM to 8AM" : "18:00至次日08:00";
+export function calculateSunriseSunset(lat: number, lng: number, date: Date = new Date()): { 
+  sunrise: Date; 
+  sunset: Date;
+} {
+  // This is a simplified calculation that doesn't account for all factors
+  // In a production app, you'd use a more precise algorithm or API
+  
+  // Day of year (approximate)
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = (date.getTime() - start.getTime()) + 
+    ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  
+  // Calculate approximate sunrise/sunset times
+  // This is a very simplified model
+  const sunriseHour = 6 + (lat > 0 ? -1 : 1) * Math.sin(2 * Math.PI * dayOfYear / 365) * 1.5;
+  const sunsetHour = 18 + (lat > 0 ? 1 : -1) * Math.sin(2 * Math.PI * dayOfYear / 365) * 1.5;
+  
+  const sunrise = new Date(date);
+  sunrise.setHours(Math.floor(sunriseHour), Math.round((sunriseHour % 1) * 60), 0);
+  
+  const sunset = new Date(date);
+  sunset.setHours(Math.floor(sunsetHour), Math.round((sunsetHour % 1) * 60), 0);
+  
+  return { sunrise, sunset };
 }
 
 /**
- * Determine if a specific hour is considered nighttime
- * @param hour Hour in 24-hour format (0-23)
+ * Determine if a given time is night (between sunset and sunrise)
+ * @param time Time to check
+ * @param lat Latitude for sunset/sunrise calculation
+ * @param lng Longitude for sunset/sunrise calculation
  * @returns Boolean indicating if it's nighttime
  */
-export function isNighttimeHour(hour: number): boolean {
+export function isNighttime(time: Date, lat: number, lng: number): boolean {
+  const { sunrise, sunset } = calculateSunriseSunset(lat, lng, time);
+  const hour = time.getHours();
+  
+  // Simplified check - between 6 PM and 8 AM
   return hour >= 18 || hour < 8;
 }
 
 /**
- * Calculate percentage of nighttime hours with good viewing conditions
- * @param forecasts Array of forecast objects
- * @param maxCloudCover Maximum cloud cover percentage for good conditions
- * @returns Percentage of good viewing hours
+ * Get the time range for the next night period
+ * @returns Object with start and end times for the night period
  */
-export function calculateGoodViewingHoursPercentage(
-  forecasts: any[], 
-  maxCloudCover: number = 30
-): number {
-  if (!forecasts || forecasts.length === 0) {
-    return 0;
+export function getNextNightPeriod(): { start: Date; end: Date } {
+  const now = new Date();
+  const start = new Date(now);
+  const end = new Date(now);
+  
+  const currentHour = now.getHours();
+  
+  // If it's before 6 PM, night starts today at 6 PM
+  if (currentHour < 18) {
+    start.setHours(18, 0, 0, 0);
+    end.setDate(end.getDate() + 1);
+    end.setHours(8, 0, 0, 0);
+  } 
+  // If it's after 6 PM but before midnight, night already started, ends tomorrow at 8 AM
+  else if (currentHour >= 18) {
+    start.setHours(18, 0, 0, 0); // Night already started at 6 PM
+    end.setDate(end.getDate() + 1);
+    end.setHours(8, 0, 0, 0);
+  } 
+  // If it's after midnight but before 8 AM, night already started yesterday, ends today at 8 AM
+  else if (currentHour < 8) {
+    start.setDate(start.getDate() - 1);
+    start.setHours(18, 0, 0, 0);
+    end.setHours(8, 0, 0, 0);
   }
   
-  // Count hours with cloud cover below threshold
-  const goodHours = forecasts.filter(f => 
-    f.cloudCover !== null && 
-    f.cloudCover !== undefined &&
-    f.cloudCover <= maxCloudCover
-  ).length;
-  
-  return (goodHours / forecasts.length) * 100;
+  return { start, end };
 }

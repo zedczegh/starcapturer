@@ -1,3 +1,4 @@
+
 import React, { memo, useMemo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
@@ -12,6 +13,10 @@ interface SIQSFactorsListProps {
     nighttimeData?: {
       average: number;
       timeRange: string;
+      detail?: {
+        evening: number;
+        morning: number;
+      };
     };
   }>;
 }

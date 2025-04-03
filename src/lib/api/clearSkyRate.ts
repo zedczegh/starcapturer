@@ -1,4 +1,3 @@
-
 import { fetchWithCache } from '@/utils/fetchWithCache';
 
 // Interface for clear sky rate data
@@ -22,95 +21,77 @@ export async function fetchClearSkyRate(
 ): Promise<ClearSkyRateData | null> {
   try {
     // For now, we'll implement a simulation of this API since we don't have actual access
-    // In a real implementation, we would call an external API here
+    // In a real implementation, we would call an external API
     
-    // Generate a deterministic but realistic clear sky rate based on location
-    // This is a placeholder - in production, this would call a real weather API
-    const locationSeed = Math.abs(Math.sin(latitude * longitude) * 100);
+    // Simple cache key for the location
+    const cacheKey = `clear-sky-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
     
-    // Areas near the equator typically have more clear days
-    // Areas with extreme latitudes typically have fewer clear days
-    const latitudeEffect = 1 - Math.abs(latitude) / 90 * 0.5;
+    // Try to get from cache first
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
     
-    // Calculate a realistic clear sky percentage (20-80% range)
-    let clearSkyRate = 20 + (locationSeed % 60) * latitudeEffect;
+    // Simulate an API delay
+    await new Promise(resolve => setTimeout(resolve, 50));
     
-    // Round to 1 decimal place
-    clearSkyRate = Math.round(clearSkyRate * 10) / 10;
+    // Generate deterministic clear sky rate based on location
+    // This is just for demo purposes - in reality we'd fetch from a real API
+    const latSeed = Math.sin(latitude * 0.1) * 0.5 + 0.5;
+    const lngSeed = Math.cos(longitude * 0.1) * 0.5 + 0.5;
+    let baseRate = ((latSeed + lngSeed) / 2) * 70 + 15; // 15% to 85% range
     
-    // Add some monthly variation (completely placeholder data)
-    const monthlyRates: Record<string, number> = {};
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Round to integer
+    baseRate = Math.round(baseRate);
     
-    months.forEach((month, index) => {
-      // Create seasonal variation
-      const seasonalFactor = Math.sin((index / 12) * Math.PI * 2);
-      let monthRate = clearSkyRate + seasonalFactor * 15;
-      
-      // Ensure rate is within reasonable bounds
-      monthRate = Math.max(5, Math.min(95, monthRate));
-      monthRate = Math.round(monthRate * 10) / 10;
-      
-      monthlyRates[month] = monthRate;
-    });
+    // Adjust for latitude - generally better near equator for astronomy
+    const latAdjustment = Math.abs(latitude) > 45 ? -10 : Math.abs(latitude) > 30 ? -5 : 0;
+    baseRate += latAdjustment;
     
-    // Simulate API response time
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Clamp to valid range
+    baseRate = Math.max(10, Math.min(95, baseRate));
     
-    return {
-      annualRate: clearSkyRate,
-      monthlyRates,
-      source: "Historical Meteorological Database"
+    // Create result object
+    const result: ClearSkyRateData = {
+      annualRate: baseRate,
+      source: "Simulated Clear Sky Database"
     };
+    
+    // Cache the result
+    localStorage.setItem(cacheKey, JSON.stringify(result));
+    
+    console.log(`Retrieved clear sky rate for location (${latitude.toFixed(4)}, ${longitude.toFixed(4)}): ${baseRate}%`);
+    
+    return result;
   } catch (error) {
-    console.error("Error fetching clear sky rate data:", error);
+    console.error("Error fetching clear sky rate:", error);
     return null;
   }
 }
 
 /**
- * Get score for clear sky rate (0-100 scale)
- * @param clearSkyRate Annual clear sky rate percentage
- * @returns Score on 0-100 scale
+ * Clear cached clear sky rate data
+ * @param latitude Optional latitude to clear specific location
+ * @param longitude Optional longitude to clear specific location
  */
-export function calculateClearSkyScore(clearSkyRate: number): number {
-  if (typeof clearSkyRate !== 'number' || isNaN(clearSkyRate)) {
-    return 50; // Default to moderate score if no data
+export function clearClearSkyRateCache(latitude?: number, longitude?: number): void {
+  // If specific coordinates are provided, clear only that location
+  if (latitude !== undefined && longitude !== undefined) {
+    const cacheKey = `clear-sky-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
+    localStorage.removeItem(cacheKey);
+    return;
   }
   
-  // Convert clear sky rate (usually 0-100%) to a 0-100 score
-  // Higher clear sky rate = better score
-  // We'll use a slightly non-linear curve to emphasize very clear locations
-  if (clearSkyRate >= 80) {
-    return 100; // Exceptional locations
-  } else if (clearSkyRate >= 60) {
-    return 80 + ((clearSkyRate - 60) * 1.0); // 80-100 range
-  } else if (clearSkyRate >= 40) {
-    return 60 + ((clearSkyRate - 40) * 1.0); // 60-80 range
-  } else if (clearSkyRate >= 20) {
-    return 30 + ((clearSkyRate - 20) * 1.5); // 30-60 range
-  } else {
-    return Math.max(0, clearSkyRate * 1.5); // 0-30 range
+  // Otherwise clear all clear sky cache entries
+  const keysToRemove: string[] = [];
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('clear-sky-')) {
+      keysToRemove.push(key);
+    }
   }
-}
-
-/**
- * Get description for clear sky rate
- * @param clearSkyRate Annual clear sky rate percentage
- * @returns Descriptive text for the clear sky rate
- */
-export function getClearSkyDescription(clearSkyRate: number): string {
-  if (clearSkyRate >= 80) {
-    return `Exceptional clear sky rate (${clearSkyRate}%), ideal for astrophotography`;
-  } else if (clearSkyRate >= 60) {
-    return `Excellent clear sky rate (${clearSkyRate}%), highly favorable for imaging`;
-  } else if (clearSkyRate >= 45) {
-    return `Good clear sky rate (${clearSkyRate}%), favorable for astrophotography`;
-  } else if (clearSkyRate >= 30) {
-    return `Moderate clear sky rate (${clearSkyRate}%), acceptable for imaging`;
-  } else if (clearSkyRate >= 15) {
-    return `Low clear sky rate (${clearSkyRate}%), limited clear nights for imaging`;
-  } else {
-    return `Very low clear sky rate (${clearSkyRate}%), challenging for regular imaging`;
-  }
+  
+  // Remove all found keys
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 }

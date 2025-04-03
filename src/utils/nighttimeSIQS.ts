@@ -45,23 +45,30 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     
     console.log(`Evening forecasts (6PM-12AM): ${eveningForecasts.length}, Morning forecasts (1AM-8AM): ${morningForecasts.length}`);
     
-    // Calculate average cloud cover for each time range
+    // Calculate average cloud cover for each time range - only count valid entries
     const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
     const morningCloudCover = calculateAverageCloudCover(morningForecasts);
     
     console.log(`Average cloud cover - Evening: ${eveningCloudCover.toFixed(1)}%, Morning: ${morningCloudCover.toFixed(1)}%`);
     
-    // Weight the cloud cover based on hours in each period
-    // Evening (6 hours) and morning (8 hours)
-    const eveningWeight = eveningForecasts.length / nightForecasts.length;
-    const morningWeight = morningForecasts.length / nightForecasts.length;
+    // Weight the cloud cover based on actual number of hours in each period
+    const totalHours = eveningForecasts.length + morningForecasts.length;
     
     // Calculate weighted average - if one period has no data, use the other
-    const avgNightCloudCover = 
-      (eveningForecasts.length === 0 && morningForecasts.length === 0) ? 50 :
-      (eveningForecasts.length === 0) ? morningCloudCover :
-      (morningForecasts.length === 0) ? eveningCloudCover :
-      (eveningCloudCover * eveningWeight) + (morningCloudCover * morningWeight);
+    let avgNightCloudCover;
+    if (eveningForecasts.length === 0 && morningForecasts.length === 0) {
+      avgNightCloudCover = 50; // Default if no data
+    } else if (eveningForecasts.length === 0) {
+      avgNightCloudCover = morningCloudCover;
+    } else if (morningForecasts.length === 0) {
+      avgNightCloudCover = eveningCloudCover;
+    } else {
+      // Correctly weight by number of hours in each period
+      avgNightCloudCover = (
+        (eveningCloudCover * eveningForecasts.length) + 
+        (morningCloudCover * morningForecasts.length)
+      ) / totalHours;
+    }
     
     console.log(`Weighted average cloud cover for night: ${avgNightCloudCover.toFixed(1)}%`);
     
