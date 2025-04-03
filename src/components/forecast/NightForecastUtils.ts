@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for extracting nighttime forecasts
  */
@@ -68,6 +67,26 @@ export function calculateAverageCloudCover(forecasts: any[]): number {
   // Calculate average cloud cover
   const sum = validForecasts.reduce((acc, f) => acc + f.cloudCover, 0);
   return sum / validForecasts.length;
+}
+
+/**
+ * Calculate average for specific time range
+ * @param forecasts Array of forecast objects
+ * @param startHour Start hour (0-23)
+ * @param endHour End hour (0-23)
+ * @returns Cloud cover percentage for that time range
+ */
+export function calculateTimeRangeCloudCover(forecasts: any[], startHour: number, endHour: number): number {
+  if (!forecasts || forecasts.length === 0) {
+    return 0;
+  }
+  
+  const rangeForecasts = forecasts.filter(f => {
+    const hour = new Date(f.time).getHours();
+    return hour >= startHour && hour <= endHour;
+  });
+  
+  return calculateAverageCloudCover(rangeForecasts);
 }
 
 /**
