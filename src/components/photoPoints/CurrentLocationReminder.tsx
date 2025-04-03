@@ -1,61 +1,48 @@
 
-import React, { useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
+import React from 'react';
+import { Star } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface CurrentLocationReminderProps {
   currentSiqs: number | null;
   isVisible: boolean;
 }
 
-const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
+const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({ 
   currentSiqs,
   isVisible
 }) => {
   const { t } = useLanguage();
   
-  // For debugging purposes - log when SIQS changes
-  useEffect(() => {
-    if (currentSiqs !== null) {
-      console.log("Current location SIQS updated:", currentSiqs);
-    }
-  }, [currentSiqs]);
-  
-  // Show reminder if explicitly set to visible AND if conditions are poor (SIQS < 5.0)
-  const shouldShowReminder = 
-    isVisible && (currentSiqs !== null) && 
-    (currentSiqs < 5.0);
+  if (!isVisible || !currentSiqs || currentSiqs < 6.0) {
+    return null;
+  }
   
   return (
-    <AnimatePresence>
-      {shouldShowReminder && (
-        <motion.div 
-          className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm"
-          initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-          animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
-          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-          transition={{ duration: 0.2 }} // Reduced animation duration
-          style={{ overflow: 'hidden' }}
-        >
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-amber-300 font-medium mb-1">
-                {t("Your location has poor stargazing conditions", "您所在位置的观星条件较差")}
-              </p>
-              <p className="text-sm opacity-90">
-                {t(
-                  "These photo points have better viewing conditions than your current location.",
-                  "这些摄影点比您当前位置的观测条件更好。"
-                )}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg p-3 backdrop-blur-sm shadow-md mb-4 border border-green-500/30"
+    >
+      <div className="flex items-start gap-3">
+        <div className="text-yellow-400 shrink-0 mt-0.5">
+          <Star className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-sm text-green-200/90">
+            {t(
+              "Your current location has favorable viewing conditions with a SIQS score of " + 
+              currentSiqs.toFixed(1) + ". For best results, find a site away from light pollution.",
+              "您当前位置的观测条件良好，SIQS评分为" + 
+              currentSiqs.toFixed(1) + "。为获得最佳效果，请远离光污染区域。"
+            )}
+          </p>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
-export default React.memo(CurrentLocationReminder);
+export default CurrentLocationReminder;

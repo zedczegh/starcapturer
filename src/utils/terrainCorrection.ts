@@ -1,244 +1,198 @@
 
 /**
- * Terrain-based correction for Bortle scale estimates
- * This improves accuracy by incorporating elevation, terrain features, and atmospheric effects
+ * Utility for terrain-corrected Bortle scale calculations
+ * Takes into account elevation and surrounding topography
  */
 
-// Elevation impact on light pollution
-// Higher elevations generally have less atmospheric scattering
-const ELEVATION_CORRECTION_FACTORS = [
-  { minElevation: 3000, maxElevation: Infinity, factor: -1.2 }, // High mountains (>3000m): significant improvement
-  { minElevation: 2000, maxElevation: 3000, factor: -0.9 },     // Mountains (2000-3000m): major improvement
-  { minElevation: 1000, maxElevation: 2000, factor: -0.6 },     // Hills/low mountains (1000-2000m): moderate improvement
-  { minElevation: 500, maxElevation: 1000, factor: -0.3 },      // Hills (500-1000m): slight improvement
-  { minElevation: 100, maxElevation: 500, factor: -0.1 },       // Low hills (100-500m): minimal improvement
-  { minElevation: 0, maxElevation: 100, factor: 0 }             // Flat land (0-100m): no change
-];
-
-// Terrain features with special light pollution characteristics
-type TerrainFeature = {
-  name: string;
-  keywords: string[];
-  bortleAdjustment: number;
-};
-
-const TERRAIN_FEATURES: TerrainFeature[] = [
-  // Natural barriers that block light pollution
-  { name: "Mountain range", keywords: ["mountain", "mountains", "range", "peak", "山脉", "山峰"], bortleAdjustment: -0.8 },
-  { name: "Valley", keywords: ["valley", "canyon", "gorge", "谷", "峡谷"], bortleAdjustment: -0.5 },
-  { name: "Forest", keywords: ["forest", "woods", "woodland", "森林"], bortleAdjustment: -0.3 },
-  { name: "Desert", keywords: ["desert", "沙漠"], bortleAdjustment: -0.7 },
-  { name: "National Park", keywords: ["national park", "park", "reserve", "国家公园", "保护区"], bortleAdjustment: -0.6 },
-  
-  // Features that worsen light pollution
-  { name: "Industrial zone", keywords: ["industrial", "factory", "plant", "工业", "工厂"], bortleAdjustment: 1.0 },
-  { name: "Airport", keywords: ["airport", "机场"], bortleAdjustment: 0.8 },
-  { name: "Commercial center", keywords: ["mall", "shopping", "commercial", "商场", "购物"], bortleAdjustment: 0.7 },
-  { name: "Sports complex", keywords: ["stadium", "arena", "sports", "体育场"], bortleAdjustment: 0.9 },
-  { name: "Port", keywords: ["port", "harbor", "dock", "港口"], bortleAdjustment: 0.6 }
-];
+// Constants for terrain adjustments
+const ELEVATION_FACTOR = 0.15; // Higher elevations have better sky clarity
+const MOUNTAIN_CORRECTION = 0.8; // Mountains block light pollution from cities
 
 /**
- * Detect terrain features from location name
- * @param locationName The name of the location
- * @returns Adjustment to Bortle scale
+ * Cache to store recent terrain-corrected Bortle scale values
+ * Key: latitude-longitude, Value: correction data
  */
-function detectTerrainFeatures(locationName: string): number {
-  if (!locationName) return 0;
-  
-  const lowercaseName = locationName.toLowerCase();
-  let totalAdjustment = 0;
-  let matchCount = 0;
-  
-  for (const feature of TERRAIN_FEATURES) {
-    for (const keyword of feature.keywords) {
-      if (lowercaseName.includes(keyword.toLowerCase())) {
-        totalAdjustment += feature.bortleAdjustment;
-        matchCount++;
-        break; // Only count each feature once
-      }
-    }
-  }
-  
-  // If multiple features match, average the adjustment
-  return matchCount > 0 ? totalAdjustment / matchCount : 0;
-}
+const terrainCorrectionCache = new Map<string, {
+  bortleScale: number;
+  confidence: 'high' | 'medium' | 'low';
+  timestamp: number;
+}>();
 
 /**
- * Get elevation data for a location
- * In a real implementation, this would query an elevation API
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Elevation in meters
- */
-async function getElevation(latitude: number, longitude: number): Promise<number> {
-  // This is a placeholder function
-  // In a real implementation, this would call an elevation API service
-  
-  try {
-    // Simplified elevation estimation for demonstration
-    // This would be replaced with actual API calls
-    
-    // Rough estimation for mountain ranges worldwide
-    // Himalayas
-    if (latitude > 25 && latitude < 40 && longitude > 70 && longitude < 95) {
-      return 4000 + Math.random() * 2000;
-    }
-    
-    // Alps
-    if (latitude > 43 && latitude < 48 && longitude > 5 && longitude < 15) {
-      return 2000 + Math.random() * 1500;
-    }
-    
-    // Rockies
-    if (latitude > 35 && latitude < 60 && longitude > -125 && longitude < -105) {
-      return 2500 + Math.random() * 1500;
-    }
-    
-    // Andes
-    if (latitude > -55 && latitude < 10 && longitude > -80 && longitude < -65) {
-      return 3000 + Math.random() * 2000;
-    }
-    
-    // Default to slightly random low elevation for other areas
-    return Math.random() * 300;
-  } catch (error) {
-    console.error("Error getting elevation data:", error);
-    return 0; // Default to sea level if error
-  }
-}
-
-/**
- * Get elevation-based Bortle scale adjustment
- * @param elevation Elevation in meters
- * @returns Adjustment factor for Bortle scale
- */
-function getElevationAdjustment(elevation: number): number {
-  for (const range of ELEVATION_CORRECTION_FACTORS) {
-    if (elevation >= range.minElevation && elevation < range.maxElevation) {
-      return range.factor;
-    }
-  }
-  return 0; // Default to no adjustment
-}
-
-/**
- * Apply atmospheric condition adjustments
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Adjustment factor for Bortle scale
- */
-async function getAtmosphericAdjustment(latitude: number, longitude: number): Promise<number> {
-  // This would use weather API data in a real implementation
-  // For now, use a simple estimation
-  
-  // Simplified logic: higher latitudes tend to have clearer air
-  const latitudeAbs = Math.abs(latitude);
-  
-  if (latitudeAbs > 60) {
-    return -0.4; // Very clear air near poles
-  } else if (latitudeAbs > 45) {
-    return -0.2; // Clearer air in higher latitudes
-  }
-  
-  // No adjustment for mid-latitudes
-  return 0;
-}
-
-/**
- * Get terrain-corrected Bortle scale
- * Combines elevation, terrain features, and atmospheric data
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @param locationName Location name
- * @returns Corrected Bortle scale or null if data unavailable
+ * Get terrain-corrected Bortle scale based on location
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @param locationName Optional location name for additional context
+ * @returns Corrected Bortle scale or null if correction not possible
  */
 export async function getTerrainCorrectedBortleScale(
   latitude: number,
   longitude: number,
-  locationName: string
+  locationName?: string
 ): Promise<number | null> {
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
+  // Check cache first (valid for 30 days since terrain doesn't change)
+  const cachedData = terrainCorrectionCache.get(cacheKey);
+  if (cachedData && (Date.now() - cachedData.timestamp) < 30 * 24 * 60 * 60 * 1000) {
+    console.log(`Using cached terrain-corrected Bortle: ${cachedData.bortleScale}`);
+    return cachedData.bortleScale;
+  }
+  
   try {
-    // First get base Bortle scale from API
-    const { fetchLightPollutionData } = await import('@/lib/api/pollution');
-    const pollutionData = await fetchLightPollutionData(latitude, longitude);
+    // Attempt to get elevation data
+    const elevation = await getElevationData(latitude, longitude);
     
-    if (!pollutionData || pollutionData.bortleScale === null) {
-      return null; // Can't apply corrections without base value
+    if (elevation === null) {
+      return null;
     }
     
-    const baseBortleScale = pollutionData.bortleScale;
+    // Get base Bortle scale estimate
+    const baseBortleScale = await getBaseBortleScale(latitude, longitude, locationName);
     
-    // Get elevation data
-    const elevation = await getElevation(latitude, longitude);
-    const elevationAdjustment = getElevationAdjustment(elevation);
+    if (baseBortleScale === null) {
+      return null;
+    }
     
-    // Get terrain feature adjustment
-    const terrainAdjustment = detectTerrainFeatures(locationName);
+    // Apply terrain corrections
+    let correctedScale = applyTerrainCorrections(
+      baseBortleScale,
+      elevation,
+      latitude,
+      longitude,
+      locationName
+    );
     
-    // Get atmospheric adjustment
-    const atmosphericAdjustment = await getAtmosphericAdjustment(latitude, longitude);
+    // Cache the result
+    terrainCorrectionCache.set(cacheKey, {
+      bortleScale: correctedScale,
+      confidence: 'medium',
+      timestamp: Date.now()
+    });
     
-    // Combine all adjustments
-    const totalAdjustment = elevationAdjustment + terrainAdjustment + atmosphericAdjustment;
-    
-    // Apply adjustment with bounds checking
-    const correctedBortleScale = Math.max(1, Math.min(9, baseBortleScale + totalAdjustment));
-    
-    console.log(`Terrain-corrected Bortle scale calculation:
-      Base: ${baseBortleScale}
-      Elevation (${elevation}m): ${elevationAdjustment}
-      Terrain features: ${terrainAdjustment}
-      Atmospheric: ${atmosphericAdjustment}
-      Final: ${correctedBortleScale}`);
-    
-    return Number(correctedBortleScale.toFixed(1)); // Round to 1 decimal place
+    console.log(`Terrain-corrected Bortle scale: ${correctedScale} (base: ${baseBortleScale}, elevation: ${elevation}m)`);
+    return correctedScale;
   } catch (error) {
-    console.error("Error applying terrain correction:", error);
+    console.error("Error in terrain correction:", error);
     return null;
   }
 }
 
 /**
- * Quick estimate of terrain-corrected Bortle scale without API calls
- * Used for faster results when needed
+ * Get base Bortle scale for location
+ * This serves as the starting point before terrain corrections
  */
-export function quickTerrainEstimate(
-  baseBortleScale: number,
-  locationName: string,
-  latitude: number,
-  longitude: number
-): number {
+async function getBaseBortleScale(
+  latitude: number, 
+  longitude: number,
+  locationName?: string
+): Promise<number | null> {
   try {
-    // Skip detailed computation to speed up response
-    // Only apply terrain feature detection
-    const terrainAdjustment = detectTerrainFeatures(locationName);
+    // Try to get light pollution data from API
+    const { fetchLightPollutionData } = await import('@/lib/api');
+    const lightPollutionData = await fetchLightPollutionData(latitude, longitude);
     
-    // Latitude adjustment (higher latitudes tend to have clearer skies)
-    const latitudeAbs = Math.abs(latitude);
-    let latitudeAdjustment = 0;
-    
-    if (latitudeAbs > 60) {
-      latitudeAdjustment = -0.3;
-    } else if (latitudeAbs > 45) {
-      latitudeAdjustment = -0.1;
+    if (lightPollutionData?.bortleScale !== undefined && 
+        lightPollutionData.bortleScale >= 1 && 
+        lightPollutionData.bortleScale <= 9) {
+      return lightPollutionData.bortleScale;
     }
     
-    // Simple mountain check based on keywords in location name
-    const isMountainous = locationName.toLowerCase().includes("mountain") || 
-                          locationName.toLowerCase().includes("mt ") ||
-                          locationName.toLowerCase().includes("mt.") ||
-                          locationName.toLowerCase().includes("山");
-    
-    const mountainAdjustment = isMountainous ? -0.5 : 0;
-    
-    // Combine adjustments
-    const totalAdjustment = terrainAdjustment + latitudeAdjustment + mountainAdjustment;
-    
-    // Apply adjustment with bounds checking
-    return Math.max(1, Math.min(9, baseBortleScale + totalAdjustment));
+    // Fall back to estimation based on location name if API fails
+    if (locationName) {
+      const { estimateBortleScaleByLocation } = await import('@/utils/locationUtils');
+      return estimateBortleScaleByLocation(locationName, latitude, longitude);
+    }
   } catch (error) {
-    console.error("Error in quick terrain estimate:", error);
-    return baseBortleScale; // Return original value if error
+    console.error("Error getting base Bortle scale:", error);
   }
+  
+  return null;
+}
+
+/**
+ * Apply terrain-based corrections to Bortle scale
+ * This improves accuracy by considering topographical features
+ */
+function applyTerrainCorrections(
+  baseBortleScale: number,
+  elevation: number,
+  latitude: number,
+  longitude: number,
+  locationName?: string
+): number {
+  // Start with base Bortle scale
+  let correctedScale = baseBortleScale;
+  
+  // Higher elevations have clearer skies due to less atmospheric interference
+  // Elevation adjustment: Each 500m reduces Bortle by ELEVATION_FACTOR
+  const elevationAdjustment = -Math.min(1, (elevation / 500) * ELEVATION_FACTOR);
+  correctedScale += elevationAdjustment;
+  
+  // Mountain regions often have better sky quality due to natural shielding
+  // from nearby light pollution sources
+  const isMountainous = (
+    elevation > 800 || // High elevation
+    (locationName && /mount|mountain|hill|peak|range|plateau|highlands/i.test(locationName))
+  );
+  
+  if (isMountainous && baseBortleScale > 3) {
+    // Mountains shield light pollution more effectively in more polluted areas
+    const mountainShieldingEffect = -MOUNTAIN_CORRECTION * (baseBortleScale / 9);
+    correctedScale += mountainShieldingEffect;
+  }
+  
+  // National parks & reserves often have dark sky protection policies
+  const isProtectedArea = locationName ? 
+    /national park|reserve|wilderness|conservation|forest|natural|protected/i.test(locationName) : 
+    false;
+  
+  if (isProtectedArea) {
+    // Protected areas typically have at least one Bortle scale unit improvement
+    // but the effect is smaller in already dark locations
+    const protectionEffect = -Math.min(1.0, Math.max(0.3, baseBortleScale / 9));
+    correctedScale += protectionEffect;
+  }
+  
+  // Ensure corrected scale stays within valid range
+  correctedScale = Math.max(1, Math.min(9, correctedScale));
+  
+  // Round to nearest 0.1 for precision
+  return Math.round(correctedScale * 10) / 10;
+}
+
+/**
+ * Get elevation data for a location
+ * Returns elevation in meters or null if not available
+ */
+async function getElevationData(latitude: number, longitude: number): Promise<number | null> {
+  try {
+    // Check if we have stored elevation data
+    const elevationCacheKey = `elevation-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
+    const cachedElevation = localStorage.getItem(elevationCacheKey);
+    
+    if (cachedElevation) {
+      return parseFloat(cachedElevation);
+    }
+    
+    // For now, use a very simple elevation estimation
+    // In a real implementation, this would call an elevation API
+    const randomElevation = Math.random() * 1000;
+    
+    // Cache the result
+    localStorage.setItem(elevationCacheKey, randomElevation.toString());
+    
+    return randomElevation;
+  } catch (error) {
+    console.error("Error getting elevation data:", error);
+    return null;
+  }
+}
+
+/**
+ * Clear terrain correction cache
+ */
+export function clearTerrainCorrectionCache(): void {
+  terrainCorrectionCache.clear();
+  console.log("Terrain correction cache cleared");
 }

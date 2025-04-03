@@ -8,7 +8,6 @@ import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import CurrentLocationReminder from '@/components/photoPoints/CurrentLocationReminder';
 import PageLoader from '@/components/loaders/PageLoader';
 
 // Lazy load components that are not immediately visible
@@ -111,12 +110,6 @@ const PhotoPointsNearby: React.FC = () => {
         userLocation={userLocation}
         locationLoading={locationLoading}
         getPosition={getPosition}
-      />
-      
-      {/* Add the reminder component with currentSiqs from store */}
-      <CurrentLocationReminder 
-        currentSiqs={currentSiqs}
-        isVisible={!!userLocation && !loading}
       />
       
       {/* Distance filter with better spacing */}
