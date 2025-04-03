@@ -72,11 +72,11 @@ export const useLocationSIQSUpdater = (
         };
         
         // Calculate new SIQS based on nighttime conditions with clear sky rate
+        // Fix: Passing only 3 arguments as required by the implementation
         const freshSIQSResult = calculateNighttimeSIQS(
           locationData, 
           forecastData, 
-          t,
-          clearSkyRateParam
+          t
         );
         
         if (freshSIQSResult) {
