@@ -36,3 +36,31 @@ export interface SIQSResult {
     };
   }[];
 }
+
+/**
+ * Location with SIQS data
+ */
+export interface LocationWithSIQS {
+  id?: string;          // Unique identifier
+  name: string;         // Location name
+  latitude: number;     // Latitude
+  longitude: number;    // Longitude
+  bortleScale?: number; // Light pollution level
+  weatherData?: any;    // Weather data
+  siqsResult?: SIQSResult; // SIQS calculation result
+  clearSkyRate?: number;   // Annual clear sky rate
+  timestamp?: string;      // When the data was collected
+}
+
+/**
+ * Specific parameters for nighttime SIQS calculation
+ */
+export interface NighttimeSIQSParams {
+  startHour?: number;    // Start hour for nighttime (default: 18, 6 PM)
+  endHour?: number;      // End hour for nighttime (default: 8, 8 AM next day)
+  cloudWeight?: number;  // Weight for cloud cover in calculation (default: 0.3)
+  windWeight?: number;   // Weight for wind in calculation (default: 0.15)
+  humidityWeight?: number; // Weight for humidity in calculation (default: 0.15)
+  bortleWeight?: number;   // Weight for light pollution in calculation (default: 0.3)
+  clearSkyWeight?: number; // Weight for clear sky rate (default: 0.1)
+}

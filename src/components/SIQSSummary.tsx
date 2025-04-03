@@ -59,7 +59,24 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   const translatedFactors = useMemo(() => {
     if (!siqsResult.factors || !Array.isArray(siqsResult.factors)) return [];
     
-    return siqsResult.factors.map(factor => ({
+    // First check if we need to add a Clear Sky Rate factor if it's missing
+    const factors = [...siqsResult.factors];
+    const hasClearSkyFactor = factors.some(factor => 
+      factor.name === 'Clear Sky Rate' || factor.name === '晴空率');
+    
+    // Add Clear Sky Rate factor if it's available in weatherData but not in factors
+    if (!hasClearSkyFactor && weatherData?.clearSkyRate) {
+      const clearSkyRate = weatherData.clearSkyRate;
+      const clearSkyScore = Math.min(10, clearSkyRate / 10);
+      
+      factors.push({
+        name: 'Clear Sky Rate',
+        score: clearSkyScore,
+        description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`,
+      });
+    }
+    
+    return factors.map(factor => ({
       ...factor,
       description: language === 'zh' ? 
         getTranslatedDescription(factor.description, 'zh') : 
@@ -73,10 +90,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
          factor.name === 'Wind Speed' ? '风速' :
          factor.name === 'Seeing Conditions' ? '视宁度' :
          factor.name === 'Air Quality' ? '空气质量' :
+         factor.name === 'Clear Sky Rate' ? '晴空率' :
          factor.name) : 
         factor.name
     }));
-  }, [siqsResult.factors, language]);
+  }, [siqsResult.factors, weatherData, language]);
   
   return (
     <Card className="glassmorphism-strong">

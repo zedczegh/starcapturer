@@ -148,6 +148,7 @@ export function calculateClearSkyScore(clearSkyRate: number): number {
   
   // Convert clear sky rate (usually 0-100%) to a 0-100 score
   // Higher clear sky rate = better score
+  // We'll use a slightly non-linear curve to emphasize very clear locations
   if (clearSkyRate >= 80) {
     return 100; // Exceptional locations
   } else if (clearSkyRate >= 60) {

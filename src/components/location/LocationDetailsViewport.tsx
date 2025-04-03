@@ -85,18 +85,28 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     if (locationData && !initialRefreshDoneRef.current) {
       initialRefreshDoneRef.current = true;
       const timer = setTimeout(() => {
-        handleRefreshAll();
+        handleRefreshAll(locationData, setLocationData, () => {
+          if (locationData.latitude && locationData.longitude) {
+            handleRefreshForecast(locationData.latitude, locationData.longitude);
+            handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+          }
+        }, setStatusMessage);
       }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [locationData, handleRefreshAll]);
+  }, [locationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setLocationData, setStatusMessage]);
   
   // Handle refresh events from external components
   useEffect(() => {
     const handleForceRefresh = () => {
       console.log("Force refresh event received");
-      handleRefreshAll();
+      handleRefreshAll(locationData, setLocationData, () => {
+        if (locationData.latitude && locationData.longitude) {
+          handleRefreshForecast(locationData.latitude, locationData.longitude);
+          handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+        }
+      }, setStatusMessage);
     };
     
     if (containerRef.current) {
@@ -108,7 +118,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         containerRef.current.removeEventListener('forceRefresh', handleForceRefresh);
       }
     };
-  }, [handleRefreshAll]);
+  }, [handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, locationData, setLocationData, setStatusMessage]);
   
   return (
     <div 
@@ -127,14 +137,18 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       
       {weatherAlerts && weatherAlerts.length > 0 && (
         <div className="mb-8">
-          <WeatherAlerts alerts={weatherAlerts} />
+          <WeatherAlerts 
+            alerts={weatherAlerts}
+            formatTime={formatTime}
+            formatDate={formatDate}
+          />
         </div>
       )}
       
       <LocationDetailsHeader 
         locationData={locationData}
         loading={loading}
-        onRefresh={handleRefreshAll}
+        // Remove the duplicate refresh button as requested
       />
       
       <div className="mt-8">

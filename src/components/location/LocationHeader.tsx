@@ -2,10 +2,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Share2, RefreshCw } from "lucide-react";
+import { Share2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import BackButton from "@/components/navigation/BackButton";
+import { shareAstroSpot } from "@/lib/api/astroSpots";
 
 interface LocationHeaderProps {
   name: string;
@@ -13,29 +14,67 @@ interface LocationHeaderProps {
   longitude: number;
   timestamp?: number;
   loading?: boolean;
-  onRefresh?: () => void;
+  bortleScale?: number;
+  siqs?: number;
 }
 
 const LocationHeader = ({ 
   name, 
   latitude, 
   longitude, 
-  timestamp, 
+  timestamp,
   loading,
-  onRefresh 
+  bortleScale,
+  siqs
 }: LocationHeaderProps) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
-  const handleRefresh = () => {
-    if (onRefresh) {
-      onRefresh();
-      toast.info(t("Refreshing Data", "刷新数据"), {
-        description: t("Fetching latest weather and conditions...", "正在获取最新天气和条件..."),
-        position: "top-center",
-        duration: 3000,
-        icon: <RefreshCw className="h-4 w-4 animate-spin" />
-      });
+  // Handle sharing location to the recommended locations database
+  const handleShareLocation = async () => {
+    if (loading) return;
+    
+    try {
+      toast.info(
+        language === 'en' ? 'Sharing location...' : '正在共享位置...',
+        { 
+          duration: 2000,
+          icon: <Share2 className="h-4 w-4" />
+        }
+      );
+      
+      // Create the location data to share
+      const locationData = {
+        name,
+        latitude,
+        longitude,
+        bortleScale: bortleScale || 5,
+        timestamp: new Date().toISOString(),
+        siqs: siqs || 0,
+        isViable: (siqs || 0) >= 5.0
+      };
+      
+      // Share to the database
+      const response = await shareAstroSpot(locationData);
+      
+      if (response.success) {
+        toast.success(
+          language === 'en' ? 'Location shared successfully!' : '位置共享成功！',
+          { 
+            description: language === 'en' 
+              ? 'This location has been added to our recommendations database'
+              : '此位置已添加到我们的推荐数据库中' 
+          }
+        );
+      } else {
+        throw new Error(response.message || 'Unknown error');
+      }
+    } catch (error) {
+      console.error("Error sharing location:", error);
+      toast.error(
+        language === 'en' ? 'Failed to share location' : '共享位置失败',
+        { description: (error as Error).message }
+      );
     }
   };
 
@@ -54,19 +93,8 @@ const LocationHeader = ({
         <h1 className="text-3xl font-bold text-center md:text-left">{name || t("Unnamed Location", "未命名位置")}</h1>
         
         <div className="flex flex-wrap gap-2 justify-center md:justify-end">
-          {onRefresh && (
-            <Button 
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {t("Refresh", "刷新")}
-            </Button>
-          )}
           <Button 
-            onClick={() => navigate("/share", { state: { name, latitude, longitude, timestamp } })}
+            onClick={handleShareLocation}
             disabled={loading}
           >
             <Share2 className="mr-2 h-4 w-4" />

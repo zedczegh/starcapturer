@@ -47,5 +47,12 @@ export const descriptionMappings: Record<string, string> = {
   "Very poor air quality, significantly affects imaging": "空气质量非常差，显著影响成像",
   
   // Nighttime descriptions
-  "Nighttime average (6PM to 8AM)": "夜间平均值（18:00至次日08:00）"
+  "Nighttime average (6PM to 8AM)": "夜间平均值（18:00至次日08:00）",
+  
+  // Clear sky rate descriptions
+  "Annual clear sky rate (0-20%), challenging for regular imaging": "年均晴空率（0-20%），规律成像具有挑战性",
+  "Annual clear sky rate (20-40%), limited clear nights for imaging": "年均晴空率（20-40%），可用于成像的晴朗夜晚有限",
+  "Annual clear sky rate (40-60%), acceptable for imaging": "年均晴空率（40-60%），可接受的成像条件",
+  "Annual clear sky rate (60-80%), favorable for astrophotography": "年均晴空率（60-80%），有利于天文摄影",
+  "Annual clear sky rate (80-100%), ideal for astrophotography": "年均晴空率（80-100%），天文摄影的理想条件"
 };

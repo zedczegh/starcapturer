@@ -19,6 +19,18 @@ const siqsCache = new Map<string, {
 const NIGHT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 const DAY_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 
+// Extended WeatherData interface with clearSkyRate
+interface WeatherDataWithClearSky extends Record<string, any> {
+  cloudCover: number;
+  temperature?: number;
+  humidity?: number;
+  windSpeed?: number;
+  precipitation?: number;
+  weatherCondition?: string;
+  aqi?: number;
+  clearSkyRate?: number;
+}
+
 /**
  * Calculate real-time SIQS for a given location
  * @param latitude Latitude of the location
@@ -86,14 +98,18 @@ export async function calculateRealTimeSiqs(
       }
     }
     
+    // Prepare weather data with clear sky rate
+    const weatherDataWithClearSky: WeatherDataWithClearSky = { ...weatherData };
+    
     // Add clear sky rate to weather data if available
     if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
-      weatherData.clearSkyRate = clearSkyData.annualRate;
+      weatherDataWithClearSky.clearSkyRate = clearSkyData.annualRate;
+      console.log(`Using clear sky rate for location: ${clearSkyData.annualRate}%`);
     }
     
     // Calculate SIQS using the optimized method with nighttime forecasts
     const siqsResult = await calculateSIQSWithWeatherData(
-      weatherData,
+      weatherDataWithClearSky,
       finalBortleScale,
       3, // Default seeing conditions
       0.5, // Default moon phase

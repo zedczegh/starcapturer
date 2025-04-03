@@ -16,6 +16,7 @@ export const normalizeScore = (score: number): number => {
 
 /**
  * Optimized function to calculate SIQS with weather data
+ * Now includes clear sky rate as a factor (10% weight)
  */
 export async function calculateSIQSWithWeatherData(
   weatherData: any,
@@ -24,19 +25,19 @@ export async function calculateSIQSWithWeatherData(
   moonPhase: number,
   forecastData: any | null
 ): Promise<any> {
-  // First try to fetch clear sky rate data
-  let clearSkyRate: number | undefined = undefined;
+  // First try to fetch clear sky rate data if not already provided
+  let clearSkyRate: number | undefined = weatherData.clearSkyRate;
   
-  try {
-    if (weatherData.latitude && weatherData.longitude) {
+  if (clearSkyRate === undefined && weatherData.latitude && weatherData.longitude) {
+    try {
       const clearSkyData = await fetchClearSkyRate(weatherData.latitude, weatherData.longitude);
       if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
         clearSkyRate = clearSkyData.annualRate;
         console.log(`Retrieved clear sky rate for location: ${clearSkyRate}%`);
       }
+    } catch (error) {
+      console.error("Error fetching clear sky rate:", error);
     }
-  } catch (error) {
-    console.error("Error fetching clear sky rate:", error);
   }
 
   // First try to calculate SIQS using nighttime forecast data
@@ -115,6 +116,22 @@ export async function calculateSIQSWithWeatherData(
     } catch (error) {
       console.error("Error adding nighttime data to factors:", error);
     }
+  }
+  
+  // Add Clear Sky Rate factor if it's available but not already in factors
+  if (clearSkyRate !== undefined && !result.factors.some((f: any) => f.name === "Clear Sky Rate")) {
+    const clearSkyFactor = {
+      name: "Clear Sky Rate",
+      score: Math.min(10, clearSkyRate / 10), 
+      description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`
+    };
+    
+    result.factors.push(clearSkyFactor);
+    
+    // Adjust overall score to include clear sky rate (10% weight)
+    const clearSkyScoreContribution = (clearSkyRate / 100) * 10 * 0.1;
+    result.score = Math.min(10, result.score * 0.9 + clearSkyScoreContribution);
+    console.log(`Added clear sky rate (${clearSkyRate}%) to SIQS calculation, adjusted score: ${result.score.toFixed(2)}`);
   }
   
   return result;
