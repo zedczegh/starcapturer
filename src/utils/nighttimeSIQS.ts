@@ -5,22 +5,7 @@ import {
 } from "@/lib/siqs/factors";
 import { isImagingImpossible, normalizeFactorScores, validateCloudCover } from "@/lib/siqs/utils";
 import { getCloudDescription } from "@/lib/siqs/descriptions";
-
-/**
- * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
- * @param forecasts Array of forecast items
- * @returns Array of nighttime forecast items
- */
-export const filterNighttimeForecasts = (forecasts: any[]): any[] => {
-  if (!forecasts || !Array.isArray(forecasts) || forecasts.length === 0) return [];
-  
-  return forecasts.filter(item => {
-    if (!item.time) return false;
-    const date = new Date(item.time);
-    const hour = date.getHours();
-    return hour >= 18 || hour < 7; // 6 PM to 7 AM
-  });
-};
+import { extractNightForecasts, calculateAverageCloudCover, calculateAverageWindSpeed, calculateAverageHumidity, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 
 /**
  * Extract hourly forecast data and convert to a standard format for processing
@@ -64,11 +49,8 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
   }
   
   try {
-    // Extract and standardize hourly forecast data
-    const allHourlyForecasts = extractHourlyForecastData(forecastData);
-    
-    // Filter to nighttime hours only
-    const nightForecasts = filterNighttimeForecasts(allHourlyForecasts);
+    // Extract nighttime forecasts directly using the utility function
+    const nightForecasts = extractNightForecasts(forecastData.hourly);
     
     if (nightForecasts.length === 0) {
       console.log("No nighttime forecasts found in data");
@@ -79,26 +61,18 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     
     // Calculate average values for cloud cover, wind speed, and humidity
     const avgCloudCover = validateCloudCover(
-      nightForecasts.reduce((sum, item) => sum + (item.cloudCover || 0), 0) / nightForecasts.length
+      calculateAverageCloudCover(nightForecasts)
     );
     console.log(`Average cloud cover: ${avgCloudCover}%`);
     
-    // Removed the imaging impossible check - we'll calculate a score regardless of cloud cover
-    // and let the calculateSIQS function handle scoring appropriately
-    
-    const avgWindSpeed = nightForecasts.reduce((sum, item) => sum + item.windSpeed, 0) / nightForecasts.length;
-    const avgHumidity = nightForecasts.reduce((sum, item) => sum + item.humidity, 0) / nightForecasts.length;
+    const avgWindSpeed = calculateAverageWindSpeed(nightForecasts);
+    const avgHumidity = calculateAverageHumidity(nightForecasts);
     
     // Calculate if any precipitation is expected
     const hasPrecipitation = nightForecasts.some(f => f.precipitation > 0);
     
     // Get current weather data for more accurate calculations
     const currentWeather = locationData.weatherData || {};
-    
-    // Log calculation inputs for better debugging
-    console.log("SIQS calculation with", nightForecasts.length, "nighttime forecast items");
-    console.log("Using nighttime forecast data for SIQS calculation");
-    console.log(`Average values - Cloud: ${avgCloudCover.toFixed(1)}%, Wind: ${avgWindSpeed.toFixed(1)}km/h, Humidity: ${avgHumidity.toFixed(1)}%`);
     
     // Calculate SIQS with emphasis on nighttime conditions
     const siqs = calculateSIQS({
@@ -115,14 +89,27 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
     });
     
     console.log("Final SIQS score based on nighttime forecast:", siqs.score.toFixed(1));
-    console.log("Calculated nighttime SIQS:", siqs.score);
     
     // Normalize all factor scores to 0-10 scale for consistent display
     const normalizedFactors = normalizeFactorScores(siqs.factors);
     
+    // Add nighttime data to cloud cover factor for UI display
+    const enhancedFactors = normalizedFactors.map(factor => {
+      if (factor.name === "Cloud Cover") {
+        return {
+          ...factor,
+          nighttimeData: {
+            average: avgCloudCover,
+            timeRange: formatNighttimeHoursRange()
+          }
+        };
+      }
+      return factor;
+    });
+    
     return {
       ...siqs,
-      factors: normalizedFactors
+      factors: enhancedFactors
     };
   } catch (error) {
     console.error("Error calculating nighttime SIQS:", error);

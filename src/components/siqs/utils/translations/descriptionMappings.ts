@@ -9,6 +9,17 @@ export const descriptionsMap: Record<string, string> = {
   "Moderate cloud cover reduces visibility": "中度云层覆盖降低可见度",
   "Heavy cloud cover significantly impairs imaging": "重度云层覆盖严重影响成像",
   "Overcast conditions make imaging impossible": "阴天条件使成像不可能",
+  "Cloud cover of 0%": "0%云层覆盖，极佳的观测条件",
+  "Cloud cover of 10%": "10%云层覆盖，非常适合观测",
+  "Cloud cover of 20%": "20%云层覆盖，适合观测",
+  "Cloud cover of 30%": "30%云层覆盖，观测条件良好",
+  "Cloud cover of 40%": "40%云层覆盖，对观测有一定影响",
+  "Cloud cover of 50%": "50%云层覆盖，观测条件一般",
+  "Cloud cover of 60%": "60%云层覆盖，观测条件较差",
+  "Cloud cover of 70%": "70%云层覆盖，观测条件困难",
+  "Cloud cover of 80%": "80%云层覆盖，观测条件非常困难",
+  "Cloud cover of 90%": "90%云层覆盖，几乎不可能观测",
+  "Cloud cover of 100%": "100%云层覆盖，完全不适合观测",
   
   // Light pollution descriptions
   "Excellent dark sky site": "极佳的暗夜地点",
@@ -51,5 +62,16 @@ export const descriptionsMap: Record<string, string> = {
   "Good air quality": "良好的空气质量",
   "Moderate air quality": "中等空气质量",
   "Poor air quality affects visibility": "较差的空气质量影响可见度",
-  "Very poor air quality significantly reduces transparency": "非常差的空气质量显著降低透明度"
+  "Very poor air quality significantly reduces transparency": "非常差的空气质量显著降低透明度",
+  
+  // Common phrases that get mixed with translations
+  "makes imaging difficult or impossible": "使成像困难或不可能",
+  "Average seeing": "一般的视宁度",
+  "Moderate effect on detail": "对细节有中等影响",
+  "Strong wind": "强风",
+  "challenging for stable imaging": "对稳定成像具有挑战性",
+  "High humidity": "高湿度",
+  "may cause dew formation": "可能导致设备起雾",
+  "Moderate air quality": "中等空气质量",
+  "slight effect on imaging": "对成像有轻微影响"
 };

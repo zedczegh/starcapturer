@@ -57,6 +57,16 @@ export const calculateAverageWindSpeed = (nightForecasts: any[]) => {
   return sum / nightForecasts.length;
 };
 
+// Calculate average humidity from nighttime forecasts
+export const calculateAverageHumidity = (nightForecasts: any[]) => {
+  if (!nightForecasts || nightForecasts.length === 0) {
+    return 0;
+  }
+  
+  const sum = nightForecasts.reduce((total, forecast) => total + (forecast.humidity || 0), 0);
+  return sum / nightForecasts.length;
+};
+
 // Check if any forecast period has high cloud cover (over threshold)
 export const hasHighCloudCover = (nightForecasts: any[], threshold: number = 40) => {
   if (!nightForecasts || nightForecasts.length === 0) {
@@ -73,4 +83,30 @@ export const getNightCloudCoverValues = (nightForecasts: any[]) => {
   }
   
   return nightForecasts.map(forecast => forecast.cloudCover || 0);
+};
+
+// Get cloud cover trend (increasing, decreasing, stable)
+export const getCloudCoverTrend = (nightForecasts: any[]) => {
+  if (!nightForecasts || nightForecasts.length < 3) {
+    return "stable";
+  }
+  
+  const values = getNightCloudCoverValues(nightForecasts);
+  
+  // Calculate the average difference between consecutive readings
+  let totalDifference = 0;
+  for (let i = 1; i < values.length; i++) {
+    totalDifference += (values[i] - values[i-1]);
+  }
+  
+  const averageDifference = totalDifference / (values.length - 1);
+  
+  if (averageDifference > 2) return "increasing";
+  if (averageDifference < -2) return "decreasing";
+  return "stable";
+};
+
+// Format nighttime hours range (6PM to 8AM) for display
+export const formatNighttimeHoursRange = () => {
+  return "6 PM - 8 AM";
 };

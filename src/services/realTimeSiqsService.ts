@@ -41,7 +41,7 @@ export async function calculateRealTimeSiqs(
   // Determine if it's nighttime for cache duration
   const isNighttime = () => {
     const hour = new Date().getHours();
-    return hour >= 18 || hour < 6; // 6 PM to 6 AM
+    return hour >= 18 || hour < 8; // 6 PM to 8 AM
   };
   
   const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
@@ -83,7 +83,7 @@ export async function calculateRealTimeSiqs(
       }
     }
     
-    // Calculate SIQS using optimized method
+    // Calculate SIQS using the optimized method with nighttime forecasts
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherData,
       finalBortleScale,

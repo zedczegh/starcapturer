@@ -5,18 +5,23 @@ import { Progress } from "@/components/ui/progress";
 import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getTranslatedDescription } from "@/components/siqs/utils/translations/descriptionTranslator";
+import { InfoCircle } from "lucide-react";
 
 interface FactorItemProps {
   factor: {
     name: string;
     score: number;
     description: string;
+    nighttimeData?: {
+      average: number;
+      timeRange: string;
+    };
   };
   index: number;
 }
 
 const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   
   // Always ensure the display score is on 0-10 scale for consistent display
   const normalizedScore = factor.score > 10 ? factor.score / 10 : factor.score;
@@ -58,6 +63,9 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   // Translate the description if needed
   const translatedDescription = getTranslatedDescription(formattedDescription, language);
   
+  // Special nighttime cloud cover note for cloud cover factor
+  const showNighttimeNote = isCloudCoverFactor && factor.nighttimeData;
+  
   return (
     <motion.div
       className="space-y-1"
@@ -77,6 +85,18 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
         colorClass={colorClass}
       />
       <p className="text-xs text-muted-foreground">{translatedDescription}</p>
+      
+      {showNighttimeNote && factor.nighttimeData && (
+        <div className="mt-1 flex items-start gap-1">
+          <InfoCircle className="h-3 w-3 text-blue-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-400">
+            {language === 'en' 
+              ? `Night average (${factor.nighttimeData.timeRange}): ${factor.nighttimeData.average.toFixed(1)}%`
+              : `夜间平均值（${factor.nighttimeData.timeRange}）：${factor.nighttimeData.average.toFixed(1)}%`
+            }
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 };

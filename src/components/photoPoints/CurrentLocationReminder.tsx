@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +14,13 @@ const CurrentLocationReminder: React.FC<CurrentLocationReminderProps> = ({
   isVisible
 }) => {
   const { t } = useLanguage();
+  
+  // For debugging purposes - log when SIQS changes
+  useEffect(() => {
+    if (currentSiqs !== null) {
+      console.log("Current location SIQS updated:", currentSiqs);
+    }
+  }, [currentSiqs]);
   
   // Show reminder if explicitly set to visible AND if conditions are poor (SIQS < 5.0)
   const shouldShowReminder = 

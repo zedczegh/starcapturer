@@ -1,6 +1,7 @@
 
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 
 /**
  * Ensure SIQS value is always on a 0-10 scale
@@ -65,6 +66,35 @@ export async function calculateSIQSWithWeatherData(
   // Cap standard result score too
   if (result.score > 8.5) {
     result.score = 8.5;
+  }
+  
+  // If we have hourly forecast data, extract nighttime info for the cloud cover factor
+  if (forecastData && forecastData.hourly) {
+    try {
+      // Extract nighttime forecasts
+      const nightForecasts = extractNightForecasts(forecastData.hourly);
+      
+      if (nightForecasts.length > 0) {
+        // Calculate average cloud cover
+        const avgNightCloudCover = calculateAverageCloudCover(nightForecasts);
+        
+        // Add nighttime data to the cloud cover factor
+        result.factors = result.factors.map((factor: any) => {
+          if (factor.name === "Cloud Cover") {
+            return {
+              ...factor,
+              nighttimeData: {
+                average: avgNightCloudCover,
+                timeRange: formatNighttimeHoursRange()
+              }
+            };
+          }
+          return factor;
+        });
+      }
+    } catch (error) {
+      console.error("Error adding nighttime data to factors:", error);
+    }
   }
   
   return result;
