@@ -62,11 +62,46 @@ const BortleNow: React.FC = () => {
       if (updatedBortle) {
         setBortleScale(updatedBortle);
         console.log("Updated Bortle scale from location:", updatedBortle);
+        
+        // Save the Bortle measurement to localStorage for persistence
+        saveBortleMeasurement(lat, lng, updatedBortle, null);
       }
     } catch (err) {
       console.error("Error updating Bortle scale:", err);
     } finally {
       setIsMeasuringRealtime(false);
+    }
+  };
+
+  // Function to save Bortle measurements
+  const saveBortleMeasurement = (
+    lat: number, 
+    lng: number, 
+    bortleValue: number, 
+    starCountValue: number | null
+  ) => {
+    try {
+      // Create measurement object
+      const measurement = {
+        latitude: lat,
+        longitude: lng,
+        bortleScale: bortleValue,
+        starCount: starCountValue,
+        locationName: locationName || null,
+        timestamp: new Date().toISOString(),
+        method: starCountValue ? 'camera' : 'location'
+      };
+      
+      // Save to localStorage
+      const savedMeasurements = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]');
+      savedMeasurements.push(measurement);
+      localStorage.setItem('bortleMeasurements', JSON.stringify(savedMeasurements));
+      
+      console.log("Saved Bortle measurement:", measurement);
+      
+      // Could add API call here to save to database in future
+    } catch (error) {
+      console.error("Error saving Bortle measurement:", error);
     }
   };
 
@@ -112,7 +147,27 @@ const BortleNow: React.FC = () => {
   useEffect(() => {
     // Get location when component loads
     getCurrentLocation();
-  }, []);
+    
+    // Load any previously saved measurements
+    try {
+      const lastMeasurement = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]').pop();
+      if (lastMeasurement && lastMeasurement.bortleScale) {
+        // Check if measurement is recent (last 24 hours)
+        const measurementTime = new Date(lastMeasurement.timestamp).getTime();
+        const currentTime = new Date().getTime();
+        const hoursDiff = (currentTime - measurementTime) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          console.log("Loading previous Bortle measurement:", lastMeasurement);
+          if (lastMeasurement.starCount) {
+            setStarCount(lastMeasurement.starCount);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading saved measurements:", error);
+    }
+  }, [getCurrentLocation]);
 
   // Countdown timer effect
   useEffect(() => {
@@ -396,6 +451,16 @@ const BortleNow: React.FC = () => {
       setBortleScale(measuredBortle);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
       
+      // Save measurement to localStorage and eventually database
+      if (latitude && longitude) {
+        saveBortleMeasurement(
+          parseFloat(latitude), 
+          parseFloat(longitude), 
+          measuredBortle, 
+          simulatedStarCount
+        );
+      }
+      
       toast({
         title: t("Measurement Complete", "测量完成"),
         description: t(
@@ -600,8 +665,6 @@ const BortleNow: React.FC = () => {
                         <span className={`text-4xl font-bold ${bortleGradient.text}`}>{bortleScale.toFixed(1)}</span>
                         <span className={`text-xs mt-1 ${bortleGradient.text} opacity-80`}>{t("Bortle Scale", "伯特尔等级")}</span>
                       </div>
-                      
-                      {/* Removed the confusing 1 and 9 scale labels as requested */}
                     </motion.div>
                     
                     {isMeasuringRealtime && (
@@ -682,7 +745,7 @@ const BortleNow: React.FC = () => {
             )}
           </AnimatePresence>
           
-          {/* Location section */}
+          {/* Location section - Update button removed as requested */}
           <motion.div 
             className="glassmorphism border-cosmic-700/30 rounded-xl p-6 relative overflow-hidden"
             variants={fadeInUp}
@@ -693,31 +756,10 @@ const BortleNow: React.FC = () => {
             <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-cosmic-800/20 to-cosmic-900/20" />
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium flex items-center gap-2">
-                  <MapPin size={18} className="text-primary" />
-                  {t("Your Location", "您的位置")}
-                </h2>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={getCurrentLocation} 
-                  disabled={isLoadingLocation}
-                  className="text-xs h-8 bg-cosmic-800/70 hover:bg-cosmic-700/80 flex gap-2 items-center"
-                >
-                  {isLoadingLocation ? (
-                    <>
-                      <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-                      <span>{t("Loading...", "加载中...")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Pointer className="h-3.5 w-3.5" />
-                      {t("Update", "更新")}
-                    </>
-                  )}
-                </Button>
-              </div>
+              <h2 className="text-lg font-medium flex items-center gap-2 mb-4">
+                <MapPin size={18} className="text-primary" />
+                {t("Your Location", "您的位置")}
+              </h2>
               
               {locationName && (
                 <div className="text-sm text-cosmic-200 mb-4 bg-cosmic-800/40 p-3 rounded-lg border border-cosmic-700/30">
