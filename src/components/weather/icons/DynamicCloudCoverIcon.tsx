@@ -97,10 +97,11 @@ const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({
     // Low cloud cover (sunny)
     if (cloudCover < 25) {
       return (
-        <Sun 
-          className={cn(iconSize, "text-yellow-400")} 
+        <CloudSun 
+          className={cn(iconSize, "text-primary")} 
           style={{
-            filter: "drop-shadow(0 0 3px rgba(250, 204, 21, 0.5))"
+            fill: `rgba(255, 215, 0, 0.2)`,
+            stroke: "currentColor"
           }}
         />
       );

@@ -1,4 +1,3 @@
-
 import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
@@ -90,6 +89,7 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           moonPhase={moonPhaseString}
           bortleScale={bortleScale}
           seeingConditions={seeingConditionsString}
+          forecastData={forecastData}
         />
         
         <SIQSSummary
@@ -112,10 +112,10 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
         
         <Suspense fallback={
           <div className="animate-pulse h-64 bg-slate-800/20 rounded-lg flex items-center justify-center">
-            <span className="text-cosmic-400">{loadingText}</span>
+            <span className="text-muted-foreground">{loadingText}</span>
           </div>
         }>
-          <ForecastTabs 
+          <ForecastTabs
             forecastData={forecastData}
             longRangeForecast={longRangeForecast}
             forecastLoading={forecastLoading}
@@ -129,4 +129,4 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   );
 };
 
-export default React.memo(LocationContentGrid);
+export default LocationContentGrid;

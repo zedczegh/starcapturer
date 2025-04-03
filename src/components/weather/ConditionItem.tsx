@@ -1,46 +1,60 @@
 
-import React, { ReactNode, memo } from "react";
+import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ConditionItemProps {
-  icon: ReactNode;
+  icon: React.ReactNode;
   label: string;
-  value: string | number | React.ReactNode;
+  value: React.ReactNode;
   tooltip?: string;
+  className?: string;
+  badgeText?: string;
 }
 
-// Use memo to prevent unnecessary re-renders
-const ConditionItem = memo<ConditionItemProps>(({ icon, label, value, tooltip }) => {
-  const content = (
-    <div className="flex items-start group hover:scale-105 transition-transform duration-200">
-      <div className="mr-3 rounded-full bg-cosmic-800/80 p-2 group-hover:bg-primary/20 transition-colors shadow-inner">
+const ConditionItem: React.FC<ConditionItemProps> = ({
+  icon,
+  label,
+  value,
+  tooltip,
+  className,
+  badgeText
+}) => {
+  return (
+    <div className={cn("flex items-start", className)}>
+      <div className="mr-3 mt-1 text-muted-foreground/80">
         {icon}
       </div>
-      <div>
-        <p className="text-sm font-medium text-cosmic-200">{label}</p>
-        <p className="text-lg font-bold bg-gradient-to-r from-white to-cosmic-100 bg-clip-text text-transparent">{value}</p>
+      <div className="flex-1">
+        <div className="flex items-center">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            {label}
+          </h3>
+          
+          {badgeText && (
+            <span className="ml-2 px-1.5 py-0.5 text-xs rounded-sm bg-blue-500/30 text-blue-300 border border-blue-500/20">
+              {badgeText}
+            </span>
+          )}
+          
+          {tooltip && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 ml-1.5 text-muted-foreground/60 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-64">{tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+        <div className="mt-1 text-primary-foreground">{value}</div>
       </div>
     </div>
   );
-
-  if (tooltip) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {content}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return content;
-});
-
-ConditionItem.displayName = 'ConditionItem';
+};
 
 export default ConditionItem;

@@ -1,22 +1,9 @@
 
-import React from "react";
-import DynamicHumidityIcon from "./icons/DynamicHumidityIcon";
-import DynamicMoonIcon from "./icons/DynamicMoonIcon";
-import DynamicLightbulbIcon from "./icons/DynamicLightbulbIcon";
-import DynamicPrecipitationIcon from "./icons/DynamicPrecipitationIcon";
-import DynamicTemperatureIcon from "./icons/DynamicTemperatureIcon";
-import DynamicCloudCoverIcon from "./icons/DynamicCloudCoverIcon";
-import DynamicSeeingIcon from "./icons/DynamicSeeingIcon";
-import DynamicWindIcon from "./icons/DynamicWindIcon";
-
-// Export all dynamic icons for easy imports
-export { 
-  DynamicHumidityIcon, 
-  DynamicMoonIcon, 
-  DynamicLightbulbIcon,
-  DynamicPrecipitationIcon,
-  DynamicTemperatureIcon,
-  DynamicCloudCoverIcon,
-  DynamicSeeingIcon,
-  DynamicWindIcon
-};
+// This file serves as an index for all dynamic weather icons
+export { default as DynamicMoonIcon } from './icons/DynamicMoonIcon';
+export { default as DynamicSunIcon } from './icons/DynamicSunIcon';
+export { default as DynamicCloudCoverIcon } from './icons/DynamicCloudCoverIcon';
+export { default as DynamicLightbulbIcon } from './icons/DynamicLightbulbIcon';
+export { default as DynamicHumidityIcon } from './icons/DynamicHumidityIcon';
+export { default as DynamicWindIcon } from './icons/DynamicWindIcon';
+export { default as DynamicTemperatureIcon } from './icons/DynamicTemperatureIcon';

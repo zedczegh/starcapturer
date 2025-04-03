@@ -33,11 +33,40 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return <EmptyFactors />;
   }
   
-  // Special handling for cloud cover - ensure 0% cloud cover always shows score 10.0
-  // and don't penalize too harshly for high cloud cover
+  // Give priority to nighttime cloud cover data
   const finalFactors = normalizedFactors.map(factor => {
     // If it's the cloud cover factor
     if ((factor.name === "Cloud Cover" || factor.name === "云层覆盖")) {
+      // If we have nighttime data available
+      if (factor.nighttimeData && factor.nighttimeData.average !== undefined) {
+        // Prioritize the nighttime average for the score and update the name
+        const nighttimeValue = factor.nighttimeData.average;
+        
+        // Adjust the factor name to indicate nighttime
+        const nighttimeName = language === 'zh' ? '夜间云层覆盖' : 'Nighttime Cloud Cover';
+        
+        // If nighttime cloud cover is 0%, ensure score is 10
+        if (nighttimeValue === 0) {
+          return { 
+            ...factor, 
+            name: nighttimeName,
+            score: 10,
+            description: language === 'zh' 
+              ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，非常适合成像`
+              : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%, excellent for imaging`
+          };
+        }
+        
+        return { 
+          ...factor, 
+          name: nighttimeName,
+          // Leave score as is but update the description to show the nighttime value
+          description: language === 'zh' 
+            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description.includes('影响') ? '，可能影响成像质量' : '')
+            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description.includes('quality') ? ', may affect imaging quality' : '')
+        };
+      }
+      
       // If description mentions 0%, ensure score is 10
       if (factor.description.includes("0%")) {
         return { ...factor, score: 10 };
@@ -71,6 +100,7 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
   const sortedFactors = [...finalFactors].sort((a, b) => {
     // Define the order of factors
     const order = [
+      'Nighttime Cloud Cover', '夜间云层覆盖',
       'Cloud Cover', '云层覆盖',
       'Light Pollution', '光污染',
       'Seeing Conditions', '视宁度',

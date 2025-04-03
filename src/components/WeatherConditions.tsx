@@ -6,6 +6,7 @@ import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
 import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
+import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -21,6 +22,7 @@ interface WeatherConditionsProps {
   moonPhase: string | number;
   bortleScale: number | null;
   seeingConditions: string;
+  forecastData?: any;
 }
 
 // Helper function to normalize moon phase display
@@ -72,9 +74,63 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   moonPhase,
   bortleScale,
   seeingConditions,
+  forecastData
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
+  
+  // Calculate nighttime cloud cover when forecast data is available
+  const nighttimeCloudData = useMemo(() => {
+    if (!forecastData || !forecastData.hourly) return null;
+    
+    try {
+      // Extract nighttime forecasts
+      const nightForecasts = extractNightForecasts(forecastData.hourly);
+      
+      if (nightForecasts.length === 0) return null;
+      
+      // Group forecasts by time ranges
+      const eveningForecasts = nightForecasts.filter(forecast => {
+        const hour = new Date(forecast.time).getHours();
+        return hour >= 18 && hour <= 23;
+      });
+      
+      const morningForecasts = nightForecasts.filter(forecast => {
+        const hour = new Date(forecast.time).getHours();
+        return hour >= 0 && hour < 8;
+      });
+      
+      // Calculate average cloud cover for each time range
+      const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
+      const morningCloudCover = calculateAverageCloudCover(morningForecasts);
+      
+      // Calculate weighted average
+      const totalHours = eveningForecasts.length + morningForecasts.length;
+      
+      let avgNightCloudCover;
+      if (eveningForecasts.length === 0 && morningForecasts.length === 0) {
+        avgNightCloudCover = null;
+      } else if (eveningForecasts.length === 0) {
+        avgNightCloudCover = morningCloudCover;
+      } else if (morningForecasts.length === 0) {
+        avgNightCloudCover = eveningCloudCover;
+      } else {
+        avgNightCloudCover = (
+          (eveningCloudCover * eveningForecasts.length) + 
+          (morningCloudCover * morningForecasts.length)
+        ) / totalHours;
+      }
+      
+      return {
+        average: avgNightCloudCover,
+        evening: eveningCloudCover,
+        morning: morningCloudCover
+      };
+    } catch (error) {
+      console.error("Error calculating nighttime cloud cover:", error);
+      return null;
+    }
+  }, [forecastData]);
   
   // Ensure weather data is stable and validated
   useEffect(() => {
@@ -149,6 +205,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
                 moonPhase={translatedData.moonPhase}
                 bortleScale={bortleScale}
                 aqi={stableWeatherData.aqi}
+                nighttimeCloudData={nighttimeCloudData}
               />
             </motion.div>
           </div>
