@@ -79,25 +79,17 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
   
-  // Improved nighttime cloud cover calculation with better error handling and logging
+  // Calculate nighttime cloud cover when forecast data is available
   const nighttimeCloudData = useMemo(() => {
-    if (!forecastData || !forecastData.hourly) {
-      console.log("No forecast data available for nighttime cloud calculation");
-      return null;
-    }
+    if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      // Extract nighttime forecasts (hours between 6 PM and 8 AM)
+      // Extract nighttime forecasts
       const nightForecasts = extractNightForecasts(forecastData.hourly);
       
-      if (nightForecasts.length === 0) {
-        console.log("No nighttime forecast hours found");
-        return null;
-      }
+      if (nightForecasts.length === 0) return null;
       
-      console.log(`Found ${nightForecasts.length} nighttime forecast hours`);
-      
-      // Group forecasts by time ranges for more precise calculation
+      // Group forecasts by time ranges
       const eveningForecasts = nightForecasts.filter(forecast => {
         const hour = new Date(forecast.time).getHours();
         return hour >= 18 && hour <= 23;
@@ -108,35 +100,25 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         return hour >= 0 && hour < 8;
       });
       
-      console.log(`Evening forecasts (6PM-12AM): ${eveningForecasts.length}, Morning forecasts (1AM-8AM): ${morningForecasts.length}`);
-      
-      // Calculate average cloud cover for each time range with improved error handling
+      // Calculate average cloud cover for each time range
       const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
       const morningCloudCover = calculateAverageCloudCover(morningForecasts);
       
-      console.log(`Average cloud cover - Evening: ${eveningCloudCover.toFixed(1)}%, Morning: ${morningCloudCover.toFixed(1)}%`);
-      
-      // Calculate weighted average based on number of hours in each period
+      // Calculate weighted average
       const totalHours = eveningForecasts.length + morningForecasts.length;
       
       let avgNightCloudCover;
-      if (totalHours === 0) {
-        console.log("No valid forecast hours found, using current cloud cover");
+      if (eveningForecasts.length === 0 && morningForecasts.length === 0) {
         avgNightCloudCover = null;
       } else if (eveningForecasts.length === 0) {
-        console.log("Using only morning forecasts for cloud cover");
         avgNightCloudCover = morningCloudCover;
       } else if (morningForecasts.length === 0) {
-        console.log("Using only evening forecasts for cloud cover");
         avgNightCloudCover = eveningCloudCover;
       } else {
-        // Weight by actual number of hours in each period
         avgNightCloudCover = (
           (eveningCloudCover * eveningForecasts.length) + 
           (morningCloudCover * morningForecasts.length)
         ) / totalHours;
-        
-        console.log(`Weighted average cloud cover for night: ${avgNightCloudCover.toFixed(1)}%`);
       }
       
       return {
