@@ -2,7 +2,6 @@
 import React, { memo } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 
@@ -26,9 +25,6 @@ interface FactorItemProps {
 const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
   const { t, language } = useLanguage();
   
-  // Convert score (0-10) to percentage (0-100) for progress bar
-  const scorePercent = Math.round(factor.score * 10);
-  
   // Determine color based on score
   const getColorClass = (score: number) => {
     if (score >= 7.5) return "bg-green-500";
@@ -45,7 +41,12 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
     return "text-red-400";
   };
   
-  const progressColor = getColorClass(factor.score);
+  const getTextColorClass = (score: number) => {
+    if (score >= 7.5) return "text-green-400";
+    if (score >= 5) return "text-lime-400";
+    if (score >= 2.5) return "text-amber-400";
+    return "text-red-400";
+  };
   
   // Special formatting for Clear Sky Rate factor
   const isClearSkyRate = factor.name === "Clear Sky Rate" || factor.name === "晴空率";
@@ -86,12 +87,6 @@ const FactorItem: React.FC<FactorItemProps> = ({ factor, index }) => {
             {factor.score.toFixed(1)}
           </Badge>
         </div>
-        
-        <Progress 
-          value={scorePercent} 
-          className="h-2 bg-cosmic-700/30"
-          indicatorClassName={progressColor}
-        />
         
         <div className="text-sm text-muted-foreground mt-1.5">
           {factor.description}

@@ -53,15 +53,18 @@ export const getWeatherData = async (
       clearTimeout(timeoutId);
       
       if (weatherData) {
+        // Create a new object to include clearSkyRate
+        const enhancedWeatherData = { ...weatherData };
+        
         // Add clear sky rate to weather data if available
         if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
-          weatherData.clearSkyRate = clearSkyData.annualRate;
+          enhancedWeatherData.clearSkyRate = clearSkyData.annualRate;
           console.log(`Added clear sky rate to weather data: ${clearSkyData.annualRate}%`);
         }
         
         // Cache the weather data for future use
-        setCachedData(locationSpecificKey, weatherData);
-        return weatherData;
+        setCachedData(locationSpecificKey, enhancedWeatherData);
+        return enhancedWeatherData;
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));

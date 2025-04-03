@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Motion, Presence } from "framer-motion";
+import { motion } from "framer-motion";
 import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
@@ -95,21 +95,28 @@ const AboutPage = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             {features.map((feature, index) => (
-              <Card key={index} className="border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">{feature.title}</CardTitle>
-                    {feature.new && (
-                      <Badge className="bg-primary/80 text-primary-foreground">
-                        {t("New", "新功能")}
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+              >
+                <Card className="border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 h-full">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      {feature.new && (
+                        <Badge className="bg-primary/80 text-primary-foreground">
+                          {t("New", "新功能")}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
           
