@@ -120,7 +120,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   
   return (
     <div 
-      className="container mx-auto px-4 py-8 pt-14 relative z-10" {/* Added pt-14 to fix navbar overlap */}
+      className="container mx-auto px-4 py-8 pt-14 relative z-10" /* Added pt-14 to fix navbar overlap */
       ref={containerRef}
       data-refresh-trigger="true"
     >

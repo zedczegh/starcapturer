@@ -1,14 +1,12 @@
 
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Sparkles, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LocationDetailsHeaderProps {
   name?: string;
   timestamp?: string;
-  onRefresh?: () => void;
   loading?: boolean;
   className?: string;
 }
@@ -16,14 +14,13 @@ interface LocationDetailsHeaderProps {
 const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({ 
   name, 
   timestamp, 
-  onRefresh, 
   loading,
   className
 }) => {
   const { t } = useLanguage();
   
   return (
-    <div className={cn("mb-6", className)}>
+    <div className={cn("mb-6 pt-16", className)}>
       <div className="flex flex-col items-center justify-between">
         <div className="text-center">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center justify-center mb-2">
@@ -37,8 +34,6 @@ const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
             )}
           </p>
         </div>
-        
-        {/* Removed the refresh button as requested */}
       </div>
       
       {timestamp && (

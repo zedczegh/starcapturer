@@ -21,6 +21,7 @@ export const commonPhrases = {
   "Partly Cloudy": "部分多云",
   "Cloudy": "多云",
   "Overcast": "阴天",
+  "Clear Sky Rate": "晴空率",
   
   // Light pollution
   "Bortle Scale": "波尔特等级",
@@ -36,7 +37,6 @@ export const commonPhrases = {
   "Precipitation": "降水量",
   "Cloud Cover": "云层覆盖",
   "Air Quality": "空气质量",
-  "Clear Sky Rate": "晴空率",
   
   // Astronomical terms
   "Moon Phase": "月相",
