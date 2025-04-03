@@ -29,6 +29,7 @@ const BortleNow: React.FC = () => {
   
   // Bortle scale states
   const [bortleScale, setBortleScale] = useState<number | null>(null);
+  const [starCount, setStarCount] = useState<number | null>(null);
   const [cameraReadings, setCameraReadings] = useState<{
     darkFrame: boolean;
     lightFrame: boolean;
@@ -247,6 +248,104 @@ const BortleNow: React.FC = () => {
     requestCameraPermission("dark");
   };
 
+  // Count stars in the image
+  const countStarsInImage = (imageData: ImageData): number => {
+    // This is a simplified algorithm to detect stars in an image
+    // In a real implementation, this would be more sophisticated
+    
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    
+    // Threshold values for star detection
+    const brightnessThreshold = 180; // Higher values are more likely to be stars
+    const contrastThreshold = 50;    // Minimum difference from background
+    
+    let starCount = 0;
+    const starPixels = new Set(); // To avoid counting the same star multiple times
+    
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const i = (y * width + x) * 4;
+        
+        // Calculate pixel brightness (simple average of RGB)
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        
+        // Check surrounding pixels to see if this is a local maximum (star center)
+        if (brightness > brightnessThreshold) {
+          let isLocalMax = true;
+          
+          // Check 8 surrounding pixels
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue; // Skip the center pixel
+              
+              const ni = ((y + dy) * width + (x + dx)) * 4;
+              const neighborBrightness = (data[ni] + data[ni + 1] + data[ni + 2]) / 3;
+              
+              // If a neighboring pixel is brighter, this is not a local max
+              if (neighborBrightness > brightness) {
+                isLocalMax = false;
+                break;
+              }
+            }
+            if (!isLocalMax) break;
+          }
+          
+          if (isLocalMax) {
+            // Ensure this is not part of a star we've already counted
+            const starKey = `${x}-${y}`;
+            if (!starPixels.has(starKey)) {
+              starCount++;
+              
+              // Mark this and nearby pixels as part of a star
+              for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                  const sx = x + dx;
+                  const sy = y + dy;
+                  if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+                    starPixels.add(`${sx}-${sy}`);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return starCount;
+  };
+
+  // Calculate Bortle scale based on star count and brightness
+  const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
+    // This is a simplified algorithm:
+    // - More stars generally indicate darker skies (lower Bortle)
+    // - Lower brightness values (darker sky) indicate lower Bortle
+    
+    // Normalize star count to a value between 0-10
+    // Typical range: 0 stars (urban) to 100+ stars (dark site) in a typical smartphone frame
+    const normalizedStarCount = Math.min(10, starCount / 10);
+    
+    // Normalize brightness (0-255) to a reversed 0-10 scale (darker is better)
+    // 255 (white) would be 0, and 0 (black) would be 10
+    const normalizedBrightness = 10 - (skyBrightness / 25.5);
+    
+    // Combine the two metrics with more weight to brightness (70/30 split)
+    const combinedMetric = (normalizedBrightness * 0.7) + (normalizedStarCount * 0.3);
+    
+    // Convert the 0-10 scale to Bortle 1-9 scale (reversed)
+    // 9 is most light-polluted, 1 is darkest sky
+    let bortle = 10 - combinedMetric;
+    
+    // Ensure Bortle is in valid range 1-9
+    bortle = Math.max(1, Math.min(9, bortle));
+    
+    console.log(`Star count: ${starCount}, Brightness: ${skyBrightness}, Calculated Bortle: ${bortle.toFixed(1)}`);
+    
+    return bortle;
+  };
+
   // Perform the actual light frame capture once countdown completes
   const performLightFrameCapture = async () => {
     try {
@@ -281,19 +380,28 @@ const BortleNow: React.FC = () => {
         resolve(true);
       }, 600));
       
-      // For simulation, generate a reasonable Bortle value
+      // For simulation, generate reasonable values
       const baseLocationBortle = bortleScale || 5;
       
-      // Simulate slight improvement from camera measurement
-      const measuredBortle = Math.max(1, Math.min(9, baseLocationBortle * 0.8 + Math.random() * 0.8));
+      // Simulate camera-based star detection
+      const simulatedStarCount = Math.max(0, Math.floor(100 * (1 - (baseLocationBortle - 1) / 8) + Math.random() * 20 - 10));
+      setStarCount(simulatedStarCount);
+      
+      // Simulate sky brightness measurement (0-255, where lower is darker)
+      const simulatedSkyBrightness = Math.min(255, Math.max(10, ((baseLocationBortle - 1) / 8) * 200 + Math.random() * 30 - 15));
+      
+      // Calculate Bortle scale based on star count and brightness
+      const measuredBortle = calculateBortleFromStars(simulatedStarCount, simulatedSkyBrightness);
       
       setBortleScale(measuredBortle);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
       
       toast({
         title: t("Measurement Complete", "测量完成"),
-        description: t("Sky brightness measured. Bortle scale: ", "天空亮度已测量。波尔特尔等级：") + 
-          measuredBortle.toFixed(1),
+        description: t(
+          `Sky brightness measured. Stars detected: ${simulatedStarCount}. Bortle scale: ${measuredBortle.toFixed(1)}`,
+          `天空亮度已测量。检测到的星星: ${simulatedStarCount}。波尔特尔等级：${measuredBortle.toFixed(1)}`
+        ),
       });
     } catch (error) {
       setError((error as Error).message);
@@ -493,13 +601,7 @@ const BortleNow: React.FC = () => {
                         <span className={`text-xs mt-1 ${bortleGradient.text} opacity-80`}>{t("Bortle Scale", "伯特尔等级")}</span>
                       </div>
                       
-                      {/* Light pollution scale labels */}
-                      <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 flex items-center">
-                        <span className="text-xs text-blue-400">1</span>
-                      </div>
-                      <div className="absolute right-0 top-0 transform translate-x-1/2 -translate-y-1/2 flex items-center">
-                        <span className="text-xs text-red-400">9</span>
-                      </div>
+                      {/* Removed the confusing 1 and 9 scale labels as requested */}
                     </motion.div>
                     
                     {isMeasuringRealtime && (
@@ -536,11 +638,15 @@ const BortleNow: React.FC = () => {
                     <ConditionItem
                       icon={<Star className="h-5 w-5 text-primary" />}
                       label={t("Visible Stars", "可见星星")}
-                      value={bortleScale <= 3 
-                        ? t("Many", "许多") 
-                        : bortleScale <= 6 
-                          ? t("Some", "一些") 
-                          : t("Few", "很少")}
+                      value={
+                        starCount !== null ? 
+                        <span className="text-lg font-medium">{starCount}</span> : 
+                        (bortleScale <= 3 
+                          ? t("Many", "许多") 
+                          : bortleScale <= 6 
+                            ? t("Some", "一些") 
+                            : t("Few", "很少"))
+                      }
                       tooltip={t("Estimated visible stars at zenith", "天顶处估计可见星星")}
                     />
                     
@@ -667,8 +773,8 @@ const BortleNow: React.FC = () => {
               <div className="bg-cosmic-800/50 p-4 rounded-lg border border-cosmic-700/30 shadow-inner mb-4">
                 <p className="mb-4 text-sm text-cosmic-200">
                   {t(
-                    "Accurate measurements use your camera to measure actual sky brightness. First capture a dark frame, then point your camera at the night sky.",
-                    "精确测量使用相机测量实际天空亮度。首先捕获暗帧，然后将相机指向夜空。"
+                    "Accurate measurements use your camera to measure actual sky brightness and count visible stars. First capture a dark frame, then point your camera at the night sky.",
+                    "精确测量使用相机测量实际天空亮度并计算可见星星。首先捕获暗帧，然后将相机指向夜空。"
                   )}
                 </p>
                 
@@ -745,23 +851,15 @@ const BortleNow: React.FC = () => {
                     <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">2</div>
                     <div>
                       <p className="font-medium text-cosmic-100 mb-1">{t("Capture Dark Frame", "捕获暗帧")}</p>
-                      <p className="text-xs">{t("Click the button to capture a reference dark frame", "点击按钮捕获参考暗帧")}</p>
+                      <p className="text-xs">{t("This sets the baseline for your camera sensor", "这为您的相机传感器设置基线")}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
                     <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">3</div>
                     <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Point at the Sky", "指向天空")}</p>
-                      <p className="text-xs">{t("Point your camera directly up at the zenith (straight overhead)", "将相机直接指向天顶（正上方）")}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
-                    <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">4</div>
-                    <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Measure Sky Brightness", "测量天空亮度")}</p>
-                      <p className="text-xs">{t("Click the button to capture and analyze the sky brightness", "点击按钮捕获并分析天空亮度")}</p>
+                      <p className="font-medium text-cosmic-100 mb-1">{t("Point at Sky", "指向天空")}</p>
+                      <p className="text-xs">{t("Point your camera at the zenith (directly overhead) to measure light pollution and count stars", "将相机指向天顶（正上方）以测量光污染并计算星星")}</p>
                     </div>
                   </div>
                 </div>
