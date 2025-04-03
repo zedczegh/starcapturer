@@ -1,7 +1,6 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import LocationDetailsHeader from "./LocationDetailsHeader";
 import LocationDetailsContent from "./LocationDetailsContent";
 import LocationStatusMessage from "./LocationStatusMessage";
 import { useWeatherUpdater } from "@/hooks/useWeatherUpdater";
@@ -121,7 +120,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   
   return (
     <div 
-      className="container mx-auto px-4 py-8 relative z-10"
+      className="container mx-auto px-4 py-8 pt-14 relative z-10" {/* Added pt-14 to fix navbar overlap */}
       ref={containerRef}
       data-refresh-trigger="true"
     >

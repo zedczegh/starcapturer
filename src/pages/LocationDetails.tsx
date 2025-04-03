@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -10,7 +9,6 @@ import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 import { isInChina } from "@/utils/chinaBortleData";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
 import PageLoader from "@/components/loaders/PageLoader";
 import NavBar from "@/components/NavBar";
 

@@ -116,7 +116,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   }, [locationData, handleRefreshAll, setLocationData, resetUpdateState]);
 
   return (
-    <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>
+    <div className="transition-all duration-300 animate-fade-in pt-10" ref={containerRef}> {/* Added padding to fix navbar overlap */}
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 

@@ -38,18 +38,7 @@ const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
           </p>
         </div>
         
-        {onRefresh && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onRefresh} 
-            disabled={loading}
-            className="flex items-center gap-2 mt-4"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            {t("Refresh", "刷新")}
-          </Button>
-        )}
+        {/* Removed the refresh button as requested */}
       </div>
       
       {timestamp && (

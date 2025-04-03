@@ -81,15 +81,15 @@ export const commonPhrases = {
   
   // SIQS specific
   "SIQS": "SIQS",
-  "Stellar Imaging Quality Score": "恒星成像质量评分",
+  "Stellar Imaging Quality Score": "天文观测质量评分",
   "Factors Affecting SIQS": "影响SIQS的因素",
   "Overall Score": "总分",
-  "Imaging Conditions": "成像条件",
+  "Imaging Conditions": "观测条件",
   "Seeing Conditions": "视宁度",
   "Atmospheric Stability": "大气稳定性",
-  "Excellent for imaging": "非常适合成像",
-  "Good for imaging": "适合成像",
-  "Fair for imaging": "成像条件尚可",
-  "Poor for imaging": "成像条件较差",
-  "Not recommended": "不推荐成像"
+  "Excellent for imaging": "非常适合观测",
+  "Good for imaging": "适合观测",
+  "Fair for imaging": "观测条件尚可",
+  "Poor for imaging": "观测条件较差",
+  "Not recommended": "不推荐观测"
 };
