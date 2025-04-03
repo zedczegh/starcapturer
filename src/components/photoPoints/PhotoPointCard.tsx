@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Building2 } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
@@ -154,7 +154,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       </div>
       
-      {/* Certification Badge - Fixed mobile rendering with transform-gpu to force hardware acceleration */}
+      {/* Certification Badge - Fixed mobile rendering by ensuring only one icon is present */}
       {certInfo && (
         <div className={`flex items-center mt-1.5 mb-2 ${isMobile ? 'transform-gpu' : ''}`}>
           <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>

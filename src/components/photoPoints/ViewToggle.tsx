@@ -2,7 +2,7 @@
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Toggle } from "@/components/ui/toggle";
-import { Award, Calculator, Loader2 } from "lucide-react";
+import { Award, Calculator } from "lucide-react";
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
