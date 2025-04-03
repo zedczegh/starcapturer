@@ -1,32 +1,141 @@
 
 import React from "react";
-import { Cloud as CloudIcon, Sun } from "lucide-react";
+import { Cloud, CloudFog, CloudDrizzle, CloudSnow, CloudHail, Sun, CloudSun } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DynamicCloudCoverIconProps {
   cloudCover: number;
-  className?: string;
   precipitation?: number;
+  snowfall?: number;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const DynamicCloudCoverIcon: React.FC<DynamicCloudCoverIconProps> = ({ 
   cloudCover, 
-  className = "", 
-  precipitation 
+  precipitation = 0, 
+  snowfall = 0,
+  className,
+  size = 'sm'
 }) => {
-  // Cloud cover opacity based on percentage
-  const opacity = Math.min(0.9, Math.max(0.1, cloudCover / 100));
+  // Enhanced size mapping with larger values
+  const sizeMap = {
+    sm: 'h-4 w-4',
+    md: 'h-5 w-5',
+    lg: 'h-6 w-6'
+  };
   
-  // If precipitation is provided, adjust the cloud color
-  const cloudColor = precipitation && precipitation > 20 
-    ? "text-blue-400" 
-    : "text-primary";
+  const iconSize = sizeMap[size] || sizeMap.sm;
+  
+  // Calculate fill based on cloud cover percentage
+  const fillOpacity = Math.min(1, cloudCover / 100);
+  
+  // Add red glow for rainy conditions - enhanced for better visibility
+  const hasRain = precipitation > 0;
+  const rainGlowStyle = hasRain ? {
+    filter: "drop-shadow(0 0 2px rgba(234, 56, 76, 0.6))",
+    transition: "all 0.3s ease"
+  } : {};
+  
+  // Determine which icon to display based on weather conditions
+  const renderWeatherIcon = () => {
+    // Heavy snow condition
+    if (snowfall > 0.5) {
+      return (
+        <CloudSnow 
+          className={cn(iconSize, "text-primary", hasRain && "text-red-400")}
+          style={{
+            fill: `rgba(148, 163, 184, ${fillOpacity})`,
+            stroke: "currentColor",
+            ...rainGlowStyle
+          }}
+        />
+      );
+    }
+    
+    // Heavy rain condition
+    if (precipitation > 0.5) {
+      return (
+        <CloudDrizzle 
+          className={cn(iconSize, hasRain ? "text-red-400" : "text-primary")}
+          style={{
+            fill: `rgba(148, 163, 184, ${fillOpacity})`,
+            stroke: "currentColor",
+            ...rainGlowStyle
+          }}
+        />
+      );
+    }
+    
+    // Light rain condition
+    if (precipitation > 0) {
+      return (
+        <CloudHail 
+          className={cn(iconSize, "text-red-400")}
+          style={{
+            fill: `rgba(148, 163, 184, ${fillOpacity})`,
+            stroke: "currentColor",
+            ...rainGlowStyle
+          }}
+        />
+      );
+    }
+    
+    // Fog condition (high cloud cover)
+    if (cloudCover > 80) {
+      return (
+        <CloudFog 
+          className={cn(iconSize, "text-primary")}
+          style={{
+            fill: `rgba(148, 163, 184, ${fillOpacity})`,
+            stroke: "currentColor"
+          }}
+        />
+      );
+    }
+    
+    // Low cloud cover (sunny)
+    if (cloudCover < 25) {
+      return (
+        <Sun 
+          className={cn(iconSize, "text-yellow-400")} 
+          style={{
+            filter: "drop-shadow(0 0 3px rgba(250, 204, 21, 0.5))"
+          }}
+        />
+      );
+    }
+    
+    // Partly cloudy (25-40% cloud cover)
+    if (cloudCover >= 25 && cloudCover < 40) {
+      return (
+        <CloudSun 
+          className={cn(iconSize, "text-primary")} 
+          style={{
+            fill: `rgba(148, 163, 184, ${fillOpacity})`,
+            stroke: "currentColor"
+          }}
+        />
+      );
+    }
+    
+    // Default cloud icon for other conditions
+    return (
+      <Cloud 
+        className={cn(iconSize, "text-primary")} 
+        style={{
+          fill: `rgba(148, 163, 184, ${fillOpacity})`,
+          stroke: "currentColor"
+        }}
+      />
+    );
+  };
   
   return (
-    <div className={`relative h-5 w-5 ${className}`}>
-      <Sun className="absolute h-5 w-5 text-yellow-400" />
-      <CloudIcon className={`absolute h-5 w-5 ${cloudColor}`} style={{ opacity }} />
+    <div className={`relative ${className || ''}`}>
+      {renderWeatherIcon()}
     </div>
   );
 };
 
-export default DynamicCloudCoverIcon;
+export default React.memo(DynamicCloudCoverIcon);
