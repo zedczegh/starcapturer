@@ -3,25 +3,14 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AboutContent } from "@/components/about/AboutContent";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import AboutHeader from "@/components/about/AboutHeader";
+import AboutFooter from "@/components/about/AboutFooter";
 
 const About = () => {
   const { t } = useLanguage();
-  
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        staggerChildren: 0.15,
-        delayChildren: 0.1
-      }
-    }
-  };
   
   return (
     <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-20">
@@ -35,30 +24,26 @@ const About = () => {
           </Link>
         </div>
         
-        <motion.h1 
-          className="text-4xl font-bold mb-10 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {t("About Bortle Now", "关于 Bortle Now")}
-        </motion.h1>
+        <AboutHeader />
         
         <motion.div
-          variants={containerVariants}
           initial="hidden"
           animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { 
+              opacity: 1,
+              transition: { 
+                staggerChildren: 0.15,
+                delayChildren: 0.1
+              }
+            }
+          }}
           className="space-y-8"
         >
           <AboutContent />
           
-          <div className="mt-8 text-center">
-            <Link to="/">
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-                {t("Return to Home", "返回首页")}
-              </Button>
-            </Link>
-          </div>
+          <AboutFooter />
         </motion.div>
       </div>
     </div>

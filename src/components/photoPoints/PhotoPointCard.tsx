@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -32,7 +31,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
 
-  // Pre-compute certification info to avoid recalculations and flash
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
   useEffect(() => {
@@ -40,7 +38,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
-          // First check if we already have a name from point data
           if (point.name && 
               !point.name.includes("°") && 
               !point.name.includes("Location at") &&
@@ -54,17 +51,14 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             return;
           }
           
-          // Try directional region naming first (e.g., "Northwest Yunnan")
           const regionalName = getRegionalName(point.latitude, point.longitude, language);
           
-          // If we got a valid region name, use it
           if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
             setNearestTown(regionalName);
             setLoadingTown(false);
             return;
           }
           
-          // Use enhanced location service as a fallback
           const townName = await getLocationNameForCoordinates(
             point.latitude,
             point.longitude,
@@ -75,7 +69,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             const extractedTownName = extractNearestTownName(townName, point.description, language);
             setNearestTown(extractedTownName);
           } else {
-            // Better fallback for remote areas
             setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
           }
         } catch (error) {
@@ -100,13 +93,11 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
 
-  // Create a stable location ID for navigation
   const getLocationId = () => {
     if (!point || !point.latitude || !point.longitude) return null;
     return `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
   };
 
-  // Handle view details click with proper navigation
   const handleViewDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -115,7 +106,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     const locationId = getLocationId();
     if (!locationId) return;
     
-    // Navigate programmatically to ensure proper state passing
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
@@ -130,7 +120,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         certification: point.certification,
         isDarkSkyReserve: point.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
-        fromPhotoPoints: true // Add flag to indicate source
+        fromPhotoPoints: true
       }
     });
   };
@@ -147,16 +137,14 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           {pointName}
         </h4>
         
-        {/* SIQS Score */}
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
         </div>
       </div>
       
-      {/* Certification Badge - Fixed mobile rendering by ensuring only one icon is present */}
       {certInfo && (
-        <div className={`flex items-center mt-1.5 mb-2 ${isMobile ? 'transform-gpu' : ''}`}>
+        <div className="flex items-center mt-1.5 mb-2">
           <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
             {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
             <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
@@ -172,7 +160,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           </span>
         </div>
         
-        {/* Improved alignment for Bortle Scale Indicator */}
         <div className="flex items-center">
           <LightPollutionIndicator 
             bortleScale={point.bortleScale || 4} 

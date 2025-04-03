@@ -1,18 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Award, Clock, Loader2, Building2, Trees, Globe, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
-import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { getLocationNameForCoordinates } from '@/components/location/map/LocationNameService';
-import { extractNearestTownName, getRegionalName } from '@/utils/locationNameFormatter';
 import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
+import SiqsScoreBadge from './cards/SiqsScoreBadge';
+import CertificationBadge from './cards/CertificationBadge';
+import LocationMetadata from './cards/LocationMetadata';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -42,37 +39,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
     return null;
   });
-  
-  // Format the distance for display
-  const formatDistance = (distance?: number) => {
-    if (!distance) return t("Unknown distance", "未知距离");
-    
-    if (distance < 1) {
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
-    }
-    
-    if (distance < 10) {
-      return t(`${distance.toFixed(1)} km away`, `距离 ${distance.toFixed(1)} 公里`);
-    }
-    
-    return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-  };
-  
-  // Format the date for display
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'zh-CN', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }).format(date);
-    } catch (error) {
-      return '';
-    }
-  };
   
   // Load real-time SIQS data if requested
   useEffect(() => {
@@ -130,47 +96,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
   
-  // Determine certification icon and details
-  const getCertificationInfo = () => {
-    if (!location.certification && !location.isDarkSkyReserve) {
-      return null;
-    }
-    
-    const certification = (location.certification || '').toLowerCase();
-    
-    if (certification.includes('sanctuary') || certification.includes('reserve')) {
-      return {
-        icon: <Globe className="h-3.5 w-3.5 mr-1.5" />,
-        text: t('Dark Sky Reserve', '暗夜保护区'),
-        color: 'text-blue-400 border-blue-400/30 bg-blue-400/10'
-      };
-    } else if (certification.includes('park')) {
-      return {
-        icon: <Trees className="h-3.5 w-3.5 mr-1.5" />,
-        text: t('Dark Sky Park', '暗夜公园'),
-        color: 'text-green-400 border-green-400/30 bg-green-400/10'
-      };
-    } else if (certification.includes('community')) {
-      return {
-        icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
-        text: t('Dark Sky Community', '暗夜社区'),
-        color: 'text-amber-400 border-amber-400/30 bg-amber-400/10'
-      };
-    } else if (certification.includes('urban')) {
-      return {
-        icon: <Building2 className="h-3.5 w-3.5 mr-1.5" />,
-        text: t('Urban Night Sky', '城市夜空'),
-        color: 'text-purple-400 border-purple-400/30 bg-purple-400/10'
-      };
-    } else {
-      return {
-        icon: <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />,
-        text: t('Certified Location', '认证地点'),
-        color: 'text-blue-300 border-blue-300/30 bg-blue-300/10'
-      };
-    }
-  };
-  
   const handleViewDetails = () => {
     // Prepare location data for details page
     const locationData = {
@@ -204,8 +129,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       }
     }
   };
-
-  const certInfo = getCertificationInfo();
   
   return (
     <motion.div
@@ -217,29 +140,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
         
         {/* SIQS Score Badge */}
-        <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-full border border-yellow-500/40">
-          {loadingSiqs ? (
-            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-          ) : (
-            <Star className="h-3.5 w-3.5 mr-1.5 text-yellow-400" fill="#facc15" />
-          )}
-          <span className="text-sm font-medium">
-            {loadingSiqs ? '...' : formatSIQSScoreForDisplay(displaySiqs)}
-          </span>
-        </div>
+        <SiqsScoreBadge score={displaySiqs} loading={loadingSiqs} />
       </div>
       
-      {/* Certification Badge - Now BELOW the SIQS score */}
-      {certInfo && (
-        <div className="mb-3 mt-1.5">
-          <Badge variant="outline" className={`${certInfo.color} px-2.5 py-1.5 rounded-full flex items-center`}>
-            {certInfo.icon}
-            <span className="text-sm">{certInfo.text}</span>
-          </Badge>
-        </div>
-      )}
+      {/* Certification Badge */}
+      <CertificationBadge 
+        certification={location.certification} 
+        isDarkSkyReserve={location.isDarkSkyReserve} 
+      />
       
-      {/* Light pollution indicator with larger text */}
+      {/* Light pollution indicator */}
       <div className="mb-4 mt-2">
         <LightPollutionIndicator 
           bortleScale={location.bortleScale || 5} 
@@ -249,19 +159,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         />
       </div>
       
-      <div className="flex flex-col space-y-2.5 mt-3">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-          <span className="font-medium">{formatDistance(location.distance)}</span>
-        </div>
-        
-        {location.date && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-            <span className="font-medium">{formatDate(location.date)}</span>
-          </div>
-        )}
-      </div>
+      {/* Location metadata */}
+      <LocationMetadata 
+        distance={location.distance} 
+        date={location.date} 
+      />
       
       <div className="mt-4 flex justify-end">
         <Button
