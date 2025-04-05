@@ -145,11 +145,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          Math.min(searchRadius * 1.5, 10000),
-          true, // Allow expansion
-          10,  // Limit
-          isRadiusIncrease, // Preserve previous locations if radius increased
-          isRadiusIncrease ? previousLocationsRef.current : []
+          Math.min(searchRadius * 1.5, 10000)
         );
         
         if (calculatedResults.length > 0) {
@@ -311,11 +307,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        true, // Allow radius expansion
-        10, // Get 10 more locations
-        true, // Always preserve previous locations
-        locations // Pass current locations
+        searchRadius
       );
       
       // Filter out locations we've already loaded

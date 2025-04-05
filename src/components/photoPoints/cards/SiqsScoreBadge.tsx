@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { Loader2, Star } from 'lucide-react';
+import { Loader2, Star, Award } from 'lucide-react';
 import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,7 @@ interface SiqsScoreBadgeProps {
 
 /**
  * Enhanced SIQS Score badge component with better performance and visual design
+ * Now with improved handling of certified locations
  */
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = memo(({ 
   score, 
@@ -27,22 +28,26 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = memo(({
     xs: {
       badge: 'px-1.5 py-0.5',
       icon: 'h-2.5 w-2.5 mr-0.5',
-      text: 'text-2xs' // Extra small text
+      text: 'text-2xs',
+      certificationBadge: 'h-2 w-2 -top-0.5 -right-0.5' // Smaller certification badge
     },
     sm: {
       badge: 'px-2 py-0.5',
       icon: 'h-3 w-3 mr-1',
-      text: 'text-xs'
+      text: 'text-xs',
+      certificationBadge: 'h-2.5 w-2.5 -top-1 -right-1'
     },
     md: {
       badge: 'px-2.5 py-1',
       icon: 'h-3.5 w-3.5 mr-1.5',
-      text: 'text-sm'
+      text: 'text-sm',
+      certificationBadge: 'h-3 w-3 -top-1.5 -right-1.5'
     },
     lg: {
       badge: 'px-3 py-1.5',
       icon: 'h-4 w-4 mr-1.5',
-      text: 'text-base'
+      text: 'text-base',
+      certificationBadge: 'h-3.5 w-3.5 -top-2 -right-2'
     }
   };
   
@@ -83,19 +88,28 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = memo(({
   };
   
   return (
-    <div className={cn(
-      `flex items-center ${currentSize.badge} rounded-full border`,
-      getBadgeColor(),
-      className
-    )}>
-      {loading ? (
-        <Loader2 className={`${currentSize.icon} animate-spin`} />
-      ) : (
-        <Star className={`${currentSize.icon} ${getIconColor()}`} />
+    <div className="relative inline-flex">
+      <div className={cn(
+        `flex items-center ${currentSize.badge} rounded-full border`,
+        getBadgeColor(),
+        className
+      )}>
+        {loading ? (
+          <Loader2 className={`${currentSize.icon} animate-spin`} />
+        ) : (
+          <Star className={`${currentSize.icon} ${getIconColor()}`} />
+        )}
+        <span className={`${currentSize.text} font-medium tabular-nums`}>
+          {loading ? '...' : formatSIQSScoreForDisplay(score)}
+        </span>
+      </div>
+      
+      {/* Certification badge - now positioned separately to avoid layout issues */}
+      {certified && (
+        <div className={`absolute ${currentSize.certificationBadge} bg-blue-500 rounded-full flex items-center justify-center p-0.5 border border-white shadow-sm`}>
+          <Award className="h-full w-full text-white" />
+        </div>
       )}
-      <span className={`${currentSize.text} font-medium tabular-nums`}>
-        {loading ? '...' : formatSIQSScoreForDisplay(score)}
-      </span>
     </div>
   );
 });

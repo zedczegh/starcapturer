@@ -1,4 +1,3 @@
-
 /**
  * Enhanced light pollution database and detection algorithms
  * Includes terrain correction, altitude consideration, and satellite-derived data
@@ -7,6 +6,7 @@
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 import { getCityBortleScale, isInChina, getChineseRegion } from "@/utils/chinaBortleData";
 import { hasProperty } from "@/types/weather-utils";
+import { getTerrainElevation } from "@/utils/terrainData";
 
 // Cache implementation for faster data access
 const pollutionCache = new Map<string, {
@@ -103,8 +103,7 @@ async function getElevationAdjustedBortle(
   baseBortleScale: number
 ): Promise<number> {
   try {
-    // Use dynamic import to load the elevation data - more efficient
-    const { getTerrainElevation } = await import('@/utils/terrainData');
+    // Use fixed direct import instead of dynamic import
     const elevation = await getTerrainElevation(latitude, longitude);
     
     if (elevation && elevation > 0) {

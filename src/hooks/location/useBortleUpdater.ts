@@ -3,6 +3,8 @@ import { useCallback } from "react";
 import { fetchLightPollutionData } from "@/lib/api";
 import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
 import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
+import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
+import { detectTerrainType } from "@/utils/terrainData"; 
 
 /**
  * Hook for optimized Bortle scale updates with enhanced accuracy
@@ -48,22 +50,23 @@ export function useBortleUpdater() {
       // Determine if we're in China (any province) for region-specific algorithms
       const inChina = isInChina(latitude, longitude);
       
-      // For locations in China, use enhanced algorithm with terrain correction
-      if (inChina) {
-        try {
-          console.log(`Location in China detected: ${locationName}. Using enhanced terrain-aware algorithm.`);
-          
-          // Import terrain analysis utilities
-          const { getTerrainCorrectedBortleScale } = await import('@/utils/terrainCorrection');
-          const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude, locationName);
-          
-          if (terrainCorrectedScale !== null) {
-            return terrainCorrectedScale;
-          }
-        } catch (error) {
-          console.warn("Terrain correction failed:", error);
-          // Fall back to standard methods if terrain analysis fails
+      // Use terrain-corrected algorithm for all locations now, not just China
+      try {
+        console.log(`Using enhanced terrain-aware algorithm for ${locationName}.`);
+        
+        // Get terrain type for more accurate analysis
+        const terrainType = await detectTerrainType(latitude, longitude);
+        console.log(`Detected terrain type: ${terrainType}`);
+        
+        // Apply terrain correction with newly detected terrain type
+        const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude, locationName);
+        
+        if (terrainCorrectedScale !== null) {
+          return terrainCorrectedScale;
         }
+      } catch (error) {
+        console.warn("Terrain correction failed:", error);
+        // Fall back to standard methods if terrain analysis fails
       }
       
       // If we already have a valid Bortle scale and we're not in China,

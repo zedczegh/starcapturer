@@ -56,7 +56,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Determine if we should show loading state
   if (loading && sortedLocations.length === 0) {
     return (
-      <div className="flex justify-center items-center py-12">
+      <div className="flex justify-center items-center py-12" 
+           data-testid="locations-loading-state">
         <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
       </div>
     );
@@ -73,7 +74,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   return (
-    <>
+    <div className="calculated-locations-container space-y-6">
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
@@ -88,7 +89,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
       />
-    </>
+    </div>
   );
 };
 
