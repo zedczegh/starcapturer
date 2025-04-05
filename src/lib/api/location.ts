@@ -1,4 +1,3 @@
-
 import { normalizeLongitude } from './coordinates';
 import { Language } from '@/services/geocoding/types';
 
@@ -62,6 +61,56 @@ function formatAddress(address: any, language: Language): string {
   const uniqueParts = [...new Set(parts)];
   
   return uniqueParts.join(language === 'en' ? ', ' : '，');
+}
+
+/**
+ * Process and filter location data
+ * @param locations Array of location data
+ * @returns Filtered and processed array
+ */
+export function processLocationData(locations: any[]): any[] {
+  if (!locations || !Array.isArray(locations)) return [];
+  
+  return locations.filter(loc => {
+    // Skip locations without coordinates
+    if (!loc.latitude || !loc.longitude) return false;
+    
+    // Add default name if missing
+    if (!loc.name) {
+      loc.name = `Location at ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`;
+    }
+    
+    // More processing logic...
+    return true;
+  });
+}
+
+/**
+ * Sort locations by specified criteria
+ * @param locations Array of location data
+ * @param sortBy Sort criteria 
+ * @returns Sorted array
+ */
+export function sortLocations(locations: any[], sortBy: string = 'distance'): any[] {
+  if (!locations || !Array.isArray(locations)) return [];
+  
+  return [...locations].sort((a, b) => {
+    // Ensure locations have names
+    if (!a.name) a.name = `Location at ${a.latitude?.toFixed(4) || '?'}, ${a.longitude?.toFixed(4) || '?'}`;
+    if (!b.name) b.name = `Location at ${b.latitude?.toFixed(4) || '?'}, ${b.longitude?.toFixed(4) || '?'}`;
+    
+    // Sort by the specified criteria
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    
+    if (sortBy === 'bortleScale') {
+      return (a.bortleScale || 5) - (b.bortleScale || 5);
+    }
+    
+    // Default to distance
+    return (a.distance || 0) - (b.distance || 0);
+  });
 }
 
 /**

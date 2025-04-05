@@ -1,66 +1,127 @@
 
 /**
- * SIQS (Stellar Imaging Quality Score) types and interfaces
+ * Type definitions for the SIQS (Stellar Imaging Quality Score) system
  */
 
 /**
- * Factors used in SIQS calculation
+ * Input factors for SIQS calculation
  */
 export interface SIQSFactors {
-  cloudCover: number;   // Cloud cover percentage (0-100)
-  bortleScale: number;  // Bortle Dark-Sky Scale (1-9, lower is better)
-  seeingConditions: number; // Seeing conditions (1-5, lower is better)
-  windSpeed: number;    // Wind speed in km/h
-  humidity: number;     // Humidity percentage (0-100)
-  moonPhase?: number;   // Moon phase (0-1, 0=new moon, 0.5=full moon, 1=new moon)
-  precipitation?: number; // Precipitation amount in mm
-  weatherCondition?: string; // Weather condition descriptor
-  aqi?: number;         // Air Quality Index (lower is better)
-  clearSkyRate?: number; // Annual clear sky rate percentage (higher is better)
-  nightForecast?: any[]; // Forecast data for nighttime
+  /**
+   * Cloud cover percentage (0-100)
+   */
+  cloudCover: number;
+  
+  /**
+   * Bortle scale value (1-9)
+   */
+  bortleScale: number;
+  
+  /**
+   * Seeing conditions (1-5, lower is better)
+   */
+  seeingConditions: number;
+  
+  /**
+   * Wind speed in km/h
+   */
+  windSpeed: number;
+  
+  /**
+   * Humidity percentage (0-100)
+   */
+  humidity: number;
+  
+  /**
+   * Moon phase (0-1, 0 = new moon, 1 = full moon)
+   */
+  moonPhase?: number;
+  
+  /**
+   * Precipitation amount in mm
+   */
+  precipitation?: number;
+  
+  /**
+   * Weather condition description
+   */
+  weatherCondition?: string;
+  
+  /**
+   * Air Quality Index
+   */
+  aqi?: number;
+  
+  /**
+   * Clear sky rate percentage
+   */
+  clearSkyRate?: number;
+  
+  /**
+   * Hourly forecast data for more detailed analysis
+   */
+  nightForecast?: any[];
 }
 
 /**
- * Result of SIQS calculation
+ * Individual SIQS factor with score and description
+ */
+export interface SIQSFactor {
+  /**
+   * Factor name
+   */
+  name: string;
+  
+  /**
+   * Factor score (0-10)
+   */
+  score: number;
+  
+  /**
+   * Human-readable description of the factor
+   */
+  description: string;
+  
+  /**
+   * Optional nighttime data for factors like cloud cover
+   */
+  nighttimeData?: {
+    /**
+     * Average value during nighttime hours
+     */
+    average: number;
+    
+    /**
+     * Time range for nighttime data
+     */
+    timeRange: string;
+    
+    /**
+     * Optional detailed breakdown
+     */
+    detail?: {
+      evening: number;
+      morning: number;
+    };
+  };
+}
+
+/**
+ * Result of the SIQS calculation
  */
 export interface SIQSResult {
-  score: number;        // SIQS score (0-10, higher is better)
-  isViable: boolean;    // Whether conditions are viable for astrophotography
-  factors: {            // Individual factor results
-    name: string;       // Factor name
-    score: number;      // Factor score (0-10 scale)
-    description: string; // Description of the factor
-    nighttimeData?: {
-      average: number;   // Nighttime average value
-      timeRange: string; // Time range for nighttime average
-    };
-  }[];
-}
-
-/**
- * Location with SIQS data
- */
-export interface LocationWithSIQS {
-  id?: string;          // Unique identifier
-  name: string;         // Location name
-  latitude: number;     // Latitude
-  longitude: number;    // Longitude
-  bortleScale?: number; // Light pollution level
-  weatherData?: any;    // Weather data
-  siqsResult?: SIQSResult; // SIQS calculation result
-  clearSkyRate?: number;   // Annual clear sky rate
-  timestamp?: string;      // When the data was collected
-}
-
-/**
- * Specific parameters for nighttime SIQS calculation
- */
-export interface NighttimeSIQSParams {
-  startHour?: number;    // Start hour for nighttime (default: 18, 6 PM)
-  endHour?: number;      // End hour for nighttime (default: 8, 8 AM next day)
-  cloudWeight?: number;  // Weight for cloud cover in calculation (default: 0.3)
-  windWeight?: number;   // Weight for wind in calculation (default: 0.15)
-  humidityWeight?: number; // Weight for humidity in calculation (default: 0.15)
-  bortleWeight?: number;   // Weight for light pollution in calculation (default: 0.3)
-  clearSkyWeight?: number; // Weight for clear sky rate (default: 0.1)
+  /**
+   * Overall SIQS score (0-10)
+   */
+  score: number;
+  
+  /**
+   * Whether the conditions are viable for astronomy
+   */
+  isViable: boolean;
+  
+  /**
+   * Individual factors that make up the score
+   */
+  factors: SIQSFactor[];
 }

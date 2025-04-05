@@ -1,175 +1,171 @@
 
 /**
- * Terrain data utilities for enhanced Bortle scale calculations
- * Provides elevation data and terrain type detection based on coordinates
+ * Terrain data and elevation utilities
+ * Provides utilities for working with terrain elevation data
  */
 
-// Simple terrain type classification
-export type TerrainType = 'mountain' | 'hill' | 'plateau' | 'valley' | 'plain' | 'coast' | 'urban' | 'unknown';
-
-// Elevation database for major mountain ranges (simplified for performance)
-const mountainRanges = [
-  // Himalayas
-  { name: "Himalayas", minLat: 27, maxLat: 36, minLng: 70, maxLng: 95, minElevation: 5000, terrainType: 'mountain' as TerrainType },
-  // Rocky Mountains
-  { name: "Rocky Mountains", minLat: 30, maxLat: 60, minLng: -125, maxLng: -105, minElevation: 2000, terrainType: 'mountain' as TerrainType },
-  // Andes
-  { name: "Andes", minLat: -55, maxLat: 12, minLng: -80, maxLng: -65, minElevation: 2500, terrainType: 'mountain' as TerrainType },
-  // Alps
-  { name: "Alps", minLat: 44, maxLat: 48, minLng: 5, maxLng: 16, minElevation: 3000, terrainType: 'mountain' as TerrainType },
-  // Tibetan Plateau
-  { name: "Tibetan Plateau", minLat: 28, maxLat: 40, minLng: 78, maxLng: 103, minElevation: 4500, terrainType: 'plateau' as TerrainType },
-  // Chinese mountain ranges
-  { name: "Tian Shan", minLat: 40, maxLat: 45, minLng: 75, maxLng: 95, minElevation: 3500, terrainType: 'mountain' as TerrainType },
-  { name: "Kunlun Mountains", minLat: 35, maxLat: 37, minLng: 80, maxLng: 105, minElevation: 5000, terrainType: 'mountain' as TerrainType },
-  { name: "Hengduan Mountains", minLat: 25, maxLat: 32, minLng: 97, maxLng: 102, minElevation: 4000, terrainType: 'mountain' as TerrainType }
-];
-
-// Elevation cache for performance
-const elevationCache = new Map<string, number>();
+// Default elevation database - simplified for demo
+const elevationDatabase: Record<string, number> = {
+  // Mountain regions
+  "alps": 2500,
+  "rockies": 2200,
+  "himalayas": 4500,
+  "andes": 3500,
+  
+  // High plateaus
+  "tibet": 4000,
+  "colorado": 2000,
+  
+  // Desert regions
+  "sahara": 400,
+  "gobi": 1000,
+  "atacama": 2000,
+  
+  // Default elevation for different regions
+  "asia": 600,
+  "europe": 300,
+  "north_america": 500,
+  "south_america": 600,
+  "africa": 600,
+  "australia": 300,
+  "antarctica": 2000
+};
 
 /**
- * Get terrain elevation for coordinates
- * @param latitude Geographical latitude
- * @param longitude Geographical longitude
- * @returns Elevation in meters, or null if unknown
+ * Determines if a location is likely to be at high elevation
+ * @param latitude Geographic latitude
+ * @param longitude Geographic longitude
+ * @returns True if the location is likely at high elevation
  */
-export async function getTerrainElevation(latitude: number, longitude: number): Promise<number | null> {
-  // Validate inputs
-  if (!isFinite(latitude) || !isFinite(longitude)) {
+export function isLikelyHighElevation(latitude: number, longitude: number): boolean {
+  // Major mountain ranges around the world
+  // Rockies in North America
+  if ((latitude >= 35 && latitude <= 60) && (longitude >= -130 && longitude <= -105)) {
+    return true;
+  }
+  
+  // Andes in South America
+  if ((latitude >= -55 && latitude <= 10) && (longitude >= -80 && longitude <= -65)) {
+    return true;
+  }
+  
+  // Alps in Europe
+  if ((latitude >= 43 && latitude <= 48) && (longitude >= 5 && longitude <= 16)) {
+    return true;
+  }
+  
+  // Himalayas and Tibetan Plateau in Asia
+  if ((latitude >= 27 && latitude <= 40) && (longitude >= 70 && longitude <= 105)) {
+    return true;
+  }
+  
+  // Ethiopian Highlands in Africa
+  if ((latitude >= 5 && latitude <= 15) && (longitude >= 35 && longitude <= 40)) {
+    return true;
+  }
+  
+  // Also check for high-latitude regions which could be clearer (less atmosphere)
+  return Math.abs(latitude) > 55; // Near polar regions
+}
+
+/**
+ * Get the estimated terrain elevation for a location
+ * This is a placeholder function that would normally call an elevation API
+ * 
+ * @param latitude Geographic latitude
+ * @param longitude Geographic longitude
+ * @returns Estimated elevation in meters, or null if unknown
+ */
+export async function getTerrainElevation(
+  latitude: number, 
+  longitude: number
+): Promise<number | null> {
+  try {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // In a real implementation, we would call an elevation API service here
+    // For this demo, we'll use some basic logic to estimate elevation
+    let elevation = 0;
+    
+    // Check for major mountain ranges
+    if (isLikelyHighElevation(latitude, longitude)) {
+      if ((latitude >= 35 && latitude <= 60) && (longitude >= -130 && longitude <= -105)) {
+        elevation = elevationDatabase.rockies;
+      } else if ((latitude >= -55 && latitude <= 10) && (longitude >= -80 && longitude <= -65)) {
+        elevation = elevationDatabase.andes;
+      } else if ((latitude >= 43 && latitude <= 48) && (longitude >= 5 && longitude <= 16)) {
+        elevation = elevationDatabase.alps;
+      } else if ((latitude >= 27 && latitude <= 40) && (longitude >= 70 && longitude <= 105)) {
+        elevation = elevationDatabase.himalayas;
+      } else {
+        // Generic high elevation
+        elevation = 1500;
+      }
+    } else {
+      // Determine continent for basic elevation estimation
+      if ((latitude >= 30 && latitude <= 70) && (longitude >= -170 && longitude <= -30)) {
+        elevation = elevationDatabase.north_america;
+      } else if ((latitude >= -60 && latitude <= 30) && (longitude >= -90 && longitude <= -30)) {
+        elevation = elevationDatabase.south_america;
+      } else if ((latitude >= 35 && latitude <= 70) && (longitude >= -10 && longitude <= 40)) {
+        elevation = elevationDatabase.europe;
+      } else if ((latitude >= -40 && latitude <= 35) && (longitude >= -20 && longitude <= 55)) {
+        elevation = elevationDatabase.africa;
+      } else if ((latitude >= -10 && latitude <= 55) && (longitude >= 55 && longitude <= 145)) {
+        elevation = elevationDatabase.asia;
+      } else if ((latitude >= -50 && latitude <= -10) && (longitude >= 110 && longitude <= 155)) {
+        elevation = elevationDatabase.australia;
+      } else if (latitude <= -60) {
+        elevation = elevationDatabase.antarctica;
+      } else {
+        // Default for unknown regions
+        elevation = 200;
+      }
+    }
+    
+    return elevation;
+  } catch (error) {
+    console.error("Error getting terrain elevation:", error);
     return null;
   }
-  
-  // Generate cache key with 2 decimal precision (about 1km resolution)
-  const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
-  
-  // Check cache first
-  if (elevationCache.has(cacheKey)) {
-    return elevationCache.get(cacheKey) || null;
-  }
-  
-  // Check if coordinates are in known mountain range
-  for (const range of mountainRanges) {
-    if (latitude >= range.minLat && latitude <= range.maxLat &&
-        longitude >= range.minLng && longitude <= range.maxLng) {
-      // Approximation based on mountain range
-      const approximateElevation = range.minElevation * (0.8 + Math.random() * 0.4); // Add some variance
-      
-      // Cache the result
-      elevationCache.set(cacheKey, approximateElevation);
-      
-      return approximateElevation;
-    }
-  }
-
-  // Elevation estimate based on latitude/longitude
-  let estimatedElevation: number;
-  
-  // Use regional estimation
-  if (latitude >= 28 && latitude <= 40 && longitude >= 78 && longitude <= 103) {
-    // Tibetan plateau
-    estimatedElevation = 4500 + Math.random() * 1000;
-  } else if (latitude >= 36 && latitude <= 44 && longitude >= -124 && longitude <= -116) {
-    // Sierra Nevada
-    estimatedElevation = 2000 + Math.random() * 1500;
-  } else if (Math.abs(latitude) >= 60) {
-    // Polar regions are often near sea level
-    estimatedElevation = 200 + Math.random() * 300;
-  } else if (Math.abs(longitude) <= 5 || Math.abs(longitude - 180) <= 5) {
-    // Near prime meridian or date line - often coastal
-    estimatedElevation = 100 + Math.random() * 200;
-  } else {
-    // Default estimate based on distance from equator
-    estimatedElevation = 300 + Math.abs(latitude) * 15 + Math.random() * 500;
-  }
-  
-  // Cache the result
-  elevationCache.set(cacheKey, estimatedElevation);
-  
-  return estimatedElevation;
 }
 
 /**
- * Detect terrain type based on coordinates
- * @param latitude Geographical latitude
- * @param longitude Geographical longitude
- * @returns Terrain type classification
- */
-export async function detectTerrainType(latitude: number, longitude: number): Promise<TerrainType> {
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    return 'unknown';
-  }
-  
-  // First check if we're in a known mountain range
-  for (const range of mountainRanges) {
-    if (latitude >= range.minLat && latitude <= range.maxLat &&
-        longitude >= range.minLng && longitude <= range.maxLng) {
-      return range.terrainType;
-    }
-  }
-  
-  // Get elevation to help determine terrain type
-  const elevation = await getTerrainElevation(latitude, longitude);
-  
-  if (!elevation) return 'unknown';
-  
-  // Classify based on elevation
-  if (elevation > 3000) return 'mountain';
-  if (elevation > 1500) return 'hill';
-  if (elevation > 800) return 'plateau';
-  if (elevation <= 100 && (Math.abs(longitude) > 175 || Math.abs(longitude) < 5)) return 'coast';
-  
-  // Default to plain for moderate elevation
-  return 'plain';
-}
-
-/**
- * Get terrain adjustment factor for Bortle scale
- * @param terrainType Type of terrain
+ * Calculate elevation adjustment factor for Bortle scale
+ * Higher elevations generally have clearer skies
+ * 
  * @param elevation Elevation in meters
- * @returns Adjustment factor (negative values improve Bortle scale)
+ * @returns Bortle scale adjustment (negative value means darker skies)
  */
-export function getTerrainAdjustmentFactor(terrainType: TerrainType, elevation: number): number {
-  let adjustmentFactor = 0;
+export function getElevationBortleAdjustment(elevation: number): number {
+  if (elevation <= 0) return 0;
   
-  // Higher elevations improve sky quality
-  if (elevation > 3000) {
-    adjustmentFactor -= 1.2;
-  } else if (elevation > 2000) {
-    adjustmentFactor -= 0.8;
-  } else if (elevation > 1000) {
-    adjustmentFactor -= 0.4;
-  } else if (elevation > 500) {
-    adjustmentFactor -= 0.2;
-  }
+  // Significant improvements start around 1000m
+  if (elevation > 3000) return -1.5; // Major improvement at very high elevations
+  if (elevation > 2000) return -1.0;
+  if (elevation > 1000) return -0.5;
+  if (elevation > 500)  return -0.3;
+  if (elevation > 300)  return -0.2;
   
-  // Different terrain types have different effects
-  switch (terrainType) {
-    case 'mountain':
-      adjustmentFactor -= 0.5; // Mountains have clearer air
-      break;
-    case 'plateau':
-      adjustmentFactor -= 0.3;
-      break;
-    case 'hill':
-      adjustmentFactor -= 0.2;
-      break;
-    case 'valley':
-      adjustmentFactor += 0.2; // Valleys can trap pollution
-      break;
-    case 'urban':
-      adjustmentFactor += 0.5; // Urban areas have more light pollution
-      break;
-  }
-  
-  return adjustmentFactor;
+  return 0; // No significant impact at low elevations
 }
 
 /**
- * Clear elevation cache
+ * Estimate the air clarity based on elevation
+ * @param elevation Elevation in meters
+ * @returns Air clarity score (0-10, higher is better)
  */
-export function clearElevationCache(): void {
-  const size = elevationCache.size;
-  elevationCache.clear();
-  console.log(`Cleared elevation cache (${size} entries)`);
+export function getAirClarityFromElevation(elevation: number): number {
+  if (elevation <= 0) return 5; // Default average
+  
+  // Higher elevations generally have clearer air
+  if (elevation > 3000) return 9.5; // Very clear at high mountains
+  if (elevation > 2000) return 8.5;
+  if (elevation > 1500) return 8.0;
+  if (elevation > 1000) return 7.5;
+  if (elevation > 500) return 6.5;
+  if (elevation > 300) return 6.0;
+  
+  return 5.5; // Slightly better than average
 }

@@ -1,80 +1,94 @@
 
 /**
- * Format SIQS score with consistent decimal places
- * @param score SIQS score
- * @returns Formatted score string with one decimal place
+ * Utility functions for SIQS (Stellar Imaging Quality Score) calculations
  */
-export function formatSIQSScore(score: number): string {
-  if (typeof score !== 'number' || isNaN(score)) {
-    return "0.0";
+
+// Convert SIQS score to a color for visual representation
+export function siqsToColor(score: number): string {
+  if (score >= 9) return "#22c55e"; // Green - Excellent
+  if (score >= 7) return "#84cc16"; // Lime green - Very Good
+  if (score >= 5) return "#3b82f6"; // Blue - Good
+  if (score >= 4) return "#eab308"; // Yellow - Fair
+  if (score >= 3) return "#f59e0b"; // Amber - Moderate
+  if (score >= 2) return "#f97316"; // Orange - Poor
+  return "#ef4444"; // Red - Bad
+}
+
+// Map SIQS score to a text description
+export function siqsToText(score: number, language: string = 'en'): string {
+  if (language === 'zh') {
+    if (score >= 9) return "极佳";
+    if (score >= 7) return "非常好";
+    if (score >= 5) return "良好";
+    if (score >= 4) return "一般";
+    if (score >= 3) return "中等";
+    if (score >= 2) return "较差";
+    return "差";
+  } else {
+    if (score >= 9) return "Excellent";
+    if (score >= 7) return "Very Good";
+    if (score >= 5) return "Good";
+    if (score >= 4) return "Fair";
+    if (score >= 3) return "Moderate";
+    if (score >= 2) return "Poor";
+    return "Bad";
   }
-  
-  // Format with one decimal place
-  return score.toFixed(1);
 }
 
-/**
- * Get SIQS level description based on score
- * @param score SIQS score (0-10)
- * @returns Quality level description
- */
-export function getSIQSLevel(score: number): string {
-  if (score >= 8) return "Excellent";
-  if (score >= 6) return "Good";
-  if (score >= 4) return "Average";
-  if (score >= 2) return "Poor";
-  return "Bad";
+// Check if imaging is impossible based on cloud cover
+export function isImagingImpossible(cloudCover: number): boolean {
+  return typeof cloudCover === 'number' && cloudCover > 50;
 }
 
-/**
- * Normalize SIQS score to ensure it's on the correct scale
- * @param score Raw SIQS score
- * @returns Normalized score on 0-10 scale
- */
-export function normalizeSIQSScore(score: number): number {
-  if (typeof score !== 'number' || isNaN(score)) {
+// Validate cloud cover input to ensure it's within valid range
+export function validateCloudCover(cloudCover: any): number {
+  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
     return 0;
   }
-  
-  // If already on 0-10 scale, just clamp to that range
-  if (score >= 0 && score <= 10) {
-    return Math.max(0, Math.min(10, score));
-  }
-  
-  // If on 0-100 scale, convert to 0-10
-  if (score > 10) {
-    return Math.round((score / 10) * 10) / 10;
-  }
-  
-  return Math.max(0, score);
+  return Math.max(0, Math.min(100, cloudCover));
 }
 
 /**
- * Get SIQS descriptor text
- * @param score SIQS score
- * @param language Language code ('en' or 'zh')
- * @returns Descriptive text
+ * Normalize factor scores to a 0-10 scale for consistent display
  */
-export function getSIQSDescription(score: number, language: string = 'en'): string {
-  if (language === 'zh') {
-    if (score >= 8.5) return "理想的天文摄影条件";
-    if (score >= 7.5) return "极好的星空质量";
-    if (score >= 6.5) return "非常适合天文摄影";
-    if (score >= 5.5) return "良好的观测和拍摄条件";
-    if (score >= 4.5) return "可以进行基础天文观测";
-    if (score >= 3.5) return "观测条件一般";
-    if (score >= 2.5) return "观测条件较差";
-    if (score >= 1.5) return "观测条件差";
-    return "不适合天文观测";
-  } else {
-    if (score >= 8.5) return "Ideal conditions for astrophotography";
-    if (score >= 7.5) return "Excellent sky quality";
-    if (score >= 6.5) return "Very good for astrophotography";
-    if (score >= 5.5) return "Good observing and imaging conditions";
-    if (score >= 4.5) return "Suitable for basic observations";
-    if (score >= 3.5) return "Average observing conditions";
-    if (score >= 2.5) return "Below average conditions";
-    if (score >= 1.5) return "Poor conditions";
-    return "Not suitable for astronomical observation";
-  }
+export function normalizeFactorScores(factors: Array<any> = []): Array<any> {
+  if (!factors || factors.length === 0) return [];
+
+  return factors.map(factor => {
+    if (factor.score >= 0 && factor.score <= 10) {
+      // Already normalized
+      return factor;
+    } else if (factor.score >= 0 && factor.score <= 100) {
+      // Convert from 0-100 to 0-10
+      return {
+        ...factor,
+        score: factor.score / 10
+      };
+    } else {
+      // Default normalization for unknown scales
+      const normalizedScore = Math.max(0, Math.min(10, factor.score));
+      return {
+        ...factor,
+        score: normalizedScore
+      };
+    }
+  });
+}
+
+/**
+ * Get a weight for a factor based on its name
+ */
+export function getFactorWeight(factorName: string): number {
+  const lowerName = factorName.toLowerCase();
+  
+  if (lowerName.includes('cloud')) return 0.30;
+  if (lowerName.includes('pollution') || lowerName.includes('bortle')) return 0.20;
+  if (lowerName.includes('seeing')) return 0.15;
+  if (lowerName.includes('wind')) return 0.10;
+  if (lowerName.includes('humid')) return 0.10;
+  if (lowerName.includes('aqi') || lowerName.includes('air quality')) return 0.10;
+  if (lowerName.includes('moon')) return 0.05;
+  
+  // Default weight
+  return 0.10;
 }

@@ -20,7 +20,9 @@ import {
   getAQIDescription,
   getClearSkyDescription
 } from './siqs/descriptions';
-import { isImagingImpossible, siqsToColor } from './siqs/utils';
+
+// Import from our fixed utils file
+import { validateCloudCover, isImagingImpossible, siqsToColor } from './siqs/utils';
 
 // Re-export types and utility functions for backward compatibility
 export type { SIQSFactors, SIQSResult } from './siqs/types';

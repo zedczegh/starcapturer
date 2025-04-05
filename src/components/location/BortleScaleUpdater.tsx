@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +59,7 @@ const BortleScaleUpdater = ({
         latitude,
         longitude,
         newBortleScale,
-        'user_input'
+        'observation'
       );
 
       // Update in parent component
