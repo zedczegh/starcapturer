@@ -1,11 +1,11 @@
-
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
+import { getPollutionCacheStats, cleanupExpiredPollutionCache } from '@/lib/api/pollution';
 
 interface Location {
   latitude: number;
@@ -15,6 +15,7 @@ interface Location {
 // Maximum number of "load more" clicks allowed
 const MAX_LOAD_MORE_CLICKS = 2;
 
+// Enhanced with geo-clustering algorithm to find diverse locations
 export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
   const [searchRadius, setSearchRadius] = useState<number>(1000);
@@ -27,18 +28,77 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const prevLocationRef = useRef<Location | null>(userLocation);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
+  // Optimization: Track loaded coordinates to prevent duplicates
+  const loadedCoordinatesRef = useRef<Set<string>>(new Set());
+  
   // New state for "load more calculated" functionality
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
-  // Get current SIQS from the store - Fix: use getValue instead of getScore
+  // Get current SIQS from the store
   const currentSiqs = currentSiqsStore.getValue();
   
   // Extract location finding logic
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
   
-  // Function to load locations
+  // Optimized implementation to track coordinates to avoid duplicates
+  const addToLoadedCoordinates = useCallback((newLocations: SharedAstroSpot[]) => {
+    newLocations.forEach(loc => {
+      if (loc.latitude && loc.longitude) {
+        loadedCoordinatesRef.current.add(
+          `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
+        );
+      }
+    });
+  }, []);
+  
+  // Clear loaded coordinates when location changes significantly
+  const clearLoadedCoordinates = useCallback(() => {
+    loadedCoordinatesRef.current.clear();
+  }, []);
+  
+  // Check if a location already exists in our loaded set
+  const isLocationLoaded = useCallback((loc: SharedAstroSpot): boolean => {
+    if (!loc.latitude || !loc.longitude) return false;
+    return loadedCoordinatesRef.current.has(
+      `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
+    );
+  }, []);
+  
+  // Perform geo-clustering to ensure diverse location selection
+  const clusterLocations = useCallback((locations: SharedAstroSpot[], maxClusters = 20): SharedAstroSpot[] => {
+    if (locations.length <= maxClusters) return locations;
+    
+    // Simple grid-based clustering for performance
+    const clustered: SharedAstroSpot[] = [];
+    const gridSize = 0.5; // Degrees, roughly 50km at mid-latitudes
+    const grid: Record<string, SharedAstroSpot[]> = {};
+    
+    // Group locations into grid cells
+    locations.forEach(loc => {
+      if (!loc.latitude || !loc.longitude) return;
+      
+      const gridKey = `${Math.floor(loc.latitude / gridSize)}_${Math.floor(loc.longitude / gridSize)}`;
+      if (!grid[gridKey]) grid[gridKey] = [];
+      grid[gridKey].push(loc);
+    });
+    
+    // Take the best location from each grid cell
+    Object.values(grid).forEach(cellLocations => {
+      if (cellLocations.length === 0) return;
+      
+      // Sort by quality (SIQS score) within each cell
+      const sorted = [...cellLocations].sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+      clustered.push(sorted[0]);
+    });
+    
+    // Sort final results by quality
+    return clustered.sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
+      .slice(0, maxClusters);
+  }, []);
+  
+  // Function to load locations with optimizations
   const loadLocations = useCallback(async () => {
     if (!userLocation) {
       return;
@@ -47,11 +107,24 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     try {
       setLoading(true);
       
+      // Clean up expired cache entries to keep memory usage efficient
+      cleanupExpiredPollutionCache();
+      
       // Check if this is a radius increase (we should preserve locations)
       const isRadiusIncrease = searchRadius > prevRadiusRef.current && 
                                prevLocationRef.current && 
                                userLocation.latitude === prevLocationRef.current.latitude &&
                                userLocation.longitude === prevLocationRef.current.longitude;
+      
+      // If location changed significantly, clear our coordinate tracking
+      const locationChanged = 
+        !prevLocationRef.current || 
+        Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.1 ||
+        Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.1;
+      
+      if (locationChanged) {
+        clearLoadedCoordinates();
+      }
       
       // Record the current radius and location for comparison
       prevRadiusRef.current = searchRadius;
@@ -80,11 +153,24 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         );
         
         if (calculatedResults.length > 0) {
+          // Filter out any locations we've already loaded
+          const newLocations = calculatedResults.filter(loc => !isLocationLoaded(loc));
+          
+          // Perform clustering for better diversity
+          const clusteredResults = clusterLocations([
+            ...(isRadiusIncrease ? previousLocationsRef.current : []),
+            ...newLocations
+          ]);
+          
           // Sort by quality and distance
-          const sortedResults = sortLocationsByQuality(calculatedResults);
+          const sortedResults = sortLocationsByQuality(clusteredResults);
+          
+          // Track the coordinates we've loaded
+          addToLoadedCoordinates(newLocations);
+          
           setLocations(sortedResults);
           previousLocationsRef.current = sortedResults;
-          setHasMore(sortedResults.length >= 20);
+          setHasMore(newLocations.length >= 5);
           setCanLoadMoreCalculated(true);
           setLoadMoreClickCount(0); // Reset click counter
           
@@ -103,11 +189,26 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         }
       } else {
         // For standard locations, we always apply the full algorithm
+        // Filter out any locations we've already loaded if it's not a fresh search
+        const filteredResults = locationChanged ? 
+          results : 
+          results.filter(loc => !isLocationLoaded(loc));
+        
+        // Add the new coordinates to our tracking
+        addToLoadedCoordinates(filteredResults);
+        
+        // Perform clustering for better diversity
+        const clusteredResults = clusterLocations([
+          ...(isRadiusIncrease ? previousLocationsRef.current : []),
+          ...filteredResults
+        ]);
+        
         // Sort by quality and distance
-        const sortedResults = sortLocationsByQuality(results);
+        const sortedResults = sortLocationsByQuality(clusteredResults);
+        
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
-        setHasMore(sortedResults.length >= 20);
+        setHasMore(filteredResults.length >= 5);
         setCanLoadMoreCalculated(true);
         setLoadMoreClickCount(0); // Reset click counter
       }
@@ -125,9 +226,20 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
+  }, [
+    searchRadius, 
+    userLocation, 
+    t, 
+    findLocationsWithinRadius, 
+    findCalculatedLocations, 
+    sortLocationsByQuality,
+    addToLoadedCoordinates,
+    clearLoadedCoordinates,
+    isLocationLoaded,
+    clusterLocations
+  ]);
   
-  // Load more locations for pagination
+  // Load more locations for pagination with performance improvements
   const loadMore = useCallback(async () => {
     if (!userLocation || !hasMore) {
       return;
@@ -141,21 +253,24 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       const results = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        searchRadius,
+        nextPage
       );
       
       // Filter out locations we already have
-      const existingIds = new Set(locations.map(loc => loc.id));
-      const newResults = results.filter(loc => !existingIds.has(loc.id));
+      const newResults = results.filter(loc => !isLocationLoaded(loc));
       
       if (newResults.length > 0) {
+        // Track the new coordinates
+        addToLoadedCoordinates(newResults);
+        
         // Sort by quality and distance
         const allLocations = [...locations, ...newResults];
         const sortedResults = sortLocationsByQuality(allLocations);
         
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
-        setHasMore(newResults.length >= 10);
+        setHasMore(newResults.length >= 5);
         setPage(nextPage);
       } else {
         setHasMore(false);
@@ -169,9 +284,20 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
+  }, [
+    hasMore, 
+    locations, 
+    page, 
+    searchRadius, 
+    userLocation, 
+    t, 
+    findLocationsWithinRadius, 
+    sortLocationsByQuality,
+    addToLoadedCoordinates,
+    isLocationLoaded
+  ]);
   
-  // Load more calculated locations (new function)
+  // Load more calculated locations with optimized duplicate detection
   const loadMoreCalculatedLocations = useCallback(async () => {
     if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
       return;
@@ -192,20 +318,17 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         locations // Pass current locations
       );
       
-      // Filter out locations we already have
-      const existingCoords = new Set(locations.map(loc => 
-        `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
-      ));
-      
-      const newResults = calculatedResults.filter(loc => {
-        const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
-        return !existingCoords.has(coordKey);
-      });
+      // Filter out locations we've already loaded
+      const newResults = calculatedResults.filter(loc => !isLocationLoaded(loc));
       
       if (newResults.length > 0) {
-        // Sort by quality and distance
+        // Update tracking of loaded coordinates
+        addToLoadedCoordinates(newResults);
+        
+        // Sort by quality and distance with clustering for diversity
         const allLocations = [...locations, ...newResults];
-        const sortedResults = sortLocationsByQuality(allLocations);
+        const clusteredLocations = clusterLocations(allLocations);
+        const sortedResults = sortLocationsByQuality(clusteredLocations);
         
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
@@ -241,7 +364,18 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setSearching(false);
     }
-  }, [loadMoreClickCount, locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
+  }, [
+    loadMoreClickCount, 
+    locations, 
+    searchRadius, 
+    t, 
+    userLocation, 
+    findCalculatedLocations, 
+    sortLocationsByQuality,
+    addToLoadedCoordinates,
+    isLocationLoaded,
+    clusterLocations
+  ]);
   
   // Refresh SIQS data for locations
   const refreshSiqsData = useCallback(async () => {
@@ -257,8 +391,15 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       
       setLoading(true);
       
+      // Clear loaded coordinates cache to force fresh data
+      clearLoadedCoordinates();
+      
       // Load fresh data
       await loadLocations();
+      
+      // Show cache stats after refresh
+      const stats = getPollutionCacheStats();
+      console.log(`Pollution cache: ${stats.size} entries, avg age: ${stats.averageAge}s`);
       
       toast.success(t(
         "Location data refreshed successfully",
@@ -273,7 +414,13 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [loadLocations, locations.length, userLocation, t]);
+  }, [
+    loadLocations, 
+    locations.length, 
+    userLocation, 
+    t,
+    clearLoadedCoordinates
+  ]);
   
   // Load locations when userLocation or searchRadius changes
   useEffect(() => {

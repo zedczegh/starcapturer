@@ -39,8 +39,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Set up the event listener for expanding search radius
-  useExpandSearchRadius({ onRefresh });
+  // Set up the event listener for expanding search radius - fixed by providing currentRadius
+  useExpandSearchRadius({ 
+    onRefresh, 
+    currentRadius: searchRadius 
+  });
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
