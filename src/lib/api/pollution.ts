@@ -6,7 +6,7 @@
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 import { getCityBortleScale, isInChina, getChineseRegion } from "@/utils/chinaBortleData";
 import { hasProperty } from "@/types/weather-utils";
-import { getTerrainElevation } from "@/utils/terrainData";
+import { getTerrainElevation, detectTerrainType, getTerrainAdjustmentFactor } from "@/utils/terrainData";
 
 // Cache implementation for faster data access
 const pollutionCache = new Map<string, {
@@ -103,7 +103,6 @@ async function getElevationAdjustedBortle(
   baseBortleScale: number
 ): Promise<number> {
   try {
-    // Use fixed direct import instead of dynamic import
     const elevation = await getTerrainElevation(latitude, longitude);
     
     if (elevation && elevation > 0) {
@@ -418,4 +417,134 @@ export function cleanupExpiredPollutionCache(): number {
   });
   
   return removed;
+}
+
+/**
+ * Update Bortle scale with user-provided measurement
+ * This allows users to improve light pollution data accuracy
+ */
+export function updateUserProvidedBortleScale(
+  latitude: number,
+  longitude: number,
+  bortleScale: number,
+  method: 'measurement' | 'observation' | 'estimate' = 'observation'
+): boolean {
+  // Validate inputs
+  if (!isFinite(latitude) || !isFinite(longitude) || 
+      !isFinite(bortleScale) || bortleScale < 1 || bortleScale > 9) {
+    return false;
+  }
+  
+  // Generate cache key with high precision
+  const cacheKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  
+  // Determine confidence based on method
+  let confidence = 0.7; // Default for observation
+  if (method === 'measurement') confidence = 0.9;
+  if (method === 'estimate') confidence = 0.6;
+  
+  // Update the cache with user data
+  pollutionCache.set(cacheKey, {
+    bortleScale,
+    timestamp: Date.now(),
+    source: `user-${method}`,
+    confidence
+  });
+  
+  console.log(`Updated Bortle scale at ${latitude.toFixed(4)}, ${longitude.toFixed(4)} to ${bortleScale} (${method})`);
+  
+  // Attempt to persist this measurement to local storage for future use
+  try {
+    const storedMeasurements = localStorage.getItem('user-bortle-measurements');
+    const measurements = storedMeasurements ? JSON.parse(storedMeasurements) : [];
+    
+    // Add new measurement
+    measurements.push({
+      latitude,
+      longitude,
+      bortleScale,
+      timestamp: new Date().toISOString(),
+      method
+    });
+    
+    // Keep only the most recent 50 measurements
+    const recentMeasurements = measurements.slice(-50);
+    localStorage.setItem('user-bortle-measurements', JSON.stringify(recentMeasurements));
+  } catch (error) {
+    console.warn("Could not persist Bortle measurement to local storage:", error);
+  }
+  
+  return true;
+}
+
+/**
+ * Get user-provided Bortle scale measurements
+ * @returns Array of user measurements
+ */
+export function getUserBortleMeasurements(): Array<{
+  latitude: number;
+  longitude: number;
+  bortleScale: number;
+  timestamp: string;
+  method: string;
+}> {
+  try {
+    const storedMeasurements = localStorage.getItem('user-bortle-measurements');
+    return storedMeasurements ? JSON.parse(storedMeasurements) : [];
+  } catch (error) {
+    console.warn("Error retrieving user Bortle measurements:", error);
+    return [];
+  }
+}
+
+/**
+ * Find the closest user measurement for a given location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param maxDistance Maximum distance in km (default 5km)
+ * @returns The closest measurement or null if none found within maxDistance
+ */
+export function findNearbyUserBortleMeasurement(
+  latitude: number,
+  longitude: number,
+  maxDistance: number = 5
+): {
+  bortleScale: number;
+  distance: number;
+  timestamp: string;
+  method: string;
+} | null {
+  try {
+    const measurements = getUserBortleMeasurements();
+    if (!measurements.length) return null;
+    
+    let closestMeasurement = null;
+    let minDistance = Infinity;
+    
+    for (const measurement of measurements) {
+      // Calculate distance using Haversine formula
+      const R = 6371; // Earth's radius in km
+      const dLat = (measurement.latitude - latitude) * Math.PI / 180;
+      const dLon = (measurement.longitude - longitude) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(latitude * Math.PI / 180) * Math.cos(measurement.latitude * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = R * c;
+      
+      if (distance < minDistance && distance <= maxDistance) {
+        minDistance = distance;
+        closestMeasurement = {
+          ...measurement,
+          distance
+        };
+      }
+    }
+    
+    return closestMeasurement;
+  } catch (error) {
+    console.warn("Error finding nearby Bortle measurements:", error);
+    return null;
+  }
 }
