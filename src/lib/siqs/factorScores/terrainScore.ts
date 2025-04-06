@@ -1,73 +1,45 @@
 
 /**
- * Terrain and elevation factor score calculations
- */
-import { getElevationBortleAdjustment } from "@/utils/terrainData";
-
-/**
- * Calculate the terrain factor score based on elevation
+ * Terrain factor - adjusts scores based on terrain features
  * @param elevation Elevation in meters
- * @returns Score on a 0-100 scale
+ * @param terrainType Type of terrain
+ * @returns Score adjustment factor (0-20)
  */
-export function calculateTerrainFactor(elevation: number): number {
-  // Validate input
-  if (typeof elevation !== 'number' || isNaN(elevation)) {
-    console.warn('Invalid elevation value:', elevation);
-    return 50; // Default to moderate score for invalid input
-  }
-  
-  // Ensure elevation is not negative
-  const validElevation = Math.max(0, elevation);
-  
-  // Elevation impact calculation
-  // 0-300m: Minimal impact (50-55)
-  // 300-1000m: Modest improvement (55-70)
-  // 1000-2000m: Significant improvement (70-85)
-  // 2000-3000m: Major improvement (85-95)
-  // 3000m+: Excellent (95-100)
-  
-  if (validElevation <= 300) return 50 + (validElevation / 60);           // 50-55
-  if (validElevation <= 1000) return 55 + ((validElevation - 300) / 35);  // 55-70
-  if (validElevation <= 2000) return 70 + ((validElevation - 1000) / 75); // 70-85
-  if (validElevation <= 3000) return 85 + ((validElevation - 2000) / 200); // 85-95
-  
-  return Math.min(100, 95 + ((validElevation - 3000) / 500));            // 95-100
-}
-
-/**
- * Calculate Bortle scale adjustment based on terrain features
- * @param elevation Elevation in meters
- * @param distance Distance from nearest city in km
- * @param population Nearest city population (optional)
- * @returns Adjustment to apply to Bortle scale
- */
-export function calculateTerrainBortleAdjustment(
-  elevation: number,
-  distance: number = 0,
-  population: number = 0
+export function calculateTerrainFactor(
+  elevation: number = 0, 
+  terrainType: 'mountain' | 'hill' | 'plateau' | 'valley' | 'plain' | 'unknown' = 'unknown'
 ): number {
-  // Get elevation adjustment
-  const elevationAdjustment = getElevationBortleAdjustment(elevation);
+  // Higher elevations generally provide better viewing conditions
+  let elevationFactor = 0;
   
-  // Calculate distance adjustment - farther from cities = darker skies
-  let distanceAdjustment = 0;
-  if (distance > 100) distanceAdjustment = -1.0;
-  else if (distance > 50) distanceAdjustment = -0.7;
-  else if (distance > 25) distanceAdjustment = -0.5;
-  else if (distance > 10) distanceAdjustment = -0.2;
+  if (elevation > 3000) elevationFactor = 20;
+  else if (elevation > 2000) elevationFactor = 15;
+  else if (elevation > 1000) elevationFactor = 10;
+  else if (elevation > 500) elevationFactor = 5;
+  else elevationFactor = 0;
   
-  // Calculate population adjustment - smaller cities = less light pollution
-  let populationAdjustment = 0;
-  if (population > 0) {
-    if (population < 10000) populationAdjustment = -0.3;
-    else if (population < 50000) populationAdjustment = -0.1;
-    else if (population > 1000000) populationAdjustment = 0.3;
-    else if (population > 500000) populationAdjustment = 0.2;
+  // Terrain type also affects viewing conditions
+  let terrainFactor = 0;
+  switch (terrainType) {
+    case 'mountain':
+      terrainFactor = 15; // Mountains often have clearer air
+      break;
+    case 'hill':
+      terrainFactor = 10;
+      break;
+    case 'plateau':
+      terrainFactor = 8;
+      break;
+    case 'plain':
+      terrainFactor = 5;
+      break;
+    case 'valley':
+      terrainFactor = 0; // Valleys can trap moisture and pollution
+      break;
+    default:
+      terrainFactor = 0;
   }
   
-  // Total adjustment cannot improve Bortle scale by more than 2 points
-  const totalAdjustment = Math.max(-2.0, 
-    elevationAdjustment + distanceAdjustment + populationAdjustment);
-  
-  return totalAdjustment;
+  // Return combined factor, max 20 points
+  return Math.min(20, elevationFactor + terrainFactor / 2);
 }

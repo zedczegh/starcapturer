@@ -1,176 +1,98 @@
 
-/**
- * Utility functions for the SIQS (Stellar Imaging Quality Score) system
- */
-import { SIQSResult, SIQSFactor } from './types';
+import { normalizeScore } from "./factors";
 
 /**
- * Format a SIQS score with appropriate precision and display format
- * @param score Raw SIQS score (0-10 scale)
+ * Utility functions for SIQS calculations and display
+ */
+
+/**
+ * Validates if cloud cover data is within valid range and returns a default value if invalid
+ * @param cloudCover Cloud cover percentage
+ * @returns Validated cloud cover percentage
+ */
+export function validateCloudCover(cloudCover: any): number {
+  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
+    return 50; // Default to moderate cloud cover
+  }
+  
+  return Math.max(0, Math.min(100, cloudCover));
+}
+
+/**
+ * Determines if imaging conditions make astrophotography impossible
+ * @param factors Weather/location factors
+ * @returns Boolean indicating if imaging is impossible
+ */
+export function isImagingImpossible(factors: any): boolean {
+  // Check for extreme conditions that make imaging impossible
+  const cloudCover = validateCloudCover(factors.cloudCover);
+  const precipitation = factors.precipitation || 0;
+  
+  // Imaging is impossible if:
+  // - Cloud cover is extremely high (>95%)
+  // - Active precipitation is substantial (>1mm)
+  return cloudCover > 95 || precipitation > 1;
+}
+
+/**
+ * Converts SIQS value to color indicator
+ * @param value SIQS value (0-10)
+ * @returns CSS color code
+ */
+export function siqsToColor(value: number): string {
+  if (value >= 8) return '#22c55e'; // green-500
+  if (value >= 6) return '#3b82f6'; // blue-500
+  if (value >= 5) return '#84cc16'; // lime-500
+  if (value >= 4) return '#eab308'; // yellow-500
+  if (value >= 2) return '#f97316'; // orange-500
+  return '#ef4444'; // red-500
+}
+
+/**
+ * Gets the quality level text for a SIQS score
+ * @param value SIQS value (0-10)
+ * @returns Quality level text
+ */
+export function getSIQSLevel(value: number): string {
+  if (value >= 8) return 'Excellent';
+  if (value >= 6) return 'Good';
+  if (value >= 4) return 'Average';
+  if (value >= 2) return 'Poor';
+  return 'Bad';
+}
+
+/**
+ * Format SIQS score with consistent decimal places
+ * @param score SIQS score
  * @returns Formatted score string
  */
-export function formatSIQSScore(score: number | null): string {
-  if (score === null || score === undefined || isNaN(score)) {
-    return '—';
+export function formatSIQSScore(score: number): string {
+  if (typeof score !== 'number' || isNaN(score)) {
+    return '0.0';
   }
   
-  // Round to 1 decimal place
-  const roundedScore = Math.round(score * 10) / 10;
-  
-  // Format with fixed decimal place
-  return roundedScore.toFixed(1);
+  return score.toFixed(1);
 }
 
 /**
- * Normalize a score to a standard 0-100 scale
- * @param score Raw score value
- * @param min Minimum possible score
- * @param max Maximum possible score
- * @param invert Whether to invert the scale (lower input = higher score)
- * @returns Normalized score on 0-100 scale
- */
-export function normalizeScore(
-  score: number, 
-  min: number, 
-  max: number, 
-  invert: boolean = false
-): number {
-  // Ensure score is within bounds
-  const boundedScore = Math.max(min, Math.min(max, score));
-  
-  // Calculate normalized value on 0-100 scale
-  const normalized = ((boundedScore - min) / (max - min)) * 100;
-  
-  // Return inverted or normal score
-  return invert ? 100 - normalized : normalized;
-}
-
-/**
- * Get the descriptive quality level based on SIQS score
- * @param score SIQS score (0-10 scale)
- * @returns Quality level description
- */
-export function getSIQSLevel(score: number | null): string {
-  if (score === null || score === undefined || isNaN(score)) {
-    return 'Unknown';
-  }
-  
-  if (score >= 9.0) return 'Outstanding';
-  if (score >= 8.0) return 'Excellent';
-  if (score >= 7.0) return 'Very Good';
-  if (score >= 6.0) return 'Good';
-  if (score >= 5.0) return 'Above Average';
-  if (score >= 4.0) return 'Average';
-  if (score >= 3.0) return 'Fair';
-  if (score >= 2.0) return 'Poor';
-  
-  return 'Very Poor';
-}
-
-/**
- * Get color class for a SIQS score
- * @param score SIQS score (0-10 scale)
- * @returns Tailwind CSS color class
- */
-export function getSIQSColorClass(score: number | null): string {
-  if (score === null || score === undefined || isNaN(score)) {
-    return 'text-gray-400';
-  }
-  
-  if (score >= 9.0) return 'text-indigo-500';
-  if (score >= 8.0) return 'text-blue-500';
-  if (score >= 7.0) return 'text-teal-500';
-  if (score >= 6.0) return 'text-green-500';
-  if (score >= 5.0) return 'text-lime-500';
-  if (score >= 4.0) return 'text-amber-500';
-  if (score >= 3.0) return 'text-orange-500';
-  if (score >= 2.0) return 'text-rose-500';
-  
-  return 'text-red-600';
-}
-
-/**
- * Sort SIQS factors to ensure consistent order
+ * Normalize factor scores to ensure they're all on 0-10 scale
  * @param factors Array of SIQS factors
- * @returns Sorted array of factors
+ * @returns Normalized factors
  */
-export function sortSIQSFactors(factors: SIQSFactor[]): SIQSFactor[] {
-  const factorOrder: Record<string, number> = {
-    'Light Pollution': 1,
-    'Cloud Cover': 2,
-    'Seeing Conditions': 3,
-    'Wind': 4,
-    'Humidity': 5,
-    'Moonlight': 6,
-    'Air Quality': 7,
-    'Clear Sky Rate': 8,
-    'Elevation': 9
-  };
+export function normalizeFactorScores(factors: any[]): any[] {
+  if (!Array.isArray(factors)) return [];
   
-  return [...factors].sort((a, b) => {
-    const orderA = factorOrder[a.name] || 99;
-    const orderB = factorOrder[b.name] || 99;
-    return orderA - orderB;
-  });
-}
-
-/**
- * Create a summary of SIQS result with key factors
- * @param siqsResult SIQS calculation result
- * @returns Summary string with score and key factors
- */
-export function createSIQSSummary(siqsResult: SIQSResult): string {
-  const score = formatSIQSScore(siqsResult.score);
-  const level = getSIQSLevel(siqsResult.score);
-  
-  // Get top positive and negative factors
-  const sortedFactors = [...siqsResult.factors].sort((a, b) => b.score - a.score);
-  const topPositive = sortedFactors[0];
-  const topNegative = sortedFactors[sortedFactors.length - 1];
-  
-  let summary = `SIQS ${score}/10 (${level}).`;
-  
-  if (topPositive) {
-    summary += ` Best: ${topPositive.name}.`;
-  }
-  
-  if (topNegative && topNegative.score < 5) {
-    summary += ` Limiting: ${topNegative.name}.`;
-  }
-  
-  return summary;
-}
-
-/**
- * Generate recommendations based on SIQS score
- * @param score SIQS score (0-10 scale)
- * @param bortleScale Bortle scale value of the location
- * @returns Recommendation string
- */
-export function getSIQSRecommendation(score: number, bortleScale: number): string {
-  if (score >= 7.5) {
-    return "Perfect conditions for all types of astrophotography including deep sky objects.";
-  }
-  
-  if (score >= 6) {
-    return "Great conditions for most imaging. Suitable for galaxies, nebulae and star clusters.";
-  }
-  
-  if (score >= 5) {
-    return "Good conditions. Consider focusing on brighter objects or using filters.";
-  }
-  
-  if (score >= 4) {
-    if (bortleScale <= 5) {
-      return "Acceptable for lunar, planetary, and bright deep sky objects. Consider short exposures.";
-    } else {
-      return "Better for lunar and planetary imaging. Deep sky objects will be challenging.";
+  return factors.map(factor => {
+    if (!factor) return factor;
+    
+    // Clone the factor to avoid modifying the original
+    const normalizedFactor = { ...factor };
+    
+    // Convert score to 0-10 scale if needed
+    if (typeof normalizedFactor.score === 'number') {
+      normalizedFactor.score = normalizeScore(normalizedFactor.score);
     }
-  }
-  
-  if (score >= 3) {
-    return "Limited imaging potential. Focus on lunar, planetary or very bright DSOs with filtering.";
-  }
-  
-  return "Poor conditions for most imaging. Consider visual observation of bright objects only.";
+    
+    return normalizedFactor;
+  });
 }

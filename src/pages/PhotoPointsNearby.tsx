@@ -30,7 +30,7 @@ const PhotoPointsNearby: React.FC = () => {
   // Get the current SIQS value from the store
   const currentSiqs = currentSiqsStore.getValue();
 
-  // Set up recommended locations with userLocation - passing proper props
+  // Set up recommended locations with userLocation
   const {
     searchRadius,
     setSearchRadius,
@@ -44,13 +44,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks
-  } = useRecommendedLocations({
-    userLatitude: userLocation?.latitude,
-    userLongitude: userLocation?.longitude,
-    maxDistance: 1000, // Default radius
-    filterType: 'all',
-    maxResults: 10 // Request more results initially
-  });
+  } = useRecommendedLocations(userLocation);
 
   // Process locations to separate certified and calculated
   const {

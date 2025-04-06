@@ -1,86 +1,73 @@
 
 /**
- * Atmospheric condition score calculations for SIQS
- */
-
-/**
- * Calculate the seeing conditions factor score
- * @param seeingConditions Seeing conditions (1-5, lower is better)
- * @returns Score on a 0-100 scale
+ * Calculate seeing score for SIQS (0-100 scale)
+ * @param seeingConditions Seeing conditions (1-5), 1 is best
+ * @returns Score on 0-100 scale
  */
 export function calculateSeeingScore(seeingConditions: number): number {
-  // Validate input
-  if (typeof seeingConditions !== 'number' || isNaN(seeingConditions)) {
-    console.warn('Invalid seeing conditions value:', seeingConditions);
-    return 60; // Default to moderate score for invalid input
-  }
+  // Ensure seeingConditions is within valid range (1-5)
+  const validSeeingConditions = Math.min(5, Math.max(1, seeingConditions || 3));
   
-  // Ensure seeing scale is within 1-5 range
-  const validSeeing = Math.max(1, Math.min(5, seeingConditions));
+  // More refined curve for seeing conditions based on astronomical research
+  // Inverted scale, 100 is perfect (seeing 1), 0 is terrible (seeing 5)
+  const percentage = (validSeeingConditions - 1) / 4;
   
-  // Non-linear mapping to represent the impact of seeing conditions
-  // Seeing 1 (excellent) = 100, Seeing 5 (poor) = 20
-  return Math.round(120 - (validSeeing * 20));
+  // Updated power function that better reflects the impact of atmospheric seeing
+  return 100 * Math.pow(1 - percentage, 1.4);
 }
 
 /**
- * Calculate the wind speed factor score
+ * Calculate wind score for SIQS (0-100 scale)
  * @param windSpeed Wind speed in km/h
- * @returns Score on a 0-100 scale
+ * @returns Score on 0-100 scale
  */
 export function calculateWindScore(windSpeed: number): number {
-  // Validate input
-  if (typeof windSpeed !== 'number' || isNaN(windSpeed)) {
-    console.warn('Invalid wind speed value:', windSpeed);
-    return 70; // Default to moderately good score for invalid input
+  // Astronomically calibrated wind speed scoring
+  // 0-5 km/h: Excellent (100-80) - Perfect for astrophotography
+  // 5-12 km/h: Good (80-60) - Minor impact on long exposures
+  // 12-20 km/h: Fair (60-40) - Some impact on stability
+  // 20-30 km/h: Poor (40-10) - Significant impact
+  // >30 km/h: Very poor (10-0) - Nearly impossible for good imaging
+  
+  if (windSpeed <= 5) {
+    return 100 - (windSpeed * 4);
+  } else if (windSpeed <= 12) {
+    return 80 - ((windSpeed - 5) * 2.85);
+  } else if (windSpeed <= 20) {
+    return 60 - ((windSpeed - 12) * 2.5);
+  } else if (windSpeed <= 30) {
+    return 40 - ((windSpeed - 20) * 3);
+  } else {
+    return Math.max(0, 10 - ((windSpeed - 30) * 0.5));
   }
-  
-  // Ensure wind speed is not negative
-  const validWindSpeed = Math.max(0, windSpeed);
-  
-  // Wind speed impact calculation
-  // 0-5 km/h: Excellent (90-100)
-  // 5-15 km/h: Good (70-90)
-  // 15-25 km/h: Fair (50-70)
-  // 25-35 km/h: Poor (30-50)
-  // 35+ km/h: Bad (0-30)
-  
-  if (validWindSpeed <= 5) return 100 - (validWindSpeed * 2);      // 100-90
-  if (validWindSpeed <= 15) return 90 - ((validWindSpeed - 5) * 2);  // 90-70
-  if (validWindSpeed <= 25) return 70 - ((validWindSpeed - 15) * 2); // 70-50
-  if (validWindSpeed <= 35) return 50 - ((validWindSpeed - 25) * 2); // 50-30
-  
-  // For wind speeds above 35 km/h, score decreases more rapidly
-  return Math.max(0, 30 - ((validWindSpeed - 35) * 3));
 }
 
 /**
- * Calculate the humidity factor score
- * @param humidity Humidity percentage (0-100)
- * @returns Score on a 0-100 scale
+ * Calculate humidity score for SIQS (0-100 scale)
+ * @param humidity Relative humidity percentage (0-100)
+ * @returns Score on 0-100 scale
  */
 export function calculateHumidityScore(humidity: number): number {
-  // Validate input
-  if (typeof humidity !== 'number' || isNaN(humidity)) {
-    console.warn('Invalid humidity value:', humidity);
-    return 60; // Default to moderate score for invalid input
+  // Improved humidity scoring based on optical effects research
+  // Low humidity is better for astronomy, but the relationship is non-linear
+  // <25%: Excellent - very clear viewing
+  // 25-45%: Very Good
+  // 45-60%: Good
+  // 60-75%: Fair
+  // 75-90%: Poor
+  // >90%: Very poor - high risk of dew and optical issues
+  
+  if (humidity < 25) {
+    return 100 - (humidity * 0.4); // 100-90
+  } else if (humidity < 45) {
+    return 90 - ((humidity - 25) * 0.75); // 90-75
+  } else if (humidity < 60) {
+    return 75 - ((humidity - 45) * 1.0); // 75-60
+  } else if (humidity < 75) {
+    return 60 - ((humidity - 60) * 1.33); // 60-40
+  } else if (humidity < 90) {
+    return 40 - ((humidity - 75) * 2.0); // 40-10
+  } else {
+    return Math.max(0, 10 - ((humidity - 90) * 1.0)); // 10-0
   }
-  
-  // Ensure humidity is within 0-100 range
-  const validHumidity = Math.max(0, Math.min(100, humidity));
-  
-  // Humidity impact calculation
-  // Very low humidity (0-30%): Very good but can cause dust issues (90-85)
-  // Low humidity (30-50%): Excellent (100-90)
-  // Moderate humidity (50-70%): Good (90-70)
-  // High humidity (70-85%): Fair to poor (70-40)
-  // Very high humidity (85-100%): Poor to bad (40-0)
-  
-  if (validHumidity <= 30) return 85 + ((30 - validHumidity) / 6);       // 85-90 (higher is better but very dry can cause dust issues)
-  if (validHumidity <= 50) return 90 + ((50 - validHumidity) / 2.5);     // 90-100
-  if (validHumidity <= 70) return 70 + ((70 - validHumidity) / 2.5);     // 70-90
-  if (validHumidity <= 85) return 40 + ((85 - validHumidity) * 2);       // 40-70
-  
-  // For humidity above 85%, score decreases more rapidly
-  return Math.max(0, 40 - ((validHumidity - 85) * 2.5));
 }

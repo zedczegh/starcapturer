@@ -1,23 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { saveLocation } from '@/utils/locationStorage';
+import { fetchUserLocations, saveUserLocation } from '@/utils/locationStorage';
 import { getCachedData, setCachedData } from '@/utils/cacheUtils';
+import { findNearbyLocations } from '@/services/locationService';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
 import { formatDistanceFriendly } from '@/utils/formatting';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { removeDuplicateLocations, prioritizeLocations } from '@/utils/locationUtils';
 
-// Mock function for findNearbyLocations until we implement the real one
-const findNearbyLocations = async (params: any) => {
-  // This is a placeholder that should be implemented in locationService.ts
-  return [] as SharedAstroSpot[];
-};
-
 // Keep recently processed locations in memory to reduce API calls
 const processedLocationsCache = new Map<string, any>();
 
-export interface UseRecommendedLocationsProps {
+interface UseRecommendedLocationsProps {
   userLatitude?: number;
   userLongitude?: number;
   maxDistance?: number;
@@ -41,15 +36,6 @@ export const useRecommendedLocations = ({
   const [recommendedLocations, setRecommendedLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Additional state for PhotoPointsNearby compatibility
-  const [searchRadius, setSearchRadius] = useState(maxDistance);
-  const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadMoreClickCount, setLoadMoreClickCount] = useState(0);
-  const [maxLoadMoreClicks] = useState(3);
-  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState(true);
 
   // Generate cache key based on parameters
   const cacheKey = `${userLatitude?.toFixed(2) || 'unknown'}-${userLongitude?.toFixed(2) || 'unknown'}-${maxDistance}-${filterType}-${maxResults}`;
@@ -208,15 +194,12 @@ export const useRecommendedLocations = ({
   useEffect(() => {
     if (data) {
       setRecommendedLocations(data);
-      setLocations(data); // For PhotoPointsNearby compatibility
-      setHasMore(data.length >= maxResults);
     }
-  }, [data, maxResults]);
+  }, [data]);
 
   // Update loading and error states
   useEffect(() => {
     setLoading(isLoading);
-    setSearching(isLoading); // For PhotoPointsNearby compatibility
     if (isError) {
       setError("Failed to load recommended locations");
     } else {
@@ -252,22 +235,6 @@ export const useRecommendedLocations = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Add compatibility functions for PhotoPointsNearby
-  const loadMore = useCallback(() => {
-    setLoadMoreClickCount(prev => prev + 1);
-    setHasMore(loadMoreClickCount < maxLoadMoreClicks - 1);
-    return Promise.resolve();
-  }, [loadMoreClickCount, maxLoadMoreClicks]);
-
-  const loadMoreCalculatedLocations = useCallback(() => {
-    setCanLoadMoreCalculated(false);
-    return Promise.resolve();
-  }, []);
-
-  const refreshSiqsData = useCallback(() => {
-    return refetch();
-  }, [refetch]);
-
   // Function to manually refresh locations
   const refreshLocations = useCallback(() => {
     // Clear both caches
@@ -280,11 +247,11 @@ export const useRecommendedLocations = ({
   }, [cacheKey, refetch]);
 
   // Function to save a location
-  const saveUserLocation = async (location: SharedAstroSpot) => {
-    if (!location) return false;
+  const saveLocation = async (location: SharedAstroSpot) => {
+    if (!location) return;
     
     try {
-      await saveLocation({
+      await saveUserLocation({
         name: location.name,
         latitude: location.latitude,
         longitude: location.longitude,
@@ -303,19 +270,7 @@ export const useRecommendedLocations = ({
     loading,
     error,
     refreshLocations,
-    saveLocation: saveUserLocation,
-    // Add compatibility properties for PhotoPointsNearby
-    searchRadius,
-    setSearchRadius,
-    locations,
-    searching,
-    hasMore,
-    loadMore,
-    refreshSiqsData,
-    canLoadMoreCalculated,
-    loadMoreCalculatedLocations,
-    loadMoreClickCount,
-    maxLoadMoreClicks
+    saveLocation
   };
 };
 
