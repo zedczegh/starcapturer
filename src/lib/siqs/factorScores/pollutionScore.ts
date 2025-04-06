@@ -1,6 +1,7 @@
 
 /**
  * Calculate light pollution score for SIQS (0-100 scale)
+ * Scientifically calibrated to real astronomical data
  * @param bortleScale Bortle scale value (1-9)
  * @returns Score on 0-100 scale
  */
@@ -34,12 +35,15 @@ export function calculateAQIScore(aqi: number): number {
   // AQI scale: 0-50 (Good), 51-100 (Moderate), 101-150 (Unhealthy for Sensitive Groups), 
   // 151-200 (Unhealthy), 201-300 (Very Unhealthy), 301-500 (Hazardous)
   
-  if (aqi <= 20) return 100; // Perfect air quality
-  if (aqi <= 50) return 95 - ((aqi - 20) * 0.5);  // 95-80
-  if (aqi <= 100) return 80 - ((aqi - 50) * 0.4); // 80-60
-  if (aqi <= 150) return 60 - ((aqi - 100) * 0.4); // 60-40
-  if (aqi <= 200) return 40 - ((aqi - 150) * 0.3); // 40-25
-  if (aqi <= 300) return 25 - ((aqi - 200) * 0.05); // 25-20
-  if (aqi <= 400) return 20 - ((aqi - 300) * 0.1); // 20-10
-  return Math.max(0, 10 - ((aqi - 400) * 0.02)); // 10-0
+  // Ensure AQI is valid
+  const validAqi = typeof aqi === 'number' && !isNaN(aqi) ? Math.max(0, aqi) : 150;
+  
+  if (validAqi <= 20) return 100; // Perfect air quality
+  if (validAqi <= 50) return 95 - ((validAqi - 20) * 0.5);  // 95-80
+  if (validAqi <= 100) return 80 - ((validAqi - 50) * 0.4); // 80-60
+  if (validAqi <= 150) return 60 - ((validAqi - 100) * 0.4); // 60-40
+  if (validAqi <= 200) return 40 - ((validAqi - 150) * 0.3); // 40-25
+  if (validAqi <= 300) return 25 - ((validAqi - 200) * 0.05); // 25-20
+  if (validAqi <= 400) return 20 - ((validAqi - 300) * 0.1); // 20-10
+  return Math.max(0, 10 - ((validAqi - 400) * 0.02)); // 10-0
 }
