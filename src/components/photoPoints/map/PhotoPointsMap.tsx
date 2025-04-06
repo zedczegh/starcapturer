@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -27,9 +27,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
 }) => {
   const { t } = useLanguage();
   const [mapReady, setMapReady] = useState(false);
+  const mapReadyRef = useRef<boolean>(false);
 
   const handleMapReady = useCallback(() => {
     setMapReady(true);
+    mapReadyRef.current = true;
     if (onMapReady) onMapReady();
   }, [onMapReady]);
 

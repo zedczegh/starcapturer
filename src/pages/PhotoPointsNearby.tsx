@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 
 // Lazy load components that are not immediately visible
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
@@ -62,17 +61,6 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
-
-  // Set up map functionality
-  const {
-    mapReady,
-    handleMapReady,
-    handleLocationClick
-  } = usePhotoPointsMap({
-    userLocation,
-    locations,
-    searchRadius
-  });
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
@@ -124,6 +112,16 @@ const PhotoPointsNearby: React.FC = () => {
     ((activeView === 'certified' && certifiedCount === 0) || 
      (activeView === 'calculated' && calculatedCount === 0));
   
+  // Handle click on a location marker
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (location && location.latitude && location.longitude) {
+      navigate(`/location/${location.id || 'custom'}`, { 
+        state: location 
+      });
+      toast.info(t("Opening location details", "正在打开位置详情"));
+    }
+  }, [navigate, t]);
+
   // Toggle between map and list view
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
