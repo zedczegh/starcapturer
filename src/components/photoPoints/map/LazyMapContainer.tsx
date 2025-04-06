@@ -2,9 +2,10 @@
 import React, { useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import L from 'leaflet';
 import './mapMarkers.css';
 
 // Create specialized marker icons
@@ -53,6 +54,40 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
   return null;
 };
 
+// This component draws the search radius circle
+const SearchRadiusCircle = ({ center, radius }: { center: [number, number], radius: number }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Clear any previous radius circles
+    map.eachLayer((layer: any) => {
+      if (layer.options && layer.options._radiusCircle) {
+        map.removeLayer(layer);
+      }
+    });
+    
+    // Create new circle
+    const circle = L.circle(center, {
+      radius: radius * 1000, // Convert km to meters
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.05,
+      weight: 1,
+      opacity: 0.3,
+      dashArray: '5, 5',
+      _radiusCircle: true // Custom property to identify this layer
+    });
+    
+    circle.addTo(map);
+    
+    return () => {
+      map.removeLayer(circle);
+    };
+  }, [map, center, radius]);
+  
+  return null;
+};
+
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
   zoom,
@@ -77,9 +112,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       className="h-full w-full"
       whenReady={() => onMapReady?.()}
       ref={mapRef}
-      zoomControl={true}
+      attributionControl={true}
       scrollWheelZoom={true}
-      dragging={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -108,17 +142,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           </Marker>
           
           {searchRadius && (
-            <Circle
+            <SearchRadiusCircle
               center={userLocation}
-              radius={searchRadius * 1000} // Convert to kilometers to meters
-              pathOptions={{ 
-                color: '#3b82f6',
-                fillColor: '#3b82f6',
-                fillOpacity: 0.05,
-                weight: 1,
-                opacity: 0.3,
-                dashArray: '5, 5'
-              }}
+              radius={searchRadius} 
             />
           )}
         </>
