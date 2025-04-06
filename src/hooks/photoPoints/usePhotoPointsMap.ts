@@ -31,7 +31,9 @@ export const usePhotoPointsMap = ({
   // Get the map center coordinates
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
-    : [39.9042, 116.4074]; // Default center (Beijing)
+    : validLocations.length > 0
+      ? [validLocations[0].latitude, validLocations[0].longitude]
+      : [39.9042, 116.4074]; // Default center (Beijing)
 
   // Handle map ready event
   const handleMapReady = useCallback(() => {
@@ -68,7 +70,9 @@ export const usePhotoPointsMap = ({
 
   // Calculate zoom level based on search radius
   const getZoomLevel = useCallback((radius: number) => {
-    if (radius <= 200) return 9;
+    if (radius <= 50) return 10;
+    if (radius <= 100) return 9;
+    if (radius <= 200) return 8;
     if (radius <= 500) return 7;
     if (radius <= 1000) return 6;
     if (radius <= 5000) return 4;

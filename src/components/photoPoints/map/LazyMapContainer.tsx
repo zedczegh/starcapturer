@@ -1,20 +1,42 @@
 
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
-import "leaflet/dist/leaflet.css";
-import { useLanguage } from "@/contexts/LanguageContext";
+import React, { useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
 import SiqsScoreBadge from "../cards/SiqsScoreBadge";
-import L from "leaflet";
+import { Circle } from 'react-leaflet';
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
+
+// Map Events component to handle click events and updates
+const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    };
+    
+    map.on('click', handleClick);
+    
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onMapClick]);
+  
+  return null;
+};
 
 // Component to handle map events and interactions
 const MapController = ({ 
@@ -55,6 +77,7 @@ interface PhotoPointsMapContainerProps {
   searchRadius: number;
   onMapReady: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
+  onMapClick?: (lat: number, lng: number) => void;
   zoom?: number;
 }
 
@@ -65,6 +88,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   searchRadius,
   onMapReady,
   onLocationClick,
+  onMapClick,
   zoom = 5
 }) => {
   const { t, language } = useLanguage();
@@ -73,6 +97,13 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const userMarkerIcon = createCustomMarker('#3b82f6'); // Blue for user location
   const locationMarkerIcon = createCustomMarker('#10b981'); // Green for certified locations
   const calculatedMarkerIcon = createCustomMarker('#f59e0b'); // Amber for calculated locations
+  
+  // Handle map click with default empty function if not provided
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (onMapClick) {
+      onMapClick(lat, lng);
+    }
+  }, [onMapClick]);
 
   return (
     <MapContainer
@@ -81,7 +112,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       className="h-full w-full"
       whenReady={() => onMapReady()}
       scrollWheelZoom={true}
-      zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -93,6 +123,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         userLocation={userLocation} 
         searchRadius={searchRadius}
       />
+      
+      {/* Add MapEvents component to handle clicks if onMapClick is provided */}
+      {onMapClick && <MapEvents onMapClick={handleMapClick} />}
       
       {/* Current user location marker */}
       {userLocation && (
@@ -137,13 +170,20 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           ? locationMarkerIcon 
           : calculatedMarkerIcon;
         
+        // Handle the click event for this marker
+        const handleClick = () => {
+          if (onLocationClick) {
+            onLocationClick(location);
+          }
+        };
+        
         return (
           <Marker
             key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
             position={[location.latitude, location.longitude]}
             icon={icon}
             eventHandlers={{
-              click: () => onLocationClick && onLocationClick(location)
+              click: handleClick
             }}
           >
             <Popup>
