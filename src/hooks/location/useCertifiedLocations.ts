@@ -61,14 +61,26 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
     
     // All locations that are not certified are calculated
     const calculated = locations.filter(location => 
-      !certified.some(cert => cert.id === location.id)
+      !certified.some(cert => 
+        cert.id === location.id || 
+        (cert.latitude === location.latitude && cert.longitude === location.longitude)
+      )
     );
     
     console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations with radius: ${searchRadius}km`);
     
+    // Sort both arrays by distance
+    const sortedCertified = [...certified].sort((a, b) => 
+      (a.distance || Infinity) - (b.distance || Infinity)
+    );
+    
+    const sortedCalculated = [...calculated].sort((a, b) => 
+      (a.distance || Infinity) - (b.distance || Infinity)
+    );
+    
     setProcessedLocations({
-      certified,
-      calculated
+      certified: sortedCertified,
+      calculated: sortedCalculated
     });
   }, [locations, searchRadius]);
   

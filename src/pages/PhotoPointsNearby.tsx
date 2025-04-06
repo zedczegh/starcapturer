@@ -19,6 +19,10 @@ const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLoca
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
+const DEFAULT_MAP_CENTER = { latitude: 39.7392, longitude: -104.9903 }; // Denver, but will be replaced by user location
+const DEFAULT_SEARCH_RADIUS = 1000; // 1000km default radius
+const CERTIFIED_SEARCH_RADIUS = 10000; // No practical limit for certified locations (10000km)
+
 const PhotoPointsNearby: React.FC = () => {
   // Get user location with high accuracy
   const { loading: locationLoading, coords, getPosition } = useGeolocation({
@@ -33,7 +37,14 @@ const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
 
   // Get user location from coordinates
-  const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  
+  // Update user location from coords
+  useEffect(() => {
+    if (coords) {
+      setUserLocation({ latitude: coords.latitude, longitude: coords.longitude });
+    }
+  }, [coords]);
 
   // Set up recommended locations with userLocation
   const {
@@ -49,7 +60,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks
-  } = useRecommendedLocations(userLocation);
+  } = useRecommendedLocations(userLocation || DEFAULT_MAP_CENTER, DEFAULT_SEARCH_RADIUS);
 
   // Process locations to separate certified and calculated
   const {
@@ -57,12 +68,18 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedLocations,
     certifiedCount,
     calculatedCount
-  } = useCertifiedLocations(locations, searchRadius);
+  } = useCertifiedLocations(locations, activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : searchRadius);
 
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
     setSearchRadius(value);
   }, [setSearchRadius]);
+  
+  // Handle location update from map click
+  const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
+    setUserLocation({ latitude, longitude });
+    refreshSiqsData();
+  }, [refreshSiqsData]);
 
   // Call getPosition when the component mounts to get user's location
   useEffect(() => {
@@ -112,6 +129,17 @@ const PhotoPointsNearby: React.FC = () => {
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
   }, []);
+
+  // Effect to update the search radius based on active view
+  useEffect(() => {
+    if (activeView === 'certified') {
+      // For certified locations, set a much larger search radius
+      setSearchRadius(CERTIFIED_SEARCH_RADIUS);
+    } else {
+      // For calculated locations, use a more reasonable radius
+      setSearchRadius(DEFAULT_SEARCH_RADIUS);
+    }
+  }, [activeView, setSearchRadius]);
   
   return (
     <PhotoPointsLayout>
@@ -131,13 +159,24 @@ const PhotoPointsNearby: React.FC = () => {
         </button>
       </div>
       
+      {/* Tab toggle for certified vs calculated */}
+      <div className="mb-6">
+        <ViewToggle
+          activeView={activeView}
+          onViewChange={setActiveView}
+          certifiedCount={certifiedCount}
+          calculatedCount={calculatedCount}
+          loading={loading && !locationLoading}
+        />
+      </div>
+      
       {/* Distance filter with better spacing */}
-      <div className="max-w-xl mx-auto mb-10 mt-6">
+      <div className="max-w-xl mx-auto mb-6">
         <DistanceRangeSlider
           currentValue={searchRadius}
           onValueChange={handleRadiusChange}
           minValue={100}
-          maxValue={10000}
+          maxValue={activeView === 'certified' ? 10000 : 2000}
           stepValue={100}
         />
       </div>
@@ -158,24 +197,17 @@ const PhotoPointsNearby: React.FC = () => {
             <PhotoPointsMap 
               userLocation={userLocation}
               locations={locations}
-              searchRadius={searchRadius}
+              certifiedLocations={certifiedLocations}
+              calculatedLocations={calculatedLocations}
+              activeView={activeView}
+              searchRadius={activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : searchRadius}
               onLocationClick={handleLocationClick}
+              onLocationUpdate={handleLocationUpdate}
             />
           </div>
         </Suspense>
       ) : (
         <>
-          {/* Tab toggle - with stable positioning to prevent layout shifts */}
-          <div className="mb-8">
-            <ViewToggle
-              activeView={activeView}
-              onViewChange={setActiveView}
-              certifiedCount={certifiedCount}
-              calculatedCount={calculatedCount}
-              loading={loading && !locationLoading}
-            />
-          </div>
-          
           {/* Content based on active view with suspense handling */}
           <Suspense fallback={<PageLoader />}>
             <div className="min-h-[300px]"> {/* Fixed height container prevents layout shift */}

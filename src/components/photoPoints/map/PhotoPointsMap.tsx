@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -14,22 +14,36 @@ const PhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
+  certifiedLocations: SharedAstroSpot[];
+  calculatedLocations: SharedAstroSpot[];
+  activeView: 'certified' | 'calculated'; 
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapReady?: () => void;
+  onLocationUpdate?: (latitude: number, longitude: number) => void;
   className?: string;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   userLocation,
   locations,
+  certifiedLocations,
+  calculatedLocations,
+  activeView,
   searchRadius,
   onLocationClick,
   onMapReady,
+  onLocationUpdate,
   className = "h-[500px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  
+  // Determine which locations to show based on active view
+  const displayedLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  
+  // If no filtered locations available, fall back to all locations
+  const locationsToShow = displayedLocations.length > 0 ? displayedLocations : locations;
   
   const {
     mapReady,
@@ -40,7 +54,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations,
+    locations: locationsToShow,
     searchRadius
   });
 
@@ -63,6 +77,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     setSelectedMapLocation({ latitude: lat, longitude: lng });
     
+    // Call the location update callback
+    if (onLocationUpdate) {
+      onLocationUpdate(lat, lng);
+    }
+    
     // Show toast to inform the user
     toast.info(t(
       "Selected new location",
@@ -81,7 +100,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     } catch (error) {
       console.error("Error calculating SIQS for selected location:", error);
     }
-  }, [t]);
+  }, [t, onLocationUpdate]);
+
+  // Reset selected location when user location changes
+  useEffect(() => {
+    if (userLocation) {
+      setSelectedMapLocation(null);
+    }
+  }, [userLocation]);
 
   return (
     <div className={className}>

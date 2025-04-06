@@ -112,7 +112,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       className="h-full w-full"
       whenReady={() => onMapReady()}
       scrollWheelZoom={true}
-      dragging={true}
       zoomControl={true}
     >
       <TileLayer

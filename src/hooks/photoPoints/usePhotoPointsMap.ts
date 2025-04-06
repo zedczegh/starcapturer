@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -28,7 +28,7 @@ export const usePhotoPointsMap = ({
     typeof location.longitude === 'number'
   );
 
-  // Get the map center coordinates
+  // Get the map center coordinates - prioritize user location
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
     : validLocations.length > 0
@@ -82,6 +82,19 @@ export const usePhotoPointsMap = ({
   // Calculate appropriate initial zoom level
   const initialZoom = getZoomLevel(searchRadius);
 
+  // Filter locations by type
+  const certifiedLocations = useCallback(() => {
+    return validLocations.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    );
+  }, [validLocations]);
+
+  const calculatedLocations = useCallback(() => {
+    return validLocations.filter(loc => 
+      !loc.isDarkSkyReserve && !loc.certification
+    );
+  }, [validLocations]);
+
   return {
     mapReady,
     handleMapReady,
@@ -89,6 +102,8 @@ export const usePhotoPointsMap = ({
     handleLocationClick,
     validLocations,
     mapCenter,
-    initialZoom
+    initialZoom,
+    certifiedLocations: certifiedLocations(),
+    calculatedLocations: calculatedLocations()
   };
 };

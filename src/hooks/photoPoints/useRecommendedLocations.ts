@@ -15,9 +15,12 @@ interface Location {
 // Maximum number of "load more" clicks allowed
 const MAX_LOAD_MORE_CLICKS = 2;
 
-export const useRecommendedLocations = (userLocation: Location | null) => {
+export const useRecommendedLocations = (
+  userLocation: Location | null,
+  initialRadius: number = 1000
+) => {
   const { t } = useLanguage();
-  const [searchRadius, setSearchRadius] = useState<number>(1000);
+  const [searchRadius, setSearchRadius] = useState<number>(initialRadius);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searching, setSearching] = useState<boolean>(false);
@@ -53,63 +56,68 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
                                userLocation.latitude === prevLocationRef.current.latitude &&
                                userLocation.longitude === prevLocationRef.current.longitude;
       
+      // Check if location has changed significantly
+      const locationChanged = !prevLocationRef.current ||
+        Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 ||
+        Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001;
+      
       // Record the current radius and location for comparison
       prevRadiusRef.current = searchRadius;
       prevLocationRef.current = userLocation;
       
-      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease}`);
+      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease && !locationChanged}`);
       
-      // Get all locations within radius
-      const results = await findLocationsWithinRadius(
+      // Get all locations within radius - separate certified and calculated with different radii
+      // For certified locations, use the full search radius
+      const certifiedResults = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        searchRadius,
+        true // Only get certified locations
+      );
+
+      // For calculated locations, use a more limited radius to maintain performance
+      const calculatedRadius = Math.min(searchRadius, 1000); // Cap calculated search at 1000km
+      const calculatedResults = await findCalculatedLocations(
+        userLocation.latitude,
+        userLocation.longitude,
+        calculatedRadius,
+        true, // Allow expansion
+        10,  // Limit
+        isRadiusIncrease && !locationChanged, // Preserve previous locations if radius increased without location change
+        isRadiusIncrease && !locationChanged ? previousLocationsRef.current : []
       );
       
-      if (results.length === 0) {
-        console.log("No locations found, trying to find calculated locations...");
-        // If no results at all, try to find some calculated locations
-        const calculatedResults = await findCalculatedLocations(
-          userLocation.latitude,
-          userLocation.longitude,
-          Math.min(searchRadius * 1.5, 10000),
-          true, // Allow expansion
-          10,  // Limit
-          isRadiusIncrease, // Preserve previous locations if radius increased
-          isRadiusIncrease ? previousLocationsRef.current : []
-        );
-        
-        if (calculatedResults.length > 0) {
-          // Sort by quality and distance
-          const sortedResults = sortLocationsByQuality(calculatedResults);
-          setLocations(sortedResults);
-          previousLocationsRef.current = sortedResults;
-          setHasMore(sortedResults.length >= 20);
-          setCanLoadMoreCalculated(true);
-          setLoadMoreClickCount(0); // Reset click counter
-          
-          // If we preserved locations, show a notification
-          if (isRadiusIncrease && previousLocationsRef.current.length > 0) {
-            toast.info(t(
-              "Search radius increased, previous locations preserved",
-              "搜索半径已增加，保留了之前的位置"
-            ));
-          }
-        } else {
-          setLocations([]);
-          previousLocationsRef.current = [];
-          setHasMore(false);
-          setCanLoadMoreCalculated(false);
-        }
+      // Combine the results
+      const combinedResults = [...certifiedResults, ...calculatedResults];
+      
+      if (combinedResults.length === 0) {
+        console.log("No locations found within the search radius");
+        setLocations([]);
+        previousLocationsRef.current = [];
+        setHasMore(false);
+        setCanLoadMoreCalculated(false);
       } else {
-        // For standard locations, we always apply the full algorithm
         // Sort by quality and distance
-        const sortedResults = sortLocationsByQuality(results);
+        const sortedResults = sortLocationsByQuality(combinedResults);
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
         setHasMore(sortedResults.length >= 20);
         setCanLoadMoreCalculated(true);
         setLoadMoreClickCount(0); // Reset click counter
+        
+        // If we preserved locations and location didn't change, show a notification
+        if (isRadiusIncrease && !locationChanged && previousLocationsRef.current.length > 0) {
+          toast.info(t(
+            "Search radius increased, previous locations preserved",
+            "搜索半径已增加，保留了之前的位置"
+          ));
+        } else if (locationChanged) {
+          toast.info(t(
+            "Location updated, showing new recommendations",
+            "位置已更新，显示新的推荐"
+          ));
+        }
       }
       
       setPage(1);
@@ -182,10 +190,11 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
       
       // Get more calculated locations, preserving existing ones
+      const calculatedRadius = Math.min(searchRadius, 1000); // Cap calculated search at 1000km
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
+        calculatedRadius,
         true, // Allow radius expansion
         10, // Get 10 more locations
         true, // Always preserve previous locations
@@ -245,7 +254,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   
   // Refresh SIQS data for locations
   const refreshSiqsData = useCallback(async () => {
-    if (!userLocation || locations.length === 0) {
+    if (!userLocation) {
       return;
     }
     
@@ -273,7 +282,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     } finally {
       setLoading(false);
     }
-  }, [loadLocations, locations.length, userLocation, t]);
+  }, [loadLocations, userLocation, t]);
   
   // Load locations when userLocation or searchRadius changes
   useEffect(() => {
@@ -283,8 +292,8 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       (userLocation && !prevLocationRef.current) ||
       (!userLocation && prevLocationRef.current) ||
       (userLocation && prevLocationRef.current && 
-        (userLocation.latitude !== prevLocationRef.current.latitude || 
-         userLocation.longitude !== prevLocationRef.current.longitude));
+        (Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 || 
+         Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001));
     
     if (userLocation && (radiusChanged || locationChanged)) {
       loadLocations();
