@@ -51,7 +51,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const { shouldRefresh, markRefreshComplete } = useRefreshManager(locationData);
   
   // Use the dedicated SIQS updater
-  const { resetUpdateState, updateSIQSForLocation } = useLocationSIQSUpdater(
+  const { resetUpdateState } = useLocationSIQSUpdater(
     locationData,
     forecastData,
     setLocationData,

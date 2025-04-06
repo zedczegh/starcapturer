@@ -19,7 +19,7 @@ export interface SIQSFactor {
   /** Normalized score after applying weights */
   normalizedScore?: number;
   
-  /** Description of the factor's impact */
+  /** Optional description of the factor's impact */
   description?: string;
   
   /** Original raw value (e.g., percentage, scale value) */

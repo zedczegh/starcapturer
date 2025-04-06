@@ -33,11 +33,6 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
         // Adjust the factor name to indicate nighttime
         const nighttimeName = language === 'zh' ? '夜间云层覆盖' : 'Nighttime Cloud Cover';
         
-        // Ensure there's a description
-        const description = factor.description || (language === 'zh' 
-          ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` 
-          : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%`);
-        
         // If nighttime cloud cover is 0%, ensure score is 10
         if (nighttimeValue === 0) {
           return { 
@@ -54,40 +49,49 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
           ...factor, 
           name: nighttimeName,
           // Leave score as is but update the description to show the nighttime value
-          description: description + (description.includes('影响') || description.includes('quality') ? '' : 
-            (language === 'zh' ? '，可能影响成像质量' : ', may affect imaging quality'))
+          description: language === 'zh' 
+            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description?.includes('影响') ? '，可能影响成像质量' : '')
+            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description?.includes('quality') ? ', may affect imaging quality' : '')
         };
       }
       
       // Ensure description exists
-      const cloudCoverDescription = factor.description || (language === 'zh' ? '云层覆盖数据' : 'Cloud cover data');
-      
-      // If description mentions 0%, ensure score is 10
-      if (cloudCoverDescription.includes("0%")) {
-        return { ...factor, description: cloudCoverDescription, score: 10 };
+      if (!factor.description) {
+        factor.description = language === 'zh' ? '云层覆盖数据' : 'Cloud cover data';
       }
       
-      // Return with ensured description
-      return { ...factor, description: cloudCoverDescription };
+      // If description mentions 0%, ensure score is 10
+      if (factor.description.includes("0%")) {
+        return { ...factor, score: 10 };
+      }
+      
+      // For high cloud cover, ensure we show the actual score (could be very low)
+      if (factor.description.includes("over 50%") || 
+          factor.description.includes("超过50%") ||
+          factor.description.includes("Heavy cloud") ||
+          factor.description.includes("重度云层")) {
+        return factor;
+      }
     }
     
     // For Chinese UI, ensure factor names are translated
     if (language === 'zh') {
-      if (factor.name === 'Cloud Cover') return { ...factor, name: '云层覆盖', description: factor.description || '云层覆盖' };
-      if (factor.name === 'Light Pollution') return { ...factor, name: '光污染', description: factor.description || '光污染' };
-      if (factor.name === 'Moon Phase') return { ...factor, name: '月相', description: factor.description || '月相' };
-      if (factor.name === 'Humidity') return { ...factor, name: '湿度', description: factor.description || '湿度' };
-      if (factor.name === 'Wind Speed') return { ...factor, name: '风速', description: factor.description || '风速' };
-      if (factor.name === 'Seeing Conditions') return { ...factor, name: '视宁度', description: factor.description || '视宁度' };
-      if (factor.name === 'Air Quality') return { ...factor, name: '空气质量', description: factor.description || '空气质量' };
-      if (factor.name === 'Clear Sky Rate') return { ...factor, name: '晴空率', description: factor.description || '晴空率' };
+      if (factor.name === 'Cloud Cover') return { ...factor, name: '云层覆盖' };
+      if (factor.name === 'Light Pollution') return { ...factor, name: '光污染' };
+      if (factor.name === 'Moon Phase') return { ...factor, name: '月相' };
+      if (factor.name === 'Humidity') return { ...factor, name: '湿度' };
+      if (factor.name === 'Wind Speed') return { ...factor, name: '风速' };
+      if (factor.name === 'Seeing Conditions') return { ...factor, name: '视宁度' };
+      if (factor.name === 'Air Quality') return { ...factor, name: '空气质量' };
+      if (factor.name === 'Clear Sky Rate') return { ...factor, name: '晴空率' };
     }
     
     // Ensure all factors have a description
-    return {
-      ...factor,
-      description: factor.description || factor.name
-    };
+    if (!factor.description) {
+      factor.description = factor.name;
+    }
+    
+    return factor;
   });
   
   // Sort factors to ensure Clear Sky Rate appears after Air Quality
