@@ -1,10 +1,9 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -24,11 +23,9 @@ export const usePhotoPointsMap = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  // Track location changes to avoid unnecessary recalculations
   useEffect(() => {
     if (!userLocation) return;
     
-    // Skip if location hasn't changed significantly
     if (
       previousLocationRef.current &&
       Math.abs(previousLocationRef.current.latitude - userLocation.latitude) < 0.01 &&
@@ -37,28 +34,23 @@ export const usePhotoPointsMap = ({
       return;
     }
     
-    // Update reference location
     previousLocationRef.current = userLocation;
     
   }, [userLocation]);
 
-  // Filter valid locations
   const validLocations = locations.filter(location => 
     location && 
     typeof location.latitude === 'number' && 
     typeof location.longitude === 'number'
   );
 
-  // Use enhanced locations when available, otherwise use filtered valid locations
   const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : validLocations;
   
-  // After locations change and map is ready, update with real-time SIQS
   useEffect(() => {
     if (!mapReady || !userLocation || !validLocations.length) return;
     
     const updateLocations = async () => {
       try {
-        // Determine type based on location properties
         const type = validLocations.some(loc => loc.isDarkSkyReserve || loc.certification) ? 
           'certified' : 'calculated';
           
@@ -80,25 +72,21 @@ export const usePhotoPointsMap = ({
     updateLocations();
   }, [validLocations, userLocation, mapReady, searchRadius]);
 
-  // Get the map center coordinates - prioritize user location
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
     : locationsToDisplay.length > 0
       ? [locationsToDisplay[0].latitude, locationsToDisplay[0].longitude]
-      : [39.9042, 116.4074]; // Default center (Beijing)
+      : [39.9042, 116.4074];
 
-  // Handle map ready event
   const handleMapReady = useCallback(() => {
     setMapReady(true);
   }, []);
 
-  // Handle location selection
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     setSelectedLocation(location);
     
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    // Navigate to location details page
     if (location && location.latitude && location.longitude) {
       navigate(`/location/${locationId}`, { 
         state: {
@@ -120,7 +108,6 @@ export const usePhotoPointsMap = ({
     }
   }, [navigate, t]);
 
-  // Calculate zoom level based on search radius
   const getZoomLevel = useCallback((radius: number) => {
     if (radius <= 50) return 10;
     if (radius <= 100) return 9;
@@ -131,7 +118,6 @@ export const usePhotoPointsMap = ({
     return 3;
   }, []);
 
-  // Calculate appropriate initial zoom level
   const initialZoom = getZoomLevel(searchRadius);
 
   return {

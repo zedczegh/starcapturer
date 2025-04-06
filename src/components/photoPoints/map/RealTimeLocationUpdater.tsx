@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Loader2, RefreshCw } from 'lucide-react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 interface RealTimeLocationUpdaterProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -23,6 +24,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const lastFetchRef = useRef<number>(0);
   const locationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const [cacheCleared, setCacheCleared] = useState<boolean>(false);
 
   // Update reference to track location changes
   useEffect(() => {
@@ -65,6 +67,20 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       setLoading(false);
     }
   }, [userLocation, t]);
+
+  // Clear location cache
+  const handleClearCache = useCallback(() => {
+    try {
+      clearLocationCache();
+      setCacheCleared(true);
+      toast.success(t("Location cache cleared", "位置缓存已清除"));
+      
+      // Reset flag after 3 seconds
+      setTimeout(() => setCacheCleared(false), 3000);
+    } catch (error) {
+      console.error("Error clearing location cache:", error);
+    }
+  }, [t]);
 
   // Automatically calculate SIQS when location changes
   useEffect(() => {
@@ -115,7 +131,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       <Button 
         size="sm" 
         variant="secondary"
-        className="bg-cosmic-800/80 hover:bg-cosmic-700/90 shadow-md"
+        className="bg-cosmic-800/80 hover:bg-cosmic-700/90 shadow-md border border-cosmic-700/30"
         onClick={handleGetCurrentLocation}
         disabled={loading}
       >
@@ -130,7 +146,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       <Button
         size="sm"
         variant="outline"
-        className="bg-cosmic-800/80 hover:bg-cosmic-700/90 text-primary-foreground shadow-md"
+        className="bg-cosmic-800/80 hover:bg-cosmic-700/90 text-primary-foreground shadow-md border border-cosmic-700/30"
         onClick={calculateCurrentSiqs}
         disabled={loading || !userLocation}
       >
@@ -142,8 +158,26 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         {t("Update SIQS", "更新SIQS")}
       </Button>
       
+      <Button
+        size="sm"
+        variant="outline"
+        className={`shadow-md border border-cosmic-700/30 ${
+          cacheCleared 
+            ? "bg-green-800/30 text-green-400 hover:bg-green-800/40" 
+            : "bg-cosmic-800/80 hover:bg-cosmic-700/90 text-primary-foreground"
+        }`}
+        onClick={handleClearCache}
+        disabled={loading || cacheCleared}
+      >
+        {cacheCleared ? (
+          t("Cache Cleared", "已清除缓存")
+        ) : (
+          t("Clear Cache", "清除缓存")
+        )}
+      </Button>
+      
       {realTimeSiqs !== null && (
-        <div className="bg-cosmic-800/80 rounded-md p-1.5 shadow-md flex items-center justify-center">
+        <div className="bg-cosmic-800/80 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30">
           <SiqsScoreBadge score={realTimeSiqs} loading={loading} />
         </div>
       )}

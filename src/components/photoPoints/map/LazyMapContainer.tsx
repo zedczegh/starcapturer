@@ -124,6 +124,7 @@ const LocationMarker = ({
     }
   }, [hoveredId, locationId]);
 
+  // Fix: Using the regular event props instead of eventHandlers object
   return (
     <Marker
       position={[location.latitude, location.longitude]}
@@ -136,11 +137,14 @@ const LocationMarker = ({
       }}
     >
       <Popup 
-        className="leaflet-popup-custom-compact"
-        closeButton={false}
-        closeOnClick={false}
-        autoClose={false}
-        autoPan={false}
+        // Fix: Use className as part of PopupOptions
+        options={{
+          className: "leaflet-popup-custom-compact",
+          closeButton: false,
+          closeOnClick: false,
+          autoClose: false,
+          autoPan: false
+        }}
       >
         <div className="p-1.5 max-w-[160px]">
           <div className="font-medium text-xs">
@@ -235,7 +239,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           icon={userMarkerIcon}
         >
           <Popup
-            className="leaflet-popup-custom"
+            options={{
+              className: "leaflet-popup-custom"
+            }}
           >
             <div className="p-1 leaflet-popup-custom">
               <strong>{t("Your Location", "您的位置")}</strong>

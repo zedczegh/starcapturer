@@ -4,7 +4,7 @@
 }
 
 .leaflet-popup-custom-compact {
-  max-width: 140px !important;
+  max-width: 120px !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -12,11 +12,17 @@
   border-radius: 6px;
 }
 
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .leaflet-popup-custom-compact .leaflet-popup-content-wrapper {
   background: rgba(20, 20, 30, 0.85) !important;
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
   border-radius: 6px;
   padding: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .leaflet-popup-custom-compact .leaflet-popup-content {
@@ -33,11 +39,13 @@
 /* Custom styles for popup interaction */
 .leaflet-marker-icon {
   transition: transform 0.2s ease, z-index 0.2s;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .leaflet-marker-icon:hover {
   transform: scale(1.2) !important;
   z-index: 1000 !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 /* Improve popup animation */
@@ -93,3 +101,14 @@
   opacity: 1 !important;
   transition-duration: 0.15s;
 }
+
+/* Make marker colors more vibrant */
+.custom-marker {
+  filter: brightness(1.1) contrast(1.1);
+}
+
+/* Add a subtle shadow to improve depth perception */
+.leaflet-tile-pane {
+  filter: contrast(1.05) brightness(0.98);
+}
+

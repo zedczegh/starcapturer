@@ -6,7 +6,7 @@ import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
-import { calculateRealTimeSiqs, batchCalculateSiqs } from "@/services/realTimeSiqsService";
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 import './MapStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
@@ -44,6 +44,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
   const mapInitializedRef = useRef(false);
   const lastClickTimeRef = useRef<number>(0);
+  const clickTimeoutRef = useRef<number | null>(null);
   const { hoveredLocationId, handleHover, getSiqsMarker } = useMapMarkers();
   
   // Always load certified locations in background as soon as component mounts
@@ -51,17 +52,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     if (!mapLoadedOnce && certifiedLocations.length > 0) {
       // Mark that we've done initial processing
       setMapLoadedOnce(true);
-      
-      // Calculate SIQS for all certified locations in batches to ensure they have scores
-      batchCalculateSiqs(certifiedLocations, 3).then(updatedCertified => {
-        console.log(`Processed ${updatedCertified.length} certified locations for map display`);
-      }).catch(err => {
-        console.error("Failed to process certified locations:", err);
-      });
     }
   }, [certifiedLocations, mapLoadedOnce]);
   
-  // Use the map hook
+  // Use the map hook with the selected location or user location
   const {
     mapReady,
     handleMapReady,
@@ -74,6 +68,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
     searchRadius
   });
+
+  // Reset selected location when userLocation changes dramatically
+  // This ensures we don't get stuck with an old selected location
+  useEffect(() => {
+    if (userLocation && selectedMapLocation) {
+      const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
+      const lngDiff = Math.abs(userLocation.longitude - selectedMapLocation.longitude);
+      
+      // If user location significantly changes, update the selected location
+      if (latDiff > 1 || lngDiff > 1) {
+        console.log("User location changed significantly, updating selected location");
+        setSelectedMapLocation(null);
+      }
+    }
+  }, [userLocation, selectedMapLocation]);
 
   // Callback for map being ready
   const handleMapReadyEvent = useCallback(() => {
@@ -91,8 +100,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Handle map click to set a new calculation point with rate limiting
-  const handleMapClick = useCallback(async (lat: number, lng: number) => {
+  // Handle map click to set a new calculation point with rate limiting and clearing timeout
+  const handleMapClick = useCallback((lat: number, lng: number) => {
     if (!mapInitializedRef.current) {
       console.log("Map not yet initialized, ignoring click");
       return;
@@ -100,42 +109,43 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     
     // Debounce rapid clicks
     const now = Date.now();
-    if (now - lastClickTimeRef.current < 1000) {
+    if (now - lastClickTimeRef.current < 500) {
       console.log("Click too soon after last click, ignoring");
       return;
     }
     lastClickTimeRef.current = now;
     
+    // Clear any existing click timeout
+    if (clickTimeoutRef.current) {
+      window.clearTimeout(clickTimeoutRef.current);
+    }
+    
     // Update selected location immediately
     const newLocation = { latitude: lat, longitude: lng };
     setSelectedMapLocation(newLocation);
     
-    // Call the location update callback
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
-      
-      // Show toast to inform the user
-      toast.info(t(
-        "Selected new location",
-        "已选择新位置"
-      ), {
-        description: t(
-          "Map will update to show locations around this point",
-          "地图将更新以显示此点周围的位置"
-        )
-      });
-      
-      // Try to calculate SIQS for this location in background
-      try {
-        const bortleScale = 4; // Default value
-        await calculateRealTimeSiqs(lat, lng, bortleScale);
-      } catch (error) {
-        console.error("Error calculating SIQS for selected location:", error);
+    // Call the location update callback after a short delay to prevent double-updating
+    clickTimeoutRef.current = window.setTimeout(() => {
+      if (onLocationUpdate) {
+        onLocationUpdate(lat, lng);
+        
+        // Show toast to inform the user
+        toast.info(t(
+          "Selected new location",
+          "已选择新位置"
+        ), {
+          description: t(
+            "Map will update to show locations around this point",
+            "地图将更新以显示此点周围的位置"
+          )
+        });
       }
-    }
+      clickTimeoutRef.current = null;
+    }, 100);
+    
   }, [t, onLocationUpdate]);
 
-  // Handle direct location update from controls
+  // Handle direct location update from controls without debounce
   const handleDirectLocationUpdate = useCallback((lat: number, lng: number) => {
     setSelectedMapLocation({ latitude: lat, longitude: lng });
     
@@ -143,6 +153,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       onLocationUpdate(lat, lng);
     }
   }, [onLocationUpdate]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        window.clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className={`${className} relative`}>

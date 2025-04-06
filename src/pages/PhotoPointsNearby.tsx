@@ -14,7 +14,8 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
-import { Map, List } from 'lucide-react';
+import { Map, List, RefreshCw } from 'lucide-react';
+import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 // Lazy load components that are not immediately visible
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
@@ -38,6 +39,7 @@ const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
+  const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // Get user location from coordinates, prioritize fresh coords over localStorage
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -59,7 +61,7 @@ const PhotoPointsNearby: React.FC = () => {
   
   // Update user location when coordinates change
   useEffect(() => {
-    if (coords) {
+    if (coords && !manualLocationOverride) {
       const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
       setUserLocation(newLocation);
       
@@ -71,11 +73,11 @@ const PhotoPointsNearby: React.FC = () => {
         console.error("Error saving location to localStorage:", err);
       }
     }
-  }, [coords]);
+  }, [coords, manualLocationOverride]);
   
   // Fallback to localStorage only if geolocation fails completely
   useEffect(() => {
-    if (locationError && !userLocation && locationLoadAttempts >= 3) {
+    if ((locationError || locationLoadAttempts >= 3) && !userLocation && !manualLocationOverride) {
       try {
         const savedLocation = localStorage.getItem('userLocation');
         if (savedLocation) {
@@ -89,9 +91,12 @@ const PhotoPointsNearby: React.FC = () => {
         console.error("Error loading saved location:", err);
       }
     }
-  }, [locationError, userLocation, locationLoadAttempts]);
+  }, [locationError, userLocation, locationLoadAttempts, manualLocationOverride]);
 
-  // Set up recommended locations with userLocation
+  // Get the actual location to use (prioritizing manual override)
+  const effectiveLocation = manualLocationOverride || userLocation;
+
+  // Set up recommended locations with effectiveLocation
   const {
     searchRadius,
     setSearchRadius,
@@ -105,7 +110,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks
-  } = useRecommendedLocations(userLocation, activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : DEFAULT_SEARCH_RADIUS);
+  } = useRecommendedLocations(effectiveLocation, activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : DEFAULT_SEARCH_RADIUS);
 
   // Process locations to separate certified and calculated
   const {
@@ -125,6 +130,11 @@ const PhotoPointsNearby: React.FC = () => {
   // Handle location update from map click - this should override any existing location
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     const newLocation = { latitude, longitude };
+    
+    // Set the manual override which takes precedence over geolocation
+    setManualLocationOverride(newLocation);
+    
+    // Also update userLocation for immediate UI update
     setUserLocation(newLocation);
     
     // Save to localStorage for other pages to use
@@ -135,14 +145,29 @@ const PhotoPointsNearby: React.FC = () => {
       console.error("Error saving location to localStorage:", err);
     }
     
-    toast.info(t(
-      "Using selected location",
-      "使用选定位置"
-    ));
+    // Clear location cache to ensure fresh data for the new location
+    try {
+      clearLocationCache();
+      console.log("Cleared location cache after location change");
+    } catch (err) {
+      console.error("Error clearing location cache:", err);
+    }
     
-    // Refresh data with the new location immediately
-    // This will trigger the useEffect in useRecommendedLocations
-  }, [t]);
+    // Force refresh of SIQS data with new location
+    refreshSiqsData();
+  }, [refreshSiqsData]);
+
+  // Handle refresh click - clear caches and get fresh data
+  const handleRefresh = useCallback(() => {
+    try {
+      clearLocationCache();
+      refreshSiqsData();
+      toast.success(t("Refreshing location data", "刷新位置数据中"));
+    } catch (err) {
+      console.error("Error refreshing data:", err);
+      toast.error(t("Error refreshing data", "刷新数据出错"));
+    }
+  }, [refreshSiqsData, t]);
 
   // Effect to update the search radius based on active view
   useEffect(() => {
@@ -182,6 +207,20 @@ const PhotoPointsNearby: React.FC = () => {
     setShowMap(prev => !prev);
   }, []);
 
+  // Reset manual location override
+  const handleResetLocation = useCallback(() => {
+    setManualLocationOverride(null);
+    if (coords) {
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      toast.success(t("Reset to current location", "重置为当前位置"));
+    } else {
+      getPosition();
+      toast.info(t("Getting your location...", "获取您的位置中..."));
+    }
+  }, [coords, getPosition, t]);
+
   // Mark initial load as complete after delay
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -196,9 +235,9 @@ const PhotoPointsNearby: React.FC = () => {
   return (
     <PhotoPointsLayout>
       <PhotoPointsHeader 
-        userLocation={userLocation}
+        userLocation={effectiveLocation}
         locationLoading={locationLoading}
-        getPosition={getPosition}
+        getPosition={handleResetLocation}
       />
       
       {/* Main filter section with improved toggle buttons */}
@@ -211,7 +250,16 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {/* View toggle between map and list */}
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between mb-4">
+        <Button 
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          className="shadow-sm hover:bg-muted/60"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" /> {t("Refresh Data", "刷新数据")}
+        </Button>
+        
         <Button 
           onClick={toggleMapView}
           variant="outline"
@@ -253,7 +301,7 @@ const PhotoPointsNearby: React.FC = () => {
         <Suspense fallback={<PageLoader />}>
           <div className="h-[600px] rounded-lg overflow-hidden border border-border shadow-lg">
             <PhotoPointsMap 
-              userLocation={userLocation}
+              userLocation={effectiveLocation}
               locations={locationsToShow}
               certifiedLocations={certifiedLocations}
               calculatedLocations={calculatedLocations}
