@@ -9,10 +9,15 @@ import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import PageLoader from '@/components/loaders/PageLoader';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 // Lazy load components that are not immediately visible
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
+const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 const PhotoPointsNearby: React.FC = () => {
   // Get user location
@@ -23,6 +28,9 @@ const PhotoPointsNearby: React.FC = () => {
   // UI state
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
+  const [showMap, setShowMap] = useState(false);
+  const { t } = useLanguage();
+  const navigate = useNavigate();
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
@@ -104,6 +112,21 @@ const PhotoPointsNearby: React.FC = () => {
     ((activeView === 'certified' && certifiedCount === 0) || 
      (activeView === 'calculated' && calculatedCount === 0));
   
+  // Handle click on a location marker
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (location && location.latitude && location.longitude) {
+      navigate(`/location/${location.id || 'custom'}`, { 
+        state: location 
+      });
+      toast.info(t("Opening location details", "正在打开位置详情"));
+    }
+  }, [navigate, t]);
+
+  // Toggle between map and list view
+  const toggleMapView = useCallback(() => {
+    setShowMap(prev => !prev);
+  }, []);
+  
   return (
     <PhotoPointsLayout>
       <PhotoPointsHeader 
@@ -111,6 +134,16 @@ const PhotoPointsNearby: React.FC = () => {
         locationLoading={locationLoading}
         getPosition={getPosition}
       />
+      
+      {/* View toggle between map and list */}
+      <div className="flex justify-end mb-4">
+        <button 
+          onClick={toggleMapView}
+          className="px-3 py-1 text-sm rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+        >
+          {showMap ? t("Show List", "显示列表") : t("Show Map", "显示地图")}
+        </button>
+      </div>
       
       {/* Distance filter with better spacing */}
       {userLocation && (
@@ -125,43 +158,58 @@ const PhotoPointsNearby: React.FC = () => {
         </div>
       )}
       
-      {/* Tab toggle - with stable positioning to prevent layout shifts */}
-      <div className="mb-8">
-        <ViewToggle
-          activeView={activeView}
-          onViewChange={setActiveView}
-          certifiedCount={certifiedCount}
-          calculatedCount={calculatedCount}
-          loading={isCurrentViewLoading}
-        />
-      </div>
-      
-      {/* Content based on active view with suspense handling */}
-      <Suspense fallback={<PageLoader />}>
-        <div className="min-h-[300px]"> {/* Fixed height container prevents layout shift */}
-          {activeView === 'certified' ? (
-            <DarkSkyLocations
-              locations={certifiedLocations}
-              loading={loading && !locationLoading}
-              initialLoad={initialLoad}
-            />
-          ) : (
-            <CalculatedLocations
-              locations={calculatedLocations}
-              loading={loading && !locationLoading}
-              hasMore={hasMore}
-              onLoadMore={loadMore}
-              onRefresh={refreshSiqsData}
+      {showMap ? (
+        <Suspense fallback={<PageLoader />}>
+          <div className="h-[600px] rounded-lg overflow-hidden border border-border">
+            <PhotoPointsMap 
+              userLocation={userLocation}
+              locations={locations}
               searchRadius={searchRadius}
-              initialLoad={initialLoad}
-              onLoadMoreCalculated={handleLoadMoreCalculated}
-              canLoadMoreCalculated={canLoadMoreCalculated}
-              loadMoreClickCount={loadMoreClickCount}
-              maxLoadMoreClicks={maxLoadMoreClicks}
+              onLocationClick={handleLocationClick}
             />
-          )}
-        </div>
-      </Suspense>
+          </div>
+        </Suspense>
+      ) : (
+        <>
+          {/* Tab toggle - with stable positioning to prevent layout shifts */}
+          <div className="mb-8">
+            <ViewToggle
+              activeView={activeView}
+              onViewChange={setActiveView}
+              certifiedCount={certifiedCount}
+              calculatedCount={calculatedCount}
+              loading={isCurrentViewLoading}
+            />
+          </div>
+          
+          {/* Content based on active view with suspense handling */}
+          <Suspense fallback={<PageLoader />}>
+            <div className="min-h-[300px]"> {/* Fixed height container prevents layout shift */}
+              {activeView === 'certified' ? (
+                <DarkSkyLocations
+                  locations={certifiedLocations}
+                  loading={loading && !locationLoading}
+                  initialLoad={initialLoad}
+                />
+              ) : (
+                <CalculatedLocations
+                  locations={calculatedLocations}
+                  loading={loading && !locationLoading}
+                  hasMore={hasMore}
+                  onLoadMore={loadMore}
+                  onRefresh={refreshSiqsData}
+                  searchRadius={searchRadius}
+                  initialLoad={initialLoad}
+                  onLoadMoreCalculated={handleLoadMoreCalculated}
+                  canLoadMoreCalculated={canLoadMoreCalculated}
+                  loadMoreClickCount={loadMoreClickCount}
+                  maxLoadMoreClicks={maxLoadMoreClicks}
+                />
+              )}
+            </div>
+          </Suspense>
+        </>
+      )}
     </PhotoPointsLayout>
   );
 };

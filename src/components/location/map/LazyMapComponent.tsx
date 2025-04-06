@@ -81,9 +81,10 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     <MapContainer
       center={position}
       zoom={5}
-      scrollWheelZoom={false}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       whenReady={() => onMapReady()}
+      scrollWheelZoom={true}
+      attributionControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

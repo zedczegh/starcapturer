@@ -24,7 +24,7 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
  * @param deg Angle in degrees
  * @returns Angle in radians
  */
-const deg2rad = (deg: number): number => {
+export const deg2rad = (deg: number): number => {
   return deg * (Math.PI / 180);
 };
 

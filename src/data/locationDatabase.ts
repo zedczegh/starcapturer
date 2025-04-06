@@ -1,4 +1,3 @@
-
 /**
  * Database of locations with accurate Bortle scale values
  * Data sourced from astronomical observations and light pollution maps
@@ -14,6 +13,7 @@ import { centralAsiaLocations } from './regions/centralAsiaLocations';
 import { chinaSuburbanLocations } from './regions/chinaSuburbanLocations';
 import { chinaMountainLocations } from './regions/chinaMountainLocations';
 import { darkSkyLocations } from './regions/darkSkyLocations';
+import { calculateDistance, deg2rad } from '@/utils/geoUtils';
 
 export interface LocationEntry {
   name: string;
@@ -37,8 +37,8 @@ export const locationDatabase: LocationEntry[] = [
   ...darkSkyLocations  // Add dark sky locations
 ];
 
-// Move distance calculation to a utility file to avoid duplication
-export { calculateDistance, deg2rad } from './utils/distanceCalculator';
+// Export utility functions from geoUtils to avoid duplication
+export { calculateDistance, deg2rad } from '@/utils/geoUtils';
 
 /**
  * Find the closest location to given coordinates
