@@ -30,10 +30,18 @@ declare module 'react-leaflet' {
   export interface MarkerProps extends L.MarkerOptions {
     position: L.LatLngExpression;
     icon?: L.Icon | L.DivIcon;
+    onClick?: () => void;
     children?: React.ReactNode;
   }
 
   export interface PopupProps extends L.PopupOptions {
+    children?: React.ReactNode;
+  }
+  
+  export interface CircleProps {
+    center: L.LatLngExpression;
+    radius: number;
+    pathOptions?: L.PathOptions;
     children?: React.ReactNode;
   }
 
@@ -41,6 +49,7 @@ declare module 'react-leaflet' {
   export class TileLayer extends React.Component<TileLayerProps> {}
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
+  export class Circle extends React.Component<CircleProps> {}
   
   export function useMap(): L.Map;
 }

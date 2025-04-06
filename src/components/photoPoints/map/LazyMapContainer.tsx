@@ -1,16 +1,24 @@
 
 import React, { useRef, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { createCustomMarker, configureLeaflet } from "@/components/location/map/MapMarkerUtils";
+import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
 import SiqsScoreBadge from "../cards/SiqsScoreBadge";
-import { formatSIQSScoreForDisplay } from "@/hooks/siqs/siqsCalculationUtils";
 import L from "leaflet";
 
-// Configure leaflet (only runs on client)
-configureLeaflet();
+// Configure Leaflet (moved directly here from the import)
+// This is necessary because Leaflet's default icon paths are different in a bundled environment
+if (typeof window !== 'undefined') {
+  // Only run this on client-side
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  });
+}
 
 // Component to handle map events and interactions
 const MapController = ({ 
@@ -97,6 +105,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const locationMarkerIcon = createCustomMarker('#10b981'); // Green for certified locations
   const calculatedMarkerIcon = createCustomMarker('#f59e0b'); // Amber for calculated locations
 
+  // Fixed: Create click handler factory for markers
+  const createClickHandler = (location: SharedAstroSpot) => {
+    if (!onLocationClick) return undefined;
+    return () => onLocationClick(location);
+  };
+
   return (
     <MapContainer
       center={center}
@@ -137,9 +151,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       
       {/* Search radius visualization as a faint circle */}
       {userLocation && searchRadius && (
-        <CircleMarker 
+        <Circle 
           center={[userLocation.latitude, userLocation.longitude]}
-          radius={50} // Fixed visual size
+          radius={searchRadius * 1000} // Convert km to meters for circle radius
           pathOptions={{ 
             color: '#3b82f6',
             fillColor: '#3b82f6',
@@ -161,17 +175,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           ? locationMarkerIcon 
           : calculatedMarkerIcon;
         
-        // Create event handlers
-        const eventHandlers = onLocationClick 
-          ? { click: () => onLocationClick(location) }
-          : {};
+        // Fixed: Create onClick handler instead of using eventHandlers prop
+        const clickHandler = createClickHandler(location);
         
         return (
           <Marker
             key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
             position={[location.latitude, location.longitude]}
             icon={icon}
-            eventHandlers={eventHandlers}
+            // Fixed: Directly use onClick instead of eventHandlers
+            onClick={clickHandler}
           >
             <Popup>
               <div className="p-1 max-w-[200px]">
