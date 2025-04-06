@@ -169,7 +169,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             key={marker.id}
             position={marker.position}
             icon={markerIcon}
-            eventHandlers={marker.onClick ? { click: marker.onClick } : {}}
+            eventHandlers={marker.onClick ? { click: marker.onClick } : undefined}
           >
             {marker.popup && (
               <Popup>

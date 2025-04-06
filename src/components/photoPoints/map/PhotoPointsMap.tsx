@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { SiqsScoreBadge } from '@/components/photoPoints/cards/SiqsScoreBadge';
 import LazyMapContainer from './LazyMapContainer';
 import { formatSIQSScore } from '@/utils/geoUtils';
-import { calculateDistance } from '@/data/utils/distanceCalculator';
+import { getProgressColor } from '@/components/siqs/utils/progressColor';
+import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 
 interface PhotoPointsMapProps {
   locations: SharedAstroSpot[];
@@ -26,69 +26,30 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   currentSiqs
 }) => {
   const { t } = useLanguage();
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  
+  // Use our dedicated map hook
+  const {
+    mapLoaded,
+    selectedLocationId,
+    mapPosition,
+    getInitialZoom,
+    filteredLocations,
+    handleMapReady,
+    handleLocationSelect
+  } = usePhotoPointsMap({
+    locations,
+    userLocation,
+    currentSiqs: currentSiqs || null
+  });
 
-  // Calculate actual distances for all locations when user location changes
-  const locationsWithDistance = useMemo(() => {
-    if (!userLocation) return locations;
-    
-    return locations.map(location => {
-      if (location.distance !== undefined) return location;
-      
-      const distance = calculateDistance(
-        userLocation.latitude, 
-        userLocation.longitude, 
-        location.latitude, 
-        location.longitude
-      );
-      
-      return {
-        ...location,
-        distance
-      };
-    });
-  }, [locations, userLocation]);
-
-  // Handle map ready event
-  const handleMapReady = useCallback(() => {
-    setMapLoaded(true);
-  }, []);
+  // Calculate zoom level based on search radius
+  const initialZoom = getInitialZoom(searchRadius);
 
   // Handle location selection
-  const handleLocationSelect = useCallback((location: SharedAstroSpot) => {
-    setSelectedLocationId(location.id || `loc-${location.latitude}-${location.longitude}`);
-    onSelectLocation(location);
-  }, [onSelectLocation]);
-
-  // Prepare map center position
-  const mapPosition = useMemo(() => {
-    if (userLocation) {
-      return [userLocation.latitude, userLocation.longitude] as [number, number];
-    }
-    // Default position if no user location
-    return [39.9, 116.3] as [number, number];
-  }, [userLocation]);
-
-  // Calculate initial zoom level based on search radius
-  const initialZoom = useMemo(() => {
-    if (searchRadius <= 200) return 9;
-    if (searchRadius <= 500) return 7;
-    if (searchRadius <= 1000) return 6;
-    return 5;  // Default for larger areas
-  }, [searchRadius]);
-
-  // Filter locations to only show ones with better SIQS than current
-  const filteredLocations = useMemo(() => {
-    if (!currentSiqs) return locationsWithDistance;
-    
-    // Include all certified locations and calculated locations with higher SIQS
-    return locationsWithDistance.filter(loc => 
-      loc.isDarkSkyReserve || 
-      loc.certification || 
-      (loc.siqs && loc.siqs > currentSiqs)
-    );
-  }, [locationsWithDistance, currentSiqs]);
+  const handleSelectLocationWrapper = useCallback((location: SharedAstroSpot) => {
+    const selectedLocation = handleLocationSelect(location);
+    onSelectLocation(selectedLocation);
+  }, [handleLocationSelect, onSelectLocation]);
 
   return (
     <div className="relative h-[500px] md:h-[600px] w-full rounded-lg overflow-hidden border border-border/30 bg-background/50 shadow-sm">
@@ -113,7 +74,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           icon: location.isDarkSkyReserve || location.certification ? 'dark-sky' : 'calculated',
           isSelected: location.id === selectedLocationId || 
                      `loc-${location.latitude}-${location.longitude}` === selectedLocationId,
-          onClick: () => handleLocationSelect(location),
+          onClick: () => handleSelectLocationWrapper(location),
           popup: {
             title: location.name,
             description: location.isDarkSkyReserve
@@ -123,20 +84,24 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
                 : t("Calculated Viewing Location", "计算观测位置"),
             content: (
               <div className="flex flex-col space-y-1 pt-1">
-                <div className="flex items-center">
-                  <span className="text-xs text-muted-foreground mr-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
                     {t("SIQS", "SIQS")}:
                   </span>
-                  <span className="text-sm font-medium text-yellow-500">
-                    {formatSIQSScore(location.siqs)}
-                  </span>
+                  <div className="flex items-center">
+                    <div className={`px-2 py-0.5 rounded-full text-xs font-medium`} 
+                         style={{ backgroundColor: `${getProgressColor(location.siqs || 0)}30`, 
+                                  color: getProgressColor(location.siqs || 0) }}>
+                      {formatSIQSScore(location.siqs)}
+                    </div>
+                  </div>
                 </div>
                 {location.distance !== undefined && (
-                  <div className="flex items-center">
-                    <span className="text-xs text-muted-foreground mr-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
                       {t("Distance", "距离")}:
                     </span>
-                    <span className="text-sm">
+                    <span className="text-xs">
                       {Math.round(location.distance)} km
                     </span>
                   </div>
@@ -151,7 +116,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           }
         }))}
         userLocation={userLocation ? [userLocation.latitude, userLocation.longitude] : undefined}
-        searchRadius={searchRadius} // Properly scale the radius for visualization
+        searchRadius={searchRadius}
         onMapReady={handleMapReady}
       />
     </div>
