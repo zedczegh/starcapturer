@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, MapPin, Sun, CloudSun, GlobeLock, CloudSnow, Moon, Stars, Camera, Telescope, ExternalLink, Mountain, Award } from "lucide-react";
+import { Sparkles, MapPin, Sun, CloudSun, GlobeLock, CloudSnow, Moon, Stars, Camera, Telescope, ExternalLink } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -40,30 +40,6 @@ export const AboutContent = () => {
               {t("We're passionate about making astronomy accessible to everyone, from beginners to professionals. Our 2025 goal is to create the world's largest community of stargazers who can share their experiences and dark sky locations.", 
                 "我们热衷于让天文学变得人人可及，从初学者到专业人士。我们2025年的目标是创建全球最大的观星者社区，人们可以在这里分享他们的经验和暗空地点。")}
             </p>
-            
-            <div className="mt-6 flex flex-wrap gap-4">
-              <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 p-4 rounded-md border border-blue-500/20 flex-1 min-w-[250px]">
-                <h4 className="text-sm font-semibold mb-2 text-cosmic-100 flex items-center">
-                  <Award className="h-4 w-4 mr-1.5 text-blue-400" />
-                  {t("Our Mission", "我们的使命")}
-                </h4>
-                <p className="text-sm text-cosmic-200">
-                  {t("To democratize access to the night sky by providing accurate, real-time data that helps anyone find optimal stargazing conditions anywhere on Earth.", 
-                    "通过提供准确、实时的数据，帮助任何人在地球上任何地方找到最佳观星条件，从而使夜空观测变得更加普及。")}
-                </p>
-              </div>
-              
-              <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-4 rounded-md border border-purple-500/20 flex-1 min-w-[250px]">
-                <h4 className="text-sm font-semibold mb-2 text-cosmic-100 flex items-center">
-                  <Mountain className="h-4 w-4 mr-1.5 text-purple-400" />
-                  {t("Terrain-Aware Technology", "地形感知技术")}
-                </h4>
-                <p className="text-sm text-cosmic-200">
-                  {t("Our algorithms account for elevation, terrain type, and geographic features to provide more accurate sky quality predictions than ever before.", 
-                    "我们的算法考虑了海拔、地形类型和地理特征，提供比以往更准确的天空质量预测。")}
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -103,8 +79,8 @@ export const AboutContent = () => {
                   <div>
                     <h5 className="text-sm font-medium text-cosmic-100">{t("Light Pollution", "光污染")}</h5>
                     <p className="text-xs text-cosmic-300 mt-1">
-                      {t("Bortle scale measurements (1-9) with terrain correction to show accurate darkness levels at your location.", 
-                        "波特尔量表测量（1-9）结合地形校正，准确显示您所在位置的黑暗程度。")}
+                      {t("Bortle scale measurements (1-9) show how dark the sky is at your location.", 
+                        "波特尔量表测量（1-9）显示您所在位置的天空有多暗。")}
                     </p>
                   </div>
                 </div>
@@ -141,17 +117,6 @@ export const AboutContent = () => {
                     </p>
                   </div>
                 </div>
-                
-                <div className="bg-cosmic-800/30 p-3 rounded-md border border-cosmic-700/30 flex items-start">
-                  <Mountain className="h-5 w-5 mr-2 mt-0.5 text-emerald-400 flex-shrink-0" />
-                  <div>
-                    <h5 className="text-sm font-medium text-cosmic-100">{t("Terrain Analysis", "地形分析")}</h5>
-                    <p className="text-xs text-cosmic-300 mt-1">
-                      {t("Evaluation of elevation and terrain type for better light pollution accuracy.", 
-                        "评估海拔和地形类型，以提供更准确的光污染数据。")}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
             
@@ -180,13 +145,6 @@ export const AboutContent = () => {
                   <span>
                     {t("Global network of verified dark sky locations with local weather stations", 
                       "全球经过验证的暗空位置网络，配备本地气象站")}
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <Mountain className="h-4 w-4 mr-2 mt-0.5 text-teal-400 flex-shrink-0" />
-                  <span>
-                    {t("Real-time terrain-adjusted light pollution mapping with satellite verification", 
-                      "基于卫星验证的实时地形调整光污染地图")}
                   </span>
                 </li>
               </ul>
@@ -268,24 +226,6 @@ export const AboutContent = () => {
                       {t("We've calibrated our measurements against professional sky quality meters (SQMs) and collaborated with astronomers worldwide to ensure our results align with real-world observations.", 
                         "我们已经根据专业的天空质量仪（SQMs）校准了我们的测量，并与世界各地的天文学家合作，以确保我们的结果与现实世界的观测一致。")}
                     </p>
-                    
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-cosmic-800/30 p-3 rounded-md border border-cosmic-700/30">
-                        <h5 className="text-xs font-medium text-cosmic-100">{t("Terrain Correction", "地形校正")}</h5>
-                        <p className="text-xs text-cosmic-300 mt-1">
-                          {t("We adjust light pollution readings based on elevation and terrain type to account for local geography.", 
-                            "我们根据海拔和地形类型调整光污染读数，以考虑当地地理因素。")}
-                        </p>
-                      </div>
-                      
-                      <div className="bg-cosmic-800/30 p-3 rounded-md border border-cosmic-700/30">
-                        <h5 className="text-xs font-medium text-cosmic-100">{t("Nighttime Forecast", "夜间预报")}</h5>
-                        <p className="text-xs text-cosmic-300 mt-1">
-                          {t("We separate evening (6PM-12AM) and morning (1AM-8AM) cloud forecasts for better imaging planning.", 
-                            "我们分别预报傍晚（下午6点至午夜12点）和清晨（凌晨1点至早上8点）的云层，以便更好地规划成像。")}
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
