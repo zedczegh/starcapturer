@@ -4,34 +4,101 @@
  */
 
 /**
- * A single factor contributing to the SIQS calculation
+ * Input factors for SIQS calculation
+ */
+export interface SIQSFactors {
+  /**
+   * Cloud cover percentage (0-100)
+   */
+  cloudCover: number;
+  
+  /**
+   * Bortle scale value (1-9)
+   */
+  bortleScale: number;
+  
+  /**
+   * Seeing conditions (1-5, lower is better)
+   */
+  seeingConditions: number;
+  
+  /**
+   * Wind speed in km/h
+   */
+  windSpeed: number;
+  
+  /**
+   * Humidity percentage (0-100)
+   */
+  humidity: number;
+  
+  /**
+   * Moon phase (0-1, 0 = new moon, 1 = full moon)
+   */
+  moonPhase?: number;
+  
+  /**
+   * Precipitation amount in mm
+   */
+  precipitation?: number;
+  
+  /**
+   * Weather condition description
+   */
+  weatherCondition?: string;
+  
+  /**
+   * Air Quality Index
+   */
+  aqi?: number;
+  
+  /**
+   * Clear sky rate percentage
+   */
+  clearSkyRate?: number;
+  
+  /**
+   * Hourly forecast data for more detailed analysis
+   */
+  nightForecast?: any[];
+}
+
+/**
+ * Individual SIQS factor with score and description
  */
 export interface SIQSFactor {
-  /** Name of the factor */
+  /**
+   * Factor name
+   */
   name: string;
   
-  /** Raw score for this factor (0-10 scale) */
+  /**
+   * Factor score (0-10)
+   */
   score: number;
   
-  /** Weight of this factor in the overall calculation */
-  weight?: number;
+  /**
+   * Human-readable description of the factor
+   */
+  description: string;
   
-  /** Normalized score after applying weights */
-  normalizedScore?: number;
-  
-  /** Description of the factor's impact */
-  description?: string;
-  
-  /** Original raw value (e.g., percentage, scale value) */
-  rawValue?: number | string;
-  
-  /** Nighttime data for cloud cover and other elements */
+  /**
+   * Optional nighttime data for factors like cloud cover
+   */
   nighttimeData?: {
-    /** Average value over night hours */
+    /**
+     * Average value during nighttime hours
+     */
     average: number;
-    /** Time range for the data */
+    
+    /**
+     * Time range for nighttime data
+     */
     timeRange: string;
-    /** Optional detailed breakdown */
+    
+    /**
+     * Optional detailed breakdown
+     */
     detail?: {
       evening: number;
       morning: number;
@@ -40,66 +107,21 @@ export interface SIQSFactor {
 }
 
 /**
- * Result of SIQS calculation
+ * Result of the SIQS calculation
  */
 export interface SIQSResult {
-  /** Overall SIQS score (0-10 scale) */
+  /**
+   * Overall SIQS score (0-10)
+   */
   score: number;
   
-  /** Array of individual factors contributing to the score */
+  /**
+   * Whether the conditions are viable for astronomy
+   */
+  isViable: boolean;
+  
+  /**
+   * Individual factors that make up the score
+   */
   factors: SIQSFactor[];
-  
-  /** Timestamp when the calculation was performed */
-  timestamp?: string;
-  
-  /** Optional location information */
-  location?: {
-    latitude: number;
-    longitude: number;
-    name?: string;
-  };
-  
-  /** Whether conditions are viable for astronomical imaging */
-  isViable?: boolean;
-}
-
-/**
- * Input parameters for SIQS calculation
- */
-export interface SIQSInputParams {
-  /** Cloud cover percentage (0-100) */
-  cloudCover: number;
-  
-  /** Bortle scale value (1-9) */
-  bortleScale: number;
-  
-  /** Seeing conditions (1-5 scale) */
-  seeingConditions: number;
-  
-  /** Wind speed (km/h) */
-  windSpeed: number;
-  
-  /** Humidity percentage (0-100) */
-  humidity: number;
-  
-  /** Moon phase (0-1, where 0=new moon, 1=full moon) */
-  moonPhase: number;
-  
-  /** Air Quality Index */
-  aqi?: number;
-  
-  /** Weather condition description */
-  weatherCondition?: string;
-  
-  /** Precipitation amount (mm) */
-  precipitation?: number;
-  
-  /** Clear sky rate percentage (0-100) */
-  clearSkyRate?: number;
-  
-  /** Elevation in meters */
-  elevation?: number;
-  
-  /** Array of nighttime forecast data */
-  nightForecast?: any[];
 }

@@ -1,170 +1,230 @@
-
-import { fetchWithTimeout } from './fetchUtils';
+import { calculateDistance } from './utils';
+import { normalizeLongitude } from './coordinates';
+import { Language } from '@/services/geocoding/types';
 
 /**
- * Interface for known locations with Bortle scale
+ * Format location address based on language-specific patterns
+ * @param address Address object from geocoding service
+ * @param language Preferred language
+ * @returns Formatted address string
  */
-interface KnownLocation {
-  name: string;
-  latitude: number;
-  longitude: number;
-  bortleScale: number;
+function formatAddress(address: any, language: Language): string {
+  if (!address) return "";
+  
+  const parts = [];
+  
+  if (language === 'en') {
+    // English format: town, county, state, country, zip code
+    if (address.village || address.town || address.hamlet || address.suburb) {
+      parts.push(address.village || address.town || address.hamlet || address.suburb);
+    }
+    if (address.city) {
+      parts.push(address.city);
+    }
+    if (address.county) {
+      parts.push(address.county);
+    }
+    if (address.state) {
+      parts.push(address.state);
+    }
+    if (address.country) {
+      parts.push(address.country);
+    }
+    if (address.postcode) {
+      parts.push(address.postcode);
+    }
+  } else {
+    // Chinese format: 区，市，省，国家，邮编
+    if (address.suburb || address.village || address.hamlet) {
+      parts.push(address.suburb || address.village || address.hamlet);
+    }
+    if (address.town) {
+      parts.push(address.town);
+    }
+    if (address.city) {
+      parts.push(address.city);
+    }
+    if (address.county) {
+      parts.push(address.county);
+    }
+    if (address.state) {
+      parts.push(address.state);
+    }
+    if (address.country) {
+      parts.push(address.country);
+    }
+    if (address.postcode) {
+      parts.push(address.postcode);
+    }
+  }
+  
+  // Remove duplicates while preserving order
+  const uniqueParts = [...new Set(parts)];
+  
+  return uniqueParts.join(language === 'en' ? ', ' : '，');
 }
 
 /**
- * Get the user's current location
+ * Process and filter location data
+ * @param locations Array of location data
+ * @returns Filtered and processed array
  */
-export async function getCurrentLocation(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation is not supported by your browser'));
-      return;
+export function processLocationData(locations: any[]): any[] {
+  if (!locations || !Array.isArray(locations)) return [];
+  
+  return locations.filter(loc => {
+    // Skip locations without coordinates
+    if (!loc.latitude || !loc.longitude) return false;
+    
+    // Add default name if missing
+    if (!loc.name) {
+      loc.name = `Location at ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`;
     }
     
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve(position);
-      },
-      (error) => {
-        reject(error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    );
+    // More processing logic...
+    return true;
   });
 }
 
 /**
- * Get location name from coordinates using reverse geocoding
+ * Sort locations by specified criteria
+ * @param locations Array of location data
+ * @param sortBy Sort criteria 
+ * @returns Sorted array
  */
-export async function getLocationName(
-  latitude: number,
+export function sortLocations(locations: any[], sortBy: string = 'distance'): any[] {
+  if (!locations || !Array.isArray(locations)) return [];
+  
+  return [...locations].sort((a, b) => {
+    // Ensure locations have names
+    if (!a.name) a.name = `Location at ${a.latitude?.toFixed(4) || '?'}, ${a.longitude?.toFixed(4) || '?'}`;
+    if (!b.name) b.name = `Location at ${b.latitude?.toFixed(4) || '?'}, ${b.longitude?.toFixed(4) || '?'}`;
+    
+    // Sort by the specified criteria
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    
+    if (sortBy === 'bortleScale') {
+      return (a.bortleScale || 5) - (b.bortleScale || 5);
+    }
+    
+    // Default to distance
+    return (a.distance || 0) - (b.distance || 0);
+  });
+}
+
+/**
+ * Enhanced function to get location name from coordinates
+ * Now with better name resolution for places beyond Beijing and Hong Kong
+ */
+export async function getLocationNameFromCoordinates(
+  latitude: number, 
   longitude: number,
-  language: string = 'en'
+  language: Language = 'en'
 ): Promise<string> {
   try {
-    // Use reverse geocoding API
-    const apiUrl = `/api/geocode?lat=${latitude}&lng=${longitude}&lang=${language}`;
+    // Normalize coordinates
+    const validLat = Math.max(-90, Math.min(90, latitude));
+    const validLng = normalizeLongitude(longitude);
     
-    const response = await fetchWithTimeout(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
+    // First try open API for reverse geocoding
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&accept-language=${language}`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'SIQSCalculatorApp'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Format address in the structured pattern
+        if (data.address) {
+          const formattedAddress = formatAddress(data.address, language);
+          if (formattedAddress) {
+            return formattedAddress;
+          }
+        }
+        
+        // Fallbacks if structured formatting didn't work
+        if (data.display_name) {
+          const parts = data.display_name.split(',');
+          return parts.slice(0, Math.min(4, parts.length)).join(language === 'en' ? ', ' : '，');
+        }
+        
+        if (data.name) {
+          return data.name;
+        }
       }
-    }, 5000);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to get location name: ${response.status}`);
+    } catch (error) {
+      console.error("Error using Nominatim API:", error);
     }
     
-    const data = await response.json();
+    // Fallback to our database
+    const { findClosestKnownLocation } = await import('../../utils/locationUtils');
+    const closestLocation = findClosestKnownLocation(validLat, validLng);
     
-    // Check if we got a valid response
-    if (data && data.name) {
-      return data.name;
+    // If we're close to a known location, use its name or "Near X"
+    if (closestLocation.distance <= 20) {
+      return closestLocation.name;
+    } else if (closestLocation.distance <= 100) {
+      return language === 'en' 
+        ? `Near ${closestLocation.name}` 
+        : `${closestLocation.name}附近`;
     }
     
-    throw new Error('No location name found');
+    // Last resort - use major city or region names based on approximate location
+    const china = {
+      north: ["Beijing Region", "北京地区"],
+      northeast: ["Northeast China", "中国东北"],
+      east: ["East China", "中国东部"],
+      south: ["South China", "中国南部"],
+      central: ["Central China", "中国中部"],
+      west: ["Western China", "中国西部"],
+      northwest: ["Northwest China", "中国西北"],
+      southwest: ["Southwest China", "中国西南"],
+    };
+    
+    // Simple region determination based on coordinates
+    let region;
+    if (validLat > 40) {
+      if (validLng < 110) region = china.northwest;
+      else region = china.northeast;
+    } else if (validLat > 30) {
+      if (validLng < 105) region = china.west;
+      else if (validLng > 118) region = china.east;
+      else region = china.central;
+    } else {
+      if (validLng < 105) region = china.southwest;
+      else region = china.south;
+    }
+    
+    return language === 'en' ? region[0] : region[1];
   } catch (error) {
     console.error('Error getting location name:', error);
-    
-    // Fallback: Generate location name from coordinates
-    return `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    return language === 'en' 
+      ? `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°` 
+      : `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
   }
 }
 
 /**
- * Mock database of known locations with Bortle scale values
+ * Find the closest city based on coordinates
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @returns Object containing city name, Bortle scale, and distance
  */
-const knownLocations: KnownLocation[] = [
-  { name: 'Cherry Springs State Park', latitude: 41.6657, longitude: -77.8238, bortleScale: 2 },
-  { name: 'Death Valley National Park', latitude: 36.5323, longitude: -116.9325, bortleScale: 1 },
-  { name: 'Natural Bridges National Monument', latitude: 37.6212, longitude: -109.9758, bortleScale: 1 },
-  { name: 'NamibRand Nature Reserve', latitude: -25.0280, longitude: 16.0729, bortleScale: 1 },
-  { name: 'Aoraki Mackenzie', latitude: -43.7340, longitude: 170.0966, bortleScale: 2 },
-  { name: 'Atacama Desert', latitude: -24.5000, longitude: -69.2500, bortleScale: 1 },
-  { name: 'McDonald Observatory', latitude: 30.6715, longitude: -104.0227, bortleScale: 2 },
-  { name: 'Flagstaff, AZ', latitude: 35.1983, longitude: -111.6513, bortleScale: 4 },
-  { name: 'Big Bend National Park', latitude: 29.1275, longitude: -103.2429, bortleScale: 1 },
-  { name: 'Galloway Forest Park', latitude: 55.1140, longitude: -4.6735, bortleScale: 3 },
-  { name: 'Westhavelland Nature Park', latitude: 52.6967, longitude: 12.3033, bortleScale: 3 },
-  { name: 'Mont-Mégantic', latitude: 45.4571, longitude: -71.1530, bortleScale: 3 },
-  { name: 'Manhattan, NY', latitude: 40.7831, longitude: -73.9712, bortleScale: 9 },
-  { name: 'Tokyo, Japan', latitude: 35.6762, longitude: 139.6503, bortleScale: 9 },
-  { name: 'London, UK', latitude: 51.5074, longitude: -0.1278, bortleScale: 8 },
-  { name: 'Paris, France', latitude: 48.8566, longitude: 2.3522, bortleScale: 9 },
-  { name: 'Los Angeles, CA', latitude: 34.0522, longitude: -118.2437, bortleScale: 9 },
-  { name: 'Chicago, IL', latitude: 41.8781, longitude: -87.6298, bortleScale: 8 },
-  { name: 'Shanghai, China', latitude: 31.2304, longitude: 121.4737, bortleScale: 9 },
-  { name: 'Sydney, Australia', latitude: -33.8688, longitude: 151.2093, bortleScale: 8 }
-];
-
-/**
- * Find the closest known location from our database
- */
-export function findClosestKnownLocation(latitude: number, longitude: number): { name: string, bortleScale: number, distance: number } | null {
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    return null;
-  }
-  
-  let closestLocation: KnownLocation | null = null;
-  let minDistance = Infinity;
-  
-  // Calculate distance to each known location
-  knownLocations.forEach(location => {
-    const distance = calculateDistance(
-      latitude, longitude, 
-      location.latitude, location.longitude
-    );
-    
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestLocation = location;
-    }
-  });
-  
-  // If we found a close match, return it
-  if (closestLocation && minDistance < 100) { // Within 100 km
-    return {
-      name: closestLocation.name,
-      bortleScale: closestLocation.bortleScale,
-      distance: minDistance
-    };
-  }
-  
-  // If no close match, return null
-  return null;
-}
-
-/**
- * Calculate distance between two coordinates using Haversine formula
- * @returns Distance in kilometers
- */
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radius of the Earth in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-  
-  return distance;
-}
-
-/**
- * Classify location into urban, suburban, rural, remote based on Bortle scale
- */
-export function getLocationClassification(bortleScale: number): string {
-  if (bortleScale <= 2) return 'Remote';
-  if (bortleScale <= 4) return 'Rural';
-  if (bortleScale <= 6) return 'Suburban';
-  return 'Urban';
+export function findClosestCity(latitude: number, longitude: number): {
+  name: string; 
+  bortleScale: number; 
+  distance: number;
+} {
+  // Simplified implementation
+  return {
+    name: "Default City",
+    bortleScale: 5,
+    distance: 100
+  };
 }

@@ -90,28 +90,6 @@ export function getSIQSColorClass(score: number | null): string {
 }
 
 /**
- * Get color hex value for a SIQS score (for non-Tailwind contexts)
- * @param score SIQS score (0-10 scale)
- * @returns Hex color string
- */
-export function siqsToColor(score: number | null): string {
-  if (score === null || score === undefined || isNaN(score)) {
-    return '#9CA3AF'; // gray-400
-  }
-  
-  if (score >= 9.0) return '#6366F1'; // indigo-500
-  if (score >= 8.0) return '#3B82F6'; // blue-500
-  if (score >= 7.0) return '#14B8A6'; // teal-500
-  if (score >= 6.0) return '#22C55E'; // green-500
-  if (score >= 5.0) return '#84CC16'; // lime-500
-  if (score >= 4.0) return '#F59E0B'; // amber-500
-  if (score >= 3.0) return '#F97316'; // orange-500
-  if (score >= 2.0) return '#F43F5E'; // rose-500
-  
-  return '#DC2626'; // red-600
-}
-
-/**
  * Sort SIQS factors to ensure consistent order
  * @param factors Array of SIQS factors
  * @returns Sorted array of factors
@@ -195,48 +173,4 @@ export function getSIQSRecommendation(score: number, bortleScale: number): strin
   }
   
   return "Poor conditions for most imaging. Consider visual observation of bright objects only.";
-}
-
-/**
- * Validate cloud cover value ensures it's within valid range
- * @param cloudCover Cloud cover percentage
- * @returns Validated cloud cover value (0-100)
- */
-export function validateCloudCover(cloudCover: number | null | undefined): number {
-  if (cloudCover === null || cloudCover === undefined || isNaN(cloudCover)) {
-    return 50; // Default to medium cloud cover
-  }
-  return Math.max(0, Math.min(100, cloudCover));
-}
-
-/**
- * Determine if imaging is impossible based on conditions
- * @param cloudCover Cloud cover percentage
- * @param precipitation Precipitation amount (mm)
- * @returns Boolean indicating if imaging is impossible
- */
-export function isImagingImpossible(cloudCover: number, precipitation?: number): boolean {
-  // If cloud cover is extremely high, imaging is likely impossible
-  if (cloudCover >= 90) return true;
-  
-  // If there's significant precipitation, imaging is impossible
-  if (precipitation !== undefined && precipitation > 0.5) return true;
-  
-  return false;
-}
-
-/**
- * Normalize factor scores to ensure consistent weighting
- * @param factors Array of SIQS factors with scores
- * @returns Array of factors with normalized scores
- */
-export function normalizeFactorScores(factors: SIQSFactor[]): SIQSFactor[] {
-  // Calculate total weight
-  const totalWeight = factors.reduce((sum, factor) => sum + (factor.weight || 1), 0);
-  
-  // Normalize scores based on weights
-  return factors.map(factor => ({
-    ...factor,
-    normalizedScore: factor.score * (factor.weight || 1) / totalWeight
-  }));
 }

@@ -4,69 +4,83 @@
  */
 
 /**
- * Calculate score based on seeing conditions
- * @param seeing Seeing value (1-5 scale where 1 is best)
- * @returns Score on 0-10 scale
+ * Calculate the seeing conditions factor score
+ * @param seeingConditions Seeing conditions (1-5, lower is better)
+ * @returns Score on a 0-100 scale
  */
-export function calculateSeeingScore(seeing: number): number {
+export function calculateSeeingScore(seeingConditions: number): number {
   // Validate input
-  const validSeeing = Math.max(1, Math.min(5, seeing));
+  if (typeof seeingConditions !== 'number' || isNaN(seeingConditions)) {
+    console.warn('Invalid seeing conditions value:', seeingConditions);
+    return 60; // Default to moderate score for invalid input
+  }
   
-  // Seeing inversely correlates with score (lower seeing = better conditions)
-  // 1 = 10, 2 = 8, 3 = 6, 4 = 4, 5 = 2
-  return 12 - (2 * validSeeing);
+  // Ensure seeing scale is within 1-5 range
+  const validSeeing = Math.max(1, Math.min(5, seeingConditions));
+  
+  // Non-linear mapping to represent the impact of seeing conditions
+  // Seeing 1 (excellent) = 100, Seeing 5 (poor) = 20
+  return Math.round(120 - (validSeeing * 20));
 }
 
 /**
- * Calculate score based on wind speed
- * @param windSpeed Wind speed (km/h)
- * @returns Score on 0-10 scale
+ * Calculate the wind speed factor score
+ * @param windSpeed Wind speed in km/h
+ * @returns Score on a 0-100 scale
  */
 export function calculateWindScore(windSpeed: number): number {
   // Validate input
+  if (typeof windSpeed !== 'number' || isNaN(windSpeed)) {
+    console.warn('Invalid wind speed value:', windSpeed);
+    return 70; // Default to moderately good score for invalid input
+  }
+  
+  // Ensure wind speed is not negative
   const validWindSpeed = Math.max(0, windSpeed);
   
-  // Wind speed inversely correlates with score (lower wind = better conditions)
-  // 0-5 km/h = 10-9, 5-10 km/h = 9-7, 10-20 km/h = 7-5, 20-30 km/h = 5-3, 30-40 km/h = 3-1, 40+ km/h = <1
+  // Wind speed impact calculation
+  // 0-5 km/h: Excellent (90-100)
+  // 5-15 km/h: Good (70-90)
+  // 15-25 km/h: Fair (50-70)
+  // 25-35 km/h: Poor (30-50)
+  // 35+ km/h: Bad (0-30)
   
-  if (validWindSpeed <= 5) {
-    return 10 - ((validWindSpeed) * (1 / 5));
-  } else if (validWindSpeed <= 10) {
-    return 9 - ((validWindSpeed - 5) * (2 / 5));
-  } else if (validWindSpeed <= 20) {
-    return 7 - ((validWindSpeed - 10) * (2 / 10));
-  } else if (validWindSpeed <= 30) {
-    return 5 - ((validWindSpeed - 20) * (2 / 10));
-  } else if (validWindSpeed <= 40) {
-    return 3 - ((validWindSpeed - 30) * (2 / 10));
-  } else {
-    return Math.max(0, 1 - ((validWindSpeed - 40) * (1 / 10)));
-  }
+  if (validWindSpeed <= 5) return 100 - (validWindSpeed * 2);      // 100-90
+  if (validWindSpeed <= 15) return 90 - ((validWindSpeed - 5) * 2);  // 90-70
+  if (validWindSpeed <= 25) return 70 - ((validWindSpeed - 15) * 2); // 70-50
+  if (validWindSpeed <= 35) return 50 - ((validWindSpeed - 25) * 2); // 50-30
+  
+  // For wind speeds above 35 km/h, score decreases more rapidly
+  return Math.max(0, 30 - ((validWindSpeed - 35) * 3));
 }
 
 /**
- * Calculate score based on humidity
+ * Calculate the humidity factor score
  * @param humidity Humidity percentage (0-100)
- * @returns Score on 0-10 scale
+ * @returns Score on a 0-100 scale
  */
 export function calculateHumidityScore(humidity: number): number {
   // Validate input
+  if (typeof humidity !== 'number' || isNaN(humidity)) {
+    console.warn('Invalid humidity value:', humidity);
+    return 60; // Default to moderate score for invalid input
+  }
+  
+  // Ensure humidity is within 0-100 range
   const validHumidity = Math.max(0, Math.min(100, humidity));
   
-  // Humidity has a sweet spot curve: too low or too high are both bad
-  // 0% = 7, 20% = 8, 40-60% = 10, 80% = 7, 100% = 3
+  // Humidity impact calculation
+  // Very low humidity (0-30%): Very good but can cause dust issues (90-85)
+  // Low humidity (30-50%): Excellent (100-90)
+  // Moderate humidity (50-70%): Good (90-70)
+  // High humidity (70-85%): Fair to poor (70-40)
+  // Very high humidity (85-100%): Poor to bad (40-0)
   
-  if (validHumidity <= 40) {
-    // Low humidity: increases from 7 to 10 as humidity increases from 0% to 40%
-    return 7 + ((validHumidity) * (3 / 40));
-  } else if (validHumidity <= 60) {
-    // Ideal range: 40-60% = 10
-    return 10;
-  } else if (validHumidity <= 80) {
-    // Moderate high humidity: decreases from 10 to 7 as humidity increases from 60% to 80%
-    return 10 - ((validHumidity - 60) * (3 / 20));
-  } else {
-    // Very high humidity: decreases from 7 to 3 as humidity increases from 80% to 100%
-    return 7 - ((validHumidity - 80) * (4 / 20));
-  }
+  if (validHumidity <= 30) return 85 + ((30 - validHumidity) / 6);       // 85-90 (higher is better but very dry can cause dust issues)
+  if (validHumidity <= 50) return 90 + ((50 - validHumidity) / 2.5);     // 90-100
+  if (validHumidity <= 70) return 70 + ((70 - validHumidity) / 2.5);     // 70-90
+  if (validHumidity <= 85) return 40 + ((85 - validHumidity) * 2);       // 40-70
+  
+  // For humidity above 85%, score decreases more rapidly
+  return Math.max(0, 40 - ((validHumidity - 85) * 2.5));
 }

@@ -1,66 +1,52 @@
 
 /**
- * Light pollution and air quality score calculations for SIQS
+ * Light pollution and air quality score calculations
  */
 
 /**
- * Calculate score based on Bortle scale (light pollution)
- * @param bortleScale Bortle scale value (1-9)
- * @returns Score on 0-10 scale
+ * Calculate the light pollution factor score based on Bortle scale
+ * @param bortleScale Bortle scale (1-9, 1 = darkest, 9 = brightest)
+ * @returns Score on a 0-100 scale
  */
 export function calculateLightPollutionScore(bortleScale: number): number {
   // Validate input
+  if (typeof bortleScale !== 'number' || isNaN(bortleScale)) {
+    console.warn('Invalid Bortle scale value:', bortleScale);
+    return 50; // Default to moderate score for invalid input
+  }
+  
+  // Ensure Bortle scale is within 1-9 range
   const validBortle = Math.max(1, Math.min(9, bortleScale));
   
-  // Enhanced scoring algorithm with non-linear scaling for better differentiation
-  // Bortle 1 = 10, Bortle 3 = 9, Bortle 5 = 7, Bortle 7 = 4, Bortle 9 = 1
-  
-  if (validBortle <= 1) {
-    return 10;
-  } else if (validBortle <= 3) {
-    return 10 - ((validBortle - 1) * (1 / 2));
-  } else if (validBortle <= 5) {
-    return 9 - ((validBortle - 3) * (2 / 2));
-  } else if (validBortle <= 7) {
-    return 7 - ((validBortle - 5) * (3 / 2));
-  } else {
-    return 4 - ((validBortle - 7) * (3 / 2));
-  }
+  // Non-linear mapping to represent the greater impact of light pollution
+  // Bortle 1 (darkest) = 100, Bortle 9 (brightest) = 0
+  return Math.round(110 - (validBortle * validBortle));
 }
 
 /**
- * Calculate score based on Air Quality Index
- * @param aqi Air Quality Index value
- * @returns Score on 0-10 scale
+ * Calculate the air quality factor score based on AQI
+ * @param aqi Air Quality Index
+ * @returns Score on a 0-100 scale
  */
-export function calculateAQIScore(aqi: number | undefined): number {
-  // If no AQI data available, return neutral score
-  if (aqi === undefined || aqi === null) {
-    return 7.5;
-  }
-  
+export function calculateAQIScore(aqi: number): number {
   // Validate input
-  const validAQI = Math.max(0, aqi);
-  
-  // AQI scoring: lower AQI = better score
-  // 0-50 (Good) = 10-9
-  // 51-100 (Moderate) = 8.9-7
-  // 101-150 (Unhealthy for Sensitive Groups) = 6.9-5
-  // 151-200 (Unhealthy) = 4.9-3
-  // 201-300 (Very Unhealthy) = 2.9-1
-  // 301+ (Hazardous) = 0.9-0
-  
-  if (validAQI <= 50) {
-    return 10 - ((validAQI) * (1 / 50));
-  } else if (validAQI <= 100) {
-    return 9 - ((validAQI - 50) * (2 / 50));
-  } else if (validAQI <= 150) {
-    return 7 - ((validAQI - 100) * (2 / 50));
-  } else if (validAQI <= 200) {
-    return 5 - ((validAQI - 150) * (2 / 50));
-  } else if (validAQI <= 300) {
-    return 3 - ((validAQI - 200) * (2 / 100));
-  } else {
-    return Math.max(0, 1 - ((validAQI - 300) * (1 / 200)));
+  if (typeof aqi !== 'number' || isNaN(aqi)) {
+    console.warn('Invalid AQI value:', aqi);
+    return 75; // Default to moderately good score for invalid input
   }
+  
+  // AQI scale: 0-50 Good, 51-100 Moderate, 101-150 Unhealthy for Sensitive Groups,
+  // 151-200 Unhealthy, 201-300 Very Unhealthy, 301+ Hazardous
+  
+  if (aqi <= 25) return 100;  // Excellent
+  if (aqi <= 50) return 90;   // Very good
+  if (aqi <= 75) return 80;   // Good
+  if (aqi <= 100) return 70;  // Moderately good
+  if (aqi <= 125) return 60;  // Moderate
+  if (aqi <= 150) return 50;  // Acceptable
+  if (aqi <= 175) return 40;  // Poor
+  if (aqi <= 200) return 30;  // Very poor
+  if (aqi <= 300) return 20;  // Bad
+  
+  return 10; // Extremely bad
 }

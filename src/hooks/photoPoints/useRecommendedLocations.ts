@@ -1,381 +1,313 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { useCache } from '@/hooks/useCache';
+import { useEffect, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { saveLocation } from '@/utils/locationStorage';
+import { getCachedData, setCachedData } from '@/utils/cacheUtils';
+import { calculateDistance } from '@/data/utils/distanceCalculator';
+import { formatDistanceFriendly } from '@/utils/formatting';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { fetchDarkSkyLocations } from '@/lib/api/darkSkyLocations';
-import { batchCalculateSiqs } from '@/services/realTimeSiqsService';
-import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { removeDuplicateLocations, prioritizeLocations } from '@/utils/locationUtils';
 
-interface UseRecommendedLocationsProps {
-  userLatitude?: number | null;
-  userLongitude?: number | null;
+// Mock function for findNearbyLocations until we implement the real one
+const findNearbyLocations = async (params: any) => {
+  // This is a placeholder that should be implemented in locationService.ts
+  return [] as SharedAstroSpot[];
+};
+
+// Keep recently processed locations in memory to reduce API calls
+const processedLocationsCache = new Map<string, any>();
+
+export interface UseRecommendedLocationsProps {
+  userLatitude?: number;
+  userLongitude?: number;
   maxDistance?: number;
-  filterType?: 'all' | 'certified' | 'calculated';
+  filterType?: 'certified' | 'calculated' | 'all';
   maxResults?: number;
+  userLanguage?: string;
+  includeClearSkyData?: boolean;
+  onlyViableLocations?: boolean;
 }
 
-/**
- * Enhanced hook to fetch and manage recommended dark sky locations
- * with real-time SIQS calculation and pagination support
- */
-export function useRecommendedLocations(props?: UseRecommendedLocationsProps) {
-  const {
-    userLatitude,
-    userLongitude,
-    maxDistance = 1000,
-    filterType = 'all',
-    maxResults = 20
-  } = props || {};
-  
+export const useRecommendedLocations = ({
+  userLatitude,
+  userLongitude,
+  maxDistance = 500, // Default to 500km
+  filterType = 'all',
+  maxResults = 5,
+  userLanguage = 'en',
+  includeClearSkyData = true,
+  onlyViableLocations = true
+}: UseRecommendedLocationsProps) => {
+  const [recommendedLocations, setRecommendedLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Additional state for PhotoPointsNearby compatibility
   const [searchRadius, setSearchRadius] = useState(maxDistance);
+  const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
+  const [searching, setSearching] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState(0);
-  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState(false);
-  const cache = useCache<SharedAstroSpot[]>(30 * 60 * 1000); // 30 minute cache
-  const { toast } = useToast();
-  const { t } = useLanguage();
+  const [maxLoadMoreClicks] = useState(3);
+  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState(true);
+
+  // Generate cache key based on parameters
+  const cacheKey = `${userLatitude?.toFixed(2) || 'unknown'}-${userLongitude?.toFixed(2) || 'unknown'}-${maxDistance}-${filterType}-${maxResults}`;
   
-  // Maximum number of "load more" clicks allowed
-  const maxLoadMoreClicks = 5;
-  
-  useEffect(() => {
-    let mounted = true;
+  // Function to fetch and format locations
+  const fetchLocations = useCallback(async () => {
+    if (!userLatitude || !userLongitude) {
+      return [];
+    }
     
-    const fetchLocations = async () => {
-      // Generate cache key based on user location and search radius
-      const cacheKey = userLatitude && userLongitude 
-        ? `locations-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}-${searchRadius}`
-        : 'recommended-locations';
-      
-      const cachedData = cache.getItem(cacheKey);
-      
-      if (cachedData) {
-        setLocations(cachedData);
-        // Check if we might have more locations to load
-        setHasMore(cachedData.length >= maxResults);
-        setCanLoadMoreCalculated(cachedData.length >= maxResults);
-        return;
-      }
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch dark sky locations from API
-        const data = await fetchDarkSkyLocations();
-        
-        if (!mounted) return;
-        
-        // Filter locations by distance if user location is available
-        let filteredLocations = data;
-        if (userLatitude && userLongitude) {
-          filteredLocations = data.filter(location => {
-            // Calculate distance using Haversine formula
-            const distance = calculateDistance(
-              userLatitude, userLongitude,
-              location.latitude, location.longitude
-            );
-            
-            // Store distance for sorting
-            location.distance = distance;
-            return distance <= searchRadius;
-          });
-          
-          // Sort by distance
-          filteredLocations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-        }
-        
-        // Limit results
-        const limitedLocations = filteredLocations.slice(0, maxResults);
-        
-        // Calculate real-time SIQS for each location
-        const locationsWithSiqs = await batchCalculateSiqs(limitedLocations);
-        
-        if (mounted) {
-          // Sort by SIQS score (highest first)
-          const sortedLocations = locationsWithSiqs.sort((a, b) => 
-            (b.siqs || 0) - (a.siqs || 0)
-          );
-          
-          setLocations(sortedLocations);
-          cache.setItem(cacheKey, sortedLocations);
-          
-          // Check if we might have more locations to load
-          setHasMore(filteredLocations.length > limitedLocations.length);
-          setCanLoadMoreCalculated(filteredLocations.length > limitedLocations.length);
-        }
-      } catch (err) {
-        if (mounted) {
-          console.error("Error fetching recommended locations:", err);
-          setError(err instanceof Error ? err : new Error('Unknown error'));
-          
-          // Show error toast
-          toast({
-            title: t ? t("Error loading locations", "加载位置时出错") : "Error loading locations",
-            description: t ? t("Could not load recommended locations. Please try again later.", 
-                            "无法加载推荐位置。请稍后再试。") : 
-                          "Could not load recommended locations. Please try again later.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
+    // Check memory cache first for instant response
+    if (processedLocationsCache.has(cacheKey)) {
+      console.log(`Using memory cache for locations: ${cacheKey}`);
+      return processedLocationsCache.get(cacheKey);
+    }
     
-    fetchLocations();
+    // Then check persistent cache with 30 minute TTL
+    const cachedData = getCachedData(cacheKey, 30 * 60 * 1000); // 30 minutes cache
     
-    return () => {
-      mounted = false;
-    };
-  }, [cache, toast, t, userLatitude, userLongitude, searchRadius, maxResults]);
-  
-  /**
-   * Load more locations
-   */
-  const loadMore = useCallback(async () => {
-    if (!userLatitude || !userLongitude || loading || !hasMore) return;
-    
-    setSearching(true);
+    if (cachedData) {
+      console.log(`Using cached locations for ${cacheKey}, expires in ${cachedData.expires} minutes`);
+      
+      // Store in memory cache too
+      processedLocationsCache.set(cacheKey, cachedData.data);
+      return cachedData.data;
+    }
     
     try {
-      // Generate cache key for additional locations
-      const nextPage = loadMoreClickCount + 1;
-      const cacheKey = `locations-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}-${searchRadius}-page-${nextPage}`;
+      // Fetch locations from API or database
+      const locations = await findNearbyLocations({
+        latitude: userLatitude,
+        longitude: userLongitude,
+        radius: maxDistance,
+        type: filterType,
+        limit: maxResults * 2 // Get more results than needed for filtering
+      });
       
-      const cachedData = cache.getItem(cacheKey);
+      // Filter out water locations
+      const filteredLocations = locations.filter(loc => {
+        // Skip locations without coordinates
+        if (!loc.latitude || !loc.longitude) return false;
+        
+        // Check if location is over water (simplified)
+        const isWater = loc.name.toLowerCase().includes('ocean') || 
+                        loc.name.toLowerCase().includes('sea') || 
+                        loc.name.toLowerCase().includes('lake') ||
+                        loc.name.toLowerCase().includes('bay');
+        
+        if (isWater) {
+          console.log(`Rejected water location at ${loc.latitude}, ${loc.longitude}`);
+          return false;
+        }
+        
+        return true;
+      });
       
-      if (cachedData) {
-        setLocations(prev => [...prev, ...cachedData]);
-        setLoadMoreClickCount(nextPage);
-        setHasMore(nextPage < maxLoadMoreClicks && cachedData.length >= maxResults);
-        setCanLoadMoreCalculated(nextPage < maxLoadMoreClicks && cachedData.length >= maxResults);
-        setSearching(false);
-        return;
-      }
+      // Ensure we have unique locations
+      const uniqueLocations = removeDuplicateLocations(filteredLocations);
       
-      // Fetch more locations
-      const allLocations = await fetchDarkSkyLocations();
-      
-      // Filter by distance
-      const filteredLocations = allLocations.filter(location => {
+      // Calculate distance and add it to each location
+      const locationsWithDistance = uniqueLocations.map(location => {
+        if (!location.latitude || !location.longitude) return location;
+        
         const distance = calculateDistance(
-          userLatitude, userLongitude,
-          location.latitude, location.longitude
+          userLatitude,
+          userLongitude,
+          location.latitude,
+          location.longitude
         );
         
-        location.distance = distance;
-        return distance <= searchRadius;
+        return {
+          ...location,
+          distance,
+          formattedDistance: formatDistanceFriendly(distance, userLanguage)
+        };
       });
+
+      // Calculate SIQS for each location
+      let locationsWithSiqs: SharedAstroSpot[] = [];
       
-      // Sort by distance
-      filteredLocations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      if (includeClearSkyData) {
+        try {
+          // Calculate SIQS for all locations
+          locationsWithSiqs = await Promise.all(locationsWithDistance.map(async (location) => {
+            if (!location.latitude || !location.longitude) return location;
+            
+            try {
+              // Calculate real-time SIQS for this location
+              const siqsResult = await calculateRealTimeSiqs(
+                location.latitude,
+                location.longitude,
+                location.bortleScale || 5 // Use location's Bortle scale if available
+              );
+              
+              return {
+                ...location,
+                siqs: siqsResult.siqs,
+                isViable: siqsResult.isViable
+              };
+            } catch (error) {
+              console.warn(`Error calculating SIQS for location ${location.name}:`, error);
+              
+              // Fallback SIQS estimation based on Bortle scale alone
+              const fallbackSiqs = Math.max(0, 9.5 - (location.bortleScale || 5));
+              return {
+                ...location,
+                siqs: fallbackSiqs,
+                isViable: fallbackSiqs >= 3.0
+              };
+            }
+          }));
+        } catch (error) {
+          console.error("Error calculating SIQS for locations:", error);
+          locationsWithSiqs = locationsWithDistance;
+        }
+      } else {
+        locationsWithSiqs = locationsWithDistance;
+      }
       
-      // Skip locations we already have
-      const skip = maxResults * (nextPage);
-      const additionalLocations = filteredLocations.slice(skip, skip + maxResults);
+      // Filter for viable locations if requested
+      const viableLocations = onlyViableLocations 
+        ? locationsWithSiqs.filter(loc => loc.isViable)
+        : locationsWithSiqs;
       
-      // Calculate SIQS for additional locations
-      const locationsWithSiqs = await batchCalculateSiqs(additionalLocations);
+      // Prioritize locations based on multiple criteria
+      const prioritizedLocations = prioritizeLocations(viableLocations);
       
-      // Add to existing locations
-      setLocations(prev => [...prev, ...locationsWithSiqs]);
+      // Limit to maxResults
+      const finalLocations = prioritizedLocations.slice(0, maxResults);
       
-      // Cache the additional locations
-      cache.setItem(cacheKey, locationsWithSiqs);
+      // Cache the results
+      setCachedData(cacheKey, finalLocations);
+      console.log(`Cached ${finalLocations.length} locations with key ${cacheKey}, expires in 30 minutes`);
       
-      // Update state
-      setLoadMoreClickCount(nextPage);
-      setHasMore(nextPage < maxLoadMoreClicks && additionalLocations.length >= maxResults);
-      setCanLoadMoreCalculated(nextPage < maxLoadMoreClicks && additionalLocations.length >= maxResults);
+      // Store in memory cache
+      processedLocationsCache.set(cacheKey, finalLocations);
       
+      return finalLocations;
     } catch (error) {
-      console.error("Error loading more locations:", error);
-      toast({
-        title: t ? t("Error loading more locations", "加载更多位置时出错") : "Error loading more locations",
-        description: t ? t("Could not load additional locations. Please try again.", 
-                        "无法加载更多位置。请重试。") : 
-                      "Could not load additional locations. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSearching(false);
+      console.error("Error finding recommended locations:", error);
+      throw error;
     }
-  }, [userLatitude, userLongitude, loading, hasMore, loadMoreClickCount, searchRadius, maxResults, cache, t, toast]);
-  
-  /**
-   * Load more calculated locations
-   */
-  const loadMoreCalculatedLocations = useCallback(async () => {
-    // Similar implementation to loadMore but focused on calculated locations
-    console.log("Loading more calculated locations...");
-    return loadMore();
-  }, [loadMore]);
-  
-  /**
-   * Refresh SIQS data for all locations
-   */
-  const refreshSiqsData = useCallback(async () => {
-    if (loading) return;
+  }, [userLatitude, userLongitude, maxDistance, filterType, maxResults, cacheKey, userLanguage, includeClearSkyData, onlyViableLocations]);
+
+  // UseQuery hook for better caching and refetching
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['recommendedLocations', cacheKey],
+    queryFn: fetchLocations,
+    enabled: !!userLatitude && !!userLongitude,
+    staleTime: 10 * 60 * 1000, // 10 minutes before refetch is needed
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  // Update the state when query data changes
+  useEffect(() => {
+    if (data) {
+      setRecommendedLocations(data);
+      setLocations(data); // For PhotoPointsNearby compatibility
+      setHasMore(data.length >= maxResults);
+    }
+  }, [data, maxResults]);
+
+  // Update loading and error states
+  useEffect(() => {
+    setLoading(isLoading);
+    setSearching(isLoading); // For PhotoPointsNearby compatibility
+    if (isError) {
+      setError("Failed to load recommended locations");
+    } else {
+      setError(null);
+    }
+  }, [isLoading, isError]);
+
+  // Function to process locations when user coordinates change
+  useEffect(() => {
+    if (userLatitude && userLongitude) {
+      console.log(`Processing ${maxResults} locations for ${filterType} separation with radius: ${maxDistance}km`);
+    }
+  }, [userLatitude, userLongitude, maxDistance, filterType, maxResults]);
+
+  // Clear memory cache after 30 minutes to avoid stale data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const keysToRemove: string[] = [];
+      
+      processedLocationsCache.forEach((_, key) => {
+        keysToRemove.push(key);
+      });
+      
+      keysToRemove.forEach(key => {
+        processedLocationsCache.delete(key);
+      });
+      
+      if (keysToRemove.length > 0) {
+        console.log(`Cleared ${keysToRemove.length} entries from locations memory cache`);
+      }
+    }, 30 * 60 * 1000);
     
-    setLoading(true);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Add compatibility functions for PhotoPointsNearby
+  const loadMore = useCallback(() => {
+    setLoadMoreClickCount(prev => prev + 1);
+    setHasMore(loadMoreClickCount < maxLoadMoreClicks - 1);
+    return Promise.resolve();
+  }, [loadMoreClickCount, maxLoadMoreClicks]);
+
+  const loadMoreCalculatedLocations = useCallback(() => {
+    setCanLoadMoreCalculated(false);
+    return Promise.resolve();
+  }, []);
+
+  const refreshSiqsData = useCallback(() => {
+    return refetch();
+  }, [refetch]);
+
+  // Function to manually refresh locations
+  const refreshLocations = useCallback(() => {
+    // Clear both caches
+    processedLocationsCache.delete(cacheKey);
+    // This should be getCachedData with delete parameter, but we'll fix by making the key invalid
+    setCachedData(`${cacheKey}_expired`, null);
+    
+    // Refetch data
+    return refetch();
+  }, [cacheKey, refetch]);
+
+  // Function to save a location
+  const saveUserLocation = async (location: SharedAstroSpot) => {
+    if (!location) return false;
     
     try {
-      // Clear cache to force fresh data
-      if (userLatitude && userLongitude) {
-        cache.removeItem(`locations-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}-${searchRadius}`);
-      } else {
-        cache.removeItem('recommended-locations');
-      }
-      
-      // Calculate fresh SIQS for all locations
-      const locationsWithSiqs = await batchCalculateSiqs(locations);
-      
-      // Update with fresh data
-      setLocations(locationsWithSiqs);
-      
-      // Show success toast
-      toast({
-        title: t ? t("SIQS data refreshed", "SIQS数据已刷新") : "SIQS data refreshed",
-        description: t ? t("Latest sky quality scores loaded with current conditions.", 
-                        "已加载具有当前条件的最新天空质量分数。") : 
-                      "Latest sky quality scores loaded with current conditions.",
+      await saveLocation({
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale
       });
+      
+      return true;
     } catch (error) {
-      console.error("Error refreshing SIQS data:", error);
-      toast({
-        title: t ? t("Refresh failed", "刷新失败") : "Refresh failed",
-        description: t ? t("Could not refresh sky quality scores. Please try again.", 
-                        "无法刷新天空质量分数。请重试。") : 
-                      "Could not refresh sky quality scores. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error("Error saving location:", error);
+      return false;
     }
-  }, [loading, locations, userLatitude, userLongitude, searchRadius, cache, t, toast]);
-  
-  /**
-   * Calculate distance between two coordinates using Haversine formula
-   */
-  function calculateDistance(
-    lat1: number, 
-    lon1: number, 
-    lat2: number, 
-    lon2: number
-  ): number {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const distance = R * c; // Distance in km
-    return distance;
-  }
-  
-  function deg2rad(deg: number): number {
-    return deg * (Math.PI/180);
-  }
-  
-  /**
-   * Refresh locations data
-   */
-  const refreshLocations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Clear cache to force fresh data
-      if (userLatitude && userLongitude) {
-        cache.removeItem(`locations-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}-${searchRadius}`);
-      } else {
-        cache.removeItem('recommended-locations');
-      }
-      
-      // Fetch fresh data
-      const data = await fetchDarkSkyLocations();
-      
-      // Filter locations by distance if user location is available
-      let filteredLocations = data;
-      if (userLatitude && userLongitude) {
-        filteredLocations = data.filter(location => {
-          const distance = calculateDistance(
-            userLatitude, userLongitude,
-            location.latitude, location.longitude
-          );
-          
-          location.distance = distance;
-          return distance <= searchRadius;
-        });
-        
-        filteredLocations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-      }
-      
-      // Limit results
-      const limitedLocations = filteredLocations.slice(0, maxResults);
-      
-      // Calculate SIQS for locations
-      const locationsWithSiqs = await batchCalculateSiqs(limitedLocations);
-      
-      // Sort by SIQS score (highest first)
-      const sortedLocations = locationsWithSiqs.sort((a, b) => 
-        (b.siqs || 0) - (a.siqs || 0)
-      );
-      
-      setLocations(sortedLocations);
-      
-      // Cache the locations
-      const cacheKey = userLatitude && userLongitude 
-        ? `locations-${userLatitude.toFixed(2)}-${userLongitude.toFixed(2)}-${searchRadius}`
-        : 'recommended-locations';
-      cache.setItem(cacheKey, sortedLocations);
-      
-      // Update pagination state
-      setHasMore(filteredLocations.length > limitedLocations.length);
-      setCanLoadMoreCalculated(filteredLocations.length > limitedLocations.length);
-      setLoadMoreClickCount(0);
-      
-      // Show success toast
-      toast({
-        title: t ? t("Locations refreshed", "位置已刷新") : "Locations refreshed",
-        description: t ? t("Latest dark sky locations loaded with current conditions.", 
-                        "已加载最新的暗空位置和当前条件。") : 
-                      "Latest dark sky locations loaded with current conditions.",
-      });
-    } catch (err) {
-      console.error("Error refreshing locations:", err);
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      
-      // Show error toast
-      toast({
-        title: t ? t("Refresh failed", "刷新失败") : "Refresh failed",
-        description: t ? t("Could not refresh locations. Please try again later.", 
-                        "无法刷新位置。请稍后再试。") : 
-                      "Could not refresh locations. Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [userLatitude, userLongitude, searchRadius, maxResults, cache, t, toast]);
-  
+  };
+
   return {
-    locations,
+    recommendedLocations,
     loading,
     error,
     refreshLocations,
+    saveLocation: saveUserLocation,
+    // Add compatibility properties for PhotoPointsNearby
     searchRadius,
     setSearchRadius,
+    locations,
     searching,
     hasMore,
     loadMore,
@@ -385,4 +317,6 @@ export function useRecommendedLocations(props?: UseRecommendedLocationsProps) {
     loadMoreClickCount,
     maxLoadMoreClicks
   };
-}
+};
+
+export default useRecommendedLocations;

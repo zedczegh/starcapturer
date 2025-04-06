@@ -1,182 +1,126 @@
 
-import { calculateSIQS } from "@/lib/calculateSIQS";
-import { extractNightForecasts } from "@/components/forecast/ForecastUtils";
-import { hasHighCloudCover } from "@/components/forecast/ForecastUtils";
-import { validateCloudCover } from "@/lib/siqs/utils";
-import { SIQSResult } from "@/lib/siqs/types";
+/**
+ * Utility for calculating SIQS based specifically on nighttime conditions
+ */
+import { calculateSIQS } from '@/lib/calculateSIQS';
+import { validateCloudCover } from '@/lib/siqs/utils';
 
 /**
- * Calculate SIQS score based on nighttime forecast data
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @param bortleScale Bortle scale value
- * @param seeingConditions Seeing conditions quality (1-5)
- * @param moonPhase Moon phase (0-1)
- * @returns Promise resolving to SIQS result or null
+ * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
+ * @param forecast Array of forecast items
+ * @returns Filtered array with only nighttime hours
  */
-export async function calculateNighttimeSIQS(
-  latitude: number,
-  longitude: number,
-  bortleScale: number,
-  seeingConditions: number = 3,
-  moonPhase: number = 0.5
-): Promise<SIQSResult | null> {
-  console.log("Starting nighttime SIQS calculation");
+export const filterNighttimeForecast = (forecast: any[]): any[] => {
+  if (!forecast || !Array.isArray(forecast) || forecast.length === 0) return [];
   
-  try {
-    // Fetch forecast data for the location
-    const { fetchForecastData } = await import("@/lib/api");
-    const forecastData = await fetchForecastData({
-      latitude,
-      longitude,
-      days: 2  // Get 2 days of forecast for complete night coverage
-    });
-    
-    if (!forecastData?.hourly || forecastData.hourly.length === 0) {
-      console.warn("No forecast data available for nighttime SIQS calculation");
-      return null;
-    }
-    
-    // Extract nighttime hours (from 6 PM to 8 AM)
-    const nighttimeForecast = extractNightForecasts(forecastData.hourly);
-    
-    console.log(`Found ${nighttimeForecast.length} nighttime forecast hours (6 PM to 8 AM)`);
-    
-    // If no nighttime forecast data, return null
-    if (!nighttimeForecast.length) {
-      console.warn("No nighttime hours in forecast data");
-      return null;
-    }
-    
-    // Split into evening and morning
-    const eveningHours = nighttimeForecast.filter(hour => {
-      const hourNum = new Date(hour.time).getHours();
-      return hourNum >= 18; // 6 PM and later
-    });
-    
-    const morningHours = nighttimeForecast.filter(hour => {
-      const hourNum = new Date(hour.time).getHours();
-      return hourNum < 8; // Before 8 AM
-    });
-    
-    console.log(`Evening forecasts (6PM-12AM): ${eveningHours.length}, Morning forecasts (1AM-8AM): ${morningHours.length}`);
-    
-    // Calculate average values with more weight given to evening hours
-    const eveningCloudAvg = eveningHours.reduce((sum, hour) => 
-      sum + (hour.cloudcover || 0), 0) / Math.max(1, eveningHours.length);
-      
-    const morningCloudAvg = morningHours.reduce((sum, hour) => 
-      sum + (hour.cloudcover || 0), 0) / Math.max(1, morningHours.length);
-    
-    console.log(`Average cloud cover - Evening: ${eveningCloudAvg.toFixed(1)}%, Morning: ${morningCloudAvg.toFixed(1)}%`);
-    
-    // Weight evening hours slightly more (better for most observations)
-    const weightedCloudCover = eveningHours.length && morningHours.length ? 
-      (eveningCloudAvg * 0.6) + (morningCloudAvg * 0.4) : 
-      eveningHours.length ? eveningCloudAvg : morningCloudAvg;
-    
-    console.log(`Weighted average cloud cover for night: ${weightedCloudCover.toFixed(1)}%`);
-    
-    // Get other average values
-    const avgWindSpeed = nighttimeForecast.reduce((sum, hour) => 
-      sum + (hour.windspeed || 0), 0) / nighttimeForecast.length;
-      
-    const avgHumidity = nighttimeForecast.reduce((sum, hour) => 
-      sum + (hour.humidity || 0), 0) / nighttimeForecast.length;
-    
-    console.log(`SIQS calculation with ${nighttimeForecast.length} nighttime forecast items`);
-    console.log(`Using nighttime forecast data for SIQS calculation`);
-    console.log(`Average values - Cloud: ${weightedCloudCover.toFixed(1)}%, Wind: ${avgWindSpeed.toFixed(1)}km/h, Humidity: ${avgHumidity.toFixed(1)}%`);
-    
-    // Calculate SIQS based on averaged nighttime data
-    const siqsResult = calculateSIQS({
-      cloudCover: validateCloudCover(weightedCloudCover),
-      bortleScale: bortleScale || 4,
-      seeingConditions: seeingConditions || 3,
-      windSpeed: avgWindSpeed,
-      humidity: avgHumidity,
-      moonPhase: moonPhase || 0.5,
-      nightForecast: nighttimeForecast
-    });
-    
-    console.log(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
-    console.log(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
-    
-    console.log(`Nighttime SIQS calculated: ${siqsResult.score}`);
-    return siqsResult;
-  } catch (error) {
-    console.error("Error calculating nighttime SIQS:", error);
+  return forecast.filter(item => {
+    if (!item.time && !item.date) return false;
+    const timeStr = item.time || item.date;
+    const itemTime = new Date(timeStr);
+    const hour = itemTime.getHours();
+    // Nighttime is defined as 6 PM to 7 AM
+    return hour >= 18 || hour < 7;
+  });
+};
+
+/**
+ * Calculate average value from an array of forecast items for a specific property
+ * @param forecast Array of forecast items
+ * @param property Property name to average
+ * @param defaultValue Default value if property doesn't exist
+ * @returns Average value
+ */
+export const calculateAverageValue = (
+  forecast: any[], 
+  property: string, 
+  defaultValue: number = 0
+): number => {
+  if (!forecast || forecast.length === 0) return defaultValue;
+  
+  const sum = forecast.reduce((acc, item) => {
+    const value = item[property];
+    return acc + (typeof value === 'number' ? value : defaultValue);
+  }, 0);
+  
+  return sum / forecast.length;
+};
+
+/**
+ * Checks if current conditions make imaging impossible
+ * @param cloudCover Cloud cover percentage
+ * @returns True if conditions make imaging impossible
+ */
+export const isImagingImpossible = (cloudCover: number): boolean => {
+  return typeof cloudCover === 'number' && cloudCover > 40;
+};
+
+/**
+ * Calculate SIQS score focusing on nighttime conditions from forecast data
+ * @param locationData Current location data
+ * @param forecastData Hourly forecast data
+ * @param translator Translation function
+ * @returns SIQS analysis result
+ */
+export const calculateNighttimeSIQS = (
+  locationData: any,
+  forecastData: any,
+  translator: any
+) => {
+  if (!forecastData || !forecastData.hourly || !locationData) {
+    console.log("Missing required data for nighttime SIQS calculation");
     return null;
   }
-}
-
-/**
- * Check if there are any good viewing windows in the forecast
- * @param forecastHours Hourly forecast data array
- * @returns Object containing information about viewing windows
- */
-export function findViewingWindows(
-  forecastHours: any[]
-): { hasGoodWindow: boolean; bestStartHour: string | null; durationHours: number } {
-  if (!forecastHours || forecastHours.length === 0) {
-    return { hasGoodWindow: false, bestStartHour: null, durationHours: 0 };
+  
+  // Extract nighttime hours from the forecast
+  const nightForecast = filterNighttimeForecast(forecastData.hourly);
+  
+  if (nightForecast.length === 0) {
+    console.log("No nighttime hours in forecast data");
+    return null;
   }
   
-  // Consider a sequence of 3+ hours with cloud cover < 30% as a good viewing window
-  let currentStart = -1;
-  let currentLength = 0;
-  let bestStart = -1;
-  let bestLength = 0;
+  // Calculate average values for key weather conditions
+  const avgCloudCover = calculateAverageValue(nightForecast, 'cloudCover');
+  const avgWindSpeed = calculateAverageValue(nightForecast, 'windSpeed');
+  const avgHumidity = calculateAverageValue(nightForecast, 'humidity');
   
-  // Find longest sequence of good hours
-  for (let i = 0; i < forecastHours.length; i++) {
-    const hour = forecastHours[i];
-    
-    if (!hasHighCloudCover(hour)) {
-      // This hour is good for viewing
-      if (currentStart === -1) {
-        // Start of a new sequence
-        currentStart = i;
-        currentLength = 1;
-      } else {
-        // Continue sequence
-        currentLength++;
-      }
-    } else {
-      // This hour is not good for viewing
-      if (currentStart !== -1) {
-        // End of sequence
-        if (currentLength > bestLength) {
-          bestStart = currentStart;
-          bestLength = currentLength;
+  // Check if average cloud cover makes imaging impossible
+  if (isImagingImpossible(avgCloudCover)) {
+    console.log(`Average nighttime cloud cover is ${avgCloudCover}%, which exceeds 40% threshold`);
+    return {
+      score: 0,
+      isViable: false,
+      factors: [
+        {
+          name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
+          score: 0,
+          description: translator ? 
+            translator(
+              `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`,
+              `${Math.round(avgCloudCover)}%的云量使成像不可能`
+            ) : 
+            `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`
         }
-        
-        // Reset sequence
-        currentStart = -1;
-        currentLength = 0;
-      }
-    }
+      ]
+    };
   }
   
-  // Check if the last sequence is best
-  if (currentStart !== -1 && currentLength > bestLength) {
-    bestStart = currentStart;
-    bestLength = currentLength;
-  }
+  // Calculate SIQS using the average nighttime conditions
+  const siqsResult = calculateSIQS({
+    cloudCover: avgCloudCover,
+    bortleScale: locationData.bortleScale || 5,
+    seeingConditions: locationData.seeingConditions || 3,
+    windSpeed: avgWindSpeed,
+    humidity: avgHumidity,
+    moonPhase: locationData.moonPhase || 0,
+    precipitation: calculateAverageValue(nightForecast, 'precipitation'),
+    aqi: locationData.weatherData?.aqi,
+    // Add nighttime forecast data for more detailed analysis
+    nightForecast: nightForecast
+  });
   
-  // A good window needs at least 2 consecutive hours
-  const hasGoodWindow = bestLength >= 2;
+  console.log(`Calculated nighttime SIQS: ${siqsResult.score}`);
+  console.log(`Using nighttime forecast for SIQS calculation: ${siqsResult.score}`);
   
-  // Format best start time (if found)
-  let bestStartHour: string | null = null;
-  if (hasGoodWindow && bestStart >= 0 && forecastHours[bestStart]) {
-    const startTime = new Date(forecastHours[bestStart].time);
-    bestStartHour = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  
-  return {
-    hasGoodWindow,
-    bestStartHour,
-    durationHours: bestLength
-  };
-}
+  return siqsResult;
+};
