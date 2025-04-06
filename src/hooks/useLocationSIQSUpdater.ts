@@ -1,120 +1,114 @@
 
-import { useEffect, useRef, useCallback } from 'react';
-import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
-import { toast } from 'sonner';
+import { useState, useCallback } from 'react';
+import { calculateSIQS } from '@/lib/calculateSIQS';
+import { useBortleUpdater } from './location/useBortleUpdater';
+import { useForecastData } from './useForecastData';
 import { validateCloudCover } from '@/lib/siqs/utils';
+import { extractNightForecasts } from '@/components/forecast/ForecastUtils';
 
 /**
- * Hook to update SIQS score based on forecast data, ensuring consistency
- * throughout the application
+ * Hook for updating SIQS data based on location changes
  */
-export const useLocationSIQSUpdater = (
-  locationData: any, 
-  forecastData: any, 
-  setLocationData: (data: any) => void,
-  t: any
-) => {
-  const updateAttemptedRef = useRef(false);
-  const forceUpdateRef = useRef(false);
-  const lastLocationRef = useRef<string | null>(null);
-  const lastForecastTimestampRef = useRef<string | null>(null);
+export function useLocationSIQSUpdater() {
+  const [loading, setLoading] = useState(false);
+  const { updateBortleScale } = useBortleUpdater();
+  const { fetchLocationForecast, clearForecastCache } = useForecastData();
   
-  // Reset update state for new calculations
-  const resetUpdateState = useCallback(() => {
-    updateAttemptedRef.current = false;
-    forceUpdateRef.current = true;
-    console.log("SIQS update state reset");
-  }, []);
-  
-  // Update SIQS score when forecast data becomes available or changes
-  useEffect(() => {
-    // Track location changes to force recalculation
-    const locationSignature = locationData ? 
-      `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}` : null;
+  /**
+   * Update SIQS data for a location
+   * @param latitude Location latitude
+   * @param longitude Location longitude
+   * @param locationName Location name
+   * @param currentData Current location data
+   * @returns Updated location data
+   */
+  const updateSIQSForLocation = useCallback(async (
+    latitude: number,
+    longitude: number,
+    locationName: string,
+    currentData: any
+  ) => {
+    if (!latitude || !longitude) return currentData;
     
-    // Get forecast signature to detect actual data changes
-    const forecastSignature = forecastData?.hourly?.time?.[0] || null;
+    setLoading(true);
     
-    // Reset state when location changes
-    if (locationSignature !== lastLocationRef.current) {
-      console.log("Location changed, resetting SIQS update state");
-      lastLocationRef.current = locationSignature;
-      lastForecastTimestampRef.current = null; // Reset forecast timestamp
-      resetUpdateState();
-    }
-    
-    // Check if forecast data has actually changed
-    const forecastChanged = forecastSignature !== lastForecastTimestampRef.current;
-    if (forecastChanged && forecastSignature) {
-      console.log("Forecast data changed, updating SIQS");
-      lastForecastTimestampRef.current = forecastSignature;
-      resetUpdateState();
-    }
-    
-    // Only update SIQS when forecast data is available or on forced update
-    const shouldUpdate = (
-      forecastData?.hourly && 
-      Array.isArray(forecastData.hourly.time) &&
-      forecastData.hourly.time.length > 0 &&
-      locationData &&
-      (!updateAttemptedRef.current || forceUpdateRef.current)
-    );
-    
-    if (shouldUpdate) {
-      console.log("Updating SIQS based on hourly forecast data");
-      forceUpdateRef.current = false;
+    try {
+      // Get Bortle scale for location
+      const bortleScale = await updateBortleScale(
+        latitude, 
+        longitude, 
+        locationName,
+        currentData?.bortleScale || null
+      );
+      
+      // Get weather data
+      let weatherData = currentData?.weatherData;
+      if (!weatherData) {
+        const { fetchWeatherData } = await import('@/lib/api/weather');
+        weatherData = await fetchWeatherData({ latitude, longitude });
+      }
+      
+      // Get forecast data for more accurate SIQS
+      let forecastData = currentData?.forecastData;
+      
+      // Clear cached forecast for this location to get fresh data
+      clearForecastCache(latitude, longitude);
       
       try {
-        // Calculate new SIQS based on nighttime conditions
-        const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
-        
-        if (freshSIQSResult) {
-          console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
-          
-          // Update the SIQS result with the fresh calculation
-          setLocationData({
-            ...locationData,
-            siqsResult: freshSIQSResult
-          });
-          
-          updateAttemptedRef.current = true;
-        } else if (locationData.weatherData?.cloudCover !== undefined) {
-          // Fallback to current weather if nighttime forecast is unavailable
-          console.log("Using fallback SIQS calculation based on current weather");
-          const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
-          
-          // Special handling for 0% cloud cover - should be score 10
-          const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
-          const estimatedScore = cloudScore / 10;
-          
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
-          
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: estimatedScore > 2,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
-                  description: t 
-                    ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
-                      `${currentCloudCover}%的云量影响成像质量`) 
-                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
-                }
-              ]
-            }
-          });
-          
-          updateAttemptedRef.current = true;
-        }
+        forecastData = await fetchLocationForecast(
+          latitude,
+          longitude
+        );
       } catch (error) {
-        console.error("Error updating SIQS with forecast data:", error);
-        toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
+        console.error("Error fetching forecast data:", error);
       }
+      
+      // Extract night forecasts if available
+      const nightForecast = forecastData?.hourly ? 
+        extractNightForecasts(forecastData.hourly) : 
+        undefined;
+      
+      // Get additional parameters
+      const cloudCover = validateCloudCover(weatherData?.cloudCover);
+      const seeingConditions = currentData?.seeingConditions || 3;
+      const moonPhase = currentData?.moonPhase || 0.5;
+      
+      // Calculate SIQS
+      const siqsResult = calculateSIQS({
+        cloudCover,
+        bortleScale: bortleScale || 5,
+        seeingConditions,
+        windSpeed: weatherData?.windSpeed || 5,
+        humidity: weatherData?.humidity || 50,
+        moonPhase,
+        aqi: weatherData?.aqi,
+        weatherCondition: weatherData?.weatherCondition,
+        precipitation: weatherData?.precipitation,
+        nightForecast
+      });
+      
+      // Return updated data
+      return {
+        ...currentData,
+        latitude,
+        longitude,
+        name: locationName,
+        weatherData,
+        forecastData,
+        bortleScale,
+        siqsResult,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Error updating SIQS for location:", error);
+      return currentData;
+    } finally {
+      setLoading(false);
     }
-  }, [forecastData, locationData, setLocationData, t, resetUpdateState]);
+  }, [updateBortleScale, fetchLocationForecast, clearForecastCache]);
   
-  return { resetUpdateState };
-};
+  return {
+    loading,
+    updateSIQSForLocation
+  };
+}

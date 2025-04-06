@@ -1,5 +1,5 @@
-import { calculateDistance } from './utils';
-import { normalizeLongitude } from './coordinates';
+
+import { calculateDistance, normalizeLongitude } from './utils';
 import { Language } from '@/services/geocoding/types';
 
 /**
@@ -167,9 +167,9 @@ export async function getLocationNameFromCoordinates(
     const closestLocation = findClosestKnownLocation(validLat, validLng);
     
     // If we're close to a known location, use its name or "Near X"
-    if (closestLocation.distance <= 20) {
+    if (closestLocation && closestLocation.distance <= 20 && closestLocation.name) {
       return closestLocation.name;
-    } else if (closestLocation.distance <= 100) {
+    } else if (closestLocation && closestLocation.distance <= 100 && closestLocation.name) {
       return language === 'en' 
         ? `Near ${closestLocation.name}` 
         : `${closestLocation.name}附近`;

@@ -1,9 +1,10 @@
+
 /**
  * Enhanced Bortle scale algorithm that combines multiple data sources
  * for the most scientifically accurate results
  */
 
-import { detectTerrainType, getTerrainAdjustmentFactor } from "./terrainData";
+import { detectTerrainType, getTerrainAdjustmentFactor, getTerrainElevation } from "./terrainData";
 import { findNearbyUserBortleMeasurement } from "@/lib/api/pollution";
 import { estimateBortleScaleByLocation } from "./locationUtils";
 
@@ -50,15 +51,13 @@ export async function getEnhancedBortleScale(
     }
     
     // First check for user-provided measurements (highest accuracy)
-    const userMeasurement = findNearbyUserBortleMeasurement(latitude, longitude, 10);
+    const userMeasurement = findNearbyUserBortleMeasurement(latitude, longitude);
     if (userMeasurement) {
-      console.log(`Using user-provided Bortle scale: ${userMeasurement.bortleScale} (${userMeasurement.method})`);
+      console.log(`Using user-provided Bortle scale: ${userMeasurement.bortleScale}`);
       
       return {
         bortleScale: userMeasurement.bortleScale,
-        confidenceSource: userMeasurement.method === 'measurement' 
-          ? 'user-measurement'
-          : 'user-observation',
+        confidenceSource: 'user-measurement',
         terrainAdjusted: false,
         elevationAdjusted: false
       };

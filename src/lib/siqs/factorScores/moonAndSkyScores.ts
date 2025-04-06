@@ -1,78 +1,70 @@
 
 /**
- * Moon phase and clear sky score calculations
+ * Moon phase and clear sky rate score calculations for SIQS
  */
 
 /**
- * Calculate the moon phase factor score
- * @param moonPhase Moon phase (0-1, 0 = new moon, 1 = full moon)
- * @returns Score on a 0-100 scale
+ * Calculate score based on moon phase
+ * @param moonPhase Moon phase (0-1, where 0=new moon, 1=full moon)
+ * @returns Score on 0-10 scale
  */
 export function calculateMoonScore(moonPhase: number): number {
   // Validate input
-  if (typeof moonPhase !== 'number' || isNaN(moonPhase)) {
-    console.warn('Invalid moon phase value:', moonPhase);
-    return 50; // Default to moderate score for invalid input
-  }
-  
-  // Ensure moon phase is within 0-1 range
   const validMoonPhase = Math.max(0, Math.min(1, moonPhase));
   
-  // Moon phase impact calculation - inverse relation (new moon is best)
-  // New moon (0-0.05): Excellent (95-100)
-  // Crescent moon (0.05-0.25): Very good (75-95)
-  // Quarter moon (0.25-0.5): Good (60-75)
-  // Gibbous moon (0.5-0.75): Fair (40-60)
-  // Full or nearly full moon (0.75-1): Poor (0-40)
+  // Moon phase inversely correlates with score (lower phase = better conditions)
+  // Enhanced non-linear scoring to reflect actual impact on observation
+  // 0 (new moon) = 10, 0.25 (crescent) = 8, 0.5 (quarter) = 6, 0.75 (gibbous) = 4, 1 (full) = 2
   
-  return Math.round(100 - (validMoonPhase * 100));
+  // Using a quadratic curve for smoother transition
+  return 10 - 8 * (validMoonPhase * validMoonPhase);
 }
 
 /**
- * Calculate the clear sky rate factor score
- * @param clearSkyRate Clear sky rate percentage (0-100)
- * @returns Score on a 0-100 scale
+ * Calculate score based on clear sky rate
+ * @param clearSkyRate Annual clear sky rate percentage (0-100)
+ * @returns Score on 0-10 scale
  */
-export function calculateClearSkyScore(clearSkyRate: number): number {
-  // Validate input
-  if (typeof clearSkyRate !== 'number' || isNaN(clearSkyRate)) {
-    console.warn('Invalid clear sky rate value:', clearSkyRate);
-    return 50; // Default to moderate score for invalid input
+export function calculateClearSkyScore(clearSkyRate: number | undefined): number {
+  // If no data available, return neutral score
+  if (clearSkyRate === undefined || clearSkyRate === null) {
+    return 5;
   }
   
-  // Ensure rate is within 0-100 range
+  // Validate input
   const validRate = Math.max(0, Math.min(100, clearSkyRate));
   
-  // Direct mapping - higher clear sky rate = higher score
-  return validRate;
+  // Clear sky rate directly correlates with score (higher rate = better score)
+  // 0% = 0, 25% = 2.5, 50% = 5, 75% = 7.5, 100% = 10
+  return validRate / 10;
 }
 
 /**
- * Calculate the terrain factor score (elevation benefit)
+ * Calculate score based on terrain elevation
  * @param elevation Elevation in meters
- * @returns Score on a 0-100 scale
+ * @returns Score on 0-10 scale
  */
-export function calculateTerrainFactor(elevation: number): number {
-  // Validate input
-  if (typeof elevation !== 'number' || isNaN(elevation)) {
-    console.warn('Invalid elevation value:', elevation);
-    return 50; // Default to moderate score for invalid input
+export function calculateElevationScore(elevation: number | undefined): number {
+  // If no data available, return neutral score
+  if (elevation === undefined || elevation === null) {
+    return 5;
   }
   
-  // Ensure elevation is not negative
+  // Validate input
   const validElevation = Math.max(0, elevation);
   
-  // Elevation impact calculation
-  // 0-300m: Minimal impact (50-55)
-  // 300-1000m: Modest improvement (55-70)
-  // 1000-2000m: Significant improvement (70-85)
-  // 2000-3000m: Major improvement (85-95)
-  // 3000m+: Excellent (95-100)
+  // Elevation scoring: higher elevation = better score, with diminishing returns
+  // 0m = 5, 500m = 6, 1000m = 7, 2000m = 8.5, 3000m+ = 10
   
-  if (validElevation <= 300) return 50 + (validElevation / 60);           // 50-55
-  if (validElevation <= 1000) return 55 + ((validElevation - 300) / 35);  // 55-70
-  if (validElevation <= 2000) return 70 + ((validElevation - 1000) / 75); // 70-85
-  if (validElevation <= 3000) return 85 + ((validElevation - 2000) / 200); // 85-95
-  
-  return Math.min(100, 95 + ((validElevation - 3000) / 500));            // 95-100
+  if (validElevation < 500) {
+    return 5 + (validElevation * (1 / 500));
+  } else if (validElevation < 1000) {
+    return 6 + ((validElevation - 500) * (1 / 500));
+  } else if (validElevation < 2000) {
+    return 7 + ((validElevation - 1000) * (1.5 / 1000));
+  } else if (validElevation < 3000) {
+    return 8.5 + ((validElevation - 2000) * (1.5 / 1000));
+  } else {
+    return 10;
+  }
 }
