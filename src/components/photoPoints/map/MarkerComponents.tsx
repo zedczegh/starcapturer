@@ -74,21 +74,15 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      // Use event listeners instead of eventHandlers
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
+      // Fix: Use onClick and onMouseOver props directly instead of eventHandlers
+      onClick={handleClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
       <Popup 
-        // Fix popup props
-        closeButton={false}
-        autoPan={false}
-        options={{
-          closeOnClick: false,
-          autoClose: false
-        }}
+        // Fix: Use properties that match react-leaflet API
+        autoClose={false}
+        closeOnClick={false}
       >
         <div className="p-1.5 max-w-[160px] leaflet-popup-custom-compact">
           <div className="font-medium text-xs">

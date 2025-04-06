@@ -1,6 +1,6 @@
-
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
+import L from 'leaflet';  // Ensure L is properly imported
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
 import { useLanguage } from '@/contexts/LanguageContext';

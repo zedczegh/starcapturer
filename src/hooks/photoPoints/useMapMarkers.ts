@@ -24,12 +24,21 @@ export const useMapMarkers = () => {
     hoverTimeoutRef.current = window.setTimeout(() => {
       setHoveredLocationId(id);
       hoverTimeoutRef.current = null;
-    }, 50); // Short delay to prevent flicker
+    }, 100); // Increase debounce delay to reduce flicker
+  }, []);
+
+  // Clean up timeout on component unmount
+  const cleanup = useCallback(() => {
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
   }, []);
 
   return {
     hoveredLocationId,
     setHoveredLocationId,
-    handleHover
+    handleHover,
+    cleanup
   };
 };
