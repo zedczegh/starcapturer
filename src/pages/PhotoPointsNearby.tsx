@@ -23,8 +23,8 @@ const CalculatedLocations = lazy(() => import('@/components/photoPoints/Calculat
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 // Defaults
-const DEFAULT_CALCULATED_RADIUS = 1000; // 1000km default radius for calculated locations
-const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (wide search)
+const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
+const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (no limit)
 
 const PhotoPointsNearby: React.FC = () => {
   // Get user location with high accuracy
@@ -197,7 +197,7 @@ const PhotoPointsNearby: React.FC = () => {
 
   // Effect to update the search radius when active view changes
   useEffect(() => {
-    // For certified locations, set a much larger search radius
+    // For certified locations, set a much larger search radius (unlimited)
     if (activeView === 'certified') {
       setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
     } else {

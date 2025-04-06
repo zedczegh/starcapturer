@@ -16,8 +16,8 @@ interface Location {
 const MAX_LOAD_MORE_CLICKS = 2;
 
 // Default radius values
-const DEFAULT_CALCULATED_RADIUS = 1000; // 1000km for calculated locations
-const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations
+const DEFAULT_CALCULATED_RADIUS = 100; // 100km for calculated locations (changed from 1000)
+const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (no limit)
 
 export const useRecommendedLocations = (
   userLocation: Location | null,
@@ -76,16 +76,15 @@ export const useRecommendedLocations = (
       const certifiedResults = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
+        DEFAULT_CERTIFIED_RADIUS, // Always use full radius for certified
         true // Only get certified locations
       );
 
-      // For calculated locations, use a more limited radius to maintain performance
-      const calculatedRadius = Math.min(searchRadius, DEFAULT_CALCULATED_RADIUS); // Cap calculated search at 1000km
+      // For calculated locations, use the provided search radius
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        calculatedRadius
+        searchRadius // Use the current search radius
       );
       
       // Combine the results
@@ -190,11 +189,10 @@ export const useRecommendedLocations = (
       console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
       
       // Get more calculated locations, preserving existing ones
-      const calculatedRadius = Math.min(searchRadius, DEFAULT_CALCULATED_RADIUS); // Cap calculated search at 1000km
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        calculatedRadius
+        searchRadius
       );
       
       // Filter out locations we already have

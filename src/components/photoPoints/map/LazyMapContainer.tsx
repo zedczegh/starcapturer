@@ -8,6 +8,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
 import SiqsScoreBadge from "../cards/SiqsScoreBadge";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
+import MapEffectsController from './MapEffectsController';
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -76,24 +77,26 @@ const MapController = ({
 };
 
 // Create a SIQS-colored marker
-const getSiqsMarker = useCallback((siqs: number | undefined) => {
+const getSiqsMarker = (siqs: number | undefined) => {
   if (!siqs) return createCustomMarker('#777777'); // Gray for unknown SIQS
   
   const color = getProgressColor(siqs);
   return createCustomMarker(color);
-}, []);
+};
+
+interface LocationMarkerProps {
+  location: SharedAstroSpot;
+  onClick: () => void;
+  hoveredId: string | null;
+  setHoveredId: (id: string | null) => void;
+}
 
 // Location Marker component with popup handling
-const LocationMarker = ({ 
+const LocationMarker: React.FC<LocationMarkerProps> = ({ 
   location, 
   onClick, 
   hoveredId, 
   setHoveredId 
-}: { 
-  location: SharedAstroSpot; 
-  onClick: () => void;
-  hoveredId: string | null;
-  setHoveredId: (id: string | null) => void;
 }) => {
   const { t, language } = useLanguage();
   const locationId = `location-${location.id || `${location.latitude}-${location.longitude}`}`;
@@ -124,26 +127,26 @@ const LocationMarker = ({
     }
   }, [hoveredId, locationId]);
 
-  // Fix: Using the eventHandlers prop correctly for react-leaflet
+  const eventHandlers = {
+    click: onClick,
+    mouseover: handleMouseOver,
+    mouseout: handleMouseOut
+  };
+
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      eventHandlers={{
-        click: onClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
+      eventHandlers={eventHandlers}
     >
       <Popup 
-        className="leaflet-popup-custom-compact"
         closeButton={false}
         closeOnClick={false}
         autoClose={false}
         autoPan={false}
       >
-        <div className="p-1.5 max-w-[160px]">
+        <div className="p-1.5 max-w-[160px] leaflet-popup-custom-compact">
           <div className="font-medium text-xs">
             {language === 'zh' && location.chineseName 
               ? location.chineseName 
@@ -174,6 +177,7 @@ interface PhotoPointsMapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
+  activeView?: 'certified' | 'calculated';
   onMapReady: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
@@ -185,6 +189,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   userLocation,
   locations,
   searchRadius,
+  activeView = 'certified',
   onMapReady,
   onLocationClick,
   onMapClick,
@@ -193,6 +198,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const { t } = useLanguage();
   const [mapElement, setMapElement] = useState<L.Map | null>(null);
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
 
   // Create marker icons
   const userMarkerIcon = createCustomMarker('#9b87f5'); // Violet for user location (matching logo color)
@@ -203,6 +209,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       onMapClick(lat, lng);
     }
   }, [onMapClick]);
+
+  // Handle SIQS calculation results
+  const handleSiqsCalculated = useCallback((siqs: number) => {
+    setCurrentSiqs(siqs);
+  }, []);
 
   return (
     <MapContainer
@@ -226,6 +237,14 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         searchRadius={searchRadius}
       />
       
+      {/* Effects controller for real-time SIQS and other effects */}
+      <MapEffectsController
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={handleSiqsCalculated}
+      />
+      
       {/* Add MapEvents component to handle clicks if onMapClick is provided */}
       {onMapClick && <MapEvents onMapClick={handleMapClick} />}
       
@@ -235,14 +254,17 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           position={[userLocation.latitude, userLocation.longitude]} 
           icon={userMarkerIcon}
         >
-          <Popup
-            className="leaflet-popup-custom"
-          >
+          <Popup>
             <div className="p-1 leaflet-popup-custom">
               <strong>{t("Your Location", "您的位置")}</strong>
               <div className="text-xs mt-1">
                 {userLocation.latitude.toFixed(5)}, {userLocation.longitude.toFixed(5)}
               </div>
+              {currentSiqs !== null && (
+                <div className="text-xs mt-1">
+                  SIQS: <span className="font-medium">{currentSiqs.toFixed(1)}</span>
+                </div>
+              )}
             </div>
           </Popup>
         </Marker>

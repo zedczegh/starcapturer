@@ -16,7 +16,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   currentValue,
   onValueChange,
   minValue = 100,
-  maxValue = 10000,
+  maxValue = 1000,
   stepValue = 100
 }) => {
   const { t } = useLanguage();

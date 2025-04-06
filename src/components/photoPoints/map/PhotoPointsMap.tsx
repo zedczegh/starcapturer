@@ -6,7 +6,6 @@ import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 import './MapStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
@@ -45,18 +44,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const mapInitializedRef = useRef(false);
   const lastClickTimeRef = useRef<number>(0);
   const clickTimeoutRef = useRef<number | null>(null);
-  const { hoveredLocationId, handleHover, getSiqsMarker } = useMapMarkers();
+  const { hoveredLocationId, handleHover } = useMapMarkers();
   
-  // Select locations based on active view
+  // Show only the active view locations
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
   // Always load certified locations in background as soon as component mounts
   useEffect(() => {
-    if (!mapLoadedOnce && certifiedLocations.length > 0) {
+    if (!mapLoadedOnce && activeLocations.length > 0) {
       // Mark that we've done initial processing
       setMapLoadedOnce(true);
     }
-  }, [certifiedLocations, mapLoadedOnce]);
+  }, [activeLocations, mapLoadedOnce]);
   
   // Use the map hook with the selected location or user location
   const {
@@ -68,7 +67,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: activeLocations, // Use the active locations based on current view mode
+    locations: activeLocations, // Use only the active locations based on current view mode
     searchRadius
   });
 
@@ -181,8 +180,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         <PhotoPointsMapContainer
           center={mapCenter}
           userLocation={selectedMapLocation || userLocation}
-          locations={activeLocations}
+          locations={activeLocations} // Only show active view locations
           searchRadius={searchRadius}
+          activeView={activeView} // Pass the active view to the map container
           onMapReady={handleMapReadyEvent}
           onLocationClick={handleLocationClickEvent}
           onMapClick={handleMapClick}
