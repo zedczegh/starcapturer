@@ -14,10 +14,10 @@
  */
 export function normalizeScore(
   value: number,
-  minValue: number = 0,
-  maxValue: number = 10,
+  minValue: number,
+  maxValue: number,
   targetMin: number = 0,
-  targetMax: number = 10
+  targetMax: number = 100
 ): number {
   // Check for invalid input range
   if (maxValue === minValue) return targetMin;
@@ -117,97 +117,4 @@ export function applyNonLinearPenalties(
  */
 export function formatSiqsScore(score: number): number {
   return parseFloat((Math.max(0, Math.min(10, score))).toFixed(1));
-}
-
-/**
- * Format SIQS score for display purposes
- * @param score Raw SIQS score
- * @returns Formatted score string
- */
-export function formatSIQSScoreForDisplay(score: number): string {
-  return formatSiqsScore(score).toFixed(1);
-}
-
-/**
- * Check if the current conditions are good for viewing
- * @param score SIQS score
- * @returns Boolean indicating if conditions are good
- */
-export function isGoodViewingCondition(score: number): boolean {
-  return score >= 6.0;
-}
-
-/**
- * Calculate SIQS with weather data and other factors
- * @param weatherData Weather data object
- * @param bortleScale Bortle scale value
- * @param seeingConditions Seeing conditions value
- * @param moonPhase Moon phase value (0-1)
- * @param forecastData Optional forecast data
- * @returns SIQS calculation result
- */
-export async function calculateSIQSWithWeatherData(
-  weatherData: any,
-  bortleScale: number,
-  seeingConditions: number,
-  moonPhase: number = 0.5,
-  forecastData?: any
-): Promise<{ score: number; factors?: any[] }> {
-  // Define weights for different factors
-  const weights = {
-    lightPollution: 0.35,
-    cloudCover: 0.25,
-    seeing: 0.15,
-    moonPhase: 0.10,
-    humidity: 0.05,
-    wind: 0.05,
-    temperature: 0.05,
-  };
-  
-  // Process inputs
-  const cloudCover = weatherData.cloudCover || 0;
-  const humidity = weatherData.humidity || 50;
-  const windSpeed = weatherData.windSpeed || 0;
-  
-  // Calculate individual scores (0-10 scale)
-  const lightPollutionScore = Math.max(0, 10 - bortleScale);
-  const cloudScore = Math.max(0, 10 - (cloudCover / 10));
-  const seeingScore = Math.min(10, seeingConditions * 2);
-  const moonScore = Math.max(0, 10 - (moonPhase * 10));
-  const humidityScore = Math.max(0, 10 - (humidity / 10));
-  const windScore = Math.max(0, 10 - (windSpeed / 2));
-  
-  // Combine scores using weighted average
-  const combinedScore = (
-    lightPollutionScore * weights.lightPollution +
-    cloudScore * weights.cloudCover +
-    seeingScore * weights.seeing +
-    moonScore * weights.moonPhase +
-    humidityScore * weights.humidity +
-    windScore * weights.wind
-  ) / (weights.lightPollution + weights.cloudCover + weights.seeing + 
-        weights.moonPhase + weights.humidity + weights.wind);
-  
-  // Apply any additional adjustments from forecast data
-  let finalScore = combinedScore;
-  if (forecastData) {
-    // Example adjustment based on forecast
-    const forecastAdjustment = 0;  // would calculate based on forecast
-    finalScore = Math.max(0, Math.min(10, finalScore + forecastAdjustment));
-  }
-  
-  // Round to one decimal place for consistency
-  finalScore = Math.round(finalScore * 10) / 10;
-  
-  // Track factors for analysis
-  const factors = [
-    { name: "Light Pollution", score: lightPollutionScore, weight: weights.lightPollution },
-    { name: "Cloud Cover", score: cloudScore, weight: weights.cloudCover },
-    { name: "Seeing Conditions", score: seeingScore, weight: weights.seeing },
-    { name: "Moon Phase", score: moonScore, weight: weights.moonPhase },
-    { name: "Humidity", score: humidityScore, weight: weights.humidity },
-    { name: "Wind", score: windScore, weight: weights.wind }
-  ];
-  
-  return { score: finalScore, factors };
 }
