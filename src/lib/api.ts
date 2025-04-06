@@ -26,8 +26,10 @@ export {
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
   shareAstroSpot
-  // fetchDarkSkyLocations - Removed as it's not exported from './api/astroSpots'
 } from './api/astroSpots';
+
+// Export dark sky locations functionality
+export { fetchDarkSkyLocations } from './api/darkSkyLocations';
 
 // Re-export the location API functions
 export { getLocationNameFromCoordinates } from './api/location';
