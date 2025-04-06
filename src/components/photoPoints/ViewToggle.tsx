@@ -1,9 +1,7 @@
 
-import React, { memo } from 'react';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { motion } from 'framer-motion';
+import { Star, MapPin } from 'lucide-react';
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
@@ -23,74 +21,71 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   loading = false
 }) => {
   const { t } = useLanguage();
-
+  
+  const handleCertifiedClick = () => {
+    if (activeView !== 'certified') {
+      onViewChange('certified');
+    }
+  };
+  
+  const handleCalculatedClick = () => {
+    if (activeView !== 'calculated') {
+      onViewChange('calculated');
+    }
+  };
+  
   return (
-    <div className="flex flex-col items-center mb-6">
-      <div className="bg-cosmic-900/60 border border-cosmic-700/30 p-1.5 rounded-xl shadow-lg flex items-center gap-6 max-w-xl mx-auto">
+    <div className="flex justify-center mb-5">
+      <div className="inline-flex rounded-md shadow-sm" role="group">
         <button
-          onClick={() => onViewChange('certified')}
-          className={`relative flex-1 flex items-center justify-center px-5 py-3 rounded-lg transition-all duration-300 ${
-            activeView === 'certified'
-              ? 'text-primary bg-cosmic-700/60 font-medium shadow-inner'
-              : 'text-muted-foreground hover:bg-cosmic-800/60'
-          }`}
-          disabled={loading}
+          type="button"
+          onClick={handleCertifiedClick}
+          className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-l-lg focus:z-10 focus:ring-2 border-r
+            ${activeView === 'certified' 
+              ? 'text-white bg-amber-700 border-amber-700 hover:bg-amber-800'
+              : 'text-gray-900 bg-white border-gray-200 hover:bg-gray-100 focus:ring-gray-100'}`}
         >
-          {activeView === 'certified' && (
-            <motion.div
-              layoutId="activeTab"
-              className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg"
-              initial={false}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">{t("Certified Locations", "认证位置")}</span>
-          
-          <Badge 
-            variant="secondary" 
-            className={`ml-2 ${activeView === 'certified' ? 'bg-primary/20 text-primary' : 'bg-cosmic-800'}`}
-          >
-            {loading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              certifiedCount
-            )}
-          </Badge>
+          <Star 
+            className={`h-4 w-4 ${activeView === 'certified' ? 'fill-white' : ''}`} 
+          />
+          <span className="hidden sm:inline">
+            {t("Certified Locations", "认证位置")} 
+            <span className={`ml-1 font-semibold ${activeView === 'certified' ? 'text-amber-200' : 'text-gray-700'}`}>
+              ({certifiedCount})
+            </span>
+          </span>
+          <span className="sm:hidden">
+            {t("Certified", "认证")} 
+            <span className={`ml-1 font-semibold ${activeView === 'certified' ? 'text-amber-200' : 'text-gray-700'}`}>
+              ({certifiedCount})
+            </span>
+          </span>
         </button>
-        
         <button
-          onClick={() => onViewChange('calculated')}
-          className={`relative flex-1 flex items-center justify-center px-5 py-3 rounded-lg transition-all duration-300 ${
-            activeView === 'calculated'
-              ? 'text-primary bg-cosmic-700/60 font-medium shadow-inner'
-              : 'text-muted-foreground hover:bg-cosmic-800/60'
-          }`}
-          disabled={loading}
+          type="button"
+          onClick={handleCalculatedClick}
+          className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-r-lg focus:z-10 focus:ring-2
+            ${activeView === 'calculated'
+              ? 'text-white bg-primary border-primary hover:bg-primary/90' 
+              : 'text-gray-900 bg-white border-gray-200 hover:bg-gray-100 focus:ring-gray-100'}`}
         >
-          {activeView === 'calculated' && (
-            <motion.div
-              layoutId="activeTab"
-              className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg"
-              initial={false}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">{t("Calculated Locations", "计算位置")}</span>
-          
-          <Badge 
-            variant="secondary" 
-            className={`ml-2 ${activeView === 'calculated' ? 'bg-primary/20 text-primary' : 'bg-cosmic-800'}`}
-          >
-            {loading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              calculatedCount
-            )}
-          </Badge>
+          <MapPin className={`h-4 w-4 ${activeView === 'calculated' ? 'fill-white' : ''}`} />
+          <span className="hidden sm:inline">
+            {t("Calculated Locations", "计算位置")}
+            <span className={`ml-1 font-semibold ${activeView === 'calculated' ? 'text-primary-100' : 'text-gray-700'}`}>
+              ({calculatedCount})
+            </span>
+          </span>
+          <span className="sm:hidden">
+            {t("Calculated", "计算")}
+            <span className={`ml-1 font-semibold ${activeView === 'calculated' ? 'text-primary-100' : 'text-gray-700'}`}>
+              ({calculatedCount})
+            </span>
+          </span>
         </button>
       </div>
     </div>
   );
 };
 
-export default memo(ViewToggle);
+export default ViewToggle;

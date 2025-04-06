@@ -45,9 +45,22 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const lastClickTimeRef = useRef<number>(0);
   const clickTimeoutRef = useRef<number | null>(null);
   const { hoveredLocationId, handleHover } = useMapMarkers();
+  const previousViewRef = useRef<string>(activeView);
+  const viewChangedRef = useRef<boolean>(false);
   
-  // Show only the active view locations
+  // Always show only the active view locations
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  
+  // When view changes, mark it to trigger a re-render
+  useEffect(() => {
+    if (previousViewRef.current !== activeView) {
+      previousViewRef.current = activeView;
+      viewChangedRef.current = true;
+      
+      // Fix for radius not updating correctly when switching views
+      console.log(`View changed to ${activeView}, adjusting radius accordingly`);
+    }
+  }, [activeView]);
   
   // Always load certified locations in background as soon as component mounts
   useEffect(() => {
@@ -187,6 +200,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onLocationClick={handleLocationClickEvent}
           onMapClick={handleMapClick}
           zoom={initialZoom}
+          key={`map-view-${activeView}`} // Add key to force re-render on view change
+          hoveredLocationId={hoveredLocationId}
+          onMarkerHover={handleHover}
         />
         
         <RealTimeLocationUpdater 

@@ -33,24 +33,25 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     try {
       const result = await calculateRealTimeSiqs(
         userLocation.latitude,
-        userLocation.longitude
+        userLocation.longitude,
+        searchRadius
       );
       
-      if (result && typeof result.score === 'number') {
-        console.log(`Real-time SIQS calculated: ${result.score.toFixed(1)}`);
+      if (result && typeof result.siqs === 'number') {
+        console.log(`Real-time SIQS calculated: ${result.siqs.toFixed(1)}`);
         
         // Update the global SIQS store
-        currentSiqsStore.setValue(result.score);
+        currentSiqsStore.setValue(result.siqs);
         
         // Call the callback if provided
         if (onSiqsCalculated) {
-          onSiqsCalculated(result.score);
+          onSiqsCalculated(result.siqs);
         }
       }
     } catch (error) {
       console.error("Error calculating real-time SIQS:", error);
     }
-  }, [userLocation, onSiqsCalculated]);
+  }, [userLocation, onSiqsCalculated, searchRadius]);
   
   // Effect for location change
   useEffect(() => {

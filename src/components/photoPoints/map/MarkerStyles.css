@@ -1,0 +1,66 @@
+
+/* Reset any global CSS that might affect our markers */
+.leaflet-marker-icon {
+  transition: transform 0.1s ease-out;
+}
+
+/* Fix popup flickering issues */
+.leaflet-popup {
+  transition: opacity 0.1s ease;
+}
+
+/* Custom marker styling */
+.custom-marker-icon {
+  cursor: pointer;
+}
+
+/* Star marker for certified locations */
+.marker-star {
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+}
+
+.marker-star:hover {
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)) brightness(1.1);
+}
+
+/* Circle marker for calculated locations */
+.marker-circle {
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.marker-circle:hover {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) brightness(1.1);
+}
+
+/* User location marker */
+.marker-user {
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.3));
+  z-index: 1000 !important; /* Ensure user marker is always on top */
+}
+
+/* Custom popup styling */
+.leaflet-popup-custom-compact {
+  padding: 2px;
+  max-width: 180px;
+}
+
+/* Fix small size popups */
+.leaflet-popup-content {
+  margin: 7px;
+}
+
+/* Fix popup tip position */
+.leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+
+/* Smoothing animation for popup transitions */
+.leaflet-fade-anim .leaflet-popup {
+  opacity: 0;
+  transition: opacity 0.2s linear;
+}
+
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+  opacity: 1;
+  transition-delay: 0.1s;
+}

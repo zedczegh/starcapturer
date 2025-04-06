@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLocationFind } from './useLocationFind';
@@ -76,8 +75,7 @@ export const useRecommendedLocations = (
       const certifiedResults = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        DEFAULT_CERTIFIED_RADIUS, // Always use full radius for certified
-        true // Only get certified locations
+        DEFAULT_CERTIFIED_RADIUS // Always use full radius for certified
       );
 
       // For calculated locations, use the provided search radius
