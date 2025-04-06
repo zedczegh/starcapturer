@@ -1,3 +1,4 @@
+
 /**
  * Extract the nearest town name from a location string or description
  * @param locationName The full location name
@@ -32,6 +33,16 @@ export function extractNearestTownName(locationName: string, description?: strin
   }
   
   return locationName;
+}
+
+/**
+ * Format location name for display
+ * @param name The full location name
+ * @param language Current language (en or zh)
+ * @returns Formatted location name
+ */
+export function formatLocationName(name: string, language: string = 'en'): string {
+  return extractNearestTownName(name, undefined, language);
 }
 
 /**

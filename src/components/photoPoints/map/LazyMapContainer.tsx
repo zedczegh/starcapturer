@@ -2,9 +2,11 @@
 import React, { useEffect, useRef, lazy, Suspense } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import './mapMarkers.css';
 
 // Create specialized marker icons
 const createDarkSkyMarker = () => createCustomMarker('#3b50ff', {
@@ -58,6 +60,9 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
   return null;
 };
 
+// Import useMap inside the component to fix references
+import { useMap } from 'react-leaflet';
+
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
   zoom,
@@ -80,8 +85,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       center={center}
       zoom={zoom}
       className="h-full w-full"
-      whenReady={() => onMapReady?.()}
-      zoomControl={false}
+      whenCreated={() => onMapReady?.()}
       ref={mapRef}
     >
       <TileLayer
@@ -111,9 +115,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           </Marker>
           
           {searchRadius && (
-            <Circle
+            <CircleMarker
               center={userLocation}
-              radius={searchRadius * 1000} // Convert to meters
+              radius={searchRadius}
               pathOptions={{ 
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
@@ -147,7 +151,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             position={marker.position}
             icon={markerIcon}
             eventHandlers={{
-              click: marker.onClick
+              click: () => marker.onClick && marker.onClick()
             }}
           >
             {marker.popup && (
@@ -165,5 +169,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     </MapContainer>
   );
 };
+
+// Import CircleMarker for the search radius visualization
+import { CircleMarker } from 'react-leaflet';
 
 export default LazyMapContainer;

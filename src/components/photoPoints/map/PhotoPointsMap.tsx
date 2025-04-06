@@ -120,7 +120,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           }
         }))}
         userLocation={userLocation ? [userLocation.latitude, userLocation.longitude] : undefined}
-        searchRadius={searchRadius}
+        searchRadius={searchRadius / 100} // Convert to visual scale for the map
         onMapReady={handleMapReady}
       />
     </div>
