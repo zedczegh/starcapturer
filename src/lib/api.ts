@@ -15,6 +15,7 @@ export {
   fetchLongRangeForecastData 
 } from './api/forecast';
 
+export { getLocationNameFromCoordinates } from './api/location';
 export { fetchLightPollutionData } from './api/pollution';
 
 // Export clear sky rate functionality
@@ -27,9 +28,3 @@ export {
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
-
-// Export dark sky locations functionality
-export { fetchDarkSkyLocations } from './api/darkSkyLocations';
-
-// Re-export the location API functions
-export { getLocationNameFromCoordinates } from './api/location';

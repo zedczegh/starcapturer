@@ -1,8 +1,9 @@
 
 import { useState, useCallback, useRef } from 'react';
+import { calculateSIQS } from '@/lib/calculateSIQS';
 import { useBortleUpdater } from './location/useBortleUpdater';
 import { useForecastData } from './useForecastData';
-import { calculateSIQSWithWeatherData } from './siqs/siqsCalculationUtils';
+import { validateCloudCover } from '@/lib/siqs/utils';
 import { extractNightForecasts } from '@/components/forecast/ForecastUtils';
 
 /**
@@ -85,14 +86,19 @@ export function useLocationSIQSUpdater(
       const seeingConditions = currentData?.seeingConditions || 3;
       const moonPhase = currentData?.moonPhase || 0.5;
       
-      // Calculate SIQS using the improved utility function
-      const siqsResult = await calculateSIQSWithWeatherData(
-        weatherData,
-        bortleScale || 5,
+      // Calculate SIQS
+      const siqsResult = calculateSIQS({
+        cloudCover,
+        bortleScale: bortleScale || 5,
         seeingConditions,
+        windSpeed: weatherData?.windSpeed || 5,
+        humidity: weatherData?.humidity || 50,
         moonPhase,
-        forecast
-      );
+        aqi: weatherData?.aqi,
+        weatherCondition: weatherData?.weatherCondition,
+        precipitation: weatherData?.precipitation,
+        nightForecast
+      });
       
       // Return updated data
       return {
@@ -119,16 +125,4 @@ export function useLocationSIQSUpdater(
     updateSIQSForLocation,
     resetUpdateState
   };
-}
-
-/**
- * Validate cloud cover value
- * @param cloudCover Cloud cover value to validate
- * @returns Validated cloud cover value
- */
-function validateCloudCover(cloudCover: any): number {
-  if (typeof cloudCover === 'number' && isFinite(cloudCover)) {
-    return Math.max(0, Math.min(100, cloudCover));
-  }
-  return 50; // Default fallback
 }

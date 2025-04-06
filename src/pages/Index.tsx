@@ -10,7 +10,7 @@ import Footer from "@/components/index/Footer";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { isGoodViewingCondition, formatSIQSScoreForDisplay } from "@/hooks/siqs/siqsCalculationUtils";
+import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 
 const Index = () => {

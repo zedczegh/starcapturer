@@ -42,7 +42,7 @@ const LocationDetails = () => {
   });
 
   // Use the SIQS updater to keep scores in sync with forecast data
-  const { resetUpdateState, updateSIQSForLocation } = useLocationSIQSUpdater(
+  const { resetUpdateState } = useLocationSIQSUpdater(
     locationData,
     locationData?.forecastData,
     setLocationData,

@@ -4,31 +4,6 @@ import { SIQSResult, SIQSFactor } from '@/lib/siqs/types';
 import { extractNightForecasts, calculateAverageCloudCover } from '@/components/forecast/NightForecastUtils';
 
 /**
- * Format SIQS score for display
- */
-export function formatSIQSScoreForDisplay(score: number | null): string {
-  if (score === null || score === undefined || isNaN(score)) {
-    return '—';
-  }
-  return (Math.round(score * 10) / 10).toFixed(1);
-}
-
-/**
- * Check if a location has good viewing conditions based on SIQS score
- */
-export function isGoodViewingCondition(score: number): boolean {
-  return score >= 5.0;
-}
-
-/**
- * Normalize score to range 0-10
- */
-export function normalizeScore(score: number): number {
-  // Ensure score is between 0 and 10
-  return Math.max(0, Math.min(10, score));
-}
-
-/**
  * Calculate SIQS with weather data and optional forecast data
  */
 export async function calculateSIQSWithWeatherData(
@@ -68,6 +43,7 @@ export async function calculateSIQSWithWeatherData(
           nightForecast
         });
         
+        console.info(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
         console.info(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
         console.info(`Using nighttime forecast for SIQS calculation: ${siqsResult.score}`);
         
