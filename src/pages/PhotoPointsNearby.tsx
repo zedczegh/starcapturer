@@ -82,12 +82,10 @@ const PhotoPointsNearby: React.FC = () => {
     };
   }, [setSearchRadius]);
 
-  // Call getUserLocation when the component mounts
+  // Call getPosition when the component mounts to get user's location
   useEffect(() => {
-    if (!userLocation) {
-      getPosition();
-    }
-  }, [getPosition, userLocation]);
+    getPosition();
+  }, [getPosition]);
 
   // Mark initial load as complete after everything is loaded
   useEffect(() => {
@@ -115,8 +113,22 @@ const PhotoPointsNearby: React.FC = () => {
   // Handle click on a location marker
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && location.latitude && location.longitude) {
-      navigate(`/location/${location.id || 'custom'}`, { 
-        state: location 
+      const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+      navigate(`/location/${locationId}`, { 
+        state: {
+          id: locationId,
+          name: location.name,
+          chineseName: location.chineseName,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          bortleScale: location.bortleScale || 4,
+          siqs: location.siqs,
+          siqsResult: location.siqs ? { score: location.siqs } : undefined,
+          certification: location.certification,
+          isDarkSkyReserve: location.isDarkSkyReserve,
+          timestamp: new Date().toISOString(),
+          fromPhotoPoints: true
+        } 
       });
       toast.info(t("Opening location details", "正在打开位置详情"));
     }
@@ -146,17 +158,15 @@ const PhotoPointsNearby: React.FC = () => {
       </div>
       
       {/* Distance filter with better spacing */}
-      {userLocation && (
-        <div className="max-w-xl mx-auto mb-10 mt-6">
-          <DistanceRangeSlider
-            currentValue={searchRadius}
-            onValueChange={handleRadiusChange}
-            minValue={100}
-            maxValue={10000}
-            stepValue={100}
-          />
-        </div>
-      )}
+      <div className="max-w-xl mx-auto mb-10 mt-6">
+        <DistanceRangeSlider
+          currentValue={searchRadius}
+          onValueChange={handleRadiusChange}
+          minValue={100}
+          maxValue={10000}
+          stepValue={100}
+        />
+      </div>
       
       {showMap ? (
         <Suspense fallback={<PageLoader />}>

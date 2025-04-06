@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -7,7 +7,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 
 // Lazy load the map container to reduce initial load time
-const LazyMapContainer = lazy(() => import('./LazyMapContainer'));
+const PhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -67,7 +67,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           </div>
         </div>
       }>
-        <LazyMapContainer
+        <PhotoPointsMapContainer
           center={mapCenter}
           userLocation={userLocation}
           locations={validLocations}

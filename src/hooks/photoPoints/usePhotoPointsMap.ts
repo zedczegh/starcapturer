@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -42,10 +42,25 @@ export const usePhotoPointsMap = ({
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     setSelectedLocation(location);
     
+    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    
     // Navigate to location details page
     if (location && location.latitude && location.longitude) {
-      navigate(`/location/${location.id || 'custom'}`, { 
-        state: location 
+      navigate(`/location/${locationId}`, { 
+        state: {
+          id: locationId,
+          name: location.name,
+          chineseName: location.chineseName,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          bortleScale: location.bortleScale || 4,
+          siqs: location.siqs,
+          siqsResult: location.siqs ? { score: location.siqs } : undefined,
+          certification: location.certification,
+          isDarkSkyReserve: location.isDarkSkyReserve,
+          timestamp: new Date().toISOString(),
+          fromPhotoPoints: true
+        } 
       });
       toast.info(t("Opening location details", "正在打开位置详情"));
     }
