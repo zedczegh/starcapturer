@@ -1,16 +1,23 @@
 
 import React, { useRef, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { createCustomMarker, configureLeaflet } from "@/components/location/map/MapMarkerUtils";
+import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
 import SiqsScoreBadge from "../cards/SiqsScoreBadge";
 import { formatSIQSScoreForDisplay } from "@/hooks/siqs/siqsCalculationUtils";
 import L from "leaflet";
 
-// Configure leaflet (only runs on client)
-configureLeaflet();
+// Fix Leaflet icon issue in bundled environments
+function fixLeafletIcons() {
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+  });
+}
 
 // Component to handle map events and interactions
 const MapController = ({ 
@@ -41,9 +48,8 @@ const MapController = ({
       map.setZoom(zoom);
     }
     
-    // Create a visual indicator of the search radius
+    // Enable all controls and interactions if we have user location
     if (userLocation) {
-      // Enable all controls and interactions
       map.scrollWheelZoom.enable();
       map.dragging.enable();
       map.touchZoom.enable();
@@ -52,7 +58,6 @@ const MapController = ({
       map.keyboard.enable();
       if (map.tap) map.tap.enable();
     }
-
   }, [map, searchRadius, userLocation]);
 
   // Handle map movement events
@@ -91,6 +96,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const mapRef = useRef(null);
+
+  // Fix Leaflet icon issue
+  useEffect(() => {
+    fixLeafletIcons();
+  }, []);
 
   // Create marker icons
   const userMarkerIcon = createCustomMarker('#3b82f6'); // Blue for user location
@@ -135,11 +145,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         </Marker>
       )}
       
-      {/* Search radius visualization as a faint circle */}
+      {/* Search radius visualization as a circle */}
       {userLocation && searchRadius && (
-        <CircleMarker 
+        <Circle 
           center={[userLocation.latitude, userLocation.longitude]}
-          radius={50} // Fixed visual size
+          radius={searchRadius * 1000} // Convert km to meters
           pathOptions={{ 
             color: '#3b82f6',
             fillColor: '#3b82f6',
@@ -161,17 +171,19 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           ? locationMarkerIcon 
           : calculatedMarkerIcon;
         
-        // Create event handlers
-        const eventHandlers = onLocationClick 
-          ? { click: () => onLocationClick(location) }
-          : {};
+        // Handle click event
+        const handleClick = () => {
+          if (onLocationClick) {
+            onLocationClick(location);
+          }
+        };
         
         return (
           <Marker
             key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
             position={[location.latitude, location.longitude]}
             icon={icon}
-            eventHandlers={eventHandlers}
+            eventHandlers={onLocationClick ? { click: handleClick } : {}}
           >
             <Popup>
               <div className="p-1 max-w-[200px]">

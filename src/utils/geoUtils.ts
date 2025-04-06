@@ -1,6 +1,6 @@
 
 /**
- * Calculate distance between two geographic coordinates
+ * Calculate distance between two geographic coordinates using Haversine formula
  * @param lat1 Latitude of first point
  * @param lon1 Longitude of first point
  * @param lat2 Latitude of second point
@@ -83,4 +83,18 @@ export const formatSIQSScore = (
 ): string => {
   const score = getSafeScore(siqs);
   return score ? score.toFixed(decimals) : 'N/A';
+};
+
+/**
+ * Calculate zoom level based on search radius
+ * @param radius Search radius in kilometers
+ * @returns Appropriate zoom level for the map
+ */
+export const calculateZoomLevel = (radius: number): number => {
+  if (radius <= 100) return 10;
+  if (radius <= 200) return 9;
+  if (radius <= 500) return 7;
+  if (radius <= 1000) return 6;
+  if (radius <= 5000) return 4;
+  return 3;
 };
