@@ -25,8 +25,8 @@ export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
 export { 
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
-  shareAstroSpot,
-  fetchDarkSkyLocations
+  shareAstroSpot
+  // fetchDarkSkyLocations - Removed as it's not exported from './api/astroSpots'
 } from './api/astroSpots';
 
 // Re-export the location API functions

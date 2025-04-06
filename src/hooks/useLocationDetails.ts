@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import { fetchForecastData } from '@/lib/api';
-import { normalizeScore } from '@/lib/siqs/utils';
+import { normalizeScore } from '@/hooks/siqs/siqsCalculationUtils';
 
 /**
  * Hook for managing location details and related calculations
@@ -62,7 +62,7 @@ export function useLocationDetails(initialData: any = null) {
           ...data,
           siqsResult: {
             ...siqsScore,
-            score: normalizeScore(siqsScore.score, 0, 10, false)
+            score: normalizeScore(siqsScore.score)
           },
           timestamp: new Date().toISOString()
         });
@@ -116,7 +116,7 @@ export function useLocationDetails(initialData: any = null) {
         ...current,
         siqsResult: {
           ...siqsScore,
-          score: normalizeScore(siqsScore.score, 0, 10, false)
+          score: normalizeScore(siqsScore.score)
         },
         timestamp: new Date().toISOString()
       }));
