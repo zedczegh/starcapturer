@@ -182,9 +182,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
             position={[location.latitude, location.longitude]}
             icon={icon}
-            eventHandlers={{
-              click: handleClick
-            }}
+            // Fix: Replace eventHandlers prop with direct onClick prop
+            onClick={handleClick}
           >
             <Popup>
               <div className="p-1 max-w-[200px]">
