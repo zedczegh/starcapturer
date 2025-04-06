@@ -3,32 +3,44 @@
  * API utilities for fetching location and environmental data
  */
 import { fetchWeatherData } from './api/weather';
-import { fetchLocationWeather } from './api/location';
+import { getLocationNameFromCoordinates } from './api/location';
 import { fetchLightPollutionData } from './api/pollution';
-import { fetchForecastData } from './api/forecast';
+import { fetchForecastData, fetchLongRangeForecastData } from './api/forecast';
 import { fetchClearSkyRate } from './api/clearSkyRate';
 import { fetchPollutionForecast } from './api/pollutionForecast';
-import { fetchCalculatedLocations } from './services/locationSearchService';
+import { 
+  findLocationsWithinRadius,
+  findCalculatedLocations,
+  fetchCalculatedLocations, 
+  sortLocationsByQuality
+} from './services/locationSearchService';
 import { 
   getAstroSpot, 
   getAstroSpots, 
   getPhotographyLocations,
   getPhotoPoints
 } from './api/astroSpots';
+import { calculateDistance, determineWeatherCondition } from './api/utils';
 
 // Export all API functions
 export {
   fetchWeatherData,
-  fetchLocationWeather,
+  getLocationNameFromCoordinates,
   fetchLightPollutionData,
   fetchForecastData,
+  fetchLongRangeForecastData,
   fetchClearSkyRate,
   fetchPollutionForecast,
+  findLocationsWithinRadius,
+  findCalculatedLocations,
   fetchCalculatedLocations,
+  sortLocationsByQuality,
   getAstroSpot,
   getAstroSpots,
   getPhotographyLocations,
-  getPhotoPoints
+  getPhotoPoints,
+  calculateDistance,
+  determineWeatherCondition
 };
 
 /**

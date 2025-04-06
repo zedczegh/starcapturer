@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { AboutContent } from "@/components/about/AboutContent";
 import { motion } from "framer-motion";
-import { ArrowLeft, Star, Map, Info, Camera } from "lucide-react";
+import { ArrowLeft, Star, Map, Info, Camera, Moon, Telescope, GitHub } from "lucide-react";
 import AboutHeader from "@/components/about/AboutHeader";
 import AboutFooter from "@/components/about/AboutFooter";
 
@@ -69,7 +69,48 @@ const About = () => {
             />
           </div>
           
+          {/* Additional Features */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <FeatureCard 
+              icon={Moon} 
+              title={t("Bortle Scale Analysis", "伯尔特尺度分析")}
+              description={t(
+                "Accurate light pollution assessment using our enhanced Bortle Scale algorithm with terrain correction",
+                "使用我们增强的伯尔特尺度算法和地形校正进行精确的光污染评估"
+              )}
+              variant="secondary"
+            />
+            <FeatureCard 
+              icon={Telescope} 
+              title={t("Astronomy Conditions", "天文条件")}
+              description={t(
+                "Real-time weather, moon phase, and seeing conditions to help plan your stargazing sessions",
+                "实时天气、月相和观测条件，帮助您规划观星活动"
+              )}
+              variant="secondary"
+            />
+          </div>
+          
           <AboutContent />
+          
+          <div className="bg-cosmic-800/30 backdrop-blur-sm border border-cosmic-700/50 p-6 rounded-xl shadow-lg">
+            <h3 className="text-xl font-bold mb-3 text-cosmic-50 flex items-center">
+              <GitHub className="h-5 w-5 mr-2" />
+              {t("Open Source", "开源项目")}
+            </h3>
+            <p className="text-cosmic-300">
+              {t(
+                "This project is open source and welcomes community contributions to improve astronomy accessibility worldwide.",
+                "这是一个开源项目，欢迎社区贡献，以改善全球天文可及性。"
+              )}
+            </p>
+            <div className="mt-4">
+              <Button variant="outline" size="sm" className="text-cosmic-200 border-cosmic-700 hover:border-cosmic-500">
+                <GitHub className="h-4 w-4 mr-2" />
+                {t("View on GitHub", "在GitHub上查看")}
+              </Button>
+            </div>
+          </div>
           
           <AboutFooter />
         </motion.div>
@@ -78,16 +119,34 @@ const About = () => {
   );
 };
 
-const FeatureCard = ({ icon: Icon, title, description }) => {
+const FeatureCard = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  variant = "primary" 
+}: { 
+  icon: any; 
+  title: string; 
+  description: string;
+  variant?: "primary" | "secondary";
+}) => {
+  const bgGradient = variant === "primary" 
+    ? "bg-gradient-to-br from-blue-500 to-purple-600"
+    : "bg-gradient-to-br from-emerald-500 to-blue-600";
+    
+  const cardBg = variant === "primary"
+    ? "bg-cosmic-800/40"
+    : "bg-cosmic-800/30";
+  
   return (
     <motion.div
       variants={{
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
       }}
-      className="bg-cosmic-800/40 backdrop-blur-sm border border-cosmic-700/50 p-6 rounded-xl shadow-lg"
+      className={`${cardBg} backdrop-blur-sm border border-cosmic-700/50 p-6 rounded-xl shadow-lg`}
     >
-      <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+      <div className={`${bgGradient} w-12 h-12 rounded-full flex items-center justify-center mb-4`}>
         <Icon className="h-6 w-6 text-white" />
       </div>
       <h3 className="text-xl font-bold mb-3 text-cosmic-50">{title}</h3>
