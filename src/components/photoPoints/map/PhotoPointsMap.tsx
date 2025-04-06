@@ -39,11 +39,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
   
-  // Determine which locations to show based on active view
-  const displayedLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
-  
-  // If no filtered locations available, fall back to all locations
-  const locationsToShow = displayedLocations.length > 0 ? displayedLocations : locations;
+  // Determine which locations to show based on active view - show only the active view's locations
+  const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
   const {
     mapReady,

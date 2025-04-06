@@ -19,7 +19,7 @@ const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLoca
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
-const DEFAULT_MAP_CENTER = { latitude: 39.7392, longitude: -104.9903 }; // Denver, but will be replaced by user location
+// Defaults
 const DEFAULT_SEARCH_RADIUS = 1000; // 1000km default radius
 const CERTIFIED_SEARCH_RADIUS = 10000; // No practical limit for certified locations (10000km)
 
@@ -60,7 +60,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks
-  } = useRecommendedLocations(userLocation || DEFAULT_MAP_CENTER, DEFAULT_SEARCH_RADIUS);
+  } = useRecommendedLocations(userLocation, activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : DEFAULT_SEARCH_RADIUS);
 
   // Process locations to separate certified and calculated
   const {
@@ -78,8 +78,12 @@ const PhotoPointsNearby: React.FC = () => {
   // Handle location update from map click
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     setUserLocation({ latitude, longitude });
+    toast.info(t(
+      "Using selected location",
+      "使用选定位置"
+    ));
     refreshSiqsData();
-  }, [refreshSiqsData]);
+  }, [refreshSiqsData, t]);
 
   // Call getPosition when the component mounts to get user's location
   useEffect(() => {
@@ -132,14 +136,17 @@ const PhotoPointsNearby: React.FC = () => {
 
   // Effect to update the search radius based on active view
   useEffect(() => {
+    // For certified locations, set a much larger search radius
     if (activeView === 'certified') {
-      // For certified locations, set a much larger search radius
       setSearchRadius(CERTIFIED_SEARCH_RADIUS);
     } else {
       // For calculated locations, use a more reasonable radius
       setSearchRadius(DEFAULT_SEARCH_RADIUS);
     }
   }, [activeView, setSearchRadius]);
+  
+  // Determine which locations to display based on the active view
+  const locationsToDisplay = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
   return (
     <PhotoPointsLayout>
@@ -196,7 +203,7 @@ const PhotoPointsNearby: React.FC = () => {
           <div className="h-[600px] rounded-lg overflow-hidden border border-border">
             <PhotoPointsMap 
               userLocation={userLocation}
-              locations={locations}
+              locations={locationsToDisplay}
               certifiedLocations={certifiedLocations}
               calculatedLocations={calculatedLocations}
               activeView={activeView}

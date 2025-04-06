@@ -82,10 +82,7 @@ export const useRecommendedLocations = (
         userLocation.latitude,
         userLocation.longitude,
         calculatedRadius,
-        true, // Allow expansion
-        10,  // Limit
-        isRadiusIncrease && !locationChanged, // Preserve previous locations if radius increased without location change
-        isRadiusIncrease && !locationChanged ? previousLocationsRef.current : []
+        true // Allow expansion
       );
       
       // Combine the results
@@ -195,10 +192,7 @@ export const useRecommendedLocations = (
         userLocation.latitude,
         userLocation.longitude,
         calculatedRadius,
-        true, // Allow radius expansion
-        10, // Get 10 more locations
-        true, // Always preserve previous locations
-        locations // Pass current locations
+        true // Allow radius expansion
       );
       
       // Filter out locations we already have

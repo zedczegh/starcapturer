@@ -112,7 +112,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       className="h-full w-full"
       whenReady={() => onMapReady()}
       scrollWheelZoom={true}
-      zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
