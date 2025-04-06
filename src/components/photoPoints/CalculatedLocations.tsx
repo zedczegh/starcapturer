@@ -39,11 +39,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Set up the event listener for expanding search radius - fixed by providing currentRadius
-  useExpandSearchRadius({ 
-    onRefresh, 
-    currentRadius: searchRadius 
-  });
+  // Set up the event listener for expanding search radius
+  useExpandSearchRadius({ onRefresh });
   
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
@@ -56,8 +53,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Determine if we should show loading state
   if (loading && sortedLocations.length === 0) {
     return (
-      <div className="flex justify-center items-center py-12" 
-           data-testid="locations-loading-state">
+      <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
       </div>
     );
@@ -74,7 +70,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   return (
-    <div className="calculated-locations-container space-y-6">
+    <>
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
@@ -89,7 +85,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
       />
-    </div>
+    </>
   );
 };
 

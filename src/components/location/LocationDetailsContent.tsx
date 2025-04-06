@@ -1,179 +1,172 @@
 
-import React, { useState, useEffect } from "react";
+import React, { memo, lazy, Suspense, useEffect, useCallback, useRef } from "react";
+import LocationHeader from "@/components/location/LocationHeader";
+import StatusMessage from "@/components/location/StatusMessage";
+import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
-import LocationDataSection from "./LocationDataSection";
-import SIQSDataSection from "./SIQSDataSection";
-import WeatherForecastSection from "../forecast/WeatherForecastSection";
-import LocationQuickActions from "./LocationQuickActions";
-import LocationEditDialog from "./LocationEditDialog";
-import WeatherDataSection from "./WeatherDataSection";
-import MapView from "./map/MapView";
-import LongRangeForecastSection from "../forecast/LongRangeForecastSection";
-import { calculateBortleToSQM } from "@/utils/bortleUtils";
-import BortleScaleUpdater from "./BortleScaleUpdater";
-import { updateUserProvidedBortleScale } from "@/lib/api/pollution";
-import { calculateSIQS } from "@/lib/calculateSIQS";
-import { useToast } from "@/components/ui/use-toast";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
+import { toast } from "sonner";
+
+// Lazy load the content grid for better performance
+const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
 
 interface LocationDetailsContentProps {
   locationData: any;
-  setLocationData: React.Dispatch<React.SetStateAction<any>>;
-  onLocationUpdate: (location: any) => Promise<void>;
+  setLocationData: (data: any) => void;
+  onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
 }
 
-const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
+const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   locationData,
   setLocationData,
-  onLocationUpdate,
+  onLocationUpdate
 }) => {
-  const { language, t } = useLanguage();
-  const [isMapViewActive, setIsMapViewActive] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const { toast } = useToast();
-
-  // Set up locationName for use in the component
-  const locationName = locationData && (locationData.name || locationData.locationName || "");
-
-  // Calculate SQM from Bortle scale
-  const sqmValue = locationData?.bortleScale ? calculateBortleToSQM(locationData.bortleScale) : null;
-
-  // Function to update location
-  const handleUpdateLocation = (data: any) => {
-    return onLocationUpdate({
-      ...locationData,
-      ...data,
-      manuallyEdited: true
-    });
-  };
+  const { t } = useLanguage();
+  const lastLocationRef = useRef<string>('');
+  const refreshTimerRef = useRef<number | null>(null);
+  const autoRefreshAttemptedRef = useRef<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Function to handle Bortle scale updates
-  const handleBortleScaleUpdate = (newBortleScale: number) => {
-    if (!locationData || newBortleScale === locationData.bortleScale) return;
-    
-    // Update the local state
-    const updatedLocationData = {
-      ...locationData,
-      bortleScale: newBortleScale
+  // Check if this is a redirect with data that doesn't need refresh
+  const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
+  const hasRequiredData = Boolean(locationData?.weatherData && locationData?.siqsResult);
+  
+  const {
+    forecastData,
+    longRangeForecast,
+    loading,
+    forecastLoading,
+    longRangeLoading,
+    gettingUserLocation,
+    statusMessage,
+    setStatusMessage,
+    setGettingUserLocation,
+    handleRefreshAll,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast
+  } = useLocationDetails(locationData, setLocationData);
+
+  // Update SIQS when forecast data changes
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData, 
+    forecastData, 
+    setLocationData,
+    t
+  );
+
+  // Listen for parent component requesting a refresh
+  useEffect(() => {
+    const handleForceRefresh = () => {
+      console.log("Force refresh request received from parent");
+      handleRefreshAll();
+      resetUpdateState(); // Reset SIQS updater state on manual refresh
     };
     
-    // Recalculate SIQS if we have the required data
-    if (locationData.weatherData && locationData.seeingConditions !== undefined) {
-      const moonPhase = locationData.moonPhase || 0;
-      const siqsResult = calculateSIQS({
-        cloudCover: locationData.weatherData.cloudCover,
-        bortleScale: newBortleScale,
-        seeingConditions: locationData.seeingConditions,
-        windSpeed: locationData.weatherData.windSpeed,
-        humidity: locationData.weatherData.humidity,
-        moonPhase,
-        precipitation: locationData.weatherData.precipitation,
-        weatherCondition: locationData.weatherData.weatherCondition,
-        aqi: locationData.weatherData.aqi
-      });
-      
-      updatedLocationData.siqsResult = siqsResult;
-      
-      toast({
-        title: t ? t("SIQS Recalculated", "SIQS已重新计算") : "SIQS Recalculated",
-        description: t 
-          ? t("Sky quality score has been updated with your light pollution data", "天空质量评分已使用您提供的光污染数据更新") 
-          : "Sky quality score has been updated with your light pollution data",
-      });
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('forceRefresh', handleForceRefresh);
     }
     
-    // Update the full location data
-    setLocationData(updatedLocationData);
+    return () => {
+      if (container) {
+        container.removeEventListener('forceRefresh', handleForceRefresh);
+      }
+    };
+  }, [handleRefreshAll, resetUpdateState]);
+  
+  // Enhanced auto-refresh when page is opened or location is updated
+  useEffect(() => {
+    // Skip auto-refresh if we're coming from a redirect with existing data
+    if (isRedirect && hasRequiredData) {
+      console.log("Skipping content refresh due to redirect with existing data");
+      autoRefreshAttemptedRef.current = true;
+      
+      // Clear any existing flag after redirect
+      if (locationData) {
+        const { fromPhotoPoints, fromCalculator, ...rest } = locationData;
+        if (fromPhotoPoints || fromCalculator) {
+          // Update the locationData to remove the flags but don't trigger a full refresh
+          setLocationData({
+            ...rest
+          });
+        }
+      }
+      
+      return;
+    }
     
-    // Also save this Bortle scale to the service
-    updateUserProvidedBortleScale(
-      locationData.latitude,
-      locationData.longitude,
-      newBortleScale,
-      'observation'
-    );
-  };
+    // Create a location signature to detect changes
+    const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
+    
+    // If location has changed or we haven't refreshed yet, refresh data
+    if (locationSignature !== lastLocationRef.current || !autoRefreshAttemptedRef.current) {
+      lastLocationRef.current = locationSignature;
+      autoRefreshAttemptedRef.current = true;
+      
+      // Clear any existing timer
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+      
+      // Set a small delay before refreshing to allow component to fully mount
+      refreshTimerRef.current = window.setTimeout(() => {
+        console.log("Auto-refreshing data after location update or page load");
+        handleRefreshAll();
+        resetUpdateState(); // Reset SIQS updater state
+      }, 300); // Reduced from 500ms for faster refresh
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState, isRedirect, hasRequiredData]);
 
   return (
-    <div className="flex flex-col gap-6">
-      {!locationData ? (
-        <div className="text-center py-10">
-          <p className="text-lg text-gray-400">{t ? t("No location selected", "未选择位置") : "No location selected"}</p>
-        </div>
-      ) : (
-        <>
-          <div className="bg-cosmic-900/70 p-4 sm:p-6 rounded-lg shadow-lg backdrop-blur-md">
-            <div className="flex flex-col lg:flex-row justify-between">
-              <div className="flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold mb-2">{locationName}</h1>
-                <div className="text-sm text-gray-300 mb-4">
-                  {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}
-                </div>
-
-                <LocationDataSection
-                  locationData={locationData}
-                  language={language}
-                  t={t}
-                  sqmValue={sqmValue}
-                />
-                
-                {locationData.latitude && locationData.longitude && locationData.bortleScale && (
-                  <BortleScaleUpdater
-                    latitude={locationData.latitude}
-                    longitude={locationData.longitude}
-                    currentBortleScale={locationData.bortleScale}
-                    onBortleScaleUpdate={handleBortleScaleUpdate}
-                  />
-                )}
-              </div>
-
-              <div className="mt-4 lg:mt-0">
-                <SIQSDataSection locationData={locationData} t={t} language={language} />
-              </div>
-            </div>
-
-            <LocationQuickActions
-              locationData={locationData}
-              setShowEditDialog={setShowEditDialog}
-              setIsMapViewActive={setIsMapViewActive}
-              t={t}
-            />
+    <div className="transition-all duration-300 animate-fade-in pt-10" ref={containerRef}> {/* Added padding to fix navbar overlap */}
+      <StatusMessage 
+        message={statusMessage} 
+        onClear={() => setStatusMessage(null)} 
+      />
+      
+      <LocationHeader 
+        name={locationData.name}
+        latitude={locationData.latitude}
+        longitude={locationData.longitude}
+        timestamp={locationData.timestamp}
+        loading={loading}
+        bortleScale={locationData.bortleScale}
+        siqs={locationData.siqsResult?.score}
+      />
+      
+      <Suspense fallback={
+        <div className="animate-pulse h-96 rounded-lg bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">{t("Loading content...", "正在加载内容...")}</p>
           </div>
-
-          {locationData.weatherData && <WeatherDataSection locationData={locationData} language={language} t={t} />}
-
-          {isMapViewActive && (
-            <div className="bg-cosmic-900/70 p-4 sm:p-6 rounded-lg shadow-lg backdrop-blur-md">
-              <h2 className="text-xl font-bold mb-4">{t ? t("Map View", "地图视图") : "Map View"}</h2>
-              <MapView
-                latitude={locationData.latitude}
-                longitude={locationData.longitude}
-                name={locationName}
-                bortleScale={locationData.bortleScale}
-              />
-            </div>
-          )}
-
-          <WeatherForecastSection
-            locationData={locationData}
-            language={language}
-          />
-
-          <LongRangeForecastSection
-            locationData={locationData}
-            language={language}
-          />
-
-          <LocationEditDialog
-            isOpen={showEditDialog}
-            onClose={() => setShowEditDialog(false)}
-            locationData={locationData}
-            onUpdateLocation={handleUpdateLocation}
-            language={language}
-          />
-        </>
-      )}
+        </div>
+      }>
+        <LocationContentGrid 
+          locationData={locationData}
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          gettingUserLocation={gettingUserLocation}
+          onLocationUpdate={onLocationUpdate}
+          setGettingUserLocation={setGettingUserLocation}
+          setStatusMessage={setStatusMessage}
+          onRefreshForecast={handleRefreshForecast}
+          onRefreshLongRange={handleRefreshLongRangeForecast}
+        />
+      </Suspense>
     </div>
   );
-};
+});
+
+LocationDetailsContent.displayName = 'LocationDetailsContent';
 
 export default LocationDetailsContent;
