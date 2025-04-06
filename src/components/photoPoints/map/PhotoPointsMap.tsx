@@ -6,7 +6,8 @@ import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
+import { calculateRealTimeSiqs, batchCalculateSiqs } from "@/services/realTimeSiqsService";
+import './MapStyles.css'; // Import custom map styles
 
 // Lazy load the map container to reduce initial load time
 const PhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -34,13 +35,29 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   onLocationClick,
   onMapReady,
   onLocationUpdate,
-  className = "h-[500px] w-full rounded-lg overflow-hidden border border-border"
+  className = "h-[600px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
   
-  // Determine which locations to show based on active view - show only the active view's locations
+  // Determine which locations to show based on active view
   const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  
+  // Always process certified locations to show them by default
+  useEffect(() => {
+    if (certifiedLocations.length > 0 && !mapLoadedOnce) {
+      // Mark that we've done initial processing
+      setMapLoadedOnce(true);
+      
+      // Calculate SIQS for all certified locations in batches to ensure they have scores
+      batchCalculateSiqs(certifiedLocations, 3).then(updatedCertified => {
+        console.log(`Processed ${updatedCertified.length} certified locations for map display`);
+      }).catch(err => {
+        console.error("Failed to process certified locations:", err);
+      });
+    }
+  }, [certifiedLocations, mapLoadedOnce]);
   
   const {
     mapReady,

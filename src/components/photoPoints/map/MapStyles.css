@@ -1,0 +1,36 @@
+
+.leaflet-popup-custom {
+  max-width: 200px !important;
+}
+
+.leaflet-popup-custom-compact {
+  max-width: 160px !important;
+}
+
+.leaflet-popup-custom-compact .leaflet-popup-content-wrapper {
+  background: rgba(20, 20, 30, 0.9) !important;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  padding: 0 !important;
+}
+
+.leaflet-popup-custom-compact .leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.leaflet-popup-custom-compact .leaflet-popup-tip {
+  background: rgba(20, 20, 30, 0.9) !important;
+}
+
+/* Custom styles for popup interaction */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  transform: scale(1.2) !important;
+  z-index: 1000 !important;
+}

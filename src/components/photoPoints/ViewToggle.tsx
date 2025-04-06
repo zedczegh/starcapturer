@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Toggle } from "@/components/ui/toggle";
-import { Award, Calculator } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Award, Calculator, Loader2 } from "lucide-react";
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
@@ -31,48 +31,48 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   };
   
   return (
-    <div className="flex items-center justify-center bg-cosmic-900/40 rounded-lg p-1.5 max-w-sm mx-auto gap-3">
-      <Toggle
-        variant="outline"
-        pressed={activeView === 'certified'}
-        onPressedChange={() => handleViewChange('certified')}
+    <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-4">
+      <Button
+        variant={activeView === 'certified' ? "default" : "outline"}
+        onClick={() => handleViewChange('certified')}
         disabled={loading}
-        className={`flex-1 gap-1.5 ${
+        size="lg"
+        className={`relative w-full md:w-60 h-14 gap-3 font-semibold transition-all duration-300 ${
           activeView === 'certified' 
-            ? 'bg-cosmic-800/60 border-cosmic-600/50' 
-            : 'bg-transparent hover:bg-cosmic-800/40'
+            ? 'bg-blue-600/90 border-blue-500 shadow-lg shadow-blue-500/20' 
+            : 'bg-background/30 hover:bg-blue-500/20'
         }`}
       >
-        <Award className="h-4.5 w-4.5 text-blue-400" />
-        <span className="text-sm">{t("Certified", "认证地点")}</span>
-        <span className="ml-1 text-xs text-muted-foreground">
-          ({certifiedCount})
+        <Award className="h-5 w-5 text-blue-400" />
+        <span className="text-base">{t("Certified", "认证地点")}</span>
+        <span className="ml-1 text-xs bg-blue-700/60 px-2 py-0.5 rounded-full">
+          {certifiedCount}
         </span>
         {loading && activeView === 'certified' && (
-          <span className="ml-1 h-3 w-3">•</span>
+          <Loader2 className="absolute right-3 h-4 w-4 animate-spin" />
         )}
-      </Toggle>
+      </Button>
       
-      <Toggle
-        variant="outline"
-        pressed={activeView === 'calculated'}
-        onPressedChange={() => handleViewChange('calculated')}
+      <Button
+        variant={activeView === 'calculated' ? "default" : "outline"}
+        onClick={() => handleViewChange('calculated')}
         disabled={loading}
-        className={`flex-1 gap-1.5 ${
+        size="lg"
+        className={`relative w-full md:w-60 h-14 gap-3 font-semibold transition-all duration-300 ${
           activeView === 'calculated' 
-            ? 'bg-cosmic-800/60 border-cosmic-600/50' 
-            : 'bg-transparent hover:bg-cosmic-800/40'
+            ? 'bg-amber-600/90 border-amber-500 shadow-lg shadow-amber-500/20' 
+            : 'bg-background/30 hover:bg-amber-500/20'
         }`}
       >
-        <Calculator className="h-4.5 w-4.5 text-yellow-400" />
-        <span className="text-sm">{t("Calculated", "计算地点")}</span>
-        <span className="ml-1 text-xs text-muted-foreground">
-          ({calculatedCount})
+        <Calculator className="h-5 w-5 text-yellow-400" />
+        <span className="text-base">{t("Calculated", "计算地点")}</span>
+        <span className="ml-1 text-xs bg-amber-700/60 px-2 py-0.5 rounded-full">
+          {calculatedCount}
         </span>
         {loading && activeView === 'calculated' && (
-          <span className="ml-1 h-3 w-3">•</span>
+          <Loader2 className="absolute right-3 h-4 w-4 animate-spin" />
         )}
-      </Toggle>
+      </Button>
     </div>
   );
 };

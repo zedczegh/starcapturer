@@ -13,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { Button } from '@/components/ui/button';
+import { Map, List } from 'lucide-react';
 
 // Lazy load components that are not immediately visible
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
@@ -67,8 +69,11 @@ const PhotoPointsNearby: React.FC = () => {
       } catch (err) {
         console.error("Error saving location to localStorage:", err);
       }
+    } else if (!userLocation) {
+      // If we don't have coords and no userLocation, try to get position
+      getPosition();
     }
-  }, [coords]);
+  }, [coords, userLocation, getPosition]);
 
   // Set up recommended locations with userLocation
   const {
@@ -193,25 +198,29 @@ const PhotoPointsNearby: React.FC = () => {
         getPosition={getPosition}
       />
       
+      {/* Main filter section with improved toggle buttons */}
+      <ViewToggle
+        activeView={activeView}
+        onViewChange={setActiveView}
+        certifiedCount={certifiedCount}
+        calculatedCount={calculatedCount}
+        loading={loading && !locationLoading}
+      />
+      
       {/* View toggle between map and list */}
       <div className="flex justify-end mb-4">
-        <button 
+        <Button 
           onClick={toggleMapView}
-          className="px-3 py-1 text-sm rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+          variant="outline"
+          size="sm"
+          className="shadow-sm hover:bg-muted/60"
         >
-          {showMap ? t("Show List", "显示列表") : t("Show Map", "显示地图")}
-        </button>
-      </div>
-      
-      {/* Tab toggle for certified vs calculated */}
-      <div className="mb-6">
-        <ViewToggle
-          activeView={activeView}
-          onViewChange={setActiveView}
-          certifiedCount={certifiedCount}
-          calculatedCount={calculatedCount}
-          loading={loading && !locationLoading}
-        />
+          {showMap ? (
+            <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
+          ) : (
+            <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
+          )}
+        </Button>
       </div>
       
       {/* Distance filter only for calculated view */}
@@ -239,7 +248,7 @@ const PhotoPointsNearby: React.FC = () => {
       
       {showMap ? (
         <Suspense fallback={<PageLoader />}>
-          <div className="h-[600px] rounded-lg overflow-hidden border border-border">
+          <div className="h-[600px] rounded-lg overflow-hidden border border-border shadow-lg">
             <PhotoPointsMap 
               userLocation={userLocation}
               locations={locationsToDisplay}

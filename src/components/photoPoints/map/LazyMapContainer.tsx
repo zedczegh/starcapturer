@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -67,9 +67,6 @@ const MapController = ({
         // Only set view once on first render to avoid constant recentering
         map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
         firstRenderRef.current = false;
-      } else if (map._animateToCenter && map._animateToZoom) {
-        // If map is already animating to a center, don't interrupt
-        return;
       }
     }
     
@@ -84,6 +81,91 @@ const getSiqsMarker = (siqs: number | undefined) => {
   
   const color = getProgressColor(siqs);
   return createCustomMarker(color);
+};
+
+// Location Marker component with popup handling
+const LocationMarker = ({ 
+  location, 
+  onClick, 
+  hoveredId, 
+  setHoveredId 
+}: { 
+  location: SharedAstroSpot; 
+  onClick: () => void;
+  hoveredId: string | null;
+  setHoveredId: (id: string | null) => void;
+}) => {
+  const { t, language } = useLanguage();
+  const locationId = `location-${location.id || `${location.latitude}-${location.longitude}`}`;
+  const icon = getSiqsMarker(location.siqs);
+
+  // Create refs to directly access the marker
+  const markerRef = useRef<L.Marker | null>(null);
+
+  // Manage hover state
+  const handleMouseOver = useCallback(() => {
+    setHoveredId(locationId);
+  }, [locationId, setHoveredId]);
+
+  const handleMouseOut = useCallback(() => {
+    setHoveredId(null);
+  }, [setHoveredId]);
+
+  // Effect to open/close popup based on hover state
+  useEffect(() => {
+    if (!markerRef.current) return;
+    
+    const marker = markerRef.current;
+    
+    if (hoveredId === locationId) {
+      marker.openPopup();
+    } else {
+      marker.closePopup();
+    }
+  }, [hoveredId, locationId]);
+
+  return (
+    <Marker
+      position={[location.latitude, location.longitude]}
+      icon={icon}
+      eventHandlers={{
+        click: onClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
+      ref={markerRef}
+    >
+      <Popup 
+        className="leaflet-popup-custom-compact"
+        closeButton={false}
+        closeOnClick={false}
+        autoClose={false}
+        autoPan={false}
+      >
+        <div className="p-1.5 max-w-[160px]">
+          <div className="font-medium text-xs">
+            {language === 'zh' && location.chineseName 
+              ? location.chineseName 
+              : location.name}
+          </div>
+          
+          {/* SIQS Score Badge */}
+          {location.siqs !== undefined && (
+            <div className="mt-1 flex items-center gap-1">
+              <SiqsScoreBadge score={location.siqs} />
+              {location.distance && (
+                <span className="text-xs text-muted-foreground">
+                  {location.distance < 1 
+                    ? `${(location.distance * 1000).toFixed(0)}m`
+                    : `${location.distance.toFixed(1)}km`}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </Popup>
+    </Marker>
+  );
 };
 
 interface PhotoPointsMapContainerProps {
@@ -107,8 +189,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   onMapClick,
   zoom = 5
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [mapElement, setMapElement] = useState<L.Map | null>(null);
+  const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
 
   // Create marker icons
   const userMarkerIcon = createCustomMarker('#9b87f5'); // Violet for user location (matching logo color)
@@ -151,7 +234,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           position={[userLocation.latitude, userLocation.longitude]} 
           icon={userMarkerIcon}
         >
-          <Popup>
+          <Popup className="leaflet-popup-custom">
             <div className="p-1">
               <strong>{t("Your Location", "您的位置")}</strong>
               <div className="text-xs mt-1">
@@ -159,9 +242,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
               </div>
             </div>
           </Popup>
-          <Tooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
-            <div className="text-xs font-bold">{t("You", "您")}</div>
-          </Tooltip>
         </Marker>
       )}
       
@@ -186,8 +266,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           return null;
         }
         
-        // Determine icon based on SIQS score
-        const icon = getSiqsMarker(location.siqs);
+        // Generate a unique ID for this location
+        const locationId = `location-${location.id || `${location.latitude}-${location.longitude}`}`;
         
         // Handle the click event for this marker
         const handleClick = () => {
@@ -197,65 +277,13 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         };
         
         return (
-          <Marker
-            key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
-            position={[location.latitude, location.longitude]}
-            icon={icon}
+          <LocationMarker
+            key={locationId}
+            location={location}
             onClick={handleClick}
-            eventHandlers={{
-              mouseover: (e) => {
-                e.target.openTooltip();
-              }
-            }}
-          >
-            <Tooltip direction="top" opacity={0.9}>
-              <div className="text-xs font-semibold">
-                {language === 'zh' && location.chineseName 
-                  ? location.chineseName 
-                  : location.name}
-                {location.siqs && (
-                  <div className="mt-1">
-                    <SiqsScoreBadge score={location.siqs} />
-                  </div>
-                )}
-              </div>
-            </Tooltip>
-            
-            <Popup>
-              <div className="p-1 max-w-[200px]">
-                <div className="font-medium text-base">
-                  {language === 'zh' && location.chineseName 
-                    ? location.chineseName 
-                    : location.name}
-                </div>
-                
-                {/* SIQS Score Badge */}
-                {location.siqs !== undefined && (
-                  <div className="mt-2 flex items-center">
-                    <SiqsScoreBadge score={location.siqs} />
-                    {location.distance && (
-                      <span className="text-xs ml-2 text-muted-foreground">
-                        {location.distance < 1 
-                          ? `${(location.distance * 1000).toFixed(0)}m`
-                          : `${location.distance.toFixed(1)}km`}
-                      </span>
-                    )}
-                  </div>
-                )}
-                
-                {(location.isDarkSkyReserve || location.certification) && (
-                  <div className="mt-1 text-xs font-medium text-emerald-600">
-                    {location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜保护区") : location.certification}
-                  </div>
-                )}
-                
-                {/* Description or coordinates */}
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {location.description || `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+            hoveredId={hoveredLocationId}
+            setHoveredId={setHoveredLocationId}
+          />
         );
       })}
     </MapContainer>
