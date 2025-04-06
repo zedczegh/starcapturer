@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 
 // Lazy load the map container to reduce initial load time
 const LazyMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -27,33 +26,29 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   className = "h-[500px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
-  const {
-    mapReady,
-    handleMapReady,
-    handleLocationClick,
-    validLocations,
-    mapCenter,
-    initialZoom
-  } = usePhotoPointsMap({
-    userLocation,
-    locations,
-    searchRadius
-  });
+  const [mapReady, setMapReady] = useState(false);
 
-  // Callback for map being ready
-  const handleMapReadyEvent = useCallback(() => {
-    handleMapReady();
+  const handleMapReady = useCallback(() => {
+    setMapReady(true);
     if (onMapReady) onMapReady();
-  }, [handleMapReady, onMapReady]);
+  }, [onMapReady]);
 
-  // Handle location click with callback if provided
-  const handleLocationClickEvent = useCallback((location: SharedAstroSpot) => {
+  // Handle location click event
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
-    } else {
-      handleLocationClick(location);
     }
-  }, [onLocationClick, handleLocationClick]);
+  }, [onLocationClick]);
+
+  // Check if locations are from the current user location
+  const validLocations = locations.filter(location => location && 
+    typeof location.latitude === 'number' && 
+    typeof location.longitude === 'number');
+
+  // Default to a central position if no user location
+  const mapCenter: [number, number] = userLocation 
+    ? [userLocation.latitude, userLocation.longitude]
+    : [39.9042, 116.4074]; // Default center (Beijing)
 
   return (
     <div className={className}>
@@ -72,9 +67,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           userLocation={userLocation}
           locations={validLocations}
           searchRadius={searchRadius}
-          onMapReady={handleMapReadyEvent}
-          onLocationClick={handleLocationClickEvent}
-          zoom={initialZoom}
+          onMapReady={handleMapReady}
+          onLocationClick={handleLocationClick}
         />
       </Suspense>
     </div>
