@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -12,12 +13,12 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 
 // Lazy load components that are not immediately visible
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
-const { usePhotoPointsMap } = require('@/hooks/photoPoints/usePhotoPointsMap');
 
 const PhotoPointsNearby: React.FC = () => {
   // Get user location
