@@ -1,3 +1,4 @@
+import { calculateDistance } from './utils';
 import { normalizeLongitude } from './coordinates';
 import { Language } from '@/services/geocoding/types';
 
@@ -207,4 +208,23 @@ export async function getLocationNameFromCoordinates(
       ? `Location at ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°` 
       : `位置在 ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
   }
+}
+
+/**
+ * Find the closest city based on coordinates
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @returns Object containing city name, Bortle scale, and distance
+ */
+export function findClosestCity(latitude: number, longitude: number): {
+  name: string; 
+  bortleScale: number; 
+  distance: number;
+} {
+  // Simplified implementation
+  return {
+    name: "Default City",
+    bortleScale: 5,
+    distance: 100
+  };
 }

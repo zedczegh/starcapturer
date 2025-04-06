@@ -1,10 +1,9 @@
-
 /**
  * Enhanced Bortle scale algorithm that combines multiple data sources
  * for the most scientifically accurate results
  */
 
-import { getTerrainElevation, detectTerrainType, getTerrainAdjustmentFactor } from "./terrainData";
+import { detectTerrainType, getTerrainAdjustmentFactor } from "./terrainData";
 import { findNearbyUserBortleMeasurement } from "@/lib/api/pollution";
 import { estimateBortleScaleByLocation } from "./locationUtils";
 

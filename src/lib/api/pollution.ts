@@ -508,12 +508,7 @@ export function findNearbyUserBortleMeasurement(
   latitude: number,
   longitude: number,
   maxDistance: number = 5
-): {
-  bortleScale: number;
-  distance: number;
-  timestamp: string;
-  method: string;
-} | null {
+): { bortleScale: number; distance: number } | null {
   try {
     const measurements = getUserBortleMeasurements();
     if (!measurements.length) return null;
