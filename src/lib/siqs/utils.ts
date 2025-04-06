@@ -1,98 +1,80 @@
 
-import { normalizeScore } from "./factors";
-
-/**
- * Utility functions for SIQS calculations and display
- */
-
-/**
- * Validates if cloud cover data is within valid range and returns a default value if invalid
- * @param cloudCover Cloud cover percentage
- * @returns Validated cloud cover percentage
- */
-export function validateCloudCover(cloudCover: any): number {
-  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
-    return 50; // Default to moderate cloud cover
-  }
-  
-  return Math.max(0, Math.min(100, cloudCover));
-}
-
-/**
- * Determines if imaging conditions make astrophotography impossible
- * @param factors Weather/location factors
- * @returns Boolean indicating if imaging is impossible
- */
-export function isImagingImpossible(factors: any): boolean {
-  // Check for extreme conditions that make imaging impossible
-  const cloudCover = validateCloudCover(factors.cloudCover);
-  const precipitation = factors.precipitation || 0;
-  
-  // Imaging is impossible if:
-  // - Cloud cover is extremely high (>95%)
-  // - Active precipitation is substantial (>1mm)
-  return cloudCover > 95 || precipitation > 1;
-}
-
-/**
- * Converts SIQS value to color indicator
- * @param value SIQS value (0-10)
- * @returns CSS color code
- */
-export function siqsToColor(value: number): string {
-  if (value >= 8) return '#22c55e'; // green-500
-  if (value >= 6) return '#3b82f6'; // blue-500
-  if (value >= 5) return '#84cc16'; // lime-500
-  if (value >= 4) return '#eab308'; // yellow-500
-  if (value >= 2) return '#f97316'; // orange-500
-  return '#ef4444'; // red-500
-}
-
-/**
- * Gets the quality level text for a SIQS score
- * @param value SIQS value (0-10)
- * @returns Quality level text
- */
-export function getSIQSLevel(value: number): string {
-  if (value >= 8) return 'Excellent';
-  if (value >= 6) return 'Good';
-  if (value >= 4) return 'Average';
-  if (value >= 2) return 'Poor';
-  return 'Bad';
-}
-
 /**
  * Format SIQS score with consistent decimal places
  * @param score SIQS score
- * @returns Formatted score string
+ * @returns Formatted score string with one decimal place
  */
 export function formatSIQSScore(score: number): string {
   if (typeof score !== 'number' || isNaN(score)) {
-    return '0.0';
+    return "0.0";
   }
   
+  // Format with one decimal place
   return score.toFixed(1);
 }
 
 /**
- * Normalize factor scores to ensure they're all on 0-10 scale
- * @param factors Array of SIQS factors
- * @returns Normalized factors
+ * Get SIQS level description based on score
+ * @param score SIQS score (0-10)
+ * @returns Quality level description
  */
-export function normalizeFactorScores(factors: any[]): any[] {
-  if (!Array.isArray(factors)) return [];
+export function getSIQSLevel(score: number): string {
+  if (score >= 8) return "Excellent";
+  if (score >= 6) return "Good";
+  if (score >= 4) return "Average";
+  if (score >= 2) return "Poor";
+  return "Bad";
+}
+
+/**
+ * Normalize SIQS score to ensure it's on the correct scale
+ * @param score Raw SIQS score
+ * @returns Normalized score on 0-10 scale
+ */
+export function normalizeSIQSScore(score: number): number {
+  if (typeof score !== 'number' || isNaN(score)) {
+    return 0;
+  }
   
-  return factors.map(factor => {
-    if (!factor) return factor;
-    
-    // Clone the factor to avoid modifying the original
-    const normalizedFactor = { ...factor };
-    
-    // Convert score to 0-10 scale if needed
-    if (typeof normalizedFactor.score === 'number') {
-      normalizedFactor.score = normalizeScore(normalizedFactor.score);
-    }
-    
-    return normalizedFactor;
-  });
+  // If already on 0-10 scale, just clamp to that range
+  if (score >= 0 && score <= 10) {
+    return Math.max(0, Math.min(10, score));
+  }
+  
+  // If on 0-100 scale, convert to 0-10
+  if (score > 10) {
+    return Math.round((score / 10) * 10) / 10;
+  }
+  
+  return Math.max(0, score);
+}
+
+/**
+ * Get SIQS descriptor text
+ * @param score SIQS score
+ * @param language Language code ('en' or 'zh')
+ * @returns Descriptive text
+ */
+export function getSIQSDescription(score: number, language: string = 'en'): string {
+  if (language === 'zh') {
+    if (score >= 8.5) return "理想的天文摄影条件";
+    if (score >= 7.5) return "极好的星空质量";
+    if (score >= 6.5) return "非常适合天文摄影";
+    if (score >= 5.5) return "良好的观测和拍摄条件";
+    if (score >= 4.5) return "可以进行基础天文观测";
+    if (score >= 3.5) return "观测条件一般";
+    if (score >= 2.5) return "观测条件较差";
+    if (score >= 1.5) return "观测条件差";
+    return "不适合天文观测";
+  } else {
+    if (score >= 8.5) return "Ideal conditions for astrophotography";
+    if (score >= 7.5) return "Excellent sky quality";
+    if (score >= 6.5) return "Very good for astrophotography";
+    if (score >= 5.5) return "Good observing and imaging conditions";
+    if (score >= 4.5) return "Suitable for basic observations";
+    if (score >= 3.5) return "Average observing conditions";
+    if (score >= 2.5) return "Below average conditions";
+    if (score >= 1.5) return "Poor conditions";
+    return "Not suitable for astronomical observation";
+  }
 }

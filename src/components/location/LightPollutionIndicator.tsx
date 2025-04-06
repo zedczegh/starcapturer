@@ -1,96 +1,72 @@
 
-import React from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { getBortleScaleDescription, getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { cn } from "@/lib/utils";
 
 interface LightPollutionIndicatorProps {
   bortleScale: number;
-  showDescription?: boolean;
-  size?: 'sm' | 'md' | 'lg';
   showBortleNumber?: boolean;
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
-  compact?: boolean;
 }
 
 const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   bortleScale,
-  showDescription = true,
+  showBortleNumber = false,
   size = 'md',
-  showBortleNumber = true,
-  className,
-  compact = false
+  className
 }) => {
-  const { t, language } = useLanguage();
+  // Ensure valid Bortle scale
+  const validBortleScale = Math.min(9, Math.max(1, bortleScale || 5));
   
-  // Get Bortle scale color
-  const colorData = getBortleScaleColor(bortleScale);
-  
-  // Destructure color properties correctly
-  const colorText = typeof colorData === 'string' ? colorData : colorData.text;
-  const colorBg = typeof colorData === 'string' ? colorData : colorData.bg;
-  const colorBorder = typeof colorData === 'string' ? colorData : colorData.border;
-  
-  // Enhanced size classes for more dynamic appearance
-  const sizeClass = {
-    sm: 'h-5 w-5 text-xs',
-    md: 'h-7 w-7 text-sm',
-    lg: 'h-8 w-8 text-base'
-  }[size];
-  
-  const description = getBortleScaleDescription(bortleScale);
-  
-  // Format Bortle scale for display (keep one decimal place if needed)
-  const formatBortleScale = (value: number) => {
-    return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+  // Get color based on Bortle scale
+  const getColor = () => {
+    if (validBortleScale <= 1) return "bg-sky-900/70 text-sky-300";
+    if (validBortleScale <= 2) return "bg-blue-900/70 text-blue-300";
+    if (validBortleScale <= 3) return "bg-teal-900/70 text-teal-300";
+    if (validBortleScale <= 4) return "bg-green-900/70 text-green-300";
+    if (validBortleScale <= 5) return "bg-lime-900/70 text-lime-300";
+    if (validBortleScale <= 6) return "bg-yellow-900/70 text-yellow-300";
+    if (validBortleScale <= 7) return "bg-amber-900/70 text-amber-300";
+    if (validBortleScale <= 8) return "bg-orange-900/70 text-orange-300";
+    return "bg-red-900/70 text-red-300";
   };
-
-  // Compact mode for sidebar widgets - with larger font
-  if (compact) {
-    return (
-      <div className={cn("flex items-center", className)}>
-        <div className="flex items-center">
-          <div 
-            className={cn(
-              "rounded-full mr-2 flex items-center justify-center border shadow-sm", 
-              "h-6 w-6",
-              colorBg,
-              colorBorder
-            )}
-          >
-            <span className={cn("font-bold text-[0.85em]", colorText)}>
-              {formatBortleScale(bortleScale)}
-            </span>
-          </div>
-          <span className="text-sm font-medium">
-            {t("Bortle", "波特尔")}
-          </span>
-        </div>
-      </div>
-    );
-  }
+  
+  // Get label based on Bortle scale
+  const getLabel = () => {
+    if (validBortleScale <= 1) return "Excellent dark sky";
+    if (validBortleScale <= 2) return "Truly dark sky";
+    if (validBortleScale <= 3) return "Rural sky";
+    if (validBortleScale <= 4) return "Rural/suburban transition";
+    if (validBortleScale <= 5) return "Suburban sky";
+    if (validBortleScale <= 6) return "Bright suburban sky";
+    if (validBortleScale <= 7) return "Suburban/urban transition";
+    if (validBortleScale <= 8) return "City sky";
+    return "Inner-city sky";
+  };
+  
+  // Size classes
+  const sizeClasses = {
+    sm: "text-xs px-1.5 py-0.5",
+    md: "text-sm px-2 py-1",
+    lg: "text-base px-2.5 py-1.5"
+  };
   
   return (
-    <div className={cn("flex items-center", className)}>
-      <div 
-        className={cn(
-          "rounded-full mr-2.5 flex items-center justify-center border shadow-sm", 
-          sizeClass,
-          colorBg,
-          colorBorder
-        )}
-      >
-        {showBortleNumber && (
-          <span className={cn("font-bold text-[0.95em]", colorText)}>
-            {formatBortleScale(bortleScale)}
-          </span>
-        )}
-      </div>
-      
-      {showDescription && (
-        <span className="text-sm font-medium text-muted-foreground">
-          {t(description, language === 'en' ? description : getBortleScaleDescription(bortleScale, 'zh'))}
+    <div 
+      className={cn(
+        "inline-flex items-center rounded font-medium border",
+        getColor(),
+        sizeClasses[size],
+        "border-opacity-50 shadow-sm",
+        className
+      )}
+    >
+      {showBortleNumber ? (
+        <span>
+          Bortle {validBortleScale.toFixed(1)} - {getLabel()}
         </span>
+      ) : (
+        <span>{getLabel()}</span>
       )}
     </div>
   );

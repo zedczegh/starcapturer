@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
@@ -9,15 +8,52 @@ import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
 import { getTranslatedDescription } from "@/components/siqs/utils/translations/descriptionTranslator";
+import { ensureSIQSData } from "@/utils/siqs/siqsSummaryUtils";
 
 interface SIQSSummaryProps {
-  siqsResult: any;
-  weatherData: any;
-  locationData: any;
+  siqsResult?: any;
+  weatherData?: any;
+  locationData?: any;
 }
 
-const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, locationData }) => {
+const SIQSSummary: React.FC<SIQSSummaryProps> = (props) => {
   const { t, language } = useLanguage();
+  
+  // Process data to ensure we have valid SIQS information
+  const processedData = useMemo(() => {
+    // If we have direct SIQS result, use that
+    if (props.siqsResult) {
+      return { 
+        siqsResult: props.siqsResult,
+        weatherData: props.weatherData
+      };
+    }
+    
+    // Otherwise, try to extract from location data
+    if (props.locationData) {
+      const enhancedLocationData = ensureSIQSData(props.locationData);
+      return {
+        siqsResult: enhancedLocationData.siqsResult,
+        weatherData: props.weatherData || enhancedLocationData.weatherData
+      };
+    }
+    
+    // Last attempt - if we have weather data and no SIQS, make a basic calculation
+    if (props.weatherData && props.weatherData.bortleScale) {
+      const enhancedData = ensureSIQSData({
+        bortleScale: props.weatherData.bortleScale,
+        weatherData: props.weatherData
+      });
+      return {
+        siqsResult: enhancedData.siqsResult,
+        weatherData: props.weatherData
+      };
+    }
+    
+    return { siqsResult: null, weatherData: props.weatherData };
+  }, [props.siqsResult, props.weatherData, props.locationData]);
+  
+  const { siqsResult, weatherData } = processedData;
   
   // If no SIQS data available, show placeholder
   if (!siqsResult) {
