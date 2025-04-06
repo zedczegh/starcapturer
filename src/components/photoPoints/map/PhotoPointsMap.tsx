@@ -7,6 +7,7 @@ import LazyMapContainer from './LazyMapContainer';
 import { formatSIQSScore } from '@/utils/geoUtils';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
+import { SiqsScoreBadge } from '../cards/SiqsScoreBadge';
 
 interface PhotoPointsMapProps {
   locations: SharedAstroSpot[];

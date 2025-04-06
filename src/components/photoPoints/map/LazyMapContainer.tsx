@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import L from 'leaflet';
@@ -56,36 +56,20 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
 
 // This component draws the search radius circle
 const SearchRadiusCircle = ({ center, radius }: { center: [number, number], radius: number }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    // Clear any previous radius circles
-    map.eachLayer((layer: any) => {
-      if (layer.options && layer.options._radiusCircle) {
-        map.removeLayer(layer);
-      }
-    });
-    
-    // Create new circle
-    const circle = L.circle(center, {
-      radius: radius * 1000, // Convert km to meters
-      color: '#3b82f6',
-      fillColor: '#3b82f6',
-      fillOpacity: 0.05,
-      weight: 1,
-      opacity: 0.3,
-      dashArray: '5, 5',
-      _radiusCircle: true // Custom property to identify this layer
-    });
-    
-    circle.addTo(map);
-    
-    return () => {
-      map.removeLayer(circle);
-    };
-  }, [map, center, radius]);
-  
-  return null;
+  return (
+    <Circle 
+      center={center}
+      radius={radius * 1000}
+      pathOptions={{
+        color: '#3b82f6',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.05,
+        weight: 1,
+        opacity: 0.3,
+        dashArray: '5, 5',
+      }}
+    />
+  );
 };
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -114,6 +98,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       ref={mapRef}
       attributionControl={true}
       scrollWheelZoom={true}
+      zoomControl={true}
+      doubleClickZoom={true}
+      dragging={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -169,7 +156,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             key={marker.id}
             position={marker.position}
             icon={markerIcon}
-            eventHandlers={marker.onClick ? { click: marker.onClick } : undefined}
+            eventHandlers={marker.onClick ? { click: marker.onClick } : {}}
           >
             {marker.popup && (
               <Popup>

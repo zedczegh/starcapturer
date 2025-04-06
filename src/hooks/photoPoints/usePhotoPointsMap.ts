@@ -1,7 +1,6 @@
-
 import { useState, useCallback, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/data/utils/distanceCalculator';
+import { calculateDistance } from '@/utils/mapUtils';
 
 interface UsePhotoPointsMapProps {
   locations: SharedAstroSpot[];
@@ -20,17 +19,24 @@ export const usePhotoPointsMap = ({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
-  // Calculate map center position
+  // Calculate map center position - prioritize user location
   const mapPosition = useMemo(() => {
     if (userLocation) {
       return [userLocation.latitude, userLocation.longitude] as [number, number];
     }
-    // Default position if no user location
+    
+    // If no user location but we have locations, center on the first one
+    if (locations.length > 0) {
+      return [locations[0].latitude, locations[0].longitude] as [number, number];
+    }
+    
+    // Default position if no user location or locations
     return [39.9, 116.3] as [number, number];
-  }, [userLocation]);
+  }, [userLocation, locations]);
 
   // Calculate initial zoom level based on search radius
   const getInitialZoom = useCallback((radius: number) => {
+    if (radius <= 100) return 10;  
     if (radius <= 200) return 9;
     if (radius <= 500) return 7;
     if (radius <= 1000) return 6;
@@ -42,7 +48,8 @@ export const usePhotoPointsMap = ({
     if (!userLocation) return locations;
     
     return locations.map(location => {
-      if (location.distance !== undefined) return location;
+      // If distance is already calculated and seems valid, keep it
+      if (location.distance !== undefined && location.distance > 0) return location;
       
       const distance = calculateDistance(
         userLocation.latitude,
