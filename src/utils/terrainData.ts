@@ -10,19 +10,19 @@ export type TerrainType = 'mountain' | 'hill' | 'plateau' | 'valley' | 'plain' |
 // Elevation database for major mountain ranges (simplified for performance)
 const mountainRanges = [
   // Himalayas
-  { name: "Himalayas", minLat: 27, maxLat: 36, minLng: 70, maxLng: 95, minElevation: 5000, terrainType: 'mountain' as TerrainType },
+  { name: "Himalayas", minLat: 27, maxLat: 36, minLng: 70, maxLng: 95, minElevation: 5000, terrainType: 'mountain' },
   // Rocky Mountains
-  { name: "Rocky Mountains", minLat: 30, maxLat: 60, minLng: -125, maxLng: -105, minElevation: 2000, terrainType: 'mountain' as TerrainType },
+  { name: "Rocky Mountains", minLat: 30, maxLat: 60, minLng: -125, maxLng: -105, minElevation: 2000, terrainType: 'mountain' },
   // Andes
-  { name: "Andes", minLat: -55, maxLat: 12, minLng: -80, maxLng: -65, minElevation: 2500, terrainType: 'mountain' as TerrainType },
+  { name: "Andes", minLat: -55, maxLat: 12, minLng: -80, maxLng: -65, minElevation: 2500, terrainType: 'mountain' },
   // Alps
-  { name: "Alps", minLat: 44, maxLat: 48, minLng: 5, maxLng: 16, minElevation: 3000, terrainType: 'mountain' as TerrainType },
+  { name: "Alps", minLat: 44, maxLat: 48, minLng: 5, maxLng: 16, minElevation: 3000, terrainType: 'mountain' },
   // Tibetan Plateau
-  { name: "Tibetan Plateau", minLat: 28, maxLat: 40, minLng: 78, maxLng: 103, minElevation: 4500, terrainType: 'plateau' as TerrainType },
+  { name: "Tibetan Plateau", minLat: 28, maxLat: 40, minLng: 78, maxLng: 103, minElevation: 4500, terrainType: 'plateau' },
   // Chinese mountain ranges
-  { name: "Tian Shan", minLat: 40, maxLat: 45, minLng: 75, maxLng: 95, minElevation: 3500, terrainType: 'mountain' as TerrainType },
-  { name: "Kunlun Mountains", minLat: 35, maxLat: 37, minLng: 80, maxLng: 105, minElevation: 5000, terrainType: 'mountain' as TerrainType },
-  { name: "Hengduan Mountains", minLat: 25, maxLat: 32, minLng: 97, maxLng: 102, minElevation: 4000, terrainType: 'mountain' as TerrainType }
+  { name: "Tian Shan", minLat: 40, maxLat: 45, minLng: 75, maxLng: 95, minElevation: 3500, terrainType: 'mountain' },
+  { name: "Kunlun Mountains", minLat: 35, maxLat: 37, minLng: 80, maxLng: 105, minElevation: 5000, terrainType: 'mountain' },
+  { name: "Hengduan Mountains", minLat: 25, maxLat: 32, minLng: 97, maxLng: 102, minElevation: 4000, terrainType: 'mountain' }
 ];
 
 // Elevation cache for performance
