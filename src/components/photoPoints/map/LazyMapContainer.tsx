@@ -87,6 +87,7 @@ interface LazyMapContainerProps {
   searchRadius: number;
   onMapReady: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
+  zoom?: number;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -96,6 +97,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   searchRadius,
   onMapReady,
   onLocationClick,
+  zoom = 5
 }) => {
   const { t, language } = useLanguage();
   const mapRef = useRef(null);
@@ -105,16 +107,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const locationMarkerIcon = createCustomMarker('#10b981'); // Green for certified locations
   const calculatedMarkerIcon = createCustomMarker('#f59e0b'); // Amber for calculated locations
 
-  // Fixed: Create click handler factory for markers
-  const createClickHandler = (location: SharedAstroSpot) => {
-    if (!onLocationClick) return undefined;
-    return () => onLocationClick(location);
-  };
-
   return (
     <MapContainer
       center={center}
-      zoom={5}
+      zoom={zoom}
       className="h-full w-full"
       whenReady={() => onMapReady()}
       ref={mapRef}
@@ -175,16 +171,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           ? locationMarkerIcon 
           : calculatedMarkerIcon;
         
-        // Fixed: Create onClick handler instead of using eventHandlers prop
-        const clickHandler = createClickHandler(location);
-        
         return (
           <Marker
             key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
             position={[location.latitude, location.longitude]}
             icon={icon}
-            // Fixed: Directly use onClick instead of eventHandlers
-            onClick={clickHandler}
+            onClick={() => onLocationClick && onLocationClick(location)}
           >
             <Popup>
               <div className="p-1 max-w-[200px]">
