@@ -24,6 +24,19 @@ export interface SIQSFactor {
   
   /** Original raw value (e.g., percentage, scale value) */
   rawValue?: number | string;
+  
+  /** Nighttime data for cloud cover and other elements */
+  nighttimeData?: {
+    /** Average value over night hours */
+    average: number;
+    /** Time range for the data */
+    timeRange: string;
+    /** Optional detailed breakdown */
+    detail?: {
+      evening: number;
+      morning: number;
+    };
+  };
 }
 
 /**

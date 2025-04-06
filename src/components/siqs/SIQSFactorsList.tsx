@@ -1,24 +1,12 @@
-
 import React, { memo, useMemo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
 import { normalizeFactorScores } from "@/lib/siqs/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SIQSFactor } from "@/lib/siqs/types";
 
 interface SIQSFactorsListProps {
-  factors?: Array<{
-    name: string;
-    score: number;
-    description: string;
-    nighttimeData?: {
-      average: number;
-      timeRange: string;
-      detail?: {
-        evening: number;
-        morning: number;
-      };
-    };
-  }>;
+  factors?: Array<SIQSFactor>;
 }
 
 const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
@@ -62,9 +50,14 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
           name: nighttimeName,
           // Leave score as is but update the description to show the nighttime value
           description: language === 'zh' 
-            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description.includes('影响') ? '，可能影响成像质量' : '')
-            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description.includes('quality') ? ', may affect imaging quality' : '')
+            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description?.includes('影响') ? '，可能影响成像质量' : '')
+            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description?.includes('quality') ? ', may affect imaging quality' : '')
         };
+      }
+      
+      // Ensure description exists
+      if (!factor.description) {
+        factor.description = language === 'zh' ? '云层覆盖数据' : 'Cloud cover data';
       }
       
       // If description mentions 0%, ensure score is 10
@@ -91,6 +84,11 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
       if (factor.name === 'Seeing Conditions') return { ...factor, name: '视宁度' };
       if (factor.name === 'Air Quality') return { ...factor, name: '空气质量' };
       if (factor.name === 'Clear Sky Rate') return { ...factor, name: '晴空率' };
+    }
+    
+    // Ensure all factors have a description
+    if (!factor.description) {
+      factor.description = factor.name;
     }
     
     return factor;

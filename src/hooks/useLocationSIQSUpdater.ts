@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import { useBortleUpdater } from './location/useBortleUpdater';
 import { useForecastData } from './useForecastData';
@@ -9,10 +9,24 @@ import { extractNightForecasts } from '@/components/forecast/ForecastUtils';
 /**
  * Hook for updating SIQS data based on location changes
  */
-export function useLocationSIQSUpdater() {
+export function useLocationSIQSUpdater(
+  locationData: any = null,
+  forecastData: any = null,
+  setLocationData: (data: any) => void = () => {},
+  t: any = null
+) {
   const [loading, setLoading] = useState(false);
   const { updateBortleScale } = useBortleUpdater();
-  const { fetchLocationForecast, clearForecastCache } = useForecastData();
+  const { fetchLocationForecast } = useForecastData();
+  const updateRequiredRef = useRef(true);
+  
+  /**
+   * Reset update state to force recalculation
+   */
+  const resetUpdateState = useCallback(() => {
+    updateRequiredRef.current = true;
+    console.log("SIQS update state reset, will recalculate on next opportunity");
+  }, []);
   
   /**
    * Update SIQS data for a location
@@ -49,23 +63,22 @@ export function useLocationSIQSUpdater() {
       }
       
       // Get forecast data for more accurate SIQS
-      let forecastData = currentData?.forecastData;
-      
-      // Clear cached forecast for this location to get fresh data
-      clearForecastCache(latitude, longitude);
+      let forecast = forecastData || currentData?.forecastData;
       
       try {
-        forecastData = await fetchLocationForecast(
-          latitude,
-          longitude
-        );
+        if (!forecast) {
+          forecast = await fetchLocationForecast(
+            latitude,
+            longitude
+          );
+        }
       } catch (error) {
         console.error("Error fetching forecast data:", error);
       }
       
       // Extract night forecasts if available
-      const nightForecast = forecastData?.hourly ? 
-        extractNightForecasts(forecastData.hourly) : 
+      const nightForecast = forecast?.hourly ? 
+        extractNightForecasts(forecast.hourly) : 
         undefined;
       
       // Get additional parameters
@@ -94,7 +107,7 @@ export function useLocationSIQSUpdater() {
         longitude,
         name: locationName,
         weatherData,
-        forecastData,
+        forecastData: forecast,
         bortleScale,
         siqsResult,
         timestamp: new Date().toISOString()
@@ -105,10 +118,11 @@ export function useLocationSIQSUpdater() {
     } finally {
       setLoading(false);
     }
-  }, [updateBortleScale, fetchLocationForecast, clearForecastCache]);
+  }, [updateBortleScale, fetchLocationForecast, forecastData]);
   
   return {
     loading,
-    updateSIQSForLocation
+    updateSIQSForLocation,
+    resetUpdateState
   };
 }
