@@ -20,7 +20,7 @@ const CalculatedLocations = lazy(() => import('@/components/photoPoints/Calculat
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 const PhotoPointsNearby: React.FC = () => {
-  // Get user location
+  // Get user location with high accuracy
   const { loading: locationLoading, coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
   });
@@ -28,15 +28,12 @@ const PhotoPointsNearby: React.FC = () => {
   // UI state
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
-  const [showMap, setShowMap] = useState(false);
+  const [showMap, setShowMap] = useState(true); // Default to map view
   const { t } = useLanguage();
   const navigate = useNavigate();
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
-
-  // Get the current SIQS value from the store
-  const currentSiqs = currentSiqsStore.getValue();
 
   // Set up recommended locations with userLocation
   const {
@@ -67,48 +64,25 @@ const PhotoPointsNearby: React.FC = () => {
     setSearchRadius(value);
   }, [setSearchRadius]);
 
-  // Listen for custom radius change events
-  useEffect(() => {
-    const handleSetRadius = (e: CustomEvent<{ radius: number }>) => {
-      if (e.detail.radius) {
-        setSearchRadius(e.detail.radius);
-      }
-    };
-    
-    document.addEventListener('set-search-radius', handleSetRadius as EventListener);
-    
-    return () => {
-      document.removeEventListener('set-search-radius', handleSetRadius as EventListener);
-    };
-  }, [setSearchRadius]);
-
   // Call getPosition when the component mounts to get user's location
   useEffect(() => {
+    // Try to get the user's location immediately
     getPosition();
+    
+    // Set a small delay to mark initial load as complete
+    const timer = setTimeout(() => {
+      setInitialLoad(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, [getPosition]);
 
-  // Mark initial load as complete after everything is loaded
-  useEffect(() => {
-    if (!loading && !locationLoading && initialLoad) {
-      // Small delay to ensure all animations are complete
-      const timer = setTimeout(() => {
-        setInitialLoad(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, locationLoading, initialLoad]);
-
-  // Handle loading more calculated locations with proper async handling
+  // Handle loading more calculated locations
   const handleLoadMoreCalculated = useCallback(async () => {
     if (loadMoreCalculatedLocations) {
       await loadMoreCalculatedLocations();
     }
   }, [loadMoreCalculatedLocations]);
-  
-  // Determine loading state for current active view - avoid spinner flashing
-  const isCurrentViewLoading = loading && 
-    ((activeView === 'certified' && certifiedCount === 0) || 
-     (activeView === 'calculated' && calculatedCount === 0));
   
   // Handle click on a location marker
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
@@ -168,6 +142,16 @@ const PhotoPointsNearby: React.FC = () => {
         />
       </div>
       
+      {/* Instructions for map view */}
+      {showMap && (
+        <div className="mb-4 text-center text-sm text-muted-foreground">
+          {t(
+            "Click anywhere on the map to select that location. The map will center on your current location if available.",
+            "点击地图上的任意位置以选择该位置。如果可用，地图将以您当前位置为中心。"
+          )}
+        </div>
+      )}
+      
       {showMap ? (
         <Suspense fallback={<PageLoader />}>
           <div className="h-[600px] rounded-lg overflow-hidden border border-border">
@@ -188,7 +172,7 @@ const PhotoPointsNearby: React.FC = () => {
               onViewChange={setActiveView}
               certifiedCount={certifiedCount}
               calculatedCount={calculatedCount}
-              loading={isCurrentViewLoading}
+              loading={loading && !locationLoading}
             />
           </div>
           

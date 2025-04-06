@@ -51,7 +51,7 @@ const MapController = ({
   useEffect(() => {
     if (!map) return;
     
-    // Enable all controls
+    // Always enable all controls to allow dragging and interaction
     map.scrollWheelZoom.enable();
     map.dragging.enable();
     map.touchZoom.enable();
@@ -112,6 +112,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       className="h-full w-full"
       whenReady={() => onMapReady()}
       scrollWheelZoom={true}
+      dragging={true}
+      zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -182,7 +184,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             key={`location-${location.id || `${location.latitude}-${location.longitude}`}`}
             position={[location.latitude, location.longitude]}
             icon={icon}
-            // Fix: Replace eventHandlers prop with direct onClick prop
             onClick={handleClick}
           >
             <Popup>
