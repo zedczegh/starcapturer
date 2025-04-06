@@ -1,55 +1,92 @@
 
-import L from 'leaflet';
+import L from "leaflet";
 
 /**
- * Creates a custom marker with a pulsing animation
- * @param color The color of the marker (hex code)
- * @returns A custom Leaflet icon with pulsing animation
+ * Create a custom marker icon with pulse animation effect
+ * @param color - The color of the marker (default: #9b87f5 - matches logo color)
+ * @returns L.DivIcon instance or null during SSR
  */
-export const createCustomMarker = (color: string): L.DivIcon => {
-  return L.divIcon({
-    className: 'custom-marker-container',
-    html: `
-      <div class="custom-marker" style="
-        position: relative;
-        width: 20px;
-        height: 20px;
-        background-color: ${color};
-        border-radius: 50%;
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.7);
-        transform: translateX(-10px) translateY(-10px);
-      ">
-        <div class="pulse" style="
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          background-color: ${color};
-          box-shadow: 0 0 10px ${color};
-          animation: pulse 2s infinite;
-          opacity: 0.7;
-        "></div>
-      </div>
-      <style>
-        @keyframes pulse {
-          0% {
-            transform: scale(1);
-            opacity: 0.7;
-          }
-          70% {
-            transform: scale(2);
-            opacity: 0;
-          }
-          100% {
-            transform: scale(1);
-            opacity: 0;
-          }
+export function createCustomMarker(color = '#9b87f5'): L.DivIcon {
+  try {
+    const markerHtmlStyles = `
+      background-color: ${color};
+      width: 1.5rem;
+      height: 1.5rem;
+      display: block;
+      position: relative;
+      border-radius: 50%;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      transform: translateX(-0.75rem) translateY(-0.75rem);
+    `;
+
+    const pulseStyles = `
+      content: '';
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background-color: ${color};
+      position: absolute;
+      margin: -2px 0 0 -2px;
+      animation: pulse 2s infinite;
+      opacity: 0.6;
+      box-shadow: 0 0 5px ${color};
+      
+      @keyframes pulse {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
         }
-      </style>
-    `,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
-  });
-};
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(2);
+          opacity: 0;
+        }
+      }
+    `;
+
+    const icon = L.divIcon({
+      className: "custom-marker-icon",
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12],
+      tooltipAnchor: [0, -12],
+      html: `<span style="${markerHtmlStyles}">
+               <span style="${pulseStyles}"></span>
+             </span>`,
+      iconSize: [24, 24]
+    });
+
+    return icon;
+  } catch (error) {
+    console.error("Error creating custom marker:", error);
+    // Return default icon as fallback
+    return new L.Icon.Default();
+  }
+}
+
+/**
+ * Configure Leaflet default settings
+ * Avoids SSR issues by running only on client side
+ */
+export function configureLeaflet(): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    // Only run this on the client side
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+  } catch (error) {
+    console.error("Error configuring Leaflet:", error);
+  }
+}
+
+// Call configure function immediately but only on client
+if (typeof window !== 'undefined') {
+  configureLeaflet();
+}

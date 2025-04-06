@@ -20,7 +20,7 @@ const CalculatedLocations = lazy(() => import('@/components/photoPoints/Calculat
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 // Defaults
-const DEFAULT_SEARCH_RADIUS = 1000; // 1000km default radius
+const DEFAULT_SEARCH_RADIUS = 1000; // 1000km default radius for calculated locations
 const CERTIFIED_SEARCH_RADIUS = 10000; // No practical limit for certified locations (10000km)
 
 const PhotoPointsNearby: React.FC = () => {
@@ -214,16 +214,18 @@ const PhotoPointsNearby: React.FC = () => {
         />
       </div>
       
-      {/* Distance filter with better spacing */}
-      <div className="max-w-xl mx-auto mb-6">
-        <DistanceRangeSlider
-          currentValue={searchRadius}
-          onValueChange={handleRadiusChange}
-          minValue={100}
-          maxValue={activeView === 'certified' ? 10000 : 2000}
-          stepValue={100}
-        />
-      </div>
+      {/* Distance filter only for calculated view */}
+      {activeView === 'calculated' && (
+        <div className="max-w-xl mx-auto mb-6">
+          <DistanceRangeSlider
+            currentValue={searchRadius}
+            onValueChange={handleRadiusChange}
+            minValue={100}
+            maxValue={1000}
+            stepValue={100}
+          />
+        </div>
+      )}
       
       {/* Instructions for map view */}
       {showMap && (

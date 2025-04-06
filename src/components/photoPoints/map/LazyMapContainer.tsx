@@ -1,12 +1,13 @@
 
-import React, { useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
 import SiqsScoreBadge from "../cards/SiqsScoreBadge";
+import { getProgressColor } from "@/components/siqs/utils/progressColor";
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -46,6 +47,7 @@ const MapController = ({
   searchRadius: number;
 }) => {
   const map = useMap();
+  const firstRenderRef = useRef(true);
   
   useEffect(() => {
     if (!map) return;
@@ -61,12 +63,27 @@ const MapController = ({
     
     // If user location exists, center on it
     if (userLocation) {
-      map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
+      if (firstRenderRef.current) {
+        // Only set view once on first render to avoid constant recentering
+        map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
+        firstRenderRef.current = false;
+      } else if (map._animateToCenter && map._animateToZoom) {
+        // If map is already animating to a center, don't interrupt
+        return;
+      }
     }
     
   }, [map, userLocation]);
 
   return null;
+};
+
+// Create a SIQS-colored marker
+const getSiqsMarker = (siqs: number | undefined) => {
+  if (!siqs) return createCustomMarker('#777777'); // Gray for unknown SIQS
+  
+  const color = getProgressColor(siqs);
+  return createCustomMarker(color);
 };
 
 interface PhotoPointsMapContainerProps {
@@ -91,11 +108,10 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   zoom = 5
 }) => {
   const { t, language } = useLanguage();
+  const [mapElement, setMapElement] = useState<L.Map | null>(null);
 
   // Create marker icons
-  const userMarkerIcon = createCustomMarker('#3b82f6'); // Blue for user location
-  const locationMarkerIcon = createCustomMarker('#10b981'); // Green for certified locations
-  const calculatedMarkerIcon = createCustomMarker('#f59e0b'); // Amber for calculated locations
+  const userMarkerIcon = createCustomMarker('#9b87f5'); // Violet for user location (matching logo color)
   
   // Handle map click with default empty function if not provided
   const handleMapClick = useCallback((lat: number, lng: number) => {
@@ -109,7 +125,10 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       center={center}
       zoom={zoom}
       className="h-full w-full"
-      whenReady={() => onMapReady()}
+      whenReady={(map) => {
+        setMapElement(map.target);
+        onMapReady();
+      }}
       scrollWheelZoom={true}
     >
       <TileLayer
@@ -140,6 +159,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
               </div>
             </div>
           </Popup>
+          <Tooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
+            <div className="text-xs font-bold">{t("You", "您")}</div>
+          </Tooltip>
         </Marker>
       )}
       
@@ -149,8 +171,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           center={[userLocation.latitude, userLocation.longitude]}
           radius={searchRadius * 1000} // Convert km to meters for circle radius
           pathOptions={{ 
-            color: '#3b82f6',
-            fillColor: '#3b82f6',
+            color: '#9b87f5', // Violet color matching logo
+            fillColor: '#9b87f5',
             fillOpacity: 0.05,
             weight: 1,
             opacity: 0.3
@@ -164,10 +186,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           return null;
         }
         
-        // Determine icon based on location type
-        const icon = location.isDarkSkyReserve || location.certification 
-          ? locationMarkerIcon 
-          : calculatedMarkerIcon;
+        // Determine icon based on SIQS score
+        const icon = getSiqsMarker(location.siqs);
         
         // Handle the click event for this marker
         const handleClick = () => {
@@ -182,7 +202,25 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             position={[location.latitude, location.longitude]}
             icon={icon}
             onClick={handleClick}
+            eventHandlers={{
+              mouseover: (e) => {
+                e.target.openTooltip();
+              }
+            }}
           >
+            <Tooltip direction="top" opacity={0.9}>
+              <div className="text-xs font-semibold">
+                {language === 'zh' && location.chineseName 
+                  ? location.chineseName 
+                  : location.name}
+                {location.siqs && (
+                  <div className="mt-1">
+                    <SiqsScoreBadge score={location.siqs} />
+                  </div>
+                )}
+              </div>
+            </Tooltip>
+            
             <Popup>
               <div className="p-1 max-w-[200px]">
                 <div className="font-medium text-base">

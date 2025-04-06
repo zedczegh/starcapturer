@@ -101,10 +101,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
 
   // Reset selected location when user location changes
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && (!selectedMapLocation || 
+        (Math.abs(userLocation.latitude - selectedMapLocation.latitude) > 1 || 
+         Math.abs(userLocation.longitude - selectedMapLocation.longitude) > 1))) {
       setSelectedMapLocation(null);
     }
-  }, [userLocation]);
+  }, [userLocation, selectedMapLocation]);
 
   return (
     <div className={className}>
