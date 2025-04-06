@@ -15,12 +15,16 @@ import PageLoader from '@/components/loaders/PageLoader';
 import { useExpandSearchRadius } from '@/hooks/photoPoints/useExpandSearchRadius';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from 'sonner';
 import '@/components/photoPoints/map/mapMarkers.css';
 
 // Lazy load components that are not immediately visible
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
+
+// Maximum search radius allowed to prevent overloading the API
+const MAX_SEARCH_RADIUS = 1000; // 1000 km
 
 const PhotoPointsNearby: React.FC = () => {
   // Get user location
@@ -41,7 +45,7 @@ const PhotoPointsNearby: React.FC = () => {
   // Get the current SIQS value from the store
   const currentSiqs = currentSiqsStore.getValue();
 
-  // Set up recommended locations with userLocation
+  // Set up recommended locations with userLocation and enforce radius limit
   const {
     searchRadius,
     setSearchRadius,
@@ -64,7 +68,7 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations, searchRadius);
-  
+
   // Listen for expand search radius events
   const handleRefresh = useCallback(() => {
     refreshSiqsData();
@@ -72,16 +76,49 @@ const PhotoPointsNearby: React.FC = () => {
   
   useExpandSearchRadius({ onRefresh: handleRefresh });
 
-  // Handle radius change
+  // Handle radius change with limit
   const handleRadiusChange = useCallback((value: number) => {
-    setSearchRadius(value);
-  }, [setSearchRadius]);
+    if (value > MAX_SEARCH_RADIUS) {
+      toast.warning(
+        t(
+          "Search radius limited to 1000 km",
+          "搜索半径限制为 1000 公里"
+        ), 
+        {
+          description: t(
+            "To prevent overloading the servers, we've limited the search radius.",
+            "为防止服务器过载，我们限制了搜索半径。"
+          )
+        }
+      );
+      setSearchRadius(MAX_SEARCH_RADIUS);
+    } else {
+      setSearchRadius(value);
+    }
+  }, [setSearchRadius, t]);
 
   // Listen for custom radius change events
   useEffect(() => {
     const handleSetRadius = (e: CustomEvent<{ radius: number }>) => {
       if (e.detail.radius) {
-        setSearchRadius(e.detail.radius);
+        // Apply the same limit to custom radius events
+        const limitedRadius = Math.min(e.detail.radius, MAX_SEARCH_RADIUS);
+        setSearchRadius(limitedRadius);
+        
+        if (e.detail.radius > MAX_SEARCH_RADIUS) {
+          toast.warning(
+            t(
+              "Search radius limited to 1000 km",
+              "搜索半径限制为 1000 公里"
+            ), 
+            {
+              description: t(
+                "To prevent overloading the servers, we've limited the search radius.",
+                "为防止服务器过载，我们限制了搜索半径。"
+              )
+            }
+          );
+        }
       }
     };
     
@@ -90,7 +127,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => {
       document.removeEventListener('set-search-radius', handleSetRadius as EventListener);
     };
-  }, [setSearchRadius]);
+  }, [setSearchRadius, t]);
 
   // Call getUserLocation when the component mounts
   useEffect(() => {
@@ -161,11 +198,18 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {/* View toggle buttons */}
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm text-muted-foreground">
+          {userLocation && locations.length > 0 && (
+            <span>
+              {t("Found", "找到")} {locations.length} {t("locations", "个位置")}
+            </span>
+          )}
+        </div>
         <Button 
           variant="outline" 
           size="sm"
-          className="bg-background/70"
+          className="bg-background/70 hover:bg-background/90 transition-all"
           onClick={toggleViewMode}
         >
           <MapPin className="h-4 w-4 mr-1.5" />
@@ -179,19 +223,25 @@ const PhotoPointsNearby: React.FC = () => {
       {userLocation && (
         <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
-            currentValue={searchRadius}
+            currentValue={Math.min(searchRadius, MAX_SEARCH_RADIUS)}
             onValueChange={handleRadiusChange}
             minValue={100}
-            maxValue={10000}
+            maxValue={MAX_SEARCH_RADIUS}
             stepValue={100}
           />
+          <div className="text-center mt-1 text-xs text-muted-foreground">
+            {t("Search radius", "搜索半径")}: {searchRadius} km
+            {searchRadius >= MAX_SEARCH_RADIUS && (
+              <span className="text-amber-500 ml-1">({t("maximum", "最大值")})</span>
+            )}
+          </div>
         </div>
       )}
       
       {/* Map view */}
       {viewMode === 'map' && (
         <Suspense fallback={
-          <div className="h-[400px] flex items-center justify-center bg-background/30 border border-border/30 rounded-lg">
+          <div className="h-[500px] flex items-center justify-center bg-background/30 border border-border/30 rounded-lg">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         }>

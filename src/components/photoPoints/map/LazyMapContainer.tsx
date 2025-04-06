@@ -1,29 +1,22 @@
 
-import React, { useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import './mapMarkers.css';
 
 // Create specialized marker icons
-const createDarkSkyMarker = () => createCustomMarker('#3b50ff', {
-  className: 'pulse-marker dark-sky-marker'
-});
+const createDarkSkyMarker = () => createCustomMarker('#3b50ff');
 
-const createCalculatedMarker = () => createCustomMarker('#10b981', {
-  className: 'pulse-marker calculated-marker'
-});
+const createCalculatedMarker = () => createCustomMarker('#10b981');
 
 const createUserMarker = () => createCustomMarker('#ff4040');
 
 const createSelectedMarker = (type: string) => {
   const color = type === 'dark-sky' ? '#3b50ff' : '#10b981';
-  return createCustomMarker(color, {
-    className: 'selected-marker pulse-strong'
-  });
+  return createCustomMarker(color);
 };
 
 interface MarkerConfig {
@@ -60,9 +53,6 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
   return null;
 };
 
-// Import useMap inside the component to fix references
-import { useMap } from 'react-leaflet';
-
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
   zoom,
@@ -85,8 +75,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       center={center}
       zoom={zoom}
       className="h-full w-full"
-      whenCreated={() => onMapReady?.()}
+      whenReady={() => onMapReady?.()}
       ref={mapRef}
+      zoomControl={true}
+      scrollWheelZoom={true}
+      dragging={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -115,9 +108,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           </Marker>
           
           {searchRadius && (
-            <CircleMarker
+            <Circle
               center={userLocation}
-              radius={searchRadius}
+              radius={searchRadius * 1000} // Convert to kilometers to meters
               pathOptions={{ 
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
@@ -150,9 +143,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             key={marker.id}
             position={marker.position}
             icon={markerIcon}
-            eventHandlers={{
-              click: () => marker.onClick && marker.onClick()
-            }}
+            eventHandlers={marker.onClick ? { click: marker.onClick } : {}}
           >
             {marker.popup && (
               <Popup>
@@ -169,8 +160,5 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     </MapContainer>
   );
 };
-
-// Import CircleMarker for the search radius visualization
-import { CircleMarker } from 'react-leaflet';
 
 export default LazyMapContainer;

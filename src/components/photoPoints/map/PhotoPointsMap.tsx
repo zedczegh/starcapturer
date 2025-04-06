@@ -6,6 +6,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { SiqsScoreBadge } from '@/components/photoPoints/cards/SiqsScoreBadge';
 import LazyMapContainer from './LazyMapContainer';
 import { formatSIQSScore } from '@/utils/geoUtils';
+import { calculateDistance } from '@/data/utils/distanceCalculator';
 
 interface PhotoPointsMapProps {
   locations: SharedAstroSpot[];
@@ -27,6 +28,27 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const { t } = useLanguage();
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+
+  // Calculate actual distances for all locations when user location changes
+  const locationsWithDistance = useMemo(() => {
+    if (!userLocation) return locations;
+    
+    return locations.map(location => {
+      if (location.distance !== undefined) return location;
+      
+      const distance = calculateDistance(
+        userLocation.latitude, 
+        userLocation.longitude, 
+        location.latitude, 
+        location.longitude
+      );
+      
+      return {
+        ...location,
+        distance
+      };
+    });
+  }, [locations, userLocation]);
 
   // Handle map ready event
   const handleMapReady = useCallback(() => {
@@ -53,24 +75,23 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     if (searchRadius <= 200) return 9;
     if (searchRadius <= 500) return 7;
     if (searchRadius <= 1000) return 6;
-    if (searchRadius <= 3000) return 5;
-    return 4;
+    return 5;  // Default for larger areas
   }, [searchRadius]);
 
   // Filter locations to only show ones with better SIQS than current
   const filteredLocations = useMemo(() => {
-    if (!currentSiqs) return locations;
+    if (!currentSiqs) return locationsWithDistance;
     
     // Include all certified locations and calculated locations with higher SIQS
-    return locations.filter(loc => 
+    return locationsWithDistance.filter(loc => 
       loc.isDarkSkyReserve || 
       loc.certification || 
       (loc.siqs && loc.siqs > currentSiqs)
     );
-  }, [locations, currentSiqs]);
+  }, [locationsWithDistance, currentSiqs]);
 
   return (
-    <div className="relative h-[400px] md:h-[500px] w-full rounded-lg overflow-hidden border border-border/30 bg-background/50">
+    <div className="relative h-[500px] md:h-[600px] w-full rounded-lg overflow-hidden border border-border/30 bg-background/50 shadow-sm">
       {(!mapLoaded || loading) && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -110,6 +131,16 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
                     {formatSIQSScore(location.siqs)}
                   </span>
                 </div>
+                {location.distance !== undefined && (
+                  <div className="flex items-center">
+                    <span className="text-xs text-muted-foreground mr-2">
+                      {t("Distance", "距离")}:
+                    </span>
+                    <span className="text-sm">
+                      {Math.round(location.distance)} km
+                    </span>
+                  </div>
+                )}
                 {currentSiqs && location.siqs && location.siqs > currentSiqs && (
                   <div className="text-xs text-green-500 font-medium">
                     {t("Better than current location", "优于当前位置")}
@@ -120,7 +151,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           }
         }))}
         userLocation={userLocation ? [userLocation.latitude, userLocation.longitude] : undefined}
-        searchRadius={searchRadius / 100} // Convert to visual scale for the map
+        searchRadius={searchRadius / 100} // Properly scale the radius for visualization
         onMapReady={handleMapReady}
       />
     </div>
