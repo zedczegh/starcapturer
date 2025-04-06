@@ -25,9 +25,11 @@ export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
 export { 
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
-  shareAstroSpot,
-  fetchDarkSkyLocations
+  shareAstroSpot
 } from './api/astroSpots';
+
+// Export dark sky locations functionality
+export { fetchDarkSkyLocations } from './api/darkSkyLocations';
 
 // Re-export the location API functions
 export { getLocationNameFromCoordinates } from './api/location';
