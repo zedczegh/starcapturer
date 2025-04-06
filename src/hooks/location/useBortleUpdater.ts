@@ -4,7 +4,7 @@ import { fetchLightPollutionData } from "@/lib/api";
 import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
 import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
-import { detectTerrainType } from "@/utils/terrainData"; 
+import { detectTerrainType } from "@/utils/terrainEstimation"; 
 
 /**
  * Hook for optimized Bortle scale updates with enhanced accuracy
