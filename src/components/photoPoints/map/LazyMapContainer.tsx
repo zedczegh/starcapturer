@@ -1,13 +1,12 @@
 
 import React, { useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
 import SiqsScoreBadge from "../cards/SiqsScoreBadge";
-import { Circle } from 'react-leaflet';
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;

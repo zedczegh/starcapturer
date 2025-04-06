@@ -36,13 +36,37 @@ const PhotoPointsNearby: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  // Get user location from coordinates
+  // Get user location from coordinates or from localStorage (home page might have saved it)
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  
+  // Try to get saved location from localStorage on initial load
+  useEffect(() => {
+    try {
+      const savedLocation = localStorage.getItem('userLocation');
+      if (savedLocation) {
+        const parsedLocation = JSON.parse(savedLocation);
+        if (parsedLocation && typeof parsedLocation.latitude === 'number' && typeof parsedLocation.longitude === 'number') {
+          setUserLocation(parsedLocation);
+          console.log("Using saved location from localStorage:", parsedLocation);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading saved location:", err);
+    }
+  }, []);
   
   // Update user location from coords
   useEffect(() => {
     if (coords) {
-      setUserLocation({ latitude: coords.latitude, longitude: coords.longitude });
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      
+      // Save to localStorage for other pages to use
+      try {
+        localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      } catch (err) {
+        console.error("Error saving location to localStorage:", err);
+      }
     }
   }, [coords]);
 
@@ -77,18 +101,31 @@ const PhotoPointsNearby: React.FC = () => {
   
   // Handle location update from map click
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
-    setUserLocation({ latitude, longitude });
+    const newLocation = { latitude, longitude };
+    setUserLocation(newLocation);
+    
+    // Save to localStorage for other pages to use
+    try {
+      localStorage.setItem('userLocation', JSON.stringify(newLocation));
+    } catch (err) {
+      console.error("Error saving location to localStorage:", err);
+    }
+    
     toast.info(t(
       "Using selected location",
       "使用选定位置"
     ));
+    
+    // Refresh data with the new location
     refreshSiqsData();
   }, [refreshSiqsData, t]);
 
   // Call getPosition when the component mounts to get user's location
   useEffect(() => {
-    // Try to get the user's location immediately
-    getPosition();
+    // Try to get the user's location immediately if we don't have one from localStorage
+    if (!userLocation) {
+      getPosition();
+    }
     
     // Set a small delay to mark initial load as complete
     const timer = setTimeout(() => {
@@ -96,7 +133,7 @@ const PhotoPointsNearby: React.FC = () => {
     }, 1000);
     
     return () => clearTimeout(timer);
-  }, [getPosition]);
+  }, [getPosition, userLocation]);
 
   // Handle loading more calculated locations
   const handleLoadMoreCalculated = useCallback(async () => {
