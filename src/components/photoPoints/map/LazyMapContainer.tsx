@@ -128,21 +128,21 @@ const LocationMarker = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: onClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
       ref={markerRef}
+      // Fix: Convert eventHandlers to individual event props
+      onClick={onClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
       <Popup 
-        className="leaflet-popup-custom-compact"
+        // Fix: Move className to PopupProps through pane option
+        pane="popupPane"
         closeButton={false}
         closeOnClick={false}
         autoClose={false}
         autoPan={false}
       >
-        <div className="p-1.5 max-w-[160px]">
+        <div className="p-1.5 max-w-[160px] leaflet-popup-custom-compact">
           <div className="font-medium text-xs">
             {language === 'zh' && location.chineseName 
               ? location.chineseName 
@@ -234,8 +234,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           position={[userLocation.latitude, userLocation.longitude]} 
           icon={userMarkerIcon}
         >
-          <Popup className="leaflet-popup-custom">
-            <div className="p-1">
+          <Popup
+            // Fix: Use pane instead of className
+            pane="popupPane"
+          >
+            <div className="p-1 leaflet-popup-custom">
               <strong>{t("Your Location", "您的位置")}</strong>
               <div className="text-xs mt-1">
                 {userLocation.latitude.toFixed(5)}, {userLocation.longitude.toFixed(5)}

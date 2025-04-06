@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -40,13 +40,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
+  const mapInitializedRef = useRef(false);
   
-  // Determine which locations to show based on active view
-  const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
-  
-  // Always process certified locations to show them by default
+  // Always load certified locations in background as soon as component mounts
   useEffect(() => {
-    if (certifiedLocations.length > 0 && !mapLoadedOnce) {
+    if (!mapLoadedOnce && certifiedLocations.length > 0) {
       // Mark that we've done initial processing
       setMapLoadedOnce(true);
       
@@ -59,6 +57,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [certifiedLocations, mapLoadedOnce]);
   
+  // Use the map hook
   const {
     mapReady,
     handleMapReady,
@@ -68,7 +67,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: locationsToShow,
+    locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
     searchRadius
   });
 
@@ -76,6 +75,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const handleMapReadyEvent = useCallback(() => {
     handleMapReady();
     if (onMapReady) onMapReady();
+    mapInitializedRef.current = true;
   }, [handleMapReady, onMapReady]);
 
   // Handle location click with callback if provided
@@ -89,23 +89,29 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   
   // Handle map click to set a new calculation point
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
+    if (!mapInitializedRef.current) {
+      console.log("Map not yet initialized, ignoring click");
+      return;
+    }
+    
+    // Update selected location immediately
     setSelectedMapLocation({ latitude: lat, longitude: lng });
     
     // Call the location update callback
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
+      
+      // Show toast to inform the user
+      toast.info(t(
+        "Selected new location",
+        "已选择新位置"
+      ), {
+        description: t(
+          "Map will update to show locations around this point",
+          "地图将更新以显示此点周围的位置"
+        )
+      });
     }
-    
-    // Show toast to inform the user
-    toast.info(t(
-      "Selected new location",
-      "已选择新位置"
-    ), {
-      description: t(
-        "Map will recenter on this location",
-        "地图将重新以此位置为中心"
-      )
-    });
     
     // Try to calculate SIQS for this location in background
     try {
@@ -115,15 +121,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       console.error("Error calculating SIQS for selected location:", error);
     }
   }, [t, onLocationUpdate]);
-
-  // Reset selected location when user location changes
-  useEffect(() => {
-    if (userLocation && (!selectedMapLocation || 
-        (Math.abs(userLocation.latitude - selectedMapLocation.latitude) > 1 || 
-         Math.abs(userLocation.longitude - selectedMapLocation.longitude) > 1))) {
-      setSelectedMapLocation(null);
-    }
-  }, [userLocation, selectedMapLocation]);
 
   return (
     <div className={className}>

@@ -7,13 +7,14 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 interface SiqsScoreBadgeProps {
   score: number;
   loading?: boolean;
+  compact?: boolean;
 }
 
-const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false }) => {
+const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false, compact = false }) => {
   const scoreColor = getProgressColor(score);
   
   // Generate a light background color based on the score color
-  const bgColor = `${scoreColor}30`;
+  const bgColor = `${scoreColor}40`; // Increased opacity for better visibility
   
   // Inline styles for dynamic coloring
   const badgeStyle = {
@@ -24,15 +25,15 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false 
   
   return (
     <div 
-      className="flex items-center px-2.5 py-1 rounded-full border shadow-sm"
+      className={`flex items-center ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'} rounded-full border shadow-sm`}
       style={badgeStyle}
     >
       {loading ? (
-        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+        <Loader2 className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} mr-1.5 animate-spin`} />
       ) : (
-        <Star className="h-3.5 w-3.5 mr-1.5" fill={scoreColor} />
+        <Star className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} mr-1.5`} fill={scoreColor} />
       )}
-      <span className="text-xs font-medium">
+      <span className={`${compact ? 'text-2xs' : 'text-xs'} font-medium`}>
         {loading ? '...' : formatSIQSScoreForDisplay(score)}
       </span>
     </div>

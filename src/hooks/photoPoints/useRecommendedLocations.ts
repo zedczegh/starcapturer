@@ -81,8 +81,7 @@ export const useRecommendedLocations = (
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        calculatedRadius,
-        true // Allow expansion
+        calculatedRadius
       );
       
       // Combine the results
@@ -191,8 +190,7 @@ export const useRecommendedLocations = (
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        calculatedRadius,
-        true // Allow radius expansion
+        calculatedRadius
       );
       
       // Filter out locations we already have

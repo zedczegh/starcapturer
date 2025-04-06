@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchPopularLocations } from '@/lib/queryPrefetcher';
 import HeroSection from "@/components/index/HeroSection";
@@ -12,12 +12,44 @@ import { Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
+import { useGeolocation } from "@/hooks/location/useGeolocation";
 
 const Index = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
+  
+  // Always try to get the user's location on page load for global use
+  const { coords, getPosition } = useGeolocation({
+    enableHighAccuracy: true
+  });
+  
+  // Save user location for global use
+  const saveUserLocation = useCallback((location: { latitude: number; longitude: number }) => {
+    try {
+      localStorage.setItem('userLocation', JSON.stringify(location));
+      console.log("Saved user location to localStorage:", location);
+    } catch (error) {
+      console.error("Error saving location to localStorage:", error);
+    }
+  }, []);
+  
+  // Update user location when coords change
+  useEffect(() => {
+    if (coords) {
+      const userLocation = {
+        latitude: coords.latitude,
+        longitude: coords.longitude
+      };
+      saveUserLocation(userLocation);
+    }
+  }, [coords, saveUserLocation]);
+  
+  // Request location on page load
+  useEffect(() => {
+    getPosition();
+  }, [getPosition]);
   
   useEffect(() => {
     // Prefetch data for popular locations when the home page loads
