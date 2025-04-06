@@ -1,11 +1,9 @@
 
 import { useState, useCallback, useRef } from 'react';
-import { calculateSIQS } from '@/lib/calculateSIQS';
 import { useBortleUpdater } from './location/useBortleUpdater';
 import { useForecastData } from './useForecastData';
-import { validateCloudCover } from '@/lib/siqs/utils';
-import { extractNightForecasts } from '@/components/forecast/ForecastUtils';
 import { calculateSIQSWithWeatherData } from './siqs/siqsCalculationUtils';
+import { extractNightForecasts } from '@/components/forecast/ForecastUtils';
 
 /**
  * Hook for updating SIQS data based on location changes
@@ -121,4 +119,16 @@ export function useLocationSIQSUpdater(
     updateSIQSForLocation,
     resetUpdateState
   };
+}
+
+/**
+ * Validate cloud cover value
+ * @param cloudCover Cloud cover value to validate
+ * @returns Validated cloud cover value
+ */
+function validateCloudCover(cloudCover: any): number {
+  if (typeof cloudCover === 'number' && isFinite(cloudCover)) {
+    return Math.max(0, Math.min(100, cloudCover));
+  }
+  return 50; // Default fallback
 }
