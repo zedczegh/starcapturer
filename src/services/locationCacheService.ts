@@ -1,35 +1,273 @@
 
 /**
- * Location cache service
+ * Service for caching location search results
+ * Reduces API calls and improves performance for repeated searches
  */
 
-// Cache for storing location data
-const locationCache = new Map<string, { data: any; timestamp: number }>();
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { isValidAstronomyLocation } from '@/utils/locationValidator';
+
+interface LocationCache {
+  [key: string]: {
+    locations: SharedAstroSpot[];
+    timestamp: number;
+    expiresAt: number;
+  };
+}
+
+// In-memory cache for location search results
+const locationSearchCache: LocationCache = {};
+
+// Cache expiration time (30 minutes by default)
+const DEFAULT_CACHE_EXPIRATION_MS = 30 * 60 * 1000;
+// Shorter expiration for mobile to prevent memory issues
+const MOBILE_CACHE_EXPIRATION_MS = 15 * 60 * 1000;
+
+// Check if we're on a mobile device
+const isMobileDevice = () => {
+  return window.innerWidth < 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
 
 /**
- * Clear the location search cache
+ * Generate a cache key for location search
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @param radius Search radius
+ * @param customKey Optional custom key
+ * @returns Cache key string
  */
-export function clearLocationSearchCache(): void {
-  locationCache.clear();
+const generateCacheKey = (
+  latitude: number, 
+  longitude: number, 
+  radius: number,
+  customKey?: string
+): string => {
+  if (customKey) {
+    return customKey;
+  }
+  
+  // Round coordinates to reduce cache fragmentation
+  const lat = Math.round(latitude * 100) / 100;
+  const lng = Math.round(longitude * 100) / 100;
+  
+  // Round radius to nearest 100km for better cache hits
+  const roundedRadius = Math.ceil(radius / 100) * 100;
+  
+  return `${lat},${lng},${roundedRadius}`;
+};
+
+/**
+ * Cache location search results
+ * @param latitude Search center latitude
+ * @param longitude Search center longitude
+ * @param radius Search radius in km
+ * @param locations Location results to cache
+ * @param customKey Optional custom cache key
+ * @param expirationMs Optional cache expiration time in milliseconds
+ */
+export function cacheLocationSearch(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  locations: SharedAstroSpot[],
+  customKey?: string,
+  expirationMs?: number
+): void {
+  // Filter out any potential water locations before caching
+  const validLocations = locations.filter(loc => 
+    isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)
+  );
+  
+  if (validLocations.length < locations.length) {
+    console.log(`Filtered out ${locations.length - validLocations.length} water locations before caching`);
+  }
+  
+  const key = generateCacheKey(latitude, longitude, radius, customKey);
+  const now = Date.now();
+  // Use mobile-specific expiration if on mobile device
+  const defaultExpiration = isMobileDevice() ? MOBILE_CACHE_EXPIRATION_MS : DEFAULT_CACHE_EXPIRATION_MS;
+  const actualExpirationMs = expirationMs || defaultExpiration;
+  
+  // Limit the number of locations stored in mobile cache to prevent memory issues
+  const locationsToCache = isMobileDevice() && validLocations.length > 30 
+    ? validLocations.slice(0, 30) 
+    : validLocations;
+  
+  locationSearchCache[key] = {
+    locations: locationsToCache,
+    timestamp: now,
+    expiresAt: now + actualExpirationMs
+  };
+  
+  console.log(`Cached ${locationsToCache.length} locations with key ${key}, expires in ${Math.round(actualExpirationMs/60000)} minutes`);
+  
+  // Clean up old cache entries if we have too many (mobile optimization)
+  if (isMobileDevice() && Object.keys(locationSearchCache).length > 5) {
+    cleanupOldCacheEntries();
+  }
 }
 
 /**
- * Cache location data
+ * Get cached location search results if available and not expired
+ * @param latitude Search center latitude
+ * @param longitude Search center longitude
+ * @param radius Search radius in km
+ * @param customKey Optional custom cache key
+ * @returns Cached locations or null if cache miss or expired
  */
-export function cacheLocationData(key: string, data: any): void {
-  locationCache.set(key, {
-    data,
-    timestamp: Date.now()
+export function getCachedLocationSearch(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  customKey?: string
+): SharedAstroSpot[] | null {
+  const key = generateCacheKey(latitude, longitude, radius, customKey);
+  const cacheEntry = locationSearchCache[key];
+  
+  if (!cacheEntry) {
+    return null;
+  }
+  
+  // Check if cache has expired
+  if (Date.now() > cacheEntry.expiresAt) {
+    console.log(`Cache expired for key ${key}`);
+    delete locationSearchCache[key];
+    return null;
+  }
+  
+  // Additional validation pass to ensure no water locations
+  const validLocations = cacheEntry.locations.filter(loc => 
+    isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)
+  );
+  
+  if (validLocations.length < cacheEntry.locations.length) {
+    console.log(`Filtered out ${cacheEntry.locations.length - validLocations.length} water locations from cached results`);
+    // Update the cache with filtered locations
+    cacheEntry.locations = validLocations;
+  }
+  
+  return validLocations;
+}
+
+/**
+ * Clean up older cache entries to prevent memory leaks
+ * Especially important for mobile devices
+ */
+function cleanupOldCacheEntries(): void {
+  const now = Date.now();
+  const cacheKeys = Object.keys(locationSearchCache);
+  
+  // Sort by timestamp (oldest first)
+  cacheKeys.sort((a, b) => 
+    locationSearchCache[a].timestamp - locationSearchCache[b].timestamp
+  );
+  
+  // Remove oldest entries until we have a reasonable number
+  const targetCount = isMobileDevice() ? 3 : 10;
+  if (cacheKeys.length > targetCount) {
+    const keysToRemove = cacheKeys.slice(0, cacheKeys.length - targetCount);
+    keysToRemove.forEach(key => {
+      delete locationSearchCache[key];
+      console.log(`Cleaned up old cache entry: ${key}`);
+    });
+  }
+  
+  // Also remove any expired entries
+  Object.keys(locationSearchCache).forEach(key => {
+    if (locationSearchCache[key].expiresAt < now) {
+      delete locationSearchCache[key];
+      console.log(`Removed expired cache entry: ${key}`);
+    }
   });
 }
 
 /**
- * Get cached location data
+ * Clear all cached location search results
  */
-export function getCachedLocationData(key: string, maxAgeMs: number = 30 * 60 * 1000): any {
-  const cached = locationCache.get(key);
-  if (cached && (Date.now() - cached.timestamp) < maxAgeMs) {
-    return cached.data;
+export function clearLocationSearchCache(): void {
+  Object.keys(locationSearchCache).forEach(key => {
+    delete locationSearchCache[key];
+  });
+  console.log("Location search cache cleared");
+}
+
+/**
+ * Clear specific cached location search
+ * @param latitude Search center latitude
+ * @param longitude Search center longitude
+ * @param radius Search radius in km
+ * @param customKey Optional custom cache key
+ */
+export function clearSpecificLocationCache(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  customKey?: string
+): void {
+  const key = generateCacheKey(latitude, longitude, radius, customKey);
+  
+  if (locationSearchCache[key]) {
+    delete locationSearchCache[key];
+    console.log(`Cleared cache for key ${key}`);
   }
-  return null;
+}
+
+/**
+ * Get all cache keys for debugging
+ * @returns Array of cache keys
+ */
+export function getCacheKeys(): string[] {
+  return Object.keys(locationSearchCache);
+}
+
+/**
+ * Get cache statistics for monitoring
+ * @returns Object with cache statistics
+ */
+export function getCacheStats(): {
+  totalEntries: number;
+  totalLocations: number;
+  averageLocationsPerEntry: number;
+  oldestEntry: number;
+  newestEntry: number;
+  isMobile: boolean;
+} {
+  const keys = Object.keys(locationSearchCache);
+  let totalLocations = 0;
+  let oldestTimestamp = Date.now();
+  let newestTimestamp = 0;
+  
+  keys.forEach(key => {
+    const entry = locationSearchCache[key];
+    totalLocations += entry.locations.length;
+    
+    if (entry.timestamp < oldestTimestamp) {
+      oldestTimestamp = entry.timestamp;
+    }
+    
+    if (entry.timestamp > newestTimestamp) {
+      newestTimestamp = entry.timestamp;
+    }
+  });
+  
+  const now = Date.now();
+  const oldestEntryAge = now - oldestTimestamp;
+  const newestEntryAge = now - newestTimestamp;
+  
+  return {
+    totalEntries: keys.length,
+    totalLocations,
+    averageLocationsPerEntry: keys.length ? totalLocations / keys.length : 0,
+    oldestEntry: Math.round(oldestEntryAge / 1000),
+    newestEntry: Math.round(newestEntryAge / 1000),
+    isMobile: isMobileDevice()
+  };
+}
+
+// Periodically clean up the cache to prevent memory issues on mobile
+if (typeof window !== 'undefined') {
+  // Clean cache every 5 minutes on mobile, every 15 minutes on desktop
+  const cleanupInterval = isMobileDevice() ? 5 * 60 * 1000 : 15 * 60 * 1000;
+  setInterval(cleanupOldCacheEntries, cleanupInterval);
 }

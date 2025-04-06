@@ -35,7 +35,7 @@ export const useSIQSCalculation = (
     lng: number, 
     name: string, 
     displayOnly: boolean = false, 
-    bortleScale: number | null, 
+    bortleScale: number, 
     seeingConditions: number, 
     setLoading?: (loading: boolean) => void, 
     setStatusMessage?: (message: string | null) => void,
@@ -82,7 +82,7 @@ export const useSIQSCalculation = (
         lat,
         lng,
         name,
-        bortleScale || undefined,
+        bortleScale,
         displayOnly,
         getCachedData,
         setCachedData,
@@ -108,7 +108,7 @@ export const useSIQSCalculation = (
       );
       
       // Ensure SIQS score is consistently on a 0-10 scale
-      const normalizedScore = normalizeScore(siqsResult.score, 0, 10, 0, 10);
+      const normalizedScore = normalizeScore(siqsResult.score);
       
       if (displayOnly) {
         // For consistency, always store the 0-10 scale value

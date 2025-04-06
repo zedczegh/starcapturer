@@ -1,6 +1,5 @@
 
 import { normalizeLongitude } from './coordinates';
-import { fetchWithTimeout } from './fetchUtils';
 import { Language } from '@/services/geocoding/types';
 
 /**
@@ -82,7 +81,7 @@ export async function getLocationNameFromCoordinates(
     // First try open API for reverse geocoding
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&accept-language=${language}`;
-      const response = await fetchWithTimeout(url, {
+      const response = await fetch(url, {
         headers: {
           'User-Agent': 'SIQSCalculatorApp'
         }
@@ -118,9 +117,9 @@ export async function getLocationNameFromCoordinates(
     const closestLocation = findClosestKnownLocation(validLat, validLng);
     
     // If we're close to a known location, use its name or "Near X"
-    if (closestLocation && closestLocation.distance <= 20) {
+    if (closestLocation.distance <= 20) {
       return closestLocation.name;
-    } else if (closestLocation && closestLocation.distance <= 100) {
+    } else if (closestLocation.distance <= 100) {
       return language === 'en' 
         ? `Near ${closestLocation.name}` 
         : `${closestLocation.name}附近`;

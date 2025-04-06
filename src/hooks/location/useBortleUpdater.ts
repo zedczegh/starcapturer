@@ -5,7 +5,6 @@ import { getCityBortleScale, isInChina } from "@/utils/chinaBortleData";
 import { estimateBortleScaleByLocation } from "@/utils/locationUtils";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { detectTerrainType } from "@/utils/terrainEstimation"; 
-import { getBortleFromLightPollutionMaps } from "@/utils/lightPollutionMap";
 
 /**
  * Hook for optimized Bortle scale updates with enhanced accuracy
@@ -46,17 +45,6 @@ export function useBortleUpdater() {
       } catch (error) {
         // Continue if star count analysis fails
         console.warn("Star count analysis unavailable:", error);
-      }
-      
-      // Get data from light pollution maps
-      try {
-        const lightPollutionBortle = await getBortleFromLightPollutionMaps(latitude, longitude);
-        if (lightPollutionBortle !== null) {
-          console.log(`Light pollution map data available for location: ${lightPollutionBortle}`);
-          return lightPollutionBortle;
-        }
-      } catch (error) {
-        console.warn("Light pollution map data unavailable:", error);
       }
       
       // Determine if we're in China (any province) for region-specific algorithms

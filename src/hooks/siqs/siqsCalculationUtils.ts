@@ -1,72 +1,120 @@
 
 /**
- * Utilities for SIQS calculation
+ * Utilities for SIQS (Sky Index Quality Score) calculations
  */
 
 /**
  * Normalize a score to a specific range
+ * @param value Input value to normalize
+ * @param minValue Minimum value in original range
+ * @param maxValue Maximum value in original range
+ * @param targetMin Minimum value in target range (default: 0)
+ * @param targetMax Maximum value in target range (default: 100)
+ * @returns Normalized value in target range
  */
-export const normalizeScore = (
-  value: number, 
-  min: number, 
-  max: number, 
-  targetMin: number, 
-  targetMax: number
-): number => {
-  // Clamp the input value to the input range
-  const clampedValue = Math.max(min, Math.min(max, value));
+export function normalizeScore(
+  value: number,
+  minValue: number,
+  maxValue: number,
+  targetMin: number = 0,
+  targetMax: number = 100
+): number {
+  // Check for invalid input range
+  if (maxValue === minValue) return targetMin;
   
-  // Calculate the normalized value
-  if (max === min) return targetMin;
+  // Clamp value to input range
+  const clampedValue = Math.max(minValue, Math.min(maxValue, value));
   
-  const normalizedValue = targetMin + (clampedValue - min) * (targetMax - targetMin) / (max - min);
+  // Calculate normalized value
+  const normalizedValue = 
+    ((clampedValue - minValue) / (maxValue - minValue)) * (targetMax - targetMin) + targetMin;
+  
   return normalizedValue;
-};
+}
 
 /**
- * Calculate SIQS with weather data
+ * Calculate weighted average of scores
+ * @param scores Array of score values
+ * @param weights Array of weight values (must be same length as scores)
+ * @returns Weighted average
  */
-export const calculateSIQSWithWeatherData = async (
-  weatherData: any,
-  bortleScale: number,
-  seeingConditions: number,
-  moonPhase: number,
-  forecastData?: any
-): Promise<{ score: number; factors: Record<string, number> }> => {
-  // Base SIQS calculation
-  const bortleFactor = 10 - bortleScale;
-  const moonFactor = 10 - (moonPhase * 10); // 0 = new moon (good), 1 = full moon (bad)
-  const seeingFactor = 10 - (seeingConditions * 2);
-  const cloudFactor = 10 - ((weatherData?.cloudCover || 0) / 10);
+export function calculateWeightedAverage(scores: number[], weights: number[]): number {
+  // Ensure arrays are the same length
+  if (scores.length !== weights.length) {
+    throw new Error('Scores and weights arrays must be the same length');
+  }
   
-  // Calculate weather impact
-  const humidityFactor = 10 - ((weatherData?.humidity || 50) / 10);
-  const precipitationFactor = weatherData?.precipitation ? 5 : 10;
+  // Calculate weighted sum and total weights
+  let weightedSum = 0;
+  let totalWeight = 0;
   
-  // Calculate score with all factors
-  const factors = {
-    bortle: bortleFactor * 2.5,
-    moon: moonFactor * 2.0,
-    seeing: seeingFactor * 1.5,
-    cloud: cloudFactor * 2.0,
-    humidity: humidityFactor * 1.0,
-    precipitation: precipitationFactor * 1.0
-  };
+  for (let i = 0; i < scores.length; i++) {
+    weightedSum += scores[i] * weights[i];
+    totalWeight += weights[i];
+  }
   
-  // Calculate total score
-  const totalWeight = 10.0;
-  const rawScore = (
-    factors.bortle +
-    factors.moon +
-    factors.seeing +
-    factors.cloud +
-    factors.humidity +
-    factors.precipitation
-  ) / totalWeight;
+  // Check for zero total weight
+  if (totalWeight === 0) return 0;
   
-  // Return normalized score and factors
-  return {
-    score: rawScore,
-    factors
-  };
-};
+  // Return weighted average
+  return weightedSum / totalWeight;
+}
+
+/**
+ * Apply a sigmoid curve to a score for better scaling
+ * @param value Input value
+ * @param midpoint Value at which the function returns 0.5
+ * @param steepness Steepness of the sigmoid curve
+ * @returns Sigmoid-transformed value between 0 and 1
+ */
+export function applySigmoidCurve(
+  value: number, 
+  midpoint: number = 0.5, 
+  steepness: number = 10
+): number {
+  return 1 / (1 + Math.exp(-steepness * (value - midpoint)));
+}
+
+/**
+ * Calculate a quality score with non-linear penalties
+ * @param baseScore Base score (0-100)
+ * @param penalties Array of penalty values (0-100)
+ * @param weights Array of weights for penalties (must match penalties array length)
+ * @returns Final score after applying penalties
+ */
+export function applyNonLinearPenalties(
+  baseScore: number,
+  penalties: number[],
+  weights: number[]
+): number {
+  // Ensure arrays are the same length
+  if (penalties.length !== weights.length) {
+    throw new Error('Penalties and weights arrays must be the same length');
+  }
+  
+  // Start with base score
+  let finalScore = baseScore;
+  
+  // Apply each penalty with its weight
+  for (let i = 0; i < penalties.length; i++) {
+    // Skip if penalty is zero
+    if (penalties[i] === 0) continue;
+    
+    // Apply non-linear penalty (using a quadratic function for steeper penalties for high values)
+    const penaltyFactor = (penalties[i] / 100) * weights[i];
+    const nonLinearPenalty = finalScore * penaltyFactor * (penalties[i] / 100);
+    finalScore -= nonLinearPenalty;
+  }
+  
+  // Ensure final score is within valid range
+  return Math.max(0, Math.min(100, finalScore));
+}
+
+/**
+ * Convert fractional score (0-10) to integer score with one decimal place (0.0-10.0)
+ * @param score Raw score
+ * @returns Formatted score
+ */
+export function formatSiqsScore(score: number): number {
+  return parseFloat((Math.max(0, Math.min(10, score))).toFixed(1));
+}

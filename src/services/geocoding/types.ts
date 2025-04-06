@@ -1,33 +1,38 @@
 
-/**
- * Types for geocoding services
- */
-
 export type Language = 'en' | 'zh';
 
-export interface GeocodingResult {
+export interface Location {
   name: string;
   latitude: number;
   longitude: number;
-  confidence: number;
-  country?: string;
-  region?: string;
-  city?: string;
+  placeDetails?: string;
 }
 
-export interface ReverseGeocodingResult {
+export interface CityAlternative {
   name: string;
-  address: {
-    country?: string;
-    state?: string;
-    county?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-    suburb?: string;
-    hamlet?: string;
-    postcode?: string;
-  };
-  latitude: number;
+  chinese: string;
+  alternatives: string[];
+  coordinates: [number, number];
+  placeDetails?: string;
+}
+
+export interface ChineseLocation {
+  areaCode: string;
+  provinceCode: string;
+  province: string;
+  cityCode: string;
+  city: string;
+  districtCode: string;
+  district: string;
+  nameEn: string;
+  pinyin: string;
   longitude: number;
+  latitude: number;
+  bortleScale?: number;
+}
+
+export interface GeocodeResponse {
+  success: boolean;
+  results: Location[];
+  error?: string;
 }
