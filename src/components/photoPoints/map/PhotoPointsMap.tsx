@@ -47,6 +47,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const clickTimeoutRef = useRef<number | null>(null);
   const { hoveredLocationId, handleHover, getSiqsMarker } = useMapMarkers();
   
+  // Select locations based on active view
+  const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  
   // Always load certified locations in background as soon as component mounts
   useEffect(() => {
     if (!mapLoadedOnce && certifiedLocations.length > 0) {
@@ -65,7 +68,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
+    locations: activeLocations, // Use the active locations based on current view mode
     searchRadius
   });
 
@@ -178,7 +181,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         <PhotoPointsMapContainer
           center={mapCenter}
           userLocation={selectedMapLocation || userLocation}
-          locations={validLocations}
+          locations={activeLocations}
           searchRadius={searchRadius}
           onMapReady={handleMapReadyEvent}
           onLocationClick={handleLocationClickEvent}

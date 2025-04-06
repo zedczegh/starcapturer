@@ -23,8 +23,8 @@ const CalculatedLocations = lazy(() => import('@/components/photoPoints/Calculat
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 // Defaults
-const DEFAULT_SEARCH_RADIUS = 1000; // 1000km default radius for calculated locations
-const CERTIFIED_SEARCH_RADIUS = 10000; // No practical limit for certified locations (10000km)
+const DEFAULT_CALCULATED_RADIUS = 1000; // 1000km default radius for calculated locations
+const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (wide search)
 
 const PhotoPointsNearby: React.FC = () => {
   // Get user location with high accuracy
@@ -96,7 +96,10 @@ const PhotoPointsNearby: React.FC = () => {
   // Get the actual location to use (prioritizing manual override)
   const effectiveLocation = manualLocationOverride || userLocation;
 
-  // Set up recommended locations with effectiveLocation
+  // Track the current search radius for the active view
+  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
+  
+  // Set up recommended locations with effectiveLocation and the appropriate radius
   const {
     searchRadius,
     setSearchRadius,
@@ -110,7 +113,10 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks
-  } = useRecommendedLocations(effectiveLocation, activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : DEFAULT_SEARCH_RADIUS);
+  } = useRecommendedLocations(
+    effectiveLocation, 
+    activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius
+  );
 
   // Process locations to separate certified and calculated
   const {
@@ -118,14 +124,34 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedLocations,
     certifiedCount,
     calculatedCount
-  } = useCertifiedLocations(locations, activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : searchRadius);
+  } = useCertifiedLocations(
+    locations, 
+    activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius
+  );
 
-  // Handle radius change - only for calculated locations
+  // Handle radius change - only applies to calculated locations
   const handleRadiusChange = useCallback((value: number) => {
     if (activeView === 'calculated') {
+      setCalculatedSearchRadius(value);
       setSearchRadius(value);
     }
   }, [setSearchRadius, activeView]);
+  
+  // Handle view toggle with proper radius adjustment
+  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
+    setActiveView(view);
+    
+    // Update the search radius based on which view is active
+    if (view === 'certified') {
+      setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
+    } else {
+      // For calculated view, use the user-set calculated radius
+      setSearchRadius(calculatedSearchRadius);
+    }
+    
+    // Clear location cache when switching views
+    clearLocationCache();
+  }, [setSearchRadius, calculatedSearchRadius]);
   
   // Handle location update from map click - this should override any existing location
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
@@ -169,14 +195,16 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [refreshSiqsData, t]);
 
-  // Effect to update the search radius based on active view
+  // Effect to update the search radius when active view changes
   useEffect(() => {
     // For certified locations, set a much larger search radius
     if (activeView === 'certified') {
-      setSearchRadius(CERTIFIED_SEARCH_RADIUS);
+      setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
+    } else {
+      // For calculated locations, use the user selected radius
+      setSearchRadius(calculatedSearchRadius);
     }
-    // For calculated locations, keep user selected radius or use default
-  }, [activeView, setSearchRadius]);
+  }, [activeView, setSearchRadius, calculatedSearchRadius]);
   
   // Handle location click to navigate to details
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
@@ -232,6 +260,9 @@ const PhotoPointsNearby: React.FC = () => {
   // Determine which locations to display based on the active view
   const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
+  // Determine the current display radius
+  const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
+  
   return (
     <PhotoPointsLayout>
       <PhotoPointsHeader 
@@ -243,7 +274,7 @@ const PhotoPointsNearby: React.FC = () => {
       {/* Main filter section with improved toggle buttons */}
       <ViewToggle
         activeView={activeView}
-        onViewChange={setActiveView}
+        onViewChange={handleViewChange}
         certifiedCount={certifiedCount}
         calculatedCount={calculatedCount}
         loading={loading && !locationLoading}
@@ -278,7 +309,7 @@ const PhotoPointsNearby: React.FC = () => {
       {activeView === 'calculated' && (
         <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
-            currentValue={searchRadius}
+            currentValue={calculatedSearchRadius}
             onValueChange={handleRadiusChange}
             minValue={100}
             maxValue={1000}
@@ -306,7 +337,7 @@ const PhotoPointsNearby: React.FC = () => {
               certifiedLocations={certifiedLocations}
               calculatedLocations={calculatedLocations}
               activeView={activeView}
-              searchRadius={activeView === 'certified' ? CERTIFIED_SEARCH_RADIUS : searchRadius}
+              searchRadius={displayRadius}
               onLocationClick={handleLocationClick}
               onLocationUpdate={handleLocationUpdate}
             />
@@ -330,7 +361,7 @@ const PhotoPointsNearby: React.FC = () => {
                   hasMore={hasMore}
                   onLoadMore={loadMore}
                   onRefresh={refreshSiqsData}
-                  searchRadius={searchRadius}
+                  searchRadius={calculatedSearchRadius}
                   initialLoad={initialLoad}
                   onLoadMoreCalculated={loadMoreCalculatedLocations}
                   canLoadMoreCalculated={canLoadMoreCalculated}

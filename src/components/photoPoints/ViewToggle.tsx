@@ -44,7 +44,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           )}
-          <span className="relative z-10">{t("Dark Sky Parks", "暗夜公园")}</span>
+          <span className="relative z-10">{t("Certified Locations", "认证位置")}</span>
           
           <Badge 
             variant="secondary" 
@@ -75,7 +75,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           )}
-          <span className="relative z-10">{t("Calculated", "计算点")}</span>
+          <span className="relative z-10">{t("Calculated Locations", "计算位置")}</span>
           
           <Badge 
             variant="secondary" 

@@ -15,9 +15,13 @@ interface Location {
 // Maximum number of "load more" clicks allowed
 const MAX_LOAD_MORE_CLICKS = 2;
 
+// Default radius values
+const DEFAULT_CALCULATED_RADIUS = 1000; // 1000km for calculated locations
+const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations
+
 export const useRecommendedLocations = (
   userLocation: Location | null,
-  initialRadius: number = 1000
+  initialRadius: number = DEFAULT_CALCULATED_RADIUS
 ) => {
   const { t } = useLanguage();
   const [searchRadius, setSearchRadius] = useState<number>(initialRadius);
@@ -77,7 +81,7 @@ export const useRecommendedLocations = (
       );
 
       // For calculated locations, use a more limited radius to maintain performance
-      const calculatedRadius = Math.min(searchRadius, 1000); // Cap calculated search at 1000km
+      const calculatedRadius = Math.min(searchRadius, DEFAULT_CALCULATED_RADIUS); // Cap calculated search at 1000km
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
@@ -186,7 +190,7 @@ export const useRecommendedLocations = (
       console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
       
       // Get more calculated locations, preserving existing ones
-      const calculatedRadius = Math.min(searchRadius, 1000); // Cap calculated search at 1000km
+      const calculatedRadius = Math.min(searchRadius, DEFAULT_CALCULATED_RADIUS); // Cap calculated search at 1000km
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,

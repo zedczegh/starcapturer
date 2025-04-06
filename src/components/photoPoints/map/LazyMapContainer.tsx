@@ -76,12 +76,12 @@ const MapController = ({
 };
 
 // Create a SIQS-colored marker
-const getSiqsMarker = (siqs: number | undefined) => {
+const getSiqsMarker = useCallback((siqs: number | undefined) => {
   if (!siqs) return createCustomMarker('#777777'); // Gray for unknown SIQS
   
   const color = getProgressColor(siqs);
   return createCustomMarker(color);
-};
+}, []);
 
 // Location Marker component with popup handling
 const LocationMarker = ({ 
@@ -124,7 +124,7 @@ const LocationMarker = ({
     }
   }, [hoveredId, locationId]);
 
-  // Fix: Using the regular event props instead of eventHandlers object
+  // Fix: Using the eventHandlers prop correctly for react-leaflet
   return (
     <Marker
       position={[location.latitude, location.longitude]}
@@ -137,14 +137,11 @@ const LocationMarker = ({
       }}
     >
       <Popup 
-        // Fix: Use className as part of PopupOptions
-        options={{
-          className: "leaflet-popup-custom-compact",
-          closeButton: false,
-          closeOnClick: false,
-          autoClose: false,
-          autoPan: false
-        }}
+        className="leaflet-popup-custom-compact"
+        closeButton={false}
+        closeOnClick={false}
+        autoClose={false}
+        autoPan={false}
       >
         <div className="p-1.5 max-w-[160px]">
           <div className="font-medium text-xs">
@@ -239,9 +236,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           icon={userMarkerIcon}
         >
           <Popup
-            options={{
-              className: "leaflet-popup-custom"
-            }}
+            className="leaflet-popup-custom"
           >
             <div className="p-1 leaflet-popup-custom">
               <strong>{t("Your Location", "您的位置")}</strong>
