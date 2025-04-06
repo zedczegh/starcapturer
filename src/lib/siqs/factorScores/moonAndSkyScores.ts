@@ -1,6 +1,6 @@
 
 /**
- * Calculate moon score for SIQS with enhanced astronomical-physical model (0-100 scale)
+ * Calculate moon score for SIQS (0-100 scale)
  * @param moonPhase Moon phase value (0-1), 0 is new moon, 0.5 is full moon, 1 is new moon again
  * @returns Score on 0-100 scale
  */
@@ -13,7 +13,6 @@ export function calculateMoonScore(moonPhase: number): number {
   
   // Enhanced cosine function that better models the non-linear impact of moonlight
   // The exponent creates a sharper drop in score around the full moon
-  // The distortion factor β=1.2 is based on astronomical research of moon brightness impact
   const moonImpact = Math.pow((Math.cos(phaseInRadians) + 1) / 2, 1.2);
   
   // Scale to 0-100 range
@@ -22,7 +21,7 @@ export function calculateMoonScore(moonPhase: number): number {
 
 /**
  * Calculate clear sky rate score with improved algorithm (0-100 scale)
- * @param clearSkyRate Annual clear sky rate percentage (0-100)
+ * @param clearSkyRate Annual clear sky rate percentage
  * @returns Score on 0-100 scale
  */
 export function calculateClearSkyScore(clearSkyRate: number): number {
@@ -30,25 +29,20 @@ export function calculateClearSkyScore(clearSkyRate: number): number {
     return 50; // Default to moderate score if no data
   }
   
-  // Validate and constrain input
-  const validRate = Math.max(0, Math.min(100, clearSkyRate));
-  
-  // Convert clear sky rate (0-100%) to a 0-100 score
+  // Convert clear sky rate (usually 0-100%) to a 0-100 score
   // Higher clear sky rate = better score
   // Enhanced non-linear curve to better reflect the actual observational benefits
-  // Based on statistical analysis of astrophotography success rates
-  
-  if (validRate >= 85) {
+  if (clearSkyRate >= 85) {
     return 100; // Exceptional locations
-  } else if (validRate >= 70) {
-    return 85 + ((validRate - 70) * 1.0); // 85-100 range
-  } else if (validRate >= 55) {
-    return 70 + ((validRate - 55) * 1.0); // 70-85 range
-  } else if (validRate >= 40) {
-    return 50 + ((validRate - 40) * 1.33); // 50-70 range
-  } else if (validRate >= 25) {
-    return 25 + ((validRate - 25) * 1.67); // 25-50 range
+  } else if (clearSkyRate >= 70) {
+    return 85 + ((clearSkyRate - 70) * 1.0); // 85-100 range
+  } else if (clearSkyRate >= 55) {
+    return 70 + ((clearSkyRate - 55) * 1.0); // 70-85 range
+  } else if (clearSkyRate >= 40) {
+    return 50 + ((clearSkyRate - 40) * 1.33); // 50-70 range
+  } else if (clearSkyRate >= 25) {
+    return 25 + ((clearSkyRate - 25) * 1.67); // 25-50 range
   } else {
-    return Math.max(0, validRate * 1.0); // 0-25 range
+    return Math.max(0, clearSkyRate * 1.0); // 0-25 range
   }
 }
