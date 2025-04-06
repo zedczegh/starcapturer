@@ -1,0 +1,54 @@
+
+/* Marker animation styles */
+.pulse-marker {
+  animation: pulse 2s infinite;
+}
+
+.pulse-strong {
+  animation: pulse-strong 1.5s infinite;
+}
+
+.dark-sky-marker {
+  filter: drop-shadow(0 0 2px rgba(59, 80, 255, 0.8));
+}
+
+.calculated-marker {
+  filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.8));
+}
+
+.selected-marker {
+  transform-origin: center bottom;
+  transform: scale(1.2);
+  z-index: 1000 !important;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8)) brightness(1.2);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-strong {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

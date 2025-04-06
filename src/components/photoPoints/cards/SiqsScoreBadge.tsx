@@ -1,12 +1,18 @@
 
 import React from 'react';
 import { Loader2, Star } from 'lucide-react';
-import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 
 interface SiqsScoreBadgeProps {
   score: number;
   loading?: boolean;
 }
+
+// Format SIQS score for display
+const formatSIQSScoreForDisplay = (score: number): string => {
+  if (score === null || score === undefined) return '—';
+  if (score <= 0) return '0';
+  return score.toFixed(1);
+};
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false }) => {
   return (
@@ -23,4 +29,5 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false 
   );
 };
 
+export { SiqsScoreBadge, formatSIQSScoreForDisplay };
 export default SiqsScoreBadge;
