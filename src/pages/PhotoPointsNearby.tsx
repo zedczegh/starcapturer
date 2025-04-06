@@ -23,6 +23,7 @@ const PhotoPointsNearby: React.FC = () => {
   // UI state
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
+  const [searchRadius, setSearchRadius] = useState(1000);
 
   // Get user location from coordinates
   const userLocation = coords ? { latitude: coords.latitude, longitude: coords.longitude } : null;
@@ -30,12 +31,12 @@ const PhotoPointsNearby: React.FC = () => {
   // Get the current SIQS value from the store
   const currentSiqs = currentSiqsStore.getValue();
 
-  // Set up recommended locations with userLocation - passing proper props
+  // Set up recommended locations with userLocation
   const {
-    searchRadius,
-    setSearchRadius,
     locations,
     loading,
+    error,
+    refreshLocations,
     searching,
     hasMore,
     loadMore,
@@ -43,12 +44,12 @@ const PhotoPointsNearby: React.FC = () => {
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks
+    maxLoadMoreClicks,
+    setSearchRadius: setRecommendedLocationRadius
   } = useRecommendedLocations({
     userLatitude: userLocation?.latitude,
     userLongitude: userLocation?.longitude,
-    maxDistance: 1000, // Default radius
-    filterType: 'all',
+    maxDistance: searchRadius,
     maxResults: 10 // Request more results initially
   });
 
@@ -63,13 +64,15 @@ const PhotoPointsNearby: React.FC = () => {
   // Handle radius change
   const handleRadiusChange = useCallback((value: number) => {
     setSearchRadius(value);
-  }, [setSearchRadius]);
+    setRecommendedLocationRadius(value);
+  }, [setRecommendedLocationRadius]);
 
   // Listen for custom radius change events
   useEffect(() => {
     const handleSetRadius = (e: CustomEvent<{ radius: number }>) => {
       if (e.detail.radius) {
         setSearchRadius(e.detail.radius);
+        setRecommendedLocationRadius(e.detail.radius);
       }
     };
     
@@ -78,7 +81,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => {
       document.removeEventListener('set-search-radius', handleSetRadius as EventListener);
     };
-  }, [setSearchRadius]);
+  }, [setRecommendedLocationRadius]);
 
   // Call getUserLocation when the component mounts
   useEffect(() => {

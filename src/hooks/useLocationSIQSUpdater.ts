@@ -5,6 +5,7 @@ import { useBortleUpdater } from './location/useBortleUpdater';
 import { useForecastData } from './useForecastData';
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { extractNightForecasts } from '@/components/forecast/ForecastUtils';
+import { calculateSIQSWithWeatherData } from './siqs/siqsCalculationUtils';
 
 /**
  * Hook for updating SIQS data based on location changes
@@ -86,19 +87,14 @@ export function useLocationSIQSUpdater(
       const seeingConditions = currentData?.seeingConditions || 3;
       const moonPhase = currentData?.moonPhase || 0.5;
       
-      // Calculate SIQS
-      const siqsResult = calculateSIQS({
-        cloudCover,
-        bortleScale: bortleScale || 5,
+      // Calculate SIQS using the improved utility function
+      const siqsResult = await calculateSIQSWithWeatherData(
+        weatherData,
+        bortleScale || 5,
         seeingConditions,
-        windSpeed: weatherData?.windSpeed || 5,
-        humidity: weatherData?.humidity || 50,
         moonPhase,
-        aqi: weatherData?.aqi,
-        weatherCondition: weatherData?.weatherCondition,
-        precipitation: weatherData?.precipitation,
-        nightForecast
-      });
+        forecast
+      );
       
       // Return updated data
       return {

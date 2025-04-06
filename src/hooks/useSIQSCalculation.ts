@@ -108,11 +108,11 @@ export const useSIQSCalculation = (
       );
       
       // Ensure SIQS score is consistently on a 0-10 scale
-      const normalizedScore = normalizeScore(siqsResult.score);
+      const normalizedSiqsScore = normalizeScore(siqsResult.score);
       
       if (displayOnly) {
         // For consistency, always store the 0-10 scale value
-        setSiqsScore(normalizedScore);
+        setSiqsScore(normalizedSiqsScore);
         setIsCalculating(false);
         return;
       }
@@ -130,7 +130,7 @@ export const useSIQSCalculation = (
         weatherData: data,
         siqsResult: {
           ...siqsResult,
-          score: normalizedScore // Ensure the score is on a 0-10 scale
+          score: normalizedSiqsScore // Ensure the score is on a 0-10 scale
         },
         moonPhase: freshMoonPhase,
         timestamp: new Date().toISOString(),
@@ -151,7 +151,8 @@ export const useSIQSCalculation = (
           name,
           latitude: lat,
           longitude: lng,
-          bortleScale: validBortleScale
+          bortleScale: validBortleScale,
+          siqs: normalizedSiqsScore
         }));
       } catch (e) {
         console.error("Failed to save to localStorage", e);
