@@ -32,6 +32,8 @@ export async function fetchDarkSkyLocations(): Promise<SharedAstroSpot[]> {
  * Get mock dark sky locations for development
  */
 function getMockDarkSkyLocations(): SharedAstroSpot[] {
+  const currentTimestamp = new Date().toISOString();
+  
   return [
     {
       id: 'ds-001',
@@ -41,7 +43,8 @@ function getMockDarkSkyLocations(): SharedAstroSpot[] {
       longitude: -77.8238,
       bortleScale: 2,
       certification: 'International Dark Sky Park',
-      isDarkSkyReserve: true
+      isDarkSkyReserve: true,
+      timestamp: currentTimestamp
     },
     {
       id: 'ds-002',
@@ -51,7 +54,8 @@ function getMockDarkSkyLocations(): SharedAstroSpot[] {
       longitude: -116.9325,
       bortleScale: 1,
       certification: 'International Dark Sky Park',
-      isDarkSkyReserve: true
+      isDarkSkyReserve: true,
+      timestamp: currentTimestamp
     },
     {
       id: 'ds-003',
@@ -61,7 +65,8 @@ function getMockDarkSkyLocations(): SharedAstroSpot[] {
       longitude: -109.9758,
       bortleScale: 1,
       certification: 'International Dark Sky Park',
-      isDarkSkyReserve: true
+      isDarkSkyReserve: true,
+      timestamp: currentTimestamp
     },
     {
       id: 'ds-004',
@@ -71,7 +76,8 @@ function getMockDarkSkyLocations(): SharedAstroSpot[] {
       longitude: 16.0729,
       bortleScale: 1,
       certification: 'International Dark Sky Reserve',
-      isDarkSkyReserve: true
+      isDarkSkyReserve: true,
+      timestamp: currentTimestamp
     },
     {
       id: 'ds-005',
@@ -81,7 +87,8 @@ function getMockDarkSkyLocations(): SharedAstroSpot[] {
       longitude: 170.0966,
       bortleScale: 2,
       certification: 'International Dark Sky Reserve',
-      isDarkSkyReserve: true
+      isDarkSkyReserve: true,
+      timestamp: currentTimestamp
     }
   ];
 }

@@ -1,73 +1,90 @@
 
-import { useState } from 'react';
-
-interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-}
+import { useState, useEffect } from 'react';
 
 /**
- * Custom hook for memory caching with expiration
+ * Simple in-memory cache with expiration
+ * @param defaultExpirationMs Default cache item expiration time in milliseconds
+ * @returns Cache API
  */
-export function useCache<T>(expirationMs: number = 60 * 60 * 1000) {
-  // In-memory cache storage
-  const [cache] = useState<Map<string, CacheItem<T>>>(new Map());
+export function useCache<T = any>(defaultExpirationMs: number = 5 * 60 * 1000) {
+  // Use a Map to store cache items with their expiration
+  const [cache] = useState<Map<string, { data: T; expiry: number }>>(new Map());
+
+  // Clean up expired items periodically
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      
+      for (const [key, value] of cache.entries()) {
+        if (now > value.expiry) {
+          cache.delete(key);
+        }
+      }
+    }, 60000); // Run every minute
+    
+    return () => clearInterval(intervalId);
+  }, [cache]);
 
   /**
-   * Set an item in cache
+   * Store an item in the cache
+   * @param key Cache key
+   * @param data Data to cache
+   * @param expirationMs Optional custom expiration time
    */
-  const setItem = (key: string, data: T): void => {
-    cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
+  const setItem = (key: string, data: T, expirationMs?: number) => {
+    const expiry = Date.now() + (expirationMs || defaultExpirationMs);
+    cache.set(key, { data, expiry });
   };
 
   /**
-   * Get an item from cache if not expired
+   * Get an item from cache if it exists and hasn't expired
+   * @param key Cache key
+   * @param maxAgeMs Optional maximum age override
+   * @returns Cached data or null
    */
-  const getItem = (key: string): T | null => {
+  const getItem = (key: string, maxAgeMs?: number): T | null => {
     const item = cache.get(key);
     
-    if (!item) {
-      return null;
+    // Check if item exists and isn't expired
+    if (item) {
+      const now = Date.now();
+      
+      // If maxAgeMs is specified, use it to determine if item is still valid
+      const expiryTime = maxAgeMs ? (item.expiry - defaultExpirationMs + maxAgeMs) : item.expiry;
+      
+      if (now < expiryTime) {
+        return item.data;
+      } else {
+        // Remove expired item
+        cache.delete(key);
+      }
     }
     
-    // Check if expired
-    if (Date.now() - item.timestamp > expirationMs) {
-      cache.delete(key);
-      return null;
-    }
-    
-    return item.data;
+    return null;
   };
 
   /**
-   * Remove item from cache
+   * Remove an item from the cache
+   * @param key Cache key
    */
-  const removeItem = (key: string): void => {
+  const removeItem = (key: string) => {
     cache.delete(key);
   };
 
   /**
-   * Clear entire cache
+   * Clear all items from the cache
    */
-  const clear = (): void => {
+  const clear = () => {
     cache.clear();
   };
 
   /**
-   * Get cache size
+   * Get the current size of the cache
+   * @returns Number of items in cache
    */
-  const size = (): number => {
+  const size = () => {
     return cache.size;
   };
 
-  return {
-    setItem,
-    getItem,
-    removeItem,
-    clear,
-    size
-  };
+  return { getItem, setItem, removeItem, clear, size };
 }

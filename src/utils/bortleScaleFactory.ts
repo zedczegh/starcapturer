@@ -1,254 +1,236 @@
 
 /**
- * Enhanced Bortle scale algorithm that combines multiple data sources
- * for the most scientifically accurate results
+ * Enhanced Bortle scale calculation with multiple data sources
  */
 
-import { detectTerrainType, getTerrainAdjustmentFactor, getTerrainElevation } from "./terrainData";
-import { findNearbyUserBortleMeasurement } from "@/lib/api/pollution";
-import { estimateBortleScaleByLocation } from "./locationUtils";
-
-// Define confidence sources in order of accuracy
-type ConfidenceSource = 
-  | 'user-measurement'     // User-provided SQM measurement (highest confidence)
-  | 'user-observation'     // User visual observation
-  | 'star-count'           // Calculated from star counts
-  | 'city-database'        // From known city database
-  | 'terrain-corrected'    // Applied terrain correction to database value
-  | 'rural-database'       // From rural area database
-  | 'interpolated'         // Interpolated from nearby points
-  | 'name-estimated'       // Estimated by location name
-  | 'unknown';             // Default/fallback
+interface BortleResult {
+  bortleScale: number;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+  confidenceSource: string;
+}
 
 /**
- * Get Bortle scale with all available correction factors
+ * Get enhanced Bortle scale using multiple data sources
  * @param latitude Location latitude
  * @param longitude Location longitude
- * @param locationName Optional location name for name-based estimation
- * @returns Promise resolving to Bortle scale value and metadata
+ * @param locationName Optional location name for better matching
+ * @returns Bortle scale result with confidence level
  */
 export async function getEnhancedBortleScale(
   latitude: number,
   longitude: number,
   locationName?: string
-): Promise<{
-  bortleScale: number;
-  confidenceSource: ConfidenceSource;
-  terrainAdjusted: boolean;
-  elevationAdjusted: boolean;
-  elevation?: number;
-  terrainType?: string;
-}> {
+): Promise<BortleResult> {
+  // Default result
+  let result: BortleResult = {
+    bortleScale: 5,
+    confidence: 'none',
+    confidenceSource: 'default'
+  };
+  
   try {
-    // Check inputs
-    if (!isFinite(latitude) || !isFinite(longitude)) {
-      return {
-        bortleScale: 4, // Default value
-        confidenceSource: 'unknown',
-        terrainAdjusted: false,
-        elevationAdjusted: false
-      };
-    }
-    
-    // First check for user-provided measurements (highest accuracy)
-    const userMeasurement = findNearbyUserBortleMeasurement(latitude, longitude);
-    if (userMeasurement) {
-      console.log(`Using user-provided Bortle scale: ${userMeasurement.bortleScale}`);
-      
-      return {
-        bortleScale: userMeasurement.bortleScale,
-        confidenceSource: 'user-measurement',
-        terrainAdjusted: false,
-        elevationAdjusted: false
-      };
-    }
-    
-    // TODO: Add star count analysis here when available
-    
-    // Get terrain data for adjustments
-    const elevation = await getTerrainElevation(latitude, longitude);
-    const terrainType = await detectTerrainType(latitude, longitude);
-    
-    // Import database functions dynamically to avoid circular dependencies
-    const { findClosestLocation } = await import("@/data/locationDatabase");
-    const closestLocation = findClosestLocation(latitude, longitude);
-    
-    // If we have a known location from database with close match
-    if (closestLocation && typeof closestLocation.bortleScale === 'number' && 
-        closestLocation.bortleScale >= 1 && closestLocation.bortleScale <= 9 && 
-        closestLocation.distance < 50) {
-      
-      console.log(`Using database Bortle scale: ${closestLocation.bortleScale} for ${closestLocation.name}`);
-      
-      // Apply terrain and elevation adjustments
-      if (elevation && terrainType) {
-        const terrainAdjustment = getTerrainAdjustmentFactor(terrainType, elevation);
-        const adjustedBortleScale = Math.max(1, Math.min(9, closestLocation.bortleScale + terrainAdjustment));
-        
-        console.log(`Applied terrain adjustment ${terrainAdjustment} to Bortle scale, result: ${adjustedBortleScale}`);
-        
-        return {
-          bortleScale: adjustedBortleScale,
-          confidenceSource: 'terrain-corrected',
-          terrainAdjusted: true,
-          elevationAdjusted: true,
-          elevation,
-          terrainType
-        };
-      }
-      
-      return {
-        bortleScale: closestLocation.bortleScale,
-        confidenceSource: 'city-database',
-        terrainAdjusted: false,
-        elevationAdjusted: false
-      };
-    }
-    
-    // Try light pollution API
+    // Try light pollution API first (highest accuracy)
     try {
-      const { fetchLightPollutionData } = await import("@/lib/api/pollution");
-      const lightPollutionData = await fetchLightPollutionData(latitude, longitude);
+      const { fetchLightPollutionData } = await import('@/lib/api/pollution');
+      const pollutionData = await fetchLightPollutionData(latitude, longitude);
       
-      if (lightPollutionData?.bortleScale !== null && 
-          typeof lightPollutionData.bortleScale === 'number' && 
-          lightPollutionData.bortleScale >= 1 && 
-          lightPollutionData.bortleScale <= 9) {
+      if (pollutionData?.bortleScale !== null && 
+          pollutionData?.bortleScale !== undefined && 
+          pollutionData?.bortleScale >= 1 && 
+          pollutionData?.bortleScale <= 9) {
         
-        // Already terrain-adjusted in the pollution module
         return {
-          bortleScale: lightPollutionData.bortleScale,
-          confidenceSource: 'terrain-corrected',
-          terrainAdjusted: true,
-          elevationAdjusted: true,
-          elevation,
-          terrainType: terrainType as string
+          bortleScale: pollutionData.bortleScale,
+          confidence: 'high',
+          confidenceSource: 'light_pollution_api'
         };
       }
     } catch (error) {
-      console.warn("Error fetching light pollution data:", error);
+      console.warn("Light pollution API unavailable:", error);
     }
     
-    // Try interpolation from nearby known points
-    try {
-      const { interpolateBortleScale } = await import("@/utils/lightPollutionData");
-      const interpolatedScale = await interpolateBortleScale(latitude, longitude);
-      
-      if (interpolatedScale !== null) {
-        // Apply terrain correction to interpolated scale
-        if (elevation && terrainType) {
-          const terrainAdjustment = getTerrainAdjustmentFactor(terrainType, elevation);
-          const adjustedBortleScale = Math.max(1, Math.min(9, interpolatedScale + terrainAdjustment));
-          
+    // Try city database lookup
+    if (locationName) {
+      try {
+        const cityScale = await checkCityDatabase(locationName, latitude, longitude);
+        
+        if (cityScale !== null) {
           return {
-            bortleScale: adjustedBortleScale,
-            confidenceSource: 'terrain-corrected',
-            terrainAdjusted: true,
-            elevationAdjusted: true,
-            elevation,
-            terrainType: terrainType as string
+            bortleScale: cityScale,
+            confidence: 'high',
+            confidenceSource: 'city_database'
           };
         }
-        
+      } catch (error) {
+        console.warn("City database lookup error:", error);
+      }
+    }
+    
+    // Try light pollution map data
+    try {
+      const { getBortleFromLightPollutionMap } = await import('@/utils/lightPollutionMap');
+      const mapBortle = await getBortleFromLightPollutionMap(latitude, longitude);
+      
+      if (mapBortle !== null && mapBortle >= 1 && mapBortle <= 9) {
         return {
-          bortleScale: interpolatedScale,
-          confidenceSource: 'interpolated',
-          terrainAdjusted: false,
-          elevationAdjusted: false
+          bortleScale: mapBortle,
+          confidence: 'medium',
+          confidenceSource: 'light_pollution_map'
         };
       }
     } catch (error) {
-      console.warn("Error in Bortle scale interpolation:", error);
+      console.warn("Light pollution map data unavailable:", error);
     }
     
-    // Fall back to location name estimate as last resort
-    if (locationName) {
-      const nameEstimate = estimateBortleScaleByLocation(locationName, latitude, longitude);
+    // Try terrain and population density estimation
+    try {
+      const { estimateBortleFromTerrainAndPopulation } = await import('@/utils/terrainEstimation');
+      const estimatedBortle = await estimateBortleFromTerrainAndPopulation(latitude, longitude);
       
-      // Apply terrain correction to name estimate if available
-      if (elevation && terrainType) {
-        const terrainAdjustment = getTerrainAdjustmentFactor(terrainType, elevation);
-        const adjustedBortleScale = Math.max(1, Math.min(9, nameEstimate + terrainAdjustment));
-        
+      if (estimatedBortle !== null) {
         return {
-          bortleScale: adjustedBortleScale,
-          confidenceSource: 'name-estimated',
-          terrainAdjusted: true,
-          elevationAdjusted: true,
-          elevation,
-          terrainType: terrainType as string
+          bortleScale: estimatedBortle,
+          confidence: 'medium',
+          confidenceSource: 'terrain_and_population'
         };
       }
-      
-      return {
-        bortleScale: nameEstimate,
-        confidenceSource: 'name-estimated',
-        terrainAdjusted: false,
-        elevationAdjusted: false
-      };
+    } catch (error) {
+      console.warn("Terrain estimation unavailable:", error);
     }
     
-    // Ultimate fallback
-    return {
-      bortleScale: 4,
-      confidenceSource: 'unknown',
-      terrainAdjusted: false,
-      elevationAdjusted: false
-    };
+    // Last resort - estimate from location name
+    if (locationName && locationName.length > 2) {
+      try {
+        const { estimateBortleScaleByLocation } = await import('@/utils/locationUtils');
+        const nameBortle = estimateBortleScaleByLocation(locationName, latitude, longitude);
+        
+        if (nameBortle !== null && nameBortle >= 1 && nameBortle <= 9) {
+          return {
+            bortleScale: nameBortle,
+            confidence: 'low',
+            confidenceSource: 'location_name'
+          };
+        }
+      } catch (error) {
+        console.warn("Location name estimation error:", error);
+      }
+    }
+    
+    // If all else fails, use a reasonable default based on coordinates
+    return getDefaultBortle(latitude, longitude);
+    
   } catch (error) {
     console.error("Error in enhanced Bortle scale calculation:", error);
-    return {
-      bortleScale: 4,
-      confidenceSource: 'unknown',
-      terrainAdjusted: false,
-      elevationAdjusted: false
-    };
+    return result;
   }
 }
 
 /**
- * Convert Bortle scale to SQM (Sky Quality Meter) reading
- * @param bortleScale Bortle scale value (1-9)
- * @returns SQM value (magnitudes per square arcsecond)
+ * Check city database for known Bortle values
+ * @param locationName Location name
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Bortle scale value or null
  */
-export function bortleToSQM(bortleScale: number): number {
-  // Validate input
-  if (!isFinite(bortleScale)) return 21.0;
+async function checkCityDatabase(
+  locationName: string,
+  latitude: number,
+  longitude: number
+): Promise<number | null> {
+  // City database lookup implementation
+  const lowercaseName = locationName.toLowerCase();
   
-  // Ensure scale is in valid range
-  const validScale = Math.max(1, Math.min(9, bortleScale));
+  // Common city patterns with known Bortle values
+  const cityPatterns: [RegExp, number][] = [
+    [/\b(new york|nyc)\b/i, 9],
+    [/\btokyo\b/i, 9],
+    [/\b(beijing|北京)\b/i, 8.5],
+    [/\b(shanghai|上海)\b/i, 8.5],
+    [/\b(london|londres)\b/i, 8.5],
+    [/\b(los angeles|la)\b/i, 8],
+    [/\b(paris|parís)\b/i, 8],
+    [/\b(sydney|melbourne)\b/i, 7.5],
+    [/\b(chicago|toronto|hong kong)\b/i, 8],
+    [/\b(berlin|madrid|rome|amsterdam)\b/i, 7.5],
+    [/\b(denver|phoenix|austin)\b/i, 7],
+    [/\b(hohhot|呼和浩特)\b/i, 4],
+    [/\b(lhasa|拉萨)\b/i, 3]
+    // Add more cities as needed
+  ];
   
-  // Enhanced conversion formula based on observational data
-  if (validScale === 1) return 22.0;
-  if (validScale <= 2) return 21.8 - (validScale - 1) * 0.4;
-  if (validScale <= 3) return 21.4 - (validScale - 2) * 0.5;
-  if (validScale <= 4) return 20.9 - (validScale - 3) * 0.7;
-  if (validScale <= 5) return 20.2 - (validScale - 4) * 0.6;
-  if (validScale <= 6) return 19.6 - (validScale - 5) * 0.9;
-  if (validScale <= 7) return 18.7 - (validScale - 6) * 1.0;
-  if (validScale <= 8) return 17.7 - (validScale - 7) * 1.2;
+  // Check for city matches
+  for (const [pattern, bortleValue] of cityPatterns) {
+    if (pattern.test(lowercaseName)) {
+      return bortleValue;
+    }
+  }
   
-  return 16.5; // Bortle 9
+  // Dark sky site patterns
+  const darkSkyPatterns: [RegExp, number][] = [
+    [/\b(death valley|cherry springs|natural bridges)\b/i, 1],
+    [/\b(big bend|bryce canyon|glacier)\b/i, 2],
+    [/\b(dark sky park|dark sky reserve)\b/i, 2],
+    [/\b(national park|reserve|wilderness)\b/i, 3]
+    // Add more dark sky sites as needed
+  ];
+  
+  // Check for dark sky site matches
+  for (const [pattern, bortleValue] of darkSkyPatterns) {
+    if (pattern.test(lowercaseName)) {
+      return bortleValue;
+    }
+  }
+  
+  return null;
 }
 
 /**
- * Convert SQM value to Bortle scale approximation
- * @param sqm SQM value (magnitudes per square arcsecond)
- * @returns Approximate Bortle scale
+ * Get default Bortle scale based on coordinates
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Default Bortle result
  */
-export function sqmToBortle(sqm: number): number {
-  // Validate input
-  if (!isFinite(sqm)) return 4;
+function getDefaultBortle(latitude: number, longitude: number): BortleResult {
+  // Check for remote regions which typically have darker skies
   
-  // Enhanced conversion based on the latest research
-  if (sqm >= 22.0) return 1.0;
-  if (sqm >= 21.5) return 1.0 + (22.0 - sqm) * 2.0;
-  if (sqm >= 21.0) return 2.0 + (21.5 - sqm) * 2.0;
-  if (sqm >= 20.2) return 3.0 + (21.0 - sqm) * 1.25;
-  if (sqm >= 19.5) return 4.0 + (20.2 - sqm) * 1.43;
-  if (sqm >= 18.5) return 5.0 + (19.5 - sqm) * 0.9;
-  if (sqm >= 17.5) return 6.0 + (18.5 - sqm) * 0.8;
-  if (sqm >= 16.5) return 7.0 + (17.5 - sqm) * 1.0;
+  // Very remote locations (deep ocean, Antarctica, etc.)
+  if (
+    // Antarctica
+    (latitude < -60) ||
+    // Arctic
+    (latitude > 75) ||
+    // Remote Pacific
+    (latitude > -30 && latitude < 30 && longitude > 170 && longitude < -140) ||
+    // Central Australia
+    (latitude < -25 && latitude > -30 && longitude > 130 && longitude < 140)
+  ) {
+    return {
+      bortleScale: 1.5,
+      confidence: 'low',
+      confidenceSource: 'remote_coordinates'
+    };
+  }
   
-  return 8.0 + Math.min(1.0, (16.5 - sqm) * 0.8);
+  // Moderately remote regions
+  if (
+    // Sahara/Central Africa
+    (latitude > 15 && latitude < 30 && longitude > 15 && longitude < 30) ||
+    // Central Asia
+    (latitude > 40 && latitude < 50 && longitude > 80 && longitude < 100) ||
+    // Northern Canada
+    (latitude > 60 && latitude < 70 && longitude > -120 && longitude < -90)
+  ) {
+    return {
+      bortleScale: 2.5,
+      confidence: 'low',
+      confidenceSource: 'moderate_remote_coordinates'
+    };
+  }
+  
+  // Default mid-range value
+  return {
+    bortleScale: 4.5,
+    confidence: 'low',
+    confidenceSource: 'default_coordinates'
+  };
 }

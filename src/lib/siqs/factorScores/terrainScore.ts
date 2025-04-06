@@ -1,184 +1,106 @@
 
 /**
- * Terrain factor score calculation for SIQS with enhanced geographic awareness
+ * Terrain factor score calculations for SIQS
+ * Accounts for elevation, terrain type, and geographical features
  */
 
-import { normalizeScore } from './utils';
-
 /**
- * Enhanced terrain types with more specific classifications
- */
-export type TerrainType = 
-  | "mountain" 
-  | "plateau"
-  | "hill"
-  | "plain"
-  | "water"
-  | "valley"
-  | "urban"
-  | "forest"
-  | "desert"
-  | "coastal"
-  | "canyon"
-  | "highland";
-
-/**
- * Calculate score based on terrain type with improved algorithm
- * @param terrainType Type of terrain
- * @param elevation Optional elevation in meters
+ * Calculate terrain factor score
+ * @param elevation Elevation in meters
+ * @param terrainType Optional terrain type classification
+ * @param latitude Location latitude (for regional adjustments)
  * @returns Score on 0-10 scale
  */
-export function calculateTerrainFactor(terrainType: string | null, elevation?: number): number {
-  // Default score for unknown terrain
-  let baseScore = 5;
+export function calculateTerrainFactor(
+  elevation: number | undefined,
+  terrainType?: string,
+  latitude?: number
+): number {
+  // Base score from elevation
+  const elevationScore = calculateElevationScore(elevation);
   
-  if (!terrainType) {
-    // If we have elevation but no terrain type
-    if (elevation !== undefined) {
-      return calculateElevationScore(elevation);
+  // Add terrain type adjustment if provided
+  let terrainAdjustment = 0;
+  
+  if (terrainType) {
+    switch (terrainType.toLowerCase()) {
+      case 'mountain':
+        terrainAdjustment = 1.5;
+        break;
+      case 'plateau':
+        terrainAdjustment = 1.0;
+        break;
+      case 'hill':
+        terrainAdjustment = 0.5;
+        break;
+      case 'desert':
+        terrainAdjustment = 1.0;
+        break;
+      case 'valley':
+        terrainAdjustment = -0.5;
+        break;
+      case 'coast':
+        terrainAdjustment = 0;
+        break;
+      case 'urban':
+        terrainAdjustment = -1.0;
+        break;
+      case 'water':
+        terrainAdjustment = -0.5;
+        break;
+      default:
+        terrainAdjustment = 0;
     }
-    return baseScore; // Neutral score if no terrain data
   }
   
-  // Different terrain types have different impacts on viewing conditions
-  switch (terrainType.toLowerCase()) {
-    case "mountain":
-      baseScore = 9; // Mountains typically offer excellent viewing conditions
-      break;
-    case "plateau":
-      baseScore = 8; // Plateaus offer good elevation and stable air
-      break;
-    case "hill":
-      baseScore = 7; // Hills provide some elevation advantage
-      break;
-    case "plain":
-      baseScore = 6; // Plains are decent but can have more light pollution
-      break;
-    case "water":
-      baseScore = 7.5; // Water bodies can be good for stability but may have humidity
-      break;
-    case "valley":
-      baseScore = 4.5; // Valleys can trap moisture and light pollution
-      break;
-    case "urban":
-      baseScore = 3; // Urban areas have significant light pollution
-      break;
-    case "forest":
-      baseScore = 6.5; // Forests can block light but may have moisture issues
-      break;
-    case "desert":
-      baseScore = 8.5; // Deserts typically have excellent seeing conditions
-      break;
-    case "coastal":
-      baseScore = 7; // Coastal areas benefit from sea breezes but may have humidity
-      break;
-    case "canyon":
-      baseScore = 6; // Canyons can provide shelter but may limit sky view
-      break;
-    case "highland":
-      baseScore = 8; // Highlands generally have good viewing conditions
-      break;
-    default:
-      baseScore = 5; // Default neutral score
+  // Apply latitude adjustment for polar or equatorial regions
+  let latitudeAdjustment = 0;
+  if (latitude !== undefined) {
+    const absLatitude = Math.abs(latitude);
+    
+    // Polar regions tend to have clearer air
+    if (absLatitude > 60) {
+      latitudeAdjustment = 0.5;
+    } 
+    // Tropical regions often have more humidity and atmospheric interference
+    else if (absLatitude < 23.5) {
+      latitudeAdjustment = -0.3;
+    }
   }
   
-  // If elevation is provided, blend the terrain and elevation scores
-  if (elevation !== undefined) {
-    const elevationScore = calculateElevationScore(elevation);
-    // Weight the terrain type more than elevation alone
-    return 0.7 * baseScore + 0.3 * elevationScore;
-  }
+  // Calculate final score with all adjustments
+  const adjustedScore = elevationScore + terrainAdjustment + latitudeAdjustment;
   
-  return baseScore;
+  // Ensure score stays in valid range
+  return Math.max(0, Math.min(10, adjustedScore));
 }
 
 /**
  * Calculate score based on elevation
  * @param elevation Elevation in meters
- * @returns Score on 0-10 scale
+ * @returns Base elevation score
  */
-function calculateElevationScore(elevation: number): number {
-  // Higher elevations generally have better seeing conditions
-  // 0m = 5, 1000m = 7, 2000m = 8, 3000m+ = 9-10
-  if (elevation < 0) {
-    return 4.5; // Below sea level (rare)
+function calculateElevationScore(elevation: number | undefined): number {
+  // If no data available, return neutral score
+  if (elevation === undefined || elevation === null) {
+    return 5;
   }
   
-  if (elevation < 100) {
-    return 5 + (elevation / 100) * 0.5;
+  // Validate input
+  const validElevation = Math.max(0, elevation);
+  
+  // Elevation scoring: higher elevation = better score, with diminishing returns
+  // 0m = 5, 500m = 6, 1000m = 7, 2000m = 8, 3000m+ = 9
+  
+  if (validElevation < 500) {
+    return 5 + (validElevation * (1 / 500));
+  } else if (validElevation < 1000) {
+    return 6 + ((validElevation - 500) * (1 / 500));
+  } else if (validElevation < 2000) {
+    return 7 + ((validElevation - 1000) * (1 / 1000));
+  } else if (validElevation < 3000) {
+    return 8 + ((validElevation - 2000) * (1 / 1000));
+  } else {
+    return 9;
   }
-  
-  if (elevation < 1000) {
-    return 5.5 + (elevation / 1000) * 1.5;
-  }
-  
-  if (elevation < 2000) {
-    return 7 + ((elevation - 1000) / 1000);
-  }
-  
-  if (elevation < 3000) {
-    return 8 + ((elevation - 2000) / 1000);
-  }
-  
-  return Math.min(10, 9 + ((elevation - 3000) / 2000));
-}
-
-/**
- * Calculate terrain correction factor for light pollution
- * @param terrainType Type of terrain
- * @param elevation Elevation in meters
- * @returns Correction factor (0-1, where lower means more correction)
- */
-export function calculateTerrainCorrectionFactor(terrainType: string | null, elevation: number = 0): number {
-  // Base correction from elevation
-  // Higher elevations get more correction (better sky)
-  let elevationFactor = 1.0;
-  
-  if (elevation > 0) {
-    if (elevation < 500) {
-      elevationFactor = 0.95 - (elevation / 500) * 0.1;
-    } else if (elevation < 1500) {
-      elevationFactor = 0.85 - ((elevation - 500) / 1000) * 0.15;
-    } else if (elevation < 3000) {
-      elevationFactor = 0.7 - ((elevation - 1500) / 1500) * 0.2;
-    } else {
-      elevationFactor = 0.5 - Math.min(0.2, ((elevation - 3000) / 2000) * 0.1);
-    }
-  }
-  
-  // Terrain correction
-  let terrainFactor = 1.0;
-  if (terrainType) {
-    switch (terrainType.toLowerCase()) {
-      case "mountain":
-        terrainFactor = 0.5; // Mountains block light pollution significantly
-        break;
-      case "plateau":
-        terrainFactor = 0.6;
-        break;
-      case "hill":
-        terrainFactor = 0.8;
-        break;
-      case "valley":
-        terrainFactor = 1.2; // Valleys can trap light pollution
-        break;
-      case "water":
-        terrainFactor = 0.9; // Water bodies reflect less light pollution upward
-        break;
-      case "forest":
-        terrainFactor = 0.85; // Forests absorb some light
-        break;
-      case "desert":
-        terrainFactor = 0.7; // Clear desert air
-        break;
-      case "canyon":
-        terrainFactor = 1.1; // Canyons can channel light pollution
-        break;
-      default:
-        terrainFactor = 1.0; // No additional correction
-    }
-  }
-  
-  // Combined correction factor, capped between 0.3 and 1.3
-  return Math.max(0.3, Math.min(1.3, elevationFactor * terrainFactor));
 }

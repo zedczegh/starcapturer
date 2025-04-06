@@ -1,110 +1,74 @@
 
 /**
- * Cloud coverage score calculation for SIQS with improved nighttime weighting
+ * Enhanced cloud cover score calculation for SIQS
+ * Takes into account both real-time and forecast data
  */
 
+interface CloudCoverData {
+  cloudCover?: number;
+  nighttimeCloudCover?: number;
+  eveningCloudCover?: number;
+  morningCloudCover?: number;
+}
+
 /**
- * Calculate score based on cloud cover percentage
- * @param cloudCover Cloud cover percentage (0-100)
- * @param isNighttime Optional flag to use nighttime-specific scoring
+ * Calculate score based on cloud cover percentage with improved algorithm
+ * @param data Cloud cover data from various sources
  * @returns Score on 0-10 scale
  */
-export function calculateCloudScore(cloudCover: number, isNighttime: boolean = false): number {
+export function calculateCloudScore(data: CloudCoverData | number): number {
+  // Handle direct number input for backward compatibility
+  if (typeof data === 'number') {
+    return calculateBasicCloudScore(data);
+  }
+  
+  // Prioritize nighttime data if available for more accurate assessment
+  if (data.nighttimeCloudCover !== undefined) {
+    return calculateBasicCloudScore(data.nighttimeCloudCover);
+  }
+  
+  // If we have both evening and morning data, use weighted average favoring evening
+  if (data.eveningCloudCover !== undefined && data.morningCloudCover !== undefined) {
+    // Weight evening slightly higher (60%) as that's when most imaging starts
+    const weightedCloudCover = (data.eveningCloudCover * 0.6) + (data.morningCloudCover * 0.4);
+    return calculateBasicCloudScore(weightedCloudCover);
+  }
+  
+  // Fall back to overall cloud cover
+  if (data.cloudCover !== undefined) {
+    return calculateBasicCloudScore(data.cloudCover);
+  }
+  
+  // Default value if no data available
+  return 5;
+}
+
+/**
+ * Basic cloud cover score calculation
+ * @param cloudCover Cloud cover percentage (0-100)
+ * @returns Score on 0-10 scale
+ */
+function calculateBasicCloudScore(cloudCover: number): number {
   // Validate input
   const validCloudCover = Math.max(0, Math.min(100, cloudCover));
   
-  // Enhanced cloud scoring algorithm with non-linear scaling
-  // Clear skies score higher, higher cloud coverage scores lower
+  // Enhanced non-linear scoring algorithm:
+  // 0% = 10, 10% = 9, 25% = 7, 50% = 4, 75% = 2, 100% = 0
   
-  // Nighttime scoring is slightly more forgiving at moderate cloud levels
-  // since moonlight can sometimes penetrate thin clouds
-  if (isNighttime) {
-    return calculateNighttimeCloudScore(validCloudCover);
-  }
-  
-  // Standard daytime scoring
-  // Score calculation with diminishing returns
-  // 0% clouds = 10, 10% = 9, 25% = 7, 50% = 4, 75% = 1.5, 100% = 0
-  if (validCloudCover <= 5) {
-    return 10;
-  } else if (validCloudCover <= 10) {
-    return 9;
+  if (validCloudCover <= 10) {
+    // Excellent conditions (0-10%)
+    return 10 - (validCloudCover / 10);
   } else if (validCloudCover <= 25) {
+    // Good conditions (10-25%)
     return 9 - ((validCloudCover - 10) * (2 / 15));
   } else if (validCloudCover <= 50) {
+    // Moderate conditions (25-50%)
     return 7 - ((validCloudCover - 25) * (3 / 25));
   } else if (validCloudCover <= 75) {
-    return 4 - ((validCloudCover - 50) * (2.5 / 25));
+    // Poor conditions (50-75%)
+    return 4 - ((validCloudCover - 50) * (2 / 25));
   } else {
-    return Math.max(0, 1.5 - ((validCloudCover - 75) * (1.5 / 25)));
+    // Very poor conditions (75-100%)
+    return 2 - ((validCloudCover - 75) * (2 / 25));
   }
-}
-
-/**
- * Calculate nighttime-specific cloud score with different weighting
- * @param cloudCover Cloud cover percentage (0-100)
- * @returns Score on 0-10 scale
- */
-function calculateNighttimeCloudScore(cloudCover: number): number {
-  // Nighttime scoring is optimized for astrophotography
-  // 0-5% = 10 (perfect), 10% = 9, 20% = 7.5, 40% = 5, 60% = 2.5, 100% = 0
-  
-  if (cloudCover <= 5) {
-    return 10; // Perfect conditions
-  } else if (cloudCover <= 10) {
-    return 10 - ((cloudCover - 5) * (1 / 5));
-  } else if (cloudCover <= 20) {
-    return 9 - ((cloudCover - 10) * (1.5 / 10));
-  } else if (cloudCover <= 40) {
-    return 7.5 - ((cloudCover - 20) * (2.5 / 20));
-  } else if (cloudCover <= 60) {
-    return 5 - ((cloudCover - 40) * (2.5 / 20));
-  } else if (cloudCover <= 80) {
-    return 2.5 - ((cloudCover - 60) * (1.5 / 20));
-  } else {
-    return Math.max(0, 1 - ((cloudCover - 80) * (1 / 20)));
-  }
-}
-
-/**
- * Calculate weighted cloud score for two-phase night periods
- * @param eveningCloudCover Evening cloud cover percentage (6PM-12AM)
- * @param morningCloudCover Morning cloud cover percentage (1AM-8AM)
- * @param eveningWeight Weight to give the evening portion (0-1)
- * @returns Weighted score on 0-10 scale
- */
-export function calculateWeightedNightCloudScore(
-  eveningCloudCover: number,
-  morningCloudCover: number,
-  eveningWeight: number = 0.4
-): number {
-  // Validate input
-  const validEveningCover = Math.max(0, Math.min(100, eveningCloudCover));
-  const validMorningCover = Math.max(0, Math.min(100, morningCloudCover));
-  const validWeight = Math.max(0, Math.min(1, eveningWeight));
-  
-  // Calculate separate scores
-  const eveningScore = calculateNighttimeCloudScore(validEveningCover);
-  const morningScore = calculateNighttimeCloudScore(validMorningCover);
-  
-  // Weight and combine the scores
-  return (eveningScore * validWeight) + (morningScore * (1 - validWeight));
-}
-
-/**
- * Calculate average cloud cover for multiple time periods
- * @param periods Array of cloud cover percentages 
- * @returns Average cloud cover
- */
-export function calculateAverageCloudCover(periods: number[]): number {
-  if (!periods.length) return 0;
-  
-  // Filter out invalid values
-  const validPeriods = periods.filter(val => !isNaN(val) && val >= 0 && val <= 100);
-  
-  if (!validPeriods.length) return 0;
-  
-  // Calculate average
-  const sum = validPeriods.reduce((total, current) => total + current, 0);
-  return sum / validPeriods.length;
 }
