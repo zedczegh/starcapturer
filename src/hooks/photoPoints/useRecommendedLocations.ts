@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLocationFind } from './useLocationFind';
@@ -5,7 +6,6 @@ import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
-import { calculateDistance } from '@/data/utils/distanceCalculator';
 
 interface Location {
   latitude: number;
@@ -14,12 +14,10 @@ interface Location {
 
 // Maximum number of "load more" clicks allowed
 const MAX_LOAD_MORE_CLICKS = 2;
-// Maximum search radius allowed
-const MAX_SEARCH_RADIUS = 1000; // 1000 km max
 
 export const useRecommendedLocations = (userLocation: Location | null) => {
   const { t } = useLanguage();
-  const [searchRadius, setSearchRadius] = useState<number>(500); // Default to a reasonable radius
+  const [searchRadius, setSearchRadius] = useState<number>(1000);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searching, setSearching] = useState<boolean>(false);
@@ -33,19 +31,12 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
-  // Get current SIQS from the store
+  // Get current SIQS from the store - Fix: use getValue instead of getScore
   const currentSiqs = currentSiqsStore.getValue();
   
   // Extract location finding logic
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
-  
-  // Set search radius with limit enforced
-  const setValidatedSearchRadius = useCallback((radius: number) => {
-    const validatedRadius = Math.min(radius, MAX_SEARCH_RADIUS);
-    setSearchRadius(validatedRadius);
-    return validatedRadius;
-  }, []);
   
   // Function to load locations
   const loadLocations = useCallback(async () => {
@@ -75,33 +66,13 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         searchRadius
       );
       
-      // Make sure all locations have accurate distance
-      const resultsWithDistance = results.map(location => {
-        // If distance is already set and seems accurate, keep it
-        if (location.distance !== undefined) return location;
-        
-        // Calculate distance from user location
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          location.latitude,
-          location.longitude
-        );
-        
-        return {
-          ...location,
-          distance
-        };
-      });
-      
-      if (resultsWithDistance.length === 0) {
+      if (results.length === 0) {
         console.log("No locations found, trying to find calculated locations...");
         // If no results at all, try to find some calculated locations
         const calculatedResults = await findCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          // Limit to max radius
-          Math.min(searchRadius * 1.5, MAX_SEARCH_RADIUS),
+          Math.min(searchRadius * 1.5, 10000),
           true, // Allow expansion
           10,  // Limit
           isRadiusIncrease, // Preserve previous locations if radius increased
@@ -109,25 +80,8 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         );
         
         if (calculatedResults.length > 0) {
-          // Ensure all calculated locations have distances
-          const calculatedWithDistances = calculatedResults.map(location => {
-            if (location.distance !== undefined) return location;
-            
-            const distance = calculateDistance(
-              userLocation.latitude,
-              userLocation.longitude,
-              location.latitude,
-              location.longitude
-            );
-            
-            return {
-              ...location,
-              distance
-            };
-          });
-          
           // Sort by quality and distance
-          const sortedResults = sortLocationsByQuality(calculatedWithDistances);
+          const sortedResults = sortLocationsByQuality(calculatedResults);
           setLocations(sortedResults);
           previousLocationsRef.current = sortedResults;
           setHasMore(sortedResults.length >= 20);
@@ -150,7 +104,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       } else {
         // For standard locations, we always apply the full algorithm
         // Sort by quality and distance
-        const sortedResults = sortLocationsByQuality(resultsWithDistance);
+        const sortedResults = sortLocationsByQuality(results);
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
         setHasMore(sortedResults.length >= 20);
@@ -190,26 +144,9 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
         searchRadius
       );
       
-      // Ensure all locations have distances
-      const resultsWithDistance = results.map(location => {
-        if (location.distance !== undefined) return location;
-        
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          location.latitude,
-          location.longitude
-        );
-        
-        return {
-          ...location,
-          distance
-        };
-      });
-      
       // Filter out locations we already have
       const existingIds = new Set(locations.map(loc => loc.id));
-      const newResults = resultsWithDistance.filter(loc => !existingIds.has(loc.id));
+      const newResults = results.filter(loc => !existingIds.has(loc.id));
       
       if (newResults.length > 0) {
         // Sort by quality and distance
@@ -248,36 +185,19 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        Math.min(searchRadius, MAX_SEARCH_RADIUS), // Apply radius limit
+        searchRadius,
         true, // Allow radius expansion
         10, // Get 10 more locations
         true, // Always preserve previous locations
         locations // Pass current locations
       );
       
-      // Ensure all calculated locations have distances
-      const calculatedWithDistances = calculatedResults.map(location => {
-        if (location.distance !== undefined) return location;
-        
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          location.latitude,
-          location.longitude
-        );
-        
-        return {
-          ...location,
-          distance
-        };
-      });
-      
       // Filter out locations we already have
       const existingCoords = new Set(locations.map(loc => 
         `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
       ));
       
-      const newResults = calculatedWithDistances.filter(loc => {
+      const newResults = calculatedResults.filter(loc => {
         const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
         return !existingCoords.has(coordKey);
       });
@@ -373,7 +293,7 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
   
   return {
     searchRadius,
-    setSearchRadius: setValidatedSearchRadius,
+    setSearchRadius,
     locations,
     loading,
     searching,
@@ -385,7 +305,6 @@ export const useRecommendedLocations = (userLocation: Location | null) => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs, // Add currentSiqs to the return value
-    maxSearchRadius: MAX_SEARCH_RADIUS
+    currentSiqs // Add currentSiqs to the return value
   };
 };
