@@ -8,6 +8,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 export const useMapMarkers = () => {
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const markerRefs = useRef<Map<string, L.Marker>>(new Map());
+  const hoverTimeoutRef = useRef<number | null>(null);
 
   // Create a SIQS-colored marker
   const getSiqsMarker = useCallback((siqs: number | undefined) => {
@@ -32,18 +33,27 @@ export const useMapMarkers = () => {
     return markerRefs.current.get(id);
   }, []);
 
-  // Handle hover state
+  // Handle hover state with debouncing to prevent flicker
   const handleHover = useCallback((id: string | null) => {
-    setHoveredLocationId(id);
+    // Clear any existing timeout to prevent flickering
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
     
-    // Close all popups except the hovered one
-    markerRefs.current.forEach((marker, markerId) => {
-      if (id === markerId) {
-        marker.openPopup();
-      } else {
-        marker.closePopup();
-      }
-    });
+    // Set a small timeout to debounce rapid hover changes
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setHoveredLocationId(id);
+      
+      // Close all popups except the hovered one
+      markerRefs.current.forEach((marker, markerId) => {
+        if (id === markerId) {
+          marker.openPopup();
+        } else {
+          marker.closePopup();
+        }
+      });
+    }, 50);
   }, []);
 
   return {

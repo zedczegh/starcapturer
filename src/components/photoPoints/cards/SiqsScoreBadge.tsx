@@ -13,14 +13,15 @@ interface SiqsScoreBadgeProps {
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false, compact = false }) => {
   const scoreColor = getProgressColor(score);
   
-  // Generate a light background color based on the score color
-  const bgColor = `${scoreColor}40`; // Increased opacity for better visibility
+  // Generate a light background color based on the score color with higher opacity for better visibility
+  const bgColor = `${scoreColor}60`; // Increased opacity for better visibility
   
-  // Inline styles for dynamic coloring
+  // Inline styles for dynamic coloring with higher contrast
   const badgeStyle = {
     backgroundColor: bgColor,
     borderColor: scoreColor,
-    color: scoreColor
+    color: scoreColor,
+    boxShadow: compact ? '0 1px 3px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.2)'
   };
   
   return (
@@ -33,7 +34,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false,
       ) : (
         <Star className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} mr-1.5`} fill={scoreColor} />
       )}
-      <span className={`${compact ? 'text-2xs' : 'text-xs'} font-medium`}>
+      <span className={`${compact ? 'text-2xs font-bold' : 'text-xs font-medium'}`}>
         {loading ? '...' : formatSIQSScoreForDisplay(score)}
       </span>
     </div>

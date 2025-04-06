@@ -8,6 +8,8 @@ import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import { calculateRealTimeSiqs, batchCalculateSiqs } from "@/services/realTimeSiqsService";
 import './MapStyles.css'; // Import custom map styles
+import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
+import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 
 // Lazy load the map container to reduce initial load time
 const PhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -41,6 +43,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
   const mapInitializedRef = useRef(false);
+  const lastClickTimeRef = useRef<number>(0);
+  const { hoveredLocationId, handleHover, getSiqsMarker } = useMapMarkers();
   
   // Always load certified locations in background as soon as component mounts
   useEffect(() => {
@@ -87,15 +91,24 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Handle map click to set a new calculation point
+  // Handle map click to set a new calculation point with rate limiting
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (!mapInitializedRef.current) {
       console.log("Map not yet initialized, ignoring click");
       return;
     }
     
+    // Debounce rapid clicks
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 1000) {
+      console.log("Click too soon after last click, ignoring");
+      return;
+    }
+    lastClickTimeRef.current = now;
+    
     // Update selected location immediately
-    setSelectedMapLocation({ latitude: lat, longitude: lng });
+    const newLocation = { latitude: lat, longitude: lng };
+    setSelectedMapLocation(newLocation);
     
     // Call the location update callback
     if (onLocationUpdate) {
@@ -111,19 +124,28 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           "地图将更新以显示此点周围的位置"
         )
       });
-    }
-    
-    // Try to calculate SIQS for this location in background
-    try {
-      const bortleScale = 4; // Default value
-      await calculateRealTimeSiqs(lat, lng, bortleScale);
-    } catch (error) {
-      console.error("Error calculating SIQS for selected location:", error);
+      
+      // Try to calculate SIQS for this location in background
+      try {
+        const bortleScale = 4; // Default value
+        await calculateRealTimeSiqs(lat, lng, bortleScale);
+      } catch (error) {
+        console.error("Error calculating SIQS for selected location:", error);
+      }
     }
   }, [t, onLocationUpdate]);
 
+  // Handle direct location update from controls
+  const handleDirectLocationUpdate = useCallback((lat: number, lng: number) => {
+    setSelectedMapLocation({ latitude: lat, longitude: lng });
+    
+    if (onLocationUpdate) {
+      onLocationUpdate(lat, lng);
+    }
+  }, [onLocationUpdate]);
+
   return (
-    <div className={className}>
+    <div className={`${className} relative`}>
       <Suspense fallback={
         <div className="h-full w-full flex items-center justify-center bg-background/20">
           <div className="flex flex-col items-center gap-3">
@@ -143,6 +165,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onLocationClick={handleLocationClickEvent}
           onMapClick={handleMapClick}
           zoom={initialZoom}
+        />
+        
+        <RealTimeLocationUpdater 
+          userLocation={selectedMapLocation || userLocation}
+          onLocationUpdate={handleDirectLocationUpdate}
+          showControls={mapReady}
         />
       </Suspense>
     </div>

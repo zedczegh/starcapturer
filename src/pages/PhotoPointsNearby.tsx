@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -283,7 +284,7 @@ const PhotoPointsNearby: React.FC = () => {
                   onRefresh={refreshSiqsData}
                   searchRadius={searchRadius}
                   initialLoad={initialLoad}
-                  onLoadMoreCalculated={handleLoadMoreCalculatedLocations}
+                  onLoadMoreCalculated={loadMoreCalculatedLocations}
                   canLoadMoreCalculated={canLoadMoreCalculated}
                   loadMoreClickCount={loadMoreClickCount}
                   maxLoadMoreClicks={maxLoadMoreClicks}

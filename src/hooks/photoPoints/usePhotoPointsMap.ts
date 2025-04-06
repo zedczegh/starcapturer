@@ -1,9 +1,10 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -18,8 +19,28 @@ export const usePhotoPointsMap = ({
 }: UsePhotoPointsMapProps) => {
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
+  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
+  const previousLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  // Track location changes to avoid unnecessary recalculations
+  useEffect(() => {
+    if (!userLocation) return;
+    
+    // Skip if location hasn't changed significantly
+    if (
+      previousLocationRef.current &&
+      Math.abs(previousLocationRef.current.latitude - userLocation.latitude) < 0.01 &&
+      Math.abs(previousLocationRef.current.longitude - userLocation.longitude) < 0.01
+    ) {
+      return;
+    }
+    
+    // Update reference location
+    previousLocationRef.current = userLocation;
+    
+  }, [userLocation]);
 
   // Filter valid locations
   const validLocations = locations.filter(location => 
@@ -28,11 +49,42 @@ export const usePhotoPointsMap = ({
     typeof location.longitude === 'number'
   );
 
+  // Use enhanced locations when available, otherwise use filtered valid locations
+  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : validLocations;
+  
+  // After locations change and map is ready, update with real-time SIQS
+  useEffect(() => {
+    if (!mapReady || !userLocation || !validLocations.length) return;
+    
+    const updateLocations = async () => {
+      try {
+        // Determine type based on location properties
+        const type = validLocations.some(loc => loc.isDarkSkyReserve || loc.certification) ? 
+          'certified' : 'calculated';
+          
+        const updated = await updateLocationsWithRealTimeSiqs(
+          validLocations, 
+          userLocation, 
+          searchRadius,
+          type
+        );
+        
+        if (updated && updated.length > 0) {
+          setEnhancedLocations(updated);
+        }
+      } catch (error) {
+        console.error('Error updating locations with real-time SIQS:', error);
+      }
+    };
+    
+    updateLocations();
+  }, [validLocations, userLocation, mapReady, searchRadius]);
+
   // Get the map center coordinates - prioritize user location
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
-    : validLocations.length > 0
-      ? [validLocations[0].latitude, validLocations[0].longitude]
+    : locationsToDisplay.length > 0
+      ? [locationsToDisplay[0].latitude, locationsToDisplay[0].longitude]
       : [39.9042, 116.4074]; // Default center (Beijing)
 
   // Handle map ready event
@@ -82,28 +134,13 @@ export const usePhotoPointsMap = ({
   // Calculate appropriate initial zoom level
   const initialZoom = getZoomLevel(searchRadius);
 
-  // Filter locations by type
-  const certifiedLocations = useCallback(() => {
-    return validLocations.filter(loc => 
-      loc.isDarkSkyReserve || loc.certification
-    );
-  }, [validLocations]);
-
-  const calculatedLocations = useCallback(() => {
-    return validLocations.filter(loc => 
-      !loc.isDarkSkyReserve && !loc.certification
-    );
-  }, [validLocations]);
-
   return {
     mapReady,
     handleMapReady,
     selectedLocation,
     handleLocationClick,
-    validLocations,
+    validLocations: locationsToDisplay,
     mapCenter,
-    initialZoom,
-    certifiedLocations: certifiedLocations(),
-    calculatedLocations: calculatedLocations()
+    initialZoom
   };
 };

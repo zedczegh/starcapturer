@@ -8,6 +8,29 @@ import L from "leaflet";
  */
 export function createCustomMarker(color = '#9b87f5'): L.DivIcon {
   try {
+    const pulseAnimation = `
+      @keyframes pulse {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(1.8);
+          opacity: 0;
+        }
+      }
+    `;
+    
+    const style = document.createElement('style');
+    if (!document.head.querySelector('[data-marker-pulse]')) {
+      style.setAttribute('data-marker-pulse', 'true');
+      style.textContent = pulseAnimation;
+      document.head.appendChild(style);
+    }
+
     const markerHtmlStyles = `
       background-color: ${color};
       width: 1.5rem;
@@ -31,20 +54,6 @@ export function createCustomMarker(color = '#9b87f5'): L.DivIcon {
       animation: pulse 2s infinite;
       opacity: 0.6;
       box-shadow: 0 0 5px ${color};
-      
-      @keyframes pulse {
-        0% {
-          transform: scale(0.5);
-          opacity: 0;
-        }
-        50% {
-          opacity: 0.5;
-        }
-        100% {
-          transform: scale(2);
-          opacity: 0;
-        }
-      }
     `;
 
     const icon = L.divIcon({
