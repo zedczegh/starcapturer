@@ -7,8 +7,20 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MarkerStyles.css'; // Import custom map styles
-import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
+
+// Create RealTimeLocationUpdater as a simple component without needing locationUpdate prop
+const RealTimeLocationUpdater = ({ userLocation }: { userLocation: { latitude: number; longitude: number } | null }) => {
+  // This component is now simplified - all it does is listen for location changes
+  // and logs them without requiring any callbacks
+  useEffect(() => {
+    if (!userLocation) return;
+    
+    console.log(`Real-time location updated: ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`);
+  }, [userLocation]);
+  
+  return null;
+};
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -206,9 +218,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       </Suspense>
       
       {/* Component to handle real-time location updates */}
-      <RealTimeLocationUpdater 
-        userLocation={userLocation} 
-      />
+      <RealTimeLocationUpdater userLocation={userLocation} />
     </div>
   );
 };

@@ -176,8 +176,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onMapReady();
       }}
       scrollWheelZoom={true}
-      zoomControl={true}
-      attributionControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -223,9 +221,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           pathOptions={{ 
             color: isCertifiedView ? '#FFD700' : '#9b87f5',
             fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.08, // Increased from 0.05 for better visibility
+            fillOpacity: 0.12, // Increased from 0.08 for better visibility
             weight: 1.5, // Increased from 1 for better visibility
-            opacity: 0.4, // Increased from 0.3 for better visibility
+            opacity: 0.5, // Increased from 0.4 for better visibility
             dashArray: '8, 8', // Adding dashed pattern for better visibility
             className: 'search-radius-circle'
           }}

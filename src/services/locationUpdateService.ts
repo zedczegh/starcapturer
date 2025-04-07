@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs, batchCalculateSiqs } from "./realTimeSiqsService/index";
 import { toast } from "sonner";
@@ -7,6 +6,11 @@ import { toast } from "sonner";
 interface LocationCache {
   timestamp: number;
   locations: SharedAstroSpot[];
+  nighttimeData?: {
+    cloudCover: number;
+    timestamp: number;
+    locationNames: string[];
+  };
 }
 
 // Global cache with timeout - reduced from 5 minutes to 2 minutes for more freshness
@@ -41,19 +45,129 @@ const isCacheValid = (cacheKey: string): boolean => {
 };
 
 /**
+ * Check if it's currently nighttime at the location
+ */
+const isNighttime = (): boolean => {
+  const hour = new Date().getHours();
+  return hour >= 19 || hour <= 6; // 7 PM to 6 AM
+};
+
+/**
  * Pre-filter locations based on approximate night conditions before calculating SIQS
  * This improves loading performance significantly
  */
-const preFilterLocationsForNightConditions = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+const preFilterLocationsForNightConditions = (
+  locations: SharedAstroSpot[], 
+  nighttimeCloudCover?: number
+): SharedAstroSpot[] => {
   // Filter out locations with Bortle scale > 7 as they're likely too light polluted
   // unless they're certified locations (which should always be included)
   return locations.filter(loc => {
     // Always include certified locations
     if (loc.isDarkSkyReserve || loc.certification) return true;
     
-    // For calculated locations, do quick pre-filtering
+    // If it's nighttime and we have cloud cover data, use it for pre-filtering
+    if (isNighttime() && typeof nighttimeCloudCover === 'number') {
+      // If nighttime cloud cover is high (>70%), only include locations with lower Bortle scale (better dark sky)
+      if (nighttimeCloudCover > 70) {
+        return !loc.bortleScale || loc.bortleScale <= 5;
+      }
+      // If moderate cloud cover (40-70%), include locations with decent dark sky
+      else if (nighttimeCloudCover > 40) {
+        return !loc.bortleScale || loc.bortleScale <= 6;
+      }
+    }
+    
+    // For calculated locations, do quick pre-filtering based on Bortle scale
     return !loc.bortleScale || loc.bortleScale <= 7;
   });
+};
+
+/**
+ * Efficiently fetch and cache nighttime cloud cover data for a region
+ * This optimizes by only checking a couple of main locations rather than every point
+ */
+const getNighttimeCloudCoverForRegion = async (
+  latitude: number,
+  longitude: number,
+  radius: number
+): Promise<number | undefined> => {
+  const cacheKey = `nighttime-${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}`;
+  
+  // Check cache first for nighttime data (valid for 60 minutes)
+  if (locationCache[cacheKey]?.nighttimeData) {
+    const cachedData = locationCache[cacheKey].nighttimeData;
+    if (cachedData && Date.now() - cachedData.timestamp < 60 * 60 * 1000) {
+      console.log(`Using cached nighttime cloud cover: ${cachedData.cloudCover}% for region`);
+      return cachedData.cloudCover;
+    }
+  }
+  
+  try {
+    // Import only when needed to keep initial bundle smaller
+    const { findNearestTowns } = await import('@/utils/locationUtils');
+    const { fetchForecastData } = await import('@/lib/api');
+    const { extractNightForecasts, calculateAverageCloudCover } = await import('@/components/forecast/NightForecastUtils');
+    
+    // Find 2 nearest towns instead of calculating for every point
+    const nearbyTowns = await findNearestTowns(latitude, longitude, 2);
+    
+    if (nearbyTowns && nearbyTowns.length > 0) {
+      // Get forecasts for these towns
+      const forecasts = await Promise.all(
+        nearbyTowns.map(town => 
+          fetchForecastData({ 
+            latitude: town.latitude, 
+            longitude: town.longitude,
+            days: 1
+          }).catch(() => null)
+        )
+      );
+      
+      // Calculate average cloud cover from night forecasts
+      const validForecasts = forecasts.filter(f => f !== null);
+      if (validForecasts.length === 0) return undefined;
+      
+      let totalCloudCover = 0;
+      let validForecastCount = 0;
+      
+      for (const forecast of validForecasts) {
+        if (!forecast?.hourly) continue;
+        
+        const nightForecasts = extractNightForecasts(forecast.hourly);
+        if (nightForecasts.length === 0) continue;
+        
+        const avgCloudCover = calculateAverageCloudCover(nightForecasts);
+        totalCloudCover += avgCloudCover;
+        validForecastCount++;
+      }
+      
+      if (validForecastCount > 0) {
+        const avgNighttimeCloudCover = totalCloudCover / validForecastCount;
+        console.log(`Average nighttime cloud cover for region: ${avgNighttimeCloudCover.toFixed(1)}%`);
+        
+        // Store in cache
+        if (!locationCache[cacheKey]) {
+          locationCache[cacheKey] = { 
+            timestamp: Date.now(),
+            locations: []
+          };
+        }
+        
+        locationCache[cacheKey].nighttimeData = {
+          cloudCover: avgNighttimeCloudCover,
+          timestamp: Date.now(),
+          locationNames: nearbyTowns.map(t => t.name)
+        };
+        
+        return avgNighttimeCloudCover;
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching nighttime cloud cover for region:", error);
+  }
+  
+  return undefined;
 };
 
 /**
@@ -85,9 +199,19 @@ export const updateLocationsWithRealTimeSiqs = async (
   try {
     console.log(`Updating ${locations.length} ${type} locations with real-time SIQS data`);
     
+    // For calculated locations, first get nighttime cloud cover for the region to optimize filtering
+    let nighttimeCloudCover: number | undefined;
+    if (type === 'calculated' && isNighttime()) {
+      nighttimeCloudCover = await getNighttimeCloudCoverForRegion(
+        userLocation.latitude,
+        userLocation.longitude,
+        radius
+      );
+    }
+    
     // Pre-filter locations to improve performance (only for calculated locations)
     const locationsToUpdate = type === 'calculated' 
-      ? preFilterLocationsForNightConditions(locations)
+      ? preFilterLocationsForNightConditions(locations, nighttimeCloudCover)
       : locations;
     
     console.log(`After pre-filtering: ${locationsToUpdate.length} locations to update`);
@@ -146,7 +270,7 @@ export const updateLocationsWithRealTimeSiqs = async (
 };
 
 /**
- * Clear the location cache
+ * Clear the location cache - called automatically on daily/hourly intervals
  */
 export const clearLocationCache = () => {
   const cacheKeys = Object.keys(locationCache);
@@ -157,7 +281,6 @@ export const clearLocationCache = () => {
   });
   
   console.log(`Location cache cleared (${cacheCount} entries)`);
-  // Don't show toast as this is now automatic
 };
 
 /**
@@ -199,10 +322,18 @@ export const forceUpdateAllLocations = async (
   console.log(`Force updating ${locations.length} locations with fresh SIQS data`);
   
   try {
-    // Clear existing cache first - automatically happens now
+    // Get nighttime cloud cover for the region to optimize filtering
+    let nighttimeCloudCover: number | undefined;
+    if (isNighttime()) {
+      nighttimeCloudCover = await getNighttimeCloudCoverForRegion(
+        userLocation.latitude,
+        userLocation.longitude,
+        100 // Default radius
+      );
+    }
     
     // Pre-filter locations to improve performance
-    const filteredLocations = preFilterLocationsForNightConditions(locations);
+    const filteredLocations = preFilterLocationsForNightConditions(locations, nighttimeCloudCover);
     console.log(`After pre-filtering: ${filteredLocations.length} locations to update`);
     
     // Update all locations with fresh data
@@ -213,3 +344,38 @@ export const forceUpdateAllLocations = async (
     return locations;
   }
 };
+
+// Set up automatic cache clearing
+const setupAutoCacheClear = () => {
+  // Clear cache every hour to ensure fresh data
+  const hourlyCleanup = setInterval(() => {
+    clearLocationCache();
+  }, 60 * 60 * 1000); // Every hour
+  
+  // Also clear at midnight
+  const setupMidnightCleanup = () => {
+    const now = new Date();
+    const night = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1, // next day
+      0, 0, 0 // midnight
+    );
+    const msUntilMidnight = night.getTime() - now.getTime();
+    
+    setTimeout(() => {
+      clearLocationCache();
+      setupMidnightCleanup(); // Setup for next day
+    }, msUntilMidnight);
+  };
+  
+  setupMidnightCleanup();
+  
+  // Return cleanup function
+  return () => {
+    clearInterval(hourlyCleanup);
+  };
+};
+
+// Initialize auto cache clear
+setupAutoCacheClear();
