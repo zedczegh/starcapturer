@@ -42,21 +42,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Set up the event listener for expanding search radius
   useExpandSearchRadius({ onRefresh });
   
-  // Filter out locations with SIQS score of 0 and water locations
-  const validLocations = locations.filter(loc => {
-    // Filter out invalid SIQS
-    if (loc.siqs === undefined || loc.siqs <= 0) return false;
-    
-    // Filter out water locations
-    const name = loc.name?.toLowerCase() || '';
-    const chineseName = loc.chineseName?.toLowerCase() || '';
-    const waterTerms = ['water', 'ocean', 'sea', 'lake', '水', '海', '湖', '洋'];
-    if (waterTerms.some(term => name.includes(term) || chineseName.includes(term))) {
-      return false;
-    }
-    
-    return true;
-  });
+  // Filter out locations with SIQS score of 0
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
   
   // Sort locations by distance (closest first)
   const sortedLocations = [...validLocations].sort((a, b) => 

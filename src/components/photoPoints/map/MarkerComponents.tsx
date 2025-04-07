@@ -1,116 +1,14 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import { formatDistance, formatSIQSScore } from '@/utils/geoUtils';
+import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award } from 'lucide-react';
-
-// Create custom CSS for the breathing effect
-const injectBreathingCss = () => {
-  if (typeof document === "undefined") return;
-  
-  if (!document.getElementById('marker-breathing-styles')) {
-    const style = document.createElement('style');
-    style.id = 'marker-breathing-styles';
-    style.innerHTML = `
-      @keyframes breathing {
-        0% { transform: scale(0.95); opacity: 0.8; }
-        50% { transform: scale(1.05); opacity: 1; }
-        100% { transform: scale(0.95); opacity: 0.8; }
-      }
-      
-      @keyframes pulse-border {
-        0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
-        70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
-      }
-      
-      .marker-custom-popup {
-        transition: all 0.3s ease-in-out;
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      
-      .leaflet-popup-content-wrapper {
-        border-radius: 12px !important;
-        overflow: hidden;
-      }
-      
-      .leaflet-popup-custom-compact {
-        background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.85));
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-      }
-      
-      .marker-popup-gradient {
-        background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.85));
-      }
-      
-      .siqs-excellent {
-        border-left: 3px solid #4ade80;
-      }
-      
-      .siqs-good {
-        border-left: 3px solid #facc15;
-      }
-      
-      .siqs-poor {
-        border-left: 3px solid #f87171;
-      }
-      
-      .hovered .leaflet-marker-icon svg {
-        animation: breathing 2s infinite ease-in-out;
-      }
-      
-      .circle-marker svg circle {
-        transition: fill 0.3s ease-in-out, stroke-width 0.3s ease-in-out, opacity 0.3s ease-in-out;
-      }
-      
-      .circle-marker.hovered svg circle {
-        stroke-width: 2px;
-        opacity: 1;
-      }
-      
-      .star-marker.hovered svg path {
-        filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.8));
-      }
-      
-      .user-marker.hovered svg circle:first-child {
-        filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.8));
-      }
-      
-      .leaflet-popup-close-button {
-        color: white !important;
-        opacity: 0.7;
-        transition: opacity 0.2s ease;
-      }
-      
-      .leaflet-popup-close-button:hover {
-        opacity: 1;
-        background: none !important;
-      }
-      
-      .leaflet-popup-tip {
-        background: rgba(17, 24, 39, 0.9) !important;
-      }
-      
-      .leaflet-popup-content {
-        margin: 6px 10px !important;
-      }
-      
-      .leaflet-popup-shown {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    `;
-    document.head.appendChild(style);
-  }
-};
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -126,8 +24,8 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
     // For certified locations, use a star-shaped marker with gold/yellow color
     return createCustomMarker('#FFD700', 'star');
   } else {
-    // For calculated locations, use a more vibrant green
-    const color = location.siqs ? getProgressColor(location.siqs) : '#4ade80'; // Using a brighter green for calculated locations
+    // For calculated locations, use the color based on SIQS with circle shape
+    const color = location.siqs ? getProgressColor(location.siqs) : '#777777';
     return createCustomMarker(color, 'circle');
   }
 };
@@ -154,11 +52,6 @@ const LocationMarker = memo(({
   const popupRef = useRef<L.Popup | null>(null);
   const openTimeoutRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
-  
-  // Inject custom CSS for breathing and popup effects
-  useEffect(() => {
-    injectBreathingCss();
-  }, []);
   
   // Create the correct marker icon based on location type and hover state
   const icon = useMemo(() => {
@@ -191,14 +84,6 @@ const LocationMarker = memo(({
       openTimeoutRef.current = window.setTimeout(() => {
         if (markerRef.current) {
           markerRef.current.openPopup();
-          
-          // Add shown class for animation after a brief delay
-          setTimeout(() => {
-            const popup = document.querySelector('.marker-custom-popup');
-            if (popup) {
-              popup.classList.add('leaflet-popup-shown');
-            }
-          }, 50);
         }
         openTimeoutRef.current = null;
       }, 150);
@@ -224,18 +109,7 @@ const LocationMarker = memo(({
       
       // Close popup with a delay
       if (markerRef.current && markerRef.current.isPopupOpen()) {
-        // Remove shown class first for fade out
-        const popup = document.querySelector('.marker-custom-popup');
-        if (popup) {
-          popup.classList.remove('leaflet-popup-shown');
-        }
-        
-        // Then close after animation
-        setTimeout(() => {
-          if (markerRef.current) {
-            markerRef.current.closePopup();
-          }
-        }, 200);
+        markerRef.current.closePopup();
       }
       
       closeTimeoutRef.current = null;
@@ -262,31 +136,13 @@ const LocationMarker = memo(({
     if (isHovered) {
       marker.openPopup();
       marker.getElement()?.classList.add('hovered');
-      
-      // Add shown class for animation
-      setTimeout(() => {
-        const popup = document.querySelector('.marker-custom-popup');
-        if (popup) {
-          popup.classList.add('leaflet-popup-shown');
-        }
-      }, 50);
     } else if (!isHovered && closeTimeoutRef.current === null && marker.isPopupOpen()) {
       // Only add a timeout if we don't already have one
       closeTimeoutRef.current = window.setTimeout(() => {
-        // Remove shown class first for fade out
-        const popup = document.querySelector('.marker-custom-popup');
-        if (popup) {
-          popup.classList.remove('leaflet-popup-shown');
+        if (markerRef.current) {
+          markerRef.current.closePopup();
+          markerRef.current.getElement()?.classList.remove('hovered');
         }
-        
-        // Then close after animation
-        setTimeout(() => {
-          if (markerRef.current) {
-            markerRef.current.closePopup();
-            markerRef.current.getElement()?.classList.remove('hovered');
-          }
-        }, 200);
-        
         closeTimeoutRef.current = null;
       }, 200);
     }
@@ -308,14 +164,15 @@ const LocationMarker = memo(({
       eventHandlers={{
         click: handleClick,
         mouseover: handleMouseOver,
-        mouseout: handleMouseOut
+        mouseout: handleMouseOut,
       }}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
+        className="marker-custom-popup"
       >
-        <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient marker-custom-popup ${siqsClass}`}>
+        <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
             {isCertified && (
               <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
@@ -374,7 +231,7 @@ const UserLocationMarker = memo(({
   return (
     <Marker position={position} icon={userMarkerIcon}>
       <Popup>
-        <div className="p-2 leaflet-popup-custom marker-popup-gradient marker-custom-popup">
+        <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
           <div className="text-xs mt-1">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
@@ -387,6 +244,10 @@ const UserLocationMarker = memo(({
           )}
         </div>
       </Popup>
+      
+      <Tooltip direction="top" offset={[0, -12]} permanent={false}>
+        {t("Your Location", "您的位置")}
+      </Tooltip>
     </Marker>
   );
 });
