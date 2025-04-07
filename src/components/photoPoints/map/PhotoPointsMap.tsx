@@ -6,7 +6,7 @@ import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
-import './MapStyles.css'; // Import custom map styles
+import './MarkerStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 
@@ -49,7 +49,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const mapInitializedRef = useRef(false);
   const lastClickTimeRef = useRef<number>(0);
   const clickTimeoutRef = useRef<number | null>(null);
-  const { hoveredLocationId, handleHover } = useMapMarkers();
+  const { hoveredLocationId, handleHover, clearHoverOnMapInteraction } = useMapMarkers();
   const previousViewRef = useRef<string>(activeView);
   const viewChangedRef = useRef<boolean>(false);
   const [key, setKey] = useState(`map-${Date.now()}`); // Add key for forced remount when view changes
@@ -144,6 +144,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     const newLocation = { latitude: lat, longitude: lng };
     setSelectedMapLocation(newLocation);
     
+    // Clear any hover state
+    clearHoverOnMapInteraction();
+    
     // Call the location update callback after a short delay to prevent double-updating
     clickTimeoutRef.current = window.setTimeout(() => {
       if (onLocationUpdate) {
@@ -163,59 +166,49 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       clickTimeoutRef.current = null;
     }, 100);
     
-  }, [t, onLocationUpdate]);
-
-  // Handle direct location update from controls without debounce
-  const handleDirectLocationUpdate = useCallback((lat: number, lng: number) => {
-    setSelectedMapLocation({ latitude: lat, longitude: lng });
-    
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
-    }
-  }, [onLocationUpdate]);
+  }, [t, onLocationUpdate, clearHoverOnMapInteraction]);
   
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (clickTimeoutRef.current) {
-        window.clearTimeout(clickTimeoutRef.current);
-      }
-    };
-  }, []);
+  // Handle map interaction (click/drag) to clear hovering tooltips
+  const handleMapInteraction = useCallback(() => {
+    clearHoverOnMapInteraction();
+  }, [clearHoverOnMapInteraction]);
+
+  // Suspense fallback component
+  const mapFallback = (
+    <div className="h-full w-full flex items-center justify-center bg-background/50 backdrop-blur-sm">
+      <div className="flex flex-col items-center space-y-2">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-sm text-muted-foreground">
+          {t("Loading map...", "地图加载中...")}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className={`${className} relative`}>
-      <Suspense fallback={
-        <div className="h-full w-full flex items-center justify-center bg-background/20">
-          <div className="flex flex-col items-center gap-3">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">
-              {t("Loading map...", "正在加载地图...")}
-            </p>
-          </div>
-        </div>
-      }>
+    <div className={className}>
+      <Suspense fallback={mapFallback}>
         <LazyPhotoPointsMapContainer
+          key={key}
           center={mapCenter}
-          userLocation={selectedMapLocation || userLocation}
-          locations={activeLocations} // Only show active view locations
+          zoom={initialZoom}
+          userLocation={userLocation}
+          locations={validLocations}
           searchRadius={searchRadius}
-          activeView={activeView} // Pass the active view to the map container
+          activeView={activeView}
           onMapReady={handleMapReadyEvent}
           onLocationClick={handleLocationClickEvent}
           onMapClick={handleMapClick}
-          zoom={initialZoom}
-          key={key} // Use key to force re-render on view change
+          onMapInteraction={handleMapInteraction}
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={handleHover}
         />
-        
-        <RealTimeLocationUpdater 
-          userLocation={selectedMapLocation || userLocation}
-          onLocationUpdate={handleDirectLocationUpdate}
-          showControls={mapReady}
-        />
       </Suspense>
+      
+      {/* Component to handle real-time location updates */}
+      <RealTimeLocationUpdater 
+        userLocation={userLocation} 
+      />
     </div>
   );
 };

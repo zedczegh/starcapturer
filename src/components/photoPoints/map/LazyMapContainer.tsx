@@ -14,7 +14,13 @@ import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
 configureLeaflet();
 
 // Map Events component to handle click events and updates
-const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+const MapEvents = ({ 
+  onMapClick, 
+  onMapInteraction 
+}: { 
+  onMapClick: (lat: number, lng: number) => void;
+  onMapInteraction: () => void;
+}) => {
   const map = useMap();
   
   // Store map reference in window for external access
@@ -26,16 +32,29 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
     
     const handleClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
+      onMapInteraction();
+    };
+    
+    const handleDragStart = () => {
+      onMapInteraction();
+    };
+    
+    const handleZoomStart = () => {
+      onMapInteraction();
     };
     
     map.on('click', handleClick);
+    map.on('dragstart', handleDragStart);
+    map.on('zoomstart', handleZoomStart);
     
     return () => {
       map.off('click', handleClick);
+      map.off('dragstart', handleDragStart);
+      map.off('zoomstart', handleZoomStart);
       // Clean up window reference
       (window as any).map = undefined;
     };
-  }, [map, onMapClick]);
+  }, [map, onMapClick, onMapInteraction]);
   
   return null;
 };
@@ -75,6 +94,13 @@ const MapController = ({
 
     // Improve performance by reduced rerenders on pan/zoom
     map._onResize = L.Util.throttle(map._onResize, 200, map);
+    
+    // Set attribute settings for better performance
+    const container = map.getContainer();
+    if (container) {
+      container.style.willChange = 'transform';
+      container.style.backfaceVisibility = 'hidden';
+    }
   }, [map, userLocation]);
 
   return null;
@@ -89,6 +115,7 @@ interface PhotoPointsMapContainerProps {
   onMapReady: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  onMapInteraction?: () => void;
   zoom?: number;
   hoveredLocationId: string | null;
   onMarkerHover: (id: string | null) => void;
@@ -103,6 +130,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   onMapReady,
   onLocationClick,
   onMapClick,
+  onMapInteraction = () => {},
   zoom = 5,
   hoveredLocationId,
   onMarkerHover
@@ -148,11 +176,12 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onMapReady();
       }}
       scrollWheelZoom={true}
+      zoomControl={true}
+      attributionControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        // Fixed the TileLayer props by removing maxZoom
         subdomains="abc"
       />
       
@@ -171,7 +200,12 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       />
       
       {/* Add MapEvents component to handle clicks if onMapClick is provided */}
-      {onMapClick && <MapEvents onMapClick={onMapClick} />}
+      {onMapClick && (
+        <MapEvents 
+          onMapClick={onMapClick} 
+          onMapInteraction={onMapInteraction}
+        />
+      )}
       
       {/* Current user location marker */}
       {userLocation && (
@@ -181,7 +215,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         />
       )}
       
-      {/* Search radius visualization as a faint circle */}
+      {/* Search radius visualization as a faint circle with improved visibility */}
       {userLocation && searchRadius && searchRadius < 1000 && (
         <Circle 
           center={[userLocation.latitude, userLocation.longitude]}
@@ -189,9 +223,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           pathOptions={{ 
             color: isCertifiedView ? '#FFD700' : '#9b87f5',
             fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.05,
-            weight: 1,
-            opacity: 0.3
+            fillOpacity: 0.08, // Increased from 0.05 for better visibility
+            weight: 1.5, // Increased from 1 for better visibility
+            opacity: 0.4, // Increased from 0.3 for better visibility
+            dashArray: '8, 8', // Adding dashed pattern for better visibility
+            className: 'search-radius-circle'
           }}
         />
       )}

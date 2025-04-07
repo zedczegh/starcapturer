@@ -50,27 +50,29 @@ export const useMapMarkers = () => {
       setHoveredLocationId(id);
       lastHoverIdRef.current = id;
       hoverStartTimeRef.current = now;
+      
+      // Lock hover after a brief moment to prevent accidental mouse movements from changing hover
+      setTimeout(() => {
+        if (lastHoverIdRef.current === id) {
+          isLockHoverRef.current = true;
+        }
+      }, 100);
       return;
     }
     
     // If leaving an item entirely, add small delay
     if (id === null) {
-      // Don't release hover lock too quickly if recently established
-      const hoverDuration = now - hoverStartTimeRef.current;
-      
       // Only unlock hover if explicitly requested by setting null
       if (isLockHoverRef.current) {
         isLockHoverRef.current = false;
       }
       
-      // If hovered for less than 300ms, use a shorter delay to prevent feeling sluggish
-      const timeoutDelay = hoverDuration < 300 ? 50 : 150;
-      
+      // Longer delay before clearing hover completely (300ms feels smooth)
       hoverTimeoutRef.current = window.setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverIdRef.current = null;
         hoverTimeoutRef.current = null;
-      }, timeoutDelay);
+      }, 300); // Increased from 150ms to 300ms for smoother experience
       return;
     }
     
@@ -81,9 +83,9 @@ export const useMapMarkers = () => {
       hoverStartTimeRef.current = now;
       hoverTimeoutRef.current = null;
       
-      // If hovered for more than brief moment, lock the hover
+      // Lock hover after hover stabilizes
       isLockHoverRef.current = true;
-    }, 50);
+    }, 50); // Kept at 50ms for quick response
   }, [hoveredLocationId]);
 
   // Allow explicit setting of hover without the debounce logic
@@ -107,9 +109,22 @@ export const useMapMarkers = () => {
     }
   }, []);
 
+  // Function to clear hover on map events (click or drag)
+  const clearHoverOnMapInteraction = useCallback(() => {
+    setHoveredLocationId(null);
+    lastHoverIdRef.current = null;
+    isLockHoverRef.current = false;
+    
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  }, []);
+
   return {
     hoveredLocationId,
-    setHoveredLocationId: setHoveredLocationIdDirectly, // Replace with direct version
-    handleHover
+    setHoveredLocationId: setHoveredLocationIdDirectly, 
+    handleHover,
+    clearHoverOnMapInteraction
   };
 };
