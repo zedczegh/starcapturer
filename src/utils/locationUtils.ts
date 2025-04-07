@@ -1,199 +1,214 @@
-import { haversineDistance } from '@/utils/geoUtils';
+
+import { calculateDistance } from "@/data/utils/distanceCalculator";
+import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
+
+// Import the correct location database
+import { locationDatabase } from "@/data/locationDatabase";
+import { quickLocationDatabase } from "@/utils/locationDatabase";
 
 /**
- * Find the nearest towns to a given location
- * This is used to get weather forecasts efficiently without making too many API calls
- * 
- * @param latitude - Latitude of the location
- * @param longitude - Longitude of the location
- * @param limit - Maximum number of towns to return
- * @returns Array of nearest towns with coordinates
+ * Find the closest known location from our database
+ * Using spatial indexing for faster lookups and more accurate results
+ * With improved error handling
  */
-export const findNearestTowns = async (
-  latitude: number,
-  longitude: number,
-  limit: number = 2
-): Promise<Array<{name: string, latitude: number, longitude: number, distance: number}>> => {
-  try {
-    // We'll use a small set of known cities/towns to avoid too many API calls
-    // In a real implementation, this would use a more comprehensive database
-    const getTownDatabase = async () => {
-      // This could be loaded from an API or static file in a real implementation
-      return [
-        // This is a simplified list - a real implementation would have many more entries
-        { name: "Beijing", latitude: 39.9042, longitude: 116.4074 },
-        { name: "Shanghai", latitude: 31.2304, longitude: 121.4737 },
-        { name: "Guangzhou", latitude: 23.1291, longitude: 113.2644 },
-        { name: "Shenzhen", latitude: 22.5431, longitude: 114.0579 },
-        { name: "Chengdu", latitude: 30.5723, longitude: 104.0665 },
-        { name: "Hangzhou", latitude: 30.2741, longitude: 120.1552 },
-        { name: "Wuhan", latitude: 30.5928, longitude: 114.3055 },
-        { name: "Xi'an", latitude: 34.3416, longitude: 108.9398 },
-        { name: "Nanjing", latitude: 32.0603, longitude: 118.7969 },
-        { name: "Tianjin", latitude: 39.3434, longitude: 117.3616 },
-        { name: "Chongqing", latitude: 29.4316, longitude: 106.9123 },
-        { name: "Suzhou", latitude: 31.2990, longitude: 120.5853 },
-        { name: "Zhengzhou", latitude: 34.7466, longitude: 113.6253 },
-        { name: "Kunming", latitude: 25.0389, longitude: 102.7183 },
-        { name: "Dalian", latitude: 38.9140, longitude: 121.6147 },
-        { name: "Qingdao", latitude: 36.0671, longitude: 120.3826 },
-        { name: "Lhasa", latitude: 29.6500, longitude: 91.1000 },
-        { name: "Urumqi", latitude: 43.8256, longitude: 87.6168 }
-      ];
-    };
-    
-    const towns = await getTownDatabase();
-    
-    // Calculate distance to each town
-    const townsWithDistance = towns.map(town => ({
-      ...town,
-      distance: haversineDistance(latitude, longitude, town.latitude, town.longitude)
-    }));
-    
-    // Sort by distance (closest first) and limit results
-    return townsWithDistance
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, limit);
-      
-  } catch (error) {
-    console.error("Error finding nearest towns:", error);
-    return [];
-  }
-};
-
-/**
- * Estimate Bortle scale for a location based on its name and coordinates
- * This is used as a fallback when no direct measurements are available
- * 
- * @param locationName - Name of the location
- * @param latitude - Latitude of the location 
- * @param longitude - Longitude of the location
- * @returns Estimated Bortle scale (1-9)
- */
-export const estimateBortleScaleByLocation = (
-  locationName: string,
-  latitude: number,
-  longitude: number
-): number => {
-  // Convert to lowercase for easier matching
-  const name = locationName.toLowerCase();
-  
-  // Check for urban indicators in name
-  const isUrban = [
-    'city', 'town', 'urban', 'metropolis', 'downtown', 'district',
-    '城市', '城区', '市区', '城镇', '郊区', '新区'
-  ].some(term => name.includes(term));
-  
-  // Check for rural/natural indicators in name
-  const isRural = [
-    'village', 'rural', 'countryside', 'farm', 'hamlet',
-    '村', '乡村', '农村', '庄园', '农场'
-  ].some(term => name.includes(term));
-  
-  // Check for natural/dark sky indicators
-  const isNatural = [
-    'mountain', 'forest', 'wilderness', 'reserve', 'park', 'national park', 
-    'peak', 'desert', 'canyon',
-    '山', '林', '森林', '自然保护区', '公园', '国家公园', '峰', '沙漠', '峡谷'
-  ].some(term => name.includes(term));
-  
-  // Base estimate starting at Bortle 5 (typical suburban/rural transition)
-  let bortleEstimate = 5;
-  
-  // Adjust based on indicators in name
-  if (isUrban) bortleEstimate += 2;
-  if (isRural) bortleEstimate -= 1;
-  if (isNatural) bortleEstimate -= 2;
-  
-  // Ensure value is within valid range
-  return Math.max(1, Math.min(9, bortleEstimate));
-};
-
-/**
- * Find a spot with potentially lower light pollution within a given radius
- * 
- * @param latitude - Starting latitude
- * @param longitude - Starting longitude
- * @param radius - Search radius in kilometers
- * @returns Coordinates of a potentially darker spot
- */
-export const findLowerLightPollutionSpot = (
-  latitude: number,
-  longitude: number,
-  radius: number,
-  bortleScale?: number
-): {latitude: number, longitude: number} => {
-  // Simple implementation - move slightly away from populated areas
-  // In a real implementation, this would use actual light pollution data
-  
-  // If we have a low Bortle scale already (1-3), don't move
-  if (bortleScale && bortleScale <= 3) {
-    return {latitude, longitude};
-  }
-  
-  // Generate a random direction (0-360 degrees)
-  const angle = Math.random() * 2 * Math.PI;
-  
-  // Move 50-80% of the radius in that direction
-  const distance = (0.5 + Math.random() * 0.3) * radius;
-  
-  // Convert to approximate lat/lng change
-  // This is a simplified calculation that works for relatively small distances
-  const latChange = (distance / 111.32) * Math.cos(angle);
-  const lngChange = (distance / (111.32 * Math.cos(latitude * Math.PI / 180))) * Math.sin(angle);
-  
-  return {
-    latitude: latitude + latChange,
-    longitude: longitude + lngChange
-  };
-};
-
-/**
- * Find the closest known location with accurate Bortle scale data
- */
-export const findClosestKnownLocation = (
-  latitude: number,
-  longitude: number
-): {
+export function findClosestKnownLocation(latitude: number, longitude: number): {
   name: string;
   bortleScale: number;
   distance: number;
-} | null => {
-  // Simple implementation that could be expanded
-  try {
-    const { findClosestLocationImpl } = require('../data/utils/locationFinder');
-    return findClosestLocationImpl(latitude, longitude, []);
-  } catch (error) {
-    console.warn("Location finder not available:", error);
-    return null;
+  type: string;
+} {
+  // First try the quick database for better performance
+  if (quickLocationDatabase && quickLocationDatabase.length) {
+    try {
+      // Find closest location in the quick database
+      let closestLocation = quickLocationDatabase[0];
+      let shortestDistance = calculateDistance(
+        latitude, longitude, 
+        quickLocationDatabase[0].coordinates[0], 
+        quickLocationDatabase[0].coordinates[1]
+      );
+
+      for (let i = 1; i < quickLocationDatabase.length; i++) {
+        const location = quickLocationDatabase[i];
+        const distance = calculateDistance(
+          latitude, longitude, 
+          location.coordinates[0], 
+          location.coordinates[1]
+        );
+
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          closestLocation = location;
+        }
+      }
+
+      return {
+        name: closestLocation.name,
+        bortleScale: closestLocation.bortleScale,
+        distance: shortestDistance,
+        type: closestLocation.type || 'unknown'
+      };
+    } catch (error) {
+      console.error("Error finding closest location in quick database:", error);
+      // Fall back to full database
+    }
   }
-};
+
+  if (!locationDatabase || !locationDatabase.length) {
+    return { name: "Unknown", bortleScale: 4, distance: 999, type: 'unknown' };
+  }
+
+  // First try the enhanced light pollution database for better accuracy
+  try {
+    const closestCity = findClosestCity(latitude, longitude);
+    if (closestCity.distance < 100) {
+      return closestCity;
+    }
+  } catch (error) {
+    console.error("Error using enhanced database:", error);
+    // Fall back to legacy database if enhanced database fails
+  }
+
+  try {
+    // Find closest location in the database
+    let closestLocation = locationDatabase[0];
+    let shortestDistance = calculateDistance(
+      latitude, longitude, 
+      locationDatabase[0].coordinates[0], 
+      locationDatabase[0].coordinates[1]
+    );
+
+    for (let i = 1; i < locationDatabase.length; i++) {
+      const location = locationDatabase[i];
+      const distance = calculateDistance(
+        latitude, longitude, 
+        location.coordinates[0], 
+        location.coordinates[1]
+      );
+
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        closestLocation = location;
+      }
+    }
+
+    return {
+      name: closestLocation.name,
+      bortleScale: closestLocation.bortleScale,
+      distance: shortestDistance,
+      type: closestLocation.type || 'unknown'
+    };
+  } catch (error) {
+    console.error("Error finding closest location:", error);
+    // Fallback with default values
+    return {
+      name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      bortleScale: 4,
+      distance: 999,
+      type: 'unknown'
+    };
+  }
+}
 
 /**
- * Calculate haversine distance between two points
- * This function is also defined in geoUtils.ts but included here for completeness
+ * Estimate Bortle scale based on location name and coordinates
+ * With optimized logic for faster processing and more accurate results
  */
-export const calculateDistance = (
-  lat1: number, 
-  lon1: number, 
-  lat2: number, 
-  lon2: number
-): number => {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
+export function estimateBortleScaleByLocation(
+  locationName: string, 
+  latitude?: number, 
+  longitude?: number
+): number {
+  // If we have coordinates, use the enhanced interpolation method
+  if (typeof latitude === 'number' && typeof longitude === 'number') {
+    try {
+      return interpolateBortleScale(latitude, longitude);
+    } catch (error) {
+      console.error("Error interpolating Bortle scale:", error);
+      // Fall back to database lookup if interpolation fails
+    }
+    
+    try {
+      // Try to find closest known location
+      const closestLocation = findClosestKnownLocation(latitude, longitude);
+      
+      // If location is close enough, use its Bortle scale
+      if (closestLocation.distance <= 100) {
+        return closestLocation.bortleScale;
+      }
+    } catch (error) {
+      console.error("Error finding closest location for Bortle scale:", error);
+    }
+  }
   
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
+  // Try to match by name - use lowercase for case-insensitive matching
+  if (locationName && locationName.length > 0) {
+    const lowercaseName = locationName.toLowerCase();
+    
+    // First check for specific location names that are in our database
+    for (const location of locationDatabase) {
+      if (lowercaseName.includes(location.name.toLowerCase())) {
+        return location.bortleScale;
+      }
+    }
   
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const distance = R * c; // Distance in km
+    // Check for keywords that indicate dark skies
+    if (
+      lowercaseName.includes('desert') || 
+      lowercaseName.includes('outback') || 
+      lowercaseName.includes('wilderness') ||
+      lowercaseName.includes('remote') ||
+      lowercaseName.includes('observatory') ||
+      lowercaseName.includes('national park') ||
+      lowercaseName.includes('mountain') ||
+      lowercaseName.includes('森林') ||
+      lowercaseName.includes('山脉') ||
+      lowercaseName.includes('沙漠')
+    ) {
+      return 3; // Likely has minimal light pollution
+    }
+    
+    // Check for keywords that indicate moderate light pollution
+    if (
+      lowercaseName.includes('rural') || 
+      lowercaseName.includes('village') || 
+      lowercaseName.includes('town') ||
+      lowercaseName.includes('县') ||
+      lowercaseName.includes('镇')
+    ) {
+      return 5; // Moderate light pollution
+    }
+    
+    // Check for keywords that indicate significant light pollution
+    if (
+      lowercaseName.includes('city') || 
+      lowercaseName.includes('urban') || 
+      lowercaseName.includes('downtown') ||
+      lowercaseName.includes('市') ||
+      lowercaseName.includes('区')
+    ) {
+      return 7; // Heavy light pollution
+    }
+  }
   
-  return distance;
-};
-
-function deg2rad(deg: number): number {
-  return deg * (Math.PI/180);
+  // For coordinates with no matching name or location, use population density estimate
+  if (typeof latitude === 'number' && typeof longitude === 'number') {
+    // China's eastern seaboard is generally high light pollution
+    if (longitude > 108 && latitude > 20 && latitude < 40) {
+      return 7;
+    }
+    
+    // Western China is generally darker
+    if (longitude < 100 && latitude > 30 && latitude < 45) {
+      return 4;
+    }
+    
+    // Central China has moderate light pollution
+    if (longitude > 100 && longitude < 108 && latitude > 25 && latitude < 40) {
+      return 6;
+    }
+  }
+  
+  // Default value when we can't determine
+  return 5;
 }

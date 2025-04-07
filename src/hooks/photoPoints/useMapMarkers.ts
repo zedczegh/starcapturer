@@ -11,8 +11,6 @@ export const useMapMarkers = () => {
   const lastHoverIdRef = useRef<string | null>(null);
   const hoverStartTimeRef = useRef<number>(0);
   const isLockHoverRef = useRef<boolean>(false);
-  const hoverDelayTimeoutRef = useRef<number | null>(null);
-  const initialHoverTimeRef = useRef<number>(0);
   
   // Clear hover timeout on unmount
   useEffect(() => {
@@ -20,11 +18,6 @@ export const useMapMarkers = () => {
       if (hoverTimeoutRef.current !== null) {
         window.clearTimeout(hoverTimeoutRef.current);
         hoverTimeoutRef.current = null;
-      }
-      
-      if (hoverDelayTimeoutRef.current !== null) {
-        window.clearTimeout(hoverDelayTimeoutRef.current);
-        hoverDelayTimeoutRef.current = null;
       }
     };
   }, []);
@@ -34,12 +27,6 @@ export const useMapMarkers = () => {
    * @param id - Location ID to hover, or null to clear hover state
    */
   const handleHover = useCallback((id: string | null) => {
-    // Cancel any pending delay timeouts
-    if (hoverDelayTimeoutRef.current !== null) {
-      window.clearTimeout(hoverDelayTimeoutRef.current);
-      hoverDelayTimeoutRef.current = null;
-    }
-    
     // If locked, only allow the locked ID or explicitly setting to null
     if (isLockHoverRef.current && id !== null && id !== lastHoverIdRef.current) {
       return;
@@ -59,55 +46,31 @@ export const useMapMarkers = () => {
     
     // Fast response for initial hover (mouseenter)
     if (id !== null && hoveredLocationId === null) {
-      initialHoverTimeRef.current = now;
-      
-      // Small delay before showing tooltip to prevent flickering on quick mouse movements
-      hoverDelayTimeoutRef.current = window.setTimeout(() => {
-        // Only proceed if this is still the current hover target
-        if (id === lastHoverIdRef.current || lastHoverIdRef.current === null) {
-          // Immediate hover when nothing is currently hovered
-          setHoveredLocationId(id);
-          lastHoverIdRef.current = id;
-          hoverStartTimeRef.current = now;
-          
-          // Lock hover after a brief moment to prevent accidental mouse movements from changing hover
-          setTimeout(() => {
-            if (lastHoverIdRef.current === id) {
-              isLockHoverRef.current = true;
-            }
-          }, 120);
-        }
-        
-        hoverDelayTimeoutRef.current = null;
-      }, 50); // Small delay to prevent flicker
-      
-      // Always update last hover ID immediately
+      // Immediate hover when nothing is currently hovered
+      setHoveredLocationId(id);
       lastHoverIdRef.current = id;
+      hoverStartTimeRef.current = now;
       return;
     }
     
     // If leaving an item entirely, add small delay
     if (id === null) {
+      // Don't release hover lock too quickly if recently established
+      const hoverDuration = now - hoverStartTimeRef.current;
+      
       // Only unlock hover if explicitly requested by setting null
       if (isLockHoverRef.current) {
         isLockHoverRef.current = false;
       }
       
-      // Check if we've been hovering for less than 200ms - if so, don't show hover at all
-      const hoverDuration = now - initialHoverTimeRef.current;
-      if (hoverDuration < 200) {
-        // For very brief hovers, clear immediately to prevent flicker
-        setHoveredLocationId(null);
-        lastHoverIdRef.current = null;
-        return;
-      }
+      // If hovered for less than 300ms, use a shorter delay to prevent feeling sluggish
+      const timeoutDelay = hoverDuration < 300 ? 50 : 150;
       
-      // Longer delay before clearing hover completely (300ms feels smooth)
       hoverTimeoutRef.current = window.setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverIdRef.current = null;
         hoverTimeoutRef.current = null;
-      }, 350); // Increased from 300ms to 350ms for smoother experience
+      }, timeoutDelay);
       return;
     }
     
@@ -118,9 +81,9 @@ export const useMapMarkers = () => {
       hoverStartTimeRef.current = now;
       hoverTimeoutRef.current = null;
       
-      // Lock hover after hover stabilizes
+      // If hovered for more than brief moment, lock the hover
       isLockHoverRef.current = true;
-    }, 50); // Kept at 50ms for quick response
+    }, 50);
   }, [hoveredLocationId]);
 
   // Allow explicit setting of hover without the debounce logic
@@ -129,11 +92,6 @@ export const useMapMarkers = () => {
     if (hoverTimeoutRef.current !== null) {
       window.clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
-    }
-    
-    if (hoverDelayTimeoutRef.current !== null) {
-      window.clearTimeout(hoverDelayTimeoutRef.current);
-      hoverDelayTimeoutRef.current = null;
     }
     
     // Update state directly
@@ -149,28 +107,9 @@ export const useMapMarkers = () => {
     }
   }, []);
 
-  // Function to clear hover on map events (click or drag)
-  const clearHoverOnMapInteraction = useCallback(() => {
-    setHoveredLocationId(null);
-    lastHoverIdRef.current = null;
-    isLockHoverRef.current = false;
-    
-    if (hoverTimeoutRef.current !== null) {
-      window.clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    
-    if (hoverDelayTimeoutRef.current !== null) {
-      window.clearTimeout(hoverDelayTimeoutRef.current);
-      hoverDelayTimeoutRef.current = null;
-    }
-  }, []);
-
   return {
     hoveredLocationId,
-    setHoveredLocationId: setHoveredLocationIdDirectly, 
-    handleHover,
-    clearHoverOnMapInteraction,
-    isHoverLocked: isLockHoverRef.current
+    setHoveredLocationId: setHoveredLocationIdDirectly, // Replace with direct version
+    handleHover
   };
 };

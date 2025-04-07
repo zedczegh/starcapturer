@@ -279,7 +279,7 @@ const PhotoPointsNearby: React.FC = () => {
         loading={loading && !locationLoading}
       />
       
-      {/* View toggle between map and list - now with only refresh and toggle buttons */}
+      {/* View toggle between map and list */}
       <div className="flex justify-between mb-4">
         <Button 
           onClick={handleRefresh}
