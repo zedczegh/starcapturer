@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useRef, memo } from 'react';
+import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -7,9 +7,10 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 // Create different marker styles for certified vs calculated locations
-const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean) => {
+const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
   if (isCertified) {
     // For certified locations, use a star-shaped marker with gold/yellow color
     return createCustomMarker('#FFD700', 'star');
@@ -40,21 +41,35 @@ const LocationMarker = memo(({
   const { language } = useLanguage();
   const markerRef = useRef<L.Marker | null>(null);
   
-  // Create the correct marker icon based on location type
-  const icon = getLocationMarker(location, isCertified);
+  // Create the correct marker icon based on location type and hover state
+  const icon = useMemo(() => {
+    return getLocationMarker(location, isCertified, isHovered);
+  }, [location, isCertified, isHovered]);
   
   // Handle click event
   const handleClick = useCallback(() => {
     onClick(location);
   }, [location, onClick]);
   
-  // Handle hover events with debouncing
+  // Handle hover events
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
+    
+    // Add hovered class to marker for style enhancement
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.add('hovered');
+    }
   }, [locationId, onHover]);
   
   const handleMouseOut = useCallback(() => {
     onHover(null);
+    
+    // Remove hovered class
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.remove('hovered');
+    }
   }, [onHover]);
   
   // Effect to manage popup state based on hover
@@ -64,8 +79,16 @@ const LocationMarker = memo(({
     
     if (isHovered) {
       marker.openPopup();
+      marker.getElement()?.classList.add('hovered');
     } else {
-      marker.closePopup();
+      // Small delay before closing popup to prevent flickering
+      const timeoutId = setTimeout(() => {
+        if (!markerRef.current) return;
+        markerRef.current.closePopup();
+        markerRef.current.getElement()?.classList.remove('hovered');
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [isHovered]);
   
@@ -79,11 +102,12 @@ const LocationMarker = memo(({
       onMouseOut={handleMouseOut}
     >
       <Popup 
+        autoPan={false}
         autoClose={false}
         closeOnClick={false}
       >
-        <div className="p-1.5 max-w-[160px] leaflet-popup-custom-compact">
-          <div className="font-medium text-xs">
+        <div className="p-2 max-w-[180px] leaflet-popup-custom-compact">
+          <div className="font-medium text-xs mb-1">
             {language === 'zh' && location.chineseName 
               ? location.chineseName 
               : location.name}
@@ -98,7 +122,7 @@ const LocationMarker = memo(({
           
           {/* SIQS Score Badge */}
           {location.siqs !== undefined && (
-            <div className="mt-1 flex items-center gap-1">
+            <div className="mt-2 flex items-center gap-1.5">
               <SiqsScoreBadge score={location.siqs} compact={true} />
               {location.distance && (
                 <span className="text-xs text-muted-foreground">
@@ -131,14 +155,15 @@ const UserLocationMarker = memo(({
   return (
     <Marker position={position} icon={userMarkerIcon}>
       <Popup>
-        <div className="p-1 leaflet-popup-custom">
+        <div className="p-2 leaflet-popup-custom">
           <strong>{t("Your Location", "您的位置")}</strong>
           <div className="text-xs mt-1">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </div>
           {currentSiqs !== null && (
-            <div className="text-xs mt-1">
-              SIQS: <span className="font-medium">{currentSiqs.toFixed(1)}</span>
+            <div className="text-xs mt-1.5 flex items-center">
+              <span className="mr-1">SIQS:</span>
+              <SiqsScoreBadge score={currentSiqs} compact={true} />
             </div>
           )}
         </div>

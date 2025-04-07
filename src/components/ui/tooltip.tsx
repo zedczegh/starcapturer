@@ -1,7 +1,11 @@
+
 import * as React from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
+
+// Define side type for better TypeScript support
+type TooltipSide = "top" | "right" | "bottom" | "left"
 
 const TooltipProvider = TooltipPrimitive.Provider
 
@@ -18,6 +22,8 @@ const TooltipContent = React.forwardRef<
     sideOffset={sideOffset}
     className={cn(
       "z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+      // Add custom styling for map tooltips
+      "backdrop-blur-sm bg-background/90",
       className
     )}
     {...props}
@@ -25,4 +31,33 @@ const TooltipContent = React.forwardRef<
 ))
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+// Add a MapTooltip component that is optimized for map usage
+const MapTooltip = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
+    side?: TooltipSide;
+    avoidCollisions?: boolean;
+  }
+>(({ className, sideOffset = 5, side = "top", avoidCollisions = true, ...props }, ref) => (
+  <TooltipPrimitive.Content
+    ref={ref}
+    sideOffset={sideOffset}
+    side={side}
+    avoidCollisions={avoidCollisions}
+    className={cn(
+      "z-[2000] overflow-hidden rounded-md border border-border/50 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-xs text-foreground shadow-md",
+      "animate-in fade-in-50 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+      className
+    )}
+    {...props}
+  />
+))
+MapTooltip.displayName = "MapTooltip"
+
+export { 
+  Tooltip, 
+  TooltipTrigger, 
+  TooltipContent, 
+  TooltipProvider,
+  MapTooltip
+}

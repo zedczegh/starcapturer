@@ -4,17 +4,31 @@
   background-color: transparent;
   border: none;
   outline: none;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s ease-in-out, z-index 0.01s;
 }
 
 /* Star marker style - for certified locations */
 .star-marker {
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.7));
   transform: scale(1.2);
+}
+
+.star-marker:hover {
+  transform: scale(1.5) !important;
+  filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.9)) !important;
+  z-index: 1001 !important;
 }
 
 /* Circle marker style - for calculated locations */
 .circle-marker {
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+  transition: transform 0.2s ease-out;
+}
+
+.circle-marker:hover {
+  transform: scale(1.4) !important;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7)) !important;
+  z-index: 1001 !important;
 }
 
 /* User marker style with pulse effect */
@@ -23,56 +37,122 @@
 }
 
 .user-marker .pulse-circle {
-  animation: pulse 2s infinite;
+  animation: pulse 2.5s infinite;
 }
 
 @keyframes pulse {
   0% {
     r: 8;
     opacity: 0.6;
+    stroke-width: 2;
   }
   50% {
-    r: 12;
+    r: 14;
     opacity: 0.3;
+    stroke-width: 1;
   }
   100% {
     r: 8;
     opacity: 0.6;
+    stroke-width: 2;
   }
 }
 
 /* Custom popup styles */
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  background-color: rgba(24, 24, 27, 0.95) !important;
+  border: 1px solid rgba(63, 63, 70, 0.5) !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-popup-tip {
+  background-color: rgba(24, 24, 27, 0.95) !important;
+  border: 1px solid rgba(63, 63, 70, 0.5) !important;
+}
+
+.leaflet-popup-content {
+  margin: 6px 10px;
+  color: #fff;
+}
+
+.leaflet-popup-close-button {
+  color: #ffffff !important;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.leaflet-popup-close-button:hover {
+  opacity: 1;
+  background: none !important;
 }
 
 .leaflet-popup-custom {
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .leaflet-popup-custom-compact {
-  min-width: 100px;
-  padding: 6px 8px;
+  min-width: 120px;
+  padding: 8px 10px;
 }
 
-/* Hover improvements to reduce flickering */
+/* Prevent marker flickering on hover with proper z-index handling */
 .leaflet-marker-icon {
-  transition: transform 0.1s ease-out;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              filter 0.2s ease-in-out, 
+              z-index 0.01s;
 }
 
-.leaflet-marker-icon:hover {
+/* Force higher z-index for hovered markers and smooth animation */
+.leaflet-marker-icon.hovered {
   z-index: 1001 !important;
+  transform: scale(1.5);
 }
 
 /* Make star markers more prominent */
 .star-marker svg {
   transform: scale(1.2);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
 }
 
 /* Make user marker more prominent */
 .user-marker svg {
   transform: scale(1.3);
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.7));
+}
+
+/* Improve popup animation */
+.leaflet-fade-anim .leaflet-popup {
+  transition: opacity 0.25s linear;
+  opacity: 0;
+}
+
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+  opacity: 1;
+  animation: popup-fade-in 0.25s ease-out;
+}
+
+@keyframes popup-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tooltip styles */
+.leaflet-tooltip {
+  background-color: rgba(24, 24, 27, 0.95) !important;
+  border: 1px solid rgba(63, 63, 70, 0.5) !important;
+  color: white !important;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
 }

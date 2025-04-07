@@ -112,14 +112,15 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         onLocationUpdate(latitude, longitude);
         setLoading(false);
         
-        // Center map on user location
-        if (window.map) {
-          try {
-            // @ts-ignore - Using global map object for direct map control
-            window.map.setView([latitude, longitude], 10);
-          } catch (e) {
-            console.error("Could not center map:", e);
+        // Center map on user location - using TypeScript-safe global map access
+        try {
+          // Access the Leaflet map instance from window (if available)
+          const mapInstance = window as any;
+          if (mapInstance.map && typeof mapInstance.map.setView === 'function') {
+            mapInstance.map.setView([latitude, longitude], 10);
           }
+        } catch (e) {
+          console.error("Could not center map:", e);
         }
         
         toast.success(t("Using your current location", "使用您的当前位置"));

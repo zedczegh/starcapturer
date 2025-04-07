@@ -11,7 +11,12 @@ import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 
 // Lazy load the map container to reduce initial load time
-const PhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
+const LazyPhotoPointsMapContainer = lazy(() => 
+  import('./LazyMapContainer').then(module => {
+    console.log("Map component loaded successfully");
+    return module;
+  })
+);
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -47,18 +52,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const { hoveredLocationId, handleHover } = useMapMarkers();
   const previousViewRef = useRef<string>(activeView);
   const viewChangedRef = useRef<boolean>(false);
+  const [key, setKey] = useState(`map-${Date.now()}`); // Add key for forced remount when view changes
   
   // Always show only the active view locations
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
-  // When view changes, mark it to trigger a re-render
+  // When view changes, mark it to trigger a re-render with a new key
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
       previousViewRef.current = activeView;
       viewChangedRef.current = true;
-      
-      // Fix for radius not updating correctly when switching views
-      console.log(`View changed to ${activeView}, adjusting radius accordingly`);
+      setKey(`map-view-${activeView}-${Date.now()}`);
+      console.log(`View changed to ${activeView}, forcing map component remount`);
     }
   }, [activeView]);
   
@@ -85,7 +90,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   });
 
   // Reset selected location when userLocation changes dramatically
-  // This ensures we don't get stuck with an old selected location
   useEffect(() => {
     if (userLocation && selectedMapLocation) {
       const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
@@ -104,6 +108,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleMapReady();
     if (onMapReady) onMapReady();
     mapInitializedRef.current = true;
+    console.log("Map is ready and initialized");
   }, [handleMapReady, onMapReady]);
 
   // Handle location click with callback if provided
@@ -115,7 +120,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Handle map click to set a new calculation point with rate limiting and clearing timeout
+  // Handle map click to set a new calculation point with rate limiting
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (!mapInitializedRef.current) {
       console.log("Map not yet initialized, ignoring click");
@@ -190,7 +195,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           </div>
         </div>
       }>
-        <PhotoPointsMapContainer
+        <LazyPhotoPointsMapContainer
           center={mapCenter}
           userLocation={selectedMapLocation || userLocation}
           locations={activeLocations} // Only show active view locations
@@ -200,7 +205,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onLocationClick={handleLocationClickEvent}
           onMapClick={handleMapClick}
           zoom={initialZoom}
-          key={`map-view-${activeView}`} // Add key to force re-render on view change
+          key={key} // Use key to force re-render on view change
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={handleHover}
         />

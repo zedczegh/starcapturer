@@ -1,7 +1,7 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
-import L from 'leaflet';  // Ensure L is properly imported
+import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,12 +18,11 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
   const map = useMap();
   
   // Store map reference in window for external access
-  // This allows the "My Location" button to control the map
   useEffect(() => {
     if (!map) return;
     
-    // @ts-ignore - Adding map to window for direct access
-    window.map = map;
+    // Store map in window object for external access
+    (window as any).map = map;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
@@ -33,8 +32,8 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
     
     return () => {
       map.off('click', handleClick);
-      // @ts-ignore - Cleanup window reference
-      window.map = undefined;
+      // Clean up window reference
+      (window as any).map = undefined;
     };
   }, [map, onMapClick]);
   
@@ -65,8 +64,7 @@ const MapController = ({
     if (map.tap) map.tap.enable();
     
     // Store map reference in window for external access
-    // @ts-ignore - Adding map to window for direct access
-    window.map = map;
+    (window as any).map = map;
     
     // If user location exists, center on it
     if (userLocation && firstRenderRef.current) {
@@ -74,6 +72,9 @@ const MapController = ({
       map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
       firstRenderRef.current = false;
     }
+
+    // Improve performance by reduced rerenders on pan/zoom
+    map._onResize = L.Util.throttle(map._onResize, 200, map);
   }, [map, userLocation]);
 
   return null;
@@ -109,6 +110,10 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const isCertifiedView = activeView === 'certified';
+  const markersRef = useRef<Map<string, boolean>>(new Map());
+  
+  // Optimize performance by reducing unnecessary marker updates
+  const locationKeys = locations.map(loc => `${loc.latitude}-${loc.longitude}`).join(',');
   
   // Handle SIQS calculation results
   const handleSiqsCalculated = useCallback((siqs: number) => {
@@ -119,6 +124,18 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const validLocations = locations.filter(location => 
     location && typeof location.latitude === 'number' && typeof location.longitude === 'number'
   );
+  
+  // Generate unique keys for markers to improve rendering performance
+  const getMarkerKey = useCallback((location: SharedAstroSpot) => {
+    return location.id || 
+           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}-${activeView}`;
+  }, [activeView]);
+
+  // Cache whether we've already rendered each marker
+  useEffect(() => {
+    // Reset marker cache when locations change significantly
+    markersRef.current = new Map();
+  }, [locationKeys]);
 
   return (
     <MapContainer
@@ -126,8 +143,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       zoom={zoom}
       className="h-full w-full"
       whenReady={(map) => {
-        // @ts-ignore - Store map reference globally for external access
-        window.map = map.target;
+        // Store map reference globally for external access
+        (window as any).map = map.target;
         onMapReady();
       }}
       scrollWheelZoom={true}
@@ -135,6 +152,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        // Add caching parameters to improve tile loading
+        subdomains="abc"
+        maxZoom={19}
       />
       
       {/* Controller for handling map events */}
@@ -180,7 +200,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       {/* Location markers */}
       {validLocations.map((location) => {
         // Generate a unique ID for this location
-        const locationId = `location-${location.id || `${location.latitude}-${location.longitude}`}`;
+        const locationId = getMarkerKey(location);
         
         // Handle the click event for this marker
         const handleClick = () => {
@@ -188,6 +208,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             onLocationClick(location);
           }
         };
+        
+        // Record that we're rendering this marker
+        markersRef.current.set(locationId, true);
         
         return (
           <LocationMarker
