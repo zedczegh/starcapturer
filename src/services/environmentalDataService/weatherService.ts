@@ -2,11 +2,11 @@
 import { fetchWeatherData } from "@/lib/api";
 
 // Default timeout for weather API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 5000;
+const DEFAULT_TIMEOUT = 4000; // Reduced from 5000 for faster loading
 // Default cache lifetime for weather data (in milliseconds)
-const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // Reduced from 5 to 3 minutes for faster refreshes
+const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // 3 minutes cache lifetime
 // Maximum retry attempts
-const MAX_RETRIES = 2;
+const MAX_RETRIES = 1; // Reduced from 2 for faster error recovery
 
 /**
  * Optimized service for retrieving weather data with better caching and error handling
@@ -25,47 +25,13 @@ export const getWeatherData = async (
   // Generate location-specific cache key to avoid using old data for new locations
   const locationSpecificKey = `${cacheKey}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   
-  // First try to use cached data
+  // First try to use cached data - prioritize this for speed
   const cachedWeatherData = getCachedData(locationSpecificKey, WEATHER_CACHE_LIFETIME);
   if (cachedWeatherData) {
     return cachedWeatherData;
   }
   
-  // Implement retry logic for better resilience
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      // Add timeout to prevent hanging
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      const data = await fetchWeatherData({
-        latitude,
-        longitude,
-        days: 3
-      }, controller.signal);
-      
-      clearTimeout(timeoutId);
-      
-      if (data) {
-        // Cache the weather data for future use
-        setCachedData(locationSpecificKey, data);
-        return data;
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      // If this isn't our last attempt, try again with a slight delay
-      if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
-      }
-    }
-  }
-  
-  // All attempts failed - use fallback data
-  console.error("Failed to fetch weather data after retries:", lastError);
-  
-  // Use fallback weather data
+  // Start preloading fallback data to ensure quick display
   const fallbackData = {
     temperature: 20,
     humidity: 50,
@@ -78,15 +44,52 @@ export const getWeatherData = async (
     aqi: 50
   };
   
+  // Set a timeout to use fallback data if fetch takes too long
+  const fallbackTimer = setTimeout(() => {
+    if (!displayOnly && setStatusMessage) {
+      setStatusMessage(language === 'en'
+        ? "Using cached weather data while updating..."
+        : "使用缓存的天气数据，正在更新...");
+    }
+    // Cache fallback data temporarily
+    setCachedData(locationSpecificKey, fallbackData);
+  }, 800); // Show fallback quickly if real data is taking time
+  
+  try {
+    // Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    const data = await fetchWeatherData({
+      latitude,
+      longitude,
+      days: 3
+    }, controller.signal);
+    
+    clearTimeout(timeoutId);
+    clearTimeout(fallbackTimer);
+    
+    if (data) {
+      // Cache the weather data for future use
+      setCachedData(locationSpecificKey, data);
+      return data;
+    }
+  } catch (error) {
+    clearTimeout(fallbackTimer);
+    console.error("Failed to fetch weather data:", error);
+  }
+  
+  // If we reach here, use fallback data
+  // Cache fallback data to avoid repeated failed requests
+  setCachedData(locationSpecificKey, fallbackData);
+  
   // Show status message if needed
   if (!displayOnly && setStatusMessage) {
     setStatusMessage(language === 'en'
-      ? "Could not fetch real-time weather. Using offline data instead."
-      : "无法获取实时天气数据，使用离线数据替代。");
+      ? "Using offline weather data."
+      : "使用离线天气数据。");
   }
   
-  // Even fallback data should be cached to prevent repeated failed requests
-  setCachedData(locationSpecificKey, fallbackData);
   return fallbackData;
 };
 

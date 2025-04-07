@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -272,12 +273,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           certifiedLocations={certifiedLocations}
         />
         
-        {/* "My Location" button positioned outside the map */}
+        {/* "My Location" button positioned further off the map */}
         <Button 
           variant="secondary"
           size="sm"
           onClick={handleResetToCurrentLocation}
           className="my-location-control shadow-md flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+          style={{ top: '15px', right: '15px' }} 
         >
           <MapPin className="h-4 w-4 text-primary" />
           <span className="text-sm">{t("My Location", "我的位置")}</span>

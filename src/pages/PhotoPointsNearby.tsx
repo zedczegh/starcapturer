@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -13,7 +14,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
-import { Map, List, RefreshCw } from 'lucide-react';
+import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 // Lazy load components that are not immediately visible
@@ -53,7 +54,7 @@ const PhotoPointsNearby: React.FC = () => {
         getPosition();
         setLocationLoadAttempts(prev => prev + 1);
       }
-    }, 2000);
+    }, 1500); // Reduced from 2000ms for faster loading
     
     return () => clearTimeout(retryTimeout);
   }, [getPosition, coords, locationLoadAttempts]);
@@ -179,20 +180,28 @@ const PhotoPointsNearby: React.FC = () => {
     }
     
     // Force refresh of SIQS data with new location
-    refreshSiqsData();
+    setTimeout(() => {
+      refreshSiqsData();
+    }, 200); // Small timeout to ensure state updates first
   }, [refreshSiqsData]);
 
-  // Handle refresh click - clear caches and get fresh data
-  const handleRefresh = useCallback(() => {
-    try {
+  // Reset manual location override
+  const handleResetLocation = useCallback(() => {
+    setManualLocationOverride(null);
+    if (coords) {
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      toast.success(t("Reset to current location", "重置为当前位置"));
+      
+      // Clear cache and refresh data
       clearLocationCache();
-      refreshSiqsData();
-      toast.success(t("Refreshing location data", "刷新位置数据中"));
-    } catch (err) {
-      console.error("Error refreshing data:", err);
-      toast.error(t("Error refreshing data", "刷新数据出错"));
+      setTimeout(() => refreshSiqsData(), 200);
+    } else {
+      getPosition();
+      toast.info(t("Getting your location...", "获取您的位置中..."));
     }
-  }, [refreshSiqsData, t]);
+  }, [coords, getPosition, refreshSiqsData, t]);
 
   // Effect to update the search radius when active view changes
   useEffect(() => {
@@ -205,27 +214,36 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [activeView, setSearchRadius, calculatedSearchRadius]);
   
-  // Handle location click to navigate to details
+  // Handle location click to navigate to details - improved to be faster
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && location.latitude && location.longitude) {
-      const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      navigate(`/location/${locationId}`, { 
-        state: {
-          id: locationId,
-          name: location.name,
-          chineseName: location.chineseName,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          bortleScale: location.bortleScale || 4,
-          siqs: location.siqs,
-          siqsResult: location.siqs ? { score: location.siqs } : undefined,
-          certification: location.certification,
-          isDarkSkyReserve: location.isDarkSkyReserve,
-          timestamp: new Date().toISOString(),
-          fromPhotoPoints: true
-        } 
+      // Pre-toast to make navigation feel faster
+      toast.info(t("Opening location details", "正在打开位置详情"), {
+        duration: 1500 // Shorter duration
       });
-      toast.info(t("Opening location details", "正在打开位置详情"));
+      
+      // Calculate location ID
+      const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+      
+      // Navigate with minimal delay
+      setTimeout(() => {
+        navigate(`/location/${locationId}`, { 
+          state: {
+            id: locationId,
+            name: location.name,
+            chineseName: location.chineseName,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            bortleScale: location.bortleScale || 4,
+            siqs: location.siqs,
+            siqsResult: location.siqs ? { score: location.siqs } : undefined,
+            certification: location.certification,
+            isDarkSkyReserve: location.isDarkSkyReserve,
+            timestamp: new Date().toISOString(),
+            fromPhotoPoints: true
+          } 
+        });
+      }, 50);
     }
   }, [navigate, t]);
 
@@ -234,25 +252,11 @@ const PhotoPointsNearby: React.FC = () => {
     setShowMap(prev => !prev);
   }, []);
 
-  // Reset manual location override
-  const handleResetLocation = useCallback(() => {
-    setManualLocationOverride(null);
-    if (coords) {
-      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
-      setUserLocation(newLocation);
-      localStorage.setItem('userLocation', JSON.stringify(newLocation));
-      toast.success(t("Reset to current location", "重置为当前位置"));
-    } else {
-      getPosition();
-      toast.info(t("Getting your location...", "获取您的位置中..."));
-    }
-  }, [coords, getPosition, t]);
-
-  // Mark initial load as complete after delay
+  // Mark initial load as complete after delay - reduced for faster perceived loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoad(false);
-    }, 1000);
+    }, 800); // Reduced from 1000ms
     return () => clearTimeout(timer);
   }, []);
   
@@ -261,6 +265,14 @@ const PhotoPointsNearby: React.FC = () => {
   
   // Determine the current display radius
   const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
+  
+  // Filter out water locations
+  const filteredLocationsToShow = locationsToShow.filter(loc => {
+    const name = loc.name?.toLowerCase() || '';
+    const chineseName = loc.chineseName?.toLowerCase() || '';
+    const waterTerms = ['water', 'ocean', 'sea', 'lake', '水', '海', '湖', '洋'];
+    return !waterTerms.some(term => name.includes(term) || chineseName.includes(term));
+  });
   
   return (
     <PhotoPointsLayout>
@@ -279,17 +291,8 @@ const PhotoPointsNearby: React.FC = () => {
         loading={loading && !locationLoading}
       />
       
-      {/* View toggle between map and list */}
-      <div className="flex justify-between mb-4">
-        <Button 
-          onClick={handleRefresh}
-          variant="outline"
-          size="sm"
-          className="shadow-sm hover:bg-muted/60"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" /> {t("Refresh Data", "刷新数据")}
-        </Button>
-        
+      {/* View toggle between map and list - removed Refresh Data button */}
+      <div className="flex justify-end mb-4">
         <Button 
           onClick={toggleMapView}
           variant="outline"
@@ -332,7 +335,7 @@ const PhotoPointsNearby: React.FC = () => {
           <div className="h-[600px] rounded-lg overflow-hidden border border-border shadow-lg">
             <PhotoPointsMap 
               userLocation={effectiveLocation}
-              locations={locationsToShow}
+              locations={filteredLocationsToShow}
               certifiedLocations={certifiedLocations}
               calculatedLocations={calculatedLocations}
               activeView={activeView}
@@ -349,13 +352,13 @@ const PhotoPointsNearby: React.FC = () => {
             <div className="min-h-[300px]"> {/* Fixed height container prevents layout shift */}
               {activeView === 'certified' ? (
                 <DarkSkyLocations
-                  locations={certifiedLocations}
+                  locations={filteredLocationsToShow}
                   loading={loading && !locationLoading}
                   initialLoad={initialLoad}
                 />
               ) : (
                 <CalculatedLocations
-                  locations={calculatedLocations}
+                  locations={filteredLocationsToShow}
                   loading={loading && !locationLoading}
                   hasMore={hasMore}
                   onLoadMore={loadMore}

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -43,17 +44,33 @@ const MapEventHandler = ({
   onMapClick: (lat: number, lng: number) => void;
   clearHover: () => void;
 }) => {
-  const map = useMapEvents({
-    click: (e) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-    mousedown: () => {
+    };
+    
+    const handleMouseDown = () => {
       clearHover();
-    },
-    dragstart: () => {
+    };
+    
+    const handleDragStart = () => {
       clearHover();
-    }
-  });
+    };
+    
+    map.on('click', handleMapClick);
+    map.on('mousedown', handleMouseDown);
+    map.on('dragstart', handleDragStart);
+    
+    return () => {
+      map.off('click', handleMapClick);
+      map.off('mousedown', handleMouseDown);
+      map.off('dragstart', handleDragStart);
+    };
+  }, [map, onMapClick, clearHover]);
 
   return null;
 };
@@ -108,6 +125,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const getCertifiedStatus = useCallback((location: SharedAstroSpot): boolean => {
     return !!(location.isDarkSkyReserve || location.certification);
   }, []);
+  
+  // Check if location is on water (remove locations with "water", "ocean", "sea" in the name)
+  const isLocationOnWater = useCallback((location: SharedAstroSpot): boolean => {
+    const name = location.name?.toLowerCase() || '';
+    const chineseName = location.chineseName?.toLowerCase() || '';
+    const waterTerms = ['water', 'ocean', 'sea', 'lake', '水', '海', '湖', '洋'];
+    
+    return waterTerms.some(term => name.includes(term) || chineseName.includes(term));
+  }, []);
 
   // Calculate locationId for each location
   const getLocationId = useCallback((location: SharedAstroSpot): string => {
@@ -152,10 +178,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       center={mapCenter}
       zoom={initialZoom}
       style={{ height: "100%", width: "100%" }}
-      whenCreated={(map) => { mapRef.current = map; }}
-      zoomControl={false}
+      ref={(map) => { if (map) mapRef.current = map.getContainer()._leaflet_id && map; }}
       attributionControl={true}
-      preferCanvas={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -167,13 +191,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         <Circle
           center={[selectedLocation.latitude, selectedLocation.longitude]}
           radius={searchRadius * 1000} // Convert km to meters
-          className="radius-circle"
           pathOptions={{
             color: '#8b5cf6',
             fillColor: '#8b5cf6',
-            fillOpacity: 0.1,
-            weight: 2,
-            opacity: 0.6,
+            fillOpacity: 0.15, // Increased from 0.1 for better visibility
+            weight: 2.5, // Increased from 2
+            opacity: 0.7, // Increased from 0.6
             dashArray: '5, 5'
           }}
         />
@@ -182,10 +205,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Map location markers */}
       {locations
         .filter(location => 
-          (activeView === 'certified' && getCertifiedStatus(location)) || 
+          // Filter out water locations
+          !isLocationOnWater(location) &&
+          ((activeView === 'certified' && getCertifiedStatus(location)) || 
           (activeView === 'calculated' && !getCertifiedStatus(location)) ||
           // Always show both types when radius is specified
-          (searchRadius > 0 && isLocationInRadius(location))
+          (searchRadius > 0 && isLocationInRadius(location)))
         )
         .map(location => {
           const locationId = getLocationId(location);

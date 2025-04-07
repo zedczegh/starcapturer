@@ -31,8 +31,8 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
   let viewBox = '0 0 24 24';
   let className = 'custom-marker';
   
-  // Brighter colors for better visibility
-  const brightenedColor = shape === 'circle' && color === '#4ade80' ? '#4ade80' : color;
+  // Use more vibrant colors for better visibility
+  const brightenedColor = shape === 'circle' ? '#4ade80' : color;
   
   switch (shape) {
     case 'star':
@@ -43,7 +43,7 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
           stroke="white" 
           stroke-width="1.5"
         />
-        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="none" opacity="0.15" class="pulse-circle" />
+        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="none" opacity="0.2" class="pulse-circle" />
       `;
       className += ' star-marker';
       break;
@@ -59,22 +59,22 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
     
     case 'circle':
     default:
-      // Circle for calculated locations - enhanced with breathing effect
+      // Enhanced circle for calculated locations - improved breathing effect & brighter color
       svgPath = `
         <circle cx="12" cy="12" r="8" fill="${brightenedColor}" stroke="white" stroke-width="1.5" />
-        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="none" opacity="0.15" class="pulse-circle" />
+        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="none" opacity="0.2" class="pulse-circle" />
       `;
       className += ' circle-marker';
       break;
   }
   
-  // Add animation style to the SVG
+  // Add improved animation style to the SVG
   const svgWithStyle = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="24" height="24">
       <style>
         @keyframes pulse {
           0% { opacity: 0.15; transform: scale(0.8); }
-          50% { opacity: 0.25; transform: scale(1.1); }
+          50% { opacity: 0.3; transform: scale(1.1); }
           100% { opacity: 0.15; transform: scale(0.8); }
         }
         .pulse-circle {
@@ -91,9 +91,9 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
   return L.divIcon({
     className: className,
     html: svgWithStyle,
-    iconSize: [28, 28], // Slightly larger for better visibility
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14]
+    iconSize: [32, 32], // Increased from 28 for better visibility
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16]
   });
 }
 
@@ -105,7 +105,7 @@ export function createPulsingUserMarker(): L.DivIcon {
   return L.divIcon({
     className: 'custom-marker pulsing-marker',
     html: `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
         <style>
           @keyframes pulse {
             0% { opacity: 0.3; transform: scale(0.8); }
@@ -122,8 +122,8 @@ export function createPulsingUserMarker(): L.DivIcon {
         <circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="1" opacity="0.4" class="pulse-circle" />
       </svg>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14]
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16]
   });
 }

@@ -18,10 +18,10 @@
 /* Customize the radius circle overlay */
 .radius-circle {
   stroke: #8b5cf6; /* Purple color */
-  stroke-width: 1.5;
+  stroke-width: 2;
   fill: #8b5cf6;
-  fill-opacity: 0.1;
-  stroke-opacity: 0.4;
+  fill-opacity: 0.15; /* Increased from 0.1 */
+  stroke-opacity: 0.7; /* Increased from 0.4 */
   stroke-dasharray: 5, 5; /* Dashed line */
   transition: all 0.3s ease;
 }
@@ -69,12 +69,14 @@
 
 /* Custom marker hover styles */
 .leaflet-marker-icon {
-  transition: transform 0.2s ease-out, filter 0.2s ease;
+  transition: transform 0.3s ease-out, filter 0.3s ease;
+  z-index: 400;
 }
 
 .leaflet-marker-icon.hovered {
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7));
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
   z-index: 1000 !important;
+  transform: scale(1.1);
 }
 
 /* Overlay fade-in animation */
@@ -95,6 +97,40 @@
   opacity: 1;
 }
 
+/* Improved breath animation for markers */
+@keyframes breathe {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.85; }
+}
+
+.custom-marker svg {
+  transition: transform 0.2s ease-out;
+}
+
+.custom-marker.hovered svg {
+  animation: breathe 2s infinite ease-in-out;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+}
+
+/* Enhanced circle marker pulse effect */
+.circle-marker .pulse-circle {
+  animation: pulse 2.5s infinite ease-in-out;
+}
+
+/* Improved marker visibility */
+.circle-marker svg circle:first-child {
+  fill: #4ade80 !important; /* Bright green for better visibility */
+}
+
+/* My location button positioning */
+.my-location-control {
+  position: absolute;
+  top: 20px;
+  right: 20px; 
+  z-index: 1000;
+}
+
 /* Improve touch interaction on mobile */
 @media (max-width: 768px) {
   .leaflet-marker-icon {
@@ -104,7 +140,8 @@
     margin-top: -16px !important;
   }
   
-  .leaflet-control-zoom {
-    display: none;
+  .my-location-control {
+    top: 15px;
+    right: 15px;
   }
 }

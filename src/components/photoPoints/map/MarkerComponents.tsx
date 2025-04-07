@@ -126,9 +126,8 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
     // For certified locations, use a star-shaped marker with gold/yellow color
     return createCustomMarker('#FFD700', 'star');
   } else {
-    // For calculated locations, use the color based on SIQS with circle shape
-    // Enhanced color with more vibrant green instead of olive
-    const color = location.siqs ? getProgressColor(location.siqs) : '#4ade80'; // Brighter green for better visibility
+    // For calculated locations, use a more vibrant green
+    const color = location.siqs ? getProgressColor(location.siqs) : '#4ade80'; // Using a brighter green for calculated locations
     return createCustomMarker(color, 'circle');
   }
 };
