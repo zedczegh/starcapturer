@@ -8,7 +8,7 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
-import { Star, Award } from 'lucide-react';
+import { Star, Award, ExternalLink } from 'lucide-react';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -24,9 +24,9 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
     // For certified locations, use a star-shaped marker with gold/yellow color
     return createCustomMarker('#FFD700', 'star');
   } else {
-    // For calculated locations, use the color based on SIQS with circle shape
-    const color = location.siqs ? getProgressColor(location.siqs) : '#777777';
-    return createCustomMarker(color, 'circle');
+    // For calculated locations, use a brighter color instead of olive green
+    const baseColor = location.siqs ? getProgressColor(location.siqs) : '#8B5CF6'; // Default to vibrant purple
+    return createCustomMarker(baseColor, 'circle');
   }
 };
 
@@ -53,12 +53,30 @@ const LocationMarker = memo(({
   const openTimeoutRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   
+  // Skip rendering locations on water (no name or very remote)
+  const isOnWater = useMemo(() => {
+    // Check for indicative patterns of water locations
+    const name = location.name?.toLowerCase() || '';
+    const desc = location.description?.toLowerCase() || '';
+    return name.includes('ocean') || 
+           name.includes('sea') || 
+           name.includes('remote area in') || 
+           desc.includes('offshore') || 
+           name.includes('atlantic') || 
+           name.includes('pacific');
+  }, [location]);
+
+  // Don't render locations on water
+  if (isOnWater) {
+    return null;
+  }
+  
   // Create the correct marker icon based on location type and hover state
   const icon = useMemo(() => {
     return getLocationMarker(location, isCertified, isHovered);
   }, [location, isCertified, isHovered]);
   
-  // Handle click event
+  // Handle click event - link to location details
   const handleClick = useCallback(() => {
     onClick(location);
   }, [location, onClick]);
@@ -203,6 +221,17 @@ const LocationMarker = memo(({
             )}
           </div>
           
+          {/* View details link */}
+          <div className="mt-2 text-xs flex justify-end">
+            <button 
+              onClick={handleClick}
+              className="text-primary-300 hover:text-primary-200 flex items-center gap-1"
+            >
+              <span>{t("View Details", "查看详情")}</span>
+              <ExternalLink className="h-3 w-3" />
+            </button>
+          </div>
+          
           {/* Bortle Scale indicator if available */}
           {location.bortleScale && (
             <div className="text-2xs mt-1.5 text-gray-300">
@@ -211,6 +240,10 @@ const LocationMarker = memo(({
           )}
         </div>
       </Popup>
+      
+      <Tooltip direction="top" offset={[0, -5]}>
+        {displayName}
+      </Tooltip>
     </Marker>
   );
 });
