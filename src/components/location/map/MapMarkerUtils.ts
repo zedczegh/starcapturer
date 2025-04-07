@@ -47,12 +47,8 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
     
     case 'circle':
     default:
-      // Circle for calculated locations - use a more vibrant color for better visibility
-      // Add a glowing effect with double circles
-      svgPath = `
-        <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
-        <circle cx="12" cy="12" r="10" fill="none" stroke="${color}" stroke-width="1" opacity="0.5" />
-      `;
+      // Circle for calculated locations
+      svgPath = `<circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />`;
       className += ' circle-marker';
       break;
   }

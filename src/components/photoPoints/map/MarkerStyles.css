@@ -33,7 +33,6 @@
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.175),
               filter 0.4s ease-in-out;
   z-index: 800 !important;
-  animation: subtle-breathing 4s infinite ease-in-out;
 }
 
 .circle-marker:hover,
@@ -61,18 +60,6 @@
   }
   50% {
     transform: scale(1.65);
-  }
-}
-
-/* Subtle breathing animation for normal state */
-@keyframes subtle-breathing {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.95;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
   }
 }
 
@@ -219,25 +206,10 @@
   z-index: 1002 !important;
 }
 
-/* More visible search radius circle */
+/* More visible radius circle */
 .location-radius-circle {
   opacity: 0.2 !important;
   stroke-opacity: 0.3 !important;
-  stroke-dasharray: 5, 5 !important;
-}
-
-/* Optimize for mobile */
-@media (max-width: 768px) {
-  .leaflet-control-zoom {
-    margin-bottom: 60px !important;
-  }
-  
-  .leaflet-control-attribution {
-    max-width: 80%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 }
 
 /* Enhanced gradient popup for markers */
@@ -261,31 +233,3 @@
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%);
   border-left: 3px solid rgb(239, 68, 68);
 }
-
-/* My location button positioning */
-.my-location-button {
-  position: absolute;
-  bottom: 100px !important; /* Move further from bottom */
-  right: 10px;
-  z-index: 1000;
-}
-
-/* Clickable marker cursor */
-.leaflet-marker-icon.custom-marker {
-  cursor: pointer !important;
-}
-
-/* Glow effect for calculated markers */
-.circle-marker svg circle {
-  animation: glow 3s infinite ease-in-out;
-}
-
-@keyframes glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
-  }
-  50% {
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
-  }
-}
-

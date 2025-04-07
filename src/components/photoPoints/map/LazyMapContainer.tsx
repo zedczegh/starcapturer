@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useState, useRef } from "react";
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
@@ -25,7 +25,7 @@ const MapEvents = ({
   onMapDragEnd?: () => void;
   onMapZoomEnd?: () => void;
 }) => {
-  useMapEvents({
+  const map = useMapEvents({
     click(e) {
       onMapClick(e.latlng.lat, e.latlng.lng);
     },
@@ -39,6 +39,19 @@ const MapEvents = ({
       if (onMapZoomEnd) onMapZoomEnd();
     }
   });
+  
+  // Store map reference in window for external access
+  useEffect(() => {
+    if (!map) return;
+    
+    // Store map in window object for external access
+    (window as any).map = map;
+    
+    return () => {
+      // Clean up window reference
+      (window as any).map = undefined;
+    };
+  }, [map]);
   
   return null;
 };
@@ -57,7 +70,7 @@ const MapController = ({
   useEffect(() => {
     if (!map) return;
     
-    // Explicitly enable all interactions
+    // Always enable all controls to allow dragging and interaction
     map.scrollWheelZoom.enable();
     map.dragging.enable();
     map.touchZoom.enable();
@@ -66,24 +79,18 @@ const MapController = ({
     map.keyboard.enable();
     if (map.tap) map.tap.enable();
     
-    // Set the default zoom handler options
-    map.options.scrollWheelZoom = true;
-    map.options.dragging = true;
+    // Store map reference in window for external access
+    (window as any).map = map;
     
     // If user location exists, center on it
     if (userLocation && firstRenderRef.current) {
+      // Only set view once on first render to avoid constant recentering
       map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
       firstRenderRef.current = false;
     }
 
     // Improve performance by reduced rerenders on pan/zoom
     map._onResize = L.Util.throttle(map._onResize, 200, map);
-    
-    // Fix for mobile scroll
-    if (map.tap && L.Browser.mobile) {
-      map.tap.enable();
-      map.dragging.enable();
-    }
   }, [map, userLocation]);
 
   return null;
@@ -184,9 +191,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       center={center}
       zoom={zoom}
       className="h-full w-full"
-      style={{ height: '100%', width: '100%' }}
-      whenReady={onMapReady}
-      attributionControl={true}
+      whenReady={(map) => {
+        // Store map reference globally for external access
+        (window as any).map = map.target;
+        onMapReady();
+      }}
       scrollWheelZoom={true}
     >
       <TileLayer
@@ -233,10 +242,10 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           pathOptions={{ 
             color: isCertifiedView ? '#FFD700' : '#9b87f5',
             fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.08,
-            weight: 1.5,
-            opacity: 0.4,
-            dashArray: "5,5"
+            fillOpacity: 0.08, // Increased opacity for more visibility
+            weight: 1.5, // Thicker border
+            opacity: 0.4, // More visible border
+            className: 'location-radius-circle'
           }}
         />
       )}
