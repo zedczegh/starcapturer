@@ -1,8 +1,7 @@
-
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader } from "lucide-react";
+import { Loader, MapPin } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
@@ -10,6 +9,7 @@ import './MapStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
+import { Button } from "@/components/ui/button";
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -18,6 +18,38 @@ const LazyPhotoPointsMapContainer = lazy(() =>
     return module;
   })
 );
+
+// Create custom CSS for map controls positioning
+const injectMapControlsCss = () => {
+  if (typeof document === "undefined") return;
+  
+  if (!document.getElementById('map-controls-styles')) {
+    const style = document.createElement('style');
+    style.id = 'map-controls-styles';
+    style.innerHTML = `
+      .photo-points-map .leaflet-bottom.leaflet-right {
+        bottom: 20px;
+        right: 20px;
+      }
+      
+      .my-location-control {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+      }
+      
+      .circle-overlay {
+        stroke: #8b5cf6;
+        stroke-width: 1.5;
+        fill: #8b5cf6;
+        fill-opacity: 0.08;
+        stroke-opacity: 0.5;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -56,6 +88,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [key, setKey] = useState(`map-${Date.now()}`); // Add key for forced remount when view changes
   const lastRadiusRef = useRef<number>(searchRadius);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
+  
+  // Inject custom CSS for map controls positioning
+  useEffect(() => {
+    injectMapControlsCss();
+  }, []);
   
   // Always show only the active view locations
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
@@ -187,8 +224,27 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleHover(null);
   }, [handleHover]);
 
+  // Handle reset to user's actual location
+  const handleResetToCurrentLocation = useCallback(() => {
+    setSelectedMapLocation(null);
+    previousLocationsRef.current = [];
+    clearLocationCache();
+    
+    if (userLocation) {
+      toast.info(t(
+        "Returning to your current location...",
+        "返回到您的当前位置..."
+      ));
+    } else {
+      toast.info(t(
+        "Getting your location...",
+        "获取您的位置中..."
+      ));
+    }
+  }, [userLocation, t]);
+
   return (
-    <div className={className}>
+    <div className={`relative photo-points-map ${className}`}>
       <Suspense fallback={
         <div className="h-full w-full flex flex-col items-center justify-center bg-background/60">
           <Loader className="h-10 w-10 animate-spin mb-4 text-primary/70" />
@@ -197,29 +253,43 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           </p>
         </div>
       }>
-        <LazyPhotoPointsMapContainer
+        <LazyPhotoPointsMapContainer 
           key={key}
-          center={mapCenter}
-          zoom={initialZoom}
-          userLocation={selectedMapLocation || userLocation}
+          userLocation={userLocation}
+          mapCenter={mapCenter}
+          initialZoom={initialZoom}
           locations={validLocations}
-          searchRadius={searchRadius}
-          activeView={activeView}
-          onMapReady={() => {
-            handleMapReady();
-            if (onMapReady) onMapReady();
-            mapInitializedRef.current = true;
-          }}
+          hoveredLocationId={hoveredLocationId}
           onLocationClick={handleLocationClick}
           onMapClick={handleMapClick}
-          hoveredLocationId={hoveredLocationId}
-          onMarkerHover={handleHover}
+          onMapReady={handleMapReady}
+          clearHover={clearHover}
+          handleHover={handleHover}
+          searchRadius={activeView === 'calculated' ? searchRadius : 0}
+          showRadiusCircle={activeView === 'calculated'}
+          selectedLocation={selectedMapLocation || userLocation}
+          activeView={activeView}
+          certifiedLocations={certifiedLocations}
         />
         
-        <RealTimeLocationUpdater 
-          userLocation={selectedMapLocation || userLocation}
-          onLocationUpdate={onLocationUpdate}
-        />
+        {/* "My Location" button positioned outside the map */}
+        <Button 
+          variant="secondary"
+          size="sm"
+          onClick={handleResetToCurrentLocation}
+          className="my-location-control shadow-md flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+        >
+          <MapPin className="h-4 w-4 text-primary" />
+          <span className="text-sm">{t("My Location", "我的位置")}</span>
+        </Button>
+        
+        {/* Real-time location updater for auto-refresh */}
+        {userLocation && (
+          <RealTimeLocationUpdater
+            userLocation={userLocation}
+            onLocationUpdate={onLocationUpdate}
+          />
+        )}
       </Suspense>
     </div>
   );

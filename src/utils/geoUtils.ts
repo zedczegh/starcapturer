@@ -36,6 +36,14 @@ export const formatDistance = (distance: number): string => {
 };
 
 /**
+ * Format SIQS score to display with one decimal place
+ */
+export const formatSIQSScore = (score?: number): string => {
+  if (score === undefined || score === null) return "N/A";
+  return score.toFixed(1);
+};
+
+/**
  * Haversine distance calculation - exported for compatibility
  */
 export const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {

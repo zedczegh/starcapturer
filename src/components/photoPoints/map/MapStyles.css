@@ -1,96 +1,110 @@
 
-/* Custom map container styles */
-.leaflet-container {
-  background-color: #1a1f2c;
-  outline: none;
-  transition: opacity 0.3s ease;
+/* Map container styles */
+.photopoints-map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-/* Custom attribution styling */
-.leaflet-control-attribution {
-  background-color: rgba(24, 24, 27, 0.6) !important;
-  color: rgba(255, 255, 255, 0.7) !important;
-  font-size: 9px !important;
-  padding: 2px 4px !important;
-  backdrop-filter: blur(8px);
-  border-radius: 4px !important;
+/* Customize the leaflet controls */
+.leaflet-control-container .leaflet-top {
+  top: 10px;
 }
 
-.leaflet-control-attribution a {
-  color: rgba(255, 255, 255, 0.8) !important;
+.leaflet-control-container .leaflet-right {
+  right: 10px;
 }
 
-/* Smooth transitions */
-.leaflet-fade-anim .leaflet-tile,
-.leaflet-zoom-anim .leaflet-zoom-animated {
-  will-change: transform, opacity;
-  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* Customize the radius circle overlay */
+.radius-circle {
+  stroke: #8b5cf6; /* Purple color */
+  stroke-width: 1.5;
+  fill: #8b5cf6;
+  fill-opacity: 0.1;
+  stroke-opacity: 0.4;
+  stroke-dasharray: 5, 5; /* Dashed line */
+  transition: all 0.3s ease;
 }
 
-/* Smoother zoom animations */
-.leaflet-zoom-anim .leaflet-zoom-animated {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* Style for marker clusters */
+.marker-cluster {
+  background-color: rgba(59, 130, 246, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  color: white;
 }
 
-/* Navigation controls styling */
-.leaflet-control-zoom {
-  border-radius: 8px !important;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  border: none !important;
+.marker-cluster div {
+  background-color: rgba(59, 130, 246, 0.8);
+  color: white;
+  font-weight: bold;
 }
 
-.leaflet-control-zoom a {
-  background-color: rgba(24, 24, 27, 0.85) !important;
-  color: white !important;
-  border-color: rgba(63, 63, 70, 0.4) !important;
-  transition: all 0.2s ease;
+/* Custom popup animations */
+.leaflet-popup {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 
-.leaflet-control-zoom a:hover {
-  background-color: rgba(39, 39, 42, 0.95) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+.leaflet-popup.leaflet-zoom-animated {
+  transition: transform 0.3s, opacity 0.3s;
 }
 
-.leaflet-touch .leaflet-control-zoom a {
-  width: 34px !important;
-  height: 34px !important;
-  line-height: 34px !important;
+.leaflet-popup-content-wrapper {
+  background: rgba(17, 24, 39, 0.85);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
 }
 
-/* Enhanced tile loading styles */
-.leaflet-tile-loaded {
-  animation: fadeIn 0.3s ease-out;
+.leaflet-popup-tip {
+  background: rgba(17, 24, 39, 0.85);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Custom map styles */
+.dark-map .leaflet-tile {
+  filter: brightness(0.8) saturate(1.2) contrast(1.1);
 }
 
-/* Map panning animation smoothness */
-.leaflet-map-pane {
-  transition: transform 0.1s ease-out;
-  will-change: transform;
+/* Custom marker hover styles */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease-out, filter 0.2s ease;
 }
 
-/* More visible search radius circle - added from MarkerStyles.css */
-.location-radius-circle {
-  opacity: 0.2 !important;
-  stroke-opacity: 0.3 !important;
+.leaflet-marker-icon.hovered {
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7));
+  z-index: 1000 !important;
 }
 
-/* Optimize for mobile */
+/* Overlay fade-in animation */
+.map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0));
+  pointer-events: none;
+  z-index: 400;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.map-loaded .map-overlay {
+  opacity: 1;
+}
+
+/* Improve touch interaction on mobile */
 @media (max-width: 768px) {
-  .leaflet-control-zoom {
-    margin-bottom: 60px !important;
+  .leaflet-marker-icon {
+    width: 32px !important;
+    height: 32px !important;
+    margin-left: -16px !important;
+    margin-top: -16px !important;
   }
   
-  .leaflet-control-attribution {
-    max-width: 80%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .leaflet-control-zoom {
+    display: none;
   }
 }
