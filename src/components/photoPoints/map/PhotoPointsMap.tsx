@@ -1,7 +1,8 @@
+
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader } from "lucide-react";
+import { Loader, MapPin } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import './MapStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
+import { Button } from "@/components/ui/button";
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -172,8 +174,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleHover(null);
   }, [handleHover]);
 
+  // Handle returning to my location
+  const handleReturnToMyLocation = useCallback(() => {
+    if (userLocation) {
+      setSelectedMapLocation(null);
+      toast.success(t("Returned to your location", "返回到您的位置"));
+    } else {
+      toast.error(t("Your location is not available", "无法获取您的位置"));
+    }
+  }, [userLocation, t]);
+
   return (
-    <div className={className}>
+    <div className={className + " relative"}>
       <Suspense fallback={
         <div className="h-full w-full flex flex-col items-center justify-center bg-background/60">
           <Loader className="h-10 w-10 animate-spin mb-4 text-primary/70" />
@@ -206,6 +218,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onRefresh={() => {}} // Auto-refreshes handled by component
           onLocationUpdate={onLocationUpdate}
         />
+        
+        {/* My Location Button - Positioned further off the map for better visibility */}
+        <div className="absolute bottom-6 right-8 z-[1000]">
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-white text-gray-800 hover:bg-gray-100 shadow-lg flex items-center"
+            onClick={handleReturnToMyLocation}
+          >
+            <MapPin className="h-4 w-4 mr-1 text-primary" />
+            {t("My Location", "我的位置")}
+          </Button>
+        </div>
       </Suspense>
     </div>
   );

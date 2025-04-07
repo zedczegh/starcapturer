@@ -31,7 +31,7 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
   
   switch (shape) {
     case 'star':
-      // Star shape for certified locations
+      // Star shape for certified locations - brighter gold color
       svgPath = `<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="${color}" stroke="white" stroke-width="1.5"/>`;
       className += ' star-marker';
       break;
@@ -47,8 +47,11 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
     
     case 'circle':
     default:
-      // Circle for calculated locations
-      svgPath = `<circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />`;
+      // Circle for calculated locations - with inner pulse effect for better visibility
+      svgPath = `
+        <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
+        <circle cx="12" cy="12" r="6" fill="${color}" stroke="none" class="pulse-inner-circle" opacity="0.6" />
+      `;
       className += ' circle-marker';
       break;
   }

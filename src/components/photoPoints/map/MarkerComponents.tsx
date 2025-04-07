@@ -8,7 +8,8 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
-import { Star, Award } from 'lucide-react';
+import { Star, Award, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -18,14 +19,33 @@ const getSiqsClass = (siqs?: number): string => {
   return 'siqs-poor';
 };
 
+// Filter out water locations (simplified check)
+const isWaterLocation = (location: SharedAstroSpot): boolean => {
+  // Check location name or description for common water-related terms
+  const waterTerms = ['sea', 'ocean', 'lake', 'river', 'bay', 'gulf', 'strait', 
+                      '海', '洋', '湖', '河', '湾', '水'];
+  
+  const checkForWaterTerms = (text?: string) => {
+    if (!text) return false;
+    const lowerText = text.toLowerCase();
+    return waterTerms.some(term => lowerText.includes(term));
+  };
+  
+  return checkForWaterTerms(location.name) || 
+         checkForWaterTerms(location.chineseName) || 
+         checkForWaterTerms(location.description);
+};
+
 // Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
   if (isCertified) {
     // For certified locations, use a star-shaped marker with gold/yellow color
     return createCustomMarker('#FFD700', 'star');
   } else {
-    // For calculated locations, use the color based on SIQS with circle shape
-    const color = location.siqs ? getProgressColor(location.siqs) : '#777777';
+    // For calculated locations, use a brighter color based on SIQS with circle shape
+    // Replace olive green with a brighter, more vibrant green
+    const defaultColor = '#4ADE80'; // Bright green fallback
+    const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
     return createCustomMarker(color, 'circle');
   }
 };
@@ -48,10 +68,16 @@ const LocationMarker = memo(({
   isCertified
 }: LocationMarkerProps) => {
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
   const openTimeoutRef = useRef<number | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
+  
+  // Skip water locations for calculated spots
+  if (!isCertified && isWaterLocation(location)) {
+    return null;
+  }
   
   // Create the correct marker icon based on location type and hover state
   const icon = useMemo(() => {
@@ -156,6 +182,28 @@ const LocationMarker = memo(({
   // Get SIQS class for styling
   const siqsClass = getSiqsClass(location.siqs);
   
+  // Function to navigate to location details
+  const goToLocationDetails = () => {
+    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    
+    navigate(`/location/${locationId}`, {
+      state: {
+        id: locationId,
+        name: location.name,
+        chineseName: location.chineseName,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale || 4,
+        siqs: location.siqs,
+        siqsResult: location.siqs ? { score: location.siqs } : undefined,
+        certification: location.certification,
+        isDarkSkyReserve: location.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true
+      }
+    });
+  };
+  
   return (
     <Marker
       position={[location.latitude, location.longitude]}
@@ -203,12 +251,16 @@ const LocationMarker = memo(({
             )}
           </div>
           
-          {/* Bortle Scale indicator if available */}
-          {location.bortleScale && (
-            <div className="text-2xs mt-1.5 text-gray-300">
-              {t("Bortle", "包特尔")} {location.bortleScale}/9
-            </div>
-          )}
+          {/* Link to details page */}
+          <div className="mt-2 text-center">
+            <button 
+              onClick={goToLocationDetails}
+              className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1 px-2 rounded transition-colors"
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              {t("View Details", "查看详情")}
+            </button>
+          </div>
         </div>
       </Popup>
     </Marker>
