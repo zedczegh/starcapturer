@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup, Tooltip } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -25,7 +25,8 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
     return createCustomMarker('#FFD700', 'star');
   } else {
     // For calculated locations, use the color based on SIQS with circle shape
-    const color = location.siqs ? getProgressColor(location.siqs) : '#777777';
+    // Enhanced color with more vibrant green instead of olive
+    const color = location.siqs ? getProgressColor(location.siqs) : '#4ade80'; // Changed to a brighter green
     return createCustomMarker(color, 'circle');
   }
 };
@@ -164,8 +165,8 @@ const LocationMarker = memo(({
       eventHandlers={{
         click: handleClick,
         mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-      }}
+        mouseout: handleMouseOut
+      } as any} // Cast as any to avoid TypeScript error
     >
       <Popup 
         closeOnClick={false}
@@ -244,10 +245,6 @@ const UserLocationMarker = memo(({
           )}
         </div>
       </Popup>
-      
-      <Tooltip direction="top" offset={[0, -12]} permanent={false}>
-        {t("Your Location", "您的位置")}
-      </Tooltip>
     </Marker>
   );
 });

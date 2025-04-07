@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -157,15 +158,29 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     
     // Set a slight delay to allow for popups to close first
     clickTimeoutRef.current = window.setTimeout(() => {
+      // Update selected location
       setSelectedMapLocation({ latitude: lat, longitude: lng });
       
+      // Reset previous locations when changing location manually
+      previousLocationsRef.current = [];
+      
+      // Clear location cache to force fresh data for the new location
+      clearLocationCache();
+      
+      // Notify parent component
       if (onLocationUpdate) {
         onLocationUpdate(lat, lng);
       }
       
       clickTimeoutRef.current = null;
+      
+      // Show toast to indicate location update
+      toast.info(t(
+        "Updating to selected location...",
+        "正在更新到所选位置..."
+      ));
     }, 100);
-  }, [onLocationUpdate]);
+  }, [onLocationUpdate, t]);
 
   // Clear hoveredLocationId when user is interacting with the map
   const clearHover = useCallback(() => {
@@ -203,7 +218,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         
         <RealTimeLocationUpdater 
           userLocation={selectedMapLocation || userLocation}
-          onRefresh={() => {}} // Auto-refreshes handled by component
           onLocationUpdate={onLocationUpdate}
         />
       </Suspense>

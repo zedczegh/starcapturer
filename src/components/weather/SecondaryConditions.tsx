@@ -1,108 +1,104 @@
 
-import React, { memo } from "react";
-import { Gauge } from "lucide-react";
-import ConditionItem from "./ConditionItem";
+import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
-import { 
-  DynamicMoonIcon, 
-  DynamicLightbulbIcon,
-  DynamicCloudCoverIcon
-} from "./DynamicIcons";
+import WeatherProperty from "./WeatherProperty";
+import { Wifi, ThermometerSnowflake, Wind, Droplets, Sun } from "lucide-react";
+import { getAQIDescription, getSeeingConditionInChinese } from "@/utils/weatherUtils";
 
 interface SecondaryConditionsProps {
-  cloudCover: number;
-  moonPhase: string;
-  bortleScale: number | null;
-  aqi?: number;
-  nighttimeCloudData?: {
-    average: number | null;
-    evening: number;
-    morning: number;
-  } | null;
+  moonIllumination?: number | null;
+  seeing?: number | null;
+  cloudCover?: number | null;
+  windSpeed?: number | null;
+  humidity?: number | null;
+  visibility?: number | null;
+  aqi?: number | null;
+  temperature?: number | null;
+  seaLevelPressure?: number | null;
+  compact?: boolean;
 }
 
-const SecondaryConditions = memo<SecondaryConditionsProps>(({
+const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
+  moonIllumination,
+  seeing,
   cloudCover,
-  moonPhase,
-  bortleScale,
+  windSpeed,
+  humidity,
+  visibility,
   aqi,
-  nighttimeCloudData
+  temperature,
+  seaLevelPressure,
+  compact = false
 }) => {
-  const { t, language } = useLanguage();
+  const { language, t } = useLanguage();
   
-  // Determine which cloud cover to display - prefer nighttime average if available
-  const displayCloudCover = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined 
-    ? nighttimeCloudData.average 
-    : cloudCover;
-    
-  // Create nighttime cloud cover tooltip if data is available
-  const cloudCoverTooltip = nighttimeCloudData 
-    ? language === 'en'
-      ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}% (Evening: ${nighttimeCloudData.evening.toFixed(1)}%, Morning: ${nighttimeCloudData.morning.toFixed(1)}%)`
-      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}% (晚上: ${nighttimeCloudData.evening.toFixed(1)}%, 早晨: ${nighttimeCloudData.morning.toFixed(1)}%)`
-    : undefined;
-  
-  // AQI display with conditional rendering and enhanced sizing
-  const aqiValue = aqi !== undefined ? (
-    <>
-      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
-        {aqi} 
-      </span> 
-      <span className="text-sm ml-1.5">({getAQIDescription(aqi, t)})</span>
-    </>
-  ) : '--';
-  
-  // Bortle scale value - now properly handles unknown values with improved confidence indicator
-  const bortleValue = formatBortleScale(bortleScale, t);
-  
-  // Add confidence indicator for Bortle scale value (high confidence when directly measured)
-  const hasHighConfidence = bortleScale !== null && 
-    Number.isInteger(bortleScale) && 
-    bortleScale >= 1 && 
-    bortleScale <= 9;
-  
-  // Create label for cloud cover that indicates it's nighttime data
-  const cloudCoverLabel = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined
-    ? t("Night Cloud Cover", "夜间云层覆盖")
-    : t("Cloud Cover", "云层覆盖");
+  // Convert seeing value to descriptive text
+  const getSeeingDescription = (value: number): string => {
+    if (value <= 2) return "Poor";
+    if (value <= 3) return "Fair";
+    if (value <= 4) return "Good";
+    return "Excellent";
+  };
   
   return (
-    <div className="space-y-7">
-      <ConditionItem
-        icon={<DynamicCloudCoverIcon cloudCover={displayCloudCover} />}
-        label={cloudCoverLabel}
-        value={<span className="text-lg font-medium">{Math.round(displayCloudCover)}%</span>}
-        tooltip={cloudCoverTooltip}
-        badgeText={nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined ? t("Night", "夜间") : undefined}
-      />
-      
-      <ConditionItem
-        icon={<DynamicMoonIcon phase={moonPhase} />}
-        label={t("Moon Phase", "月相")}
-        value={<span className="text-lg font-medium">{moonPhase}</span>}
-      />
-      
-      {aqi !== undefined && (
-        <ConditionItem
-          icon={<Gauge className="h-5 w-5 text-primary" />}
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+      {aqi !== undefined && aqi !== null && (
+        <WeatherProperty 
+          icon={<Wifi className="h-3.5 w-3.5" />} 
           label={t("Air Quality", "空气质量")}
-          value={aqiValue}
+          value={`${getAQIDescription(aqi, language === 'zh' ? 'zh' : 'en')}`} 
+          tooltip={t("Air Quality Index", "空气质量指数")}
         />
       )}
       
-      <ConditionItem
-        icon={<DynamicLightbulbIcon bortleScale={bortleScale} animated={hasHighConfidence} />}
-        label={t("Bortle Scale", "光污染等级")}
-        value={<span className="text-lg font-medium">{bortleValue}</span>}
-        tooltip={bortleScale === null ? (language === 'en' ? 
-          "Bortle scale could not be determined for this location" : 
-          "无法确定此位置的光污染等级") : undefined}
-      />
+      {seeing !== undefined && seeing !== null && (
+        <WeatherProperty 
+          icon={<Sun className="h-3.5 w-3.5" />} 
+          label={t("Seeing", "视宁度")}
+          value={language === 'zh' ? 
+            getSeeingConditionInChinese(getSeeingDescription(seeing)) : 
+            getSeeingDescription(seeing)} 
+          tooltip={t("Astronomical seeing conditions", "天文视宁度条件")}
+        />
+      )}
+      
+      {cloudCover !== undefined && cloudCover !== null && (
+        <WeatherProperty 
+          icon={<Sun className="h-3.5 w-3.5" />} 
+          label={t("Cloud Cover", "云量")}
+          value={`${cloudCover}%`} 
+          tooltip={t("Percentage of sky covered by clouds", "云覆盖天空的百分比")}
+        />
+      )}
+      
+      {windSpeed !== undefined && windSpeed !== null && (
+        <WeatherProperty 
+          icon={<Wind className="h-3.5 w-3.5" />} 
+          label={t("Wind", "风速")}
+          value={`${windSpeed} ${t("km/h", "公里/时")}`} 
+          tooltip={t("Wind speed", "风速")}
+        />
+      )}
+      
+      {humidity !== undefined && humidity !== null && (
+        <WeatherProperty 
+          icon={<Droplets className="h-3.5 w-3.5" />} 
+          label={t("Humidity", "湿度")}
+          value={`${humidity}%`} 
+          tooltip={t("Relative humidity", "相对湿度")}
+        />
+      )}
+      
+      {temperature !== undefined && temperature !== null && (
+        <WeatherProperty 
+          icon={<ThermometerSnowflake className="h-3.5 w-3.5" />} 
+          label={t("Temperature", "温度")}
+          value={`${temperature}°C`} 
+          tooltip={t("Current temperature", "当前温度")}
+        />
+      )}
     </div>
   );
-});
-
-SecondaryConditions.displayName = 'SecondaryConditions';
+};
 
 export default SecondaryConditions;
