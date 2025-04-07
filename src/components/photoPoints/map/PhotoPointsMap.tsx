@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +8,7 @@ import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
+import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -53,6 +53,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const previousViewRef = useRef<string>(activeView);
   const viewChangedRef = useRef<boolean>(false);
   const [key, setKey] = useState(`map-${Date.now()}`); // Add key for forced remount when view changes
+  const lastRadiusRef = useRef<number>(searchRadius);
+  const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
   // Always show only the active view locations
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
@@ -66,6 +68,36 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       console.log(`View changed to ${activeView}, forcing map component remount`);
     }
   }, [activeView]);
+  
+  // Auto-clear cache when radius changes significantly
+  useEffect(() => {
+    if (lastRadiusRef.current !== searchRadius && 
+        Math.abs(lastRadiusRef.current - searchRadius) > 100) {
+      // Radius has changed significantly, clear cache
+      console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
+      clearLocationCache();
+      lastRadiusRef.current = searchRadius;
+    } else {
+      lastRadiusRef.current = searchRadius;
+    }
+  }, [searchRadius]);
+  
+  // Process locations to keep track of all loaded locations across radius changes
+  useEffect(() => {
+    if (activeView === 'calculated' && activeLocations.length > 0) {
+      // For calculated view, preserve all previously loaded locations
+      previousLocationsRef.current = [
+        ...previousLocationsRef.current,
+        ...activeLocations.filter(newLoc => {
+          // Only add if not already in the list
+          return !previousLocationsRef.current.some(existingLoc => 
+            existingLoc.latitude === newLoc.latitude && 
+            existingLoc.longitude === newLoc.longitude
+          );
+        })
+      ];
+    }
+  }, [activeLocations, activeView]);
   
   // Always load certified locations in background as soon as component mounts
   useEffect(() => {
@@ -85,7 +117,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: activeLocations, // Use only the active locations based on current view mode
+    locations: activeView === 'calculated' && previousLocationsRef.current.length > 0 
+      ? previousLocationsRef.current 
+      : activeLocations,
     searchRadius
   });
 
@@ -99,40 +133,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       if (latDiff > 1 || lngDiff > 1) {
         console.log("User location changed significantly, updating selected location");
         setSelectedMapLocation(null);
+        previousLocationsRef.current = []; // Reset accumulated locations
       }
     }
   }, [userLocation, selectedMapLocation]);
 
-  // Callback for map being ready
-  const handleMapReadyEvent = useCallback(() => {
-    handleMapReady();
-    if (onMapReady) onMapReady();
-    mapInitializedRef.current = true;
-    console.log("Map is ready and initialized");
-  }, [handleMapReady, onMapReady]);
-
-  // Handle location click with callback if provided
-  const handleLocationClickEvent = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    } else {
-      handleLocationClick(location);
-    }
-  }, [onLocationClick, handleLocationClick]);
-  
-  // Handle map click to set a new calculation point with rate limiting
+  // Handle map click event
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (!mapInitializedRef.current) {
-      console.log("Map not yet initialized, ignoring click");
+    const now = Date.now();
+    
+    // Prevent double clicks by checking time since last click
+    if (now - lastClickTimeRef.current < 300) {
+      console.log("Ignoring rapid click");
       return;
     }
     
-    // Debounce rapid clicks
-    const now = Date.now();
-    if (now - lastClickTimeRef.current < 500) {
-      console.log("Click too soon after last click, ignoring");
-      return;
-    }
     lastClickTimeRef.current = now;
     
     // Clear any existing click timeout
@@ -140,80 +155,56 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       window.clearTimeout(clickTimeoutRef.current);
     }
     
-    // Update selected location immediately
-    const newLocation = { latitude: lat, longitude: lng };
-    setSelectedMapLocation(newLocation);
-    
-    // Call the location update callback after a short delay to prevent double-updating
+    // Set a slight delay to allow for popups to close first
     clickTimeoutRef.current = window.setTimeout(() => {
+      setSelectedMapLocation({ latitude: lat, longitude: lng });
+      
       if (onLocationUpdate) {
         onLocationUpdate(lat, lng);
-        
-        // Show toast to inform the user
-        toast.info(t(
-          "Selected new location",
-          "已选择新位置"
-        ), {
-          description: t(
-            "Map will update to show locations around this point",
-            "地图将更新以显示此点周围的位置"
-          )
-        });
       }
+      
       clickTimeoutRef.current = null;
     }, 100);
-    
-  }, [t, onLocationUpdate]);
-
-  // Handle direct location update from controls without debounce
-  const handleDirectLocationUpdate = useCallback((lat: number, lng: number) => {
-    setSelectedMapLocation({ latitude: lat, longitude: lng });
-    
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
-    }
   }, [onLocationUpdate]);
-  
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (clickTimeoutRef.current) {
-        window.clearTimeout(clickTimeoutRef.current);
-      }
-    };
-  }, []);
+
+  // Clear hoveredLocationId when user is interacting with the map
+  const clearHover = useCallback(() => {
+    handleHover(null);
+  }, [handleHover]);
 
   return (
-    <div className={`${className} relative`}>
+    <div className={className}>
       <Suspense fallback={
-        <div className="h-full w-full flex items-center justify-center bg-background/20">
-          <div className="flex flex-col items-center gap-3">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">
-              {t("Loading map...", "正在加载地图...")}
-            </p>
-          </div>
+        <div className="h-full w-full flex flex-col items-center justify-center bg-background/60">
+          <Loader className="h-10 w-10 animate-spin mb-4 text-primary/70" />
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("Loading map...", "加载地图中...")}
+          </p>
         </div>
       }>
         <LazyPhotoPointsMapContainer
+          key={key}
           center={mapCenter}
-          userLocation={selectedMapLocation || userLocation}
-          locations={activeLocations} // Only show active view locations
-          searchRadius={searchRadius}
-          activeView={activeView} // Pass the active view to the map container
-          onMapReady={handleMapReadyEvent}
-          onLocationClick={handleLocationClickEvent}
-          onMapClick={handleMapClick}
           zoom={initialZoom}
-          key={key} // Use key to force re-render on view change
+          userLocation={selectedMapLocation || userLocation}
+          locations={validLocations}
+          searchRadius={searchRadius}
+          activeView={activeView}
+          onMapReady={() => {
+            handleMapReady();
+            if (onMapReady) onMapReady();
+            mapInitializedRef.current = true;
+          }}
+          onLocationClick={handleLocationClick}
+          onMapClick={handleMapClick}
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={handleHover}
         />
         
         <RealTimeLocationUpdater 
           userLocation={selectedMapLocation || userLocation}
-          onLocationUpdate={handleDirectLocationUpdate}
-          showControls={mapReady}
+          onRefresh={() => {}} // Auto-refreshes handled by component
+          onLocationUpdate={onLocationUpdate}
         />
       </Suspense>
     </div>

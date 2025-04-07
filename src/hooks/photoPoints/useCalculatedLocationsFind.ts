@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -47,12 +46,24 @@ export const useCalculatedLocationsFind = () => {
             return !existingCoords.has(coordKey);
           });
           
+          // Filter out locations with SIQS below 5
+          const qualityFilteredLocations = uniqueNewLocations.filter(loc => {
+            // If siqs is null/undefined or >= 5, keep the location
+            return loc.siqs === undefined || loc.siqs === null || loc.siqs >= 5;
+          });
+          
           // Combine previous and new locations
-          console.log(`Adding ${uniqueNewLocations.length} new unique locations to ${previousLocations.length} existing ones`);
-          return [...previousLocations, ...uniqueNewLocations];
+          console.log(`Adding ${qualityFilteredLocations.length} new unique locations to ${previousLocations.length} existing ones`);
+          return [...previousLocations, ...qualityFilteredLocations];
         }
         
-        return newLocations;
+        // Filter new locations by quality
+        const qualityFilteredLocations = newLocations.filter(loc => {
+          // If siqs is null/undefined or >= 5, keep the location
+          return loc.siqs === undefined || loc.siqs === null || loc.siqs >= 5;
+        });
+        
+        return qualityFilteredLocations;
       } catch (error) {
         console.error("Error finding calculated locations:", error);
         toast.error(t(

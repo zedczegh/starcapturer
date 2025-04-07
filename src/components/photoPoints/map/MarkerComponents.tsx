@@ -1,12 +1,22 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import { formatDistance } from '@/utils/geoUtils';
+import { Star, Award } from 'lucide-react';
+
+// Get SIQS quality class
+const getSiqsClass = (siqs?: number): string => {
+  if (!siqs) return '';
+  if (siqs >= 7.5) return 'siqs-excellent';
+  if (siqs >= 5.5) return 'siqs-good';
+  return 'siqs-poor';
+};
 
 // Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
@@ -37,8 +47,11 @@ const LocationMarker = memo(({
   locationId,
   isCertified
 }: LocationMarkerProps) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const markerRef = useRef<L.Marker | null>(null);
+  const popupRef = useRef<L.Popup | null>(null);
+  const openTimeoutRef = useRef<number | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
   
   // Create the correct marker icon based on location type and hover state
   const icon = useMemo(() => {
@@ -54,22 +67,66 @@ const LocationMarker = memo(({
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
     
+    // Clear any existing timeouts
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    
     // Add hovered class to marker for style enhancement
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
     }
+    
+    // Delayed opening of popup for smoother hover
+    if (!openTimeoutRef.current && markerRef.current && !markerRef.current.isPopupOpen()) {
+      openTimeoutRef.current = window.setTimeout(() => {
+        if (markerRef.current) {
+          markerRef.current.openPopup();
+        }
+        openTimeoutRef.current = null;
+      }, 150);
+    }
   }, [locationId, onHover]);
   
   const handleMouseOut = useCallback(() => {
-    onHover(null);
-    
-    // Remove hovered class
-    const marker = markerRef.current;
-    if (marker && marker.getElement()) {
-      marker.getElement()?.classList.remove('hovered');
+    // Clear open timeout if it exists
+    if (openTimeoutRef.current !== null) {
+      window.clearTimeout(openTimeoutRef.current);
+      openTimeoutRef.current = null;
     }
+    
+    // Delayed popup closing and hover state removal
+    closeTimeoutRef.current = window.setTimeout(() => {
+      onHover(null);
+      
+      // Remove hovered class
+      const marker = markerRef.current;
+      if (marker && marker.getElement()) {
+        marker.getElement()?.classList.remove('hovered');
+      }
+      
+      // Close popup with a delay
+      if (markerRef.current && markerRef.current.isPopupOpen()) {
+        markerRef.current.closePopup();
+      }
+      
+      closeTimeoutRef.current = null;
+    }, 200);
   }, [onHover]);
+  
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (openTimeoutRef.current !== null) {
+        window.clearTimeout(openTimeoutRef.current);
+      }
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Effect to manage popup state based on hover
   useEffect(() => {
@@ -79,57 +136,77 @@ const LocationMarker = memo(({
     if (isHovered) {
       marker.openPopup();
       marker.getElement()?.classList.add('hovered');
-    } else {
-      // Small delay before closing popup to prevent flickering
-      const timeoutId = setTimeout(() => {
-        if (!markerRef.current) return;
-        markerRef.current.closePopup();
-        markerRef.current.getElement()?.classList.remove('hovered');
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
+    } else if (!isHovered && closeTimeoutRef.current === null && marker.isPopupOpen()) {
+      // Only add a timeout if we don't already have one
+      closeTimeoutRef.current = window.setTimeout(() => {
+        if (markerRef.current) {
+          markerRef.current.closePopup();
+          markerRef.current.getElement()?.classList.remove('hovered');
+        }
+        closeTimeoutRef.current = null;
+      }, 200);
     }
   }, [isHovered]);
+
+  // Format location name based on language
+  const displayName = language === 'zh' && location.chineseName 
+    ? location.chineseName 
+    : location.name;
+  
+  // Get SIQS class for styling
+  const siqsClass = getSiqsClass(location.siqs);
   
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      onClick={handleClick}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut,
+      }}
     >
       <Popup 
-        // Fix Popup props to match allowed types
         closeOnClick={false}
         autoClose={false}
+        className="marker-custom-popup"
       >
-        <div className="p-2 max-w-[180px] leaflet-popup-custom-compact">
-          <div className="font-medium text-xs mb-1">
-            {language === 'zh' && location.chineseName 
-              ? location.chineseName 
-              : location.name}
+        <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
+          <div className="font-medium text-sm mb-1.5 flex items-center">
+            {isCertified && (
+              <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
+            )}
+            <span className="text-gray-100">{displayName}</span>
           </div>
           
           {/* Show certification badge for certified locations */}
           {isCertified && location.certification && (
-            <div className="mt-1 text-2xs font-medium text-amber-600">
+            <div className="mt-1 text-xs font-medium text-amber-400 flex items-center">
+              <Award className="h-3 w-3 mr-1" />
               {location.certification}
             </div>
           )}
           
-          {/* SIQS Score Badge */}
-          {location.siqs !== undefined && (
-            <div className="mt-2 flex items-center gap-1.5">
-              <SiqsScoreBadge score={location.siqs} compact={true} />
-              {location.distance && (
-                <span className="text-xs text-muted-foreground">
-                  {location.distance < 1 
-                    ? `${(location.distance * 1000).toFixed(0)}m`
-                    : `${location.distance.toFixed(1)}km`}
-                </span>
-              )}
+          {/* SIQS Score and Distance */}
+          <div className="mt-2 flex items-center justify-between">
+            {location.siqs !== undefined && (
+              <div className="flex items-center gap-1.5">
+                <SiqsScoreBadge score={location.siqs} compact={true} />
+              </div>
+            )}
+            
+            {location.distance && (
+              <span className="text-xs text-gray-300 flex items-center justify-end">
+                {formatDistance(location.distance)}
+              </span>
+            )}
+          </div>
+          
+          {/* Bortle Scale indicator if available */}
+          {location.bortleScale && (
+            <div className="text-2xs mt-1.5 text-gray-300">
+              {t("Bortle", "包特尔")} {location.bortleScale}/9
             </div>
           )}
         </div>
@@ -154,7 +231,7 @@ const UserLocationMarker = memo(({
   return (
     <Marker position={position} icon={userMarkerIcon}>
       <Popup>
-        <div className="p-2 leaflet-popup-custom">
+        <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
           <div className="text-xs mt-1">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
@@ -167,6 +244,10 @@ const UserLocationMarker = memo(({
           )}
         </div>
       </Popup>
+      
+      <Tooltip direction="top" offset={[0, -12]} permanent={false}>
+        {t("Your Location", "您的位置")}
+      </Tooltip>
     </Marker>
   );
 });

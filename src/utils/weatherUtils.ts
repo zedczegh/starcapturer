@@ -1,123 +1,125 @@
 
 /**
- * Helper functions for Chinese translations and weather data formatting
+ * Format an Air Quality Index (AQI) value into a human-readable description
+ * @param aqi - The Air Quality Index value
+ * @param language - The language to use for the description (en or zh)
+ * @returns Human-readable description of the air quality
  */
-
-// Moon phase translations with improved accuracy
-export function getMoonPhaseInChinese(phase: string): string {
-  const translations: { [key: string]: string } = {
-    "New Moon": "新月",
-    "Waxing Crescent": "蛾眉月",
-    "First Quarter": "上弦月",
-    "Waxing Gibbous": "盈凸月",
-    "Full Moon": "满月",
-    "Waning Gibbous": "亏凸月",
-    "Last Quarter": "下弦月",
-    "Waning Crescent": "残月",
-    "Unknown": "未知"
-  };
-  return translations[phase] || phase;
-}
-
-// Seeing condition translations with improved clarity
-export function getSeeingConditionInChinese(condition: string): string {
-  const translations: { [key: string]: string } = {
-    "Excellent": "极佳",
-    "Good": "良好",
-    "Average": "一般",
-    "Poor": "较差",
-    "Very Poor": "非常差",
-    "Unknown": "未知"
-  };
-  return translations[condition] || condition;
-}
-
-// Format Bortle scale with description - enhanced for better visualization
-export function formatBortleScale(value: number, t: (en: string, zh: string) => string) {
-  // Ensure Bortle scale is a valid number between 1-9
-  let sanitizedValue = value;
-  if (isNaN(value) || value < 1) sanitizedValue = 1;
-  if (value > 9) sanitizedValue = 9;
+export const getAQIDescription = (aqi: number | null | undefined, language: string = 'en'): string => {
+  if (aqi === null || aqi === undefined) return language === 'en' ? 'Unknown' : '未知';
   
-  if (sanitizedValue <= 1) return `1 (${t("Excellent Dark", "极暗")})`;
-  if (sanitizedValue <= 3) return `${sanitizedValue.toFixed(1)} (${t("Very Dark", "很暗")})`;
-  if (sanitizedValue <= 5) return `${sanitizedValue.toFixed(1)} (${t("Suburban", "郊区")})`;
-  if (sanitizedValue <= 7) return `${sanitizedValue.toFixed(1)} (${t("Bright Suburban", "明亮郊区")})`;
-  return `${sanitizedValue.toFixed(1)} (${t("City", "城市")})`;
-}
+  if (aqi <= 50) return language === 'en' ? 'Good' : '良好';
+  if (aqi <= 100) return language === 'en' ? 'Moderate' : '中等';
+  if (aqi <= 150) return language === 'en' ? 'Unhealthy for Sensitive Groups' : '对敏感人群不健康';
+  if (aqi <= 200) return language === 'en' ? 'Unhealthy' : '不健康';
+  if (aqi <= 300) return language === 'en' ? 'Very Unhealthy' : '非常不健康';
+  return language === 'en' ? 'Hazardous' : '危险';
+};
 
-// Get AQI color based on value - with optimized color ranges
-export function getAQIColor(aqi: number): string {
-  if (aqi <= 50) return "text-green-400";
-  if (aqi <= 100) return "text-yellow-400";
-  if (aqi <= 150) return "text-orange-400";
-  if (aqi <= 200) return "text-red-400";
-  if (aqi <= 300) return "text-purple-400";
-  return "text-rose-700";
-}
+/**
+ * Get the color associated with an Air Quality Index (AQI) value
+ * @param aqi - The Air Quality Index value
+ * @returns CSS color string
+ */
+export const getAQIColor = (aqi: number | null | undefined): string => {
+  if (aqi === null || aqi === undefined) return '#6B7280'; // gray-500
+  
+  if (aqi <= 50) return '#10B981'; // green-500
+  if (aqi <= 100) return '#FBBF24'; // yellow-400
+  if (aqi <= 150) return '#F59E0B'; // amber-500
+  if (aqi <= 200) return '#EF4444'; // red-500
+  if (aqi <= 300) return '#7C3AED'; // violet-600
+  return '#991B1B'; // red-800
+};
 
-// Get AQI description based on value
-export function getAQIDescription(aqi: number, t: (en: string, zh: string) => string): string {
-  if (aqi <= 50) return t("Good", "优");
-  if (aqi <= 100) return t("Moderate", "中等");
-  if (aqi <= 150) return t("Unhealthy for Sensitive Groups", "对敏感人群不健康");
-  if (aqi <= 200) return t("Unhealthy", "不健康");
-  if (aqi <= 300) return t("Very Unhealthy", "非常不健康");
-  return t("Hazardous", "危险");
-}
-
-// Convert weather condition to Chinese for better UX
-export function getWeatherConditionInChinese(condition: string): string {
-  const translations: { [key: string]: string } = {
-    "Clear": "晴朗",
-    "Sunny": "晴天",
-    "Partly Cloudy": "局部多云",
-    "Cloudy": "多云",
-    "Overcast": "阴天",
-    "Mist": "薄雾",
-    "Fog": "雾",
-    "Light Rain": "小雨",
-    "Moderate Rain": "中雨",
-    "Heavy Rain": "大雨",
-    "Light Snow": "小雪",
-    "Moderate Snow": "中雪",
-    "Heavy Snow": "大雪",
-    "Thunderstorm": "雷暴",
-    "Drizzle": "毛毛雨",
-    "Haze": "霾",
-    "Smoke": "烟雾",
-    "Dust": "尘土",
-    "Sand": "沙尘",
-    "Squalls": "狂风",
-    "Tornado": "龙卷风",
-    "Hurricane": "飓风",
-    "Hot": "炎热",
-    "Cold": "寒冷",
-    "Windy": "有风"
+/**
+ * Format Bortle scale to show as a descriptive string
+ * @param bortleScale - Bortle scale number (1-9)
+ * @param language - The language to use for the description (en or zh)
+ * @returns Formatted description string
+ */
+export const formatBortleScale = (bortleScale: number, language: string = 'en'): string => {
+  const descriptions = {
+    1: language === 'en' ? 'Excellent dark sky' : '极佳暗夜',
+    2: language === 'en' ? 'Truly dark sky' : '真正暗夜',
+    3: language === 'en' ? 'Rural sky' : '乡村夜空',
+    4: language === 'en' ? 'Rural/suburban transition' : '乡村/郊区过渡',
+    5: language === 'en' ? 'Suburban sky' : '郊区夜空',
+    6: language === 'en' ? 'Bright suburban sky' : '明亮郊区夜空',
+    7: language === 'en' ? 'Suburban/urban transition' : '郊区/城市过渡',
+    8: language === 'en' ? 'City sky' : '城市夜空',
+    9: language === 'en' ? 'Inner-city sky' : '市中心夜空'
   };
   
-  for (const [key, value] of Object.entries(translations)) {
-    if (condition.includes(key)) {
-      return value;
-    }
-  }
-  
-  return condition;
-}
+  const scale = Math.max(1, Math.min(9, Math.round(bortleScale)));
+  return `${scale} - ${descriptions[scale as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9]}`;
+};
 
-// Optimize weather condition classification for more accurate SIQS calculations
-export function classifyWeatherCondition(condition: string): 'good' | 'moderate' | 'poor' | 'bad' {
-  const lowerCondition = condition.toLowerCase();
+/**
+ * Convert English seeing conditions to Chinese
+ * @param condition - The English seeing condition text
+ * @returns Chinese translation
+ */
+export const getSeeingConditionInChinese = (condition: string): string => {
+  const conditionMap: Record<string, string> = {
+    'Poor': '较差',
+    'Fair': '一般',
+    'Good': '良好',
+    'Excellent': '极佳',
+    'Below Average': '低于平均',
+    'Average': '平均',
+    'Above Average': '高于平均',
+    'Unknown': '未知'
+  };
   
-  const goodConditions = ['clear', 'sunny', 'fair'];
-  const moderateConditions = ['partly cloudy', 'partly', 'few clouds'];
-  const poorConditions = ['cloudy', 'overcast', 'mist', 'haze'];
-  const badConditions = ['rain', 'snow', 'drizzle', 'sleet', 'fog', 'thunderstorm', 'storm'];
+  return conditionMap[condition] || '未知';
+};
+
+/**
+ * Convert English moon phase to Chinese
+ * @param phase - The English moon phase text
+ * @returns Chinese translation
+ */
+export const getMoonPhaseInChinese = (phase: string): string => {
+  const phaseMap: Record<string, string> = {
+    'New Moon': '新月',
+    'Waxing Crescent': '眉月上弦',
+    'First Quarter': '上弦月',
+    'Waxing Gibbous': '盈凸月',
+    'Full Moon': '满月',
+    'Waning Gibbous': '亏凸月',
+    'Last Quarter': '下弦月',
+    'Waning Crescent': '残月下弦',
+    'Unknown': '未知'
+  };
   
-  if (goodConditions.some(c => lowerCondition.includes(c))) return 'good';
-  if (moderateConditions.some(c => lowerCondition.includes(c))) return 'moderate';
-  if (poorConditions.some(c => lowerCondition.includes(c))) return 'poor';
-  if (badConditions.some(c => lowerCondition.includes(c))) return 'bad';
+  return phaseMap[phase] || '未知';
+};
+
+/**
+ * Convert English weather condition to Chinese
+ * @param condition - The English weather condition text
+ * @returns Chinese translation
+ */
+export const getWeatherConditionInChinese = (condition: string): string => {
+  const conditionMap: Record<string, string> = {
+    'Clear': '晴朗',
+    'Sunny': '阳光明媚',
+    'Partly Cloudy': '多云',
+    'Cloudy': '阴天',
+    'Overcast': '阴天',
+    'Mist': '薄雾',
+    'Fog': '雾',
+    'Light Rain': '小雨',
+    'Rain': '雨',
+    'Heavy Rain': '大雨',
+    'Thunderstorm': '雷雨',
+    'Snow': '雪',
+    'Light Snow': '小雪',
+    'Heavy Snow': '大雪',
+    'Sleet': '雨夹雪',
+    'Unknown': '未知'
+  };
   
-  return 'moderate'; // Default to moderate if unknown
-}
+  return conditionMap[condition] || '未知';
+};

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
@@ -14,8 +14,31 @@ import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
 configureLeaflet();
 
 // Map Events component to handle click events and updates
-const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
-  const map = useMap();
+const MapEvents = ({ 
+  onMapClick, 
+  onMapDragStart, 
+  onMapDragEnd,
+  onMapZoomEnd 
+}: { 
+  onMapClick: (lat: number, lng: number) => void;
+  onMapDragStart?: () => void;
+  onMapDragEnd?: () => void;
+  onMapZoomEnd?: () => void;
+}) => {
+  const map = useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+    dragstart() {
+      if (onMapDragStart) onMapDragStart();
+    },
+    dragend() {
+      if (onMapDragEnd) onMapDragEnd();
+    },
+    zoomend() {
+      if (onMapZoomEnd) onMapZoomEnd();
+    }
+  });
   
   // Store map reference in window for external access
   useEffect(() => {
@@ -24,18 +47,11 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
     // Store map in window object for external access
     (window as any).map = map;
     
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-    
-    map.on('click', handleClick);
-    
     return () => {
-      map.off('click', handleClick);
       // Clean up window reference
       (window as any).map = undefined;
     };
-  }, [map, onMapClick]);
+  }, [map]);
   
   return null;
 };
@@ -111,6 +127,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const isCertifiedView = activeView === 'certified';
   const markersRef = useRef<Map<string, boolean>>(new Map());
+  const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   
   // Optimize performance by reducing unnecessary marker updates
   const locationKeys = locations.map(loc => `${loc.latitude}-${loc.longitude}`).join(',');
@@ -120,9 +137,24 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     setCurrentSiqs(siqs);
   }, []);
 
+  // Handle map interaction to hide popups while interacting
+  const handleMapDragStart = useCallback(() => {
+    setHideMarkerPopups(true);
+    onMarkerHover(null);
+  }, [onMarkerHover]);
+  
+  const handleMapDragEnd = useCallback(() => {
+    // Small delay to prevent immediate popup reappearance
+    setTimeout(() => {
+      setHideMarkerPopups(false);
+    }, 100);
+  }, []);
+
   // Filter out any invalid locations
   const validLocations = locations.filter(location => 
-    location && typeof location.latitude === 'number' && typeof location.longitude === 'number'
+    location && 
+    typeof location.latitude === 'number' && 
+    typeof location.longitude === 'number'
   );
   
   // Generate unique keys for markers to improve rendering performance
@@ -136,6 +168,23 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     // Reset marker cache when locations change significantly
     markersRef.current = new Map();
   }, [locationKeys]);
+  
+  // Handle map click that closes popups
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    // Hide all popups
+    setHideMarkerPopups(true);
+    onMarkerHover(null);
+    
+    // After a brief delay, allow popups again
+    setTimeout(() => {
+      setHideMarkerPopups(false);
+    }, 100);
+    
+    // Pass the click to the parent
+    if (onMapClick) {
+      onMapClick(lat, lng);
+    }
+  }, [onMapClick, onMarkerHover]);
 
   return (
     <MapContainer
@@ -152,7 +201,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        // Fixed the TileLayer props by removing maxZoom
         subdomains="abc"
       />
       
@@ -171,7 +219,12 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       />
       
       {/* Add MapEvents component to handle clicks if onMapClick is provided */}
-      {onMapClick && <MapEvents onMapClick={onMapClick} />}
+      <MapEvents 
+        onMapClick={handleMapClick} 
+        onMapDragStart={handleMapDragStart}
+        onMapDragEnd={handleMapDragEnd}
+        onMapZoomEnd={() => onMarkerHover(null)}
+      />
       
       {/* Current user location marker */}
       {userLocation && (
@@ -181,7 +234,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         />
       )}
       
-      {/* Search radius visualization as a faint circle */}
+      {/* Search radius visualization as a more visible circle */}
       {userLocation && searchRadius && searchRadius < 1000 && (
         <Circle 
           center={[userLocation.latitude, userLocation.longitude]}
@@ -189,15 +242,16 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           pathOptions={{ 
             color: isCertifiedView ? '#FFD700' : '#9b87f5',
             fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.05,
-            weight: 1,
-            opacity: 0.3
+            fillOpacity: 0.08, // Increased opacity for more visibility
+            weight: 1.5, // Thicker border
+            opacity: 0.4, // More visible border
+            className: 'location-radius-circle'
           }}
         />
       )}
       
       {/* Location markers */}
-      {validLocations.map((location) => {
+      {!hideMarkerPopups && validLocations.map((location) => {
         // Generate a unique ID for this location
         const locationId = getMarkerKey(location);
         
@@ -216,8 +270,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             key={locationId}
             location={location}
             onClick={handleClick}
-            isHovered={hoveredLocationId === locationId}
-            onHover={onMarkerHover}
+            isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
+            onHover={hideMarkerPopups ? () => {} : onMarkerHover}
             locationId={locationId}
             isCertified={isCertifiedView}
           />

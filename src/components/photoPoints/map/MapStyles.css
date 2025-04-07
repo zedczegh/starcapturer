@@ -1,91 +1,96 @@
 
-/* Base map styles */
+/* Custom map container styles */
 .leaflet-container {
-  width: 100%;
-  height: 100%;
-  background-color: #0B0F19;
+  background-color: #1a1f2c;
+  outline: none;
+  transition: opacity 0.3s ease;
 }
 
-/* Make panning and zooming more smooth */
-.leaflet-fade-anim .leaflet-tile,
-.leaflet-zoom-anim .leaflet-zoom-animated { 
-  will-change: transform;
-  transition: opacity 0.15s cubic-bezier(0, 0, 0.25, 1) !important; 
-}
-
-/* Improve map control appearance */
-.leaflet-control-container .leaflet-control {
-  border-radius: 8px !important;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.leaflet-control-zoom a {
-  background-color: rgba(15, 23, 42, 0.9) !important;
-  color: white !important;
-  border-color: rgba(51, 65, 85, 0.3) !important;
-}
-
-.leaflet-control-zoom a:hover {
-  background-color: rgba(51, 65, 85, 0.9) !important;
-}
-
-/* Attribution styling */
+/* Custom attribution styling */
 .leaflet-control-attribution {
-  background-color: rgba(15, 23, 42, 0.8) !important;
-  color: rgba(255, 255, 255, 0.6) !important;
-  padding: 2px 6px !important;
-  font-size: 10px !important;
+  background-color: rgba(24, 24, 27, 0.6) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 9px !important;
+  padding: 2px 4px !important;
+  backdrop-filter: blur(8px);
+  border-radius: 4px !important;
 }
 
 .leaflet-control-attribution a {
-  color: rgba(139, 92, 246, 0.8) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Improve panning performance */
-.leaflet-tile {
-  filter: brightness(0.8) saturate(1.4) contrast(1.1);
+/* Smooth transitions */
+.leaflet-fade-anim .leaflet-tile,
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: transform, opacity;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Better loading spinner */
-.leaflet-tile-container img.leaflet-tile-loading {
-  opacity: 0 !important;
+/* Smoother zoom animations */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Fade tile transition */
-.leaflet-tile-loaded { 
-  animation: tileFadeIn 0.3s ease-out;
+/* Navigation controls styling */
+.leaflet-control-zoom {
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: none !important;
 }
 
-@keyframes tileFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Layer transitions */
-.leaflet-map-pane {
-  z-index: 2 !important;
-}
-
-.leaflet-tile-pane {
-  z-index: 1 !important;
-}
-
-/* Make scale prettier */
-.leaflet-control-scale-line {
-  background-color: rgba(15, 23, 42, 0.8) !important;
-  border-color: rgba(51, 65, 85, 0.3) !important;
+.leaflet-control-zoom a {
+  background-color: rgba(24, 24, 27, 0.85) !important;
   color: white !important;
+  border-color: rgba(63, 63, 70, 0.4) !important;
+  transition: all 0.2s ease;
 }
 
-/* Focus states */
-.leaflet-container:focus {
-  outline: none !important;
+.leaflet-control-zoom a:hover {
+  background-color: rgba(39, 39, 42, 0.95) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.leaflet-touch .leaflet-control-zoom a {
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+}
+
+/* Enhanced tile loading styles */
+.leaflet-tile-loaded {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Map panning animation smoothness */
+.leaflet-map-pane {
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+
+/* More visible search radius circle - added from MarkerStyles.css */
+.location-radius-circle {
+  opacity: 0.2 !important;
+  stroke-opacity: 0.3 !important;
+}
+
+/* Optimize for mobile */
+@media (max-width: 768px) {
+  .leaflet-control-zoom {
+    margin-bottom: 60px !important;
+  }
+  
+  .leaflet-control-attribution {
+    max-width: 80%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }

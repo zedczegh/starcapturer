@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import { calculateDistance } from '@/utils/geoUtils';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -20,6 +21,8 @@ export const usePhotoPointsMap = ({
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   const previousLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
+  const previousRadiusRef = useRef<number>(0);
+  const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -29,14 +32,21 @@ export const usePhotoPointsMap = ({
     if (
       previousLocationRef.current &&
       Math.abs(previousLocationRef.current.latitude - userLocation.latitude) < 0.01 &&
-      Math.abs(previousLocationRef.current.longitude - userLocation.longitude) < 0.01
+      Math.abs(previousLocationRef.current.longitude - userLocation.longitude) < 0.01 &&
+      previousRadiusRef.current === searchRadius
     ) {
       return;
     }
     
     previousLocationRef.current = userLocation;
+    previousRadiusRef.current = searchRadius;
     
-  }, [userLocation]);
+    if (!previousLocationRef.current || 
+        Math.abs(previousLocationRef.current.latitude - userLocation.latitude) > 0.1 ||
+        Math.abs(previousLocationRef.current.longitude - userLocation.longitude) > 0.1) {
+      previousLocationsRef.current = [];
+    }
+  }, [userLocation, searchRadius]);
 
   const validLocations = locations.filter(location => 
     location && 
@@ -44,7 +54,26 @@ export const usePhotoPointsMap = ({
     typeof location.longitude === 'number'
   );
 
-  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : validLocations;
+  const locationMap = new Map<string, SharedAstroSpot>();
+  
+  previousLocationsRef.current.forEach(loc => {
+    const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+    locationMap.set(key, loc);
+  });
+  
+  validLocations.forEach(loc => {
+    const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+    const existing = locationMap.get(key);
+    if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
+      locationMap.set(key, loc);
+    }
+  });
+  
+  const mergedLocations = Array.from(locationMap.values());
+  
+  previousLocationsRef.current = mergedLocations;
+  
+  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
   
   useEffect(() => {
     if (!mapReady || !userLocation || !validLocations.length) return;
@@ -54,22 +83,73 @@ export const usePhotoPointsMap = ({
         const type = validLocations.some(loc => loc.isDarkSkyReserve || loc.certification) ? 
           'certified' : 'calculated';
           
+        const locationsInRadius = type === 'calculated' && userLocation ? 
+          validLocations.filter(loc => {
+            if (!loc.latitude || !loc.longitude) return false;
+            const distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              loc.latitude,
+              loc.longitude
+            );
+            return distance <= searchRadius * 1.1;
+          }) : 
+          validLocations;
+        
         const updated = await updateLocationsWithRealTimeSiqs(
-          validLocations, 
+          locationsInRadius, 
           userLocation, 
           searchRadius,
           type
         );
         
         if (updated && updated.length > 0) {
-          setEnhancedLocations(updated);
+          setEnhancedLocations(prevLocations => {
+            const updatedMap = new Map<string, SharedAstroSpot>();
+            updated.forEach(loc => {
+              if (loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                updatedMap.set(key, loc);
+              }
+            });
+            
+            const combinedLocations = [...prevLocations];
+            
+            updated.forEach(newLoc => {
+              if (!newLoc.latitude || !newLoc.longitude) return;
+              
+              const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
+              const exists = combinedLocations.some(
+                existingLoc => existingLoc.latitude && existingLoc.longitude && 
+                `${existingLoc.latitude.toFixed(6)}-${existingLoc.longitude.toFixed(6)}` === key
+              );
+              
+              if (!exists) {
+                combinedLocations.push(newLoc);
+              } else {
+                const index = combinedLocations.findIndex(
+                  existingLoc => existingLoc.latitude && existingLoc.longitude &&
+                  `${existingLoc.latitude.toFixed(6)}-${existingLoc.longitude.toFixed(6)}` === key
+                );
+                if (index !== -1) {
+                  combinedLocations[index] = newLoc;
+                }
+              }
+            });
+            
+            return combinedLocations;
+          });
         }
       } catch (error) {
         console.error('Error updating locations with real-time SIQS:', error);
       }
     };
     
-    updateLocations();
+    const timeoutId = setTimeout(() => {
+      updateLocations();
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [validLocations, userLocation, mapReady, searchRadius]);
 
   const mapCenter: [number, number] = userLocation 
