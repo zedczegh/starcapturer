@@ -7,7 +7,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 // Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
@@ -51,7 +50,7 @@ const LocationMarker = memo(({
     onClick(location);
   }, [location, onClick]);
   
-  // Handle hover events
+  // Handle hover events with improved hover handling
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
     
@@ -102,9 +101,9 @@ const LocationMarker = memo(({
       onMouseOut={handleMouseOut}
     >
       <Popup 
-        autoPan={false}
-        autoClose={false}
+        // Fix Popup props to match allowed types
         closeOnClick={false}
+        autoClose={false}
       >
         <div className="p-2 max-w-[180px] leaflet-popup-custom-compact">
           <div className="font-medium text-xs mb-1">

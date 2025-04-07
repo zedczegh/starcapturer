@@ -9,9 +9,9 @@ interface LocationCache {
   locations: SharedAstroSpot[];
 }
 
-// Global cache with timeout
+// Global cache with timeout - reduced from 5 minutes to 2 minutes for more freshness
 const locationCache: Record<string, LocationCache> = {};
-const CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const CACHE_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
 /**
  * Generate a cache key based on user location and radius
@@ -22,8 +22,9 @@ const generateCacheKey = (
   radius: number,
   type: 'certified' | 'calculated'
 ): string => {
-  const lat = latitude.toFixed(2);
-  const lng = longitude.toFixed(2);
+  // More precise lat/lng for better cache differentiation
+  const lat = latitude.toFixed(3);
+  const lng = longitude.toFixed(3);
   return `${type}-${lat}-${lng}-${radius}`;
 };
 
@@ -70,6 +71,7 @@ export const updateLocationsWithRealTimeSiqs = async (
     
     // For certified locations, batch process in parallel for efficiency
     if (type === 'certified' || locations.length > 10) {
+      // Use smaller batch size (3) for more consistent processing
       const updatedLocations = await batchCalculateSiqs(locations, 3);
       
       // Save to cache
@@ -124,11 +126,14 @@ export const updateLocationsWithRealTimeSiqs = async (
  * Clear the location cache
  */
 export const clearLocationCache = () => {
-  Object.keys(locationCache).forEach(key => {
+  const cacheKeys = Object.keys(locationCache);
+  const cacheCount = cacheKeys.length;
+  
+  cacheKeys.forEach(key => {
     delete locationCache[key];
   });
   
-  console.log("Location cache cleared");
+  console.log(`Location cache cleared (${cacheCount} entries)`);
   toast.success("Location data refreshed");
 };
 
@@ -152,7 +157,33 @@ export const shouldUpdateLocations = (
   const latDiff = Math.abs(prevLocation.latitude - newLocation.latitude);
   const lngDiff = Math.abs(prevLocation.longitude - newLocation.longitude);
   
-  // If moved more than ~5km, update locations
-  // Roughly 0.05 degrees latitude = ~5.5km
-  return latDiff > 0.05 || lngDiff > 0.05;
+  // If moved more than ~2km, update locations (more sensitive than before)
+  // Roughly 0.02 degrees latitude = ~2.2km
+  return latDiff > 0.02 || lngDiff > 0.02;
+};
+
+/**
+ * Force update all location data regardless of cache status
+ */
+export const forceUpdateAllLocations = async (
+  locations: SharedAstroSpot[],
+  userLocation: { latitude: number; longitude: number } | null
+): Promise<SharedAstroSpot[]> => {
+  if (!locations || locations.length === 0 || !userLocation) {
+    return locations;
+  }
+  
+  console.log(`Force updating ${locations.length} locations with fresh SIQS data`);
+  
+  try {
+    // Clear existing cache first
+    clearLocationCache();
+    
+    // Update all locations with fresh data
+    const updatedLocations = await batchCalculateSiqs(locations, 3);
+    return updatedLocations;
+  } catch (error) {
+    console.error("Error force updating locations:", error);
+    return locations;
+  }
 };

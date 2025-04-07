@@ -152,9 +152,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        // Add caching parameters to improve tile loading
+        // Fixed the TileLayer props by removing maxZoom
         subdomains="abc"
-        maxZoom={19}
       />
       
       {/* Controller for handling map events */}
