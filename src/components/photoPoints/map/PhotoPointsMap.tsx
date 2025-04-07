@@ -7,6 +7,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
+import './MarkerStyles.css'; // Import marker styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
@@ -35,8 +36,8 @@ const injectMapControlsCss = () => {
       
       .my-location-control {
         position: absolute;
-        top: 20px;
-        right: 20px;
+        top: 25px;
+        right: 25px;
         z-index: 1000;
       }
       
@@ -46,6 +47,25 @@ const injectMapControlsCss = () => {
         fill: #8b5cf6;
         fill-opacity: 0.08;
         stroke-opacity: 0.5;
+      }
+      
+      /* Fix for view toggle positioning */
+      .view-type-toggles {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+      }
+      
+      .view-type-toggles button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1.25rem;
+        min-width: 140px;
+      }
+      
+      .view-type-toggles button svg {
+        margin-right: 0.5rem;
       }
     `;
     document.head.appendChild(style);
@@ -279,7 +299,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           size="sm"
           onClick={handleResetToCurrentLocation}
           className="my-location-control shadow-md flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-          style={{ top: '15px', right: '15px' }} 
         >
           <MapPin className="h-4 w-4 text-primary" />
           <span className="text-sm">{t("My Location", "我的位置")}</span>

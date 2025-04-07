@@ -10,6 +10,7 @@
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  cursor: pointer !important;
 }
 
 /* Star marker style - for certified locations */
@@ -17,6 +18,7 @@
   filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
   transform: scale(1.2);
   z-index: 900 !important;
+  animation: star-pulse 3s infinite ease-in-out;
 }
 
 .star-marker:hover,
@@ -24,16 +26,16 @@
   transform: scale(1.6) !important;
   filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.95)) !important;
   z-index: 1001 !important;
-  animation: breathing 3s infinite ease-in-out;
+  animation: breathing 1.5s infinite ease-in-out;
 }
 
 /* Enhanced circle marker style - for calculated locations */
 .circle-marker {
-  filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.6)); /* Brighter green shadow */
+  filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.7)); /* Brighter green shadow */
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.175),
               filter 0.4s ease-in-out;
   z-index: 800 !important;
-  animation: gentle-pulse 4s infinite ease-in-out; /* Constant gentle pulse animation */
+  animation: circle-pulse 4s infinite ease-in-out; /* Constant gentle pulse animation */
 }
 
 .circle-marker:hover,
@@ -41,17 +43,56 @@
   transform: scale(1.5) !important;
   filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.9)) !important; /* Brighter green shadow on hover */
   z-index: 1001 !important;
-  animation: breathing 3s infinite ease-in-out;
+  animation: breathing 1.5s infinite ease-in-out;
 }
 
 /* User marker style with pulse effect */
 .user-marker {
   z-index: 1000 !important;
   transform: scale(1.1);
+  animation: user-pulse 3s infinite ease-in-out;
 }
 
 .user-marker .pulse-circle {
   animation: pulse 2.5s infinite;
+}
+
+/* Star pulse animation */
+@keyframes star-pulse {
+  0%, 100% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.7));
+  }
+  50% {
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.9));
+  }
+}
+
+/* Circle pulse animation for calculated locations */
+@keyframes circle-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.5));
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.8));
+  }
+}
+
+/* User location pulse animation */
+@keyframes user-pulse {
+  0%, 100% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.6));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.9));
+  }
 }
 
 /* Breathing animation for hover effect */
@@ -146,6 +187,7 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 /* Force higher z-index for hovered markers and smooth animation */
@@ -216,4 +258,37 @@
 .siqs-poor {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(239, 68, 68, 0.1) 100%);
   border-left: 3px solid rgb(239, 68, 68);
+}
+
+/* Fix for map interactions */
+.leaflet-container {
+  font: inherit;
+  cursor: default !important;
+}
+
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+  cursor: move !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  cursor: pointer !important;
+}
+
+/* Enable proper dragging and interactions */
+.leaflet-interactive {
+  cursor: pointer !important;
+}
+
+/* Make controls more visible */
+.leaflet-control-zoom a {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  color: #333 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: rgba(255, 255, 255, 1) !important;
 }

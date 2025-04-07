@@ -2,9 +2,9 @@
 import { fetchWeatherData } from "@/lib/api";
 
 // Default timeout for weather API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 4000; // Reduced from 5000 for faster loading
+const DEFAULT_TIMEOUT = 3000; // Reduced from 4000 for faster loading
 // Default cache lifetime for weather data (in milliseconds)
-const WEATHER_CACHE_LIFETIME = 3 * 60 * 1000; // 3 minutes cache lifetime
+const WEATHER_CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes cache lifetime
 // Maximum retry attempts
 const MAX_RETRIES = 1; // Reduced from 2 for faster error recovery
 
@@ -48,12 +48,12 @@ export const getWeatherData = async (
   const fallbackTimer = setTimeout(() => {
     if (!displayOnly && setStatusMessage) {
       setStatusMessage(language === 'en'
-        ? "Using cached weather data while updating..."
-        : "使用缓存的天气数据，正在更新...");
+        ? "Using cached weather data..."
+        : "使用缓存的天气数据...");
     }
     // Cache fallback data temporarily
     setCachedData(locationSpecificKey, fallbackData);
-  }, 800); // Show fallback quickly if real data is taking time
+  }, 600); // Show fallback quickly if real data is taking time
   
   try {
     // Use AbortController for timeout

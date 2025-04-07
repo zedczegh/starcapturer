@@ -71,6 +71,7 @@
 .leaflet-marker-icon {
   transition: transform 0.3s ease-out, filter 0.3s ease;
   z-index: 400;
+  cursor: pointer !important;
 }
 
 .leaflet-marker-icon.hovered {
@@ -97,7 +98,7 @@
   opacity: 1;
 }
 
-/* Improved breath animation for markers */
+/* Enhanced breath animation for markers */
 @keyframes breathe {
   0% { transform: scale(0.95); opacity: 0.85; }
   50% { transform: scale(1.05); opacity: 1; }
@@ -120,15 +121,42 @@
 
 /* Improved marker visibility */
 .circle-marker svg circle:first-child {
-  fill: #4ade80 !important; /* Bright green for better visibility */
+  fill: #22c55e !important; /* Brighter green for better visibility */
 }
 
 /* My location button positioning */
 .my-location-control {
   position: absolute;
-  top: 20px;
-  right: 20px; 
+  top: 25px;
+  right: 25px; 
   z-index: 1000;
+}
+
+/* Improve map interaction functionality */
+.leaflet-grab {
+  cursor: move !important;
+  cursor: -webkit-grab !important;
+  cursor: grab !important;
+}
+
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+  cursor: move !important;
+  cursor: -webkit-grabbing !important;
+  cursor: grabbing !important;
+}
+
+/* Make zoom controls more visible */
+.leaflet-control-zoom a {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  color: #333 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: rgba(255, 255, 255, 1) !important;
 }
 
 /* Improve touch interaction on mobile */
@@ -141,7 +169,25 @@
   }
   
   .my-location-control {
-    top: 15px;
-    right: 15px;
+    top: 20px;
+    right: 20px;
   }
+  
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 18px !important;
+  }
+}
+
+/* Improve map performance */
+.leaflet-container {
+  will-change: transform;
+  transform: translate3d(0,0,0);
+}
+
+.leaflet-tile-container img {
+  will-change: transform;
+  backface-visibility: hidden;
 }

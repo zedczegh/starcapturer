@@ -32,37 +32,40 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
   let className = 'custom-marker';
   
   // Use more vibrant colors for better visibility
-  const brightenedColor = shape === 'circle' ? '#4ade80' : color;
+  let markerColor = color;
   
   switch (shape) {
     case 'star':
       // Star shape for certified locations
+      markerColor = '#FFD700'; // Golden yellow for certified locations
       svgPath = `
         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
-          fill="${brightenedColor}" 
+          fill="${markerColor}" 
           stroke="white" 
           stroke-width="1.5"
         />
-        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="none" opacity="0.2" class="pulse-circle" />
+        <circle cx="12" cy="12" r="12" fill="${markerColor}" stroke="none" opacity="0.2" class="pulse-circle" />
       `;
       className += ' star-marker';
       break;
     
     case 'user':
       // User location marker - blue dot with pulse effect
+      markerColor = '#3b82f6'; // Blue for user location
       svgPath = `
-        <circle cx="12" cy="12" r="8" fill="${brightenedColor}" stroke="white" stroke-width="2" opacity="0.9" />
-        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="white" stroke-width="1" opacity="0.3" class="pulse-circle" />
+        <circle cx="12" cy="12" r="8" fill="${markerColor}" stroke="white" stroke-width="2" opacity="0.9" />
+        <circle cx="12" cy="12" r="12" fill="${markerColor}" stroke="white" stroke-width="1" opacity="0.3" class="pulse-circle" />
       `;
       className += ' user-marker';
       break;
     
     case 'circle':
     default:
-      // Enhanced circle for calculated locations - improved breathing effect & brighter color
+      // Enhanced circle for calculated locations - brighter green for better visibility
+      markerColor = '#22c55e'; // Brighter green for calculated locations
       svgPath = `
-        <circle cx="12" cy="12" r="8" fill="${brightenedColor}" stroke="white" stroke-width="1.5" />
-        <circle cx="12" cy="12" r="12" fill="${brightenedColor}" stroke="none" opacity="0.2" class="pulse-circle" />
+        <circle cx="12" cy="12" r="8" fill="${markerColor}" stroke="white" stroke-width="1.5" />
+        <circle cx="12" cy="12" r="12" fill="${markerColor}" stroke="none" opacity="0.2" class="pulse-circle" />
       `;
       className += ' circle-marker';
       break;

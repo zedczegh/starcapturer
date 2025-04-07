@@ -178,8 +178,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       center={mapCenter}
       zoom={initialZoom}
       style={{ height: "100%", width: "100%" }}
-      ref={(map) => { if (map) mapRef.current = map.getContainer()._leaflet_id && map; }}
+      whenCreated={(map) => { mapRef.current = map; }}
       attributionControl={true}
+      scrollWheelZoom={true}
+      zoomControl={true}
+      dragging={true}
+      doubleClickZoom={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -199,6 +203,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             opacity: 0.7, // Increased from 0.6
             dashArray: '5, 5'
           }}
+          className="location-radius-circle"
         />
       )}
       
