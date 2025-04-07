@@ -29,6 +29,19 @@ export const deg2rad = (deg: number): number => {
 };
 
 /**
+ * Haversine formula for calculating distance between two points
+ * This is identical to calculateDistance but kept for backward compatibility
+ * @param lat1 Latitude of first point
+ * @param lon1 Longitude of first point
+ * @param lat2 Latitude of second point
+ * @param lon2 Longitude of second point
+ * @returns Distance in kilometers
+ */
+export const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  return calculateDistance(lat1, lon1, lat2, lon2);
+};
+
+/**
  * Format distance in a user-friendly way
  * @param distance Distance in kilometers
  * @returns Formatted distance string
