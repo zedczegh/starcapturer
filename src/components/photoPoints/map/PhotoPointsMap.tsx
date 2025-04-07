@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
 import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
+import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -67,6 +68,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       console.log(`View changed to ${activeView}, forcing map component remount`);
     }
   }, [activeView]);
+  
+  // Auto-clear cache when radius changes significantly
+  useEffect(() => {
+    if (lastRadiusRef.current !== searchRadius && 
+        Math.abs(lastRadiusRef.current - searchRadius) > 100) {
+      // Radius has changed significantly, clear cache
+      console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
+      clearLocationCache();
+      lastRadiusRef.current = searchRadius;
+    } else {
+      lastRadiusRef.current = searchRadius;
+    }
+  }, [searchRadius]);
   
   // Process locations to keep track of all loaded locations across radius changes
   useEffect(() => {
@@ -189,6 +203,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         
         <RealTimeLocationUpdater 
           userLocation={selectedMapLocation || userLocation}
+          onRefresh={() => {}} // Auto-refreshes handled by component
           onLocationUpdate={onLocationUpdate}
         />
       </Suspense>

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
@@ -25,42 +25,33 @@ const MapEvents = ({
   onMapDragEnd?: () => void;
   onMapZoomEnd?: () => void;
 }) => {
-  const mapRef = useRef<L.Map | null>(null);
+  const map = useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+    dragstart() {
+      if (onMapDragStart) onMapDragStart();
+    },
+    dragend() {
+      if (onMapDragEnd) onMapDragEnd();
+    },
+    zoomend() {
+      if (onMapZoomEnd) onMapZoomEnd();
+    }
+  });
   
+  // Store map reference in window for external access
   useEffect(() => {
-    const map = mapRef.current = (window as any).map;
     if (!map) return;
     
-    // Add event listeners
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-    
-    const handleDragStart = () => {
-      if (onMapDragStart) onMapDragStart();
-    };
-    
-    const handleDragEnd = () => {
-      if (onMapDragEnd) onMapDragEnd();
-    };
-    
-    const handleZoomEnd = () => {
-      if (onMapZoomEnd) onMapZoomEnd();
-    };
-    
-    map.on('click', handleClick);
-    map.on('dragstart', handleDragStart);
-    map.on('dragend', handleDragEnd);
-    map.on('zoomend', handleZoomEnd);
+    // Store map in window object for external access
+    (window as any).map = map;
     
     return () => {
-      if (!map) return;
-      map.off('click', handleClick);
-      map.off('dragstart', handleDragStart);
-      map.off('dragend', handleDragEnd);
-      map.off('zoomend', handleZoomEnd);
+      // Clean up window reference
+      (window as any).map = undefined;
     };
-  }, [onMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
+  }, [map]);
   
   return null;
 };
@@ -73,11 +64,10 @@ const MapController = ({
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
 }) => {
-  const mapRef = useRef<L.Map | null>(null);
+  const map = useMap();
   const firstRenderRef = useRef(true);
   
   useEffect(() => {
-    const map = mapRef.current = (window as any).map;
     if (!map) return;
     
     // Always enable all controls to allow dragging and interaction
@@ -89,6 +79,9 @@ const MapController = ({
     map.keyboard.enable();
     if (map.tap) map.tap.enable();
     
+    // Store map reference in window for external access
+    (window as any).map = map;
+    
     // If user location exists, center on it
     if (userLocation && firstRenderRef.current) {
       // Only set view once on first render to avoid constant recentering
@@ -98,7 +91,7 @@ const MapController = ({
 
     // Improve performance by reduced rerenders on pan/zoom
     map._onResize = L.Util.throttle(map._onResize, 200, map);
-  }, [userLocation]);
+  }, [map, userLocation]);
 
   return null;
 };
@@ -136,6 +129,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const markersRef = useRef<Map<string, boolean>>(new Map());
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   
+  // Optimize performance by reducing unnecessary marker updates
+  const locationKeys = locations.map(loc => `${loc.latitude}-${loc.longitude}`).join(',');
+  
   // Handle SIQS calculation results
   const handleSiqsCalculated = useCallback((siqs: number) => {
     setCurrentSiqs(siqs);
@@ -154,23 +150,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     }, 100);
   }, []);
 
-  // Filter out any invalid locations or locations on water (no name/missing bortle scale)
+  // Filter out any invalid locations
   const validLocations = locations.filter(location => 
     location && 
     typeof location.latitude === 'number' && 
-    typeof location.longitude === 'number' &&
-    // Filter out locations with missing data or likely on water
-    !(location.name && (
-      location.name.toLowerCase().includes('ocean') ||
-      location.name.toLowerCase().includes('sea') ||
-      location.name.toLowerCase().includes('lake') ||
-      location.name.toLowerCase().includes('bay') ||
-      location.name.toLowerCase().includes('gulf') ||
-      location.name.toLowerCase().includes('water') ||
-      location.name.toLowerCase().includes('海') ||
-      location.name.toLowerCase().includes('洋') ||
-      location.name.toLowerCase().includes('湖')
-    ))
+    typeof location.longitude === 'number'
   );
   
   // Generate unique keys for markers to improve rendering performance
@@ -183,7 +167,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   useEffect(() => {
     // Reset marker cache when locations change significantly
     markersRef.current = new Map();
-  }, [locations]);
+  }, [locationKeys]);
   
   // Handle map click that closes popups
   const handleMapClick = useCallback((lat: number, lng: number) => {
@@ -213,8 +197,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onMapReady();
       }}
       scrollWheelZoom={true}
-      doubleClickZoom={true}
-      dragging={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
