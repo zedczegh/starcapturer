@@ -1,66 +1,78 @@
 
-/* Reset any global CSS that might affect our markers */
+/* Custom marker styles */
+.leaflet-marker-icon.custom-marker {
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+
+/* Star marker style - for certified locations */
+.star-marker {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+  transform: scale(1.2);
+}
+
+/* Circle marker style - for calculated locations */
+.circle-marker {
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
+}
+
+/* User marker style with pulse effect */
+.user-marker {
+  z-index: 1000 !important;
+}
+
+.user-marker .pulse-circle {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    r: 8;
+    opacity: 0.6;
+  }
+  50% {
+    r: 12;
+    opacity: 0.3;
+  }
+  100% {
+    r: 8;
+    opacity: 0.6;
+  }
+}
+
+/* Custom popup styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-custom {
+  min-width: 120px;
+}
+
+.leaflet-popup-custom-compact {
+  min-width: 100px;
+  padding: 6px 8px;
+}
+
+/* Hover improvements to reduce flickering */
 .leaflet-marker-icon {
   transition: transform 0.1s ease-out;
 }
 
-/* Fix popup flickering issues */
-.leaflet-popup {
-  transition: opacity 0.1s ease;
+.leaflet-marker-icon:hover {
+  z-index: 1001 !important;
 }
 
-/* Custom marker styling */
-.custom-marker-icon {
-  cursor: pointer;
+/* Make star markers more prominent */
+.star-marker svg {
+  transform: scale(1.2);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
-/* Star marker for certified locations */
-.marker-star {
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
-}
-
-.marker-star:hover {
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)) brightness(1.1);
-}
-
-/* Circle marker for calculated locations */
-.marker-circle {
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
-}
-
-.marker-circle:hover {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) brightness(1.1);
-}
-
-/* User location marker */
-.marker-user {
-  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.3));
-  z-index: 1000 !important; /* Ensure user marker is always on top */
-}
-
-/* Custom popup styling */
-.leaflet-popup-custom-compact {
-  padding: 2px;
-  max-width: 180px;
-}
-
-/* Fix small size popups */
-.leaflet-popup-content {
-  margin: 7px;
-}
-
-/* Fix popup tip position */
-.leaflet-popup-tip-container {
-  margin-top: -1px;
-}
-
-/* Smoothing animation for popup transitions */
-.leaflet-fade-anim .leaflet-popup {
-  opacity: 0;
-  transition: opacity 0.2s linear;
-}
-
-.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
-  opacity: 1;
-  transition-delay: 0.1s;
+/* Make user marker more prominent */
+.user-marker svg {
+  transform: scale(1.3);
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.4));
 }

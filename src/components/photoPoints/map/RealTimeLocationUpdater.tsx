@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader2, RefreshCw } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
@@ -102,7 +102,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
     calculateCurrentSiqs();
   }, [userLocation, calculateCurrentSiqs]);
 
-  // Get current location
+  // Get current location with high accuracy
   const handleGetCurrentLocation = useCallback(() => {
     setLoading(true);
     
@@ -111,12 +111,35 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         const { latitude, longitude } = position.coords;
         onLocationUpdate(latitude, longitude);
         setLoading(false);
+        
+        // Center map on user location
+        if (window.map) {
+          try {
+            // @ts-ignore - Using global map object for direct map control
+            window.map.setView([latitude, longitude], 10);
+          } catch (e) {
+            console.error("Could not center map:", e);
+          }
+        }
+        
         toast.success(t("Using your current location", "使用您的当前位置"));
       },
       (error) => {
         console.error("Error getting location:", error);
         setLoading(false);
-        toast.error(t("Failed to get your location", "获取您的位置失败"));
+        
+        // Provide user-friendly error messages
+        let errorMsg = t("Failed to get your location", "获取您的位置失败");
+        
+        if (error.code === 1) {
+          errorMsg = t("Location permission denied", "位置权限被拒绝");
+        } else if (error.code === 2) {
+          errorMsg = t("Location unavailable", "位置信息不可用");
+        } else if (error.code === 3) {
+          errorMsg = t("Location request timed out", "位置请求超时");
+        }
+        
+        toast.error(errorMsg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -131,7 +154,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       <Button 
         size="sm" 
         variant="secondary"
-        className="bg-cosmic-800/80 hover:bg-cosmic-700/90 shadow-md border border-cosmic-700/30"
+        className="bg-cosmic-800/90 hover:bg-cosmic-700/90 shadow-md border border-cosmic-700/30 font-medium"
         onClick={handleGetCurrentLocation}
         disabled={loading}
       >
@@ -146,25 +169,10 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       <Button
         size="sm"
         variant="outline"
-        className="bg-cosmic-800/80 hover:bg-cosmic-700/90 text-primary-foreground shadow-md border border-cosmic-700/30"
-        onClick={calculateCurrentSiqs}
-        disabled={loading || !userLocation}
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-        ) : (
-          <RefreshCw className="h-4 w-4 mr-1" />
-        )}
-        {t("Update SIQS", "更新SIQS")}
-      </Button>
-      
-      <Button
-        size="sm"
-        variant="outline"
         className={`shadow-md border border-cosmic-700/30 ${
           cacheCleared 
             ? "bg-green-800/30 text-green-400 hover:bg-green-800/40" 
-            : "bg-cosmic-800/80 hover:bg-cosmic-700/90 text-primary-foreground"
+            : "bg-cosmic-800/90 hover:bg-cosmic-700/90 text-primary-foreground"
         }`}
         onClick={handleClearCache}
         disabled={loading || cacheCleared}
@@ -177,7 +185,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       </Button>
       
       {realTimeSiqs !== null && (
-        <div className="bg-cosmic-800/80 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30">
+        <div className="bg-cosmic-800/90 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30">
           <SiqsScoreBadge score={realTimeSiqs} loading={loading} />
         </div>
       )}

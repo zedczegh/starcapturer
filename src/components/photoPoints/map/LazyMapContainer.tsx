@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  // Ensure L is properly imported
@@ -16,8 +17,13 @@ configureLeaflet();
 const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
   const map = useMap();
   
+  // Store map reference in window for external access
+  // This allows the "My Location" button to control the map
   useEffect(() => {
     if (!map) return;
+    
+    // @ts-ignore - Adding map to window for direct access
+    window.map = map;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
@@ -27,6 +33,8 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
     
     return () => {
       map.off('click', handleClick);
+      // @ts-ignore - Cleanup window reference
+      window.map = undefined;
     };
   }, [map, onMapClick]);
   
@@ -55,6 +63,10 @@ const MapController = ({
     map.boxZoom.enable();
     map.keyboard.enable();
     if (map.tap) map.tap.enable();
+    
+    // Store map reference in window for external access
+    // @ts-ignore - Adding map to window for direct access
+    window.map = map;
     
     // If user location exists, center on it
     if (userLocation && firstRenderRef.current) {
@@ -114,6 +126,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       zoom={zoom}
       className="h-full w-full"
       whenReady={(map) => {
+        // @ts-ignore - Store map reference globally for external access
+        window.map = map.target;
         onMapReady();
       }}
       scrollWheelZoom={true}

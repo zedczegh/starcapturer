@@ -62,6 +62,7 @@ declare module 'react-leaflet' {
 declare global {
   interface Window {
     L: typeof import('leaflet');
+    map?: L.Map; // Add map to window interface for direct access
   }
 }
 

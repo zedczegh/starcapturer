@@ -24,7 +24,7 @@ export const useMapMarkers = () => {
     hoverTimeoutRef.current = window.setTimeout(() => {
       setHoveredLocationId(id);
       hoverTimeoutRef.current = null;
-    }, 100); // Increase debounce delay to reduce flicker
+    }, 200); // Increase debounce delay to further reduce flicker
   }, []);
 
   // Clean up timeout on component unmount

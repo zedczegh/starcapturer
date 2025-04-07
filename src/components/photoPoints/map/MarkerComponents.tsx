@@ -74,13 +74,11 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      // Fix: Use onClick and onMouseOver props directly instead of eventHandlers
       onClick={handleClick}
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
       <Popup 
-        // Fix: Use properties that match react-leaflet API
         autoClose={false}
         closeOnClick={false}
       >
@@ -128,7 +126,7 @@ const UserLocationMarker = memo(({
   currentSiqs: number | null 
 }) => {
   const { t } = useLanguage();
-  const userMarkerIcon = createCustomMarker('#9b87f5', 'user');
+  const userMarkerIcon = createCustomMarker('#3b82f6', 'user');
   
   return (
     <Marker position={position} icon={userMarkerIcon}>

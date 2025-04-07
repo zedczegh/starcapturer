@@ -1,7 +1,8 @@
 
 import React from 'react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Star, MapPin } from 'lucide-react';
+import { Sparkles, MapPin } from 'lucide-react';
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
@@ -22,67 +23,50 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  const handleCertifiedClick = () => {
-    if (activeView !== 'certified') {
-      onViewChange('certified');
-    }
-  };
-  
-  const handleCalculatedClick = () => {
-    if (activeView !== 'calculated') {
-      onViewChange('calculated');
-    }
-  };
-  
   return (
-    <div className="flex justify-center mb-5">
-      <div className="inline-flex rounded-md shadow-sm" role="group">
-        <button
-          type="button"
-          onClick={handleCertifiedClick}
-          className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-l-lg focus:z-10 focus:ring-2 border-r
-            ${activeView === 'certified' 
-              ? 'text-white bg-amber-700 border-amber-700 hover:bg-amber-800'
-              : 'text-gray-900 bg-white border-gray-200 hover:bg-gray-100 focus:ring-gray-100'}`}
+    <div className="flex justify-center md:justify-start mb-6">
+      <div className="inline-flex bg-muted/30 p-1 rounded-lg shadow-sm border border-border/50">
+        <Button
+          variant={activeView === 'certified' ? "default" : "ghost"}
+          size="sm"
+          onClick={() => onViewChange('certified')}
+          className={`relative mr-1 py-1 ${
+            activeView === 'certified'
+              ? 'bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-primary-foreground hover:from-amber-500/100 hover:to-amber-600/100'
+              : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
+          }`}
         >
-          <Star 
-            className={`h-4 w-4 ${activeView === 'certified' ? 'fill-white' : ''}`} 
-          />
-          <span className="hidden sm:inline">
-            {t("Certified Locations", "认证位置")} 
-            <span className={`ml-1 font-semibold ${activeView === 'certified' ? 'text-amber-200' : 'text-gray-700'}`}>
-              ({certifiedCount})
-            </span>
+          <Sparkles className="h-4 w-4 mr-2" />
+          <span>
+            {t("Certified Dark Sky", "认证暗夜区")}
           </span>
-          <span className="sm:hidden">
-            {t("Certified", "认证")} 
-            <span className={`ml-1 font-semibold ${activeView === 'certified' ? 'text-amber-200' : 'text-gray-700'}`}>
-              ({certifiedCount})
-            </span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={handleCalculatedClick}
-          className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-r-lg focus:z-10 focus:ring-2
-            ${activeView === 'calculated'
-              ? 'text-white bg-primary border-primary hover:bg-primary/90' 
-              : 'text-gray-900 bg-white border-gray-200 hover:bg-gray-100 focus:ring-gray-100'}`}
+          {typeof certifiedCount === 'number' && (
+            <div className="absolute -top-2 -right-2 bg-primary rounded-full w-5 h-5 text-[10px] flex items-center justify-center z-10 text-primary-foreground font-medium">
+              {certifiedCount}
+            </div>
+          )}
+        </Button>
+        
+        <Button
+          variant={activeView === 'calculated' ? "default" : "ghost"}
+          size="sm"
+          onClick={() => onViewChange('calculated')}
+          className={`relative py-1 ${
+            activeView === 'calculated'
+              ? 'bg-gradient-to-r from-primary/90 to-primary-dark/90 text-primary-foreground hover:from-primary hover:to-primary-dark'
+              : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
+          }`}
         >
-          <MapPin className={`h-4 w-4 ${activeView === 'calculated' ? 'fill-white' : ''}`} />
-          <span className="hidden sm:inline">
-            {t("Calculated Locations", "计算位置")}
-            <span className={`ml-1 font-semibold ${activeView === 'calculated' ? 'text-primary-100' : 'text-gray-700'}`}>
-              ({calculatedCount})
-            </span>
+          <MapPin className="h-4 w-4 mr-2" />
+          <span>
+            {t("Calculated Spots", "计算位置")}
           </span>
-          <span className="sm:hidden">
-            {t("Calculated", "计算")}
-            <span className={`ml-1 font-semibold ${activeView === 'calculated' ? 'text-primary-100' : 'text-gray-700'}`}>
-              ({calculatedCount})
-            </span>
-          </span>
-        </button>
+          {typeof calculatedCount === 'number' && (
+            <div className="absolute -top-2 -right-2 bg-primary rounded-full w-5 h-5 text-[10px] flex items-center justify-center z-10 text-primary-foreground font-medium">
+              {calculatedCount}
+            </div>
+          )}
+        </Button>
       </div>
     </div>
   );
