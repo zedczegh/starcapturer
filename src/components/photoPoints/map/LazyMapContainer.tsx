@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Circle, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
@@ -25,33 +25,46 @@ const MapEvents = ({
   onMapDragEnd?: () => void;
   onMapZoomEnd?: () => void;
 }) => {
-  const map = useMapEvents({
-    click(e) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-    dragstart() {
-      if (onMapDragStart) onMapDragStart();
-    },
-    dragend() {
-      if (onMapDragEnd) onMapDragEnd();
-    },
-    zoomend() {
-      if (onMapZoomEnd) onMapZoomEnd();
-    }
-  });
+  const map = useMap();
   
-  // Store map reference in window for external access
+  // Set up event listeners
   useEffect(() => {
     if (!map) return;
     
-    // Store map in window object for external access
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    };
+    
+    const handleDragStart = () => {
+      if (onMapDragStart) onMapDragStart();
+    };
+    
+    const handleDragEnd = () => {
+      if (onMapDragEnd) onMapDragEnd();
+    };
+    
+    const handleZoomEnd = () => {
+      if (onMapZoomEnd) onMapZoomEnd();
+    };
+    
+    map.on('click', handleClick);
+    map.on('dragstart', handleDragStart);
+    map.on('dragend', handleDragEnd);
+    map.on('zoomend', handleZoomEnd);
+    
+    // Store map reference in window for external access
     (window as any).map = map;
     
     return () => {
+      // Clean up event listeners
+      map.off('click', handleClick);
+      map.off('dragstart', handleDragStart);
+      map.off('dragend', handleDragEnd);
+      map.off('zoomend', handleZoomEnd);
       // Clean up window reference
       (window as any).map = undefined;
     };
-  }, [map]);
+  }, [map, onMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
   
   return null;
 };

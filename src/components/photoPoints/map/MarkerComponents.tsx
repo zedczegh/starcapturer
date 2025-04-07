@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup, Tooltip } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -218,7 +218,6 @@ const LocationMarker = memo(({
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        className="marker-custom-popup"
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
@@ -296,10 +295,6 @@ const UserLocationMarker = memo(({
           )}
         </div>
       </Popup>
-      
-      <Tooltip direction="top" offset={[0, -12]} permanent={false}>
-        {t("Your Location", "您的位置")}
-      </Tooltip>
     </Marker>
   );
 });

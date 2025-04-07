@@ -30,7 +30,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange('certified')}
-          className={`relative mr-2 py-1 ${
+          className={`relative flex-1 mr-3 py-1.5 justify-center ${
             activeView === 'certified'
               ? 'bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-primary-foreground hover:from-amber-500/100 hover:to-amber-600/100'
               : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
@@ -51,7 +51,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'calculated' ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange('calculated')}
-          className={`relative py-1 ${
+          className={`relative flex-1 py-1.5 justify-center ${
             activeView === 'calculated'
               ? 'bg-gradient-to-r from-primary/90 to-primary-dark/90 text-primary-foreground hover:from-primary hover:to-primary-dark'
               : 'text-muted-foreground hover:text-foreground hover:bg-background/90'

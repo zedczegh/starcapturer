@@ -7,10 +7,11 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
-import RealTimeLocationUpdater from "./RealTimeLocationUpdater";
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import { Button } from "@/components/ui/button";
+
+const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -213,14 +214,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onMarkerHover={handleHover}
         />
         
-        <RealTimeLocationUpdater 
-          userLocation={selectedMapLocation || userLocation}
-          onRefresh={() => {}} // Auto-refreshes handled by component
-          onLocationUpdate={onLocationUpdate}
-        />
+        <Suspense fallback={null}>
+          <RealTimeLocationUpdater 
+            userLocation={selectedMapLocation || userLocation}
+            onLocationUpdate={onLocationUpdate}
+          />
+        </Suspense>
         
         {/* My Location Button - Positioned further off the map for better visibility */}
-        <div className="absolute bottom-6 right-8 z-[1000]">
+        <div className="absolute bottom-8 right-8 z-[1000]">
           <Button
             variant="default"
             size="sm"
