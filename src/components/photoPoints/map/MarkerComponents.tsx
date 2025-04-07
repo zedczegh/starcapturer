@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup, Tooltip } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -21,11 +21,14 @@ const getSiqsClass = (siqs?: number): string => {
 // Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
   if (isCertified) {
-    // For certified locations, use a star-shaped marker with gold/yellow color
+    // For certified locations, use a star-shaped marker with brighter gold color
     return createCustomMarker('#FFD700', 'star');
   } else {
-    // For calculated locations, use the color based on SIQS with circle shape
-    const color = location.siqs ? getProgressColor(location.siqs) : '#777777';
+    // For calculated locations, use a vibrant color instead of olive green
+    // Changed from dull olive to more vibrant colors based on SIQS
+    const color = location.siqs 
+      ? getProgressColor(location.siqs) 
+      : '#3b82f6'; // Default to blue if no SIQS
     return createCustomMarker(color, 'circle');
   }
 };
@@ -161,16 +164,13 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-      }}
+      onClick={handleClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        className="marker-custom-popup"
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
@@ -209,6 +209,11 @@ const LocationMarker = memo(({
               {t("Bortle", "包特尔")} {location.bortleScale}/9
             </div>
           )}
+          
+          {/* Call to action for more information */}
+          <div className="mt-2 text-xs text-center text-blue-300">
+            {t("Click for details", "点击查看详情")}
+          </div>
         </div>
       </Popup>
     </Marker>
@@ -244,10 +249,6 @@ const UserLocationMarker = memo(({
           )}
         </div>
       </Popup>
-      
-      <Tooltip direction="top" offset={[0, -12]} permanent={false}>
-        {t("Your Location", "您的位置")}
-      </Tooltip>
     </Marker>
   );
 });

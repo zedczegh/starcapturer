@@ -33,6 +33,11 @@
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.175),
               filter 0.4s ease-in-out;
   z-index: 800 !important;
+  animation: gentle-pulse 2.5s infinite ease-in-out;
+}
+
+.circle-marker .inner-pulse {
+  animation: inner-pulse 2s infinite ease-in-out;
 }
 
 .circle-marker:hover,
@@ -60,6 +65,30 @@
   }
   50% {
     transform: scale(1.65);
+  }
+}
+
+/* Gentle pulse animation for calculated locations */
+@keyframes gentle-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Inner pulse animation for calculated markers */
+@keyframes inner-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    r: 4;
+  }
+  50% {
+    opacity: 0.8;
+    r: 6;
   }
 }
 
@@ -232,4 +261,21 @@
 .siqs-poor {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%);
   border-left: 3px solid rgb(239, 68, 68);
+}
+
+/* Fix for the controls placement */
+.leaflet-control-container .leaflet-top.leaflet-right {
+  top: 75px; /* Move controls down to avoid overlap with buttons */
+}
+
+/* Bring "My Location" button further off the map */
+.location-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 1000;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+  padding: 6px;
 }
