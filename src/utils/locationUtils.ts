@@ -1,5 +1,4 @@
-
-import { haversineDistance } from './distanceCalculator';
+import { haversineDistance } from '@/utils/geoUtils';
 
 /**
  * Find the nearest towns to a given location
@@ -172,7 +171,7 @@ export const findClosestKnownLocation = (
 
 /**
  * Calculate haversine distance between two points
- * This function is also defined in distanceCalculator.ts but included here for completeness
+ * This function is also defined in geoUtils.ts but included here for completeness
  */
 export const calculateDistance = (
   lat1: number, 
