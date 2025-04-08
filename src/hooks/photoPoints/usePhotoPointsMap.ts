@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -141,18 +141,7 @@ export const usePhotoPointsMap = ({
           // For certified view, include ALL certified locations regardless of distance
           certifiedLocations;
         
-        // Fix type issues by ensuring id field exists
-        const locationsWithId = locationsInRadius.map(loc => {
-          if (!loc.id) {
-            return {
-              ...loc,
-              id: `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
-            };
-          }
-          return loc;
-        });
-        
-        const updated = await updateLocationsWithRealTimeSiqs(locationsWithId);
+        const updated = await updateLocationsWithRealTimeSiqs(locationsInRadius);
         
         if (updated && updated.length > 0) {
           setEnhancedLocations(prevLocations => {
@@ -162,12 +151,7 @@ export const usePhotoPointsMap = ({
             certifiedLocations.forEach(loc => {
               if (loc.latitude && loc.longitude) {
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                // Ensure id exists
-                const locWithId = loc.id ? loc : {
-                  ...loc,
-                  id: `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`
-                };
-                updatedMap.set(key, locWithId);
+                updatedMap.set(key, loc);
               }
             });
             
@@ -242,8 +226,7 @@ export const usePhotoPointsMap = ({
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     setSelectedLocation(location);
     
-    // Ensure location has an ID
-    const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
+    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
     if (location && location.latitude && location.longitude) {
       navigate(`/location/${locationId}`, { 
@@ -255,12 +238,7 @@ export const usePhotoPointsMap = ({
           longitude: location.longitude,
           bortleScale: location.bortleScale || 4,
           siqs: location.siqs,
-          siqsResult: location.siqs ? { 
-            score: location.siqs,
-            isViable: location.siqs >= 5.0,
-            factors: location.siqsResult?.factors || [],
-            isNighttimeCalculation: location.siqsResult?.isNighttimeCalculation || false
-          } : undefined,
+          siqsResult: location.siqs ? { score: location.siqs } : undefined,
           certification: location.certification,
           isDarkSkyReserve: location.isDarkSkyReserve,
           timestamp: new Date().toISOString(),

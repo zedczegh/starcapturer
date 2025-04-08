@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/siqs/types';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { getDarkSkyAstroSpots } from './darkSkyLocationService';
@@ -54,9 +55,9 @@ export async function findCalculatedLocations(
     
     const calculatedLocations: SharedAstroSpot[] = [];
     
-    // FURTHER REDUCED DENSITY: Scale number of points with radius but with even lower density
-    // Using min(8, radius/25) to generate fewer points
-    const pointsToGenerate = Math.min(8, Math.ceil(radius / 25));
+    // REDUCED DENSITY: Scale number of points with radius but with lower density
+    // Using min(12, radius/20) instead of min(20, radius/10)
+    const pointsToGenerate = Math.min(12, Math.ceil(radius / 20));
     
     console.log(`Generating ${pointsToGenerate} calculated locations to reduce API load`);
     
@@ -66,9 +67,7 @@ export async function findCalculatedLocations(
       const angle = (i / pointsToGenerate) * Math.PI * 2;
       
       // Random distance within 40-90% of radius for better spread
-      // Use a different random seed for each point to ensure variety
-      const randomSeed = Math.sin(angle * 1000 + i) * 0.5 + 0.5; // Deterministic yet varied
-      const distance = radius * (0.4 + randomSeed * 0.5);
+      const distance = radius * (0.4 + Math.random() * 0.5);
       
       // Convert polar to cartesian
       const offsetKm = {
@@ -83,26 +82,17 @@ export async function findCalculatedLocations(
       const pointLat = latitude + (offsetKm.lat * latDegPerKm);
       const pointLng = longitude + (offsetKm.lng * lngDegPerKm);
       
-      // Skip if it's a water location - do this check early to avoid wasted calculation
+      // Skip if it's a water location
       if (isWaterLocation(pointLat, pointLng)) {
         continue;
       }
       
-      // Add a small random offset to each point to prevent point clustering
-      // Use a different random seed for variation but keep it deterministic
-      const jitterFactor = 0.05; // 5% jitter maximum
-      const latJitter = ((Math.sin(angle * 73.4 + i * 2.3) * 0.5 + 0.5) * jitterFactor - jitterFactor/2) * radius * latDegPerKm;
-      const lngJitter = ((Math.cos(angle * 47.9 + i * 1.7) * 0.5 + 0.5) * jitterFactor - jitterFactor/2) * radius * lngDegPerKm;
-      
-      const finalLat = pointLat + latJitter;
-      const finalLng = pointLng + lngJitter;
-      
       // Create location with a more specific ID to avoid duplicates
       const calculatedLocation: SharedAstroSpot = {
-        id: `calc-${latitude.toFixed(3)}-${longitude.toFixed(3)}-${i}-${Date.now()}`,
+        id: `calc-${latitude.toFixed(2)}-${longitude.toFixed(2)}-${i}-${Date.now()}`,
         name: `Potential dark site ${i + 1}`,
-        latitude: finalLat,
-        longitude: finalLng,
+        latitude: pointLat,
+        longitude: pointLng,
         bortleScale: 3 + Math.floor(Math.random() * 3), // Random Bortle scale 3-5
         distance: distance,
         timestamp: new Date().toISOString()
