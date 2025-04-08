@@ -1,6 +1,6 @@
 
 import { toast } from "sonner";
-import { SharedAstroSpot } from "@/lib/siqs/types";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findLocationsWithinRadius, findCalculatedLocations } from "@/services/locationSearchService";
 import { isValidAstronomyLocation } from "@/utils/locationValidator";
 import { Language } from "@/contexts/LanguageContext";
@@ -28,7 +28,8 @@ export const searchStandardLocations = async (
       latitude,
       longitude,
       searchDistance,
-      false // Get all locations, not just certified
+      false, // Get all locations, not just certified
+      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
     );
     
     if (locations.length === 0) {
@@ -84,7 +85,9 @@ export const searchCalculatedLocations = async (
     const calculatedLocations = await findCalculatedLocations(
       latitude,
       longitude,
-      searchDistance
+      searchDistance,
+      true, // Allow expanding the search radius
+      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
     );
     
     // Apply filtering to ensure valid locations

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from "@/lib/siqs/types";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findCalculatedLocations } from "@/services/locationSearchService";
 
 export const useCalculatedLocationsFind = () => {
@@ -27,7 +27,9 @@ export const useCalculatedLocationsFind = () => {
         const newLocations = await findCalculatedLocations(
           latitude, 
           longitude, 
-          radius
+          radius,
+          allowExpansion,
+          limit
         );
         
         if (preservePrevious && previousLocations.length > 0) {
