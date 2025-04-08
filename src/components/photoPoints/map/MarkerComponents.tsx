@@ -8,7 +8,7 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
-import { Star, Award, ExternalLink } from 'lucide-react';
+import { Star, Award, ExternalLink, MapPin, Compass } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isWaterLocation } from '@/utils/locationValidator';
 
@@ -35,14 +35,28 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   );
 };
 
-// Create different marker styles for certified vs calculated locations
+// Create different marker styles for different certification types
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
   if (isCertified) {
-    // For certified locations, use a star-shaped marker with gold/yellow color
-    return createCustomMarker('#FFD700');
+    const certification = location.certification || '';
+    
+    // Marker colors based on IDA certification type
+    if (certification.includes("Sanctuary")) {
+      return createCustomMarker('#8B5CF6'); // Purple for Sanctuaries
+    } else if (certification.includes("Reserve")) {
+      return createCustomMarker('#F59E0B'); // Amber for Reserves
+    } else if (certification.includes("Park")) {
+      return createCustomMarker('#10B981'); // Emerald for Parks
+    } else if (certification.includes("Community")) {
+      return createCustomMarker('#3B82F6'); // Blue for Communities
+    } else if (certification.includes("Urban")) {
+      return createCustomMarker('#EC4899'); // Pink for Urban Night Sky Places
+    } else {
+      // Default gold for other certified locations
+      return createCustomMarker('#FFD700');
+    }
   } else {
-    // For calculated locations, use a brighter color based on SIQS with circle shape
-    // Replace olive green with a brighter, more vibrant green
+    // For calculated locations, use a color based on SIQS with circle shape
     const defaultColor = '#4ADE80'; // Bright green fallback
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
     return createCustomMarker(color);
@@ -142,13 +156,30 @@ const LocationMarker = memo(({
         longitude: location.longitude,
         bortleScale: location.bortleScale || 4,
         siqs: location.siqs,
-        siqsResult: location.siqs ? { score: location.siqs } : undefined,
+        siqsResult: location.siqsResult || (location.siqs ? { score: location.siqs, isViable: true } : undefined),
         certification: location.certification,
         isDarkSkyReserve: location.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
         fromPhotoPoints: true
       }
     });
+  };
+  
+  // Get appropriate icon based on certification type
+  const getCertificationIcon = () => {
+    const certification = location.certification || '';
+    
+    if (certification.includes("Sanctuary")) {
+      return <Star className="h-3.5 w-3.5 mr-1 text-purple-400 fill-purple-300" />;
+    } else if (certification.includes("Reserve")) {
+      return <Award className="h-3.5 w-3.5 mr-1 text-amber-400 fill-amber-300" />;
+    } else if (certification.includes("Park")) {
+      return <Compass className="h-3.5 w-3.5 mr-1 text-emerald-400" />;
+    } else if (certification.includes("Community")) {
+      return <MapPin className="h-3.5 w-3.5 mr-1 text-blue-400" />;
+    } else {
+      return <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />;
+    }
   };
   
   return (
@@ -167,9 +198,7 @@ const LocationMarker = memo(({
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
-            {isCertified && (
-              <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
-            )}
+            {isCertified && getCertificationIcon()}
             <span className="text-gray-100">{displayName}</span>
           </div>
           
