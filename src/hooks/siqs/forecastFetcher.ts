@@ -10,18 +10,24 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
   const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
   
   try {
-    // Try to use cached data from sessionStorage if it's fresh (less than 10 minutes old - reduced for fresher data)
+    // Try to use cached data from sessionStorage if it's fresh
+    // During nighttime, cache is valid for 30 minutes; during day, only 10 minutes
     const cachedData = sessionStorage.getItem(cacheKey);
     if (cachedData) {
       const { data, timestamp } = JSON.parse(cachedData);
       const cacheAge = Date.now() - timestamp;
       
-      // Use cache if it's less than 10 minutes old
-      if (cacheAge < 10 * 60 * 1000) {
-        console.log("Using cached forecast data");
+      // Determine if it's nighttime for caching purposes
+      const hour = new Date().getHours();
+      const isNighttime = hour >= 18 || hour < 8; // 6 PM to 8 AM
+      const cacheDuration = isNighttime ? 30 * 60 * 1000 : 10 * 60 * 1000; // 30 min at night, 10 min during day
+      
+      // Use cache if it's fresh
+      if (cacheAge < cacheDuration) {
+        console.log(`Using cached forecast data (${Math.round(cacheAge / 60000)} minutes old)`);
         return data;
       } else {
-        console.log("Cache is stale, fetching fresh forecast data");
+        console.log(`Cache is stale (${Math.round(cacheAge / 60000)} minutes old), fetching fresh forecast data`);
       }
     }
     
@@ -30,7 +36,7 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
     const forecastData = await fetchForecastData({
       latitude: lat,
       longitude: lng,
-      days: 3
+      days: 3 // Ensure we have enough data for full nighttime coverage
     });
     
     if (forecastData && forecastData.hourly) {
@@ -96,8 +102,12 @@ export function getCachedForecast(lat: number, lng: number): any | null {
       const { data, timestamp } = JSON.parse(cachedData);
       const cacheAge = Date.now() - timestamp;
       
-      // Consider cache valid if less than 30 minutes old
-      if (cacheAge < 30 * 60 * 1000) {
+      // Consider cache valid if less than 30 minutes old during night, 15 minutes during day
+      const hour = new Date().getHours();
+      const isNighttime = hour >= 18 || hour < 8; // 6 PM to 8 AM
+      const cacheDuration = isNighttime ? 30 * 60 * 1000 : 15 * 60 * 1000;
+      
+      if (cacheAge < cacheDuration) {
         return data;
       }
     }

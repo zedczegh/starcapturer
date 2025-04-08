@@ -56,7 +56,15 @@ export const usePhotoPointsSearch = ({
           return 1;
         }
         
-        // Then sort by distance
+        // Then sort by nighttime SIQS if available, otherwise by distance
+        const aSiqs = a.siqsResult?.score || a.siqs || 0;
+        const bSiqs = b.siqsResult?.score || b.siqs || 0;
+        
+        if (aSiqs !== bSiqs) {
+          return bSiqs - aSiqs; // Higher SIQS first
+        }
+        
+        // Finally sort by distance
         return (a.distance || Infinity) - (b.distance || Infinity);
       });
       
