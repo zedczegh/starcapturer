@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -142,16 +141,35 @@ export const usePhotoPointsMap = ({
           // For certified view, include ALL certified locations regardless of distance
           certifiedLocations;
         
-        // Update with real-time SIQS data
         const updated = await updateLocationsWithRealTimeSiqs(locationsInRadius);
         
         if (updated && updated.length > 0) {
           setEnhancedLocations(prevLocations => {
-            // Process updated locations and filter out water
             const updatedMap = new Map<string, SharedAstroSpot>();
+            
+            // Always include all certified locations
+            certifiedLocations.forEach(loc => {
+              if (loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                updatedMap.set(key, loc);
+              }
+            });
+            
+            updated.forEach(loc => {
+              if (loc.latitude && loc.longitude) {
+                // Skip water locations for calculated spots
+                if (!loc.isDarkSkyReserve && !loc.certification && 
+                    isWaterLocation(loc.latitude, loc.longitude)) {
+                  return;
+                }
+                
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                updatedMap.set(key, loc);
+              }
+            });
+            
             const combinedLocations = [...prevLocations];
             
-            // Process enhanced locations
             updated.forEach(newLoc => {
               if (!newLoc.latitude || !newLoc.longitude) return;
               
@@ -220,7 +238,7 @@ export const usePhotoPointsMap = ({
           longitude: location.longitude,
           bortleScale: location.bortleScale || 4,
           siqs: location.siqs,
-          siqsResult: location.siqsResult || (location.siqs ? { score: location.siqs } : undefined),
+          siqsResult: location.siqs ? { score: location.siqs } : undefined,
           certification: location.certification,
           isDarkSkyReserve: location.isDarkSkyReserve,
           timestamp: new Date().toISOString(),

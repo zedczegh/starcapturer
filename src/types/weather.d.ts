@@ -51,17 +51,20 @@ declare module "@/types/weather" {
   }
 
   export interface SharedAstroSpot {
-    id?: string;
+    id: string;
     name: string;
     latitude: number;
     longitude: number;
-    bortleScale?: number;
+    bortleScale: number;
     description?: string;
     imageURL?: string;
     rating?: number;
-    timestamp?: string;
+    timestamp: string;
     chineseName?: string;
-    siqs?: number;
+    siqs?: number | {
+      score: number;
+      isViable: boolean;
+    };
     siqsResult?: SIQSData;
     siqsFactors?: Array<any>;
     distance?: number;

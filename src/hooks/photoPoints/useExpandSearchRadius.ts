@@ -6,29 +6,25 @@ interface UseExpandSearchRadiusProps {
 }
 
 /**
- * Hook to listen for expand-search-radius events
+ * Hook to handle the expand-search-radius event
  */
-export const useExpandSearchRadius = ({
-  onRefresh
-}: UseExpandSearchRadiusProps) => {
+export function useExpandSearchRadius({ onRefresh }: UseExpandSearchRadiusProps) {
   useEffect(() => {
-    const handleExpandSearchRadius = (event: Event) => {
-      // Parse the event detail
-      const customEvent = event as CustomEvent<{ radius: number }>;
-      console.log('Expand search radius event detected:', customEvent.detail);
-      
+    const handleExpandRadius = (e: CustomEvent<{ radius: number }>) => {
       if (onRefresh) {
-        console.log('Triggering refresh');
-        onRefresh();
+        document.dispatchEvent(new CustomEvent('set-search-radius', { 
+          detail: { radius: e.detail.radius } 
+        }));
+        setTimeout(onRefresh, 100);
       }
     };
     
-    // Add event listener
-    document.addEventListener('expand-search-radius', handleExpandSearchRadius);
+    document.addEventListener('expand-search-radius', handleExpandRadius as EventListener);
     
-    // Cleanup
     return () => {
-      document.removeEventListener('expand-search-radius', handleExpandSearchRadius);
+      document.removeEventListener('expand-search-radius', handleExpandRadius as EventListener);
     };
   }, [onRefresh]);
-};
+}
+
+export default useExpandSearchRadius;

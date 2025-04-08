@@ -1,112 +1,186 @@
-import { useState, useCallback } from 'react';
-import { fetchWeatherData, getLocationNameFromCoordinates } from '@/lib/api';
-import { calculateNighttimeSiqs as calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
-import { fetchForecastData } from '@/lib/api/forecast';
-import { Language } from '@/services/geocoding/types';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { prioritizeNighttimeCloudCover } from '@/utils/nighttimeSIQS';
-import { processSiqsFactors } from './siqs/siqsCalculationUtils';
-import { SIQSFactors } from '@/lib/siqs/types';
 
-interface LocationDataCache {
-  weatherData?: any;
-  forecastData?: any;
-  locationName?: string;
-}
+import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
+import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
+import { v4 as uuidv4 } from "uuid";
+import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { fetchForecastData } from "@/lib/api";
+
+// Extract forecast fetching logic
+import { fetchForecastForLocation } from "./siqs/forecastFetcher";
+
+// Extract scoring and normalization logic
+import { 
+  normalizeScore, 
+  calculateSIQSWithWeatherData 
+} from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
-  getCachedData: (key: string) => any
+  getCachedData: (key: string, maxAge?: number) => any
 ) => {
+  const navigate = useNavigate();
   const [isCalculating, setIsCalculating] = useState(false);
+  const [weatherData, setWeatherData] = useState<any>(null);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
+  const [forecastData, setForecastData] = useState<any>(null);
   
-  const calculateSIQSForLocation = useCallback(
-    async (
-      latitude: number,
-      longitude: number,
-      locationName: string,
-      useCache: boolean = true,
-      bortleScaleOverride?: number,
-      seeingConditionsOverride?: number,
-      clearSkyRateOverride?: number,
-      setStatusMessage?: (message: string | null) => void,
-      language?: Language
-    ): Promise<number | null> => {
-      setIsCalculating(true);
-      setStatusMessage?.("Calculating SIQS...");
+  // Pre-compute moon phase for better performance - refreshed on component mount
+  const currentMoonPhase = useMemo(() => calculateMoonPhase(), []);
+  
+  const calculateSIQSForLocation = useCallback(async (
+    lat: number, 
+    lng: number, 
+    name: string, 
+    displayOnly: boolean = false, 
+    bortleScale: number, 
+    seeingConditions: number, 
+    setLoading?: (loading: boolean) => void, 
+    setStatusMessage?: (message: string | null) => void,
+    language: string = 'en'
+  ) => {
+    if (isCalculating) return;
+    
+    setIsCalculating(true);
+    displayOnly ? null : setLoading && setLoading(true);
+    
+    try {
+      // Get weather data
+      const cacheKey = `weather-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+      const data = await getWeatherData(
+        lat, 
+        lng, 
+        cacheKey, 
+        getCachedData, 
+        setCachedData, 
+        displayOnly,
+        language,
+        setStatusMessage
+      );
       
-      let weatherData;
-      let forecastData;
-      
-      const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-      
-      if (useCache) {
-        const cachedData: LocationDataCache = getCachedData(cacheKey) || {};
-        weatherData = cachedData.weatherData;
-        forecastData = cachedData.forecastData;
-      }
-      
-      try {
-        if (!weatherData) {
-          setStatusMessage?.("Fetching weather data...");
-          weatherData = await fetchWeatherData(latitude, longitude, language);
-          if (!weatherData) {
-            throw new Error("Failed to fetch weather data");
-          }
-        }
-        
-        if (!forecastData) {
-          setStatusMessage?.("Fetching forecast data...");
-          forecastData = await fetchForecastData(latitude, longitude);
-          if (!forecastData) {
-            console.warn("Failed to fetch forecast data, using current conditions only");
-          }
-        }
-        
-        // Prioritize nighttime cloud cover
-        const siqsFactors: SIQSFactors = prioritizeNighttimeCloudCover(weatherData);
-        
-        // Override values if provided
-        if (bortleScaleOverride !== undefined) {
-          siqsFactors.bortleScale = bortleScaleOverride;
-        }
-        if (seeingConditionsOverride !== undefined) {
-          siqsFactors.seeingConditions = seeingConditionsOverride;
-        }
-        if (clearSkyRateOverride !== undefined) {
-          siqsFactors.clearSkyRate = clearSkyRateOverride;
-        }
-        
-        // Process SIQS factors
-        const siqsResult = processSiqsFactors(siqsFactors);
-        
-        setSiqsScore(siqsResult.score);
-        setStatusMessage?.(`SIQS: ${siqsResult.score.toFixed(1)}`);
-        
-        // Update cache
-        setCachedData(cacheKey, {
-          weatherData: weatherData,
-          forecastData: forecastData,
-          locationName: locationName
-        });
-        
-        return siqsResult.score;
-      } catch (error: any) {
-        console.error("SIQS Calculation failed:", error.message);
-        setStatusMessage?.(`SIQS Calculation failed: ${error.message}`);
-        setSiqsScore(null);
-        return null;
-      } finally {
+      if (!data) {
+        setStatusMessage && setStatusMessage(language === 'en' ? 
+          "Could not retrieve weather data. Please try again." : 
+          "无法获取天气数据，请重试。");
         setIsCalculating(false);
+        displayOnly ? null : setLoading && setLoading(false);
+        return;
       }
-    },
-    [getCachedData, setCachedData]
-  );
+      
+      setWeatherData(data);
+      
+      // Fetch forecast data to get night conditions
+      const forecastResult = await fetchForecastForLocation(lat, lng);
+      if (forecastResult) {
+        setForecastData(forecastResult);
+      }
+      
+      // Get Bortle scale data
+      const actualBortleScale = await getBortleScaleData(
+        lat,
+        lng,
+        name,
+        bortleScale,
+        displayOnly,
+        getCachedData,
+        setCachedData,
+        language,
+        setStatusMessage
+      );
+      
+      // Validate Bortle scale before proceeding
+      const validBortleScale = (actualBortleScale < 1 || actualBortleScale > 9 || isNaN(actualBortleScale))
+        ? 5 // Default to moderate value if invalid
+        : actualBortleScale;
+      
+      // We need to recalculate moon phase to ensure it's fresh
+      const freshMoonPhase = calculateMoonPhase();
+      
+      // Calculate SIQS score using utility function
+      const siqsResult = await calculateSIQSWithWeatherData(
+        data,
+        validBortleScale,
+        seeingConditions,
+        freshMoonPhase,
+        forecastResult
+      );
+      
+      // Ensure SIQS score is consistently on a 0-10 scale
+      const normalizedScore = normalizeScore(siqsResult.score);
+      
+      if (displayOnly) {
+        // For consistency, always store the 0-10 scale value
+        setSiqsScore(normalizedScore);
+        setIsCalculating(false);
+        return;
+      }
+      
+      // Generate a stable, unique ID using UUID
+      const locationId = uuidv4();
+      
+      const locationData = {
+        id: locationId,
+        name: name,
+        latitude: lat,
+        longitude: lng,
+        bortleScale: validBortleScale,
+        seeingConditions,
+        weatherData: data,
+        siqsResult: {
+          ...siqsResult,
+          score: normalizedScore // Ensure the score is on a 0-10 scale
+        },
+        moonPhase: freshMoonPhase,
+        timestamp: new Date().toISOString(),
+      };
+      
+      console.log("Navigating to location details with data:", locationData);
+      
+      // Ensure navigation happens immediately to prevent data loss
+      navigate(`/location/${locationId}`, { 
+        state: locationData,
+        replace: false
+      });
+      
+      // Also save to localStorage as a backup with UUID as key
+      try {
+        localStorage.setItem(`location_${locationId}`, JSON.stringify(locationData));
+        localStorage.setItem('latest_siqs_location', JSON.stringify({
+          name,
+          latitude: lat,
+          longitude: lng,
+          bortleScale: validBortleScale
+        }));
+      } catch (e) {
+        console.error("Failed to save to localStorage", e);
+      }
+      
+      // Wait a small delay to ensure the state is updated
+      setTimeout(() => {
+        setIsCalculating(false);
+        displayOnly ? null : setLoading && setLoading(false);
+      }, 300);
+      
+    } catch (error) {
+      console.error("Error calculating SIQS:", error);
+      setStatusMessage && setStatusMessage(language === 'en' ? 
+        "An error occurred while calculating SIQS. Please try again." : 
+        "计算SIQS时发生错误，请重试。");
+      setIsCalculating(false);
+      displayOnly ? null : setLoading && setLoading(false);
+    }
+  }, [isCalculating, navigate, getCachedData, setCachedData]);
   
   return {
     isCalculating,
+    weatherData,
     siqsScore,
+    forecastData,
+    currentMoonPhase,
+    setSiqsScore,
+    validateInputs,
     calculateSIQSForLocation
   };
 };
