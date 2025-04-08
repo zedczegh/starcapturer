@@ -79,3 +79,56 @@ export function DarkSkyOverlay({
   
   return null;
 }
+
+// Add a radar scanning animation for search radius
+export function SearchRadiusOverlay({
+  position,
+  radius,
+  isLoading,
+  color = '#4ADE80'
+}: {
+  position: [number, number];
+  radius: number;
+  isLoading?: boolean;
+  color?: string;
+}) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map || !position || !radius) return;
+    
+    // Convert km to meters
+    const radiusInMeters = radius * 1000;
+    
+    // Create a circular overlay for the search radius
+    const circle = L.circle(position, {
+      radius: radiusInMeters,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.03,
+      weight: 2,
+      className: isLoading ? 'location-radius-circle' : '',
+      dashArray: isLoading ? '8, 12' : '',
+    }).addTo(map);
+    
+    if (isLoading) {
+      // For loading state, add the radar scanning animation
+      const circleElement = circle.getElement();
+      if (circleElement) {
+        circleElement.classList.add('radar-scanning-animation');
+      }
+    }
+    
+    return () => {
+      if (circle) {
+        try {
+          circle.remove();
+        } catch (error) {
+          console.error("Error removing radius overlay:", error);
+        }
+      }
+    };
+  }, [map, position, radius, isLoading, color]);
+  
+  return null;
+}

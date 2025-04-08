@@ -4,12 +4,13 @@
   background-color: transparent;
   border: none;
   outline: none;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.175), 
-              filter 0.4s ease-in-out,
-              opacity 0.4s ease-in-out;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.175), 
+              filter 0.3s ease-in-out,
+              opacity 0.3s ease-in-out;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  transform-origin: center bottom !important;
 }
 
 /* Star marker style - for certified locations */
@@ -136,17 +137,22 @@
   animation: radar-scan 6s linear infinite !important;
 }
 
-/* Radar-like pulse circles for search radius */
-.location-radius-circle::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+/* Add radar scanning animation to circle */
+.leaflet-circle-pulsing {
   animation: radius-pulse 3s infinite ease-in-out;
+  stroke-dasharray: 8, 12;
+  stroke: #4ADE80;
+  stroke-width: 2;
+}
+
+/* Radar-like pulse circles for search radius */
+.location-radius-circle {
+  stroke-dasharray: 8, 12;
+  animation: radar-scan 8s linear infinite;
+  fill-opacity: 0.05;
+  stroke: #4ADE80;
+  stroke-width: 2;
+  stroke-opacity: 0.7;
 }
 
 @keyframes radius-pulse {
@@ -207,12 +213,17 @@
   padding: 8px 10px;
 }
 
-/* Prevent marker flickering on hover with proper z-index handling */
+/* Fix for popup positioning issue */
+.leaflet-popup {
+  margin-bottom: 15px !important; /* Adjust upward */
+}
+
+/* Fix for hover positioning */
 .leaflet-marker-icon {
   transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1.000), 
               filter 0.3s ease, 
               opacity 0.3s ease;
-  will-change: transform;
+  transform-origin: center bottom !important; /* Critical for proper scaling */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   pointer-events: auto !important;
@@ -223,7 +234,7 @@
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 1001 !important;
-  transform: scale(1.65);
+  transform-origin: center bottom !important;
   pointer-events: auto !important;
 }
 
@@ -297,7 +308,8 @@
 }
 
 /* Remove control buttons we don't need */
-.leaflet-control-container .leaflet-top.leaflet-right .leaflet-control:not(.leaflet-control-zoom) {
+.leaflet-control-container .leaflet-top.leaflet-right,
+.leaflet-control-container .leaflet-bottom.leaflet-right {
   display: none !important;
 }
 

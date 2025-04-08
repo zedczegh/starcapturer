@@ -227,21 +227,20 @@ const LocationMarker = memo(({
     });
   };
   
-  // FixBug: Fix case sensitivity in event handlers - "onMouseover" to "onMouseOver" and "onMouseout" to "onMouseOut"
+  // Fixed marker props without using the deprecated eventHandlers prop
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      eventHandlers={{
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
+        offset={[0, -10]} // Adjust popup position to prevent flickering
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
