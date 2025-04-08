@@ -1,4 +1,3 @@
-
 import { calculateCloudScore, calculateLightPollutionScore } from "@/lib/siqs/factors";
 
 /**
@@ -172,6 +171,9 @@ export const calculateNighttimeSiqs = (
   }
 };
 
+// Add alias for backward compatibility with existing code
+export const calculateNighttimeSIQS = calculateNighttimeSiqs;
+
 /**
  * Get consistent SIQS value from any location object
  * This ensures consistent SIQS display across the application
@@ -205,7 +207,7 @@ export const getConsistentSiqsValue = (location: any): number => {
  * @param t Translation function (optional)
  * @returns Localized description string
  */
-function getCloudCoverDescription(cloudCover: number, t?: any): string {
+function getCloudCoverDescription(cloudCover: number, t?: any): string => {
   if (cloudCover <= 10) {
     return t 
       ? t("Clear skies (0-10%), excellent for imaging", "晴朗天空 (0-10%)，非常适合拍摄")
