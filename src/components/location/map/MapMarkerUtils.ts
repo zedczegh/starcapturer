@@ -6,21 +6,15 @@ import L from 'leaflet';
  * This is necessary because Leaflet's default icon paths are different in a bundled environment
  */
 export function configureLeaflet() {
-  if (typeof window === 'undefined') return; // Skip for SSR
+  // Delete default icon settings to avoid path issues
+  delete L.Icon.Default.prototype._getIconUrl;
   
-  try {
-    // Delete default icon settings to avoid path issues
-    delete L.Icon.Default.prototype._getIconUrl;
-    
-    // Configure with CDN paths for markers
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    });
-  } catch (error) {
-    console.error("Error configuring Leaflet icons:", error);
-  }
+  // Configure with CDN paths for markers
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+  });
 }
 
 /**
@@ -30,63 +24,47 @@ export function configureLeaflet() {
  * @returns Leaflet DivIcon
  */
 export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'user' = 'circle'): L.DivIcon {
-  if (typeof window === 'undefined') {
-    // Return empty placeholder for SSR
-    return L.divIcon({ className: 'ssr-placeholder' });
+  // SVG code for different shapes
+  let svgPath = '';
+  let viewBox = '0 0 24 24';
+  let className = 'custom-marker';
+  
+  switch (shape) {
+    case 'star':
+      // Star shape for certified locations - brighter gold color
+      svgPath = `<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="${color}" stroke="white" stroke-width="1.5"/>`;
+      className += ' star-marker';
+      break;
+    
+    case 'user':
+      // User location marker - blue dot with pulse effect
+      svgPath = `
+        <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2" opacity="0.9" />
+        <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="1" opacity="0.4" class="pulse-circle" />
+      `;
+      className += ' user-marker';
+      break;
+    
+    case 'circle':
+    default:
+      // Circle for calculated locations - with inner pulse effect for better visibility
+      // Brighter green instead of olive green
+      svgPath = `
+        <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
+        <circle cx="12" cy="12" r="6" fill="${color}" stroke="none" class="pulse-inner-circle" opacity="0.6" />
+      `;
+      className += ' circle-marker';
+      break;
   }
   
-  try {
-    // SVG code for different shapes
-    let svgPath = '';
-    let viewBox = '0 0 24 24';
-    let className = 'custom-marker';
-    
-    switch (shape) {
-      case 'star':
-        // Star shape for certified locations - brighter gold color
-        svgPath = `<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="${color}" stroke="white" stroke-width="1.5"/>`;
-        className += ' star-marker';
-        break;
-      
-      case 'user':
-        // User location marker - blue dot with pulse effect
-        svgPath = `
-          <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2" opacity="0.9" />
-          <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="1" opacity="0.4" class="pulse-circle" />
-        `;
-        className += ' user-marker';
-        break;
-      
-      case 'circle':
-      default:
-        // Circle for calculated locations - with enhanced inner pulse effect for better visibility
-        // Use brighter, more vibrant green instead of olive green
-        svgPath = `
-          <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
-          <circle cx="12" cy="12" r="6" fill="${color}" stroke="none" class="pulse-inner-circle" opacity="0.6" />
-        `;
-        className += ' circle-marker';
-        break;
-    }
-    
-    // Create a div icon with SVG content
-    return L.divIcon({
-      className: className,
-      html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="24" height="24">${svgPath}</svg>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      popupAnchor: [0, -12]
-    });
-  } catch (error) {
-    console.error("Error creating custom marker:", error);
-    // Return a simple fallback div icon
-    return L.divIcon({ 
-      className: 'fallback-marker',
-      html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8] 
-    });
-  }
+  // Create a div icon with SVG content
+  return L.divIcon({
+    className: className,
+    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="24" height="24">${svgPath}</svg>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
+  });
 }
 
 /**
@@ -94,28 +72,16 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
  * Useful for indicating the user's current position
  */
 export function createPulsingUserMarker(): L.DivIcon {
-  if (typeof window === 'undefined') return L.divIcon({ className: 'ssr-placeholder' });
-  
-  try {
-    return L.divIcon({
-      className: 'custom-marker pulsing-marker',
-      html: `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-          <circle cx="12" cy="12" r="6" fill="#3b82f6" stroke="white" stroke-width="2" opacity="0.9" />
-          <circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
-        </svg>
-      `,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      popupAnchor: [0, -12]
-    });
-  } catch (error) {
-    console.error("Error creating pulsing user marker:", error);
-    return L.divIcon({ 
-      className: 'fallback-marker',
-      html: '<div style="background-color: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
-      iconSize: [16, 16], 
-      iconAnchor: [8, 8]
-    });
-  }
+  return L.divIcon({
+    className: 'custom-marker pulsing-marker',
+    html: `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+        <circle cx="12" cy="12" r="6" fill="#3b82f6" stroke="white" stroke-width="2" opacity="0.9" />
+        <circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
+      </svg>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
+  });
 }
