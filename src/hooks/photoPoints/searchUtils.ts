@@ -23,12 +23,13 @@ export const searchStandardLocations = async (
   language: Language
 ): Promise<{ locations: SharedAstroSpot[], message: string | null }> => {
   try {
-    // Updated to match the correct function signature (3-4 args, not 5)
+    // Find locations within radius
     const locations = await findLocationsWithinRadius(
       latitude,
       longitude,
       searchDistance,
-      false // Get all locations, not just certified
+      false, // Get all locations, not just certified
+      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
     );
     
     if (locations.length === 0) {
@@ -52,7 +53,7 @@ export const searchStandardLocations = async (
       return loc.siqs !== undefined && loc.siqs > 0;
     });
     
-    return { locations: validLocations as SharedAstroSpot[], message: null };
+    return { locations: validLocations, message: null };
   } catch (error) {
     console.error("Error searching standard locations:", error);
     return { 
@@ -81,11 +82,12 @@ export const searchCalculatedLocations = async (
   existingLocations: SharedAstroSpot[] = []
 ): Promise<{ locations: SharedAstroSpot[], message: string | null }> => {
   try {
-    // Updated to match the correct function signature (3 args, not 5)
     const calculatedLocations = await findCalculatedLocations(
       latitude,
       longitude,
-      searchDistance
+      searchDistance,
+      true, // Allow expanding the search radius
+      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
     );
     
     // Apply filtering to ensure valid locations
@@ -120,7 +122,7 @@ export const searchCalculatedLocations = async (
     }
     
     return { 
-      locations: validLocations as SharedAstroSpot[], 
+      locations: validLocations, 
       message: language === "en" 
         ? "Using calculated locations with good viewing conditions" 
         : "使用计算出的良好观测条件位置" 

@@ -58,7 +58,7 @@ export const usePhotoPointsMap = ({
     // Filter out water locations for calculated spots, never filter certified
     (location.isDarkSkyReserve || 
      location.certification || 
-     !isWaterLocation(location.latitude, location.longitude))
+     !isWaterLocation(location.latitude, location.longitude, false))
   );
 
   const certifiedLocations = validLocations.filter(location => 

@@ -1,3 +1,4 @@
+
 /**
  * Service for caching location search results
  * Reduces API calls and improves performance for repeated searches
@@ -270,6 +271,3 @@ if (typeof window !== 'undefined') {
   const cleanupInterval = isMobileDevice() ? 5 * 60 * 1000 : 15 * 60 * 1000;
   setInterval(cleanupOldCacheEntries, cleanupInterval);
 }
-
-// Export the isValidAstronomyLocation function to fix the import error
-export { isValidAstronomyLocation };

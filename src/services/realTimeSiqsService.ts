@@ -150,11 +150,11 @@ export async function calculateRealTimeSiqs(
  */
 export async function batchCalculateSiqs(
   locations: SharedAstroSpot[],
-  maxParallel: number = 2 // REDUCED from 3 to 2 for fewer API calls
+  maxParallel: number = 3
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   
-  console.log(`Batch calculating SIQS for ${locations.length} locations with reduced API load`);
+  console.log(`Batch calculating SIQS for ${locations.length} locations`);
   
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
@@ -176,13 +176,9 @@ export async function batchCalculateSiqs(
     return (a.bortleScale || 5) - (b.bortleScale || 5);
   });
   
-  // OPTIMIZATION: Only process a limited subset of locations (max 8) to reduce API calls
-  const locationsToProcess = prioritizedLocations.slice(0, 8);
-  console.log(`Processing only the ${locationsToProcess.length} highest priority locations`);
-  
   // Process locations in chunks to avoid too many parallel requests with improved error handling
-  for (let i = 0; i < locationsToProcess.length; i += maxParallel) {
-    const chunk = locationsToProcess.slice(i, i + maxParallel);
+  for (let i = 0; i < prioritizedLocations.length; i += maxParallel) {
+    const chunk = prioritizedLocations.slice(i, i + maxParallel);
     const promises = chunk.map(async (location) => {
       if (!location.latitude || !location.longitude) return location;
       
@@ -221,18 +217,13 @@ export async function batchCalculateSiqs(
       results.forEach((result, idx) => {
         if (result.status === 'fulfilled') {
           const locationIndex = updatedLocations.findIndex(loc => 
-            loc.id === locationsToProcess[i + idx].id
+            loc.id === prioritizedLocations[i + idx].id
           );
           if (locationIndex >= 0) {
             updatedLocations[locationIndex] = result.value;
           }
         }
       });
-      
-      // Add a small delay between batches to prevent API rate limiting
-      if (i + maxParallel < locationsToProcess.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
     } catch (error) {
       console.error("Error in batch processing chunk:", error);
       // Continue with next chunk if one fails
