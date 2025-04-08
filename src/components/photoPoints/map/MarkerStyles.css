@@ -134,8 +134,15 @@
   pointer-events: auto !important;
 }
 
-/* Add a small delay to popup display to prevent flickering */
+/* Add a small delay to popup display and make it sticky */
 .leaflet-fade-anim .leaflet-popup {
   transition: opacity 0.15s linear;
   transition-delay: 0.05s;
+  pointer-events: auto !important;
+}
+
+/* Ensure popups are always shown when active */
+.leaflet-popup.leaflet-zoom-animated {
+  visibility: visible !important;
+  opacity: 1 !important;
 }

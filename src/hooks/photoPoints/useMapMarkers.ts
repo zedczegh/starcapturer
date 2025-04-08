@@ -50,7 +50,8 @@ export const useMapMarkers = () => {
     
     // For new hover target, set with slight delay for better stability
     if (id !== null) {
-      // If rapidly changing between markers, use longer delay
+      // For more stability with rapid changes, use different delay strategy
+      // Shorter delay (50ms) for initial hover, longer (80ms) for rapid switches
       const delay = now - hoverTimestamp.current < 300 ? 80 : 50;
       
       debounceTimeoutRef.current = setTimeout(() => {
@@ -63,8 +64,9 @@ export const useMapMarkers = () => {
     } 
     // When leaving a marker completely
     else {
-      // Add a delay to prevent flicker on quick mouse movements
-      const delay = now - hoverTimestamp.current < 200 ? 150 : 100;
+      // Add a longer delay to prevent flicker on quick mouse movements
+      // This helps maintain the hover state during brief mouse movements between markers
+      const delay = now - hoverTimestamp.current < 200 ? 200 : 150;
       
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(null);
