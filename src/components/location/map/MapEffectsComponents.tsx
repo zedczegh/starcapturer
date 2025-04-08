@@ -69,7 +69,7 @@ export function DarkSkyOverlay({
     return () => {
       if (circle) {
         try {
-          circle.remove();
+          map.removeLayer(circle);
         } catch (error) {
           console.error("Error removing circle overlay:", error);
         }
@@ -107,22 +107,56 @@ export function SearchRadiusOverlay({
       fillColor: color,
       fillOpacity: 0.03,
       weight: 2,
-      className: isLoading ? 'location-radius-circle' : '',
+      className: isLoading ? 'radar-scanning-animation' : '',
       dashArray: isLoading ? '8, 12' : '',
     }).addTo(map);
     
-    if (isLoading) {
-      // For loading state, add the radar scanning animation
+    // For loading state, add the radar scanning animation via DOM manipulation
+    // This ensures it works across different browsers
+    if (isLoading && circle) {
       const circleElement = circle.getElement();
       if (circleElement) {
         circleElement.classList.add('radar-scanning-animation');
+        
+        // Add animation styles directly to ensure they work
+        const style = document.createElement('style');
+        style.textContent = `
+          .radar-scanning-animation {
+            animation: radar-scan 6s linear infinite !important;
+            stroke-dasharray: 8, 12 !important;
+            stroke-opacity: 0.8 !important;
+            fill-opacity: 0.05 !important;
+          }
+
+          @keyframes radar-scan {
+            0% {
+              stroke-dashoffset: 0;
+              opacity: 0.8;
+              stroke-width: 2;
+            }
+            50% {
+              opacity: 0.4;
+              stroke-width: 1;
+            }
+            100% {
+              stroke-dashoffset: -628;
+              opacity: 0.8;
+              stroke-width: 2;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+        
+        return () => {
+          document.head.removeChild(style);
+        };
       }
     }
     
     return () => {
       if (circle) {
         try {
-          circle.remove();
+          map.removeLayer(circle);
         } catch (error) {
           console.error("Error removing radius overlay:", error);
         }

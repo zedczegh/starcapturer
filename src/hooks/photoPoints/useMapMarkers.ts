@@ -77,7 +77,7 @@ export const useMapMarkers = () => {
       }
       
       // Use a very short delay to prevent flickering but still be responsive
-      const timeoutDelay = hoverDuration < 300 ? 30 : 80;
+      const timeoutDelay = hoverDuration < 300 ? 100 : 150;
       
       hoverTimeoutRef.current = window.setTimeout(() => {
         setHoveredLocationId(null);
@@ -124,7 +124,7 @@ export const useMapMarkers = () => {
 
   return {
     hoveredLocationId,
-    setHoveredLocationId: setHoveredLocationIdDirectly, // Replace with direct version
+    setHoveredLocationId: setHoveredLocationIdDirectly,
     handleHover
   };
 };

@@ -22,7 +22,7 @@
 
 .star-marker:hover,
 .star-marker.hovered {
-  transform: scale(1.6) !important;
+  transform: scale(1.4) translateY(0) !important;
   filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.95)) !important;
   z-index: 1001 !important;
   animation: breathing 3s infinite ease-in-out;
@@ -39,7 +39,7 @@
 
 .circle-marker:hover,
 .circle-marker.hovered {
-  transform: scale(1.5) !important;
+  transform: scale(1.4) translateY(0) !important;
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8)) !important;
   z-index: 1001 !important;
   animation: breathing 3s infinite ease-in-out;
@@ -63,10 +63,10 @@
 /* Breathing animation for hover effect */
 @keyframes breathing {
   0%, 100% {
-    transform: scale(1.5);
+    transform: scale(1.4) translateY(0);
   }
   50% {
-    transform: scale(1.65);
+    transform: scale(1.55) translateY(0);
   }
 }
 
@@ -215,7 +215,7 @@
 
 /* Fix for popup positioning issue */
 .leaflet-popup {
-  margin-bottom: 15px !important; /* Adjust upward */
+  margin-bottom: 0 !important; /* Adjusted from 15px to fix positioning */
 }
 
 /* Fix for hover positioning */
@@ -252,14 +252,14 @@
 
 /* Improve popup animation */
 .leaflet-fade-anim .leaflet-popup {
-  transition: opacity 0.35s ease-out, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   opacity: 0;
   will-change: transform, opacity;
 }
 
 .leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
   opacity: 1;
-  animation: popup-fade-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: popup-fade-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes popup-fade-in {
@@ -304,11 +304,14 @@
 /* Better positioning of markers to avoid clipping */
 .leaflet-marker-icon {
   margin-left: -12px !important;
-  margin-top: -12px !important;
+  margin-top: -24px !important; /* Fixed positioning - changed from -12px to -24px */
 }
 
 /* Remove control buttons we don't need */
-.leaflet-control-container .leaflet-top.leaflet-right,
+.leaflet-control-container .leaflet-top.leaflet-right {
+  display: none !important;
+}
+
 .leaflet-control-container .leaflet-bottom.leaflet-right {
   display: none !important;
 }
@@ -358,11 +361,23 @@
   .star-marker.hovered,
   .circle-marker:hover, 
   .circle-marker.hovered {
-    transform: scale(1.4) !important;
+    transform: scale(1.2) translateY(0) !important;
   }
 }
 
 /* Center popup content */
 .leaflet-popup-content {
   text-align: center;
+}
+
+/* Fix z-index for popups to always appear on top of markers */
+.leaflet-popup-pane {
+  z-index: 1002 !important;
+}
+
+/* Fix for map container to ensure proper sizing */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background-color: #1a1b26;
 }
