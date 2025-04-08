@@ -72,17 +72,5 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
  * Uses red color to make it more visible
  */
 export function createPulsingUserMarker(): L.DivIcon {
-  return L.divIcon({
-    className: 'custom-marker pulsing-marker',
-    html: `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-        <circle cx="12" cy="12" r="6" fill="#e11d48" stroke="white" stroke-width="2" opacity="0.9" />
-        <circle cx="12" cy="12" r="10" fill="#e11d48" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
-        <circle cx="12" cy="12" r="3" fill="white" stroke="none" opacity="0.7" />
-      </svg>
-    `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
-  });
+  return createCustomMarker('#e11d48', 'user');
 }
