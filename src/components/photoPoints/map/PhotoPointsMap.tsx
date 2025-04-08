@@ -221,8 +221,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           />
         </Suspense>
         
-        {/* My Location Button - Positioned further off the map for better visibility */}
-        <div className="absolute bottom-8 right-8 z-[1000]">
+        {/* My Location Button - Positioned in top-right corner for better visibility */}
+        <div className="absolute top-4 right-4 z-[1000]">
           <Button
             variant="default"
             size="sm"
