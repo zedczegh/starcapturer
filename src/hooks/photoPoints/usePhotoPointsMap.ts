@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -5,6 +6,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
 import { calculateDistance } from '@/utils/geoUtils';
+import { isWaterLocation } from '@/utils/locationValidator';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -53,7 +55,11 @@ export const usePhotoPointsMap = ({
   const validLocations = locations.filter(location => 
     location && 
     typeof location.latitude === 'number' && 
-    typeof location.longitude === 'number'
+    typeof location.longitude === 'number' &&
+    // Filter out water locations for calculated spots, never filter certified
+    (location.isDarkSkyReserve || 
+     location.certification || 
+     !isWaterLocation(location.latitude, location.longitude, false))
   );
 
   const certifiedLocations = validLocations.filter(location => 
@@ -68,6 +74,7 @@ export const usePhotoPointsMap = ({
 
   const locationMap = new Map<string, SharedAstroSpot>();
   
+  // Always include all certified locations regardless of active view
   certifiedLocations.forEach(loc => {
     const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
     locationMap.set(key, loc);
@@ -76,16 +83,22 @@ export const usePhotoPointsMap = ({
   if (activeView === 'calculated') {
     previousLocationsRef.current.forEach(loc => {
       if (!loc.isDarkSkyReserve && !loc.certification) {
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        locationMap.set(key, loc);
+        // Don't add water locations
+        if (!isWaterLocation(loc.latitude, loc.longitude)) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
       }
     });
     
     calculatedLocations.forEach(loc => {
-      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-      const existing = locationMap.get(key);
-      if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
-        locationMap.set(key, loc);
+      // Skip water locations for calculated spots
+      if (!isWaterLocation(loc.latitude, loc.longitude)) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        const existing = locationMap.get(key);
+        if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
+          locationMap.set(key, loc);
+        }
       }
     });
   }
@@ -110,6 +123,14 @@ export const usePhotoPointsMap = ({
         const locationsInRadius = type === 'calculated' && userLocation ? 
           calculatedLocations.filter(loc => {
             if (!loc.latitude || !loc.longitude) return false;
+            
+            // Skip water locations for calculated spots
+            if (!loc.isDarkSkyReserve && !loc.certification) {
+              if (isWaterLocation(loc.latitude, loc.longitude)) {
+                return false;
+              }
+            }
+            
             const distance = calculateDistance(
               userLocation.latitude,
               userLocation.longitude,
@@ -118,6 +139,7 @@ export const usePhotoPointsMap = ({
             );
             return distance <= searchRadius * 1.1;
           }) : 
+          // For certified view, include ALL certified locations regardless of distance
           certifiedLocations;
         
         const updated = await updateLocationsWithRealTimeSiqs(
@@ -131,17 +153,22 @@ export const usePhotoPointsMap = ({
           setEnhancedLocations(prevLocations => {
             const updatedMap = new Map<string, SharedAstroSpot>();
             
-            if (type === 'certified') {
-              certifiedLocations.forEach(loc => {
-                if (loc.latitude && loc.longitude) {
-                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                  updatedMap.set(key, loc);
-                }
-              });
-            }
+            // Always include all certified locations
+            certifiedLocations.forEach(loc => {
+              if (loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                updatedMap.set(key, loc);
+              }
+            });
             
             updated.forEach(loc => {
               if (loc.latitude && loc.longitude) {
+                // Skip water locations for calculated spots
+                if (!loc.isDarkSkyReserve && !loc.certification && 
+                    isWaterLocation(loc.latitude, loc.longitude)) {
+                  return;
+                }
+                
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
                 updatedMap.set(key, loc);
               }
@@ -151,6 +178,12 @@ export const usePhotoPointsMap = ({
             
             updated.forEach(newLoc => {
               if (!newLoc.latitude || !newLoc.longitude) return;
+              
+              // Skip water locations for calculated spots
+              if (!newLoc.isDarkSkyReserve && !newLoc.certification && 
+                  isWaterLocation(newLoc.latitude, newLoc.longitude)) {
+                return;
+              }
               
               const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
               const exists = combinedLocations.some(

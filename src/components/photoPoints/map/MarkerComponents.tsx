@@ -10,6 +10,7 @@ import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isWaterLocation } from '@/utils/locationValidator';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -19,21 +20,19 @@ const getSiqsClass = (siqs?: number): string => {
   return 'siqs-poor';
 };
 
-// Filter out water locations (simplified check)
-const isWaterLocation = (location: SharedAstroSpot): boolean => {
-  // Check location name or description for common water-related terms
-  const waterTerms = ['sea', 'ocean', 'lake', 'river', 'bay', 'gulf', 'strait', 
-                      '海', '洋', '湖', '河', '湾', '水'];
+// Filter out water locations using the improved detection
+const isWaterSpot = (location: SharedAstroSpot): boolean => {
+  // Never filter out certified locations
+  if (location.isDarkSkyReserve || location.certification) {
+    return false;
+  }
   
-  const checkForWaterTerms = (text?: string) => {
-    if (!text) return false;
-    const lowerText = text.toLowerCase();
-    return waterTerms.some(term => lowerText.includes(term));
-  };
-  
-  return checkForWaterTerms(location.name) || 
-         checkForWaterTerms(location.chineseName) || 
-         checkForWaterTerms(location.description);
+  // Use enhanced water detection
+  return isWaterLocation(
+    location.latitude, 
+    location.longitude, 
+    Boolean(location.isDarkSkyReserve || location.certification)
+  );
 };
 
 // Create different marker styles for certified vs calculated locations
@@ -72,8 +71,8 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
   
-  // Skip water locations for calculated spots
-  if (!isCertified && isWaterLocation(location)) {
+  // Skip water locations for calculated spots (never skip certified)
+  if (!isCertified && isWaterSpot(location)) {
     return null;
   }
   

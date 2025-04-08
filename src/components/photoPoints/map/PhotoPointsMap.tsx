@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
+import { isWaterLocation } from "@/utils/locationValidator";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 
@@ -42,7 +44,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   onLocationClick,
   onMapReady,
   onLocationUpdate,
-  className = "h-[510px] w-full rounded-lg overflow-hidden border border-border"
+  className = "h-[440px] w-full rounded-lg overflow-hidden border border-border" // Reduced map height by ~15%
 }) => {
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
@@ -57,7 +59,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const lastRadiusRef = useRef<number>(searchRadius);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
-  // Always show only the active view locations
+  // Always show only the active view locations, ensuring all certified locations are included
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
   // When view changes, mark it to trigger a re-render with a new key
@@ -90,6 +92,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       previousLocationsRef.current = [
         ...previousLocationsRef.current,
         ...activeLocations.filter(newLoc => {
+          // Filter out water locations for calculated spots
+          if (!newLoc.isDarkSkyReserve && !newLoc.certification) {
+            if (isWaterLocation(newLoc.latitude, newLoc.longitude)) {
+              return false;
+            }
+          }
+          
           // Only add if not already in the list
           return !previousLocationsRef.current.some(existingLoc => 
             existingLoc.latitude === newLoc.latitude && 

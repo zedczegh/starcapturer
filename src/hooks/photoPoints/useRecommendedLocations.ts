@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLocationFind } from './useLocationFind';
@@ -5,6 +6,7 @@ import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
+import { isWaterLocation } from '@/utils/locationValidator';
 
 interface Location {
   latitude: number;
@@ -37,7 +39,7 @@ export const useRecommendedLocations = (
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
-  // Get current SIQS from the store - Fix: use getValue instead of getScore
+  // Get current SIQS from the store
   const currentSiqs = currentSiqsStore.getValue();
   
   // Extract location finding logic
@@ -71,7 +73,7 @@ export const useRecommendedLocations = (
       console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease && !locationChanged}`);
       
       // Get all locations within radius - separate certified and calculated with different radii
-      // For certified locations, use the full search radius
+      // For certified locations, always use the full search radius (global)
       const certifiedResults = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
@@ -85,8 +87,13 @@ export const useRecommendedLocations = (
         searchRadius // Use the current search radius
       );
       
-      // Combine the results
-      const combinedResults = [...certifiedResults, ...calculatedResults];
+      // Filter out water locations from calculated results
+      const filteredCalculatedResults = calculatedResults.filter(loc => 
+        !isWaterLocation(loc.latitude, loc.longitude)
+      );
+      
+      // Combine the results (all certified + filtered calculated)
+      const combinedResults = [...certifiedResults, ...filteredCalculatedResults];
       
       if (combinedResults.length === 0) {
         console.log("No locations found within the search radius");
@@ -149,9 +156,14 @@ export const useRecommendedLocations = (
         searchRadius
       );
       
+      // Filter out water locations from results
+      const filteredResults = results.filter(loc => 
+        loc.isDarkSkyReserve || loc.certification || !isWaterLocation(loc.latitude, loc.longitude)
+      );
+      
       // Filter out locations we already have
       const existingIds = new Set(locations.map(loc => loc.id));
-      const newResults = results.filter(loc => !existingIds.has(loc.id));
+      const newResults = filteredResults.filter(loc => !existingIds.has(loc.id));
       
       if (newResults.length > 0) {
         // Sort by quality and distance
@@ -193,12 +205,17 @@ export const useRecommendedLocations = (
         searchRadius
       );
       
+      // Filter out water locations
+      const filteredResults = calculatedResults.filter(loc => 
+        !isWaterLocation(loc.latitude, loc.longitude)
+      );
+      
       // Filter out locations we already have
       const existingCoords = new Set(locations.map(loc => 
         `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
       ));
       
-      const newResults = calculatedResults.filter(loc => {
+      const newResults = filteredResults.filter(loc => {
         const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
         return !existingCoords.has(coordKey);
       });

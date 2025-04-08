@@ -17,20 +17,18 @@ interface ViewToggleProps {
 const ViewToggle: React.FC<ViewToggleProps> = ({
   activeView,
   onViewChange,
-  certifiedCount,
-  calculatedCount,
   loading = false
 }) => {
   const { t } = useLanguage();
   
   return (
     <div className="flex justify-center mb-6">
-      <div className="inline-flex bg-muted/30 p-1 rounded-lg shadow-sm border border-border/50 w-full max-w-md">
+      <div className="inline-flex bg-muted/30 p-1.5 rounded-lg shadow-sm border border-border/50 w-full max-w-md">
         <Button
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange('certified')}
-          className={`relative flex-1 mx-1 py-1.5 justify-center ${
+          className={`relative flex-1 mx-2 py-1.5 justify-center ${
             activeView === 'certified'
               ? 'bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-primary-foreground hover:from-amber-500/100 hover:to-amber-600/100'
               : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
@@ -40,18 +38,13 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <span>
             {t("Certified Dark Skies", "认证暗夜区")}
           </span>
-          {typeof certifiedCount === 'number' && (
-            <div className="absolute -top-2 -right-2 bg-primary rounded-full w-5 h-5 text-[10px] flex items-center justify-center z-10 text-primary-foreground font-medium">
-              {certifiedCount}
-            </div>
-          )}
         </Button>
         
         <Button
           variant={activeView === 'calculated' ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange('calculated')}
-          className={`relative flex-1 mx-1 py-1.5 justify-center ${
+          className={`relative flex-1 mx-2 py-1.5 justify-center ${
             activeView === 'calculated'
               ? 'bg-gradient-to-r from-primary/90 to-primary-dark/90 text-primary-foreground hover:from-primary hover:to-primary-dark'
               : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
@@ -61,11 +54,6 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <span>
             {t("Calculated Spots", "计算位置")}
           </span>
-          {typeof calculatedCount === 'number' && (
-            <div className="absolute -top-2 -right-2 bg-primary rounded-full w-5 h-5 text-[10px] flex items-center justify-center z-10 text-primary-foreground font-medium">
-              {calculatedCount}
-            </div>
-          )}
         </Button>
       </div>
     </div>

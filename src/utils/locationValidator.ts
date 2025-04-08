@@ -109,18 +109,80 @@ const MAJOR_LAKES = [
   
   // Great Salt Lake
   { minLat: 40.7, maxLat: 41.7, minLng: -113.1, maxLng: -112.0, name: "Great Salt Lake" },
+  
+  // Additional major lakes and small seas for enhanced detection
+  { minLat: -12, maxLat: -5, minLng: 12, maxLng: 18, name: "Lake Malawi" },
+  { minLat: 28, maxLat: 30, minLng: 32, maxLng: 34, name: "Lake Nasser" },
+  { minLat: 45, maxLat: 48, minLng: 86, maxLng: 88, name: "Lake Balkhash" },
+  { minLat: 38, maxLat: 42, minLng: 66, maxLng: 70, name: "Aral Sea (remains)" },
+  { minLat: 52, maxLat: 56, minLng: 48, maxLng: 55, name: "Kuybyshev Reservoir" }
 ];
+
+// Cache for water location detection to improve performance
+const waterLocationCache = new Map<string, boolean>();
+const CACHE_SIZE_LIMIT = 1000;
 
 /**
  * Check if a location is on water
  * Uses coordinate-based detection for oceans, seas, and major lakes
  * @param latitude Location latitude
  * @param longitude Location longitude
+ * @param isCertifiedLocation Whether location is certified dark sky location
  * @returns boolean indicating if location is on water
  */
-export function isWaterLocation(latitude: number, longitude: number): boolean {
+export function isWaterLocation(latitude: number, longitude: number, isCertifiedLocation: boolean = false): boolean {
+  // Never filter out certified dark sky locations
+  if (isCertifiedLocation) {
+    return false;
+  }
+  
+  // Create cache key based on rounded coordinates (0.1 degree precision)
+  const roundedLat = Math.round(latitude * 10) / 10;
+  const roundedLng = Math.round(longitude * 10) / 10;
+  const cacheKey = `${roundedLat},${roundedLng}`;
+  
+  // Check cache first for better performance
+  if (waterLocationCache.has(cacheKey)) {
+    return waterLocationCache.get(cacheKey) || false;
+  }
+  
+  // Manage cache size
+  if (waterLocationCache.size > CACHE_SIZE_LIMIT) {
+    // Clear the oldest 20% of entries when limit is reached
+    const keys = Array.from(waterLocationCache.keys());
+    const deleteCount = Math.floor(CACHE_SIZE_LIMIT * 0.2);
+    for (let i = 0; i < deleteCount; i++) {
+      waterLocationCache.delete(keys[i]);
+    }
+  }
+  
   // Normalize longitude to -180 to 180 range
   const normalizedLng = ((longitude + 540) % 360) - 180;
+  
+  // Fast check for extreme ocean cases
+  if (Math.abs(latitude) < 60) {
+    // Central Pacific Ocean check (fast reject for obvious ocean cases)
+    if ((normalizedLng > -170 && normalizedLng < -120) || 
+        (normalizedLng > 160 && normalizedLng <= 180) ||
+        (normalizedLng >= -180 && normalizedLng < -170)) {
+      waterLocationCache.set(cacheKey, true);
+      return true;
+    }
+    
+    // Central Atlantic Ocean check
+    if (normalizedLng > -60 && normalizedLng < -30 && 
+        latitude > -50 && latitude < 50) {
+      waterLocationCache.set(cacheKey, true);
+      return true;
+    }
+    
+    // Central Indian Ocean check
+    if (normalizedLng > 60 && normalizedLng < 90 && 
+        latitude > -40 && latitude < 10) {
+      waterLocationCache.set(cacheKey, true);
+      return true;
+    }
+  }
   
   // Check if within any ocean region
   for (const region of OCEAN_REGIONS) {
@@ -135,15 +197,15 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
         // Exclude major land masses in the Pacific
         // North America west coast
         if (latitude >= 25 && latitude <= 60 && normalizedLng >= -130 && normalizedLng <= -115) {
-          return false;
+          continue;
         }
         // East Asia/Australia
         if (latitude >= -45 && latitude <= 45 && normalizedLng >= 115 && normalizedLng <= 150) {
-          return false;
+          continue;
         }
       }
       
-      console.log(`Location at ${latitude}, ${longitude} is likely in ${region.name}`);
+      waterLocationCache.set(cacheKey, true);
       return true;
     }
   }
@@ -161,39 +223,26 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
         // Exclude major islands and coastal areas
         // Sicily, Sardinia, Corsica approximate area
         if (latitude >= 36 && latitude <= 43 && normalizedLng >= 8 && normalizedLng <= 16) {
-          return false;
+          continue;
         }
         // Greek islands area
         if (latitude >= 34 && latitude <= 41 && normalizedLng >= 19 && normalizedLng <= 28) {
-          return false;
+          continue;
         }
       }
       
-      console.log(`Location at ${latitude}, ${longitude} is likely in ${lake.name}`);
+      waterLocationCache.set(cacheKey, true);
       return true;
     }
   }
   
-  // Enhanced grid-based detection for coastal areas
-  // Check specific coastal coordinates not covered by the above regions
-  
-  // Norwegian coastline and fjords
-  if (latitude >= 58 && latitude <= 71 && normalizedLng >= 4 && normalizedLng <= 31) {
-    // Narrow fjords - these long thin bodies of water are technically water but have good viewing
-    // from the shoreline, so we'll be selective in filtering
-    const distanceToLand = Math.min(
-      Math.abs(normalizedLng - 4),  // Distance to western coast
-      Math.abs(normalizedLng - 31)  // Distance to eastern coast
-    );
-    
-    // If we're more than 0.5 degrees (~50km) from shore in this region, likely water
-    if (distanceToLand > 0.5) {
-      console.log(`Location at ${latitude}, ${longitude} is likely in Norwegian Sea`);
-      return true;
-    }
+  // Additional check for problematic coastal areas
+  if (isLikelyCoastalWater(latitude, longitude)) {
+    waterLocationCache.set(cacheKey, true);
+    return true;
   }
   
-  // Additional check for common location names that indicate water
+  waterLocationCache.set(cacheKey, false);
   return false;
 }
 
@@ -203,13 +252,20 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
  * @param latitude Location latitude
  * @param longitude Location longitude
  * @param name Optional location name for additional checks
+ * @param isCertifiedLocation Whether location is certified dark sky location
  * @returns boolean indicating if location is valid
  */
 export function isValidAstronomyLocation(
   latitude: number, 
   longitude: number,
-  name?: string
+  name?: string,
+  isCertifiedLocation: boolean = false
 ): boolean {
+  // Never filter out certified dark sky locations
+  if (isCertifiedLocation) {
+    return true;
+  }
+  
   // Check if on water
   if (isWaterLocation(latitude, longitude)) {
     console.log(`Location at ${latitude}, ${longitude} filtered out as water`);
@@ -273,7 +329,12 @@ export function isLikelyCoastalWater(latitude: number, longitude: number): boole
     // US West Coast
     "37.8,-122.5", "37.7,-122.4", "34.0,-118.5",
     // Other known water spots that may be missed
-    "22.3,114.2", "1.3,103.8", "59.9,10.7", "45.5,-73.6"
+    "22.3,114.2", "1.3,103.8", "59.9,10.7", "45.5,-73.6",
+    // Additional problematic spots in busy coastal areas
+    "35.4,139.8", "51.5,-0.1", "40.7,-74.0", "33.6,130.4",
+    "19.1,-155.5", "-33.9,151.2", "43.2,-70.6", "21.3,-157.8",
+    "29.9,122.3", "24.8,118.6", "37.6,126.7", "13.7,100.5",
+    "10.8,106.7", "3.1,101.7", "-6.2,106.8", "32.9,131.0"
   ]);
   
   const cellKey = `${gridLat},${gridLng}`;
