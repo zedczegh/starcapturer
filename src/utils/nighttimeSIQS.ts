@@ -1,92 +1,131 @@
 
-import { SIQSResult } from "@/lib/siqs/types";
+import { calculateCloudScore, calculateLightPollutionScore } from "@/lib/siqs/factors";
 
 /**
- * Calculate nighttime SIQS based on forecast data
- * @param locationData Location data
- * @param forecastData Forecast data
- * @param t Translation function
- * @returns SIQS result object
+ * Calculate nighttime SIQS based on location and forecast data
+ * This function delivers consistent SIQS values across the application
+ * @param location Location data
+ * @param forecastData Hourly forecast data
+ * @param t Translation function (optional)
+ * @returns SIQS calculation result object
  */
-export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: any): SIQSResult => {
+export const calculateNighttimeSiqs = (
+  location: any,
+  forecastData: any,
+  t?: any
+): any => {
+  if (!location || !forecastData) {
+    return null;
+  }
+
   try {
-    if (!forecastData || !forecastData.hourly || !forecastData.hourly.time) {
-      throw new Error("Missing forecast data");
-    }
+    // Extract basic location data
+    const { bortleScale = 4 } = location;
     
-    // Get Bortle scale
-    const bortleScale = locationData.bortleScale || 5;
+    // Get nighttime cloud cover data if available
+    const hasHourlyData = forecastData?.hourly && 
+      forecastData.hourly.cloudcover && 
+      Array.isArray(forecastData.hourly.time) &&
+      forecastData.hourly.time.length > 0;
     
-    // Calculate base score based on Bortle scale (light pollution)
-    // Bortle 1 (best) = 10, Bortle 9 (worst) = 1
-    const lightPollutionScore = 10 - (bortleScale - 1) * (9 / 8);
-    
-    // Extract nighttime hours from forecast
-    const hourlyData = forecastData.hourly;
-    const cloudCoverData = hourlyData.cloudcover || [];
-    const times = hourlyData.time || [];
-    
-    // Find nighttime hours (between 8PM and 4AM)
-    const nighttimeCloudCover: number[] = [];
-    
-    times.forEach((time: string, index: number) => {
-      const hour = new Date(time).getHours();
-      if (hour >= 20 || hour <= 4) { // 8PM to 4AM
-        const cloudCover = cloudCoverData[index];
-        if (typeof cloudCover === 'number') {
-          nighttimeCloudCover.push(cloudCover);
+    // If we have hourly forecast data, use it for night calculation
+    if (hasHourlyData) {
+      const hourly = forecastData.hourly;
+      const times = hourly.time;
+      const cloudCover = hourly.cloudcover;
+      
+      // Get current time and determine night hours
+      const now = new Date();
+      const startNightHour = 18; // 6 PM
+      const endNightHour = 6;    // 6 AM next day
+      
+      // Extract cloud cover data from nighttime hours
+      const nighttimeCloudData = [];
+      const dayTimestamps = [];
+      
+      for (let i = 0; i < times.length; i++) {
+        const time = new Date(times[i]);
+        const hour = time.getHours();
+        
+        // Record the date for reference
+        const dateStr = time.toISOString().split('T')[0];
+        if (!dayTimestamps.includes(dateStr)) {
+          dayTimestamps.push(dateStr);
+        }
+        
+        // Check if this is nighttime
+        if (hour >= startNightHour || hour <= endNightHour) {
+          // This is the nighttime range we're interested in
+          nighttimeCloudData.push({
+            time,
+            cloudCover: cloudCover[i]
+          });
         }
       }
-    });
-    
-    // If no nighttime data, use a fallback approach
-    if (nighttimeCloudCover.length === 0) {
-      const baseScore = Math.max(0, Math.min(10, 10 - bortleScale + 3));
       
-      return {
-        score: baseScore,
-        isViable: baseScore >= 5.0,
-        factors: [
-          {
-            name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-            score: lightPollutionScore,
-            description: t 
-              ? t(`Bortle scale ${bortleScale} affects visibility`, `Bortle等级 ${bortleScale} 影响能见度`) 
-              : `Bortle scale ${bortleScale} affects visibility`
-          }
-        ],
-        isNighttimeCalculation: false
-      };
-    }
-    
-    // Calculate average nighttime cloud cover
-    const avgNightCloudCover = nighttimeCloudCover.reduce((sum, val) => sum + val, 0) / nighttimeCloudCover.length;
-    
-    // Calculate cloud score (0-100% cover maps to 10-0 score)
-    const cloudScore = Math.max(0, 10 - (avgNightCloudCover / 10));
-    
-    // Weight factors: 60% cloud cover, 40% light pollution
-    const weightedScore = (cloudScore * 0.6) + (lightPollutionScore * 0.4);
-    
-    // Final score, ensuring it's between 0-10
-    const finalScore = Math.max(0, Math.min(10, weightedScore));
-    
-    return {
-      score: finalScore,
-      isViable: finalScore >= 5.0,
-      factors: [
+      // Analyze nighttime cloud cover
+      let totalNightCloudCover = 0;
+      let eveningCloudCover = 0;
+      let morningCloudCover = 0;
+      let eveningCount = 0;
+      let morningCount = 0;
+      
+      nighttimeCloudData.forEach(entry => {
+        const hour = entry.time.getHours();
+        totalNightCloudCover += entry.cloudCover;
+        
+        if (hour >= 18 && hour <= 23) {
+          // Evening hours (6 PM to midnight)
+          eveningCloudCover += entry.cloudCover;
+          eveningCount++;
+        } else if (hour >= 0 && hour <= 6) {
+          // Morning hours (midnight to 6 AM)
+          morningCloudCover += entry.cloudCover;
+          morningCount++;
+        }
+      });
+      
+      // Calculate averages
+      const avgNightCloudCover = nighttimeCloudData.length > 0 
+        ? totalNightCloudCover / nighttimeCloudData.length 
+        : 50; // Default to 50% if no data
+        
+      const avgEveningCloudCover = eveningCount > 0 
+        ? eveningCloudCover / eveningCount 
+        : avgNightCloudCover;
+        
+      const avgMorningCloudCover = morningCount > 0 
+        ? morningCloudCover / morningCount 
+        : avgNightCloudCover;
+      
+      // Calculate scores based on factors
+      const cloudScore = calculateCloudScore(avgNightCloudCover) / 10;
+      const lightPollutionScore = calculateLightPollutionScore(bortleScale) / 10;
+      
+      // Blend factors with appropriate weights
+      const cloudWeight = 0.65;
+      const lightPollutionWeight = 0.35;
+      
+      // Calculate final SIQS score
+      const siqs = (cloudScore * cloudWeight) + (lightPollutionScore * lightPollutionWeight);
+      
+      // Format factor description
+      const cloudDescription = t 
+        ? getCloudCoverDescription(avgNightCloudCover, t)
+        : getCloudCoverDescription(avgNightCloudCover);
+      
+      // Create factors array for display
+      const factors = [
         {
           name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
           score: cloudScore,
-          description: t 
-            ? t(`Average night cloud cover: ${Math.round(avgNightCloudCover)}%`, `夜间平均云量: ${Math.round(avgNightCloudCover)}%`) 
-            : `Average night cloud cover: ${Math.round(avgNightCloudCover)}%`,
+          description: cloudDescription,
           nighttimeData: {
             average: avgNightCloudCover,
-            timeRange: "8PM - 4AM",
+            timeRange: `${startNightHour}:00-${endNightHour}:00`,
             detail: {
-              evening: nighttimeCloudCover[0] || avgNightCloudCover,
-              morning: nighttimeCloudCover[nighttimeCloudCover.length - 1] || avgNightCloudCover
+              evening: avgEveningCloudCover,
+              morning: avgMorningCloudCover
             }
           }
         },
@@ -94,27 +133,39 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
           name: t ? t("Light Pollution", "光污染") : "Light Pollution",
           score: lightPollutionScore,
           description: t 
-            ? t(`Bortle scale ${bortleScale} affects visibility`, `Bortle等级 ${bortleScale} 影响能见度`) 
-            : `Bortle scale ${bortleScale} affects visibility`
+            ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
+            : `Bortle scale ${bortleScale}`
         }
-      ],
-      metadata: {
-        calculationType: 'nighttime',
-        timestamp: new Date().toISOString(),
-        avgNightCloudCover
-      },
-      isNighttimeCalculation: true
+      ];
+      
+      // Create final SIQS result
+      return {
+        score: Math.min(10, Math.max(0, siqs)),
+        isViable: siqs >= 5.0,
+        factors,
+        metadata: {
+          calculationType: 'nighttime',
+          timestamp: new Date().toISOString(),
+          eveningCloudCover: avgEveningCloudCover,
+          morningCloudCover: avgMorningCloudCover,
+          avgNightCloudCover
+        },
+        isNighttimeCalculation: true
+      };
+    }
+    
+    // Fallback to simpler calculation without forecast data
+    return {
+      score: Math.min(10, (10 - bortleScale * 0.75) + 3),
+      isViable: true,
+      factors: [],
+      isNighttimeCalculation: false
     };
   } catch (error) {
     console.error("Error calculating nighttime SIQS:", error);
-    
-    // Fallback to simpler calculation
-    const bortleScale = locationData?.bortleScale || 5;
-    const baseScore = Math.max(0, Math.min(10, 10 - bortleScale + 3));
-    
     return {
-      score: baseScore,
-      isViable: baseScore >= 5.0,
+      score: 0,
+      isViable: false,
       factors: [],
       isNighttimeCalculation: false
     };
@@ -122,32 +173,62 @@ export const calculateNighttimeSIQS = (locationData: any, forecastData: any, t: 
 };
 
 /**
- * Get the most accurate SIQS value from location data
- * @param location Location data object
- * @returns Consistent SIQS number value
+ * Get consistent SIQS value from any location object
+ * This ensures consistent SIQS display across the application
+ * @param location Location object
+ * @returns SIQS value (0-10 scale)
  */
 export const getConsistentSiqsValue = (location: any): number => {
-  // When no location or data, return 0
   if (!location) return 0;
   
-  // Priority 1: Check siqsResult.score (most accurate)
-  if (location.siqsResult?.score !== undefined) {
-    return location.siqsResult.score;
+  // Get SIQS from siqsResult if available (most accurate)
+  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
+    return Math.min(10, Math.max(0, location.siqsResult.score));
   }
   
-  // Priority 2: Check direct siqs property
-  if (location.siqs !== undefined) {
-    return location.siqs;
+  // Fall back to direct siqs property
+  if (typeof location.siqs === 'number') {
+    return Math.min(10, Math.max(0, location.siqs));
   }
   
-  // Priority 3: Estimate from Bortle scale if available
-  if (location.bortleScale !== undefined) {
-    // Simple formula: higher Bortle = lower quality
-    const bortleScale = location.bortleScale;
-    // Bortle 1 (best) = 8.5, Bortle 9 (worst) = 1.5
-    return 10 - (bortleScale * 0.8) + 0.5;
+  // Last resort: estimate from Bortle scale 
+  if (typeof location.bortleScale === 'number') {
+    return Math.min(10, Math.max(0, (10 - location.bortleScale * 0.75) + 3));
   }
   
-  // Default: return 0
-  return 0;
+  return 0; // Default if no data available
 };
+
+/**
+ * Get cloud cover description based on percentage
+ * @param cloudCover Cloud cover percentage
+ * @param t Translation function (optional)
+ * @returns Localized description string
+ */
+function getCloudCoverDescription(cloudCover: number, t?: any): string {
+  if (cloudCover <= 10) {
+    return t 
+      ? t("Clear skies (0-10%), excellent for imaging", "晴朗天空 (0-10%)，非常适合拍摄")
+      : "Clear skies (0-10%), excellent for imaging";
+  } else if (cloudCover <= 20) {
+    return t 
+      ? t("Mostly clear (10-20%), very good for imaging", "大部分清晰 (10-20%)，很适合拍摄")
+      : "Mostly clear (10-20%), very good for imaging";
+  } else if (cloudCover <= 40) {
+    return t 
+      ? t("Partly cloudy (20-40%), good for imaging", "部分多云 (20-40%)，适合拍摄")
+      : "Partly cloudy (20-40%), good for imaging";
+  } else if (cloudCover <= 60) {
+    return t 
+      ? t("Considerable clouds (40-60%), fair for imaging", "相当多云 (40-60%)，一般适合拍摄")
+      : "Considerable clouds (40-60%), fair for imaging";
+  } else if (cloudCover <= 80) {
+    return t 
+      ? t("Mostly cloudy (60-80%), poor for imaging", "大部分多云 (60-80%)，不太适合拍摄")
+      : "Mostly cloudy (60-80%), poor for imaging";
+  } else {
+    return t 
+      ? t("Heavy cloud cover (80-100%), not recommended for imaging", "浓密云层 (80-100%)，不建议拍摄")
+      : "Heavy cloud cover (80-100%), not recommended for imaging";
+  }
+}

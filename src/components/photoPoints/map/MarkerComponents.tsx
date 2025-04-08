@@ -1,8 +1,9 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/siqs/types';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
@@ -140,7 +141,12 @@ const LocationMarker = memo(({
         longitude: location.longitude,
         bortleScale: location.bortleScale || 4,
         siqs: location.siqs,
-        siqsResult: location.siqs ? { score: location.siqs } : undefined,
+        siqsResult: location.siqs ? { 
+          score: location.siqs,
+          isViable: location.siqs >= 5.0,
+          factors: [],
+          isNighttimeCalculation: true
+        } : undefined,
         certification: location.certification,
         isDarkSkyReserve: location.isDarkSkyReserve,
         timestamp: new Date().toISOString(),

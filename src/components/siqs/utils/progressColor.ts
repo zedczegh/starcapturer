@@ -1,56 +1,48 @@
 
 /**
- * Utility functions for determining color based on SIQS score
+ * Get color for progress indicator based on score
+ * @param score Value between 0-10
+ * @returns Hex color string
  */
-
-// Get the appropriate color class for progress bars based on score (0-10 scale)
-export const getProgressColorClass = (score: number): string => {
-  // Ensure score is on 0-10 scale
-  const normalizedScore = score > 10 ? score / 10 : score;
-  
-  if (normalizedScore >= 8) return 'bg-green-500';
-  if (normalizedScore >= 6) return 'bg-blue-500';
-  if (normalizedScore >= 5) return 'bg-olive-500'; // Olive green for scores over 5
-  if (normalizedScore >= 4) return 'bg-yellow-500';
-  if (normalizedScore >= 2) return 'bg-orange-500';
-  return 'bg-red-500';
-};
-
-// Get the appropriate text color class based on score (0-10 scale)
-export const getProgressTextColorClass = (score: number): string => {
-  // Ensure score is on 0-10 scale
-  const normalizedScore = score > 10 ? score / 10 : score;
-  
-  if (normalizedScore >= 8) return 'text-green-500';
-  if (normalizedScore >= 6) return 'text-blue-500';
-  if (normalizedScore >= 5) return 'text-olive-500'; // Olive green for scores over 5
-  if (normalizedScore >= 4) return 'text-yellow-500';
-  if (normalizedScore >= 2) return 'text-orange-500';
-  return 'text-red-500';
-};
-
-// Get a hex color value (for direct CSS styles) based on score (0-10 scale)
 export const getProgressColor = (score: number): string => {
-  // Ensure score is on 0-10 scale
-  const normalizedScore = score > 10 ? score / 10 : score;
+  // Fix NaN and out-of-range values
+  if (isNaN(score) || score === undefined || score === null) {
+    return '#ef4444'; // Red for invalid scores
+  }
   
-  if (normalizedScore >= 8) return '#22c55e'; // green-500
-  if (normalizedScore >= 6) return '#3b82f6'; // blue-500
-  if (normalizedScore >= 5) return '#808000'; // olive-500
-  if (normalizedScore >= 4) return '#eab308'; // yellow-500
-  if (normalizedScore >= 2) return '#f97316'; // orange-500
-  return '#ef4444'; // red-500
-};
+  // Normalize score to ensure it's in 0-10 range
+  const normalizedScore = Math.max(0, Math.min(10, score));
+  
+  // Enhanced color scale with improved precision
+  if (normalizedScore >= 8.5) return '#15803d'; // Dark green for excellent
+  if (normalizedScore >= 7.5) return '#22c55e'; // Green for very good
+  if (normalizedScore >= 6.0) return '#4ade80'; // Light green for good
+  if (normalizedScore >= 5.0) return '#f59e0b'; // Amber for acceptable
+  if (normalizedScore >= 3.5) return '#f97316'; // Orange for poor
+  if (normalizedScore >= 2.0) return '#fb7185'; // Light red for very poor
+  return '#ef4444'; // Red for terrible
+}
 
-// Get a CSS gradient based on score (0-10 scale)
-export const getProgressGradient = (score: number): string => {
-  // Ensure score is on 0-10 scale
-  const normalizedScore = score > 10 ? score / 10 : score;
-  
-  if (normalizedScore >= 8) return 'linear-gradient(90deg, rgba(34,197,94,1) 0%, rgba(34,197,94,0.8) 100%)';
-  if (normalizedScore >= 6) return 'linear-gradient(90deg, rgba(59,130,246,1) 0%, rgba(59,130,246,0.8) 100%)';
-  if (normalizedScore >= 5) return 'linear-gradient(90deg, rgba(128,128,0,1) 0%, rgba(128,128,0,0.8) 100%)'; // Olive gradient
-  if (normalizedScore >= 4) return 'linear-gradient(90deg, rgba(234,179,8,1) 0%, rgba(234,179,8,0.8) 100%)';
-  if (normalizedScore >= 2) return 'linear-gradient(90deg, rgba(249,115,22,1) 0%, rgba(249,115,22,0.8) 100%)';
-  return 'linear-gradient(90deg, rgba(239,68,68,1) 0%, rgba(239,68,68,0.8) 100%)';
-};
+/**
+ * Get background color class for score display
+ * @param score SIQS score (0-10)
+ * @returns Tailwind CSS class for background
+ */
+export const getScoreBackgroundClass = (score: number): string => {
+  if (score >= 7.5) return 'bg-green-500';
+  if (score >= 5.0) return 'bg-amber-500';
+  if (score >= 2.5) return 'bg-orange-500';
+  return 'bg-red-500';
+}
+
+/**
+ * Get text color class for score display
+ * @param score SIQS score (0-10)
+ * @returns Tailwind CSS class for text
+ */
+export const getScoreTextClass = (score: number): string => {
+  if (score >= 7.5) return 'text-green-500';
+  if (score >= 5.0) return 'text-amber-500';
+  if (score >= 2.5) return 'text-orange-500';
+  return 'text-red-500';
+}

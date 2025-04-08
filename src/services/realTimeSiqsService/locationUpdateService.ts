@@ -109,7 +109,7 @@ export async function updateLocationsWithRealTimeSiqs(
               score: result.siqs,
               isViable: result.siqs >= 5.0,
               factors: result.factors || [],
-              isNighttimeCalculation: result.isNighttimeCalculation || false
+              isNighttimeCalculation: result.isNighttimeCalculation || true
             }
           };
           
