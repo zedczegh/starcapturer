@@ -28,10 +28,8 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Winnetou Dark Sky Sanctuary", coordinates: [44.3617, 15.7539], bortleScale: 1, radius: 25, type: 'dark-site' },
   { name: "Juan Fernández Islands", coordinates: [-33.6168, -78.8319], bortleScale: 1, radius: 35, type: 'dark-site' },
   { name: "Massacre Rim Dark Sky Sanctuary", coordinates: [41.5835, -119.7557], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Stewart Island/Rakiura", coordinates: [-46.9415, 167.9680], bortleScale: 1, radius: 40, type: 'dark-site' },
-  { name: "Faraway Ranch Dark Sky Sanctuary", coordinates: [32.1807, -109.4653], bortleScale: 1, radius: 35, type: 'dark-site' },
-  { name: "Gordon's Park Dark Sky Preserve", coordinates: [45.6666, -82.0805], bortleScale: 1, radius: 35, type: 'dark-site' }, // New 2024
-  { name: "Grasslands National Park Dark Sky Preserve", coordinates: [49.1893, -107.5692], bortleScale: 1, radius: 45, type: 'dark-site' }, // New 2024
+  { name: "Stewart Island/Rakiura", coordinates: [-46.9415, 167.9680], bortleScale: 1, radius: 40, type: 'dark-site' }, // New 2024
+  { name: "Faraway Ranch Dark Sky Sanctuary", coordinates: [32.1807, -109.4653], bortleScale: 1, radius: 35, type: 'dark-site' }, // New 2024
   
   // DARK SKY RESERVES
   { name: "Abruzzi International Dark Sky Reserve", coordinates: [42.2360, 13.9106], bortleScale: 2, radius: 50, type: 'dark-site' },
@@ -59,11 +57,9 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Swan Hills Dark Sky Reserve", coordinates: [54.7039, -115.4036], bortleScale: 1, radius: 50, type: 'dark-site' }, 
   { name: "Julian International Dark Sky Reserve", coordinates: [33.0789, -116.5995], bortleScale: 2, radius: 45, type: 'dark-site' }, 
   { name: "Val d'Aran International Dark Sky Reserve", coordinates: [42.7014, 0.7945], bortleScale: 2, radius: 45, type: 'dark-site' },
-  { name: "Northumberland International Dark Sky Reserve", coordinates: [55.2837, -2.2338], bortleScale: 2, radius: 50, type: 'dark-site' },
-  { name: "Yaeyama Islands International Dark Sky Reserve", coordinates: [24.4667, 124.2167], bortleScale: 2, radius: 45, type: 'dark-site' },
-  { name: "Bryce Canyon National Park - Plateau Province", coordinates: [37.6283, -112.1679], bortleScale: 1, radius: 55, type: 'dark-site' },
-  { name: "Georgian Bay Dark Sky Reserve", coordinates: [45.2676, -80.8610], bortleScale: 2, radius: 45, type: 'dark-site' }, // New 2024
-  { name: "Limfjord Dark Sky Reserve", coordinates: [56.8760, 8.5949], bortleScale: 2, radius: 40, type: 'dark-site' }, // New 2024
+  { name: "Northumberland International Dark Sky Reserve", coordinates: [55.2837, -2.2338], bortleScale: 2, radius: 50, type: 'dark-site' }, // New 2024
+  { name: "Yaeyama Islands International Dark Sky Reserve", coordinates: [24.4667, 124.2167], bortleScale: 2, radius: 45, type: 'dark-site' }, // New 2024
+  { name: "Bryce Canyon National Park - Plateau Province", coordinates: [37.6283, -112.1679], bortleScale: 1, radius: 55, type: 'dark-site' }, // New 2024
 
   // DARK SKY PARKS
   { name: "Anza-Borrego Desert State Park", coordinates: [33.1269, -116.2991], bortleScale: 2, radius: 50, type: 'dark-site' },
@@ -141,16 +137,11 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Aulanka National Park", coordinates: [66.3703, 29.5221], bortleScale: 2, radius: 40, type: 'dark-site' },
   { name: "Cohutta Wilderness Area", coordinates: [34.9418, -84.5745], bortleScale: 2, radius: 35, type: 'dark-site' },
   { name: "Prineville Reservoir State Park", coordinates: [44.1193, -120.7536], bortleScale: 2, radius: 30, type: 'dark-site' },
-  { name: "Guadalupe Mountains National Park", coordinates: [31.9231, -104.8645], bortleScale: 1, radius: 45, type: 'dark-site' },
-  { name: "Mount Rainier National Park", coordinates: [46.8800, -121.7269], bortleScale: 2, radius: 40, type: 'dark-site' },
-  { name: "Gwaii Haanas National Park Reserve", coordinates: [52.5233, -131.4806], bortleScale: 1, radius: 50, type: 'dark-site' },
-  { name: "White Sands National Park", coordinates: [32.7872, -106.3257], bortleScale: 2, radius: 45, type: 'dark-site' },
-  { name: "Shenandoah National Park", coordinates: [38.4755, -78.4687], bortleScale: 3, radius: 40, type: 'dark-site' },
-  { name: "Glacier National Park", coordinates: [48.7596, -113.7870], bortleScale: 1, radius: 45, type: 'dark-site' }, // New 2024
-  { name: "Yellowstone National Park", coordinates: [44.4280, -110.5885], bortleScale: 1, radius: 50, type: 'dark-site' }, // New 2024
-  { name: "Grand Teton National Park", coordinates: [43.7904, -110.6818], bortleScale: 1, radius: 45, type: 'dark-site' }, // New 2024
-  { name: "Valles Caldera National Preserve", coordinates: [35.9087, -106.5195], bortleScale: 2, radius: 40, type: 'dark-site' }, // New 2024
-  { name: "Theodore Roosevelt National Park", coordinates: [46.9790, -103.5387], bortleScale: 1, radius: 45, type: 'dark-site' }, // New 2024
+  { name: "Guadalupe Mountains National Park", coordinates: [31.9231, -104.8645], bortleScale: 1, radius: 45, type: 'dark-site' }, // New 2024
+  { name: "Mount Rainier National Park", coordinates: [46.8800, -121.7269], bortleScale: 2, radius: 40, type: 'dark-site' }, // New 2024
+  { name: "Gwaii Haanas National Park Reserve", coordinates: [52.5233, -131.4806], bortleScale: 1, radius: 50, type: 'dark-site' }, // New 2024
+  { name: "White Sands National Park", coordinates: [32.7872, -106.3257], bortleScale: 2, radius: 45, type: 'dark-site' }, // New 2024
+  { name: "Shenandoah National Park", coordinates: [38.4755, -78.4687], bortleScale: 3, radius: 40, type: 'dark-site' }, // New 2024
   
   // DARK SKY COMMUNITIES
   { name: "Flagstaff, Arizona", coordinates: [35.1983, -111.6513], bortleScale: 3, radius: 20, type: 'dark-site' },
@@ -178,12 +169,10 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Nucla & Naturita, Colorado", coordinates: [38.2444, -108.5464], bortleScale: 2, radius: 15, type: 'dark-site' },
   { name: "Ridgway, Colorado", coordinates: [38.1527, -107.7534], bortleScale: 3, radius: 15, type: 'dark-site' },
   { name: "Jasper, Alberta", coordinates: [52.8738, -118.0813], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Kanab, Utah", coordinates: [37.0475, -112.5263], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Springdale, Utah", coordinates: [37.1890, -112.9987], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Moab, Utah", coordinates: [38.5733, -109.5498], bortleScale: 3, radius: 15, type: 'dark-site' },
-  { name: "Cave Creek, Arizona", coordinates: [33.8331, -111.9507], bortleScale: 4, radius: 15, type: 'dark-site' },
-  { name: "Dinosaur, Colorado", coordinates: [40.2436, -109.0053], bortleScale: 2, radius: 15, type: 'dark-site' }, // New 2024
-  { name: "Nyctophiles de Tuchan, France", coordinates: [42.9151, 2.7233], bortleScale: 3, radius: 15, type: 'dark-site' }, // New 2024
+  { name: "Kanab, Utah", coordinates: [37.0475, -112.5263], bortleScale: 3, radius: 15, type: 'dark-site' }, // New 2024
+  { name: "Springdale, Utah", coordinates: [37.1890, -112.9987], bortleScale: 3, radius: 15, type: 'dark-site' }, // New 2024
+  { name: "Moab, Utah", coordinates: [38.5733, -109.5498], bortleScale: 3, radius: 15, type: 'dark-site' }, // New 2024
+  { name: "Cave Creek, Arizona", coordinates: [33.8331, -111.9507], bortleScale: 4, radius: 15, type: 'dark-site' }, // New 2024
   
   // URBAN NIGHT SKY PLACES
   { name: "Valle de Oro National Wildlife Refuge", coordinates: [35.0075, -106.6751], bortleScale: 5, radius: 8, type: 'dark-site' },
@@ -200,12 +189,8 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Homestead National Historical Park", coordinates: [40.2882, -96.8339], bortleScale: 4, radius: 8, type: 'dark-site' },
   { name: "Fremont Peak Observatory", coordinates: [36.7597, -121.5025], bortleScale: 4, radius: 8, type: 'dark-site' },
   { name: "Curecanti National Recreation Area", coordinates: [38.4513, -107.1566], bortleScale: 3, radius: 12, type: 'dark-site' },
-  { name: "McDonald Observatory", coordinates: [30.6756, -104.0225], bortleScale: 2, radius: 12, type: 'dark-site' },
-  { name: "Lowell Observatory", coordinates: [35.2027, -111.6657], bortleScale: 4, radius: 8, type: 'dark-site' },
-  { name: "Kitt Peak National Observatory", coordinates: [31.9633, -111.5997], bortleScale: 2, radius: 15, type: 'dark-site' },
-  { name: "Yerkes Observatory", coordinates: [42.5736, -88.5561], bortleScale: 4, radius: 8, type: 'dark-site' },
-  { name: "Royal Observatory Greenwich", coordinates: [51.4768, -0.0005], bortleScale: 5, radius: 5, type: 'dark-site' }, // New 2024
-  { name: "Mauna Kea Observatories", coordinates: [19.8263, -155.4749], bortleScale: 1, radius: 15, type: 'dark-site' }, // New 2024
-  { name: "Paranal Observatory", coordinates: [-24.6275, -70.4042], bortleScale: 1, radius: 15, type: 'dark-site' }, // New 2024
-  { name: "La Silla Observatory", coordinates: [-29.2567, -70.7367], bortleScale: 1, radius: 15, type: 'dark-site' } // New 2024
+  { name: "McDonald Observatory", coordinates: [30.6756, -104.0225], bortleScale: 2, radius: 12, type: 'dark-site' }, // New 2024
+  { name: "Lowell Observatory", coordinates: [35.2027, -111.6657], bortleScale: 4, radius: 8, type: 'dark-site' }, // New 2024
+  { name: "Kitt Peak National Observatory", coordinates: [31.9633, -111.5997], bortleScale: 2, radius: 15, type: 'dark-site' }, // New 2024
+  { name: "Yerkes Observatory", coordinates: [42.5736, -88.5561], bortleScale: 4, radius: 8, type: 'dark-site' } // New 2024
 ];

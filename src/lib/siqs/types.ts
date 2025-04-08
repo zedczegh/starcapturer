@@ -62,9 +62,6 @@ export interface LocationWithSIQS {
   siqsResult?: SIQSResult; // SIQS calculation result
   clearSkyRate?: number;   // Annual clear sky rate
   timestamp?: string;      // When the data was collected
-  siqsFactors?: Array<any>; // SIQS factors data
-  isDarkSkyReserve?: boolean; // Whether this is a dark sky reserve
-  certification?: string;  // Dark sky certification information 
 }
 
 /**
