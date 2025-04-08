@@ -155,13 +155,15 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     }
     
     // Store nighttime calculation metadata for consistency checks
-    siqsResult.metadata = {
-      calculationType: 'nighttime',
-      eveningCloudCover,
-      morningCloudCover,
-      avgNightCloudCover,
-      timestamp: new Date().toISOString()
-    };
+    if (siqsResult) {
+      siqsResult.metadata = {
+        calculationType: 'nighttime',
+        eveningCloudCover,
+        morningCloudCover,
+        avgNightCloudCover,
+        timestamp: new Date().toISOString()
+      };
+    }
     
     console.log(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
     

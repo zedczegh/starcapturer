@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -142,12 +141,7 @@ export const usePhotoPointsMap = ({
           // For certified view, include ALL certified locations regardless of distance
           certifiedLocations;
         
-        const updated = await updateLocationsWithRealTimeSiqs(
-          locationsInRadius, 
-          userLocation, 
-          searchRadius,
-          type
-        );
+        const updated = await updateLocationsWithRealTimeSiqs(locationsInRadius);
         
         if (updated && updated.length > 0) {
           setEnhancedLocations(prevLocations => {

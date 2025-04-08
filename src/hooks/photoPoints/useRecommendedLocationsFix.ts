@@ -34,17 +34,9 @@ export const fixLoadMoreCalculatedLocations = (
  * Update location data with real-time SIQS values
  */
 export const updateWithRealTimeSiqs = async (
-  locations: SharedAstroSpot[],
-  userLocation: { latitude: number; longitude: number } | null,
-  searchRadius: number,
-  type: 'certified' | 'calculated'
+  locations: SharedAstroSpot[]
 ): Promise<SharedAstroSpot[]> => {
-  if (!userLocation || !locations?.length) return locations;
+  if (!locations?.length) return locations;
   
-  return updateLocationsWithRealTimeSiqs(
-    locations,
-    userLocation,
-    searchRadius,
-    type
-  );
+  return updateLocationsWithRealTimeSiqs(locations);
 };
