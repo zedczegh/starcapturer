@@ -1,48 +1,51 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import PhotoLocationCard from '../PhotoLocationCard';
+import PhotoPointCard from '../PhotoPointCard';
+import { useNavigate } from 'react-router-dom';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
-  initialLoad: boolean;
-  isMobile: boolean;
 }
 
-const LocationsGrid: React.FC<LocationsGridProps> = ({
-  locations,
-  initialLoad,
-  isMobile
-}) => {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        staggerChildren: isMobile ? 0.05 : 0.1,
-        when: "beforeChildren" 
-      } 
-    }
+const LocationsGrid: React.FC<LocationsGridProps> = ({ locations }) => {
+  const navigate = useNavigate();
+  
+  const handleViewDetails = (point: SharedAstroSpot) => {
+    if (!point.latitude || !point.longitude) return;
+    
+    const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    
+    navigate(`/location/${locationId}`, {
+      state: {
+        id: locationId,
+        name: point.name,
+        chineseName: point.chineseName,
+        latitude: point.latitude,
+        longitude: point.longitude,
+        bortleScale: point.bortleScale || 4,
+        siqs: point.siqs,
+        siqsResult: point.siqsResult || (point.siqs ? { score: typeof point.siqs === 'number' ? point.siqs : 0 } : undefined),
+        certification: point.certification,
+        isDarkSkyReserve: point.isDarkSkyReserve,
+        timestamp: point.timestamp || new Date().toISOString(),
+        fromPhotoPoints: true
+      }
+    });
   };
   
   return (
-    <motion.div
-      variants={containerVariants}
-      initial={initialLoad ? "hidden" : "visible"}
-      animate="visible"
-      className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${isMobile ? 'content-visibility-auto' : ''}`}
-    >
-      {locations.map((location, index) => (
-        <PhotoLocationCard
-          key={location.id || `calc-loc-${index}`}
-          location={location}
-          index={index}
-          showRealTimeSiqs={true}
-          isMobile={isMobile}
-        />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
+      {locations.map(location => (
+        <div key={`${location.id || location.latitude}-${location.longitude}`}>
+          <PhotoPointCard
+            point={location}
+            onViewDetails={handleViewDetails}
+            userLocation={null} 
+          />
+        </div>
       ))}
-    </motion.div>
+    </div>
   );
 };
 

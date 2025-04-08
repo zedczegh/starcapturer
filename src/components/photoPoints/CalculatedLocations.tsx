@@ -43,49 +43,41 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   useExpandSearchRadius({ onRefresh });
   
   // Filter out locations with SIQS score of 0
-  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+  const validLocations = locations.filter(loc => {
+    const siqsValue = typeof loc.siqs === 'object' && loc.siqs ? 
+      loc.siqs.score : (loc.siqs || 0);
+    return siqsValue > 0;
+  });
   
-  // Sort locations by distance (closest first)
-  const sortedLocations = [...validLocations].sort((a, b) => 
-    (a.distance || Infinity) - (b.distance || Infinity)
-  );
-  
-  // Determine if we should show loading state
-  if (loading && sortedLocations.length === 0) {
+  if (loading && validLocations.length === 0) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/60 mb-4" />
+        <p className="text-center text-sm text-muted-foreground">
+          {t("Loading calculated locations...", "正在加载计算位置...")}
+        </p>
       </div>
     );
   }
   
-  // Show empty state if no locations available
-  if (sortedLocations.length === 0) {
-    return (
-      <EmptyCalculatedState 
-        searchRadius={searchRadius}
-        onRefresh={onRefresh}
-      />
-    );
+  if (!loading && validLocations.length === 0) {
+    return <EmptyCalculatedState searchRadius={searchRadius} onRefresh={onRefresh} />;
   }
   
   return (
-    <>
-      <LocationsGrid 
-        locations={sortedLocations}
-        initialLoad={initialLoad}
-        isMobile={isMobile}
-      />
+    <div>
+      <LocationsGrid locations={validLocations} />
       
       <LoadMoreButtons 
+        loading={loading}
         hasMore={hasMore}
         onLoadMore={onLoadMore}
-        canLoadMoreCalculated={canLoadMoreCalculated}
         onLoadMoreCalculated={onLoadMoreCalculated}
+        canLoadMoreCalculated={canLoadMoreCalculated}
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
       />
-    </>
+    </div>
   );
 };
 

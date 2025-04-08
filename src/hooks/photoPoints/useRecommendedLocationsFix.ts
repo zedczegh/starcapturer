@@ -37,7 +37,7 @@ export const updateWithRealTimeSiqs = async (
   // Convert locations to the expected type before passing to service
   const typedLocations = locations.map(loc => ({
     ...loc,
-    siqs: typeof loc.siqs === 'object' ? loc.siqs.score : loc.siqs
+    siqs: typeof loc.siqs === 'object' && loc.siqs ? loc.siqs.score : loc.siqs
   }));
   
   return updateLocationsWithRealTimeSiqs(typedLocations);

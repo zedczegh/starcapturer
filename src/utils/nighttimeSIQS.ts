@@ -1,3 +1,4 @@
+
 /**
  * Nighttime SIQS calculation utilities
  * Focus on nighttime cloud cover and other astronomy-specific factors
@@ -24,11 +25,18 @@ export function getConsistentSiqsValue(location: SharedAstroSpot): number {
   }
   
   // Handle complex siqs object
-  if (typeof location.siqs === 'object' && location.siqs && typeof location.siqs.score === 'number') {
+  if (typeof location.siqs === 'object' && location.siqs && 'score' in location.siqs) {
     return location.siqs.score;
   }
   
   return 0;
+}
+
+/**
+ * Check if this is a nighttime SIQS calculation
+ */
+export function isNighttimeSiqsCalculation(factors?: SIQSFactors): boolean {
+  return !!(factors && factors.isNighttimeCalculation && factors.nightForecast?.length);
 }
 
 /**
@@ -199,4 +207,40 @@ export function calculateNighttimeSiqs(factors: SIQSFactors): SIQSResult {
   }
   
   return result;
+}
+
+/**
+ * Legacy function name for backward compatibility
+ */
+export function calculateNighttimeSIQS(
+  locationData: any,
+  forecastData: any,
+  translator: any
+): SIQSResult | null {
+  // This is maintained for backward compatibility
+  if (!forecastData || !forecastData.hourly || !locationData) {
+    console.log("Missing required data for nighttime SIQS calculation");
+    return null;
+  }
+  
+  const factors: SIQSFactors = {
+    cloudCover: locationData.weatherData?.cloudCover || 0,
+    bortleScale: locationData.bortleScale || 5,
+    seeingConditions: locationData.seeingConditions || 3,
+    windSpeed: locationData.weatherData?.windSpeed || 0,
+    humidity: locationData.weatherData?.humidity || 50,
+    moonPhase: locationData.moonPhase || 0
+  };
+  
+  // Add nighttime forecast data
+  const nightForecast = forecastData.hourly.filter((item: any) => {
+    if (!item.time) return false;
+    const hour = new Date(item.time).getHours();
+    return hour >= 19 || hour <= 5;
+  });
+  
+  factors.nightForecast = nightForecast;
+  factors.isNighttimeCalculation = true;
+  
+  return calculateNighttimeSiqs(factors);
 }
