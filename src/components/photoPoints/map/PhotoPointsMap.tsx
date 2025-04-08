@@ -123,7 +123,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     locations: activeView === 'calculated' && previousLocationsRef.current.length > 0 
       ? previousLocationsRef.current 
       : activeLocations,
-    searchRadius
+    searchRadius,
+    activeView // Pass the active view to usePhotoPointsMap
   });
 
   // Reset selected location when userLocation changes dramatically

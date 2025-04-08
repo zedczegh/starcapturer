@@ -4,7 +4,7 @@ import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import L from 'leaflet'; // Add import for L (Leaflet)
+import L from 'leaflet'; // Fixed import for L (Leaflet)
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -80,6 +80,25 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     if (activeView === 'calculated' && searchRadius) {
       console.log(`Search radius set to ${searchRadius}km for calculated locations`);
     }
+    
+    // Set world bounds to prevent infinite horizontal scrolling
+    // This restricts the map to one "copy" of the world
+    const worldBounds = L.latLngBounds(
+      L.latLng(-90, -180),  // Southwest corner
+      L.latLng(90, 180)     // Northeast corner
+    );
+    
+    map.setMaxBounds(worldBounds);
+    map.on('drag', function() {
+      map.panInsideBounds(worldBounds, { animate: false });
+    });
+    
+    return () => {
+      if (map) {
+        // Clean up event listeners
+        map.off('drag');
+      }
+    };
   }, [map, activeView, searchRadius]);
   
   return null;

@@ -10,12 +10,14 @@ interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
+  activeView: 'certified' | 'calculated';
 }
 
 export const usePhotoPointsMap = ({
   userLocation,
   locations,
-  searchRadius
+  searchRadius,
+  activeView
 }: UsePhotoPointsMapProps) => {
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
@@ -54,24 +56,47 @@ export const usePhotoPointsMap = ({
     typeof location.longitude === 'number'
   );
 
+  const certifiedLocations = validLocations.filter(location => 
+    location.isDarkSkyReserve === true || 
+    (location.certification && location.certification !== '')
+  );
+  
+  const calculatedLocations = validLocations.filter(location => 
+    !(location.isDarkSkyReserve === true || 
+    (location.certification && location.certification !== ''))
+  );
+
   const locationMap = new Map<string, SharedAstroSpot>();
   
-  previousLocationsRef.current.forEach(loc => {
+  certifiedLocations.forEach(loc => {
     const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
     locationMap.set(key, loc);
   });
   
-  validLocations.forEach(loc => {
-    const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-    const existing = locationMap.get(key);
-    if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
-      locationMap.set(key, loc);
-    }
-  });
+  if (activeView === 'calculated') {
+    previousLocationsRef.current.forEach(loc => {
+      if (!loc.isDarkSkyReserve && !loc.certification) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        locationMap.set(key, loc);
+      }
+    });
+    
+    calculatedLocations.forEach(loc => {
+      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      const existing = locationMap.get(key);
+      if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
+        locationMap.set(key, loc);
+      }
+    });
+  }
   
   const mergedLocations = Array.from(locationMap.values());
   
-  previousLocationsRef.current = mergedLocations;
+  if (activeView === 'calculated') {
+    previousLocationsRef.current = mergedLocations.filter(
+      loc => !loc.isDarkSkyReserve && !loc.certification
+    );
+  }
   
   const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
   
@@ -80,11 +105,10 @@ export const usePhotoPointsMap = ({
     
     const updateLocations = async () => {
       try {
-        const type = validLocations.some(loc => loc.isDarkSkyReserve || loc.certification) ? 
-          'certified' : 'calculated';
+        const type = activeView;
           
         const locationsInRadius = type === 'calculated' && userLocation ? 
-          validLocations.filter(loc => {
+          calculatedLocations.filter(loc => {
             if (!loc.latitude || !loc.longitude) return false;
             const distance = calculateDistance(
               userLocation.latitude,
@@ -94,7 +118,7 @@ export const usePhotoPointsMap = ({
             );
             return distance <= searchRadius * 1.1;
           }) : 
-          validLocations;
+          certifiedLocations;
         
         const updated = await updateLocationsWithRealTimeSiqs(
           locationsInRadius, 
@@ -106,6 +130,16 @@ export const usePhotoPointsMap = ({
         if (updated && updated.length > 0) {
           setEnhancedLocations(prevLocations => {
             const updatedMap = new Map<string, SharedAstroSpot>();
+            
+            if (type === 'certified') {
+              certifiedLocations.forEach(loc => {
+                if (loc.latitude && loc.longitude) {
+                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                  updatedMap.set(key, loc);
+                }
+              });
+            }
+            
             updated.forEach(loc => {
               if (loc.latitude && loc.longitude) {
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -150,7 +184,7 @@ export const usePhotoPointsMap = ({
     }, 300);
     
     return () => clearTimeout(timeoutId);
-  }, [validLocations, userLocation, mapReady, searchRadius]);
+  }, [validLocations, userLocation, mapReady, searchRadius, activeView, certifiedLocations, calculatedLocations]);
 
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
