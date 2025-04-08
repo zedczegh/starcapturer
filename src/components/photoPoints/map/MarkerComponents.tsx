@@ -40,13 +40,13 @@ const isWaterLocation = (location: SharedAstroSpot): boolean => {
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
   if (isCertified) {
     // For certified locations, use a star-shaped marker with gold/yellow color
-    return createCustomMarker('#FFD700', 'star');
+    return createCustomMarker('#FFD700');
   } else {
     // For calculated locations, use a brighter color based on SIQS with circle shape
     // Replace olive green with a brighter, more vibrant green
     const defaultColor = '#4ADE80'; // Bright green fallback
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
-    return createCustomMarker(color, 'circle');
+    return createCustomMarker(color);
   }
 };
 
@@ -158,7 +158,7 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use correct casing for mouse event handlers
+      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
@@ -225,7 +225,7 @@ const UserLocationMarker = memo(({
 }) => {
   const { t } = useLanguage();
   // Changed to red color for user location
-  const userMarkerIcon = createCustomMarker('#e11d48', 'user');
+  const userMarkerIcon = createCustomMarker('#e11d48');
   
   return (
     <Marker position={position} icon={userMarkerIcon}>

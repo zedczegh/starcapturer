@@ -4,6 +4,7 @@ import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
+import L from 'leaflet'; // Add import for L (Leaflet)
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;

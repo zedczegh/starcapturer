@@ -37,11 +37,11 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     : cloudCover;
     
   // Create nighttime cloud cover tooltip if data is available
-  // Fixed: Use string instead of function for tooltip
+  // Fix: Use string instead of function for tooltip
   const cloudCoverTooltip = nighttimeCloudData 
-    ? language === 'en'
+    ? (language === 'en'
       ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}% (Evening: ${nighttimeCloudData.evening.toFixed(1)}%, Morning: ${nighttimeCloudData.morning.toFixed(1)}%)`
-      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}% (晚上: ${nighttimeCloudData.evening.toFixed(1)}%, 早晨: ${nighttimeCloudData.morning.toFixed(1)}%)`
+      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}% (晚上: ${nighttimeCloudData.evening.toFixed(1)}%, 早晨: ${nighttimeCloudData.morning.toFixed(1)}%)`)
     : undefined;
   
   // AQI display with conditional rendering and enhanced sizing
@@ -68,7 +68,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     ? t("Night Cloud Cover", "夜间云层覆盖")
     : t("Cloud Cover", "云层覆盖");
   
-  // Fixed: Use string for tooltip instead of function
+  // Fix: Use string for tooltip instead of function
   const bortleTooltip = bortleScale === null 
     ? (language === 'en' ? "Bortle scale could not be determined for this location" : "无法确定此位置的光污染等级") 
     : undefined;

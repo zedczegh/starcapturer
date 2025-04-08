@@ -24,9 +24,9 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      className={`map-tooltip ${className}`}
+      // The className needs to be applied to the inner div instead of Popup
     >
-      <div className="p-2 leaflet-popup-custom marker-popup-gradient">
+      <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
         <div className="font-medium text-sm">{name}</div>
         {children}
       </div>
