@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from "@/types/weather";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
 
 /**
