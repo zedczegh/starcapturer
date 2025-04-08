@@ -55,3 +55,23 @@ export const isWaterLocation = (latitude: number, longitude: number): boolean =>
   return isPacific || isAtlantic || isIndian || isMediterranean || 
          isCaribbean || isGulfMexico || isBayOfBengal || isSouthChinaSea;
 };
+
+/**
+ * Check if location is valid for astronomy observations
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Boolean indicating if the location is suitable for astronomy
+ */
+export const isValidAstronomyLocation = (latitude: number, longitude: number): boolean => {
+  // First check if it's not a water location (water locations are generally not good for astronomy)
+  if (isWaterLocation(latitude, longitude)) {
+    return false;
+  }
+  
+  // Check if coordinates are valid
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return false;
+  }
+  
+  return true;
+};

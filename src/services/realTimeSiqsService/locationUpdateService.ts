@@ -54,7 +54,8 @@ export async function updateLocationsWithRealTimeSiqs(
         siqsResult: {
           score: cachedResult.siqs,
           isViable: cachedResult.siqs >= 5.0,
-          factors: []
+          factors: [],
+          isNighttimeCalculation: true
         }
       });
       
