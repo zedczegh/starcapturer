@@ -247,7 +247,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         />
       )}
       
-      {/* Search radius visualization as a more visible circle with radar scanning animation */}
+      {/* Search radius visualization as a more visible circle */}
       {userLocation && searchRadius && searchRadius < 1000 && (
         <Circle 
           center={[userLocation.latitude, userLocation.longitude]}
@@ -258,7 +258,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             fillOpacity: 0.08, // Increased opacity for more visibility
             weight: 1.5, // Thicker border
             opacity: 0.4, // More visible border
-            className: 'location-radius-circle radar-scanning-animation' // Added radar scanning animation class
+            className: 'location-radius-circle'
           }}
         />
       )}
