@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from "@/lib/siqs/types";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
 
 /**
@@ -15,7 +15,7 @@ export const fixLoadMoreCalculatedLocations = (
     if (!userLocation) return [];
     
     try {
-      // Call the original function with correct parameter count
+      // Call the original function with correct parameter count (3)
       const result = await loadMoreCalculatedLocations(
         userLocation.latitude, 
         userLocation.longitude, 

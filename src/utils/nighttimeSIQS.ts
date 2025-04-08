@@ -1,4 +1,3 @@
-
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { 
   extractNightForecasts, 

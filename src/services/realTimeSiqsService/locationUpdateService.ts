@@ -45,6 +45,7 @@ export async function updateLocationsWithRealTimeSiqs(
         ...location,
         siqs: cachedLocation.data.siqs,
         isViable: cachedLocation.data.isViable,
+        siqsFactors: cachedLocation.data.siqsFactors,
         siqsResult: cachedLocation.data.siqsResult
       });
     } else {

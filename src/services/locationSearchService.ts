@@ -1,143 +1,131 @@
 
 import { SharedAstroSpot } from '@/lib/siqs/types';
+import { calculateDistance } from '@/lib/api/coordinates';
+import { getDarkSkyAstroSpots } from './darkSkyLocationService';
 import { isWaterLocation } from '@/utils/locationValidator';
-import { calculateDistance } from '@/utils/geoUtils';
 
 /**
- * Find locations within a specified radius from a center point
+ * Find locations within a specified radius
+ * @param latitude Center latitude
+ * @param longitude Center longitude 
+ * @param radius Search radius in km
+ * @param certifiedOnly Whether to return only certified locations
+ * @returns Promise resolving to locations within radius
  */
-export const findLocationsWithinRadius = async (
+export async function findLocationsWithinRadius(
   latitude: number,
   longitude: number,
-  radius: number
-): Promise<SharedAstroSpot[]> => {
+  radius: number,
+  certifiedOnly: boolean = false
+): Promise<SharedAstroSpot[]> {
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 200));
+    console.log(`Finding locations within ${radius}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     
-    // Return mock data for now
-    const mockLocations: SharedAstroSpot[] = [
-      {
-        id: `cert-${Date.now()}-1`,
-        name: "Dark Sky Reserve",
-        latitude: latitude + 0.05,
-        longitude: longitude + 0.05,
-        bortleScale: 3,
-        siqs: 8.2,
-        isDarkSkyReserve: true,
-        certification: "International Dark Sky Reserve",
-        timestamp: new Date().toISOString()
-      },
-      {
-        id: `calc-${Date.now()}-1`,
-        name: "Mountain Viewpoint",
-        latitude: latitude - 0.1,
-        longitude: longitude - 0.1,
-        bortleScale: 4,
-        siqs: 7.4,
-        timestamp: new Date().toISOString()
-      }
-    ];
+    // Get dark sky locations
+    const darkSkyLocations = getDarkSkyAstroSpots(latitude, longitude, radius);
     
-    // Calculate distance for each location
-    const locationsWithDistance = mockLocations.map(loc => ({
-      ...loc,
-      distance: calculateDistance(latitude, longitude, loc.latitude, loc.longitude)
-    }));
+    // Filter by certification status if requested
+    if (certifiedOnly) {
+      return darkSkyLocations.filter(loc => 
+        loc.isDarkSkyReserve || (loc.certification && loc.certification.length > 0)
+      );
+    }
     
-    // Filter by radius
-    return locationsWithDistance.filter(loc => (loc.distance || 0) <= radius);
+    return darkSkyLocations;
   } catch (error) {
     console.error("Error finding locations within radius:", error);
     return [];
   }
-};
+}
 
 /**
- * Find calculated locations within a specified radius
+ * Find calculated potential locations within radius
+ * @param latitude User latitude
+ * @param longitude User longitude
+ * @param radius Search radius in km
+ * @returns Promise resolving to potential locations
  */
-export const findCalculatedLocations = async (
+export async function findCalculatedLocations(
   latitude: number,
   longitude: number,
-  radius: number,
-  allowExpansion: boolean = true,
-  limit: number = 10
-): Promise<SharedAstroSpot[]> => {
+  radius: number
+): Promise<SharedAstroSpot[]> {
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log(`Generating calculated locations within ${radius}km of ${latitude}, ${longitude}`);
     
-    // Generate mock calculated locations
-    const locations: SharedAstroSpot[] = [];
+    const calculatedLocations: SharedAstroSpot[] = [];
+    const pointsToGenerate = Math.min(20, Math.ceil(radius / 10)); // Scale number of points with radius
     
-    // Number of locations to generate
-    const count = Math.min(limit, 20);
-    
-    for (let i = 0; i < count; i++) {
-      // Generate random coordinates within radius
-      const randomRadius = Math.random() * radius;
-      const randomAngle = Math.random() * Math.PI * 2;
+    // Generate points evenly distributed around the center
+    for (let i = 0; i < pointsToGenerate; i++) {
+      // Calculate angle for even distribution
+      const angle = (i / pointsToGenerate) * Math.PI * 2;
       
-      const lat = latitude + (randomRadius / 111.32) * Math.cos(randomAngle);
-      const lng = longitude + (randomRadius / (111.32 * Math.cos(latitude * Math.PI / 180))) * Math.sin(randomAngle);
+      // Random distance within 30-90% of radius for variety
+      const distance = radius * (0.3 + Math.random() * 0.6);
+      
+      // Convert polar to cartesian
+      const offsetKm = {
+        lat: Math.sin(angle) * distance,
+        lng: Math.cos(angle) * distance
+      };
+      
+      // Convert km to degrees (approximate)
+      const latDegPerKm = 1 / 110.574;
+      const lngDegPerKm = 1 / (111.32 * Math.cos(latitude * Math.PI / 180));
+      
+      const pointLat = latitude + (offsetKm.lat * latDegPerKm);
+      const pointLng = longitude + (offsetKm.lng * lngDegPerKm);
       
       // Skip if it's a water location
-      if (isWaterLocation(lat, lng)) {
+      if (isWaterLocation(pointLat, pointLng)) {
         continue;
       }
       
-      // Calculate actual distance
-      const distance = calculateDistance(latitude, longitude, lat, lng);
-      
-      // Calculate a random bortle scale (weighted toward better locations)
-      const bortleScale = Math.min(9, Math.max(1, Math.floor(Math.random() * 6) + 2));
-      
-      // Calculate a SIQS score based on bortle scale
-      const siqs = Math.min(10, Math.max(1, 11 - bortleScale + (Math.random() * 2 - 1)));
-      
-      locations.push({
-        id: `calc-${Date.now()}-${i}`,
-        name: `Calculated Location ${i+1}`,
-        latitude: lat,
-        longitude: lng,
-        bortleScale: bortleScale,
-        siqs: siqs,
+      // Create location
+      const calculatedLocation: SharedAstroSpot = {
+        id: `calc-${i}-${Date.now()}`,
+        name: `Potential dark site ${i + 1}`,
+        latitude: pointLat,
+        longitude: pointLng,
+        bortleScale: 3 + Math.floor(Math.random() * 3), // Random Bortle scale 3-5
         distance: distance,
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      calculatedLocations.push(calculatedLocation);
     }
     
-    return locations.filter(loc => (loc.distance || 0) <= radius);
+    return calculatedLocations;
   } catch (error) {
-    console.error("Error finding calculated locations:", error);
+    console.error("Error generating calculated locations:", error);
     return [];
   }
-};
+}
 
 /**
  * Sort locations by quality and distance
+ * @param locations Array of locations to sort
+ * @returns Sorted locations array
  */
-export const sortLocationsByQuality = (
-  locations: SharedAstroSpot[]
-): SharedAstroSpot[] => {
+export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
   return [...locations].sort((a, b) => {
-    // First prioritize certified locations
-    if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
-      return -1;
-    }
-    if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
-      return 1;
-    }
+    // First sort by certification status
+    const aIsCertified = Boolean(a.isDarkSkyReserve || a.certification);
+    const bIsCertified = Boolean(b.isDarkSkyReserve || b.certification);
     
-    // Then prioritize by SIQS
-    const aSiqs = a.siqs || 0;
-    const bSiqs = b.siqs || 0;
+    if (aIsCertified && !bIsCertified) return -1;
+    if (!aIsCertified && bIsCertified) return 1;
     
-    if (Math.abs(aSiqs - bSiqs) > 1) {
+    // Then sort by SIQS if available
+    const aSiqs = a.siqsResult?.score ?? a.siqs ?? 0;
+    const bSiqs = b.siqsResult?.score ?? b.siqs ?? 0;
+    
+    if (aSiqs !== bSiqs) {
       return bSiqs - aSiqs; // Higher SIQS first
     }
     
-    // If SIQS is similar, prioritize by distance
+    // Finally sort by distance
     return (a.distance || Infinity) - (b.distance || Infinity);
   });
-};
+}
