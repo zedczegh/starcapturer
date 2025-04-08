@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/types/sharedTypes';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -57,8 +57,8 @@ export const usePhotoPointsSearch = ({
         }
         
         // Then sort by nighttime SIQS if available, otherwise by distance
-        const aSiqs = a.siqsResult?.score ?? a.siqs ?? 0;
-        const bSiqs = b.siqsResult?.score ?? b.siqs ?? 0;
+        const aSiqs = a.siqs ?? 0;
+        const bSiqs = b.siqs ?? 0;
         
         if (aSiqs !== bSiqs) {
           return bSiqs - aSiqs; // Higher SIQS first

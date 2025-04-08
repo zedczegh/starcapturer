@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { findLocationsWithinRadius as apiLocationFind } from '@/services/locationSearchService';
 import { sortLocationsByQuality as apiSortQuality } from '@/services/locationSearchService';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/types/sharedTypes';
 
 /**
  * Hook to abstract location finding functionality from useRecommendedLocations

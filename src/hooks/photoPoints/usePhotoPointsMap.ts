@@ -1,5 +1,6 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/types/sharedTypes';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
