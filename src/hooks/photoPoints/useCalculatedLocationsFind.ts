@@ -20,7 +20,8 @@ export const useCalculatedLocationsFind = () => {
       try {
         console.log(`Finding calculated locations within ${radius}km of [${latitude.toFixed(4)}, ${longitude.toFixed(4)}]`);
         
-        // Get new locations from the service - using only required parameters
+        // Get new locations from the service - only using the required parameters
+        // Updated to match the correct function signature
         const newLocations = await findCalculatedLocations(
           latitude, 
           longitude, 

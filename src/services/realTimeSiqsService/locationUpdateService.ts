@@ -56,8 +56,8 @@ export async function updateLocationsWithRealTimeSiqs(
   
   if (locationsToUpdate.length > 0) {
     try {
-      // Batch update the remaining locations - cast to ensure type compatibility
-      const freshLocations = await batchCalculateSiqs(locationsToUpdate as any) as SharedAstroSpot[];
+      // Cast to avoid type errors, since we're just passing the data through
+      const freshLocations = await batchCalculateSiqs(locationsToUpdate) as SharedAstroSpot[];
       
       // Update the cache with fresh data
       for (const location of freshLocations) {

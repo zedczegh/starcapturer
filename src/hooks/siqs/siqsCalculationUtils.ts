@@ -1,4 +1,3 @@
-
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS, isNighttimeSiqsCalculation, getConsistentSiqsValue } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
