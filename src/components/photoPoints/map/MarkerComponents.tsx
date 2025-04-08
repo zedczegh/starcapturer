@@ -209,11 +209,10 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-      }}
+      onClick={handleClick}
+      // Fix: Use the onClick prop instead of eventHandlers
+      onMouseover={handleMouseOver}
+      onMouseout={handleMouseOut}
     >
       <Popup 
         closeOnClick={false}

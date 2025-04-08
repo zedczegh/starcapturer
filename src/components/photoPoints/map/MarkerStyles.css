@@ -33,6 +33,7 @@
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.175),
               filter 0.3s ease-in-out;
   z-index: 800 !important;
+  animation: gentle-pulse 2s infinite ease-in-out;
 }
 
 .circle-marker:hover,
@@ -43,7 +44,7 @@
   animation: breathing 3s infinite ease-in-out;
 }
 
-/* Adding pulse animation to calculated markers */
+/* Enhanced pulsing animation for calculated markers */
 .circle-marker .pulse-inner-circle {
   animation: pulse-inner 2s infinite ease-in-out;
 }
@@ -65,6 +66,16 @@
   }
   50% {
     transform: scale(1.65);
+  }
+}
+
+/* Gentle pulse animation for non-hovered calculated locations */
+@keyframes gentle-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.7));
   }
 }
 
@@ -97,6 +108,26 @@
     r: 4;
     opacity: 0.9;
   }
+}
+
+/* Radar scanning animation for search radius */
+@keyframes radar-scan {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.8;
+  }
+  100% {
+    stroke-dashoffset: -628; /* approx 2*PI*100 */
+    opacity: 0.2;
+  }
+}
+
+/* Apply radar scanning animation to location radius */
+.location-radius-circle {
+  opacity: 0.2 !important;
+  stroke-opacity: 0.3 !important;
+  stroke-dasharray: 8, 12 !important;
+  animation: radar-scan 8s linear infinite !important;
 }
 
 /* Custom popup styles */
@@ -223,21 +254,6 @@
 .siqs-poor {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%);
   border-left: 3px solid rgb(239, 68, 68);
-}
-
-/* Position the "my location" button further off the map */
-.leaflet-control-locate {
-  margin-bottom: 20px !important;
-  margin-right: 20px !important;
-}
-
-.leaflet-control-locate a {
-  background-color: #ffffff !important;
-  border-radius: 4px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-  width: 36px !important;
-  height: 36px !important;
-  line-height: 36px !important;
 }
 
 /* Improve marker loading performance */

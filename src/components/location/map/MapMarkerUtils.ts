@@ -47,8 +47,8 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
     
     case 'circle':
     default:
-      // Circle for calculated locations - with inner pulse effect for better visibility
-      // Brighter green instead of olive green
+      // Circle for calculated locations - with enhanced inner pulse effect for better visibility
+      // Use brighter, more vibrant green instead of olive green
       svgPath = `
         <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
         <circle cx="12" cy="12" r="6" fill="${color}" stroke="none" class="pulse-inner-circle" opacity="0.6" />

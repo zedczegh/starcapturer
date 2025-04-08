@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -13,7 +14,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
-import { Map, List, RefreshCw } from 'lucide-react';
+import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 // Lazy load components that are not immediately visible
@@ -182,18 +183,6 @@ const PhotoPointsNearby: React.FC = () => {
     refreshSiqsData();
   }, [refreshSiqsData]);
 
-  // Handle refresh click - clear caches and get fresh data
-  const handleRefresh = useCallback(() => {
-    try {
-      clearLocationCache();
-      refreshSiqsData();
-      toast.success(t("Refreshing location data", "刷新位置数据中"));
-    } catch (err) {
-      console.error("Error refreshing data:", err);
-      toast.error(t("Error refreshing data", "刷新数据出错"));
-    }
-  }, [refreshSiqsData, t]);
-
   // Effect to update the search radius when active view changes
   useEffect(() => {
     // For certified locations, set a much larger search radius (unlimited)
@@ -280,16 +269,7 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {/* View toggle between map and list */}
-      <div className="flex justify-between mb-4">
-        <Button 
-          onClick={handleRefresh}
-          variant="outline"
-          size="sm"
-          className="shadow-sm hover:bg-muted/60"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" /> {t("Refresh Data", "刷新数据")}
-        </Button>
-        
+      <div className="flex justify-end mb-4">
         <Button 
           onClick={toggleMapView}
           variant="outline"
