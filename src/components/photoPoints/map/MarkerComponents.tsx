@@ -19,11 +19,14 @@ const getSiqsClass = (siqs?: number): string => {
   return 'siqs-poor';
 };
 
-// Filter out water locations (simplified check)
+// Enhanced water location detection
 const isWaterLocation = (location: SharedAstroSpot): boolean => {
   // Check location name or description for common water-related terms
-  const waterTerms = ['sea', 'ocean', 'lake', 'river', 'bay', 'gulf', 'strait', 
-                      '海', '洋', '湖', '河', '湾', '水'];
+  const waterTerms = [
+    'sea', 'ocean', 'lake', 'river', 'bay', 'gulf', 'strait', 'pond', 'reservoir',
+    'water', 'harbor', 'channel', 'canal', 'stream', 'creek', 'lagoon', 'beach',
+    '海', '洋', '湖', '河', '湾', '水', '港', '沟', '渠', '溪', '泉', '池', '滩', '潭'
+  ];
   
   const checkForWaterTerms = (text?: string) => {
     if (!text) return false;
@@ -31,9 +34,29 @@ const isWaterLocation = (location: SharedAstroSpot): boolean => {
     return waterTerms.some(term => lowerText.includes(term));
   };
   
+  // Enhanced water detection - also check coordinates against known water area ranges
+  // Simple check for Pacific Ocean, Atlantic Ocean, and major water bodies
+  const isLikelyWaterCoordinate = (lat: number, lng: number) => {
+    // Pacific Ocean bounds (rough approximation)
+    if ((lng > 140 || lng < -120) && (lat < 60 && lat > -60)) return true;
+    
+    // Atlantic Ocean bounds (rough approximation)
+    if ((lng > -80 && lng < -10) && (lat < 60 && lat > -60)) return true;
+    
+    // Indian Ocean bounds (rough approximation)
+    if ((lng > 40 && lng < 120) && (lat < 20 && lat > -60)) return true;
+    
+    // Mediterranean Sea bounds (rough approximation)
+    if ((lng > 0 && lng < 40) && (lat > 30 && lat < 45)) return true;
+    
+    return false;
+  };
+  
   return checkForWaterTerms(location.name) || 
          checkForWaterTerms(location.chineseName) || 
-         checkForWaterTerms(location.description);
+         checkForWaterTerms(location.description) ||
+         (location.latitude && location.longitude && 
+          isLikelyWaterCoordinate(location.latitude, location.longitude));
 };
 
 // Create different marker styles for certified vs calculated locations
@@ -112,7 +135,7 @@ const LocationMarker = memo(({
           markerRef.current.openPopup();
         }
         openTimeoutRef.current = null;
-      }, 150);
+      }, 100); // Reduced delay for more responsive feel
     }
   }, [locationId, onHover]);
   
@@ -204,15 +227,17 @@ const LocationMarker = memo(({
     });
   };
   
+  // FixBug: Fix case sensitivity in event handlers - "onMouseover" to "onMouseOver" and "onMouseout" to "onMouseOut"
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use the onClick prop instead of eventHandlers
-      onMouseover={handleMouseOver}
-      onMouseout={handleMouseOut}
+      eventHandlers={{
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
     >
       <Popup 
         closeOnClick={false}
