@@ -1,6 +1,6 @@
 
 import { calculateRealTimeSiqs, batchCalculateSiqs } from '../realTimeSiqsService';
-import { SharedAstroSpot } from '@/lib/types/sharedTypes';
+import { SharedAstroSpot } from '@/lib/siqs/types';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 
 // Create a cache for locations to avoid redundant processing
@@ -45,6 +45,7 @@ export async function updateLocationsWithRealTimeSiqs(
         ...location,
         siqs: cachedLocation.data.siqs,
         isViable: cachedLocation.data.isViable,
+        siqsFactors: cachedLocation.data.siqsFactors,
         siqsResult: cachedLocation.data.siqsResult
       });
     } else {

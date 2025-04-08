@@ -1,7 +1,8 @@
+
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
-import { SharedAstroSpot } from "@/lib/types/sharedTypes";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Button } from "./ui/button";
 import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -29,6 +30,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
   
+  // Start with cached data if available from localStorage
   useEffect(() => {
     try {
       const savedLocations = localStorage.getItem('cachedRecommendedLocations');
@@ -54,11 +56,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     maxInitialResults: limit + 5 // Request more to ensure we have enough even after filtering
   });
 
+  // Mark as initialized after initial load and save to cache
   useEffect(() => {
     if (!loading && !isInitialized && displayedLocations.length > 0) {
       setIsInitialized(true);
       setLocalLoading(false);
       
+      // Save to localStorage for faster future loads
       try {
         localStorage.setItem('cachedRecommendedLocations', JSON.stringify(displayedLocations));
       } catch (error) {
@@ -67,9 +71,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     }
   }, [loading, isInitialized, displayedLocations]);
 
+  // Only show limited number of locations
   const limitedLocations = useMemo(() => {
+    // Use fresh data if available, otherwise use cached data
     const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
     
+    // Prioritize certified locations 
     const certified = locationsToUse.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
@@ -78,6 +85,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       !loc.isDarkSkyReserve && !loc.certification
     );
     
+    // Combine with certified locations first, then add non-certified
+    // to fill up to the limit
     const sortedLocations = [
       ...certified,
       ...nonCertified
@@ -116,6 +125,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             size="sm"
             className="mt-4 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30"
             onClick={() => {
+              // Trigger event to find more locations
               document.dispatchEvent(
                 new CustomEvent('expand-search-radius', { detail: { radius: 1000 } })
               );
@@ -131,6 +141,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   
   return (
     <div className="mt-2">
+      {/* Show reminder based on actual current SIQS value */}
       {currentSiqs !== null && (
         <CurrentLocationReminder 
           currentSiqs={currentSiqs}
@@ -139,13 +150,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       )}
       
       <AnimatePresence>
-        <div className="space-y-3 mt-3">
+        <div className="space-y-3 mt-3"> {/* Added margin-top to fix layout conflicts */}
           {limitedLocations.map((location, index) => (
             <motion.div
               key={`${location.id || location.latitude}-${location.longitude}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, delay: index * 0.03 }}
+              transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
             >
               <PhotoPointCard
                 point={location}
