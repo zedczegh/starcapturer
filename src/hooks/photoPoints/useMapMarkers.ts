@@ -11,6 +11,7 @@ export const useMapMarkers = () => {
   const lastHoverIdRef = useRef<string | null>(null);
   const hoverStartTimeRef = useRef<number>(0);
   const isLockHoverRef = useRef<boolean>(false);
+  const mousePositionRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
   
   // Clear hover timeout on unmount
   useEffect(() => {
@@ -19,6 +20,18 @@ export const useMapMarkers = () => {
         window.clearTimeout(hoverTimeoutRef.current);
         hoverTimeoutRef.current = null;
       }
+    };
+  }, []);
+
+  // Track mouse position to detect if user has moved away significantly
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePositionRef.current = { x: e.clientX, y: e.clientY };
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
@@ -63,8 +76,8 @@ export const useMapMarkers = () => {
         isLockHoverRef.current = false;
       }
       
-      // If hovered for less than 300ms, use a shorter delay to prevent feeling sluggish
-      const timeoutDelay = hoverDuration < 300 ? 50 : 150;
+      // Use a very short delay to prevent flickering but still be responsive
+      const timeoutDelay = hoverDuration < 300 ? 30 : 80;
       
       hoverTimeoutRef.current = window.setTimeout(() => {
         setHoveredLocationId(null);
@@ -74,16 +87,18 @@ export const useMapMarkers = () => {
       return;
     }
     
-    // For switching between items, make it quick but with minimal delay
+    // For switching between items, make it immediate to prevent flickering
+    setHoveredLocationId(id);
+    lastHoverIdRef.current = id;
+    hoverStartTimeRef.current = now;
+    
+    // If user stays on a marker for a brief moment, lock the hover
+    const lockTimeoutDelay = 300; // ms to wait before locking hover
+    
     hoverTimeoutRef.current = window.setTimeout(() => {
-      setHoveredLocationId(id);
-      lastHoverIdRef.current = id;
-      hoverStartTimeRef.current = now;
-      hoverTimeoutRef.current = null;
-      
-      // If hovered for more than brief moment, lock the hover
       isLockHoverRef.current = true;
-    }, 50);
+      hoverTimeoutRef.current = null;
+    }, lockTimeoutDelay);
   }, [hoveredLocationId]);
 
   // Allow explicit setting of hover without the debounce logic
