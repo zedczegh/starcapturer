@@ -4,7 +4,7 @@ import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import L from 'leaflet';
+import L from 'leaflet'; // Fixed import for L (Leaflet)
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -93,38 +93,19 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
       map.panInsideBounds(worldBounds, { animate: false });
     });
 
-    // Improve wrapping of coordinates to stay within -180 to 180 longitude
-    const originalLatLng = L.latLng;
-    
-    // Override Leaflet's latLng to enforce wrapping
-    L.latLng = function(lat, lng) {
-      if (lng !== undefined) {
-        // Wrap longitude to stay within -180 to 180 range
-        lng = ((lng + 540) % 360) - 180;
-      }
-      return originalLatLng(lat, lng);
+    // Add bounds limiting to ensure we don't show multiple copies of the world
+    const originalGetBounds = map.getBounds;
+    map.wrapLatLng = function(latlng) {
+      const lng = latlng.lng;
+      // Wrap longitude to stay within -180 to 180 range
+      const wrappedLng = ((lng + 540) % 360) - 180;
+      return L.latLng(latlng.lat, wrappedLng);
     };
-    
-    // Maintain backwards compatibility with the original function
-    Object.keys(originalLatLng).forEach(key => {
-      L.latLng[key] = originalLatLng[key];
-    });
-    
-    // Enforce single world view
-    map.on('moveend', () => {
-      const mapBounds = map.getBounds();
-      if (mapBounds.getWest() < -180 || mapBounds.getEast() > 180) {
-        const center = map.getCenter();
-        center.lng = ((center.lng + 540) % 360) - 180;
-        map.setView(center, map.getZoom(), { animate: false });
-      }
-    });
     
     return () => {
       if (map) {
         // Clean up event listeners
         map.off('drag');
-        map.off('moveend');
       }
     };
   }, [map, activeView, searchRadius]);

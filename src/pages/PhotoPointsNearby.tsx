@@ -15,7 +15,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
-import { calculateDistance } from '@/utils/geoUtils';
 
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
@@ -227,6 +226,8 @@ const PhotoPointsNearby: React.FC = () => {
       <ViewToggle
         activeView={activeView}
         onViewChange={handleViewChange}
+        certifiedCount={certifiedCount}
+        calculatedCount={calculatedCount}
         loading={loading && !locationLoading}
       />
       
@@ -292,17 +293,7 @@ const PhotoPointsNearby: React.FC = () => {
               />
             ) : (
               <CalculatedLocations
-                locations={calculatedLocations.filter(loc => {
-                  // For calculated spots, ensure they are within the current radius
-                  if (!effectiveLocation) return true;
-                  const distance = loc.distance || calculateDistance(
-                    effectiveLocation.latitude,
-                    effectiveLocation.longitude,
-                    loc.latitude,
-                    loc.longitude
-                  );
-                  return distance <= calculatedSearchRadius;
-                })}
+                locations={calculatedLocations}
                 loading={loading && !locationLoading}
                 hasMore={hasMore}
                 onLoadMore={loadMore}

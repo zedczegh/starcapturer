@@ -9,6 +9,8 @@ export type PhotoPointsViewMode = 'certified' | 'calculated';
 interface ViewToggleProps {
   activeView: PhotoPointsViewMode;
   onViewChange: (view: PhotoPointsViewMode) => void;
+  certifiedCount: number;
+  calculatedCount: number;
   loading?: boolean;
 }
 
@@ -26,7 +28,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange('certified')}
-          className={`relative flex-1 mx-4 py-1.5 justify-center ${
+          className={`relative flex-1 mx-2 py-1.5 justify-center ${
             activeView === 'certified'
               ? 'bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-primary-foreground hover:from-amber-500/100 hover:to-amber-600/100'
               : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
@@ -42,7 +44,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'calculated' ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange('calculated')}
-          className={`relative flex-1 mx-4 py-1.5 justify-center ${
+          className={`relative flex-1 mx-2 py-1.5 justify-center ${
             activeView === 'calculated'
               ? 'bg-gradient-to-r from-primary/90 to-primary-dark/90 text-primary-foreground hover:from-primary hover:to-primary-dark'
               : 'text-muted-foreground hover:text-foreground hover:bg-background/90'
