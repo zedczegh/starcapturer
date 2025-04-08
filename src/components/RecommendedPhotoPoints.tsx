@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/lib/siqs/types";
 import { Button } from "./ui/button";
 import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -37,7 +37,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       if (savedLocations) {
         const parsed = JSON.parse(savedLocations);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setCachedLocations(parsed);
+          // Ensure all locations have an id
+          const locationsWithId = parsed.map((loc: any) => ({
+            ...loc,
+            id: loc.id || `loc-${loc.latitude?.toFixed(5)}-${loc.longitude?.toFixed(5)}-${Date.now()}`
+          }));
+          setCachedLocations(locationsWithId);
           setLocalLoading(false);
         }
       }
@@ -76,12 +81,18 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     // Use fresh data if available, otherwise use cached data
     const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
     
+    // Ensure all locations have an id
+    const locsWithIds = locationsToUse.map(loc => ({
+      ...loc,
+      id: loc.id || `loc-${loc.latitude?.toFixed(5)}-${loc.longitude?.toFixed(5)}-${Date.now()}`
+    }));
+    
     // Prioritize certified locations 
-    const certified = locationsToUse.filter(loc => 
+    const certified = locsWithIds.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
     
-    const nonCertified = locationsToUse.filter(loc => 
+    const nonCertified = locsWithIds.filter(loc => 
       !loc.isDarkSkyReserve && !loc.certification
     );
     

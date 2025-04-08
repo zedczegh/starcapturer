@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/lib/siqs/types";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
 
 /**
@@ -38,5 +38,5 @@ export const updateWithRealTimeSiqs = async (
 ): Promise<SharedAstroSpot[]> => {
   if (!locations?.length) return locations;
   
-  return updateLocationsWithRealTimeSiqs(locations);
+  return await updateLocationsWithRealTimeSiqs(locations);
 };

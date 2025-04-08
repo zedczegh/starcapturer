@@ -27,7 +27,7 @@ export interface SIQSFactors {
 export interface SIQSResult {
   score: number;        // SIQS score (0-10, higher is better)
   isViable: boolean;    // Whether conditions are viable for astrophotography
-  factors: {            // Individual factor results
+  factors?: {            // Individual factor results
     name: string;       // Factor name
     score: number;      // Factor score (0-10 scale)
     description: string; // Description of the factor
@@ -80,9 +80,10 @@ export interface NighttimeSIQSParams {
 
 /**
  * SharedAstroSpot interface for location data throughout the app
+ * Modified to make id required
  */
 export interface SharedAstroSpot {
-  id?: string;
+  id: string;           // Now required to align with astroSpots.ts
   name: string;
   latitude: number;
   longitude: number;
