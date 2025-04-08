@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from '@/lib/siqs/types';
 import { findCalculatedLocations } from "@/services/locationSearchService";
 
 export const useCalculatedLocationsFind = () => {
