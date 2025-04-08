@@ -17,8 +17,6 @@ interface ViewToggleProps {
 const ViewToggle: React.FC<ViewToggleProps> = ({
   activeView,
   onViewChange,
-  certifiedCount,
-  calculatedCount,
   loading = false
 }) => {
   const { t } = useLanguage();
@@ -40,11 +38,6 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <span>
             {t("Certified Dark Skies", "认证暗夜区")}
           </span>
-          {typeof certifiedCount === 'number' && (
-            <div className="absolute -top-2 -right-2 bg-primary rounded-full w-5 h-5 text-[10px] flex items-center justify-center z-10 text-primary-foreground font-medium">
-              {certifiedCount}
-            </div>
-          )}
         </Button>
         
         <Button
@@ -61,11 +54,6 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <span>
             {t("Calculated Spots", "计算位置")}
           </span>
-          {typeof calculatedCount === 'number' && (
-            <div className="absolute -top-2 -right-2 bg-primary rounded-full w-5 h-5 text-[10px] flex items-center justify-center z-10 text-primary-foreground font-medium">
-              {calculatedCount}
-            </div>
-          )}
         </Button>
       </div>
     </div>

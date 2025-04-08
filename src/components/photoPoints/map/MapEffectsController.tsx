@@ -1,105 +1,112 @@
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useMap } from 'react-leaflet';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
-import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import L from 'leaflet'; // Fixed import for L (Leaflet)
+import L from 'leaflet';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
-  activeView: 'certified' | 'calculated';
   searchRadius: number;
+  activeView: 'certified' | 'calculated';
   onSiqsCalculated?: (siqs: number) => void;
 }
 
-/**
- * Controller component for map effects and real-time SIQS updates
- * Handles SIQS calculations when user location changes
- */
 const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
   userLocation,
-  activeView,
   searchRadius,
+  activeView,
   onSiqsCalculated
 }) => {
-  const { t } = useLanguage();
   const map = useMap();
+  const [siqsScore, setSiqsScore] = useState<number | null>(null);
+  const lastFetchRef = useRef<number>(0);
+  const isInitializedRef = useRef(false);
   
-  // Calculate real-time SIQS for the current location
-  const updateRealTimeSiqs = useCallback(async () => {
-    if (!userLocation) return;
+  // Restrict map bounds to prevent infinite scrolling
+  useEffect(() => {
+    if (!map || isInitializedRef.current) return;
+    
+    // Set map bounds to prevent infinite scrolling east/west
+    const southWest = L.latLng(-85.0511, -180);
+    const northEast = L.latLng(85.0511, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
     
     try {
+      map.setMaxBounds(bounds);
+      map.on('drag', () => {
+        map.panInsideBounds(bounds, { animate: false });
+      });
+      
+      isInitializedRef.current = true;
+    } catch (error) {
+      console.error("Error setting map bounds:", error);
+    }
+  }, [map]);
+  
+  // Calculate real-time SIQS for the user's location
+  const calculateSiqs = useCallback(async () => {
+    if (!userLocation) return;
+    
+    // Throttle calculations to once per 10 seconds
+    const now = Date.now();
+    if (now - lastFetchRef.current < 10000) {
+      return;
+    }
+    lastFetchRef.current = now;
+    
+    try {
+      // Default Bortle scale if not available
+      const defaultBortleScale = 4;
+      
       const result = await calculateRealTimeSiqs(
-        userLocation.latitude,
-        userLocation.longitude,
-        searchRadius
+        userLocation.latitude, 
+        userLocation.longitude, 
+        defaultBortleScale
       );
       
-      if (result && typeof result.siqs === 'number') {
-        console.log(`Real-time SIQS calculated: ${result.siqs.toFixed(1)}`);
-        
-        // Update the global SIQS store
-        currentSiqsStore.setValue(result.siqs);
-        
-        // Call the callback if provided
-        if (onSiqsCalculated) {
-          onSiqsCalculated(result.siqs);
-        }
+      setSiqsScore(result.siqs);
+      
+      // Pass the SIQS result to the parent if needed
+      if (onSiqsCalculated) {
+        onSiqsCalculated(result.siqs);
       }
     } catch (error) {
-      console.error("Error calculating real-time SIQS:", error);
+      console.error("Error calculating SIQS in effects controller:", error);
     }
-  }, [userLocation, onSiqsCalculated, searchRadius]);
+  }, [userLocation, onSiqsCalculated]);
   
-  // Effect for location change
+  // Calculate SIQS when location changes
   useEffect(() => {
     if (userLocation) {
-      updateRealTimeSiqs();
+      calculateSiqs();
     }
-  }, [userLocation, updateRealTimeSiqs]);
+  }, [userLocation, calculateSiqs]);
   
-  // Effect for map initialization
+  // Center map on user location if available during initial load
+  useEffect(() => {
+    if (!map || !userLocation) return;
+    
+    const center = [userLocation.latitude, userLocation.longitude];
+    const zoom = map.getZoom() || 10;
+    
+    try {
+      map.setView(center as L.LatLngExpression, zoom, { 
+        animate: true 
+      });
+    } catch (error) {
+      console.error("Error centering map:", error);
+    }
+  }, [map, userLocation]);
+  
+  // Apply restrictions for a single world view (no infinite horizontal scrolling)
   useEffect(() => {
     if (!map) return;
     
-    // Enable map interactions
-    map.scrollWheelZoom.enable();
-    map.dragging.enable();
+    // This ensures the map wraps around once when scrolling horizontally
+    // and prevents multiple copies of the same location
+    map.options.worldCopyJump = true;
     
-    // Clear SIQS cache when view changes
-    if (activeView) {
-      clearSiqsCache();
-    }
-    
-    // Add performance optimizations
-    map._onResize = L.Util.throttle(map._onResize, 200, map);
-    
-    // Update UI when radius changes
-    if (activeView === 'calculated' && searchRadius) {
-      console.log(`Search radius set to ${searchRadius}km for calculated locations`);
-    }
-    
-    // Set world bounds to prevent infinite horizontal scrolling
-    // This restricts the map to one "copy" of the world
-    const worldBounds = L.latLngBounds(
-      L.latLng(-90, -180),  // Southwest corner
-      L.latLng(90, 180)     // Northeast corner
-    );
-    
-    map.setMaxBounds(worldBounds);
-    map.on('drag', function() {
-      map.panInsideBounds(worldBounds, { animate: false });
-    });
-    
-    return () => {
-      if (map) {
-        // Clean up event listeners
-        map.off('drag');
-      }
-    };
-  }, [map, activeView, searchRadius]);
+  }, [map]);
   
   return null;
 };

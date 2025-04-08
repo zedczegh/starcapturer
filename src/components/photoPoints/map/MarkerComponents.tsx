@@ -10,6 +10,7 @@ import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isWaterLocationFast } from '@/utils/enhancedLocationValidator';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -17,23 +18,6 @@ const getSiqsClass = (siqs?: number): string => {
   if (siqs >= 7.5) return 'siqs-excellent';
   if (siqs >= 5.5) return 'siqs-good';
   return 'siqs-poor';
-};
-
-// Filter out water locations (simplified check)
-const isWaterLocation = (location: SharedAstroSpot): boolean => {
-  // Check location name or description for common water-related terms
-  const waterTerms = ['sea', 'ocean', 'lake', 'river', 'bay', 'gulf', 'strait', 
-                      '海', '洋', '湖', '河', '湾', '水'];
-  
-  const checkForWaterTerms = (text?: string) => {
-    if (!text) return false;
-    const lowerText = text.toLowerCase();
-    return waterTerms.some(term => lowerText.includes(term));
-  };
-  
-  return checkForWaterTerms(location.name) || 
-         checkForWaterTerms(location.chineseName) || 
-         checkForWaterTerms(location.description);
 };
 
 // Create different marker styles for certified vs calculated locations
@@ -72,8 +56,9 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
   
-  // Skip water locations for calculated spots
-  if (!isCertified && isWaterLocation(location)) {
+  // Skip water locations for calculated spots (unless certified)
+  if (!isCertified && location.latitude && location.longitude && 
+      isWaterLocationFast(location.latitude, location.longitude)) {
     return null;
   }
   
@@ -158,7 +143,6 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
@@ -215,7 +199,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component - Updated to use red color
+// User location marker component
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
@@ -224,7 +208,6 @@ const UserLocationMarker = memo(({
   currentSiqs: number | null 
 }) => {
   const { t } = useLanguage();
-  // Changed to red color for user location
   const userMarkerIcon = createCustomMarker('#e11d48');
   
   return (
