@@ -21,8 +21,6 @@ const getSiqsClass = (siqs?: number): string => {
 
 // Enhanced water location detection
 const isWaterLocation = (location: SharedAstroSpot): boolean => {
-  if (!location.latitude || !location.longitude) return false;
-  
   // Check location name or description for common water-related terms
   const waterTerms = [
     'sea', 'ocean', 'lake', 'river', 'bay', 'gulf', 'strait', 'pond', 'reservoir',
@@ -68,6 +66,7 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
     return createCustomMarker('#FFD700', 'star');
   } else {
     // For calculated locations, use a brighter color based on SIQS with circle shape
+    // Replace olive green with a brighter, more vibrant green
     const defaultColor = '#4ADE80'; // Bright green fallback
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
     return createCustomMarker(color, 'circle');
@@ -99,7 +98,7 @@ const LocationMarker = memo(({
   const closeTimeoutRef = useRef<number | null>(null);
   
   // Skip water locations for calculated spots
-  if (!isCertified && location.latitude && location.longitude && isWaterLocation(location)) {
+  if (!isCertified && isWaterLocation(location)) {
     return null;
   }
   
@@ -228,20 +227,21 @@ const LocationMarker = memo(({
     });
   };
   
-  // Fixed marker props without using the deprecated eventHandlers prop
+  // FixBug: Fix case sensitivity in event handlers - "onMouseover" to "onMouseOver" and "onMouseout" to "onMouseOut"
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
+      eventHandlers={{
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        // Removed the problematic offset property
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">

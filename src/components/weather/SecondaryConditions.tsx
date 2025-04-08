@@ -1,40 +1,20 @@
 
 import React from 'react';
+import { WeatherCondition } from '@/lib/api/weatherApi';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Droplets, Wind, Sun } from 'lucide-react';
 
-interface WeatherCondition {
-  humidity?: number;
-  cloudiness?: number;
-  windSpeed?: number;
-  [key: string]: any;
-}
-
 interface SecondaryConditionsProps {
-  conditions?: WeatherCondition[];
+  conditions: WeatherCondition[];
   currentTimestamp?: string;
   showMoreLink?: boolean;
-  cloudCover?: number;
-  moonPhase?: string;
-  bortleScale?: number | null;
-  aqi?: number;
-  nighttimeCloudData?: {
-    average: number | null;
-    evening: number;
-    morning: number;
-  } | null;
 }
 
 const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({ 
   conditions, 
   currentTimestamp,
-  showMoreLink = false,
-  cloudCover,
-  moonPhase,
-  bortleScale,
-  aqi,
-  nighttimeCloudData
+  showMoreLink = false
 }) => {
   const { t } = useLanguage();
   
@@ -50,10 +30,9 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
     return Math.round((sum / conditions.length) * 10) / 10;
   };
   
-  // Use directly provided values or calculate from conditions
-  const averageHumidity = conditions ? getAverageValue('humidity') : 0;
-  const averageCloudiness = cloudCover !== undefined ? cloudCover : (conditions ? getAverageValue('cloudiness') : 0);
-  const averageWindSpeed = conditions ? getAverageValue('windSpeed') : 0;
+  const averageHumidity = getAverageValue('humidity');
+  const averageCloudiness = getAverageValue('cloudiness');
+  const averageWindSpeed = getAverageValue('windSpeed');
   
   return (
     <Card className="border-cosmic-600/20 bg-cosmic-900/40 backdrop-blur-sm">

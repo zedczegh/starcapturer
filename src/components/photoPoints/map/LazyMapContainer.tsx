@@ -72,12 +72,10 @@ const MapEvents = ({
 // Component to handle map events and interactions
 const MapController = ({ 
   userLocation, 
-  searchRadius,
-  isLoading
+  searchRadius
 }: { 
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
-  isLoading?: boolean;
 }) => {
   const map = useMap();
   const firstRenderRef = useRef(true);
@@ -107,18 +105,6 @@ const MapController = ({
     // Improve performance by reduced rerenders on pan/zoom
     map._onResize = L.Util.throttle(map._onResize, 200, map);
   }, [map, userLocation]);
-
-  // Add loading class to map container when loading
-  useEffect(() => {
-    if (!map) return;
-    
-    const container = map.getContainer();
-    if (isLoading) {
-      container.classList.add('loading');
-    } else {
-      container.classList.remove('loading');
-    }
-  }, [map, isLoading]);
 
   return null;
 };
@@ -155,7 +141,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const isCertifiedView = activeView === 'certified';
   const markersRef = useRef<Map<string, boolean>>(new Map());
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   
   // Optimize performance by reducing unnecessary marker updates
   const locationKeys = locations.map(loc => `${loc.latitude}-${loc.longitude}`).join(',');
@@ -195,14 +180,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   useEffect(() => {
     // Reset marker cache when locations change significantly
     markersRef.current = new Map();
-    
-    // Set loading state when locations change
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
   }, [locationKeys]);
   
   // Handle map click that closes popups
@@ -244,7 +221,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       <MapController 
         userLocation={userLocation} 
         searchRadius={searchRadius}
-        isLoading={isLoading}
       />
       
       {/* Effects controller for real-time SIQS and other effects */}
@@ -282,18 +258,13 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             fillOpacity: 0.08, // Increased opacity for more visibility
             weight: 1.5, // Thicker border
             opacity: 0.4, // More visible border
-            className: isLoading ? 'location-radius-circle radar-scanning-animation' : 'location-radius-circle' // Added radar scanning animation class
+            className: 'location-radius-circle radar-scanning-animation' // Added radar scanning animation class
           }}
         />
       )}
       
-      {/* Location markers - filter out invalid locations and water locations for calculated view */}
+      {/* Location markers */}
       {!hideMarkerPopups && validLocations.map((location) => {
-        // Skip locations without latitude/longitude
-        if (typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
-          return null;
-        }
-        
         // Generate a unique ID for this location
         const locationId = getMarkerKey(location);
         
@@ -318,7 +289,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
             isCertified={isCertifiedView}
           />
         );
-      }).filter(Boolean)}
+      })}
     </MapContainer>
   );
 };

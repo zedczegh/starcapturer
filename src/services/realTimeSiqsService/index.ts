@@ -1,9 +1,8 @@
 
-// Re-export all services from the main realTimeSiqsService file
+// Re-export all SIQS functionality from services
 export * from '../realTimeSiqsService';
-
-// Export the main service functions
-export { calculateRealTimeSiqs, batchCalculateSiqs, clearSiqsCache } from '../realTimeSiqsService';
-
-// Export utility functions
-export { clearLocationCache, clearLocationCacheForArea } from './locationUpdateService';
+export * from '../bestLocationsService';
+export { 
+  updateLocationsWithRealTimeSiqs,
+  clearLocationCache as clearSiqsLocationCache
+} from './locationUpdateService';

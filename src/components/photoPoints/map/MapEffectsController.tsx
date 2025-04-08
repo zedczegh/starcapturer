@@ -1,8 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
-import { MapUpdater, SearchRadiusOverlay } from '@/components/location/map/MapEffectsComponents';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from 'sonner';
+import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -11,84 +13,73 @@ interface MapEffectsControllerProps {
   onSiqsCalculated?: (siqs: number) => void;
 }
 
+/**
+ * Controller component for map effects and real-time SIQS updates
+ * Handles SIQS calculations when user location changes
+ */
 const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
   userLocation,
   activeView,
   searchRadius,
   onSiqsCalculated
 }) => {
+  const { t } = useLanguage();
   const map = useMap();
-  const [isCalculating, setIsCalculating] = useState(false);
-  const isCertifiedView = activeView === 'certified';
   
-  // Calculate SIQS for the current user location
-  useEffect(() => {
-    let mounted = true;
+  // Calculate real-time SIQS for the current location
+  const updateRealTimeSiqs = useCallback(async () => {
+    if (!userLocation) return;
     
-    const calculateLocationSiqs = async () => {
-      if (!userLocation) return;
+    try {
+      const result = await calculateRealTimeSiqs(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius
+      );
       
-      try {
-        setIsCalculating(true);
+      if (result && typeof result.siqs === 'number') {
+        console.log(`Real-time SIQS calculated: ${result.siqs.toFixed(1)}`);
         
-        // Calculate SIQS for the current location using the correct function from realTimeSiqsService
-        const result = await calculateRealTimeSiqs(
-          userLocation.latitude, 
-          userLocation.longitude,
-          5 // Default Bortle scale if not provided
-        );
+        // Update the global SIQS store
+        currentSiqsStore.setValue(result.siqs);
         
-        // Only update if component is still mounted
-        if (mounted) {
-          if (onSiqsCalculated && result?.siqs) {
-            onSiqsCalculated(result.siqs);
-          }
-          setIsCalculating(false);
-        }
-      } catch (error) {
-        console.error("Error calculating SIQS for map location:", error);
-        if (mounted) {
-          setIsCalculating(false);
+        // Call the callback if provided
+        if (onSiqsCalculated) {
+          onSiqsCalculated(result.siqs);
         }
       }
-    };
-    
-    calculateLocationSiqs();
-    
-    return () => {
-      mounted = false;
-    };
-  }, [userLocation, onSiqsCalculated]);
+    } catch (error) {
+      console.error("Error calculating real-time SIQS:", error);
+    }
+  }, [userLocation, onSiqsCalculated, searchRadius]);
   
-  // Update map settings based on active view
+  // Effect for location change
+  useEffect(() => {
+    if (userLocation) {
+      updateRealTimeSiqs();
+    }
+  }, [userLocation, updateRealTimeSiqs]);
+  
+  // Effect for map initialization
   useEffect(() => {
     if (!map) return;
     
-    // Update map maxZoom based on the active view
-    if (isCertifiedView) {
-      map.setMaxZoom(10);
-    } else {
-      map.setMaxZoom(18);
+    // Enable map interactions
+    map.scrollWheelZoom.enable();
+    map.dragging.enable();
+    
+    // Clear SIQS cache when view changes
+    if (activeView) {
+      clearSiqsCache();
     }
     
-  }, [map, isCertifiedView]);
-
-  if (!userLocation) return null;
+    // Update UI when radius changes
+    if (activeView === 'calculated' && searchRadius) {
+      console.log(`Search radius set to ${searchRadius}km for calculated locations`);
+    }
+  }, [map, activeView, searchRadius]);
   
-  return (
-    <>
-      {/* Update map center when user location changes */}
-      <MapUpdater position={[userLocation.latitude, userLocation.longitude]} />
-      
-      {/* Add search radius overlay with radar scanning animation when loading */}
-      <SearchRadiusOverlay
-        position={[userLocation.latitude, userLocation.longitude]}
-        radius={searchRadius}
-        isLoading={isCalculating || (activeView === 'calculated' && searchRadius > 0)}
-        color={isCertifiedView ? '#FFD700' : '#4ADE80'}
-      />
-    </>
-  );
+  return null;
 };
 
 export default MapEffectsController;
