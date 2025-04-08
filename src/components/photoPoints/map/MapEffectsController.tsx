@@ -1,7 +1,6 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet'; // Added import for L
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
