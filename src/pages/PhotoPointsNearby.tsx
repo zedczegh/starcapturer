@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -16,7 +15,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
-import { clearWaterLocationCache } from '@/utils/enhancedLocationValidator';
 
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
@@ -132,9 +130,7 @@ const PhotoPointsNearby: React.FC = () => {
       setSearchRadius(calculatedSearchRadius);
     }
     
-    // Clear both location and water location caches when switching views
     clearLocationCache();
-    clearWaterLocationCache();
   }, [setSearchRadius, calculatedSearchRadius]);
   
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
@@ -152,7 +148,6 @@ const PhotoPointsNearby: React.FC = () => {
     
     try {
       clearLocationCache();
-      clearWaterLocationCache();
       console.log("Cleared location cache after location change");
     } catch (err) {
       console.error("Error clearing location cache:", err);
@@ -217,6 +212,7 @@ const PhotoPointsNearby: React.FC = () => {
   }, []);
   
   const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  
   const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
   
   return (

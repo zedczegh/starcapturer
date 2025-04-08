@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -6,10 +5,9 @@ import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
-import './MapStyles.css';
+import './MapStyles.css'; // Import custom map styles
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
-import { filterLocationsForMap } from "@/utils/enhancedLocationValidator";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 
@@ -44,7 +42,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   onLocationClick,
   onMapReady,
   onLocationUpdate,
-  className = "h-[435px] w-full rounded-lg overflow-hidden border border-border" // Reduced height by 15%
+  className = "h-[510px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
@@ -59,10 +57,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const lastRadiusRef = useRef<number>(searchRadius);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
-  // Always show only the active view locations, filtered for water if in calculated view
-  const activeLocations = activeView === 'certified' 
-    ? certifiedLocations 
-    : filterLocationsForMap(calculatedLocations, false);
+  // Always show only the active view locations
+  const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
   
   // When view changes, mark it to trigger a re-render with a new key
   useEffect(() => {
@@ -87,6 +83,23 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [searchRadius]);
   
+  // Process locations to keep track of all loaded locations across radius changes
+  useEffect(() => {
+    if (activeView === 'calculated' && activeLocations.length > 0) {
+      // For calculated view, preserve all previously loaded locations
+      previousLocationsRef.current = [
+        ...previousLocationsRef.current,
+        ...activeLocations.filter(newLoc => {
+          // Only add if not already in the list
+          return !previousLocationsRef.current.some(existingLoc => 
+            existingLoc.latitude === newLoc.latitude && 
+            existingLoc.longitude === newLoc.longitude
+          );
+        })
+      ];
+    }
+  }, [activeLocations, activeView]);
+  
   // Always load certified locations in background as soon as component mounts
   useEffect(() => {
     if (!mapLoadedOnce && activeLocations.length > 0) {
@@ -105,11 +118,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: activeView === 'certified' 
-      ? certifiedLocations 
-      : filterLocationsForMap(calculatedLocations, false),
+    locations: activeView === 'calculated' && previousLocationsRef.current.length > 0 
+      ? previousLocationsRef.current 
+      : activeLocations,
     searchRadius,
-    activeView
+    activeView // Pass the active view to usePhotoPointsMap
   });
 
   // Reset selected location when userLocation changes dramatically
