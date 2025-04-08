@@ -2,14 +2,15 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 
 /**
- * Custom hook for managing map marker hover states with improved debounce
+ * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
  */
 export const useMapMarkers = () => {
   // State for currently hovered location ID
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   
-  // Refs to manage timing and prevent flicker
-  const hoverTimeoutRef = useRef<number | null>(null);
+  // Refs for improved hover stability
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHoverId = useRef<string | null>(null);
   const hoverTimestamp = useRef<number>(0);
   const isHoverLocked = useRef<boolean>(false);
@@ -18,13 +19,16 @@ export const useMapMarkers = () => {
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current !== null) {
-        window.clearTimeout(hoverTimeoutRef.current);
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      if (debounceTimeoutRef.current !== null) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
   }, []);
 
   /**
-   * Handle hover with improved debounce algorithm to prevent flicker
+   * Handle hover with improved anti-flicker debounce algorithm
    */
   const handleHover = useCallback((id: string | null) => {
     // Prevent redundant updates for same ID
@@ -32,45 +36,48 @@ export const useMapMarkers = () => {
     
     // Clear any pending timeouts
     if (hoverTimeoutRef.current !== null) {
-      window.clearTimeout(hoverTimeoutRef.current);
+      clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
+    }
+    
+    if (debounceTimeoutRef.current !== null) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
     }
     
     // Track current time
     const now = Date.now();
     
-    // Fast hover when nothing is currently selected
-    if (id !== null && hoveredLocationId === null) {
-      setHoveredLocationId(id);
-      lastHoverId.current = id;
-      hoverTimestamp.current = now;
-      isHoverLocked.current = true;
-      return;
-    }
-    
-    // When leaving a marker completely
-    if (id === null) {
-      // Add a delay to prevent rapid hover state changes
-      const delay = now - hoverTimestamp.current < 200 ? 100 : 50;
+    // For new hover target, set with slight delay for better stability
+    if (id !== null) {
+      // If rapidly changing between markers, use longer delay
+      const delay = now - hoverTimestamp.current < 300 ? 80 : 50;
       
-      hoverTimeoutRef.current = window.setTimeout(() => {
+      debounceTimeoutRef.current = setTimeout(() => {
+        setHoveredLocationId(id);
+        lastHoverId.current = id;
+        hoverTimestamp.current = Date.now();
+        isHoverLocked.current = true;
+        debounceTimeoutRef.current = null;
+      }, delay);
+    } 
+    // When leaving a marker completely
+    else {
+      // Add a delay to prevent flicker on quick mouse movements
+      const delay = now - hoverTimestamp.current < 200 ? 150 : 100;
+      
+      hoverTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverId.current = null;
         isHoverLocked.current = false;
         hoverTimeoutRef.current = null;
       }, delay);
-      return;
     }
-    
-    // When switching between markers - make it faster
-    setHoveredLocationId(id);
-    lastHoverId.current = id;
-    hoverTimestamp.current = now;
-    isHoverLocked.current = true;
-  }, [hoveredLocationId]);
+  }, []);
   
   return {
     hoveredLocationId,
-    handleHover
+    handleHover,
+    isHoverLocked: isHoverLocked.current
   };
 };

@@ -5,17 +5,16 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 interface MapTooltipProps {
   name: string;
-  position: [number, number];
   children?: React.ReactNode;
   className?: string;
 }
 
 /**
  * Enhanced map tooltip component with better styling and performance
+ * Removed position prop as it's not needed when used as a child of Marker
  */
 const MapTooltip: React.FC<MapTooltipProps> = ({ 
   name, 
-  position,
   children,
   className = ''
 }) => {
@@ -23,7 +22,6 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   
   return (
     <Popup
-      position={position}
       closeOnClick={false}
       autoClose={false}
       className={`map-tooltip ${className}`}

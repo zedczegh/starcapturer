@@ -71,8 +71,6 @@ const LocationMarker = memo(({
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
-  const openTimeoutRef = useRef<number | null>(null);
-  const closeTimeoutRef = useRef<number | null>(null);
   
   // Skip water locations for calculated spots
   if (!isCertified && isWaterLocation(location)) {
@@ -93,66 +91,22 @@ const LocationMarker = memo(({
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
     
-    // Clear any existing timeouts
-    if (closeTimeoutRef.current !== null) {
-      window.clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-    
     // Add hovered class to marker for style enhancement
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
     }
-    
-    // Delayed opening of popup for smoother hover
-    if (!openTimeoutRef.current && markerRef.current && !markerRef.current.isPopupOpen()) {
-      openTimeoutRef.current = window.setTimeout(() => {
-        if (markerRef.current) {
-          markerRef.current.openPopup();
-        }
-        openTimeoutRef.current = null;
-      }, 150);
-    }
   }, [locationId, onHover]);
   
   const handleMouseOut = useCallback(() => {
-    // Clear open timeout if it exists
-    if (openTimeoutRef.current !== null) {
-      window.clearTimeout(openTimeoutRef.current);
-      openTimeoutRef.current = null;
-    }
+    onHover(null);
     
-    // Delayed popup closing and hover state removal
-    closeTimeoutRef.current = window.setTimeout(() => {
-      onHover(null);
-      
-      // Remove hovered class
-      const marker = markerRef.current;
-      if (marker && marker.getElement()) {
-        marker.getElement()?.classList.remove('hovered');
-      }
-      
-      // Close popup with a delay
-      if (markerRef.current && markerRef.current.isPopupOpen()) {
-        markerRef.current.closePopup();
-      }
-      
-      closeTimeoutRef.current = null;
-    }, 200);
+    // Remove hovered class
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.remove('hovered');
+    }
   }, [onHover]);
-  
-  // Clean up timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (openTimeoutRef.current !== null) {
-        window.clearTimeout(openTimeoutRef.current);
-      }
-      if (closeTimeoutRef.current !== null) {
-        window.clearTimeout(closeTimeoutRef.current);
-      }
-    };
-  }, []);
   
   // Effect to manage popup state based on hover
   useEffect(() => {
@@ -162,15 +116,9 @@ const LocationMarker = memo(({
     if (isHovered) {
       marker.openPopup();
       marker.getElement()?.classList.add('hovered');
-    } else if (!isHovered && closeTimeoutRef.current === null && marker.isPopupOpen()) {
-      // Only add a timeout if we don't already have one
-      closeTimeoutRef.current = window.setTimeout(() => {
-        if (markerRef.current) {
-          markerRef.current.closePopup();
-          markerRef.current.getElement()?.classList.remove('hovered');
-        }
-        closeTimeoutRef.current = null;
-      }, 200);
+    } else {
+      marker.closePopup();
+      marker.getElement()?.classList.remove('hovered');
     }
   }, [isHovered]);
 
@@ -277,7 +225,7 @@ const UserLocationMarker = memo(({
 }) => {
   const { t } = useLanguage();
   // Changed to red color for user location
-  const userMarkerIcon = createCustomMarker('#e11d48', 'user'); // Using red color
+  const userMarkerIcon = createCustomMarker('#e11d48', 'user');
   
   return (
     <Marker position={position} icon={userMarkerIcon}>

@@ -37,18 +37,18 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
       break;
     
     case 'user':
-      // User location marker - now using red color with pulse effect
+      // User location marker - updated to use bright red color with enhanced visibility
       svgPath = `
-        <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2" opacity="0.9" />
-        <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="1" opacity="0.4" class="pulse-circle" />
+        <circle cx="12" cy="12" r="7" fill="${color}" stroke="white" stroke-width="2" opacity="0.95" />
+        <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
+        <circle cx="12" cy="12" r="3" fill="white" stroke="none" opacity="0.85" />
       `;
-      className += ' user-marker';
+      className += ' user-location-marker';
       break;
     
     case 'circle':
     default:
-      // Circle for calculated locations - with enhanced inner pulse effect for better visibility
-      // Use brighter, more vibrant green instead of olive green
+      // Circle for calculated locations with enhanced inner pulse effect
       svgPath = `
         <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
         <circle cx="12" cy="12" r="6" fill="${color}" stroke="none" class="pulse-inner-circle" opacity="0.6" />
@@ -78,6 +78,7 @@ export function createPulsingUserMarker(): L.DivIcon {
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
         <circle cx="12" cy="12" r="6" fill="#e11d48" stroke="white" stroke-width="2" opacity="0.9" />
         <circle cx="12" cy="12" r="10" fill="#e11d48" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
+        <circle cx="12" cy="12" r="3" fill="white" stroke="none" opacity="0.7" />
       </svg>
     `,
     iconSize: [24, 24],

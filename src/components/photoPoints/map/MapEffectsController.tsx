@@ -2,7 +2,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
 import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
@@ -72,6 +71,9 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     if (activeView) {
       clearSiqsCache();
     }
+    
+    // Add performance optimizations
+    map._onResize = L.Util.throttle(map._onResize, 200, map);
     
     // Update UI when radius changes
     if (activeView === 'calculated' && searchRadius) {
