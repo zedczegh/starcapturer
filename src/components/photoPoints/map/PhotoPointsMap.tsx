@@ -1,15 +1,13 @@
-
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader, MapPin } from "lucide-react";
+import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
-import { Button } from "@/components/ui/button";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 
@@ -44,7 +42,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   onLocationClick,
   onMapReady,
   onLocationUpdate,
-  className = "h-[600px] w-full rounded-lg overflow-hidden border border-border"
+  className = "h-[510px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
@@ -221,19 +219,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
             onLocationUpdate={onLocationUpdate}
           />
         </Suspense>
-        
-        {/* My Location Button - Positioned in top-right corner for better visibility */}
-        <div className="absolute top-4 right-4 z-[1000]">
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-white text-gray-800 hover:bg-gray-100 shadow-lg flex items-center"
-            onClick={handleReturnToMyLocation}
-          >
-            <MapPin className="h-4 w-4 mr-1 text-primary" />
-            {t("My Location", "我的位置")}
-          </Button>
-        </div>
       </Suspense>
     </div>
   );

@@ -195,3 +195,4 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
 };
 
 export default RealTimeLocationUpdater;
+
