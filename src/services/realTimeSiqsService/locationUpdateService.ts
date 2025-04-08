@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 

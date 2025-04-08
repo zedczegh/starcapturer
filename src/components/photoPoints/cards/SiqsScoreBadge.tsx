@@ -10,10 +10,12 @@ interface SiqsScoreBadgeProps {
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false, compact = false }) => {
-  const scoreColor = getProgressColor(score);
+  // Ensure score is valid and within range
+  const validScore = Math.max(0, Math.min(10, Number(score) || 0));
+  const scoreColor = getProgressColor(validScore);
   
   // Generate a light background color based on the score color with higher opacity for better visibility
-  const bgColor = `${scoreColor}60`; // Increased opacity for better visibility
+  const bgColor = `${scoreColor}30`; // Reduced opacity for better contrast
   
   // Format the score with one decimal place
   const formatSIQSScoreForDisplay = (score: number) => {
@@ -25,7 +27,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false,
     backgroundColor: bgColor,
     borderColor: scoreColor,
     color: scoreColor,
-    boxShadow: compact ? '0 1px 3px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.2)'
+    boxShadow: compact ? '0 1px 3px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.3)'
   };
   
   return (
@@ -39,7 +41,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false,
         <Star className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} mr-1.5`} fill={scoreColor} />
       )}
       <span className={`${compact ? 'text-2xs font-bold' : 'text-xs font-medium'}`}>
-        {loading ? '...' : formatSIQSScoreForDisplay(score)}
+        {loading ? '...' : formatSIQSScoreForDisplay(validScore)}
       </span>
     </div>
   );
