@@ -1,6 +1,6 @@
 
 import { calculateRealTimeSiqs, batchCalculateSiqs } from '../realTimeSiqsService';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 
 // Create a cache for locations to avoid redundant processing
@@ -56,8 +56,8 @@ export async function updateLocationsWithRealTimeSiqs(
   
   if (locationsToUpdate.length > 0) {
     try {
-      // Batch update the remaining locations
-      const freshLocations = await batchCalculateSiqs(locationsToUpdate);
+      // Batch update the remaining locations - cast to ensure type compatibility
+      const freshLocations = await batchCalculateSiqs(locationsToUpdate as any) as SharedAstroSpot[];
       
       // Update the cache with fresh data
       for (const location of freshLocations) {

@@ -14,12 +14,14 @@ export const useLocationFind = () => {
     longitude: number,
     radius: number
   ): Promise<SharedAstroSpot[]> => {
-    return apiLocationFind(latitude, longitude, radius);
+    // Cast to ensure type compatibility
+    return (await apiLocationFind(latitude, longitude, radius)) as SharedAstroSpot[];
   }, []);
 
   // Sort locations by quality and distance
   const sortLocationsByQuality = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-    return apiSortQuality(locations);
+    // Cast to ensure type compatibility 
+    return apiSortQuality(locations) as SharedAstroSpot[];
   }, []);
 
   return {
