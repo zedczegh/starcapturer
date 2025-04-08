@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useMap } from 'react-leaflet';
-import { MapUpdater, SearchRadiusOverlay, DarkSkyOverlay } from '@/components/location/map/MapEffectsComponents';
-import { calculateSiqs } from '@/services/siqsCalculator';
+import { MapUpdater, SearchRadiusOverlay } from '@/components/location/map/MapEffectsComponents';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -31,13 +31,17 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
       try {
         setIsCalculating(true);
         
-        // Calculate SIQS for the current location
-        const result = await calculateSiqs(userLocation.latitude, userLocation.longitude);
+        // Calculate SIQS for the current location using the correct function from realTimeSiqsService
+        const result = await calculateRealTimeSiqs(
+          userLocation.latitude, 
+          userLocation.longitude,
+          5 // Default Bortle scale if not provided
+        );
         
         // Only update if component is still mounted
         if (mounted) {
-          if (onSiqsCalculated && result?.score) {
-            onSiqsCalculated(result.score);
+          if (onSiqsCalculated && result?.siqs) {
+            onSiqsCalculated(result.siqs);
           }
           setIsCalculating(false);
         }
