@@ -63,7 +63,15 @@ export async function updateLocationsWithRealTimeSiqs(
       for (const location of freshLocations) {
         const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
         locationCache.set(cacheKey, {
-          data: location,
+          data: {
+            ...location,
+            // Ensure these properties exist in the cached data
+            siqsFactors: location.siqsFactors || [],
+            siqsResult: location.siqsResult || (location.siqs ? { 
+              score: typeof location.siqs === 'number' ? location.siqs : 0, 
+              isViable: typeof location.isViable === 'boolean' ? location.isViable : false 
+            } : undefined)
+          },
           timestamp: Date.now()
         });
       }

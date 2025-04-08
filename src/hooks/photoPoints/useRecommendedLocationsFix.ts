@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from "@/types/weather";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
 
 /**
@@ -15,12 +15,8 @@ export const fixLoadMoreCalculatedLocations = (
     if (!userLocation) return [];
     
     try {
-      // Call the original function with correct parameter count (3)
-      const result = await loadMoreCalculatedLocations(
-        userLocation.latitude, 
-        userLocation.longitude, 
-        searchRadius
-      );
+      // Call the original function with correct parameter count (1)
+      const result = await loadMoreCalculatedLocations();
       
       return result;
     } catch (error) {
@@ -38,5 +34,11 @@ export const updateWithRealTimeSiqs = async (
 ): Promise<SharedAstroSpot[]> => {
   if (!locations?.length) return locations;
   
-  return updateLocationsWithRealTimeSiqs(locations);
+  // Convert locations to the expected type before passing to service
+  const typedLocations = locations.map(loc => ({
+    ...loc,
+    siqs: typeof loc.siqs === 'object' ? loc.siqs.score : loc.siqs
+  }));
+  
+  return updateLocationsWithRealTimeSiqs(typedLocations);
 };

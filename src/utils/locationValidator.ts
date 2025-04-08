@@ -4,8 +4,6 @@
  * Provides improved water detection and location quality assessment
  */
 
-import { batchGeocode } from '@/lib/api/geocoding';
-
 // Cache of water detection results to avoid redundant API calls
 const waterLocationCache = new Map<string, boolean>();
 const WATER_CACHE_SIZE_LIMIT = 500;
@@ -199,4 +197,36 @@ export function isWaterNamedLocation(name: string): boolean {
  */
 export function clearWaterLocationCache(): void {
   waterLocationCache.clear();
+}
+
+/**
+ * Export of isValidAstronomyLocation for backward compatibility
+ */
+export function isValidAstronomyLocation(
+  latitude: number, 
+  longitude: number,
+  name?: string
+): boolean {
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return false;
+  }
+
+  // Check if it's water
+  if (isWaterLocation(latitude, longitude, false)) {
+    return false;
+  }
+
+  // Check if name suggests it's water
+  if (name && isWaterNamedLocation(name)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Export of isLikelyCoastalWater for backward compatibility
+ */
+export function isLikelyCoastalWater(name?: string): boolean {
+  return isWaterNamedLocation(name || '');
 }

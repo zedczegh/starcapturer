@@ -27,7 +27,7 @@ export interface SIQSFactors {
 export interface SIQSResult {
   score: number;        // SIQS score (0-10, higher is better)
   isViable: boolean;    // Whether conditions are viable for astrophotography
-  factors: {            // Individual factor results
+  factors?: {            // Individual factor results
     name: string;       // Factor name
     score: number;      // Factor score (0-10 scale)
     description: string; // Description of the factor
