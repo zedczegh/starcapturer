@@ -210,7 +210,7 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use correct casing for mouse event handlers (onMouseOver instead of onMouseover)
+      // Fix: Use correct casing for mouse event handlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
@@ -267,7 +267,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component
+// User location marker component - Updated to use red color
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
@@ -276,7 +276,8 @@ const UserLocationMarker = memo(({
   currentSiqs: number | null 
 }) => {
   const { t } = useLanguage();
-  const userMarkerIcon = createCustomMarker('#3b82f6', 'user');
+  // Changed to red color for user location
+  const userMarkerIcon = createCustomMarker('#e11d48', 'user'); // Using red color
   
   return (
     <Marker position={position} icon={userMarkerIcon}>

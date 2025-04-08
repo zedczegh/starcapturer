@@ -1,9 +1,11 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 
-// Update map view when center position changes
+/**
+ * Component to update map view when center position changes
+ */
 export function MapUpdater({ position }: { position: [number, number] }) {
   const map = useMap();
   
@@ -23,28 +25,32 @@ export function MapUpdater({ position }: { position: [number, number] }) {
   return null;
 }
 
-// Handle map click events for editable maps
+/**
+ * Component to handle map click events for editable maps
+ */
 export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   const map = useMap();
+  
+  const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
+    onMapClick(e.latlng.lat, e.latlng.lng);
+  }, [onMapClick]);
   
   useEffect(() => {
     if (!map) return;
     
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-    
-    map.on('click', handleClick);
+    map.on('click', handleMapClick);
     
     return () => {
-      map.off('click', handleClick);
+      map.off('click', handleMapClick);
     };
-  }, [map, onMapClick]);
+  }, [map, handleMapClick]);
   
   return null;
 }
 
-// Apply additional dark sky overlay for certified locations
+/**
+ * Component to apply additional dark sky overlay for certified locations
+ */
 export function DarkSkyOverlay({ 
   isDarkSkyReserve, 
   position 

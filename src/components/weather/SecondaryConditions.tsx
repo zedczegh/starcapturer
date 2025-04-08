@@ -37,7 +37,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     : cloudCover;
     
   // Create nighttime cloud cover tooltip if data is available
-  // Fix: Use string instead of function for tooltip
+  // Fixed: Use string instead of function for tooltip
   const cloudCoverTooltip = nighttimeCloudData 
     ? language === 'en'
       ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}% (Evening: ${nighttimeCloudData.evening.toFixed(1)}%, Morning: ${nighttimeCloudData.morning.toFixed(1)}%)`
@@ -68,11 +68,10 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     ? t("Night Cloud Cover", "夜间云层覆盖")
     : t("Cloud Cover", "云层覆盖");
   
-  // Fix: Use string for tooltip instead of function
-  const bortleTooltip = bortleScale === null ? 
-    (language === 'en' ? "Bortle scale could not be determined for this location" : 
-    "无法确定此位置的光污染等级") : 
-    undefined;
+  // Fixed: Use string for tooltip instead of function
+  const bortleTooltip = bortleScale === null 
+    ? (language === 'en' ? "Bortle scale could not be determined for this location" : "无法确定此位置的光污染等级") 
+    : undefined;
   
   return (
     <div className="space-y-7">

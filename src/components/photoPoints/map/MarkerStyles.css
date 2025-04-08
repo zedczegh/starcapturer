@@ -4,9 +4,9 @@
   background-color: transparent;
   border: none;
   outline: none;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.175), 
-              filter 0.4s ease-in-out,
-              opacity 0.4s ease-in-out;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.175), 
+              filter 0.35s ease-in-out,
+              opacity 0.35s ease-in-out;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -24,7 +24,6 @@
   transform: scale(1.6) !important;
   filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.95)) !important;
   z-index: 1001 !important;
-  animation: breathing 3s infinite ease-in-out;
 }
 
 /* Circle marker style - for calculated locations */
@@ -33,7 +32,6 @@
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.175),
               filter 0.3s ease-in-out;
   z-index: 800 !important;
-  animation: gentle-pulse 2s infinite ease-in-out;
 }
 
 .circle-marker:hover,
@@ -41,7 +39,6 @@
   transform: scale(1.5) !important;
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8)) !important;
   z-index: 1001 !important;
-  animation: breathing 3s infinite ease-in-out;
 }
 
 /* Enhanced pulsing animation for calculated markers */
@@ -49,38 +46,19 @@
   animation: pulse-inner 2s infinite ease-in-out;
 }
 
-/* User marker style with pulse effect */
+/* User marker style with pulse effect - now red */
 .user-marker {
   z-index: 1000 !important;
-  transform: scale(1.1);
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 6px rgba(225, 29, 72, 0.7)) !important;
 }
 
 .user-marker .pulse-circle {
-  animation: pulse 2.5s infinite;
+  animation: user-pulse 2.5s infinite;
 }
 
-/* Breathing animation for hover effect */
-@keyframes breathing {
-  0%, 100% {
-    transform: scale(1.5);
-  }
-  50% {
-    transform: scale(1.65);
-  }
-}
-
-/* Gentle pulse animation for non-hovered calculated locations */
-@keyframes gentle-pulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.4));
-  }
-  50% {
-    filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.7));
-  }
-}
-
-/* Pulse animation for user location marker */
-@keyframes pulse {
+/* Animation for user location pulse (red) */
+@keyframes user-pulse {
   0% {
     r: 8;
     opacity: 0.6;
@@ -108,26 +86,6 @@
     r: 4;
     opacity: 0.9;
   }
-}
-
-/* Radar scanning animation for search radius */
-@keyframes radar-scan {
-  0% {
-    stroke-dashoffset: 0;
-    opacity: 0.8;
-  }
-  100% {
-    stroke-dashoffset: -628; /* approx 2*PI*100 */
-    opacity: 0.2;
-  }
-}
-
-/* Apply radar scanning animation to location radius */
-.location-radius-circle {
-  opacity: 0.2 !important;
-  stroke-opacity: 0.3 !important;
-  stroke-dasharray: 8, 12 !important;
-  animation: radar-scan 8s linear infinite !important;
 }
 
 /* Custom popup styles */
@@ -164,6 +122,7 @@
   background: none !important;
 }
 
+/* Enhanced popup styles */
 .leaflet-popup-custom {
   min-width: 150px;
 }
@@ -173,39 +132,18 @@
   padding: 8px 10px;
 }
 
-/* Prevent marker flickering on hover with proper z-index handling */
+/* Prevent marker flickering with better z-index handling */
 .leaflet-marker-icon {
-  transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1.000), 
-              filter 0.3s ease, 
-              opacity 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.215, 0.610, 0.355, 1.000), 
+              filter 0.35s ease, 
+              opacity 0.35s ease;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   pointer-events: auto !important;
 }
 
-/* Force higher z-index for hovered markers and smooth animation */
-.leaflet-marker-icon.hovered {
-  opacity: 1 !important;
-  visibility: visible !important;
-  z-index: 1001 !important;
-  transform: scale(1.65);
-  pointer-events: auto !important;
-}
-
-/* Make star markers more prominent */
-.star-marker svg {
-  transform: scale(1.2);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
-}
-
-/* Make user marker more prominent */
-.user-marker svg {
-  transform: scale(1.3);
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
-}
-
-/* Improve popup animation */
+/* Improved popup animation */
 .leaflet-fade-anim .leaflet-popup {
   transition: opacity 0.35s ease-out, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   opacity: 0;
@@ -228,13 +166,7 @@
   }
 }
 
-/* More visible radius circle */
-.location-radius-circle {
-  opacity: 0.2 !important;
-  stroke-opacity: 0.3 !important;
-}
-
-/* Enhanced gradient popup for markers */
+/* Gradient popup styles */
 .marker-popup-gradient {
   background: linear-gradient(135deg, rgba(50, 50, 70, 0.85) 0%, rgba(24, 24, 27, 0.9) 100%);
   border-radius: 8px;
@@ -256,19 +188,13 @@
   border-left: 3px solid rgb(239, 68, 68);
 }
 
-/* Improve marker loading performance */
-.leaflet-marker-pane {
-  will-change: transform;
-  transform: translateZ(0);
-}
-
 /* Better positioning of markers to avoid clipping */
 .leaflet-marker-icon {
   margin-left: -12px !important;
   margin-top: -12px !important;
 }
 
-/* Ensure markers are responsive and always visible */
+/* Responsive adjustments for mobile */
 @media (max-width: 640px) {
   .leaflet-marker-icon {
     transform: scale(0.9);

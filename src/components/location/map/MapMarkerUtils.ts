@@ -37,7 +37,7 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
       break;
     
     case 'user':
-      // User location marker - blue dot with pulse effect
+      // User location marker - now using red color with pulse effect
       svgPath = `
         <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2" opacity="0.9" />
         <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="1" opacity="0.4" class="pulse-circle" />
@@ -68,16 +68,16 @@ export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'us
 }
 
 /**
- * Create a custom pulsing marker icon
- * Useful for indicating the user's current position
+ * Create a custom pulsing marker icon for user location
+ * Uses red color to make it more visible
  */
 export function createPulsingUserMarker(): L.DivIcon {
   return L.divIcon({
     className: 'custom-marker pulsing-marker',
     html: `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-        <circle cx="12" cy="12" r="6" fill="#3b82f6" stroke="white" stroke-width="2" opacity="0.9" />
-        <circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
+        <circle cx="12" cy="12" r="6" fill="#e11d48" stroke="white" stroke-width="2" opacity="0.9" />
+        <circle cx="12" cy="12" r="10" fill="#e11d48" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
       </svg>
     `,
     iconSize: [24, 24],
