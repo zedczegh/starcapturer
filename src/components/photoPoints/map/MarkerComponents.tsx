@@ -1,9 +1,8 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
