@@ -54,15 +54,20 @@ export async function findCalculatedLocations(
     console.log(`Generating calculated locations within ${radius}km of ${latitude}, ${longitude}`);
     
     const calculatedLocations: SharedAstroSpot[] = [];
-    const pointsToGenerate = Math.min(20, Math.ceil(radius / 10)); // Scale number of points with radius
+    
+    // REDUCED DENSITY: Scale number of points with radius but with lower density
+    // Using min(12, radius/20) instead of min(20, radius/10)
+    const pointsToGenerate = Math.min(12, Math.ceil(radius / 20));
+    
+    console.log(`Generating ${pointsToGenerate} calculated locations to reduce API load`);
     
     // Generate points evenly distributed around the center
     for (let i = 0; i < pointsToGenerate; i++) {
       // Calculate angle for even distribution
       const angle = (i / pointsToGenerate) * Math.PI * 2;
       
-      // Random distance within 30-90% of radius for variety
-      const distance = radius * (0.3 + Math.random() * 0.6);
+      // Random distance within 40-90% of radius for better spread
+      const distance = radius * (0.4 + Math.random() * 0.5);
       
       // Convert polar to cartesian
       const offsetKm = {
@@ -82,9 +87,9 @@ export async function findCalculatedLocations(
         continue;
       }
       
-      // Create location
+      // Create location with a more specific ID to avoid duplicates
       const calculatedLocation: SharedAstroSpot = {
-        id: `calc-${i}-${Date.now()}`,
+        id: `calc-${latitude.toFixed(2)}-${longitude.toFixed(2)}-${i}-${Date.now()}`,
         name: `Potential dark site ${i + 1}`,
         latitude: pointLat,
         longitude: pointLng,

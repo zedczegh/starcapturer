@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -30,8 +29,7 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   // Use enhanced water detection
   return isWaterLocation(
     location.latitude, 
-    location.longitude, 
-    Boolean(location.isDarkSkyReserve || location.certification)
+    location.longitude
   );
 };
 
@@ -157,7 +155,6 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
