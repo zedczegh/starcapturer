@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/siqs/types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -58,7 +58,7 @@ export const usePhotoPointsMap = ({
     // Filter out water locations for calculated spots, never filter certified
     (location.isDarkSkyReserve || 
      location.certification || 
-     !isWaterLocation(location.latitude, location.longitude, false))
+     !isWaterLocation(location.latitude, location.longitude))
   );
 
   const certifiedLocations = validLocations.filter(location => 
@@ -141,7 +141,18 @@ export const usePhotoPointsMap = ({
           // For certified view, include ALL certified locations regardless of distance
           certifiedLocations;
         
-        const updated = await updateLocationsWithRealTimeSiqs(locationsInRadius);
+        // Fix type issues by ensuring id field exists
+        const locationsWithId = locationsInRadius.map(loc => {
+          if (!loc.id) {
+            return {
+              ...loc,
+              id: `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
+            };
+          }
+          return loc;
+        });
+        
+        const updated = await updateLocationsWithRealTimeSiqs(locationsWithId);
         
         if (updated && updated.length > 0) {
           setEnhancedLocations(prevLocations => {
@@ -151,7 +162,12 @@ export const usePhotoPointsMap = ({
             certifiedLocations.forEach(loc => {
               if (loc.latitude && loc.longitude) {
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                updatedMap.set(key, loc);
+                // Ensure id exists
+                const locWithId = loc.id ? loc : {
+                  ...loc,
+                  id: `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`
+                };
+                updatedMap.set(key, locWithId);
               }
             });
             
@@ -226,7 +242,8 @@ export const usePhotoPointsMap = ({
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     setSelectedLocation(location);
     
-    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    // Ensure location has an ID
+    const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
     
     if (location && location.latitude && location.longitude) {
       navigate(`/location/${locationId}`, { 
@@ -238,7 +255,12 @@ export const usePhotoPointsMap = ({
           longitude: location.longitude,
           bortleScale: location.bortleScale || 4,
           siqs: location.siqs,
-          siqsResult: location.siqs ? { score: location.siqs } : undefined,
+          siqsResult: location.siqs ? { 
+            score: location.siqs,
+            isViable: location.siqs >= 5.0,
+            factors: location.siqsResult?.factors || [],
+            isNighttimeCalculation: location.siqsResult?.isNighttimeCalculation || false
+          } : undefined,
           certification: location.certification,
           isDarkSkyReserve: location.isDarkSkyReserve,
           timestamp: new Date().toISOString(),
