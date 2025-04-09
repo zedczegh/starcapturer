@@ -1,4 +1,3 @@
-
 import { fetchForecastData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchWeatherData } from "@/lib/api/weather";
@@ -7,12 +6,13 @@ import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 
-// Create a cache to avoid redundant API calls with improved invalidation strategy
+// Improved cache with memory management
 const siqsCache = new Map<string, {
   siqs: number;
   timestamp: number;
   isViable: boolean;
   factors?: any[];
+  isNighttimeCalculation?: boolean;
 }>();
 
 // Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
@@ -31,6 +31,10 @@ interface WeatherDataWithClearSky extends Record<string, any> {
   clearSkyRate?: number;
 }
 
+// Cache statistics
+let cacheMisses = 0;
+let cacheHits = 0;
+
 /**
  * Calculate real-time SIQS for a given location
  * @param latitude Latitude of the location
@@ -42,15 +46,15 @@ export async function calculateRealTimeSiqs(
   latitude: number, 
   longitude: number, 
   bortleScale: number
-): Promise<{ siqs: number; isViable: boolean; factors?: any[] }> {
+): Promise<{ siqs: number; isViable: boolean; factors?: any[]; isNighttimeCalculation?: boolean }> {
   // Validate inputs
   if (!isFinite(latitude) || !isFinite(longitude)) {
     console.error("Invalid coordinates provided to calculateRealTimeSiqs");
-    return { siqs: 0, isViable: false };
+    return { siqs: 0, isViable: false, isNighttimeCalculation: false };
   }
   
-  // Generate cache key
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  // Generate cache key with improved precision
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}`;
   
   // Determine if it's nighttime for cache duration
   const isNighttime = () => {
@@ -63,14 +67,17 @@ export async function calculateRealTimeSiqs(
   // Check cache first with improved cache key strategy
   const cachedData = siqsCache.get(cacheKey);
   if (cachedData && (Date.now() - cachedData.timestamp) < cacheDuration) {
+    cacheHits++;
     console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
     return {
       siqs: cachedData.siqs,
       isViable: cachedData.isViable,
-      factors: cachedData.factors
+      factors: cachedData.factors,
+      isNighttimeCalculation: cachedData.isNighttimeCalculation || true
     };
   }
   
+  cacheMisses++;
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
@@ -83,7 +90,7 @@ export async function calculateRealTimeSiqs(
     
     // Default values if API calls fail
     if (!weatherData) {
-      return { siqs: 0, isViable: false };
+      return { siqs: 0, isViable: false, isNighttimeCalculation: false };
     }
     
     // For light pollution, use provided Bortle scale or fetch it
@@ -107,6 +114,16 @@ export async function calculateRealTimeSiqs(
       console.log(`Using clear sky rate for location: ${clearSkyData.annualRate}%`);
     }
     
+    // Extract nighttime data from forecast if available
+    let isNighttimeCalculation = false;
+    if (forecastData?.hourly?.cloudcover && Array.isArray(forecastData.hourly.time)) {
+      const nightForecasts = extractNightForecasts(forecastData.hourly);
+      if (nightForecasts.length > 0) {
+        isNighttimeCalculation = true;
+        console.log(`Using nighttime forecast for SIQS calculation`);
+      }
+    }
+    
     // Calculate SIQS using the optimized method with nighttime forecasts
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherDataWithClearSky,
@@ -127,17 +144,19 @@ export async function calculateRealTimeSiqs(
       siqs: finalSiqs,
       isViable: isViable,
       timestamp: Date.now(),
-      factors: siqsResult.factors
+      factors: siqsResult.factors,
+      isNighttimeCalculation
     });
     
     return {
       siqs: finalSiqs,
       isViable: isViable,
-      factors: siqsResult.factors
+      factors: siqsResult.factors,
+      isNighttimeCalculation
     };
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
-    return { siqs: 0, isViable: false };
+    return { siqs: 0, isViable: false, isNighttimeCalculation: false };
   }
 }
 
@@ -251,15 +270,25 @@ export async function batchCalculateSiqs(
 export function clearSiqsCache(): void {
   const size = siqsCache.size;
   siqsCache.clear();
+  cacheMisses = 0;
+  cacheHits = 0;
   console.log(`SIQS cache cleared (${size} entries removed)`);
 }
 
 /**
- * Get the current SIQS cache size
- * @returns Number of cached entries
+ * Get the current SIQS cache size and statistics
+ * @returns Cache statistics
  */
-export function getSiqsCacheSize(): number {
-  return siqsCache.size;
+export function getSiqsCacheSize(): { size: number, hits: number, misses: number, hitRate: string } {
+  const total = cacheHits + cacheMisses;
+  const hitRate = total > 0 ? (cacheHits / total * 100).toFixed(1) + '%' : '0%';
+  
+  return {
+    size: siqsCache.size,
+    hits: cacheHits,
+    misses: cacheMisses,
+    hitRate
+  };
 }
 
 /**
@@ -267,14 +296,23 @@ export function getSiqsCacheSize(): number {
  */
 export function clearLocationSiqsCache(latitude: number, longitude: number): void {
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  if (siqsCache.has(cacheKey)) {
-    siqsCache.delete(cacheKey);
-    console.log(`Cleared SIQS cache for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  let cleared = 0;
+  
+  // Find all matching keys (we might have different bortleScale values)
+  for (const key of siqsCache.keys()) {
+    if (key.startsWith(cacheKey)) {
+      siqsCache.delete(key);
+      cleared++;
+    }
+  }
+  
+  if (cleared > 0) {
+    console.log(`Cleared ${cleared} SIQS cache entries for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   }
 }
 
 /**
- * Clear all expired cache entries to free memory
+ * Clean up expired cache entries to free memory
  */
 export function cleanupExpiredCache(): void {
   const now = Date.now();
@@ -298,3 +336,6 @@ export function cleanupExpiredCache(): void {
     console.log(`Cleaned up ${expiredCount} expired SIQS cache entries`);
   }
 }
+
+// Add automatic cache cleanup every 10 minutes
+setInterval(cleanupExpiredCache, 10 * 60 * 1000);
