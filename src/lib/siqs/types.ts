@@ -56,10 +56,11 @@ export interface SIQSDisplayData {
 }
 
 /**
- * Interface for astronomy location data
+ * Interface for astronomy location data - this has been updated to use 'id' as required
+ * to match the definition in lib/api/astroSpots.ts
  */
 export interface SharedAstroSpot {
-  id?: string;
+  id: string; // Now required to match the API version
   name: string;
   latitude: number;
   longitude: number;
@@ -78,4 +79,10 @@ export interface SharedAstroSpot {
   created?: string;
   updated?: string;
   moonPhase?: number;
+  imageURL?: string; // Added from API SharedAstroSpot
+  rating?: number; // Added from API SharedAstroSpot
+  chineseName?: string; // Added from API SharedAstroSpot
+  cloudCover?: number; // Added from API SharedAstroSpot
+  photographer?: string; // Added from API SharedAstroSpot
+  date?: string; // Added from API SharedAstroSpot
 }

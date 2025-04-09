@@ -1,3 +1,4 @@
+
 import { updateLocationsWithRealTimeSiqs } from './realTimeSiqsService/locationUpdateService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
@@ -10,9 +11,18 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * @param locations Array of locations to update
  * @returns Promise resolving to locations with updated SIQS
  */
-// Fix the type error with SharedAstroSpot[]
-export async function updateLocationsWithSiqs(locations: any[]): Promise<any[]> {
-  // Wrap the locations in a type assertion to match the expected type
-  const result = await updateLocationsWithRealTimeSiqs(locations as SharedAstroSpot[]);
+export async function updateLocationsWithSiqs(locations: SharedAstroSpot[]): Promise<SharedAstroSpot[]> {
+  // Make sure all locations have an id before passing to the update function
+  const locationsWithIds = locations.map(loc => {
+    if (!loc.id) {
+      return {
+        ...loc,
+        id: `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
+      };
+    }
+    return loc;
+  });
+  
+  const result = await updateLocationsWithRealTimeSiqs(locationsWithIds);
   return result;
 }
