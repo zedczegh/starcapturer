@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 
@@ -108,7 +109,7 @@ export async function updateLocationsWithRealTimeSiqs(
               score: result.siqs,
               isViable: result.siqs >= 5.0,
               factors: result.factors || [],
-              isNighttimeCalculation: result.isNighttimeCalculation || true
+              isNighttimeCalculation: true
             }
           };
           

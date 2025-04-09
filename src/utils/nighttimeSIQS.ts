@@ -1,5 +1,10 @@
 
 import { calculateCloudScore, calculateLightPollutionScore } from "@/lib/siqs/factors";
+import { 
+  extractNighttimeForecast, 
+  getCloudCoverInfo,
+  getCloudCoverDescription 
+} from "@/utils/siqs/forecastAnalyzer";
 
 /**
  * Calculate nighttime SIQS based on location and forecast data
@@ -30,128 +35,79 @@ export const calculateNighttimeSiqs = (
     
     // If we have hourly forecast data, use it for night calculation
     if (hasHourlyData) {
-      const hourly = forecastData.hourly;
-      const times = hourly.time;
-      const cloudCover = hourly.cloudcover;
-      
-      // Get current time and determine night hours
-      const now = new Date();
       const startNightHour = 18; // 6 PM
       const endNightHour = 6;    // 6 AM next day
       
-      // Extract cloud cover data from nighttime hours
-      const nighttimeCloudData = [];
-      const dayTimestamps = [];
+      // Extract nighttime forecast data
+      const { 
+        nighttimeItems,
+        eveningItems,
+        morningItems
+      } = extractNighttimeForecast(forecastData, startNightHour, endNightHour);
       
-      for (let i = 0; i < times.length; i++) {
-        const time = new Date(times[i]);
-        const hour = time.getHours();
+      // If we have nighttime data, calculate cloud cover averages
+      if (nighttimeItems.length > 0) {
+        const { 
+          avgNightCloudCover,
+          avgEveningCloudCover,
+          avgMorningCloudCover
+        } = getCloudCoverInfo(nighttimeItems, eveningItems, morningItems);
         
-        // Record the date for reference
-        const dateStr = time.toISOString().split('T')[0];
-        if (!dayTimestamps.includes(dateStr)) {
-          dayTimestamps.push(dateStr);
-        }
+        // Calculate scores based on factors
+        const cloudScore = calculateCloudScore(avgNightCloudCover) / 10;
+        const lightPollutionScore = calculateLightPollutionScore(bortleScale) / 10;
         
-        // Check if this is nighttime
-        if (hour >= startNightHour || hour <= endNightHour) {
-          // This is the nighttime range we're interested in
-          nighttimeCloudData.push({
-            time,
-            cloudCover: cloudCover[i]
-          });
-        }
-      }
-      
-      // Analyze nighttime cloud cover
-      let totalNightCloudCover = 0;
-      let eveningCloudCover = 0;
-      let morningCloudCover = 0;
-      let eveningCount = 0;
-      let morningCount = 0;
-      
-      nighttimeCloudData.forEach(entry => {
-        const hour = entry.time.getHours();
-        totalNightCloudCover += entry.cloudCover;
+        // Blend factors with appropriate weights
+        const cloudWeight = 0.65;
+        const lightPollutionWeight = 0.35;
         
-        if (hour >= 18 && hour <= 23) {
-          // Evening hours (6 PM to midnight)
-          eveningCloudCover += entry.cloudCover;
-          eveningCount++;
-        } else if (hour >= 0 && hour <= 6) {
-          // Morning hours (midnight to 6 AM)
-          morningCloudCover += entry.cloudCover;
-          morningCount++;
-        }
-      });
-      
-      // Calculate averages
-      const avgNightCloudCover = nighttimeCloudData.length > 0 
-        ? totalNightCloudCover / nighttimeCloudData.length 
-        : 50; // Default to 50% if no data
+        // Calculate final SIQS score
+        const siqs = (cloudScore * cloudWeight) + (lightPollutionScore * lightPollutionWeight);
         
-      const avgEveningCloudCover = eveningCount > 0 
-        ? eveningCloudCover / eveningCount 
-        : avgNightCloudCover;
+        // Format factor description
+        const cloudDescription = t 
+          ? getCloudCoverDescription(avgNightCloudCover, t)
+          : getCloudCoverDescription(avgNightCloudCover);
         
-      const avgMorningCloudCover = morningCount > 0 
-        ? morningCloudCover / morningCount 
-        : avgNightCloudCover;
-      
-      // Calculate scores based on factors
-      const cloudScore = calculateCloudScore(avgNightCloudCover) / 10;
-      const lightPollutionScore = calculateLightPollutionScore(bortleScale) / 10;
-      
-      // Blend factors with appropriate weights
-      const cloudWeight = 0.65;
-      const lightPollutionWeight = 0.35;
-      
-      // Calculate final SIQS score
-      const siqs = (cloudScore * cloudWeight) + (lightPollutionScore * lightPollutionWeight);
-      
-      // Format factor description
-      const cloudDescription = t 
-        ? getCloudCoverDescription(avgNightCloudCover, t)
-        : getCloudCoverDescription(avgNightCloudCover);
-      
-      // Create factors array for display
-      const factors = [
-        {
-          name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-          score: cloudScore,
-          description: cloudDescription,
-          nighttimeData: {
-            average: avgNightCloudCover,
-            timeRange: `${startNightHour}:00-${endNightHour}:00`,
-            detail: {
-              evening: avgEveningCloudCover,
-              morning: avgMorningCloudCover
+        // Create factors array for display
+        const factors = [
+          {
+            name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+            score: cloudScore,
+            description: cloudDescription,
+            nighttimeData: {
+              average: avgNightCloudCover,
+              timeRange: `${startNightHour}:00-${endNightHour}:00`,
+              detail: {
+                evening: avgEveningCloudCover,
+                morning: avgMorningCloudCover
+              }
             }
+          },
+          {
+            name: t ? t("Light Pollution", "光污染") : "Light Pollution",
+            score: lightPollutionScore,
+            description: t 
+              ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
+              : `Bortle scale ${bortleScale}`
           }
-        },
-        {
-          name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-          score: lightPollutionScore,
-          description: t 
-            ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
-            : `Bortle scale ${bortleScale}`
-        }
-      ];
-      
-      // Create final SIQS result
-      return {
-        score: Math.min(10, Math.max(0, siqs)),
-        isViable: siqs >= 5.0,
-        factors,
-        metadata: {
-          calculationType: 'nighttime',
-          timestamp: new Date().toISOString(),
-          eveningCloudCover: avgEveningCloudCover,
-          morningCloudCover: avgMorningCloudCover,
-          avgNightCloudCover
-        },
-        isNighttimeCalculation: true
-      };
+        ];
+        
+        // Create final SIQS result
+        return {
+          score: Math.min(10, Math.max(0, siqs)),
+          isViable: siqs >= 5.0,
+          factors,
+          metadata: {
+            calculationType: 'nighttime',
+            timestamp: new Date().toISOString(),
+            eveningCloudCover: avgEveningCloudCover,
+            morningCloudCover: avgMorningCloudCover,
+            avgNightCloudCover
+          },
+          isNighttimeCalculation: true
+        };
+      }
     }
     
     // Fallback to simpler calculation without forecast data
@@ -201,37 +157,3 @@ export const getConsistentSiqsValue = (location: any): number => {
   
   return 0; // Default if no data available
 };
-
-/**
- * Get cloud cover description based on percentage
- * @param cloudCover Cloud cover percentage
- * @param t Translation function (optional)
- * @returns Localized description string
- */
-function getCloudCoverDescription(cloudCover: number, t?: any): string {
-  if (cloudCover <= 10) {
-    return t 
-      ? t("Clear skies (0-10%), excellent for imaging", "晴朗天空 (0-10%)，非常适合拍摄")
-      : "Clear skies (0-10%), excellent for imaging";
-  } else if (cloudCover <= 20) {
-    return t 
-      ? t("Mostly clear (10-20%), very good for imaging", "大部分清晰 (10-20%)，很适合拍摄")
-      : "Mostly clear (10-20%), very good for imaging";
-  } else if (cloudCover <= 40) {
-    return t 
-      ? t("Partly cloudy (20-40%), good for imaging", "部分多云 (20-40%)，适合拍摄")
-      : "Partly cloudy (20-40%), good for imaging";
-  } else if (cloudCover <= 60) {
-    return t 
-      ? t("Considerable clouds (40-60%), fair for imaging", "相当多云 (40-60%)，一般适合拍摄")
-      : "Considerable clouds (40-60%), fair for imaging";
-  } else if (cloudCover <= 80) {
-    return t 
-      ? t("Mostly cloudy (60-80%), poor for imaging", "大部分多云 (60-80%)，不太适合拍摄")
-      : "Mostly cloudy (60-80%), poor for imaging";
-  } else {
-    return t 
-      ? t("Heavy cloud cover (80-100%), not recommended for imaging", "浓密云层 (80-100%)，不建议拍摄")
-      : "Heavy cloud cover (80-100%), not recommended for imaging";
-  }
-}

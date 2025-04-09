@@ -24,8 +24,9 @@ export function useSiqsDisplay(location: any) {
     
     // Check if this is a nighttime calculation
     const isNighttimeCalculation = location.siqsResult?.metadata?.calculationType === 'nighttime' ||
-      location.siqsResult?.isNighttimeCalculation ||
-      location.siqsResult?.factors?.some((f: any) => f.nighttimeData);
+      location.siqsResult?.isNighttimeCalculation === true ||
+      (Array.isArray(location.siqsResult?.factors) && 
+        location.siqsResult?.factors.some((f: any) => f.nighttimeData));
     
     return {
       displayScore: formatSIQSScoreForDisplay(siqsValue),
