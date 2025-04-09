@@ -54,3 +54,28 @@ export interface SIQSDisplayData {
   isViable: boolean;
   isNighttimeCalculation: boolean;
 }
+
+/**
+ * Interface for astronomy location data
+ */
+export interface SharedAstroSpot {
+  id?: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  seeingConditions?: number;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
+  description?: string;
+  distance?: number;
+  weatherData?: any;
+  siqs?: number;
+  siqsResult?: SIQSResult;
+  siqsFactors?: any[];
+  isViable?: boolean;
+  timestamp?: string;
+  created?: string;
+  updated?: string;
+  moonPhase?: number;
+}

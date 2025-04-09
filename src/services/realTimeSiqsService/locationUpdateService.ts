@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/siqs/types';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 
 // Cache to store SIQS results by location coordinates

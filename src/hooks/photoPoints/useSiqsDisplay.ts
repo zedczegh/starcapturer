@@ -2,13 +2,14 @@
 import { useMemo } from 'react';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 import { formatSIQSScoreForDisplay, getSIQSColorClass } from '@/hooks/siqs/siqsCalculationUtils';
+import { SIQSDisplayData } from '@/lib/siqs/types';
 
 /**
  * A hook to provide consistent SIQS display values
  * @param location The location object with SIQS data
  * @returns Formatted values and styles for the SIQS display
  */
-export function useSiqsDisplay(location: any) {
+export function useSiqsDisplay(location: any): SIQSDisplayData {
   return useMemo(() => {
     if (!location) {
       return {

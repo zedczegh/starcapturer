@@ -73,7 +73,7 @@ export const calculateNighttimeSiqs = (
         const factors = [
           {
             name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-            score: cloudScore,
+            score: cloudScore * 10, // Scale to 0-10 for display
             description: cloudDescription,
             nighttimeData: {
               average: avgNightCloudCover,
@@ -86,7 +86,7 @@ export const calculateNighttimeSiqs = (
           },
           {
             name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-            score: lightPollutionScore,
+            score: lightPollutionScore * 10, // Scale to 0-10 for display
             description: t 
               ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
               : `Bortle scale ${bortleScale}`
@@ -95,8 +95,8 @@ export const calculateNighttimeSiqs = (
         
         // Create final SIQS result
         return {
-          score: Math.min(10, Math.max(0, siqs)),
-          isViable: siqs >= 5.0,
+          score: Math.min(10, Math.max(0, siqs * 10)), // Ensure score is in 0-10 range
+          isViable: siqs >= 0.5, // 5.0 on a 0-10 scale
           factors,
           metadata: {
             calculationType: 'nighttime',
