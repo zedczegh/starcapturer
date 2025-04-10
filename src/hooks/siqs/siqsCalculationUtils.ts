@@ -1,6 +1,6 @@
 
 import { calculateSIQS } from "@/lib/calculateSIQS";
-import { calculateNighttimeSIQS, isNighttimeSiqsCalculation, getConsistentSiqsValue } from "@/utils/nighttimeSIQS";
+import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 
@@ -17,7 +17,6 @@ export const normalizeScore = (score: number): number => {
 /**
  * Optimized function to calculate SIQS with weather data
  * Now includes clear sky rate as a factor (10% weight)
- * Prioritizes nighttime calculation for better accuracy
  */
 export async function calculateSIQSWithWeatherData(
   weatherData: any,
@@ -41,7 +40,7 @@ export async function calculateSIQSWithWeatherData(
     }
   }
 
-  // ALWAYS prioritize nighttime forecast data for calculation
+  // First try to calculate SIQS using nighttime forecast data
   if (forecastData && forecastData.hourly) {
     try {
       const locationWithWeather = {
@@ -62,9 +61,6 @@ export async function calculateSIQSWithWeatherData(
         if (nighttimeSIQS.score > 8.5) {
           nighttimeSIQS.score = 8.5; // Cap at 8.5 to avoid over-promising
         }
-        
-        // Mark this as a nighttime calculation for consistency checks
-        nighttimeSIQS.isNighttimeCalculation = true;
         
         return nighttimeSIQS;
       }
@@ -199,6 +195,3 @@ export function formatSIQSScoreForDisplay(value: number): string {
   // Always show one decimal place
   return value.toFixed(1);
 }
-
-// Re-export the consistent SIQS value getter for use throughout the app
-export { getConsistentSiqsValue } from "@/utils/nighttimeSIQS";
