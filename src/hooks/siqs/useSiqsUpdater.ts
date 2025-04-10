@@ -1,0 +1,99 @@
+
+import { useState, useEffect, useCallback } from 'react';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
+
+interface UseSiqsUpdaterProps {
+  initialSiqs?: number | null;
+  locationId?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+/**
+ * Hook to manage and update SIQS scores consistently across the application
+ */
+export const useSiqsUpdater = ({ 
+  initialSiqs = null,
+  locationId,
+  latitude,
+  longitude
+}: UseSiqsUpdaterProps = {}) => {
+  const [siqsScore, setSiqsScore] = useState<number | null>(initialSiqs);
+  
+  // Update localStorage and global store with new SIQS value
+  const updateSiqsValue = useCallback((newValue: number | null) => {
+    if (newValue === null) {
+      setSiqsScore(null);
+      currentSiqsStore.setValue(null);
+      return;
+    }
+    
+    // Normalize and validate value
+    const validValue = Math.min(10, Math.max(0, newValue));
+    setSiqsScore(validValue);
+    
+    // Update global store
+    currentSiqsStore.setValue(validValue);
+    
+    // Update location-specific SIQS in localStorage if we have coordinates
+    if (latitude !== undefined && longitude !== undefined) {
+      try {
+        const storageKey = locationId || `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+        const savedLocationString = localStorage.getItem('latest_siqs_location');
+        
+        if (savedLocationString) {
+          const savedLocation = JSON.parse(savedLocationString);
+          
+          // Check if this is the same location
+          if (savedLocation && 
+              savedLocation.latitude === latitude && 
+              savedLocation.longitude === longitude) {
+            
+            // Update SIQS value
+            savedLocation.siqs = validValue;
+            savedLocation.timestamp = new Date().toISOString();
+            localStorage.setItem('latest_siqs_location', JSON.stringify(savedLocation));
+          }
+        } else if (locationId) {
+          // Create new entry
+          const newLocation = {
+            id: locationId,
+            latitude,
+            longitude,
+            siqs: validValue,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem('latest_siqs_location', JSON.stringify(newLocation));
+        }
+      } catch (error) {
+        console.error("Error updating SIQS in localStorage:", error);
+      }
+    }
+  }, [locationId, latitude, longitude]);
+  
+  // Check for updates from global store periodically
+  useEffect(() => {
+    // Initial synchronization
+    const storedValue = currentSiqsStore.getValue();
+    if (storedValue !== null && storedValue !== siqsScore) {
+      setSiqsScore(storedValue);
+    }
+    
+    // Setup interval to check for updates
+    const intervalId = setInterval(() => {
+      const latestValue = currentSiqsStore.getValue();
+      if (latestValue !== null && latestValue !== siqsScore) {
+        setSiqsScore(latestValue);
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [siqsScore]);
+  
+  return {
+    siqsScore,
+    updateSiqsValue
+  };
+};
+
+export default useSiqsUpdater;

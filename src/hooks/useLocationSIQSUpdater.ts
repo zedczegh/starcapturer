@@ -4,6 +4,14 @@ import { calculateNighttimeSiqs } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
+
+// Extend window type to include our global store
+declare global {
+  interface Window {
+    currentSiqsStore?: typeof currentSiqsStore;
+  }
+}
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency

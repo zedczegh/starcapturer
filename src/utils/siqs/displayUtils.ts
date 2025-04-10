@@ -88,6 +88,15 @@ export function getSiqsDescription(score: number, language: string = 'en'): stri
 }
 
 /**
+ * Check if a SIQS score is valid and usable
+ * @param score The SIQS score to check
+ * @returns Boolean indicating if the score is valid
+ */
+export function isValidSiqsScore(score: number | null | undefined): boolean {
+  return score !== null && score !== undefined && !isNaN(score);
+}
+
+/**
  * Extract consistent SIQS display data from any location or SIQS result
  * @param location Location object or SIQS result
  * @returns Formatted display data
@@ -103,19 +112,30 @@ export function extractSiqsDisplayData(location: any) {
   }
   
   // Get SIQS value with consistent approach
-  let siqsValue = 0;
+  let siqsValue = null;
   
   // First try siqsResult.score (most accurate)
-  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
+  if (location.siqsResult && typeof location.siqsResult.score === 'number' && !isNaN(location.siqsResult.score)) {
     siqsValue = location.siqsResult.score;
   }
   // Then try the siqs property
-  else if (typeof location.siqs === 'number') {
+  else if (typeof location.siqs === 'number' && !isNaN(location.siqs)) {
     siqsValue = location.siqs;
   }
-  // Lastly estimate from bortle scale
-  else if (typeof location.bortleScale === 'number') {
+  // Lastly estimate from bortle scale if we have it
+  else if (typeof location.bortleScale === 'number' && !isNaN(location.bortleScale)) {
     siqsValue = (10 - location.bortleScale * 0.75) + 3;
+  }
+  
+  // If we don't have a valid SIQS value, return placeholder
+  if (siqsValue === null) {
+    return {
+      displayScore: 'N/A',
+      colorClass: 'bg-gray-500/70 border-gray-400/50',
+      isViable: false,
+      isNighttimeCalculation: false,
+      isPending: true
+    };
   }
   
   // Ensure value is in range 0-10

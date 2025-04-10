@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,6 +17,8 @@ export const currentSiqsStore = {
       localStorage.setItem('current_siqs_value', validValue.toString());
     } else {
       currentSiqsStore.value = null;
+      // Clear from localStorage if null
+      localStorage.removeItem('current_siqs_value');
     }
   },
   getValue: () => {
@@ -46,6 +49,11 @@ export const currentSiqsStore = {
     return currentSiqsStore.value;
   }
 };
+
+// Expose to window for global access
+if (typeof window !== 'undefined') {
+  window.currentSiqsStore = currentSiqsStore;
+}
 
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;

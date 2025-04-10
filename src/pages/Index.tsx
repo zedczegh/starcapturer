@@ -71,26 +71,28 @@ const Index = () => {
           
           // Use the exact SIQS value from the saved location
           const locationSiqs = savedLocation.siqs;
-          setCurrentSiqs(locationSiqs);
-          
-          // Update the global store with this value
-          currentSiqsStore.setValue(locationSiqs);
-          
-          // Using threshold of 5 for showing notification about good conditions
-          if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
-            // Show notification for ideal astrophotography location
-            setTimeout(() => {
-              toast.info(
-                t(
-                  "Your current location is ideal for astrophotography tonight, please find a rural spot with lower light pollution to start imaging!",
-                  "您当前的位置今晚非常适合天文摄影，请寻找光污染较少的乡村地点开始拍摄！"
-                ),
-                {
-                  duration: 8000,
-                  icon: <Star className="text-yellow-400" />,
-                }
-              );
-            }, 2000);
+          if (typeof locationSiqs === 'number') {
+            setCurrentSiqs(locationSiqs);
+            
+            // Update the global store with this value
+            currentSiqsStore.setValue(locationSiqs);
+            
+            // Using threshold of 5 for showing notification about good conditions
+            if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
+              // Show notification for ideal astrophotography location
+              setTimeout(() => {
+                toast.info(
+                  t(
+                    "Your current location is ideal for astrophotography tonight, please find a rural spot with lower light pollution to start imaging!",
+                    "您当前的位置今晚非常适合天文摄影，请寻找光污染较少的乡村地点开始拍摄！"
+                  ),
+                  {
+                    duration: 8000,
+                    icon: <Star className="text-yellow-400" />,
+                  }
+                );
+              }, 2000);
+            }
           }
         }
       }
@@ -109,7 +111,7 @@ const Index = () => {
       }
     }
     
-    // Update the currentSiqsStore value
+    // Update the currentSiqsStore value from localStorage if available
     const updateCurrentSiqs = () => {
       try {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
@@ -118,18 +120,34 @@ const Index = () => {
           if (savedLocation && typeof savedLocation.siqs === 'number') {
             currentSiqsStore.setValue(savedLocation.siqs);
             setCurrentSiqs(savedLocation.siqs);
+          } else {
+            // If no SIQS value in saved location, ensure we don't default to 10.0
+            currentSiqsStore.setValue(null);
+            setCurrentSiqs(null);
           }
+        } else {
+          // No saved location, ensure we don't default to 10.0
+          currentSiqsStore.setValue(null);
+          setCurrentSiqs(null);
         }
       } catch (error) {
         console.error("Error updating current SIQS:", error);
+        // In case of error, reset SIQS to null
+        currentSiqsStore.setValue(null);
+        setCurrentSiqs(null);
       }
     };
     
+    // Call immediately and set up periodic refresh
     updateCurrentSiqs();
+    const intervalId = setInterval(updateCurrentSiqs, 30000); // Check every 30 seconds
     
     // Make global store available for external components
-    (window as any).currentSiqsStore = currentSiqsStore;
+    if (typeof window !== 'undefined') {
+      window.currentSiqsStore = currentSiqsStore;
+    }
     
+    return () => clearInterval(intervalId);
   }, [queryClient, t]);
 
   return (
