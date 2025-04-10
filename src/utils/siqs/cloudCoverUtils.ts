@@ -28,6 +28,41 @@ export function calculateSiqsFromCloudCover(cloudCover: number): number {
 }
 
 /**
+ * Calculate SIQS score with emphasis on nighttime cloud cover
+ * This function ensures consistent SIQS values based on cloud cover
+ * @param nighttimeCloudCover Average nighttime cloud cover
+ * @param bortleScale Bortle scale value (light pollution)
+ * @returns SIQS score (0-10 scale)
+ */
+export function calculateNighttimeSiqs(nighttimeCloudCover: number, bortleScale: number = 5): number {
+  // Cloud cover has much more weight than Bortle scale in this calculation
+  const cloudCoverWeight = 0.80; // Increased from 0.75 to give more weight to cloud cover
+  const bortleWeight = 0.20; // Decreased from 0.25
+  
+  // Calculate cloud cover score (0-10)
+  const cloudCoverScore = calculateSiqsFromCloudCover(nighttimeCloudCover);
+  
+  // Calculate Bortle scale score (0-10)
+  // Inverted: Lower Bortle scale (less light pollution) = higher score
+  const bortleScore = Math.max(0, 10 - (bortleScale));
+  
+  // Weighted average
+  const weightedScore = (cloudCoverScore * cloudCoverWeight) + (bortleScore * bortleWeight);
+  
+  // If cloud cover is terrible (>65%), significantly reduce the overall score
+  if (nighttimeCloudCover > 65) {
+    return Math.min(3, weightedScore); // Cap at 3.0 for high cloud cover
+  }
+  
+  // If cloud cover is high (>45%), reduce the score further
+  if (nighttimeCloudCover > 45) {
+    return Math.min(5, weightedScore); // Cap at 5.0 for moderately high cloud cover
+  }
+  
+  return Math.min(10, Math.max(0, weightedScore));
+}
+
+/**
  * Determine if cloud cover makes imaging impossible
  * @param cloudCover Cloud cover percentage (0-100)
  * @returns Boolean indicating if imaging is impossible
@@ -62,33 +97,4 @@ export function getCloudCoverDescription(cloudCover: number): string {
   if (cloudCover >= 20) return "Mostly clear (20-30%), good for imaging";
   if (cloudCover >= 10) return "Few clouds (10-20%), very good for imaging";
   return "Clear skies (0-10%), excellent for imaging";
-}
-
-/**
- * Calculate SIQS score with emphasis on nighttime cloud cover
- * @param nighttimeCloudCover Average nighttime cloud cover
- * @param bortleScale Bortle scale value (light pollution)
- * @returns SIQS score (0-10 scale)
- */
-export function calculateNighttimeSiqs(nighttimeCloudCover: number, bortleScale: number = 5): number {
-  // Cloud cover has much more weight than Bortle scale in this calculation
-  const cloudCoverWeight = 0.75;
-  const bortleWeight = 0.25;
-  
-  // Calculate cloud cover score (0-10)
-  const cloudCoverScore = calculateSiqsFromCloudCover(nighttimeCloudCover);
-  
-  // Calculate Bortle scale score (0-10)
-  // Inverted: Lower Bortle scale (less light pollution) = higher score
-  const bortleScore = Math.max(0, 10 - (bortleScale * 0.9));
-  
-  // Weighted average
-  const weightedScore = (cloudCoverScore * cloudCoverWeight) + (bortleScore * bortleWeight);
-  
-  // If cloud cover is terrible (>75%), significantly reduce the overall score
-  if (nighttimeCloudCover > 75) {
-    return Math.min(3, weightedScore); // Cap at 3.0 for very high cloud cover
-  }
-  
-  return Math.min(10, Math.max(0, weightedScore));
 }

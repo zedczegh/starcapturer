@@ -26,8 +26,12 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
 
   // Create memoized values to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
+    // Debug output to trace SIQS values
+    console.log(`SIQSScore: Rendering with SIQS value: ${siqsScore}`);
+    
     // Check if we have a valid score
     if (!isValidSiqsScore(siqsScore)) {
+      console.log("SIQSScore: Invalid or null SIQS value");
       return {
         displayValue: null,
         interpretation: t("Not Available", "不可用"),
@@ -39,6 +43,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
 
     // Ensure we have a valid score and it's on a 0-10 scale
     const displayValue = Math.min(10, Math.max(0, siqsScore!));
+    console.log(`SIQSScore: Using display value: ${displayValue}`);
 
     // Determine value interpretation
     let interpretation;
@@ -70,6 +75,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
 
   // If no SIQS score is available, show a placeholder
   if (memoizedValues.displayValue === null) {
+    console.log("SIQSScore: Showing placeholder for null SIQS");
     return (
       <motion.div 
         className="mb-4 pb-4 border-b border-cosmic-700/30" 
@@ -136,6 +142,8 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const progressStyle = useMemo(() => ({
     backgroundColor: memoizedValues.progressColor
   }) as React.CSSProperties, [memoizedValues.progressColor]);
+
+  console.log(`SIQSScore: Rendering with score ${formatSiqsScore(memoizedValues.displayValue)}`);
 
   return (
     <motion.div 

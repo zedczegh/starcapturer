@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { calculateNighttimeSiqs } from '@/utils/siqs/cloudCoverUtils';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
@@ -26,6 +25,7 @@ export const useSiqsUpdater = ({
     if (newValue === null) {
       setSiqsScore(null);
       currentSiqsStore.setValue(null);
+      console.log("SIQS value reset to null");
       return;
     }
     
@@ -35,6 +35,7 @@ export const useSiqsUpdater = ({
     
     // Update global store
     currentSiqsStore.setValue(validValue);
+    console.log(`SIQS value updated to ${validValue}`);
     
     // Update location-specific SIQS in localStorage if we have coordinates
     if (latitude !== undefined && longitude !== undefined) {
@@ -54,6 +55,7 @@ export const useSiqsUpdater = ({
             savedLocation.siqs = validValue;
             savedLocation.timestamp = new Date().toISOString();
             localStorage.setItem('latest_siqs_location', JSON.stringify(savedLocation));
+            console.log(`Updated stored SIQS for location ${storageKey} to ${validValue}`);
           }
         } else if (locationId) {
           // Create new entry
@@ -65,6 +67,7 @@ export const useSiqsUpdater = ({
             timestamp: new Date().toISOString()
           };
           localStorage.setItem('latest_siqs_location', JSON.stringify(newLocation));
+          console.log(`Created new stored SIQS for location ${locationId} with value ${validValue}`);
         }
       } catch (error) {
         console.error("Error updating SIQS in localStorage:", error);
@@ -90,6 +93,7 @@ export const useSiqsUpdater = ({
             // Use stored SIQS value
             setSiqsScore(savedLocation.siqs);
             currentSiqsStore.setValue(savedLocation.siqs);
+            console.log(`Initialized SIQS from localStorage: ${savedLocation.siqs}`);
             return;
           }
         }
@@ -102,6 +106,12 @@ export const useSiqsUpdater = ({
     if (initialSiqs !== null) {
       setSiqsScore(initialSiqs);
       currentSiqsStore.setValue(initialSiqs);
+      console.log(`Initialized SIQS from initialSiqs: ${initialSiqs}`);
+    } else {
+      // Make sure we explicitly set to null rather than keeping undefined
+      setSiqsScore(null);
+      currentSiqsStore.setValue(null);
+      console.log("No SIQS found, initialized to null");
     }
   }, [locationId, latitude, longitude, initialSiqs]);
   
@@ -110,6 +120,7 @@ export const useSiqsUpdater = ({
     // Initial synchronization
     const storedValue = currentSiqsStore.getValue();
     if (storedValue !== null && storedValue !== siqsScore) {
+      console.log(`Syncing SIQS from global store: ${storedValue}`);
       setSiqsScore(storedValue);
     }
     
@@ -117,9 +128,10 @@ export const useSiqsUpdater = ({
     const intervalId = setInterval(() => {
       const latestValue = currentSiqsStore.getValue();
       if (latestValue !== null && latestValue !== siqsScore) {
+        console.log(`Updated SIQS from global store: ${latestValue}`);
         setSiqsScore(latestValue);
       }
-    }, 5000); // Check every 5 seconds
+    }, 3000); // Check every 3 seconds
     
     return () => clearInterval(intervalId);
   }, [siqsScore]);

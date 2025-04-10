@@ -1,5 +1,5 @@
 
-import { calculateNighttimeSiqs } from '@/utils/siqs/cloudCoverUtils';
+import { calculateNighttimeSiqs as calculateNighttimeSiqsFromCloudCover } from '@/utils/siqs/cloudCoverUtils';
 import { 
   extractNighttimeForecast, 
   getCloudCoverInfo,
@@ -54,7 +54,7 @@ export const calculateNighttimeSiqs = (
         } = getCloudCoverInfo(nighttimeItems, eveningItems, morningItems);
         
         // Use our improved nighttime SIQS calculation with heavy emphasis on cloud cover
-        const siqs = calculateNighttimeSiqs(avgNightCloudCover, bortleScale);
+        const siqs = calculateNighttimeSiqsFromCloudCover(avgNightCloudCover, bortleScale);
         
         // Format factor description
         const cloudDescription = t 
@@ -105,7 +105,7 @@ export const calculateNighttimeSiqs = (
     // Fallback to simpler calculation without forecast data
     // Uses our improved nighttime SIQS calculation with default cloud cover value
     const defaultCloudCover = 50; // Default to 50% cloud cover if unknown
-    const siqs = calculateNighttimeSiqs(defaultCloudCover, bortleScale);
+    const siqs = calculateNighttimeSiqsFromCloudCover(defaultCloudCover, bortleScale);
     
     return {
       score: siqs, 
