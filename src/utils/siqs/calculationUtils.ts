@@ -33,7 +33,12 @@ export function calculateBasicSiqs(cloudCover: number, bortleScale: number): num
   // Calculate weighted final score (0-10 scale)
   const siqs = (cloudScore * cloudWeight + lightPollutionScore * lightPollutionWeight) / 10;
   
-  // Ensure score is in 0-10 range
+  // Ensure score is in 0-10 range and high cloud cover results in lower score
+  // Cloud cover is the most critical factor, so ensure 100% cloud cover results in a very low score
+  if (validCloudCover >= 95) {
+    return Math.min(2.0, siqs); // Cap at 2.0 for extremely high cloud cover
+  }
+  
   return Math.min(10, Math.max(0, siqs));
 }
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -29,6 +28,19 @@ export const currentSiqsStore = {
           // Ensure value is on a 0-10 scale
           currentSiqsStore.value = Math.min(10, Math.max(0, parsedValue));
         }
+      } else {
+        // Try getting from latest location data
+        try {
+          const savedLocationString = localStorage.getItem('latest_siqs_location');
+          if (savedLocationString) {
+            const savedLocation = JSON.parse(savedLocationString);
+            if (savedLocation && typeof savedLocation.siqs === 'number') {
+              currentSiqsStore.value = Math.min(10, Math.max(0, savedLocation.siqs));
+            }
+          }
+        } catch (error) {
+          console.error("Error reading from latest_siqs_location:", error);
+        }
       }
     }
     return currentSiqsStore.value;
@@ -43,7 +55,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   noAutoLocationRequest = false 
 }) => {
   const { t } = useLanguage();
-  const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   
   // Define animations
   const containerVariants = {
@@ -71,6 +83,31 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
     }
   };
   
+  // Initialize with the stored value immediately to prevent flicker
+  useEffect(() => {
+    // First try to get value from latest_siqs_location
+    try {
+      const savedLocationString = localStorage.getItem('latest_siqs_location');
+      if (savedLocationString) {
+        const savedLocation = JSON.parse(savedLocationString);
+        if (savedLocation && typeof savedLocation.siqs === 'number') {
+          const scoreValue = Math.min(10, Math.max(0, savedLocation.siqs));
+          setCurrentSiqs(scoreValue);
+          currentSiqsStore.setValue(scoreValue);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error reading from latest_siqs_location:", error);
+    }
+    
+    // Fall back to current_siqs_value
+    const storedValue = currentSiqsStore.getValue();
+    if (storedValue !== null && storedValue !== currentSiqs) {
+      setCurrentSiqs(storedValue);
+    }
+  }, []);
+  
   // Update current SIQS value when calculated
   const handleSiqsCalculated = (value: number | null) => {
     if (value !== null) {
@@ -78,6 +115,20 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
       const validValue = Math.min(10, Math.max(0, value));
       setCurrentSiqs(validValue);
       currentSiqsStore.setValue(validValue);
+      
+      // Also update latest_siqs_location
+      try {
+        const savedLocationString = localStorage.getItem('latest_siqs_location');
+        if (savedLocationString) {
+          const savedLocation = JSON.parse(savedLocationString);
+          if (savedLocation) {
+            savedLocation.siqs = validValue;
+            localStorage.setItem('latest_siqs_location', JSON.stringify(savedLocation));
+          }
+        }
+      } catch (error) {
+        console.error("Error updating latest_siqs_location:", error);
+      }
     } else {
       setCurrentSiqs(null);
       currentSiqsStore.setValue(null);
@@ -87,9 +138,19 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   // Check for value updates from other components
   useEffect(() => {
     const storedValue = currentSiqsStore.getValue();
-    if (storedValue !== currentSiqs) {
+    if (storedValue !== null && storedValue !== currentSiqs) {
       setCurrentSiqs(storedValue);
     }
+    
+    // Poll for updates from other components
+    const intervalId = setInterval(() => {
+      const latestValue = currentSiqsStore.getValue();
+      if (latestValue !== null && latestValue !== currentSiqs) {
+        setCurrentSiqs(latestValue);
+      }
+    }, 3000); // Check every 3 seconds
+    
+    return () => clearInterval(intervalId);
   }, [currentSiqs]);
   
   return (

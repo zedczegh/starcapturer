@@ -69,8 +69,12 @@ const Index = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          // Use the exact SIQS value from the saved location
+          const locationSiqs = savedLocation.siqs;
           setCurrentSiqs(locationSiqs);
+          
+          // Update the global store with this value
+          currentSiqsStore.setValue(locationSiqs);
           
           // Using threshold of 5 for showing notification about good conditions
           if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
@@ -111,7 +115,7 @@ const Index = () => {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
         if (savedLocationString) {
           const savedLocation = JSON.parse(savedLocationString);
-          if (savedLocation && savedLocation.siqs) {
+          if (savedLocation && typeof savedLocation.siqs === 'number') {
             currentSiqsStore.setValue(savedLocation.siqs);
             setCurrentSiqs(savedLocation.siqs);
           }
@@ -122,6 +126,10 @@ const Index = () => {
     };
     
     updateCurrentSiqs();
+    
+    // Make global store available for external components
+    (window as any).currentSiqsStore = currentSiqsStore;
+    
   }, [queryClient, t]);
 
   return (

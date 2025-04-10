@@ -82,6 +82,26 @@ export const useLocationSIQSUpdater = (
             siqsResult: freshSIQSResult
           });
           
+          // Also update localStorage with the latest SIQS score for global accessibility
+          try {
+            const latestLocationData = {
+              name: locationData.name,
+              latitude: locationData.latitude,
+              longitude: locationData.longitude,
+              bortleScale: locationData.bortleScale,
+              siqs: freshSIQSResult.score,
+              timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('latest_siqs_location', JSON.stringify(latestLocationData));
+            
+            // Update current SIQS store if it exists in window
+            if (window.currentSiqsStore) {
+              window.currentSiqsStore.setValue(freshSIQSResult.score);
+            }
+          } catch (err) {
+            console.error("Failed to update localStorage with SIQS:", err);
+          }
+          
           updateAttemptedRef.current = true;
         } else if (locationData.weatherData?.cloudCover !== undefined) {
           // Fallback to current weather if nighttime forecast is unavailable
@@ -115,6 +135,26 @@ export const useLocationSIQSUpdater = (
             siqsResult: fallbackResult
           });
           
+          // Also update localStorage for global accessibility
+          try {
+            const latestLocationData = {
+              name: locationData.name,
+              latitude: locationData.latitude,
+              longitude: locationData.longitude,
+              bortleScale: locationData.bortleScale,
+              siqs: cloudScore,
+              timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('latest_siqs_location', JSON.stringify(latestLocationData));
+            
+            // Update current SIQS store if it exists in window
+            if (window.currentSiqsStore) {
+              window.currentSiqsStore.setValue(cloudScore);
+            }
+          } catch (err) {
+            console.error("Failed to update localStorage with SIQS:", err);
+          }
+          
           updateAttemptedRef.current = true;
         }
       } catch (error) {
@@ -132,6 +172,26 @@ export const useLocationSIQSUpdater = (
           ...locationData,
           siqs: consistentSiqs
         });
+        
+        // Update localStorage with the consistent value
+        try {
+          const storedLocation = localStorage.getItem('latest_siqs_location');
+          if (storedLocation) {
+            const parsedLocation = JSON.parse(storedLocation);
+            if (parsedLocation.latitude === locationData.latitude && 
+                parsedLocation.longitude === locationData.longitude) {
+              parsedLocation.siqs = consistentSiqs;
+              localStorage.setItem('latest_siqs_location', JSON.stringify(parsedLocation));
+              
+              // Update current SIQS store if it exists in window
+              if (window.currentSiqsStore) {
+                window.currentSiqsStore.setValue(consistentSiqs);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to update localStorage with consistent SIQS:", err);
+        }
       }
     }
   }, [forecastData, locationData, setLocationData, t, resetUpdateState]);
