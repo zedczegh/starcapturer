@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSiqs } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
@@ -15,7 +16,7 @@ export const useLocationSIQSUpdater = (
   t: any
 ) => {
   const updateAttemptedRef = useRef(false);
-  const forceUpdateRef = useRef(false);
+  const forceUpdateRef = useRef(true); // Changed to true to ensure initial update happens
   const lastLocationRef = useRef<string | null>(null);
   const lastForecastTimestampRef = useRef<string | null>(null);
   const nighttimeCalculatedRef = useRef(false);
@@ -53,7 +54,7 @@ export const useLocationSIQSUpdater = (
       resetUpdateState();
     }
     
-    // Only update SIQS when forecast data is available or on forced update
+    // Updated condition: Force update on first load, when forecast data changes, or when explicitly requested
     const shouldUpdate = (
       forecastData?.hourly && 
       Array.isArray(forecastData.hourly.time) &&
@@ -87,19 +88,19 @@ export const useLocationSIQSUpdater = (
           console.log("Using fallback SIQS calculation based on current weather");
           const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
-          // Special handling for 0% cloud cover - should be score 10
-          const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
-          const estimatedScore = cloudScore / 10;
+          // FIXED: Ensure proper inverse relationship between cloudCover and score
+          // Higher cloud cover should result in lower scores
+          const cloudScore = Math.max(0, 100 - (currentCloudCover * 2)) / 10;
           
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${cloudScore.toFixed(2)}`);
           
           const fallbackResult = {
-            score: estimatedScore,
-            isViable: estimatedScore > 2,
+            score: cloudScore,
+            isViable: cloudScore > 2,
             factors: [
               {
                 name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                score: estimatedScore, // Already on 0-10 scale
+                score: cloudScore, // Already on 0-10 scale
                 description: t 
                   ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                     `${currentCloudCover}%的云量影响成像质量`) 
@@ -110,7 +111,7 @@ export const useLocationSIQSUpdater = (
           
           setLocationData({
             ...locationData,
-            siqs: estimatedScore,
+            siqs: cloudScore,
             siqsResult: fallbackResult
           });
           

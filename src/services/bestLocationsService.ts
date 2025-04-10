@@ -1,6 +1,6 @@
 
 import { updateLocationsWithRealTimeSiqs } from './realTimeSiqsService/locationUpdateService';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/siqs/types';
 
 /**
  * Service for finding the best locations for astronomy
@@ -18,7 +18,7 @@ export async function updateLocationsWithSiqs(locations: SharedAstroSpot[]): Pro
       return {
         ...loc,
         id: `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
-      };
+      } as SharedAstroSpot; // Type assertion to ensure it matches required id
     }
     return loc;
   });
