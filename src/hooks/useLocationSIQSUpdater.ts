@@ -3,6 +3,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
+import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
@@ -18,11 +19,13 @@ export const useLocationSIQSUpdater = (
   const forceUpdateRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const lastForecastTimestampRef = useRef<string | null>(null);
+  const nighttimeCalculatedRef = useRef(false);
   
   // Reset update state for new calculations
   const resetUpdateState = useCallback(() => {
     updateAttemptedRef.current = false;
     forceUpdateRef.current = true;
+    nighttimeCalculatedRef.current = false;
     console.log("SIQS update state reset");
   }, []);
   
@@ -65,15 +68,17 @@ export const useLocationSIQSUpdater = (
       forceUpdateRef.current = false;
       
       try {
-        // Calculate new SIQS based on nighttime conditions
+        // Always calculate SIQS based on nighttime conditions first
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
-          console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
+          console.log(`Updated SIQS score from nighttime data: ${freshSIQSResult.score.toFixed(2)}`);
+          nighttimeCalculatedRef.current = true;
           
           // Update the SIQS result with the fresh calculation
           setLocationData({
             ...locationData,
+            siqs: freshSIQSResult.score,
             siqsResult: freshSIQSResult
           });
           
@@ -89,22 +94,25 @@ export const useLocationSIQSUpdater = (
           
           console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
           
+          const fallbackResult = {
+            score: estimatedScore,
+            isViable: estimatedScore > 2,
+            factors: [
+              {
+                name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+                score: estimatedScore, // Already on 0-10 scale
+                description: t 
+                  ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
+                    `${currentCloudCover}%的云量影响成像质量`) 
+                  : `Cloud cover of ${currentCloudCover}% affects imaging quality`
+              }
+            ]
+          };
+          
           setLocationData({
             ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: estimatedScore > 2,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
-                  description: t 
-                    ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
-                      `${currentCloudCover}%的云量影响成像质量`) 
-                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
-                }
-              ]
-            }
+            siqs: estimatedScore,
+            siqsResult: fallbackResult
           });
           
           updateAttemptedRef.current = true;
@@ -114,7 +122,22 @@ export const useLocationSIQSUpdater = (
         toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
       }
     }
+    
+    // Ensure consistent SIQS value if we already have data
+    if (locationData && locationData.siqsResult) {
+      const consistentSiqs = getConsistentSiqsValue(locationData);
+      if (consistentSiqs !== locationData.siqs) {
+        console.log(`Updating inconsistent SIQS value from ${locationData.siqs} to ${consistentSiqs}`);
+        setLocationData({
+          ...locationData,
+          siqs: consistentSiqs
+        });
+      }
+    }
   }, [forecastData, locationData, setLocationData, t, resetUpdateState]);
   
-  return { resetUpdateState };
+  return { 
+    resetUpdateState,
+    isNighttimeCalculated: nighttimeCalculatedRef.current
+  };
 };

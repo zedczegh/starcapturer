@@ -32,7 +32,22 @@ declare module "@/types/weather" {
       name: string;
       score: number;
       description: string;
+      nighttimeData?: {
+        average: number;
+        timeRange: string;
+        detail?: {
+          evening: number;
+          morning: number;
+        };
+      };
     }>;
+    metadata?: {
+      calculationType: string;
+      timestamp: string;
+      eveningCloudCover?: number;
+      morningCloudCover?: number;
+      avgNightCloudCover?: number;
+    };
   }
 
   export interface SharedAstroSpot {
@@ -50,7 +65,12 @@ declare module "@/types/weather" {
       score: number;
       isViable: boolean;
     };
+    siqsResult?: SIQSData;
+    siqsFactors?: Array<any>;
     distance?: number;
     isViable?: boolean;
+    isDarkSkyReserve?: boolean;
+    certification?: string;
+    weatherData?: WeatherData;
   }
 }
