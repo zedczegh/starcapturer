@@ -1,3 +1,4 @@
+
 import React, { memo, useMemo } from "react";
 import EmptyFactors from "./factors/EmptyFactors";
 import FactorItem from "./factors/FactorItem";
@@ -32,12 +33,10 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return <EmptyFactors />;
   }
   
-  // Fix cloud cover factor scoring and description
+  // Give priority to nighttime cloud cover data
   const finalFactors = normalizedFactors.map(factor => {
     // If it's the cloud cover factor
-    if ((factor.name === "Cloud Cover" || factor.name === "云层覆盖" || 
-         factor.name === "Nighttime Cloud Cover" || factor.name === "夜间云层覆盖")) {
-      
+    if ((factor.name === "Cloud Cover" || factor.name === "云层覆盖")) {
       // If we have nighttime data available
       if (factor.nighttimeData && factor.nighttimeData.average !== undefined) {
         // Prioritize the nighttime average for the score and update the name
@@ -46,88 +45,58 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
         // Adjust the factor name to indicate nighttime
         const nighttimeName = language === 'zh' ? '夜间云层覆盖' : 'Nighttime Cloud Cover';
         
-        // CRITICAL FIX: Ensure cloud cover percentage is inversely related to score
-        // 0% cloud cover = 10 score, 100% cloud cover = 0 score
-        let correctedScore;
-        let description;
+        // If nighttime cloud cover is 0%, ensure score is 10
+        if (nighttimeValue === 0) {
+          return { 
+            ...factor, 
+            name: nighttimeName,
+            score: 10,
+            description: language === 'zh' 
+              ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，非常适合成像`
+              : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%, excellent for imaging`
+          };
+        }
         
-        if (nighttimeValue <= 0) {
-          // Clear skies
-          correctedScore = 10;
-          description = language === 'zh' 
-            ? '夜间晴朗无云，非常适合天文摄影'
-            : 'Clear night skies, excellent for astrophotography';
-        } else if (nighttimeValue >= 100) {
-          // Completely overcast
-          correctedScore = 0;
-          description = language === 'zh'
-            ? '夜间完全被云层覆盖，不适合天文摄影'
-            : 'Completely overcast night skies, not suitable for astrophotography';
-        } else if (nighttimeValue > 80) {
-          // Heavy cloud cover
-          correctedScore = Math.max(0, (100 - nighttimeValue) / 10);
-          description = language === 'zh'
-            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，不推荐进行天文摄影`
-            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%, not recommended for imaging`;
-        } else {
-          // Partial cloud cover
-          correctedScore = Math.max(0, (100 - nighttimeValue) / 10);
-          description = language === 'zh' 
-            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (nighttimeValue > 50 ? '，可能影响成像质量' : '')
-            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (nighttimeValue > 50 ? ', may affect imaging quality' : '');
+        // Fix issue with high cloud cover showing high scores
+        if (nighttimeValue > 80) {
+          return {
+            ...factor,
+            name: nighttimeName,
+            score: Math.max(0, 10 - (nighttimeValue / 10)), // Ensure score is properly calculated
+            description: language === 'zh'
+              ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，不适合成像`
+              : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%, not recommended for imaging`
+          };
         }
         
         return { 
           ...factor, 
           name: nighttimeName,
-          score: correctedScore,
-          description: description
+          score: Math.max(0, 10 - (nighttimeValue / 10)), // Ensure score is properly calculated
+          description: language === 'zh' 
+            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description.includes('影响') ? '，可能影响成像质量' : '')
+            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description.includes('quality') ? ', may affect imaging quality' : '')
         };
       }
       
-      // Regular cloud cover (non-nighttime)
-      // Extract cloud cover percentage from description if available
-      let cloudCoverPercentage = 50; // Default value
-      const percentMatch = factor.description.match(/(\d+(?:\.\d+)?)%/);
-      if (percentMatch && percentMatch[1]) {
-        cloudCoverPercentage = parseFloat(percentMatch[1]);
+      // Fix description-score mismatch for regular cloud cover
+      if (factor.description.includes("0%")) {
+        return { ...factor, score: 10 };
       }
       
-      // CRITICAL FIX: Ensure cloud cover percentage is inversely related to score
-      let correctedScore;
-      let description;
-      
-      if (cloudCoverPercentage <= 0) {
-        // Clear skies
-        correctedScore = 10;
-        description = language === 'zh' 
-          ? '晴朗无云，非常适合天文摄影'
-          : 'Clear skies, excellent for astrophotography';
-      } else if (cloudCoverPercentage >= 100) {
-        // Completely overcast
-        correctedScore = 0;
-        description = language === 'zh'
-          ? '完全被云层覆盖，不适合天文摄影'
-          : 'Completely overcast, not suitable for astrophotography';
-      } else if (cloudCoverPercentage > 80) {
-        // Heavy cloud cover
-        correctedScore = Math.max(0, (100 - cloudCoverPercentage) / 10);
-        description = language === 'zh'
-          ? `云层覆盖率为${cloudCoverPercentage.toFixed(1)}%，不推荐进行天文摄影`
-          : `Cloud cover of ${cloudCoverPercentage.toFixed(1)}%, not recommended for imaging`;
-      } else {
-        // Partial cloud cover
-        correctedScore = Math.max(0, (100 - cloudCoverPercentage) / 10);
-        description = language === 'zh' 
-          ? `云层覆盖率为${cloudCoverPercentage.toFixed(1)}%` + (cloudCoverPercentage > 50 ? '，可能影响成像质量' : '')
-          : `Cloud cover of ${cloudCoverPercentage.toFixed(1)}%` + (cloudCoverPercentage > 50 ? ', may affect imaging quality' : '');
+      if (factor.description.includes("Heavy cloud") || 
+          factor.description.includes("重度云层")) {
+        // If description mentions heavy cloud cover, set score appropriately low
+        const cloudValueMatch = factor.description.match(/\((\d+)%\)/);
+        if (cloudValueMatch && cloudValueMatch[1]) {
+          const cloudValue = parseInt(cloudValueMatch[1], 10);
+          return { 
+            ...factor, 
+            score: Math.max(0, 10 - (cloudValue / 10)) // 100% cloud cover = 0 score
+          };
+        }
+        return { ...factor, score: 0 }; // Default to 0 if no percentage found
       }
-      
-      return { 
-        ...factor, 
-        score: correctedScore,
-        description: description
-      };
     }
     
     // For Chinese UI, ensure factor names are translated

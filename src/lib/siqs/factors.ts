@@ -1,4 +1,3 @@
-
 /**
  * Factor score calculation functions for SIQS
  */
@@ -10,13 +9,10 @@ export function calculateCloudScore(cloudCover: number): number {
     return 0;
   }
   
-  // FIXED: Ensure proper inverse relationship between cloud cover and score
-  // 0% cloud cover should be 100 points (perfect)
-  // 100% cloud cover should be 0 points (terrible)
-  
-  // Handle edge cases
-  if (cloudCover <= 0) return 100;
-  if (cloudCover >= 100) return 0;
+  // If cloud cover is 0%, score should be 100 points (perfect)
+  if (cloudCover === 0) {
+    return 100;
+  }
   
   // Improved cloud cover scoring with smoother transitions:
   // 0-20% cloud cover = Outstanding (80-100 points)

@@ -1,5 +1,6 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/lib/api/astroSpots'; // Import from consistent location
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +56,7 @@ export const usePhotoPointsMap = ({
     location && 
     typeof location.latitude === 'number' && 
     typeof location.longitude === 'number' &&
+    // Filter out water locations for calculated spots, never filter certified
     (location.isDarkSkyReserve || 
      location.certification || 
      !isWaterLocation(location.latitude, location.longitude))
@@ -72,6 +74,7 @@ export const usePhotoPointsMap = ({
 
   const locationMap = new Map<string, SharedAstroSpot>();
   
+  // Always include all certified locations regardless of active view
   certifiedLocations.forEach(loc => {
     const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
     locationMap.set(key, loc);
@@ -80,6 +83,7 @@ export const usePhotoPointsMap = ({
   if (activeView === 'calculated') {
     previousLocationsRef.current.forEach(loc => {
       if (!loc.isDarkSkyReserve && !loc.certification) {
+        // Don't add water locations
         if (!isWaterLocation(loc.latitude, loc.longitude)) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           locationMap.set(key, loc);
@@ -88,6 +92,7 @@ export const usePhotoPointsMap = ({
     });
     
     calculatedLocations.forEach(loc => {
+      // Skip water locations for calculated spots
       if (!isWaterLocation(loc.latitude, loc.longitude)) {
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         const existing = locationMap.get(key);
@@ -119,6 +124,7 @@ export const usePhotoPointsMap = ({
           calculatedLocations.filter(loc => {
             if (!loc.latitude || !loc.longitude) return false;
             
+            // Skip water locations for calculated spots
             if (!loc.isDarkSkyReserve && !loc.certification) {
               if (isWaterLocation(loc.latitude, loc.longitude)) {
                 return false;
@@ -133,14 +139,16 @@ export const usePhotoPointsMap = ({
             );
             return distance <= searchRadius * 1.1;
           }) : 
+          // For certified view, include ALL certified locations regardless of distance
           certifiedLocations;
         
+        // Fix type issues by ensuring id field exists
         const locationsWithId = locationsInRadius.map(loc => {
           if (!loc.id) {
             return {
               ...loc,
               id: `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
-            } as SharedAstroSpot;
+            };
           }
           return loc;
         });
@@ -151,31 +159,29 @@ export const usePhotoPointsMap = ({
           setEnhancedLocations(prevLocations => {
             const updatedMap = new Map<string, SharedAstroSpot>();
             
+            // Always include all certified locations
             certifiedLocations.forEach(loc => {
               if (loc.latitude && loc.longitude) {
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                // Ensure id exists
                 const locWithId = loc.id ? loc : {
                   ...loc,
                   id: `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`
-                } as SharedAstroSpot;
+                };
                 updatedMap.set(key, locWithId);
               }
             });
             
             updated.forEach(loc => {
               if (loc.latitude && loc.longitude) {
+                // Skip water locations for calculated spots
                 if (!loc.isDarkSkyReserve && !loc.certification && 
                     isWaterLocation(loc.latitude, loc.longitude)) {
                   return;
                 }
                 
-                const locWithId = loc.id ? loc : {
-                  ...loc,
-                  id: `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`
-                } as SharedAstroSpot;
-                
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                updatedMap.set(key, locWithId);
+                updatedMap.set(key, loc);
               }
             });
             
@@ -184,15 +190,11 @@ export const usePhotoPointsMap = ({
             updated.forEach(newLoc => {
               if (!newLoc.latitude || !newLoc.longitude) return;
               
+              // Skip water locations for calculated spots
               if (!newLoc.isDarkSkyReserve && !newLoc.certification && 
                   isWaterLocation(newLoc.latitude, newLoc.longitude)) {
                 return;
               }
-              
-              const newLocWithId = newLoc.id ? newLoc : {
-                ...newLoc,
-                id: `loc-${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`
-              } as SharedAstroSpot;
               
               const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
               const exists = combinedLocations.some(
@@ -201,14 +203,14 @@ export const usePhotoPointsMap = ({
               );
               
               if (!exists) {
-                combinedLocations.push(newLocWithId);
+                combinedLocations.push(newLoc);
               } else {
                 const index = combinedLocations.findIndex(
                   existingLoc => existingLoc.latitude && existingLoc.longitude &&
                   `${existingLoc.latitude.toFixed(6)}-${existingLoc.longitude.toFixed(6)}` === key
                 );
                 if (index !== -1) {
-                  combinedLocations[index] = newLocWithId;
+                  combinedLocations[index] = newLoc;
                 }
               }
             });
@@ -241,6 +243,7 @@ export const usePhotoPointsMap = ({
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     setSelectedLocation(location);
     
+    // Ensure location has an ID
     const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
     
     if (location && location.latitude && location.longitude) {
