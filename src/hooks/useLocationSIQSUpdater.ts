@@ -2,7 +2,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSiqs } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
-import { validateCloudCover } from '@/lib/siqs/utils';
+import { validateCloudCover } from '@/utils/siqs/cloudCoverUtils';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
@@ -116,19 +116,18 @@ export const useLocationSIQSUpdater = (
           console.log("Using fallback SIQS calculation based on current weather");
           const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
-          // FIXED: Ensure proper inverse relationship between cloudCover and score
-          // Higher cloud cover should result in lower scores
-          const cloudScore = Math.max(0, 100 - (currentCloudCover * 2)) / 10;
+          // Calculate SIQS primarily based on cloud cover
+          const siqs = Math.min(10, Math.max(0, 10 - (currentCloudCover * 0.1)));
           
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${cloudScore.toFixed(2)}`);
+          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${siqs.toFixed(2)}`);
           
           const fallbackResult = {
-            score: cloudScore,
-            isViable: cloudScore > 2,
+            score: siqs,
+            isViable: siqs > 5,
             factors: [
               {
                 name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                score: cloudScore, // Already on 0-10 scale
+                score: Math.min(10, Math.max(0, 10 - (currentCloudCover * 0.1))),
                 description: t 
                   ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                     `${currentCloudCover}%的云量影响成像质量`) 
@@ -139,7 +138,7 @@ export const useLocationSIQSUpdater = (
           
           setLocationData({
             ...locationData,
-            siqs: cloudScore,
+            siqs: siqs,
             siqsResult: fallbackResult
           });
           
@@ -150,14 +149,14 @@ export const useLocationSIQSUpdater = (
               latitude: locationData.latitude,
               longitude: locationData.longitude,
               bortleScale: locationData.bortleScale,
-              siqs: cloudScore,
+              siqs: siqs,
               timestamp: new Date().toISOString()
             };
             localStorage.setItem('latest_siqs_location', JSON.stringify(latestLocationData));
             
             // Update current SIQS store if it exists in window
             if (window.currentSiqsStore) {
-              window.currentSiqsStore.setValue(cloudScore);
+              window.currentSiqsStore.setValue(siqs);
             }
           } catch (err) {
             console.error("Failed to update localStorage with SIQS:", err);

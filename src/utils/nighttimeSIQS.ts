@@ -1,5 +1,5 @@
 
-import { calculateCloudScore, calculateLightPollutionScore } from "@/lib/siqs/factors";
+import { calculateNighttimeSiqs } from '@/utils/siqs/cloudCoverUtils';
 import { 
   extractNighttimeForecast, 
   getCloudCoverInfo,
@@ -53,16 +53,8 @@ export const calculateNighttimeSiqs = (
           avgMorningCloudCover
         } = getCloudCoverInfo(nighttimeItems, eveningItems, morningItems);
         
-        // Calculate scores based on factors
-        const cloudScore = calculateCloudScore(avgNightCloudCover) / 10;
-        const lightPollutionScore = calculateLightPollutionScore(bortleScale) / 10;
-        
-        // Blend factors with appropriate weights
-        const cloudWeight = 0.65;
-        const lightPollutionWeight = 0.35;
-        
-        // Calculate final SIQS score
-        const siqs = (cloudScore * cloudWeight) + (lightPollutionScore * lightPollutionWeight);
+        // Use our improved nighttime SIQS calculation with heavy emphasis on cloud cover
+        const siqs = calculateNighttimeSiqs(avgNightCloudCover, bortleScale);
         
         // Format factor description
         const cloudDescription = t 
@@ -73,7 +65,7 @@ export const calculateNighttimeSiqs = (
         const factors = [
           {
             name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-            score: cloudScore * 10, // Scale to 0-10 for display
+            score: Math.min(10, Math.max(0, (100 - avgNightCloudCover) / 10)), // Invert for display
             description: cloudDescription,
             nighttimeData: {
               average: avgNightCloudCover,
@@ -86,7 +78,7 @@ export const calculateNighttimeSiqs = (
           },
           {
             name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-            score: lightPollutionScore * 10, // Scale to 0-10 for display
+            score: Math.max(0, 10 - bortleScale), // Invert Bortle scale to score
             description: t 
               ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
               : `Bortle scale ${bortleScale}`
@@ -95,8 +87,8 @@ export const calculateNighttimeSiqs = (
         
         // Create final SIQS result
         return {
-          score: Math.min(10, Math.max(0, siqs * 10)), // Ensure score is in 0-10 range
-          isViable: siqs >= 0.5, // 5.0 on a 0-10 scale
+          score: siqs, // already in 0-10 range
+          isViable: siqs >= 5.0, // 5.0 on a 0-10 scale is viable
           factors,
           metadata: {
             calculationType: 'nighttime',
@@ -111,10 +103,29 @@ export const calculateNighttimeSiqs = (
     }
     
     // Fallback to simpler calculation without forecast data
+    // Uses our improved nighttime SIQS calculation with default cloud cover value
+    const defaultCloudCover = 50; // Default to 50% cloud cover if unknown
+    const siqs = calculateNighttimeSiqs(defaultCloudCover, bortleScale);
+    
     return {
-      score: Math.min(10, (10 - bortleScale * 0.75) + 3),
-      isViable: true,
-      factors: [],
+      score: siqs, 
+      isViable: siqs >= 5.0,
+      factors: [
+        {
+          name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+          score: Math.min(10, Math.max(0, (100 - defaultCloudCover) / 10)),
+          description: t 
+            ? t("Estimated cloud cover (no forecast data)", "估计的云量（无预报数据）")
+            : "Estimated cloud cover (no forecast data)"
+        },
+        {
+          name: t ? t("Light Pollution", "光污染") : "Light Pollution",
+          score: Math.max(0, 10 - bortleScale),
+          description: t 
+            ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
+            : `Bortle scale ${bortleScale}`
+        }
+      ],
       isNighttimeCalculation: false
     };
   } catch (error) {
@@ -152,7 +163,8 @@ export const getConsistentSiqsValue = (location: any): number => {
   
   // Last resort: estimate from Bortle scale 
   if (typeof location.bortleScale === 'number') {
-    return Math.min(10, Math.max(0, (10 - location.bortleScale * 0.75) + 3));
+    // Use a more conservative estimate (lower scores)
+    return Math.min(10, Math.max(0, (10 - location.bortleScale * 0.9)));
   }
   
   return 0; // Default if no data available

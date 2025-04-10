@@ -1,77 +1,94 @@
 
 /**
- * Validate and normalize cloud cover value
- * @param cloudCover Raw cloud cover value
- * @returns Normalized cloud cover percentage (0-100)
+ * Utility functions for cloud cover analysis and SIQS calculation
  */
-export function validateCloudCover(cloudCover: any): number {
-  if (cloudCover === null || cloudCover === undefined) {
-    return 50; // Default value
+
+/**
+ * Calculate SIQS score based primarily on cloud cover with proper inverse relationship
+ * Higher cloud cover should result in lower scores
+ * @param cloudCover Cloud cover percentage (0-100)
+ * @returns SIQS score (0-10 scale)
+ */
+export function calculateSiqsFromCloudCover(cloudCover: number): number {
+  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
+    return 0;
   }
   
-  const numValue = Number(cloudCover);
+  // Ensure proper inverse relationship - cloud cover of 100% should result in score of 0
+  if (cloudCover >= 90) return 0; // 90-100% cloud cover is terrible for imaging
+  if (cloudCover >= 75) return 1; // 75-90% cloud cover is very poor
+  if (cloudCover >= 60) return 2.5; // 60-75% cloud cover is poor
+  if (cloudCover >= 45) return 4; // 45-60% cloud cover is below average
+  if (cloudCover >= 30) return 5.5; // 30-45% cloud cover is average
+  if (cloudCover >= 20) return 7; // 20-30% cloud cover is good
+  if (cloudCover >= 10) return 8.5; // 10-20% cloud cover is very good
   
-  if (isNaN(numValue)) {
-    return 50; // Default for invalid values
-  }
-  
-  // Ensure value is in 0-100 range
-  return Math.max(0, Math.min(100, numValue));
+  // 0-10% cloud cover is excellent
+  return 10 - (cloudCover * 0.15);
 }
 
 /**
- * Get cloud cover description based on percentage
- * @param cloudCover Cloud cover percentage
+ * Determine if cloud cover makes imaging impossible
+ * @param cloudCover Cloud cover percentage (0-100)
+ * @returns Boolean indicating if imaging is impossible
+ */
+export function isImagingImpossible(cloudCover: number): boolean {
+  return cloudCover >= 70; // 70% or higher cloud cover makes imaging very difficult
+}
+
+/**
+ * Validate cloud cover value
+ * @param value Cloud cover value to validate
+ * @returns Validated cloud cover value (0-100)
+ */
+export function validateCloudCover(value: any): number {
+  if (typeof value !== 'number' || isNaN(value)) {
+    return 50; // Default to 50% if invalid
+  }
+  return Math.min(100, Math.max(0, value)); // Clamp between 0-100
+}
+
+/**
+ * Get descriptive text for cloud cover values
+ * @param cloudCover Cloud cover percentage (0-100)
  * @returns Description string
  */
-export function getCloudCoverDescription(cloudCover: number, language: string = 'en'): string {
-  const validCloudCover = validateCloudCover(cloudCover);
-  
-  if (validCloudCover === 0) {
-    return language === 'zh' ? '完全晴朗无云' : 'Clear skies (0%)';
-  } else if (validCloudCover < 10) {
-    return language === 'zh' ? `几乎晴朗 (${validCloudCover}%)` : `Nearly clear (${validCloudCover}%)`;
-  } else if (validCloudCover < 30) {
-    return language === 'zh' ? `少量云层 (${validCloudCover}%)` : `Light clouds (${validCloudCover}%)`;
-  } else if (validCloudCover < 50) {
-    return language === 'zh' ? `部分多云 (${validCloudCover}%)` : `Partly cloudy (${validCloudCover}%)`;
-  } else if (validCloudCover < 80) {
-    return language === 'zh' ? `较多云层 (${validCloudCover}%)` : `Mostly cloudy (${validCloudCover}%)`;
-  } else if (validCloudCover < 100) {
-    return language === 'zh' 
-      ? `重度云层 (${validCloudCover}%), 不适合成像`
-      : `Heavy cloud cover (${validCloudCover}%), not suitable for imaging`;
-  } else {
-    return language === 'zh' 
-      ? '完全被云层覆盖 (100%), 不适合任何天文观测'
-      : 'Complete overcast (100%), not suitable for astronomy';
-  }
+export function getCloudCoverDescription(cloudCover: number): string {
+  if (cloudCover >= 90) return "Heavy overcast (90-100%), imaging impossible";
+  if (cloudCover >= 75) return "Mostly overcast (75-90%), very poor for imaging";
+  if (cloudCover >= 60) return "Considerable clouds (60-75%), poor for imaging";
+  if (cloudCover >= 45) return "Partly cloudy (45-60%), challenging for imaging";
+  if (cloudCover >= 30) return "Scattered clouds (30-45%), fair for imaging";
+  if (cloudCover >= 20) return "Mostly clear (20-30%), good for imaging";
+  if (cloudCover >= 10) return "Few clouds (10-20%), very good for imaging";
+  return "Clear skies (0-10%), excellent for imaging";
 }
 
 /**
- * Calculate average cloud cover from forecast items
- * @param forecastItems Array of forecast items with cloud_cover property
- * @returns Average cloud cover or null if no valid data
+ * Calculate SIQS score with emphasis on nighttime cloud cover
+ * @param nighttimeCloudCover Average nighttime cloud cover
+ * @param bortleScale Bortle scale value (light pollution)
+ * @returns SIQS score (0-10 scale)
  */
-export function calculateAverageCloudCover(forecastItems: any[]): number | null {
-  if (!Array.isArray(forecastItems) || forecastItems.length === 0) {
-    return null;
+export function calculateNighttimeSiqs(nighttimeCloudCover: number, bortleScale: number = 5): number {
+  // Cloud cover has much more weight than Bortle scale in this calculation
+  const cloudCoverWeight = 0.75;
+  const bortleWeight = 0.25;
+  
+  // Calculate cloud cover score (0-10)
+  const cloudCoverScore = calculateSiqsFromCloudCover(nighttimeCloudCover);
+  
+  // Calculate Bortle scale score (0-10)
+  // Inverted: Lower Bortle scale (less light pollution) = higher score
+  const bortleScore = Math.max(0, 10 - (bortleScale * 0.9));
+  
+  // Weighted average
+  const weightedScore = (cloudCoverScore * cloudCoverWeight) + (bortleScore * bortleWeight);
+  
+  // If cloud cover is terrible (>75%), significantly reduce the overall score
+  if (nighttimeCloudCover > 75) {
+    return Math.min(3, weightedScore); // Cap at 3.0 for very high cloud cover
   }
   
-  let totalCloudCover = 0;
-  let validItemCount = 0;
-  
-  forecastItems.forEach(item => {
-    const cloudCover = item.cloud_cover || item.cloudcover || item.cloudCover;
-    if (typeof cloudCover === 'number' && !isNaN(cloudCover)) {
-      totalCloudCover += cloudCover;
-      validItemCount++;
-    }
-  });
-  
-  if (validItemCount === 0) {
-    return null;
-  }
-  
-  return totalCloudCover / validItemCount;
+  return Math.min(10, Math.max(0, weightedScore));
 }

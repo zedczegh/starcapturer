@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { calculateNighttimeSiqs } from '@/utils/siqs/cloudCoverUtils';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 interface UseSiqsUpdaterProps {
@@ -70,6 +71,39 @@ export const useSiqsUpdater = ({
       }
     }
   }, [locationId, latitude, longitude]);
+  
+  // Initialize from localStorage on first mount
+  useEffect(() => {
+    // Try to get SIQS from localStorage on component mount
+    if (latitude && longitude) {
+      try {
+        const storageKey = locationId || `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+        const savedLocationString = localStorage.getItem('latest_siqs_location');
+        
+        if (savedLocationString) {
+          const savedLocation = JSON.parse(savedLocationString);
+          if (savedLocation && 
+              savedLocation.latitude === latitude && 
+              savedLocation.longitude === longitude &&
+              typeof savedLocation.siqs === 'number') {
+            
+            // Use stored SIQS value
+            setSiqsScore(savedLocation.siqs);
+            currentSiqsStore.setValue(savedLocation.siqs);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error reading SIQS from localStorage:", error);
+      }
+    }
+    
+    // If no match in localStorage, use initial value if provided
+    if (initialSiqs !== null) {
+      setSiqsScore(initialSiqs);
+      currentSiqsStore.setValue(initialSiqs);
+    }
+  }, [locationId, latitude, longitude, initialSiqs]);
   
   // Check for updates from global store periodically
   useEffect(() => {

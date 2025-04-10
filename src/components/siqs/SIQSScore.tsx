@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatSiqsScore, isValidSiqsScore } from "@/utils/siqs/displayUtils";
 
 interface SIQSScoreProps {
   siqsScore: number | null;
@@ -26,7 +27,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   // Create memoized values to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
     // Check if we have a valid score
-    if (siqsScore === null || isNaN(siqsScore)) {
+    if (!isValidSiqsScore(siqsScore)) {
       return {
         displayValue: null,
         interpretation: t("Not Available", "不可用"),
@@ -37,7 +38,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     }
 
     // Ensure we have a valid score and it's on a 0-10 scale
-    const displayValue = Math.min(10, Math.max(0, siqsScore));
+    const displayValue = Math.min(10, Math.max(0, siqsScore!));
 
     // Determine value interpretation
     let interpretation;
@@ -148,7 +149,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           {t("Estimated SIQS", "预估SIQS")}
         </h3>
         <span className={`text-xl font-bold px-2 py-1 rounded ${memoizedValues.textColorClass}`}>
-          {memoizedValues.displayValue.toFixed(1)}
+          {formatSiqsScore(memoizedValues.displayValue)}
         </span>
       </div>
       

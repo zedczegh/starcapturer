@@ -55,6 +55,13 @@ if (typeof window !== 'undefined') {
   window.currentSiqsStore = currentSiqsStore;
 }
 
+// Declare window interface extension for TypeScript
+declare global {
+  interface Window {
+    currentSiqsStore?: typeof currentSiqsStore;
+  }
+}
+
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
 }

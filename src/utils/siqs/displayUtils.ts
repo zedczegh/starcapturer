@@ -1,5 +1,7 @@
 
-import { SIQSResult } from '@/lib/siqs/types';
+/**
+ * Utility functions for SIQS display formatting
+ */
 
 /**
  * Format SIQS score with one decimal place
@@ -124,7 +126,7 @@ export function extractSiqsDisplayData(location: any) {
   }
   // Lastly estimate from bortle scale if we have it
   else if (typeof location.bortleScale === 'number' && !isNaN(location.bortleScale)) {
-    siqsValue = (10 - location.bortleScale * 0.75) + 3;
+    siqsValue = (10 - location.bortleScale * 0.9);
   }
   
   // If we don't have a valid SIQS value, return placeholder
