@@ -3,7 +3,7 @@ import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots"; // Use the consistent type from api/astroSpots
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles

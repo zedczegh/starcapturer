@@ -30,7 +30,8 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   // Use enhanced water detection
   return isWaterLocation(
     location.latitude, 
-    location.longitude
+    location.longitude, 
+    Boolean(location.isDarkSkyReserve || location.certification)
   );
 };
 
@@ -68,6 +69,7 @@ const LocationMarker = memo(({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
+  const popupRef = useRef<L.Popup | null>(null);
   
   // Skip water locations for calculated spots (never skip certified)
   if (!isCertified && isWaterSpot(location)) {
@@ -140,12 +142,7 @@ const LocationMarker = memo(({
         longitude: location.longitude,
         bortleScale: location.bortleScale || 4,
         siqs: location.siqs,
-        siqsResult: location.siqs ? { 
-          score: location.siqs,
-          isViable: location.siqs >= 5.0,
-          factors: [],
-          isNighttimeCalculation: true
-        } : undefined,
+        siqsResult: location.siqs ? { score: location.siqs } : undefined,
         certification: location.certification,
         isDarkSkyReserve: location.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
@@ -160,6 +157,7 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
+      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
@@ -216,7 +214,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component
+// User location marker component - Updated to use red color
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 

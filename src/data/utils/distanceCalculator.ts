@@ -4,4 +4,4 @@
  * Re-exporting from centralized geoUtils to avoid duplication
  */
 
-export { calculateDistance, deg2rad, formatDistance } from '@/utils/geoUtils';
+export { calculateDistance, deg2rad } from '@/utils/geoUtils';
