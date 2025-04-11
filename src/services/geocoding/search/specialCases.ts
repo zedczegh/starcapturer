@@ -36,14 +36,25 @@ export function handleSpecialCases(query: string, language: Language): Location[
     return [westernCities['california']];
   }
   
-  // Dark sky related queries
+  // Enhanced dark sky search patterns
   if (query.includes('dark sky') || 
       query.includes('dark-sky') || 
       query.includes('ida') || 
-      query.includes('international dark') || 
+      query.includes('international dark') ||
+      query.includes('star reserve') ||
+      query.includes('astro') ||
+      query.includes('astronomy') ||
+      query.includes('star gazing') ||
+      query.includes('stargazing') ||
+      query.includes('night sky') ||
+      query.includes('milky way') ||
       (language === 'zh' && (
         query.includes('暗夜') || 
-        query.includes('暗空'))
+        query.includes('暗空') ||
+        query.includes('星空') ||
+        query.includes('天文') ||
+        query.includes('银河') ||
+        query.includes('观星'))
       )) {
     
     // Return special dark sky placeholder to trigger search for certified locations

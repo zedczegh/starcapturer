@@ -99,7 +99,67 @@ export function getWesternCitiesDatabase(): Record<string, Location> {
       longitude: 12.4833,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
-    // Add more western cities as needed
+    // Additional Dark Sky locations
+    "alpes azur mercantour": {
+      name: "Alpes Azur Mercantour Dark Sky Reserve, France",
+      latitude: 44.1800, 
+      longitude: 7.0500,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "central idaho": {
+      name: "Central Idaho Dark Sky Reserve, USA", 
+      latitude: 44.2210, 
+      longitude: -114.9318,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "namibrand": {
+      name: "NamibRand Dark Sky Reserve, Namibia", 
+      latitude: -24.9400, 
+      longitude: 16.0600,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "cranborne chase": {
+      name: "Cranborne Chase Dark Sky Reserve, England", 
+      latitude: 51.0290, 
+      longitude: -2.1370,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "snowdonia": {
+      name: "Snowdonia Dark Sky Reserve, Wales", 
+      latitude: 52.9493, 
+      longitude: -3.8872,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "rhön": {
+      name: "Rhön Dark Sky Reserve, Germany", 
+      latitude: 50.3492, 
+      longitude: 9.9675,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "galloway": {
+      name: "Galloway Dark Sky Park, Scotland", 
+      latitude: 55.1054, 
+      longitude: -4.4899,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "great barrier island": {
+      name: "Great Barrier Island Dark Sky Sanctuary, New Zealand", 
+      latitude: -36.2058, 
+      longitude: 175.4831,
+      placeDetails: "Dark Sky Sanctuary - International Dark Sky Association"
+    },
+    "wairarapa": {
+      name: "Wairarapa Dark Sky Reserve, New Zealand", 
+      latitude: -41.3446, 
+      longitude: 175.5440,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "river murray": {
+      name: "River Murray Dark Sky Reserve, Australia", 
+      latitude: -34.4048, 
+      longitude: 139.2851,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    }
   };
 }
 

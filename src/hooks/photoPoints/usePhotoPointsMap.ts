@@ -32,15 +32,58 @@ export const usePhotoPointsMap = ({
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Load all certified locations when map is ready
+  // Load all certified locations immediately when component mounts
   useEffect(() => {
     const loadAllCertifiedLocations = async () => {
-      // Only load certified locations once or when user location changes significantly
-      if (mapReady && userLocation && 
-          (!certifiedLocationsLoaded || shouldRefreshCertified(userLocation))) {
+      try {
+        console.log("Loading all certified dark sky locations globally on page load");
         
+        // Use a default location if user location is not available yet
+        const searchLocation = userLocation || { latitude: 39.9042, longitude: 116.4074 };
+        
+        const certifiedResults = await findCertifiedLocations(
+          searchLocation.latitude,
+          searchLocation.longitude,
+          10000, // Global radius
+          300 // Increased limit to get more certified locations
+        );
+        
+        if (certifiedResults.length > 0) {
+          console.log(`Loaded ${certifiedResults.length} certified dark sky locations`);
+          setAllCertifiedLocations(certifiedResults);
+          
+          // Store all certified locations in the global store for persistence
+          certifiedResults.forEach(location => {
+            if (location.isDarkSkyReserve || location.certification) {
+              addLocationToStore(location);
+            }
+          });
+        }
+        
+        lastUserLocation.current = searchLocation;
+        setCertifiedLocationsLoaded(true);
+      } catch (error) {
+        console.error("Error loading certified locations on mount:", error);
+        setCertifiedLocationsLoaded(true); // Mark as loaded even on error to prevent repeated attempts
+      }
+    };
+    
+    // Load certified locations immediately on mount
+    loadAllCertifiedLocations();
+    
+    return () => {
+      if (certifiedLoadingTimeoutRef.current) {
+        clearTimeout(certifiedLoadingTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Refresh certified locations when map is ready and user location changes significantly
+  useEffect(() => {
+    const refreshCertifiedLocations = async () => {
+      if (mapReady && userLocation && shouldRefreshCertified(userLocation)) {
         try {
-          console.log("Loading all certified dark sky locations globally");
+          console.log("Refreshing certified dark sky locations based on new user location");
           
           // Clear any existing timeout
           if (certifiedLoadingTimeoutRef.current) {
@@ -53,12 +96,17 @@ export const usePhotoPointsMap = ({
               userLocation.latitude,
               userLocation.longitude,
               10000, // Global radius
-              150 // Increased limit to get more certified locations
+              300 // Increased limit
             );
             
             if (certifiedResults.length > 0) {
-              console.log(`Loaded ${certifiedResults.length} certified dark sky locations`);
-              setAllCertifiedLocations(certifiedResults);
+              console.log(`Refreshed ${certifiedResults.length} certified dark sky locations`);
+              setAllCertifiedLocations(prevLocations => {
+                // Combine new results with existing locations, removing duplicates
+                const existingIds = new Set(prevLocations.map(loc => loc.id));
+                const newLocations = certifiedResults.filter(loc => !existingIds.has(loc.id));
+                return [...prevLocations, ...newLocations];
+              });
               
               // Store all certified locations in the global store for persistence
               certifiedResults.forEach(location => {
@@ -69,23 +117,21 @@ export const usePhotoPointsMap = ({
             }
             
             lastUserLocation.current = userLocation;
-            setCertifiedLocationsLoaded(true);
           }, 500);
         } catch (error) {
-          console.error("Error loading certified locations:", error);
-          setCertifiedLocationsLoaded(true); // Mark as loaded even on error to prevent repeated attempts
+          console.error("Error refreshing certified locations:", error);
         }
       }
     };
     
-    loadAllCertifiedLocations();
+    refreshCertifiedLocations();
     
     return () => {
       if (certifiedLoadingTimeoutRef.current) {
         clearTimeout(certifiedLoadingTimeoutRef.current);
       }
     };
-  }, [mapReady, userLocation, certifiedLocationsLoaded]);
+  }, [mapReady, userLocation]);
   
   // Helper function to determine if certified locations should be refreshed
   const shouldRefreshCertified = (currentLocation: {latitude: number, longitude: number}) => {
@@ -105,20 +151,19 @@ export const usePhotoPointsMap = ({
       // Make a map to remove any duplicates
       const locMap = new Map<string, SharedAstroSpot>();
       
-      // First add certified locations from main locations array
-      locations.forEach(loc => {
+      // First add all certified locations from global list
+      allCertifiedLocations.forEach(loc => {
         if (!loc.latitude || !loc.longitude) return;
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         locMap.set(key, loc);
       });
       
-      // Then add global certified locations, not overwriting existing ones
-      allCertifiedLocations.forEach(loc => {
+      // Then add locations from main locations array
+      locations.forEach(loc => {
         if (!loc.latitude || !loc.longitude) return;
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        if (!locMap.has(key)) {
-          locMap.set(key, loc);
-        }
+        // Prefer locations from the main array as they might have more up-to-date data
+        locMap.set(key, loc);
       });
       
       return Array.from(locMap.values());
@@ -170,6 +215,8 @@ export const usePhotoPointsMap = ({
     handleLocationClick,
     validLocations: processedLocations,
     mapCenter,
-    initialZoom
+    initialZoom,
+    certifiedLocationsLoaded,
+    allCertifiedLocationsCount: allCertifiedLocations.length
   };
 };

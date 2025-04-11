@@ -17,6 +17,8 @@ interface LocationMapProps {
   onLocationUpdate?: (location: { name: string; latitude: number; longitude: number }) => void;
   editable?: boolean;
   showInfoPanel?: boolean;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ 
@@ -25,7 +27,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
   name,
   onLocationUpdate,
   editable = false,
-  showInfoPanel = false
+  showInfoPanel = false,
+  isDarkSkyReserve = false,
+  certification = ""
 }) => {
   const { language, t } = useLanguage();
   const [position, setPosition] = useState<[number, number]>([
@@ -119,37 +123,42 @@ const LocationMap: React.FC<LocationMapProps> = ({
   return (
     <div className="aspect-video w-full h-[300px] relative">
       {(isLoading || locationLoading) && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-500">
-          <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-cosmic-800/70 border border-cosmic-600/20 shadow-lg">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
             <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-primary-foreground font-medium tracking-wide">
+            <p className="text-sm text-primary-foreground/90">
               {locationLoading 
-                ? t("Retrieving location data...", "正在获取位置数据...")
-                : t("Initializing map...", "正在初始化地图...")}
+                ? t("Updating location...", "正在更新位置...") 
+                : t("Loading map...", "正在加载地图...")}
             </p>
           </div>
         </div>
       )}
       
-      <MapDisplay 
+      {mapError && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-destructive/10 backdrop-blur-sm">
+          <div className="bg-card p-4 rounded-md shadow-lg max-w-[80%] text-center">
+            <p className="text-destructive font-medium">{mapError}</p>
+            <button
+              className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm"
+              onClick={() => window.location.reload()}
+            >
+              {t("Refresh Page", "刷新页面")}
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <MapDisplay
         position={position}
         locationName={validName}
         editable={editable}
         onMapReady={handleMapReady}
         onMapClick={handleMapClick}
         showInfoPanel={showInfoPanel}
+        isDarkSkyReserve={isDarkSkyReserve}
+        certification={certification}
       />
-      
-      {mapError && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="p-4 text-center max-w-xs bg-cosmic-800/70 border border-destructive/30 rounded-lg shadow-lg">
-            <p className="text-destructive font-medium">{mapError}</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              {t("Please refresh the page or try again later.", "请刷新页面或稍后再试。")}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

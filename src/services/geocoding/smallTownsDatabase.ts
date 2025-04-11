@@ -86,7 +86,67 @@ export function findSmallTownMatches(query: string): Location[] {
       longitude: -99.7481,
       placeDetails: "Dark Sky Park - International Dark Sky Association"
     },
-    // Add more small towns as needed
+    // Additional dark sky locations
+    "death valley": {
+      name: "Death Valley National Park Dark Sky Park, California, USA",
+      latitude: 36.5323,
+      longitude: -116.9325,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "joshua tree": {
+      name: "Joshua Tree National Park Dark Sky Park, California, USA",
+      latitude: 33.8734,
+      longitude: -115.9010,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "chaco culture": {
+      name: "Chaco Culture National Historical Park Dark Sky Park, New Mexico, USA",
+      latitude: 36.0319,
+      longitude: -107.9698,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "arches": {
+      name: "Arches National Park Dark Sky Park, Utah, USA",
+      latitude: 38.7331,
+      longitude: -109.5925,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "canyonlands": {
+      name: "Canyonlands National Park Dark Sky Park, Utah, USA",
+      latitude: 38.2136,
+      longitude: -109.9025,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "enchanted rock": {
+      name: "Enchanted Rock State Natural Area Dark Sky Park, Texas, USA",
+      latitude: 30.4949,
+      longitude: -98.8192,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "capulin volcano": {
+      name: "Capulin Volcano National Monument Dark Sky Park, New Mexico, USA",
+      latitude: 36.7811,
+      longitude: -103.9695,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "tonto": {
+      name: "Tonto National Monument Dark Sky Park, Arizona, USA",
+      latitude: 33.6553,
+      longitude: -110.9143,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "waterton glacier": {
+      name: "Waterton-Glacier International Peace Park Dark Sky Park, Montana, USA & Alberta, Canada",
+      latitude: 48.9977,
+      longitude: -113.9111,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "bruce peninsula": {
+      name: "Bruce Peninsula National Park Dark Sky Preserve, Ontario, Canada",
+      latitude: 45.2292,
+      longitude: -81.5264,
+      placeDetails: "Dark Sky Preserve - Royal Astronomical Society of Canada"
+    }
   };
   
   // Check for exact matches
@@ -110,10 +170,14 @@ export function findSmallTownMatches(query: string): Location[] {
     }
   });
   
-  // If query contains "dark sky", "dark-sky", or "ida", include all dark sky locations
+  // If query contains "dark sky", "dark-sky", "ida", or other astronomy terms, include all dark sky locations
   if (queryLower.includes('dark sky') || 
       queryLower.includes('dark-sky') || 
-      queryLower.includes('ida')) {
+      queryLower.includes('ida') ||
+      queryLower.includes('star') ||
+      queryLower.includes('astronomy') ||
+      queryLower.includes('night sky') ||
+      queryLower.includes('milky way')) {
     // Find all dark sky locations
     Object.values(smallTowns).forEach(town => {
       if ((town.name && 

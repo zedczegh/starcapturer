@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -48,6 +49,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const prevLocationRef = useRef<{latitude: number; longitude: number} | null>(null);
   const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
   const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
+  const [locationStats, setLocationStats] = useState<{certified: number, calculated: number}>({ certified: 0, calculated: 0 });
   
   const {
     hoveredLocationId,
@@ -60,12 +62,32 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     onMarkerHover: (id) => console.log("Marker hover:", id)
   });
 
+  // Initialize by forcing certified locations to load on first render
+  useEffect(() => {
+    // Immediate force load of certified locations
+    if (activeView === 'certified') {
+      setLoadingPhase('fetching');
+      console.log("Forcing initial load of certified locations");
+      
+      // Reset the key to force remount of the map component
+      setKey(`map-certified-initial-${Date.now()}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (certifiedLocations.length > 0) {
+      setLocationStats(prev => ({ ...prev, certified: certifiedLocations.length }));
+      console.log(`Loaded ${certifiedLocations.length} certified locations`);
+    }
+  }, [certifiedLocations]);
+
   useEffect(() => {
     if (calculatedLocations.length > 0) {
       console.log(`Received ${calculatedLocations.length} calculated locations to process`);
     }
   }, [calculatedLocations]);
 
+  // Combine calculated locations with stored locations
   useEffect(() => {
     if (activeView === 'calculated') {
       const storedLocations = getAllStoredLocations();
@@ -92,6 +114,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       
       const combined = Array.from(locMap.values());
       setCombinedCalculatedLocations(combined);
+      setLocationStats(prev => ({ ...prev, calculated: combined.length }));
       
       console.log(`Combined ${calculatedLocations.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
       
@@ -101,8 +124,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [calculatedLocations, activeView]);
   
+  // Select the active locations based on the current view
   const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
   
+  // Force map remount when view changes
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
       previousViewRef.current = activeView;
@@ -113,6 +138,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [activeView]);
   
+  // Reset the cache when the radius changes significantly
   useEffect(() => {
     if (lastRadiusRef.current !== searchRadius && 
         Math.abs(lastRadiusRef.current - searchRadius) > 100) {
@@ -124,6 +150,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
 
+  // Handle significant location changes
   useEffect(() => {
     if (userLocation && prevLocationRef.current) {
       const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);
@@ -149,7 +176,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleMapReady,
     validLocations,
     mapCenter,
-    initialZoom
+    initialZoom,
+    certifiedLocationsLoaded,
+    allCertifiedLocationsCount
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
     locations: activeLocations,
@@ -157,6 +186,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
 
+  // Update the user when certified locations finish loading
+  useEffect(() => {
+    if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
+      console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
+      toast.success(
+        t(`Loaded ${allCertifiedLocationsCount} dark sky locations worldwide`, 
+           `已加载全球${allCertifiedLocationsCount}个暗夜保护区`), 
+        { duration: 3000 }
+      );
+    }
+  }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
+
+  // Reset selected location when user location changes significantly
   useEffect(() => {
     if (userLocation && selectedMapLocation) {
       const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
@@ -169,6 +211,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [userLocation, selectedMapLocation]);
 
+  // Handle map click
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedMapLocation({ latitude: lat, longitude: lng });
       

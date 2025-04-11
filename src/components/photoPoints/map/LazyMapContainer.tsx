@@ -56,6 +56,15 @@ const MarkerGroup = React.memo(({
   return (
     <>
       {locations.map((location) => {
+        // Only render markers with valid coordinates
+        if (!location || 
+            typeof location.latitude !== 'number' || 
+            typeof location.longitude !== 'number' ||
+            isNaN(location.latitude) || 
+            isNaN(location.longitude)) {
+          return null;
+        }
+        
         // Generate a unique ID for this location
         const locationId = location.id || 
           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
@@ -83,6 +92,22 @@ const MarkerGroup = React.memo(({
   );
 });
 
+// Separate component to update map center properly
+const MapCenterHandler = ({ center }: { center: [number, number] }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Only center map if coordinates are valid
+    if (center && center.length === 2 && 
+        isFinite(center[0]) && isFinite(center[1]) &&
+        Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) {
+      map.setView(center, map.getZoom(), { animate: false });
+    }
+  }, [center, map]);
+  
+  return null;
+};
+
 const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   center,
   userLocation,
@@ -102,6 +127,15 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   const [mapRendered, setMapRendered] = useState(false);
   const [markerChunks, setMarkerChunks] = useState<SharedAstroSpot[][]>([]);
+  const mapRef = useRef<L.Map | null>(null);
+  
+  // Make sure center coordinates are valid
+  const validCenter = useMemo(() => {
+    return (center && center.length === 2 && 
+            isFinite(center[0]) && isFinite(center[1]) &&
+            Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) ? 
+            center : [0, 0] as [number, number];
+  }, [center]);
   
   // Handle SIQS calculation results
   const handleSiqsCalculated = useCallback((siqs: number) => {
@@ -130,7 +164,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     return locations.filter(location => 
       location && 
       typeof location.latitude === 'number' && 
-      typeof location.longitude === 'number'
+      typeof location.longitude === 'number' &&
+      isFinite(location.latitude) &&
+      isFinite(location.longitude) &&
+      Math.abs(location.latitude) <= 90 &&
+      Math.abs(location.longitude) <= 180
     );
   }, [locations]);
   
@@ -142,6 +180,23 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       setMarkerChunks(chunkArray(validLocations, chunkSize));
     }
   }, [validLocations, mapRendered]);
+  
+  // Store map reference when ready
+  const storeMapRef = useCallback((map: L.Map) => {
+    mapRef.current = map;
+    // Explicitly enable dragging
+    map.dragging.enable();
+    console.log("Map container ready, dragging enabled:", map.dragging.enabled());
+    setMapRendered(true);
+    onMapReady();
+    
+    // Fix for Leaflet error by invalidating size
+    setTimeout(() => {
+      if (map) {
+        map.invalidateSize();
+      }
+    }, 100);
+  }, [onMapReady]);
   
   // Handle map click that closes popups
   const handleMapClick = useCallback((lat: number, lng: number) => {
@@ -162,7 +217,14 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
 
   // Optimization: render circle conditionally
   const renderSearchRadiusCircle = useMemo(() => {
-    if (userLocation && searchRadius && searchRadius < 1000) {
+    if (userLocation && 
+        searchRadius && 
+        searchRadius < 1000 &&
+        typeof userLocation.latitude === 'number' &&
+        typeof userLocation.longitude === 'number' &&
+        isFinite(userLocation.latitude) &&
+        isFinite(userLocation.longitude)) {
+      
       return (
         <Circle 
           center={[userLocation.latitude, userLocation.longitude]}
@@ -181,26 +243,21 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     return null;
   }, [userLocation, searchRadius, isCertifiedView]);
 
-  const handleMapReady = useCallback(() => {
-    setMapRendered(true);
-    onMapReady();
-  }, [onMapReady]);
-
   return (
     <MapContainer
-      center={center}
+      center={validCenter}
       zoom={zoom}
       className="h-full w-full"
-      whenReady={(map) => {
+      whenReady={({ target }) => {
         // Store map reference globally for external access
-        (window as any).leafletMap = map.target;
-        // Explicitly enable dragging
-        map.target.dragging.enable();
-        console.log("Map container ready, dragging enabled:", map.target.dragging.enabled());
-        handleMapReady();
+        (window as any).leafletMap = target;
+        storeMapRef(target);
       }}
       scrollWheelZoom={true}
     >
+      {/* Add a MapCenterHandler to properly handle center changes */}
+      <MapCenterHandler center={validCenter} />
+      
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -230,7 +287,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       />
       
       {/* Current user location marker */}
-      {userLocation && (
+      {userLocation && 
+       typeof userLocation.latitude === 'number' &&
+       typeof userLocation.longitude === 'number' && (
         <UserLocationMarker 
           position={[userLocation.latitude, userLocation.longitude]}
           currentSiqs={currentSiqs}

@@ -1,3 +1,4 @@
+
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -37,7 +38,7 @@ export async function findLocationsWithinRadius(
       radius
     );
     
-    if (cachedData) {
+    if (cachedData && cachedData.length > 0) {
       console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km, limit: ${limit}`);
       return certifiedOnly 
         ? cachedData.filter(loc => loc.isDarkSkyReserve || loc.certification)
@@ -341,26 +342,48 @@ function combineWithIDACertifiedLocations(
 ): SharedAstroSpot[] {
   try {
     // Key IDA certified locations that might be missing
-    const keyIDALocations: Array<{name: string, lat: number, lng: number, type: string}> = [
+    const keyIDALocations: Array<{name: string, lat: number, lng: number, type: string, bortleScale?: number}> = [
       // Dark Sky Reserves
-      {name: "Alpes Azur Mercantour Dark Sky Reserve", lat: 44.1800, lng: 7.0500, type: "Dark Sky Reserve"},
-      {name: "Central Idaho Dark Sky Reserve", lat: 44.2210, lng: -114.9318, type: "Dark Sky Reserve"},
-      {name: "NamibRand Dark Sky Reserve", lat: -24.9400, lng: 16.0600, type: "Dark Sky Reserve"},
-      {name: "Cranborne Chase Dark Sky Reserve", lat: 51.0290, lng: -2.1370, type: "Dark Sky Reserve"},
-      {name: "Snowdonia Dark Sky Reserve", lat: 52.9493, lng: -3.8872, type: "Dark Sky Reserve"},
-      {name: "Rhön Dark Sky Reserve", lat: 50.3492, lng: 9.9675, type: "Dark Sky Reserve"},
-      {name: "Galloway Dark Sky Park", lat: 55.1054, lng: -4.4899, type: "Dark Sky Park"},
-      {name: "Great Barrier Island Dark Sky Sanctuary", lat: -36.2058, lng: 175.4831, type: "Dark Sky Sanctuary"},
-      {name: "Wairarapa Dark Sky Reserve", lat: -41.3446, lng: 175.5440, type: "Dark Sky Reserve"},
-      {name: "River Murray Dark Sky Reserve", lat: -34.4048, lng: 139.2851, type: "Dark Sky Reserve"},
+      {name: "Alpes Azur Mercantour Dark Sky Reserve", lat: 44.1800, lng: 7.0500, type: "Dark Sky Reserve", bortleScale: 2},
+      {name: "Central Idaho Dark Sky Reserve", lat: 44.2210, lng: -114.9318, type: "Dark Sky Reserve", bortleScale: 1},
+      {name: "NamibRand Dark Sky Reserve", lat: -24.9400, lng: 16.0600, type: "Dark Sky Reserve", bortleScale: 1},
+      {name: "Cranborne Chase Dark Sky Reserve", lat: 51.0290, lng: -2.1370, type: "Dark Sky Reserve", bortleScale: 2},
+      {name: "Snowdonia Dark Sky Reserve", lat: 52.9493, lng: -3.8872, type: "Dark Sky Reserve", bortleScale: 2},
+      {name: "Rhön Dark Sky Reserve", lat: 50.3492, lng: 9.9675, type: "Dark Sky Reserve", bortleScale: 2},
+      {name: "Galloway Dark Sky Park", lat: 55.1054, lng: -4.4899, type: "Dark Sky Park", bortleScale: 2},
+      {name: "Great Barrier Island Dark Sky Sanctuary", lat: -36.2058, lng: 175.4831, type: "Dark Sky Sanctuary", bortleScale: 1},
+      {name: "Wairarapa Dark Sky Reserve", lat: -41.3446, lng: 175.5440, type: "Dark Sky Reserve", bortleScale: 2},
+      {name: "River Murray Dark Sky Reserve", lat: -34.4048, lng: 139.2851, type: "Dark Sky Reserve", bortleScale: 2},
       
       // Dark Sky Parks in USA
-      {name: "Death Valley National Park", lat: 36.5323, lng: -116.9325, type: "Dark Sky Park"},
-      {name: "Joshua Tree National Park", lat: 33.8734, lng: -115.9010, type: "Dark Sky Park"},
-      {name: "Grand Canyon National Park", lat: 36.1069, lng: -112.1129, type: "Dark Sky Park"},
-      {name: "Chaco Culture National Historical Park", lat: 36.0319, lng: -107.9698, type: "Dark Sky Park"},
-      {name: "Arches National Park", lat: 38.7331, lng: -109.5925, type: "Dark Sky Park"},
-      {name: "Canyonlands National Park", lat: 38.2136, lng: -109.9025, type: "Dark Sky Park"}
+      {name: "Death Valley National Park Dark Sky Park", lat: 36.5323, lng: -116.9325, type: "Dark Sky Park", bortleScale: 2},
+      {name: "Joshua Tree National Park Dark Sky Park", lat: 33.8734, lng: -115.9010, type: "Dark Sky Park", bortleScale: 3},
+      {name: "Grand Canyon National Park Dark Sky Park", lat: 36.1069, lng: -112.1129, type: "Dark Sky Park", bortleScale: 2},
+      {name: "Chaco Culture National Historical Park Dark Sky Park", lat: 36.0319, lng: -107.9698, type: "Dark Sky Park", bortleScale: 1},
+      {name: "Arches National Park Dark Sky Park", lat: 38.7331, lng: -109.5925, type: "Dark Sky Park", bortleScale: 2},
+      {name: "Canyonlands National Park Dark Sky Park", lat: 38.2136, lng: -109.9025, type: "Dark Sky Park", bortleScale: 1},
+      {name: "Big Bend National Park Dark Sky Park", lat: 29.2498, lng: -103.2502, type: "Dark Sky Park", bortleScale: 1},
+      {name: "Black Canyon of the Gunnison National Park Dark Sky Park", lat: 38.5754, lng: -107.7416, type: "Dark Sky Park", bortleScale: 1},
+      {name: "Bryce Canyon National Park Dark Sky Park", lat: 37.6283, lng: -112.1677, type: "Dark Sky Park", bortleScale: 2},
+      {name: "Capitol Reef National Park Dark Sky Park", lat: 38.2821, lng: -111.2471, type: "Dark Sky Park", bortleScale: 1},
+      {name: "Great Basin National Park Dark Sky Park", lat: 38.9500, lng: -114.2600, type: "Dark Sky Park", bortleScale: 1},
+      {name: "Mesa Verde National Park Dark Sky Park", lat: 37.2308, lng: -108.4618, type: "Dark Sky Park", bortleScale: 2},
+      {name: "Waterton-Glacier International Peace Park Dark Sky Park", lat: 48.7596, lng: -113.7870, type: "Dark Sky Park", bortleScale: 2},
+      
+      // International Dark Sky Sanctuaries
+      {name: "Aotea / Great Barrier Island Dark Sky Sanctuary", lat: -36.1900, lng: 175.4900, type: "Dark Sky Sanctuary", bortleScale: 1},
+      {name: "Pitcairn Islands Dark Sky Sanctuary", lat: -25.0667, lng: -130.1000, type: "Dark Sky Sanctuary", bortleScale: 1},
+      {name: "Elqui Valley Dark Sky Sanctuary", lat: -30.1500, lng: -70.8167, type: "Dark Sky Sanctuary", bortleScale: 1},
+      {name: "Rainbow Bridge National Monument Dark Sky Sanctuary", lat: 37.0772, lng: -110.9639, type: "Dark Sky Sanctuary", bortleScale: 1},
+      {name: "Massacre Rim Dark Sky Sanctuary", lat: 41.5683, lng: -119.7522, type: "Dark Sky Sanctuary", bortleScale: 1},
+      
+      // Dark Sky Communities
+      {name: "Flagstaff Dark Sky Community", lat: 35.1983, lng: -111.6513, type: "Dark Sky Community", bortleScale: 4},
+      {name: "Sedona Dark Sky Community", lat: 34.8697, lng: -111.7601, type: "Dark Sky Community", bortleScale: 3},
+      {name: "Westcliffe & Silver Cliff Dark Sky Community", lat: 38.1350, lng: -105.4661, type: "Dark Sky Community", bortleScale: 3},
+      {name: "Beverly Shores Dark Sky Community", lat: 41.6871, lng: -86.9893, type: "Dark Sky Community", bortleScale: 4},
+      {name: "Borrego Springs Dark Sky Community", lat: 33.2558, lng: -116.3753, type: "Dark Sky Community", bortleScale: 3},
+      {name: "Homer Glen Dark Sky Community", lat: 41.6012, lng: -87.9381, type: "Dark Sky Community", bortleScale: 5}
     ];
     
     // Create a map of existing locations to avoid duplicates
@@ -369,14 +392,21 @@ function combineWithIDACertifiedLocations(
       if (loc.name) {
         existingMap.set(loc.name.toLowerCase(), true);
       }
+      // Also check by coordinates for better deduplication
+      if (loc.latitude && loc.longitude) {
+        const coordKey = `${loc.latitude.toFixed(3)}-${loc.longitude.toFixed(3)}`;
+        existingMap.set(coordKey, true);
+      }
     });
     
     // Add IDA locations that aren't already in our list and are within radius
     const additionalLocations: SharedAstroSpot[] = [];
     
     keyIDALocations.forEach(idaLoc => {
-      // Check if this location already exists
-      if (!existingMap.has(idaLoc.name.toLowerCase())) {
+      const coordKey = `${idaLoc.lat.toFixed(3)}-${idaLoc.lng.toFixed(3)}`;
+      
+      // Check if this location already exists by name or coordinates
+      if (!existingMap.has(idaLoc.name.toLowerCase()) && !existingMap.has(coordKey)) {
         // Check if it's within our radius
         const distance = calculateDistance(
           latitude, 
@@ -392,9 +422,9 @@ function combineWithIDACertifiedLocations(
             name: idaLoc.name,
             latitude: idaLoc.lat,
             longitude: idaLoc.lng,
-            bortleScale: 2, // Most IDA locations have excellent Bortle scales
-            siqs: 8.5, // High SIQS for IDA certified locations
-            isDarkSkyReserve: idaLoc.type === "Dark Sky Reserve",
+            bortleScale: idaLoc.bortleScale || 2, // Use provided Bortle scale or default to 2
+            siqs: 10 - (idaLoc.bortleScale || 2), // Convert Bortle to approximate SIQS
+            isDarkSkyReserve: idaLoc.type === "Dark Sky Reserve" || idaLoc.type === "Dark Sky Sanctuary",
             certification: `International ${idaLoc.type}`,
             description: `An International Dark Sky Association certified ${idaLoc.type}.`,
             distance: distance,

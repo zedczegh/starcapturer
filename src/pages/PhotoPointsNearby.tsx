@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -25,8 +26,16 @@ const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated lo
 const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (no limit)
 
 const PhotoPointsNearby: React.FC = () => {
-  const { loading: locationLoading, coords, getPosition, error: locationError } = useGeolocation({
-    enableHighAccuracy: true
+  // Fix the infinite loop by using useCallback for getPosition
+  const { 
+    loading: locationLoading, 
+    coords, 
+    getPosition, 
+    error: locationError 
+  } = useGeolocation({
+    enableHighAccuracy: true,
+    maximumAge: 60000, // Use cached position for 1 minute to avoid repeated calls
+    timeout: 10000 // Timeout after 10 seconds
   });
   
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
@@ -39,17 +48,18 @@ const PhotoPointsNearby: React.FC = () => {
 
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
+  // Fix the infinite loop by using useEffect for getPosition with proper dependencies
   useEffect(() => {
-    getPosition();
-    const retryTimeout = setTimeout(() => {
-      if (!coords && locationLoadAttempts < 3) {
-        console.log("Retrying to get user position...");
+    // Only get position if we don't have coords already and haven't exceeded max attempts
+    if (!coords && locationLoadAttempts < 3) {
+      console.log("Getting user position, attempt:", locationLoadAttempts + 1);
+      const timeoutId = setTimeout(() => {
         getPosition();
         setLocationLoadAttempts(prev => prev + 1);
-      }
-    }, 2000);
-    
-    return () => clearTimeout(retryTimeout);
+      }, locationLoadAttempts * 1000); // Increase delay with each attempt
+      
+      return () => clearTimeout(timeoutId);
+    }
   }, [getPosition, coords, locationLoadAttempts]);
   
   useEffect(() => {
@@ -157,6 +167,7 @@ const PhotoPointsNearby: React.FC = () => {
     refreshSiqsData();
   }, [refreshSiqsData]);
 
+  // Don't call setSearchRadius in every render to avoid infinite loops
   useEffect(() => {
     if (activeView === 'certified') {
       setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
