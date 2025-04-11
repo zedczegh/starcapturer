@@ -14,6 +14,9 @@ const calculatedLocationsCache = new Map<string, {
 // Global location store to maintain locations between user position changes
 const globalLocationStore = new Map<string, SharedAstroSpot>();
 
+// Minimum distance in kilometers between calculated spots to prevent clustering
+const MIN_LOCATION_DISTANCE = 2.5; // 2.5km minimum distance between points
+
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
 
@@ -73,17 +76,19 @@ export async function processCalculatedLocations(
     }
   }
 
-  // Filter locations by distance and water
-  const filteredLocations = combinedLocations.filter(loc => {
+  // Filter locations by distance and water, maintaining minimum distance between points
+  const processedLocations: SharedAstroSpot[] = [];
+  
+  for (const loc of combinedLocations) {
     // Skip invalid locations
-    if (!loc.latitude || !loc.longitude) return false;
+    if (!loc.latitude || !loc.longitude) continue;
 
-    // Skip water locations
+    // Skip water locations (unless they're certified sites)
     if (!loc.isDarkSkyReserve && !loc.certification && isWaterLocation(loc.latitude, loc.longitude)) {
-      return false;
+      continue;
     }
 
-    // Check distance
+    // Calculate distance from user location
     const distance = calculateDistance(
       userLocation.latitude,
       userLocation.longitude,
@@ -94,18 +99,48 @@ export async function processCalculatedLocations(
     // Add distance property
     loc.distance = distance;
     
-    // Keep if within radius
-    return distance <= searchRadius;
-  });
+    // Skip if beyond radius
+    if (distance > searchRadius) continue;
+    
+    // For non-certified locations, ensure minimum distance from existing processed points
+    if (!loc.isDarkSkyReserve && !loc.certification) {
+      // Check distance to all existing processed locations
+      const tooClose = processedLocations.some(existingLoc => {
+        if (existingLoc.latitude === undefined || existingLoc.longitude === undefined) return false;
+        
+        const pointDistance = calculateDistance(
+          loc.latitude,
+          loc.longitude,
+          existingLoc.latitude,
+          existingLoc.longitude
+        );
+        
+        return pointDistance < MIN_LOCATION_DISTANCE;
+      });
+      
+      // Skip this location if it's too close to an existing one
+      if (tooClose) {
+        console.log(`Skipping location at ${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)} - too close to existing point`);
+        continue;
+      }
+    }
+    
+    // Store the location in the global store and add to processed locations
+    if (loc.latitude && loc.longitude) {
+      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      globalLocationStore.set(key, loc);
+      processedLocations.push(loc);
+    }
+  }
 
   // Process in smaller chunks for better performance
   // This helps prevent overwhelming the API and browser
   const enhancedLocations: SharedAstroSpot[] = [];
   const chunkSize = 10;
   
-  for (let i = 0; i < filteredLocations.length; i += chunkSize) {
-    const chunk = filteredLocations.slice(i, i + chunkSize);
-    console.log(`Processing chunk ${Math.floor(i/chunkSize) + 1} of ${Math.ceil(filteredLocations.length/chunkSize)}`);
+  for (let i = 0; i < processedLocations.length; i += chunkSize) {
+    const chunk = processedLocations.slice(i, i + chunkSize);
+    console.log(`Processing chunk ${Math.floor(i/chunkSize) + 1} of ${Math.ceil(processedLocations.length/chunkSize)}`);
     
     const processedChunk = await updateLocationsWithRealTimeSiqs(
       chunk,
@@ -125,7 +160,7 @@ export async function processCalculatedLocations(
     });
     
     // Add a small delay between chunks to avoid overwhelming the API
-    if (i + chunkSize < filteredLocations.length) {
+    if (i + chunkSize < processedLocations.length) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
@@ -249,6 +284,17 @@ export function loadCalculatedLocationsCache(): void {
  */
 export function getAllStoredLocations(): SharedAstroSpot[] {
   return Array.from(globalLocationStore.values());
+}
+
+/**
+ * Add a calculated location to the global store
+ * @param location Location to store
+ */
+export function addLocationToStore(location: SharedAstroSpot): void {
+  if (location && location.latitude && location.longitude) {
+    const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    globalLocationStore.set(key, location);
+  }
 }
 
 // Initialize cache on module load

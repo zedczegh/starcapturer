@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations } from './useMapLocations';
 import { useMapUtils } from './useMapUtils';
 import { findCertifiedLocations } from '@/services/locationSearchService';
+import { addLocationToStore } from '@/services/calculatedLocationsService';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -23,6 +24,10 @@ export const usePhotoPointsMap = ({
   const previousLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   const [allCertifiedLocations, setAllCertifiedLocations] = useState<SharedAstroSpot[]>([]);
+  const certifiedLoadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track last user location for performance optimization
+  const lastUserLocation = useRef<{latitude: number, longitude: number} | null>(null);
 
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
@@ -30,30 +35,69 @@ export const usePhotoPointsMap = ({
   // Load all certified locations when map is ready
   useEffect(() => {
     const loadAllCertifiedLocations = async () => {
-      if (mapReady && userLocation && !certifiedLocationsLoaded) {
+      // Only load certified locations once or when user location changes significantly
+      if (mapReady && userLocation && 
+          (!certifiedLocationsLoaded || shouldRefreshCertified(userLocation))) {
+        
         try {
           console.log("Loading all certified dark sky locations globally");
-          const certifiedResults = await findCertifiedLocations(
-            userLocation.latitude,
-            userLocation.longitude,
-            10000, // Global radius
-            100 // Get up to 100 certified locations
-          );
           
-          if (certifiedResults.length > 0) {
-            console.log(`Loaded ${certifiedResults.length} certified dark sky locations`);
-            setAllCertifiedLocations(certifiedResults);
+          // Clear any existing timeout
+          if (certifiedLoadingTimeoutRef.current) {
+            clearTimeout(certifiedLoadingTimeoutRef.current);
           }
           
-          setCertifiedLocationsLoaded(true);
+          // Add a small delay to prevent rapid reloading
+          certifiedLoadingTimeoutRef.current = setTimeout(async () => {
+            const certifiedResults = await findCertifiedLocations(
+              userLocation.latitude,
+              userLocation.longitude,
+              10000, // Global radius
+              150 // Increased limit to get more certified locations
+            );
+            
+            if (certifiedResults.length > 0) {
+              console.log(`Loaded ${certifiedResults.length} certified dark sky locations`);
+              setAllCertifiedLocations(certifiedResults);
+              
+              // Store all certified locations in the global store for persistence
+              certifiedResults.forEach(location => {
+                if (location.isDarkSkyReserve || location.certification) {
+                  addLocationToStore(location);
+                }
+              });
+            }
+            
+            lastUserLocation.current = userLocation;
+            setCertifiedLocationsLoaded(true);
+          }, 500);
         } catch (error) {
           console.error("Error loading certified locations:", error);
+          setCertifiedLocationsLoaded(true); // Mark as loaded even on error to prevent repeated attempts
         }
       }
     };
     
     loadAllCertifiedLocations();
+    
+    return () => {
+      if (certifiedLoadingTimeoutRef.current) {
+        clearTimeout(certifiedLoadingTimeoutRef.current);
+      }
+    };
   }, [mapReady, userLocation, certifiedLocationsLoaded]);
+  
+  // Helper function to determine if certified locations should be refreshed
+  const shouldRefreshCertified = (currentLocation: {latitude: number, longitude: number}) => {
+    if (!lastUserLocation.current) return true;
+    
+    // Check if location has changed significantly (more than 500km)
+    const latDiff = Math.abs(currentLocation.latitude - lastUserLocation.current.latitude);
+    const lngDiff = Math.abs(currentLocation.longitude - lastUserLocation.current.longitude);
+    
+    // Rough distance calculation - if either coordinate has changed by ~5 degrees, that's roughly 500km
+    return latDiff > 5 || lngDiff > 5;
+  };
   
   // Combine locations - for certified view, always include all certified locations
   const combinedLocations = useCallback(() => {
@@ -63,12 +107,14 @@ export const usePhotoPointsMap = ({
       
       // First add certified locations from main locations array
       locations.forEach(loc => {
+        if (!loc.latitude || !loc.longitude) return;
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         locMap.set(key, loc);
       });
       
       // Then add global certified locations, not overwriting existing ones
       allCertifiedLocations.forEach(loc => {
+        if (!loc.latitude || !loc.longitude) return;
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         if (!locMap.has(key)) {
           locMap.set(key, loc);

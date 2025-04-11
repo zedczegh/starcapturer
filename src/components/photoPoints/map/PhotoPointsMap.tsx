@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -8,7 +7,7 @@ import { toast } from "sonner";
 import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
-import { getAllStoredLocations, storeCalculatedLocation } from "@/services/calculatedLocationsService";
+import { getAllStoredLocations } from "@/services/calculatedLocationsService";
 import MapDataLoader from "./loaders/MapDataLoader";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
@@ -50,7 +49,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
   const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
   
-  // Handle map interactions
   const {
     hoveredLocationId,
     handleMarkerHover,
@@ -62,31 +60,20 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     onMarkerHover: (id) => console.log("Marker hover:", id)
   });
 
-  // Store new calculated locations when they're received
   useEffect(() => {
-    // Store calculated locations for persistence
     if (calculatedLocations.length > 0) {
-      calculatedLocations.forEach(loc => {
-        if (loc && loc.latitude && loc.longitude && !loc.isDarkSkyReserve && !loc.certification) {
-          storeCalculatedLocation(loc);
-        }
-      });
+      console.log(`Received ${calculatedLocations.length} calculated locations to process`);
     }
   }, [calculatedLocations]);
 
-  // Merge provided calculated locations with stored ones
   useEffect(() => {
     if (activeView === 'calculated') {
-      // Get all stored locations from the global store
       const storedLocations = getAllStoredLocations();
       
-      // Set loading phase for loader UI
       setLoadingPhase('processing');
       
-      // Merge with current calculated locations without duplicates
       const locMap = new Map<string, SharedAstroSpot>();
       
-      // First add current calculated locations
       calculatedLocations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -94,7 +81,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         }
       });
       
-      // Then add stored locations that don't already exist
       storedLocations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -109,42 +95,35 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       
       console.log(`Combined ${calculatedLocations.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
       
-      // Set loading phase to ready after processing
       setTimeout(() => {
         setLoadingPhase('ready');
       }, 500);
     }
   }, [calculatedLocations, activeView]);
   
-  // Always show only the active view locations, ensuring all certified locations are included
   const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
   
-  // When view changes, mark it to trigger a re-render with a new key
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
       previousViewRef.current = activeView;
       setKey(`map-view-${activeView}-${Date.now()}`);
       console.log(`View changed to ${activeView}, forcing map component remount`);
       
-      // Set loading state for view change
       setLoadingPhase(activeView === 'certified' ? 'fetching' : 'processing');
     }
   }, [activeView]);
   
-  // Auto-clear cache when radius changes significantly
   useEffect(() => {
     if (lastRadiusRef.current !== searchRadius && 
         Math.abs(lastRadiusRef.current - searchRadius) > 100) {
       console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
       clearLocationCache();
       
-      // Update loading phase for radius change
       setLoadingPhase('fetching');
     }
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
 
-  // Check if location has changed significantly but DON'T clear calculated locations
   useEffect(() => {
     if (userLocation && prevLocationRef.current) {
       const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);
@@ -154,10 +133,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         console.log("User location changed significantly");
         setLoadingPhase('changing_location');
         
-        // Don't clear the cache to keep existing locations, just update the ref
         prevLocationRef.current = userLocation;
         
-        // Reset to ready after a short delay
         setTimeout(() => {
           setLoadingPhase('ready');
         }, 2000);
@@ -167,7 +144,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [userLocation]);
   
-  // Use the map hook with the selected location or user location
   const {
     mapReady,
     handleMapReady,
@@ -181,7 +157,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
 
-  // Reset selected location when userLocation changes dramatically
   useEffect(() => {
     if (userLocation && selectedMapLocation) {
       const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
@@ -194,7 +169,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [userLocation, selectedMapLocation]);
 
-  // Handle map click event
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedMapLocation({ latitude: lat, longitude: lng });
       
@@ -205,7 +179,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
 
   return (
     <div className={className + " relative"}>
-      {/* Loading overlay - always shows regardless of lazy loading state */}
       <MapDataLoader 
         loading={loadingPhase !== 'ready'} 
         locationCount={validLocations.length}
