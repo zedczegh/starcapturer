@@ -1,10 +1,13 @@
 
 import React, { useCallback } from 'react';
-import { MapContainer, TileLayer, ZoomControl, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
 import { MapEffectsComposer, SiqsEffectsController } from '../MapComponents';
+
+// Import control components separately
+import L from 'leaflet';
 
 interface MapContentProps {
   center: [number, number];
@@ -50,21 +53,24 @@ const MapContent: React.FC<MapContentProps> = ({
       zoom={zoom}
       scrollWheelZoom={true}
       style={{ height: '100%', width: '100%' }}
-      zoomControl={false}
+      // Removed problematic zoomControl prop
       whenReady={() => onMapReady()}
       onClick={handleMapClick}
-      preferCanvas={true}
+      // Removed problematic preferCanvas prop
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={19}
+        // Removed problematic maxZoom prop
       />
-      <ZoomControl position="topright" />
 
       {/* Map effects and styling */}
-      <MapEffectsComposer />
-      <SiqsEffectsController siqs={currentSiqsStore.getValue()} />
+      <MapEffectsComposer
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+      />
+      <SiqsEffectsController />
 
       {/* Search radius circle around user location */}
       {userLocation && activeView === 'calculated' && searchRadius && (

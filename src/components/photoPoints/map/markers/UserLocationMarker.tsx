@@ -22,8 +22,9 @@ const UserLocationMarker = memo(({
       <Popup
         closeOnClick={false}
         autoClose={false}
-        maxWidth={250}
-        autoPan={true}
+        // Removed problematic maxWidth prop
+        // Removed problematic autoPan prop
+        className="user-location-popup"
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
