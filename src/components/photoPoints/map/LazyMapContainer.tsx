@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
@@ -10,6 +10,7 @@ import { WorldBoundsController, MapEvents } from './MapComponents';
 import { UserLocationMarker, LocationMarker } from './MarkerComponents';
 import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
 import { MapController } from './MapController';
+import MapEffectsComposer from './effects/MapEffectsComposer';
 
 // Configure Leaflet on load
 configureLeaflet();
@@ -28,6 +29,60 @@ interface PhotoPointsMapContainerProps {
   onMarkerHover: (id: string | null) => void;
 }
 
+// Use a function to efficiently chunk marker rendering
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+const MarkerGroup = React.memo(({ 
+  locations, 
+  onLocationClick,
+  hoveredLocationId,
+  onMarkerHover,
+  isCertified,
+  hideMarkerPopups
+}: { 
+  locations: SharedAstroSpot[], 
+  onLocationClick?: (location: SharedAstroSpot) => void,
+  hoveredLocationId: string | null,
+  onMarkerHover: (id: string | null) => void,
+  isCertified: boolean,
+  hideMarkerPopups: boolean
+}) => {
+  return (
+    <>
+      {locations.map((location) => {
+        // Generate a unique ID for this location
+        const locationId = location.id || 
+          `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+        
+        // Handle the click event for this marker
+        const handleClick = () => {
+          if (onLocationClick) {
+            onLocationClick(location);
+          }
+        };
+        
+        return (
+          <LocationMarker
+            key={locationId}
+            location={location}
+            onClick={handleClick}
+            isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
+            onHover={hideMarkerPopups ? () => {} : onMarkerHover}
+            locationId={locationId}
+            isCertified={isCertified}
+          />
+        );
+      })}
+    </>
+  );
+});
+
 const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   center,
   userLocation,
@@ -44,11 +99,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const isCertifiedView = activeView === 'certified';
-  const markersRef = useRef<Map<string, boolean>>(new Map());
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
-  
-  // Optimize performance by reducing unnecessary marker updates
-  const locationKeys = locations.map(loc => `${loc.latitude}-${loc.longitude}`).join(',');
+  const [mapRendered, setMapRendered] = useState(false);
+  const [markerChunks, setMarkerChunks] = useState<SharedAstroSpot[][]>([]);
   
   // Handle SIQS calculation results
   const handleSiqsCalculated = useCallback((siqs: number) => {
@@ -67,25 +120,28 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       setHideMarkerPopups(false);
     }, 100);
   }, []);
+  
+  const handleMapZoomEnd = useCallback(() => {
+    onMarkerHover(null);
+  }, [onMarkerHover]);
 
   // Filter out any invalid locations
-  const validLocations = locations.filter(location => 
-    location && 
-    typeof location.latitude === 'number' && 
-    typeof location.longitude === 'number'
-  );
+  const validLocations = useMemo(() => {
+    return locations.filter(location => 
+      location && 
+      typeof location.latitude === 'number' && 
+      typeof location.longitude === 'number'
+    );
+  }, [locations]);
   
-  // Generate unique keys for markers to improve rendering performance
-  const getMarkerKey = useCallback((location: SharedAstroSpot) => {
-    return location.id || 
-           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}-${activeView}`;
-  }, [activeView]);
-
-  // Cache whether we've already rendered each marker
+  // Chunk locations for better rendering performance
   useEffect(() => {
-    // Reset marker cache when locations change significantly
-    markersRef.current = new Map();
-  }, [locationKeys]);
+    if (validLocations.length > 0 && mapRendered) {
+      // Get optimal chunk size based on location count
+      const chunkSize = validLocations.length > 100 ? 30 : 50;
+      setMarkerChunks(chunkArray(validLocations, chunkSize));
+    }
+  }, [validLocations, mapRendered]);
   
   // Handle map click that closes popups
   const handleMapClick = useCallback((lat: number, lng: number) => {
@@ -104,6 +160,32 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     }
   }, [onMapClick, onMarkerHover]);
 
+  // Optimization: render circle conditionally
+  const renderSearchRadiusCircle = useMemo(() => {
+    if (userLocation && searchRadius && searchRadius < 1000) {
+      return (
+        <Circle 
+          center={[userLocation.latitude, userLocation.longitude]}
+          radius={searchRadius * 1000} // Convert km to meters for circle radius
+          pathOptions={{ 
+            color: isCertifiedView ? '#FFD700' : '#9b87f5',
+            fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
+            fillOpacity: 0.08,
+            weight: 1.5,
+            opacity: 0.4,
+            className: 'location-radius-circle'
+          }}
+        />
+      );
+    }
+    return null;
+  }, [userLocation, searchRadius, isCertifiedView]);
+
+  const handleMapReady = useCallback(() => {
+    setMapRendered(true);
+    onMapReady();
+  }, [onMapReady]);
+
   return (
     <MapContainer
       center={center}
@@ -115,7 +197,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         // Explicitly enable dragging
         map.target.dragging.enable();
         console.log("Map container ready, dragging enabled:", map.target.dragging.enabled());
-        onMapReady();
+        handleMapReady();
       }}
       scrollWheelZoom={true}
     >
@@ -131,15 +213,20 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         searchRadius={searchRadius}
       />
       
-      {/* Controller for preventing infinite scrolling */}
-      <WorldBoundsController />
+      {/* Effects composer for all effects like bounds control and SIQS calculation */}
+      <MapEffectsComposer 
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={handleSiqsCalculated}
+      />
       
       {/* Add MapEvents component to handle clicks if onMapClick is provided */}
       <MapEvents 
         onMapClick={handleMapClick} 
         onMapDragStart={handleMapDragStart}
         onMapDragEnd={handleMapDragEnd}
-        onMapZoomEnd={() => onMarkerHover(null)}
+        onMapZoomEnd={handleMapZoomEnd}
       />
       
       {/* Current user location marker */}
@@ -150,52 +237,23 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         />
       )}
       
-      {/* Search radius visualization as a more visible circle */}
-      {userLocation && searchRadius && searchRadius < 1000 && (
-        <Circle 
-          center={[userLocation.latitude, userLocation.longitude]}
-          radius={searchRadius * 1000} // Convert km to meters for circle radius
-          pathOptions={{ 
-            color: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.08, // Increased opacity for more visibility
-            weight: 1.5, // Thicker border
-            opacity: 0.4, // More visible border
-            className: 'location-radius-circle'
-          }}
-        />
-      )}
+      {/* Search radius visualization */}
+      {renderSearchRadiusCircle}
       
-      {/* Location markers */}
-      {!hideMarkerPopups && locations.map((location) => {
-        // Generate a unique ID for this location
-        const locationId = location.id || 
-           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}-${activeView}`;
-        
-        // Handle the click event for this marker
-        const handleClick = () => {
-          if (onLocationClick) {
-            onLocationClick(location);
-          }
-        };
-        
-        // Record that we're rendering this marker
-        markersRef.current.set(locationId, true);
-        
-        return (
-          <LocationMarker
-            key={locationId}
-            location={location}
-            onClick={handleClick}
-            isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
-            onHover={hideMarkerPopups ? () => {} : onMarkerHover}
-            locationId={locationId}
-            isCertified={isCertifiedView}
-          />
-        );
-      })}
+      {/* Location markers rendered in batches for better performance */}
+      {!hideMarkerPopups && mapRendered && markerChunks.map((chunk, i) => (
+        <MarkerGroup
+          key={`marker-chunk-${i}`}
+          locations={chunk}
+          onLocationClick={onLocationClick}
+          hoveredLocationId={hoveredLocationId}
+          onMarkerHover={onMarkerHover}
+          isCertified={isCertifiedView}
+          hideMarkerPopups={hideMarkerPopups}
+        />
+      ))}
     </MapContainer>
   );
 };
 
-export default PhotoPointsMapContainer;
+export default React.memo(PhotoPointsMapContainer);

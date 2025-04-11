@@ -1,86 +1,93 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-/**
- * Component to handle map world bounds and prevent infinite scrolling
- */
-export const WorldBoundsController: React.FC = () => {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (!map) return;
-    
-    // Set world bounds to prevent infinite horizontal scrolling
-    const worldBounds = L.latLngBounds(
-      L.latLng(-90, -180),  // Southwest corner
-      L.latLng(90, 180)     // Northeast corner
-    );
-    
-    map.setMaxBounds(worldBounds);
-    map.options.maxBoundsViscosity = 1.0; // Make bounds "sticky"
-    
-    return () => {
-      // Cleanup if needed
-    };
-  }, [map]);
-  
-  return null;
-};
-
-/**
- * Component to handle map events
- */
-export const MapEvents: React.FC<{
-  onMapClick: (lat: number, lng: number) => void;
+interface MapEventsProps {
+  onMapClick?: (lat: number, lng: number) => void;
   onMapDragStart?: () => void;
   onMapDragEnd?: () => void;
   onMapZoomEnd?: () => void;
-}> = ({ 
-  onMapClick, 
-  onMapDragStart, 
+}
+
+export function MapEvents({ 
+  onMapClick,
+  onMapDragStart,
   onMapDragEnd,
-  onMapZoomEnd 
-}) => {
+  onMapZoomEnd
+}: MapEventsProps) {
   const map = useMap();
+  
+  // Handle map click
+  const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
+    if (onMapClick) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    }
+  }, [onMapClick]);
   
   // Set up event listeners
   useEffect(() => {
     if (!map) return;
     
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
+    if (onMapClick) {
+      map.on('click', handleMapClick);
+    }
     
-    const handleDragStart = () => {
-      if (onMapDragStart) onMapDragStart();
-    };
+    if (onMapDragStart) {
+      map.on('dragstart', onMapDragStart);
+    }
     
-    const handleDragEnd = () => {
-      if (onMapDragEnd) onMapDragEnd();
-    };
+    if (onMapDragEnd) {
+      map.on('dragend', onMapDragEnd);
+    }
     
-    const handleZoomEnd = () => {
-      if (onMapZoomEnd) onMapZoomEnd();
-    };
-    
-    // Add event listeners
-    map.on('click', handleClick);
-    map.on('dragstart', handleDragStart);
-    map.on('dragend', handleDragEnd);
-    map.on('zoomend', handleZoomEnd);
+    if (onMapZoomEnd) {
+      map.on('zoomend', onMapZoomEnd);
+    }
     
     return () => {
-      // Clean up event listeners
-      map.off('click', handleClick);
-      map.off('dragstart', handleDragStart);
-      map.off('dragend', handleDragEnd);
-      map.off('zoomend', handleZoomEnd);
+      if (onMapClick) {
+        map.off('click', handleMapClick);
+      }
+      
+      if (onMapDragStart) {
+        map.off('dragstart', onMapDragStart);
+      }
+      
+      if (onMapDragEnd) {
+        map.off('dragend', onMapDragEnd);
+      }
+      
+      if (onMapZoomEnd) {
+        map.off('zoomend', onMapZoomEnd);
+      }
     };
-  }, [map, onMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
+  }, [map, handleMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
   
   return null;
-};
+}
 
-export default { WorldBoundsController, MapEvents };
+export function WorldBoundsController() {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    
+    // Set max bounds to prevent scrolling beyond world boundaries
+    const worldBounds = L.latLngBounds(
+      L.latLng(-85.0511, -190), // Southwest corner
+      L.latLng(85.0511, 190)   // Northeast corner
+    );
+    
+    map.setMaxBounds(worldBounds);
+    map.on('drag', () => {
+      map.panInsideBounds(worldBounds, { animate: false });
+    });
+    
+    return () => {
+      map.off('drag');
+    };
+  }, [map]);
+
+  return null;
+}

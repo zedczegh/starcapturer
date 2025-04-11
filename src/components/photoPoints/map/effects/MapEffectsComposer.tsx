@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { WorldBoundsController } from '../MapComponents';
+import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
 
 interface MapEffectsComposerProps {
