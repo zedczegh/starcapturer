@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/api/astroSpots'; // Updated import
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -35,8 +35,19 @@ export const usePhotoPointsSearch = ({
       if (!initialLoadComplete && cachedData) {
         const parsed = JSON.parse(cachedData);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setDisplayedLocations(parsed.slice(0, maxInitialResults));
-          console.log("Using cached locations initially:", parsed.length);
+          // Ensure all cached locations have an ID
+          const validLocations = parsed.map((loc: any) => {
+            if (!loc.id && loc.latitude && loc.longitude) {
+              return {
+                ...loc,
+                id: `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`
+              };
+            }
+            return loc;
+          });
+          
+          setDisplayedLocations(validLocations.slice(0, maxInitialResults));
+          console.log("Using cached locations initially:", validLocations.length);
         }
       }
     } catch (error) {
@@ -47,7 +58,18 @@ export const usePhotoPointsSearch = ({
   // Update displayed locations when fetched locations change
   useEffect(() => {
     if (locations.length > 0) {
-      const sortedLocations = [...locations].sort((a, b) => {
+      // Ensure all locations have an ID
+      const locationsWithIds = locations.map(loc => {
+        if (!loc.id && loc.latitude && loc.longitude) {
+          return {
+            ...loc,
+            id: `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`
+          };
+        }
+        return loc;
+      });
+      
+      const sortedLocations = [...locationsWithIds].sort((a, b) => {
         // First sort by certification status
         if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
           return -1;

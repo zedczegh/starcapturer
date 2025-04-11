@@ -29,9 +29,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [locationCounter] = useState(() => {
-    // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
-      // Get or set a counter for potential dark sites
       const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
       const newCounter = storedCounter + 1;
       localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
@@ -40,7 +38,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
-  // Load real-time SIQS data if requested
   useEffect(() => {
     if (showRealTimeSiqs && location.latitude && location.longitude) {
       const fetchSiqs = async () => {
@@ -52,11 +49,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             location.bortleScale || 5
           );
           
-          // Only update if SIQS is greater than 0
           if (result.siqs > 0) {
             setRealTimeSiqs(result.siqs);
           } else {
-            // If we got a zero score, hide this card
             setRealTimeSiqs(0);
           }
         } catch (error) {
@@ -70,34 +65,27 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [location, showRealTimeSiqs]);
 
-  // If we have a real-time SIQS of 0, don't render this card
   if (realTimeSiqs === 0) {
     return null;
   }
 
-  // Get display name based on language and location type
   let displayName;
   
-  // If it's a calculated location, use the "Potential ideal dark site" format
   if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
     displayName = language === 'en' 
       ? `Potential ideal dark site ${locationCounter}`
       : `潜在理想暗夜地点 ${locationCounter}`;
   } else {
-    // Otherwise use the provided name
     displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   }
   
-  // Get SIQS score to display (real-time or stored)
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
   
-  // If the SIQS score is 0 and we're not currently loading, don't render
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
   const handleViewDetails = () => {
-    // Prepare location data for details page
     const locationData = {
       id: location.id || `calc-loc-${Date.now()}`,
       name: displayName,
@@ -110,14 +98,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       certification: location.certification
     };
     
-    // Save to localStorage to ensure proper refresh handling
     saveLocationFromPhotoPoints(locationData);
     
-    // Navigate to location details with state
     navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
   };
   
-  // Animation variants - reduced for mobile
   const cardVariants = {
     hidden: { opacity: 0, y: isMobile ? 10 : 20 },
     visible: { 
@@ -139,17 +124,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
         
-        {/* SIQS Score Badge */}
         <SiqsScoreBadge score={displaySiqs} loading={loadingSiqs} />
       </div>
       
-      {/* Certification Badge */}
       <CertificationBadge 
         certification={location.certification} 
         isDarkSkyReserve={location.isDarkSkyReserve} 
       />
       
-      {/* Light pollution indicator */}
       <div className="mb-4 mt-2">
         <LightPollutionIndicator 
           bortleScale={location.bortleScale || 5} 
@@ -159,10 +141,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         />
       </div>
       
-      {/* Location metadata */}
       <LocationMetadata 
         distance={location.distance} 
-        date={location.date} 
+        date={location.timestamp}
       />
       
       <div className="mt-4 flex justify-end">
