@@ -4,29 +4,33 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isWaterLocation } from '@/utils/locationValidator';
+import { calculateDistance } from '@/utils/geoUtils';
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
   currentSiqs: number | null;
+  searchRadius?: number;
   maxInitialResults?: number;
 }
 
 export const usePhotoPointsSearch = ({
   userLocation,
   currentSiqs,
+  searchRadius = 100,
   maxInitialResults = 5
 }: UsePhotoPointsSearchProps) => {
   const { t } = useLanguage();
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Set up recommended locations
+  // Set up recommended locations - pass the searchRadius from props
   const {
     locations,
     loading: locationsLoading,
     searching,
     refreshSiqsData,
-  } = useRecommendedLocations(userLocation, 100); // Always start with 100km radius for calculated
+  } = useRecommendedLocations(userLocation, searchRadius);
 
   // Initialize locations from cache if available while waiting for API
   useEffect(() => {
@@ -35,14 +39,33 @@ export const usePhotoPointsSearch = ({
       if (!initialLoadComplete && cachedData) {
         const parsed = JSON.parse(cachedData);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setDisplayedLocations(parsed.slice(0, maxInitialResults));
-          console.log("Using cached locations initially:", parsed.length);
+          // Filter cached locations by current radius
+          const filteredByRadius = userLocation 
+            ? parsed.filter(loc => {
+                // Never filter certified locations by distance
+                if (loc.isDarkSkyReserve || loc.certification) return true;
+                
+                // Calculate distance if not already set
+                const distance = loc.distance || calculateDistance(
+                  userLocation.latitude, 
+                  userLocation.longitude,
+                  loc.latitude,
+                  loc.longitude
+                );
+                
+                // Only include locations within current radius
+                return distance <= searchRadius;
+              })
+            : parsed;
+            
+          setDisplayedLocations(filteredByRadius.slice(0, maxInitialResults));
+          console.log(`Using cached locations initially: ${filteredByRadius.length} locations within ${searchRadius}km radius`);
         }
       }
     } catch (error) {
       console.error("Error loading cached locations:", error);
     }
-  }, [maxInitialResults, initialLoadComplete]);
+  }, [maxInitialResults, initialLoadComplete, searchRadius, userLocation]);
 
   // Update displayed locations when fetched locations change
   useEffect(() => {
@@ -56,29 +79,49 @@ export const usePhotoPointsSearch = ({
           return 1;
         }
         
-        // Then sort by nighttime SIQS if available, otherwise by distance
-        const aSiqs = a.siqsResult?.score || a.siqs || 0;
-        const bSiqs = b.siqsResult?.score || b.siqs || 0;
-        
-        if (aSiqs !== bSiqs) {
-          return bSiqs - aSiqs; // Higher SIQS first
-        }
-        
-        // Finally sort by distance
+        // Then sort by distance
         return (a.distance || Infinity) - (b.distance || Infinity);
       });
       
-      setDisplayedLocations(sortedLocations.slice(0, maxInitialResults));
+      // Filter out water locations for calculated spots
+      const filteredLocations = sortedLocations.filter(loc => {
+        // Never filter out certified locations
+        if (loc.isDarkSkyReserve || loc.certification) return true;
+        
+        // Filter out water locations for calculated spots
+        return !isWaterLocation(loc.latitude, loc.longitude);
+      });
+      
+      // Filter by current radius for non-certified locations
+      const filteredByRadius = userLocation
+        ? filteredLocations.filter(loc => {
+            // Never filter certified locations by distance
+            if (loc.isDarkSkyReserve || loc.certification) return true;
+            
+            // Use existing distance or calculate it
+            const distance = loc.distance || calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              loc.latitude,
+              loc.longitude
+            );
+            
+            // Only include locations within current radius
+            return distance <= searchRadius;
+          })
+        : filteredLocations;
+      
+      setDisplayedLocations(filteredByRadius.slice(0, maxInitialResults));
       setInitialLoadComplete(true);
       
       // Save to localStorage for faster future loads
       try {
-        localStorage.setItem('cachedRecommendedLocations', JSON.stringify(sortedLocations));
+        localStorage.setItem('cachedRecommendedLocations', JSON.stringify(filteredLocations));
       } catch (error) {
         console.error("Error saving locations to cache:", error);
       }
     }
-  }, [locations, maxInitialResults]);
+  }, [locations, maxInitialResults, searchRadius, userLocation]);
 
   // Handle errors and refresh data
   const handleRefresh = useCallback(() => {
