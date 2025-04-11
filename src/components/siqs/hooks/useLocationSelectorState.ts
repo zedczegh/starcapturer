@@ -1,150 +1,251 @@
 
-import { useState, useCallback } from "react";
-import { toast } from "sonner";
-import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { Language } from "@/services/geocoding/types";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { useState, useCallback, useEffect } from "react";
+import { fetchLightPollutionData } from "@/lib/api";
+import { estimateBortleScale } from "@/hooks/location/useBortleScale";
 
-interface UseLocationSelectorStateProps {
-  language: Language;
-  noAutoLocationRequest: boolean;
-  bortleScale: number | null;
-  setBortleScale: (bortleScale: number | null) => void;
-  setStatusMessage: (message: string | null) => void;
-  setShowAdvancedSettings: (show: boolean) => void;
-  getCachedData: (key: string) => any;
-  setCachedData: (key: string, data: any) => void;
+interface CachedLocationData {
+  name?: string;
+  formattedName?: string;
+  bortleScale?: number | null;
 }
 
-export const useLocationSelectorState = (props: UseLocationSelectorStateProps) => {
-  const { 
-    language,
-    noAutoLocationRequest,
-    bortleScale,
-    setBortleScale,
-    setStatusMessage,
-    setShowAdvancedSettings,
-    getCachedData,
-    setCachedData
-  } = props;
+interface UseLocationSelectorStateProps {
+  language: string;
+  noAutoLocationRequest: boolean;
+  bortleScale: number | null;
+  setBortleScale: (scale: number | null) => void;
+  setStatusMessage: (message: string | null) => void;
+  setShowAdvancedSettings: (show: boolean) => void;
+  getCachedData: (key: string, maxAge?: number) => CachedLocationData | null;
+  setCachedData: (key: string, data: CachedLocationData) => void;
+}
+
+export const useLocationSelectorState = ({
+  language,
+  noAutoLocationRequest,
+  bortleScale,
+  setBortleScale,
+  setStatusMessage,
+  setShowAdvancedSettings,
+  getCachedData,
+  setCachedData
+}: UseLocationSelectorStateProps) => {
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationName, setLocationName] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [hasTriedStoredLocation, setHasTriedStoredLocation] = useState(false);
   
-  const [locationName, setLocationName] = useState<string>("");
-  const [latitude, setLatitude] = useState<string>("");
-  const [longitude, setLongitude] = useState<string>("");
-  
-  // Get user geolocation
-  const { getPosition, coords } = useGeolocation({
-    enableHighAccuracy: true,
-    skipPermissionRequest: noAutoLocationRequest
-  });
-  
-  // Use current location
-  const handleUseCurrentLocation = useCallback(async () => {
-    setStatusMessage("Getting your location...");
+  // Try to restore previous location when component initializes
+  useEffect(() => {
+    if (hasTriedStoredLocation || locationName || latitude || longitude) {
+      return; // Already initialized or tried
+    }
     
     try {
-      await getPosition();
-      
-      if (!coords) {
-        // Check if coords might be loaded after a slight delay
-        setTimeout(async () => {
-          if (coords) {
-            await handleCurrentLocationSuccess(coords.latitude, coords.longitude);
-          } else {
-            setStatusMessage("Could not get your location. Please try again.");
-            toast.error("Location access denied or unavailable");
+      const storedLocationStr = localStorage.getItem('latest_siqs_location');
+      if (storedLocationStr) {
+        const storedLocation = JSON.parse(storedLocationStr);
+        if (storedLocation && storedLocation.name && 
+            typeof storedLocation.latitude === 'number' &&
+            typeof storedLocation.longitude === 'number') {
+          
+          // Restore the saved location
+          setLocationName(storedLocation.name);
+          setLatitude(storedLocation.latitude.toString());
+          setLongitude(storedLocation.longitude.toString());
+          setShowAdvancedSettings(true);
+          
+          // Update Bortle scale based on the restored location
+          if (bortleScale === null) {
+            fetchLightPollutionData(storedLocation.latitude, storedLocation.longitude)
+              .then(data => {
+                if (data && data.bortleScale !== undefined) {
+                  setBortleScale(data.bortleScale);
+                }
+              })
+              .catch(error => {
+                console.error("Error fetching Bortle scale for restored location:", error);
+              });
           }
-        }, 1000);
-        return;
+        }
       }
-      
-      await handleCurrentLocationSuccess(coords.latitude, coords.longitude);
-    } catch (err) {
-      console.error("Error getting location:", err);
-      setStatusMessage("Could not get your location. Please try again.");
-      toast.error("Location access denied or unavailable");
+    } catch (error) {
+      console.error("Error restoring location:", error);
+    } finally {
+      setHasTriedStoredLocation(true);
     }
-  }, [getPosition, coords, setStatusMessage]);
+  }, [hasTriedStoredLocation, locationName, latitude, longitude, bortleScale, setBortleScale, setShowAdvancedSettings]);
   
-  // Handle success getting current location
-  const handleCurrentLocationSuccess = useCallback(async (lat: number, lng: number) => {
-    setLatitude(lat.toString());
-    setLongitude(lng.toString());
+  // Get the current location from the browser
+  const handleUseCurrentLocation = useCallback(() => {
+    if (navigator.geolocation) {
+      setStatusMessage(language === 'en' ? "Getting current location..." : "正在获取当前位置...");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLatitude(latitude.toFixed(6));
+          setLongitude(longitude.toFixed(6));
+          setUserLocation({ latitude, longitude });
+          setLocationName(language === 'en' ? "Current Location" : "当前位置");
+          setStatusMessage(language === 'en' ? "Current location found" : "已找到当前位置");
+          setShowAdvancedSettings(true);
+          
+          // Reset Bortle scale to null until we get fresh data
+          setBortleScale(null);
+          
+          // Save this as the latest location
+          try {
+            localStorage.setItem('latest_siqs_location', JSON.stringify({
+              name: language === 'en' ? "Current Location" : "当前位置",
+              latitude,
+              longitude
+            }));
+          } catch (error) {
+            console.error("Error saving location to localStorage:", error);
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setStatusMessage(
+            language === 'en'
+              ? "Could not get your location. Please check browser permissions."
+              : "无法获取您的位置。请检查浏览器权限。"
+          );
+        }
+      );
+    } else {
+      setStatusMessage(
+        language === 'en'
+          ? "Geolocation is not supported by your browser"
+          : "您的浏览器不支持地理位置"
+      );
+    }
+  }, [language, setStatusMessage, setShowAdvancedSettings, setBortleScale]);
+  
+  const handleLocationSelect = useCallback(async (location: { 
+    name: string; 
+    latitude: number; 
+    longitude: number; 
+    placeDetails?: string 
+  }) => {
+    setLocationName(location.name);
+    setLatitude(location.latitude.toFixed(6));
+    setLongitude(location.longitude.toFixed(6));
+    
+    // Reset Bortle scale until we get fresh data
+    setBortleScale(null);
+    
+    // Save as latest location
+    try {
+      localStorage.setItem('latest_siqs_location', JSON.stringify({
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude
+      }));
+    } catch (error) {
+      console.error("Error saving selected location to localStorage:", error);
+    }
+    
+    const cacheKey = `loc-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData && cachedData.bortleScale !== undefined) {
+      setBortleScale(cachedData.bortleScale);
+      setStatusMessage(language === 'en' 
+        ? `Selected location: ${location.name}` 
+        : `已选择位置：${location.name}`);
+      setShowAdvancedSettings(true);
+      return;
+    }
     
     try {
-      // Get location name
-      const name = await getLocationNameForCoordinates(lat, lng, language, {
-        getCachedData,
-        setCachedData
-      });
-      
-      if (name) {
-        setLocationName(name);
-        setStatusMessage("Location found");
+      const lightPollutionData = await fetchLightPollutionData(location.latitude, location.longitude);
+      if (lightPollutionData && lightPollutionData.bortleScale !== undefined) {
+        setBortleScale(lightPollutionData.bortleScale);
+        
+        setCachedData(cacheKey, {
+          name: location.name,
+          bortleScale: lightPollutionData.bortleScale
+        });
       } else {
-        setLocationName(`Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        // If we couldn't get light pollution data, set to null and inform user
+        setBortleScale(null);
+        setStatusMessage(language === 'en'
+          ? `Light pollution data unavailable for ${location.name}`
+          : `无法获取${location.name}的光污染数据`);
+        
+        setCachedData(cacheKey, {
+          name: location.name,
+          bortleScale: null
+        });
       }
-    } catch (err) {
-      console.error("Error getting location name:", err);
-      setLocationName(`Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-    }
-  }, [language, setStatusMessage, getCachedData, setCachedData]);
-  
-  // Handle manual location select
-  const handleLocationSelect = useCallback((place: any) => {
-    if (!place) return;
-    
-    setLocationName(place.name || "");
-    
-    if (place.latitude && place.longitude) {
-      setLatitude(place.latitude.toString());
-      setLongitude(place.longitude.toString());
-    }
-    
-    if (place.bortleScale) {
-      setBortleScale(place.bortleScale);
-    }
-    
-    setStatusMessage(null);
-  }, [setBortleScale, setStatusMessage]);
-  
-  // Handle selection of a recommended point
-  const handleRecommendedPointSelect = useCallback((point: SharedAstroSpot) => {
-    if (!point) return;
-    
-    const name = point.name || 
-                (point.latitude && point.longitude 
-                  ? `Location at ${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}` 
-                  : "");
-    
-    setLocationName(name);
-    
-    if (point.latitude !== undefined && point.longitude !== undefined) {
-      setLatitude(point.latitude.toString());
-      setLongitude(point.longitude.toString());
-      
-      if (point.bortleScale) {
-        setBortleScale(point.bortleScale);
+    } catch (error) {
+      console.error("Error fetching light pollution data for selected location:", error);
+      try {
+        const estimatedBortleScale = estimateBortleScale(location.name);
+        if (estimatedBortleScale >= 1 && estimatedBortleScale <= 9) {
+          setBortleScale(estimatedBortleScale);
+          setCachedData(cacheKey, {
+            name: location.name,
+            bortleScale: estimatedBortleScale
+          });
+        } else {
+          setBortleScale(null);
+          setCachedData(cacheKey, {
+            name: location.name,
+            bortleScale: null
+          });
+        }
+      } catch (estimationError) {
+        setBortleScale(null);
+        console.error("Error estimating Bortle scale:", estimationError);
       }
-      
-      // Show settings since we're selecting a specific location
-      setShowAdvancedSettings(false);
-      
-      setStatusMessage(null);
     }
-  }, [setBortleScale, setShowAdvancedSettings, setStatusMessage]);
+    
+    setStatusMessage(language === 'en' 
+      ? `Selected location: ${location.name}` 
+      : `已选择位置：${location.name}`);
+    setShowAdvancedSettings(true);
+  }, [language, setBortleScale, setStatusMessage, setShowAdvancedSettings, getCachedData, setCachedData]);
+
+  const handleRecommendedPointSelect = useCallback((point: { 
+    name: string; 
+    latitude: number; 
+    longitude: number 
+  }) => {
+    setLocationName(point.name);
+    setLatitude(point.latitude.toFixed(6));
+    setLongitude(point.longitude.toFixed(6));
+    
+    // Save as latest location
+    try {
+      localStorage.setItem('latest_siqs_location', JSON.stringify({
+        name: point.name,
+        latitude: point.latitude,
+        longitude: point.longitude
+      }));
+    } catch (error) {
+      console.error("Error saving recommended location to localStorage:", error);
+    }
+    
+    // Reset Bortle scale until we get fresh data
+    setBortleScale(null);
+    
+    setShowAdvancedSettings(true);
+    setStatusMessage(language === 'en' 
+      ? `Selected recommended location: ${point.name}` 
+      : `已选择推荐位置：${point.name}`);
+  }, [language, setStatusMessage, setShowAdvancedSettings, setBortleScale]);
   
   return {
-    userLocation: coords ? { latitude: coords.latitude, longitude: coords.longitude } : null,
+    userLocation,
     locationName,
     latitude,
     longitude,
-    bortleScale,
     setLocationName,
     setLatitude,
     setLongitude,
-    setBortleScale,
     handleUseCurrentLocation,
     handleLocationSelect,
     handleRecommendedPointSelect

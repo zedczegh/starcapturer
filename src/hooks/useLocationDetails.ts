@@ -1,8 +1,5 @@
-import { useState, useEffect } from 'react';
-import { formatTime, formatDayMonth } from '@/components/forecast/ForecastUtils';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { fetchForecast } from '@/hooks/siqs/forecastFetcher';
 
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
 import { clearForecastCache } from "./siqs/forecastFetcher";
@@ -34,6 +31,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     updateLightPollutionData
   } = useWeatherUpdater();
 
+  // Check if location has changed to reset cache and trigger a fresh update
   useEffect(() => {
     if (!locationData) return;
     
@@ -45,6 +43,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
       initialLoadCompleteRef.current = false; // Reset to trigger a refresh
       siqsUpdatedRef.current = false; // Reset SIQS update flag
       
+      // Clear any existing sync timer
       if (dataSyncTimerRef.current) {
         window.clearTimeout(dataSyncTimerRef.current);
         dataSyncTimerRef.current = null;
@@ -54,22 +53,27 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     lastLocationRef.current = currentLocation;
   }, [locationData?.latitude, locationData?.longitude]);
 
+  // Auto-refresh data on initial mount
   useEffect(() => {
+    // Only run once and only if we have locationData
     if (!initialLoadCompleteRef.current && locationData && 
         locationData.latitude && locationData.longitude) {
       
+      // Set a slight delay to ensure all components are mounted
       const timer = setTimeout(() => {
         console.log("Auto-refreshing on initial load");
         handleRefreshAll();
         initialLoadCompleteRef.current = true;
-      }, 300);
+      }, 300); // Reduced delay for faster response
       
       return () => clearTimeout(timer);
     }
   }, [locationData]);
 
+  // Update SIQS score when forecast data is available and ensure data consistency
   useEffect(() => {
     if (forecastData && !forecastLoading && locationData) {
+      // Sync weather data with forecast data
       syncWeatherWithForecast();
       
       if (!siqsUpdatedRef.current) {
@@ -81,6 +85,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
           if (updatedSIQS) {
             console.log("Nighttime SIQS calculated:", updatedSIQS.score);
             
+            // Only update if we have meaningful data (either good or bad score)
             setLocationData({
               ...locationData,
               siqsResult: updatedSIQS
@@ -88,6 +93,8 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
             
             siqsUpdatedRef.current = true;
           } else if (locationData.weatherData) {
+            // If cloud cover is low but we couldn't calculate nighttime SIQS,
+            // update with a fallback calculation
             const cloudCover = locationData.weatherData.cloudCover;
             if (cloudCover < 40) {
               const estimatedScore = Math.max(0, Math.min(10, 10 - (cloudCover * 0.25)));
@@ -118,6 +125,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     }
   }, [forecastData, forecastLoading, locationData, setLocationData]);
 
+  // Synchronize weather data with forecast current data for consistency
   const syncWeatherWithForecast = useCallback(() => {
     if (!forecastData?.current || !locationData?.weatherData) return;
     
@@ -125,6 +133,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
       const currentForecast = forecastData.current;
       const currentWeather = locationData.weatherData;
       
+      // Only update if there's a significant difference
       const cloudDifference = Math.abs((currentForecast.cloud_cover || 0) - (currentWeather.cloudCover || 0));
       const tempDifference = Math.abs((currentForecast.temperature_2m || 0) - (currentWeather.temperature || 0));
       
@@ -141,7 +150,9 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
           time: currentForecast.time || currentWeather.time
         };
         
+        // If weather code is available, update condition
         if (currentForecast.weather_code !== undefined) {
+          // Map weather code to condition text
           const weatherConditions: Record<number, string> = {
             0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
             45: "Fog", 48: "Depositing rime fog", 51: "Light drizzle",
@@ -159,6 +170,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
                                     determineConditionFromCloudCover(updatedWeather.cloudCover);
         }
         
+        // Update location data with synced weather
         setLocationData({
           ...locationData,
           weatherData: updatedWeather
@@ -168,7 +180,8 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
       console.error("Error syncing weather with forecast:", error);
     }
   }, [forecastData, locationData, setLocationData]);
-
+  
+  // Determine condition from cloud cover when weather code isn't available
   const determineConditionFromCloudCover = (cloudCover: number): string => {
     if (cloudCover < 10) return "Clear";
     if (cloudCover < 30) return "Mostly Clear";
@@ -177,11 +190,14 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     return "Overcast";
   };
 
+  // Memoized wrapper functions
   const handleRefreshForecast = useCallback(() => {
     if (!locationData) return;
     
+    // Reset SIQS update flag to ensure it updates again
     siqsUpdatedRef.current = false;
     
+    // Clear the cache for this specific location to force a fresh fetch
     clearForecastCache(locationData.latitude, locationData.longitude);
     refreshForecast(locationData.latitude, locationData.longitude);
   }, [locationData, refreshForecast]);
@@ -191,9 +207,11 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     refreshLongRange(locationData.latitude, locationData.longitude);
   }, [locationData, refreshLongRange]);
   
+  // Wrapper function for refreshing all data
   const handleRefreshAll = useCallback(() => {
     if (!locationData) return;
     
+    // Reset SIQS update flag
     siqsUpdatedRef.current = false;
     
     const fetchBothForecasts = () => {
@@ -203,6 +221,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     
     refreshWeather(locationData, setLocationData, fetchBothForecasts, setStatusMessage);
     
+    // Schedule periodic data sync to ensure consistency
     if (dataSyncTimerRef.current) {
       window.clearTimeout(dataSyncTimerRef.current);
     }
@@ -210,9 +229,10 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     dataSyncTimerRef.current = window.setTimeout(() => {
       syncWeatherWithForecast();
       dataSyncTimerRef.current = null;
-    }, 5000);
+    }, 5000); // Check for data consistency after 5 seconds
   }, [locationData, setLocationData, refreshWeather, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, syncWeatherWithForecast]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (dataSyncTimerRef.current) {

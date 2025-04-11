@@ -14,27 +14,12 @@ export const useLocationFind = () => {
     longitude: number,
     radius: number
   ): Promise<SharedAstroSpot[]> => {
-    try {
-      return await apiLocationFind(latitude, longitude, radius);
-    } catch (error) {
-      console.error("Error finding locations within radius:", error);
-      return [];
-    }
+    return apiLocationFind(latitude, longitude, radius);
   }, []);
 
   // Sort locations by quality and distance
   const sortLocationsByQuality = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-    try {
-      return apiSortQuality(locations);
-    } catch (error) {
-      console.error("Error sorting locations by quality:", error);
-      // Fallback sorting by SIQS score if API fails
-      return [...locations].sort((a, b) => {
-        const aSiqs = a.siqsResult?.score ?? a.siqs ?? 0;
-        const bSiqs = b.siqsResult?.score ?? b.siqs ?? 0;
-        return bSiqs - aSiqs;
-      });
-    }
+    return apiSortQuality(locations);
   }, []);
 
   return {
