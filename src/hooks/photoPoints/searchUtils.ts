@@ -27,9 +27,7 @@ export const searchStandardLocations = async (
     const locations = await findLocationsWithinRadius(
       latitude,
       longitude,
-      searchDistance,
-      false, // Get all locations, not just certified
-      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+      searchDistance
     );
     
     if (locations.length === 0) {

@@ -216,6 +216,17 @@ const PhotoPointsNearby: React.FC = () => {
   
   const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
   
+  const filteredCalculatedLocations = calculatedLocations.filter(loc => {
+    if (!effectiveLocation) return true;
+    const distance = loc.distance || calculateDistance(
+      effectiveLocation.latitude,
+      effectiveLocation.longitude,
+      loc.latitude,
+      loc.longitude
+    );
+    return distance <= calculatedSearchRadius;
+  });
+  
   return (
     <PhotoPointsLayout>
       <PhotoPointsHeader 
@@ -292,17 +303,7 @@ const PhotoPointsNearby: React.FC = () => {
               />
             ) : (
               <CalculatedLocations
-                locations={calculatedLocations.filter(loc => {
-                  // For calculated spots, ensure they are within the current radius
-                  if (!effectiveLocation) return true;
-                  const distance = loc.distance || calculateDistance(
-                    effectiveLocation.latitude,
-                    effectiveLocation.longitude,
-                    loc.latitude,
-                    loc.longitude
-                  );
-                  return distance <= calculatedSearchRadius;
-                })}
+                locations={filteredCalculatedLocations}
                 loading={loading && !locationLoading}
                 hasMore={hasMore}
                 onLoadMore={loadMore}

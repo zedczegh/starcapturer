@@ -10,6 +10,7 @@ import { getCachedLocations, cacheLocations } from '@/services/locationCacheServ
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { filterLocations, sortLocationsByQuality, generateRandomPoint } from './locationFilters';
 
 /**
  * Find all locations within a radius of a center point
@@ -65,9 +66,7 @@ export async function findLocationsWithinRadius(
       );
       
       // Filter out water locations
-      const validApiPoints = apiPoints.filter(point => 
-        isValidAstronomyLocation(point.latitude, point.longitude, point.name)
-      );
+      const validApiPoints = filterLocations(apiPoints);
       
       if (validApiPoints.length < apiPoints.length) {
         console.log(`Filtered out ${apiPoints.length - validApiPoints.length} water locations from API results`);
@@ -107,9 +106,7 @@ export async function findLocationsWithinRadius(
     }
     
     // Filter out water locations
-    const validPoints = points.filter(point => 
-      isValidAstronomyLocation(point.latitude, point.longitude, point.name)
-    );
+    const validPoints = filterLocations(points);
     
     if (validPoints.length < points.length) {
       console.log(`Filtered out ${points.length - validPoints.length} water locations from results`);
@@ -330,183 +327,5 @@ export async function findCertifiedLocations(
   }
 }
 
-/**
- * Sort locations by quality and distance
- * @param locations Array of locations
- * @returns Sorted array of locations
- */
-export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  return [...locations].sort((a, b) => {
-    // First prioritize certified locations
-    if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
-      return -1;
-    }
-    if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
-      return 1;
-    }
-    
-    // If both are certified or both are not certified, check if they're in the same category
-    const aIsCertified = a.isDarkSkyReserve || a.certification;
-    const bIsCertified = b.isDarkSkyReserve || b.certification;
-    
-    if (aIsCertified && bIsCertified) {
-      // If both are certified, sort by SIQS score first
-      if (a.siqs !== b.siqs) {
-        return (b.siqs || 0) - (a.siqs || 0);
-      }
-      // Then by distance
-      return (a.distance || Infinity) - (b.distance || Infinity);
-    }
-    
-    if (!aIsCertified && !bIsCertified) {
-      // For calculated locations, sort by SIQS score first
-      if (a.siqs !== b.siqs) {
-        return (b.siqs || 0) - (a.siqs || 0);
-      }
-      // Then by distance
-      return (a.distance || Infinity) - (b.distance || Infinity);
-    }
-    
-    // Default case: sort by SIQS score
-    return (b.siqs || 0) - (a.siqs || 0);
-  });
-}
-
-/**
- * Generate calculated astronomy spots for general recommendations
- * These are potential good locations that aren't officially certified
- * @param centerLat - Latitude of center point
- * @param centerLng - Longitude of center point
- * @param count - Number of locations to generate
- * @param radiusKm - Search radius in kilometers
- * @param existingLocations - Existing locations to avoid duplicating
- * @returns Array of SharedAstroSpot
- */
-function generateCalculatedSpots(
-  centerLat: number, 
-  centerLng: number, 
-  count: number,
-  radiusKm: number,
-  existingLocations: SharedAstroSpot[]
-): SharedAstroSpot[] {
-  const spots: SharedAstroSpot[] = [];
-  
-  // Names for calculated locations - authentic and not misleading
-  const englishNames = [
-    "Mountain Observation Point", "Valley Viewpoint", "Highland Observation Spot",
-    "Ridge Viewpoint", "Observatory Site", "Canyon Overlook",
-    "Peak Observation Area", "Plateau Viewpoint", "Hillside Overlook",
-    "Meadow Observation Point", "Forest Clearing", "Lake Viewpoint", 
-    "Desert Observation Site", "Coastal Viewpoint", "Rural Observatory Point",
-    "Countryside Viewing Area", "Remote Viewing Site", "Hilltop Viewpoint"
-  ];
-  
-  const chineseNames = [
-    "山区观测点", "山谷观景点", "高地观测点",
-    "山脊观景台", "天文台址", "峡谷观景点",
-    "峰顶观测区", "高原观景台", "山坡瞭望点",
-    "草地观测点", "林间空地", "湖泊观景点", 
-    "沙漠观测站", "海岸观景点", "乡村天文点",
-    "乡间观景区", "偏远观测站", "山顶观景点"
-  ];
-  
-  // Create a grid of potential points to avoid duplicating locations
-  const existingPositions = new Set();
-  
-  // Add existing certified locations to avoid overlap
-  existingLocations.forEach(loc => {
-    const posKey = `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
-    existingPositions.add(posKey);
-  });
-  
-  let attemptsCount = 0;
-  const maxAttempts = count * 5; // Increased attempts to ensure we find enough valid locations
-  
-  while (spots.length < count && attemptsCount < maxAttempts) {
-    attemptsCount++;
-    
-    // Generate a position within the specified radius
-    const randomPoint = generateRandomPoint(centerLat, centerLng, radiusKm);
-    
-    // Check if this position already exists (avoid duplicates)
-    const posKey = `${randomPoint.latitude.toFixed(2)},${randomPoint.longitude.toFixed(2)}`;
-    if (existingPositions.has(posKey)) {
-      continue;
-    }
-    
-    // Filter out water locations
-    if (isWaterLocation(randomPoint.latitude, randomPoint.longitude)) {
-      console.log(`Rejected water location at ${randomPoint.latitude}, ${randomPoint.longitude}`);
-      continue;
-    }
-    
-    existingPositions.add(posKey);
-    
-    const nameIndex = spots.length % englishNames.length;
-    
-    // Realistic Bortle scale distribution weighted toward better viewing conditions
-    // This creates a more realistic set of results that are good for astronomy
-    let bortleScale;
-    const rand = Math.random();
-    if (rand < 0.5) {
-      // 50% chance of good locations (Bortle 2-4)
-      bortleScale = Math.floor(Math.random() * 3) + 2;
-    } else if (rand < 0.8) {
-      // 30% chance of moderate locations (Bortle 4-5)
-      bortleScale = Math.floor(Math.random() * 2) + 4;
-    } else {
-      // 20% chance of challenging locations (Bortle 6-7)
-      bortleScale = Math.floor(Math.random() * 2) + 6;
-    }
-    
-    // Calculate a realistic SIQS score based on Bortle scale
-    // SIQS is roughly inverse to Bortle scale but with some randomness
-    const baseSiqs = 10 - bortleScale;
-    const siqs = Math.max(1, Math.min(9, baseSiqs + (Math.random() * 2 - 1)));
-    
-    // Ensure location is viable for astrophotography
-    const isViable = siqs >= 5;
-    
-    // Only add viable locations or locations with good SIQS scores
-    if (isViable || siqs >= 6) {
-      spots.push({
-        id: `calculated-${spots.length}-${Date.now()}`,
-        name: englishNames[nameIndex],
-        chineseName: chineseNames[nameIndex],
-        latitude: randomPoint.latitude,
-        longitude: randomPoint.longitude,
-        bortleScale,
-        siqs: siqs,
-        isViable,
-        distance: randomPoint.distance,
-        description: "A calculated location with potentially good conditions for astrophotography.",
-        timestamp: new Date().toISOString()
-      });
-    }
-  }
-  
-  return spots;
-}
-
-/**
- * Generate a random point within a specified radius
- * @param centerLat Center latitude
- * @param centerLng Center longitude
- * @param radius Radius in kilometers
- * @returns Random point object
- */
-function generateRandomPoint(centerLat: number, centerLng: number, radius: number): { latitude: number, longitude: number, distance: number } {
-  const angle = Math.random() * 2 * Math.PI;
-  const radiusInMeters = radius * 1000;
-  const x = radiusInMeters * Math.cos(angle);
-  const y = radiusInMeters * Math.sin(angle);
-  
-  const newLat = centerLat + (y / 111320);
-  const newLng = centerLng + (x / (111320 * Math.cos(centerLat * Math.PI / 180)));
-  
-  return {
-    latitude: newLat,
-    longitude: newLng,
-    distance: calculateDistance(centerLat, centerLng, newLat, newLng)
-  };
-}
+// Export the sortLocationsByQuality function
+export { sortLocationsByQuality } from './locationFilters';

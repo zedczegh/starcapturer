@@ -2,47 +2,38 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import PhotoLocationCard from '../PhotoLocationCard';
+import PhotoPointCard from '../PhotoPointCard';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
-  initialLoad: boolean;
-  isMobile: boolean;
+  initialLoad?: boolean;
+  isMobile?: boolean;
+  onViewDetails?: (location: SharedAstroSpot) => void;
 }
 
-const LocationsGrid: React.FC<LocationsGridProps> = ({
+const LocationsGrid: React.FC<LocationsGridProps> = ({ 
   locations,
-  initialLoad,
-  isMobile
+  initialLoad = false,
+  isMobile = false,
+  onViewDetails
 }) => {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        staggerChildren: isMobile ? 0.05 : 0.1,
-        when: "beforeChildren" 
-      } 
-    }
-  };
-  
   return (
-    <motion.div
-      variants={containerVariants}
-      initial={initialLoad ? "hidden" : "visible"}
-      animate="visible"
-      className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${isMobile ? 'content-visibility-auto' : ''}`}
-    >
+    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
       {locations.map((location, index) => (
-        <PhotoLocationCard
-          key={location.id || `calc-loc-${index}`}
-          location={location}
-          index={index}
-          showRealTimeSiqs={true}
-          isMobile={isMobile}
-        />
+        <motion.div
+          key={location.id || `${location.latitude}-${location.longitude}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+        >
+          <PhotoPointCard
+            point={location}
+            onViewDetails={onViewDetails}
+            userLocation={null} // This doesn't use current location for distance
+          />
+        </motion.div>
       ))}
-    </motion.div>
+    </div>
   );
 };
 

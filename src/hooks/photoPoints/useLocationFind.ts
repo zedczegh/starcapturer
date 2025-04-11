@@ -1,7 +1,6 @@
 
 import { useCallback } from 'react';
-import { findLocationsWithinRadius as apiLocationFind } from '@/services/locationSearchService';
-import { sortLocationsByQuality as apiSortQuality } from '@/services/locationSearchService';
+import { findLocationsWithinRadius as apiLocationFind, sortLocationsByQuality as apiSortQuality } from '@/services/locationSearchService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**

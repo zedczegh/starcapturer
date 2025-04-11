@@ -8,6 +8,8 @@ import EmptyCalculatedState from './calculatedLocations/EmptyCalculatedState';
 import LoadMoreButtons from './calculatedLocations/LoadMoreButtons';
 import { useExpandSearchRadius } from '@/hooks/photoPoints/useExpandSearchRadius';
 import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -38,6 +40,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   // Set up the event listener for expanding search radius
   useExpandSearchRadius({ onRefresh });
@@ -69,12 +72,27 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
+  const handleViewLocation = (point: SharedAstroSpot) => {
+    const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    
+    // Navigate to location details page
+    navigate(`/location/${locationId}`, {
+      state: {
+        ...point,
+        id: locationId,
+        timestamp: new Date().toISOString()
+      }
+    });
+    toast.info(t("Opening location details", "正在打开位置详情"));
+  };
+  
   return (
     <>
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
         isMobile={isMobile}
+        onViewDetails={handleViewLocation}
       />
       
       <LoadMoreButtons 
