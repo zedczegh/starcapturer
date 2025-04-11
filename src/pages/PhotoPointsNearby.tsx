@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -26,7 +25,6 @@ const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated lo
 const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (no limit)
 
 const PhotoPointsNearby: React.FC = () => {
-  // Fix the infinite loop by using useCallback for getPosition
   const { 
     loading: locationLoading, 
     coords, 
@@ -48,15 +46,13 @@ const PhotoPointsNearby: React.FC = () => {
 
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
-  // Fix the infinite loop by using useEffect for getPosition with proper dependencies
   useEffect(() => {
-    // Only get position if we don't have coords already and haven't exceeded max attempts
     if (!coords && locationLoadAttempts < 3) {
       console.log("Getting user position, attempt:", locationLoadAttempts + 1);
       const timeoutId = setTimeout(() => {
         getPosition();
         setLocationLoadAttempts(prev => prev + 1);
-      }, locationLoadAttempts * 1000); // Increase delay with each attempt
+      }, locationLoadAttempts * 1000);
       
       return () => clearTimeout(timeoutId);
     }
@@ -167,7 +163,6 @@ const PhotoPointsNearby: React.FC = () => {
     refreshSiqsData();
   }, [refreshSiqsData]);
 
-  // Don't call setSearchRadius in every render to avoid infinite loops
   useEffect(() => {
     if (activeView === 'certified') {
       setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
@@ -223,8 +218,6 @@ const PhotoPointsNearby: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
-  
   const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
   
   const filteredCalculatedLocations = calculatedLocations.filter(loc => {
@@ -237,6 +230,10 @@ const PhotoPointsNearby: React.FC = () => {
     );
     return distance <= calculatedSearchRadius;
   });
+  
+  const locationsToShow = activeView === 'certified' 
+    ? certifiedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
+    : filteredCalculatedLocations;
   
   return (
     <PhotoPointsLayout>
@@ -294,8 +291,8 @@ const PhotoPointsNearby: React.FC = () => {
             <PhotoPointsMap 
               userLocation={effectiveLocation}
               locations={locationsToShow}
-              certifiedLocations={certifiedLocations}
-              calculatedLocations={calculatedLocations}
+              certifiedLocations={certifiedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)}
+              calculatedLocations={filteredCalculatedLocations}
               activeView={activeView}
               searchRadius={displayRadius}
               onLocationClick={handleLocationClick}
@@ -308,7 +305,7 @@ const PhotoPointsNearby: React.FC = () => {
           <div className="min-h-[300px]">
             {activeView === 'certified' ? (
               <DarkSkyLocations
-                locations={certifiedLocations}
+                locations={certifiedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)}
                 loading={loading && !locationLoading}
                 initialLoad={initialLoad}
               />

@@ -179,15 +179,17 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
+        autoPan={true}
+        autoPanPadding={[50, 50]}
+        maxWidth={220}
       >
-        <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
+        <div className={`py-2 px-0.5 max-w-[220px] w-full leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
             {isCertified && (
               <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
@@ -250,7 +252,13 @@ const UserLocationMarker = memo(({
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
-      <Popup>
+      <Popup
+        closeOnClick={false}
+        autoClose={false}
+        autoPan={true}
+        autoPanPadding={[50, 50]}
+        maxWidth={220}
+      >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
           <div className="text-xs mt-1">

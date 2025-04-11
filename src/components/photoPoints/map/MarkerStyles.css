@@ -94,6 +94,9 @@
   margin: 0;
   width: auto !important;
   overflow: hidden;
+  max-width: 220px !important;
+  word-wrap: break-word;
+  white-space: normal;
 }
 
 .leaflet-popup-tip {
@@ -103,6 +106,9 @@
 
 .leaflet-popup-custom-compact {
   color: #fff;
+  word-wrap: break-word;
+  white-space: normal;
+  text-align: left;
 }
 
 .marker-popup-gradient {
@@ -138,4 +144,15 @@
 .leaflet-fade-anim .leaflet-popup {
   transition: opacity 0.15s linear;
   transition-delay: 0.05s;
+}
+
+/* Ensure content is horizontally aligned for better readability */
+.leaflet-popup-content-wrapper {
+  text-align: left;
+}
+
+/* Fix for popups extending outside map boundaries */
+.leaflet-container {
+  position: relative;
+  overflow: hidden;
 }
