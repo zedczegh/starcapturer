@@ -14,3 +14,20 @@ export function findMatchingLocations(
   console.warn('Using placeholder findMatchingLocations function');
   return [];
 }
+
+/**
+ * Find location details by coordinates
+ */
+export function findLocationByCoordinates(
+  latitude: number,
+  longitude: number,
+  language: Language = 'en'
+): Location | null {
+  // Return a default location as this is a placeholder
+  console.warn('Using placeholder findLocationByCoordinates function');
+  return {
+    name: language === 'zh' ? '未知位置' : 'Unknown Location',
+    latitude,
+    longitude
+  };
+}

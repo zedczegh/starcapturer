@@ -3,7 +3,8 @@ import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { validateInputs, calculateMoonPhase } from "@/utils/siqsValidation";
-import { getWeatherData, getBortleScaleData } from "@/services/environmentalDataService";
+import { getWeatherData } from "@/services/environmentalDataService";
+import { getBortleScale } from "@/services/environmentalDataService";
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { fetchForecastData } from "@/lib/api";
@@ -78,16 +79,9 @@ export const useSIQSCalculation = (
       }
       
       // Get Bortle scale data
-      const actualBortleScale = await getBortleScaleData(
+      const actualBortleScale = await getBortleScale(
         lat,
-        lng,
-        name,
-        bortleScale,
-        displayOnly,
-        getCachedData,
-        setCachedData,
-        language,
-        setStatusMessage
+        lng
       );
       
       // Validate Bortle scale before proceeding

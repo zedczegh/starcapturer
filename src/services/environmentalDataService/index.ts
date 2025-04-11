@@ -1,8 +1,14 @@
 
 import { getBortleScale } from './bortleScaleService';
+import { getWeatherData, getCachedWeatherData, clearWeatherCache } from './weatherService';
 
 // Re-export functions from the service modules
-export { getBortleScale };
+export { 
+  getBortleScale,
+  getWeatherData,
+  getCachedWeatherData,
+  clearWeatherCache
+};
 
 /**
  * Get environmental data for a location

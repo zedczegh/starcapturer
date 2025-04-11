@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { findLocationsWithinRadius, sortLocationsByQuality } from '@/services/locationSearchService';
+import { findLocationsWithinRadius as findLocationsService, sortLocationsByQuality as sortLocationsService } from '@/services/locationSearchService';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
@@ -13,12 +13,12 @@ export const useLocationFind = () => {
     longitude: number,
     radius: number
   ): Promise<SharedAstroSpot[]> => {
-    return findLocationsWithinRadius(latitude, longitude, radius);
+    return findLocationsService(latitude, longitude, radius);
   }, []);
 
   // Sort locations by quality and distance
   const sortLocationsByQuality = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-    return sortLocationsByQuality(locations);
+    return sortLocationsService(locations);
   }, []);
 
   return {
