@@ -63,23 +63,32 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     } else if (morningForecasts.length === 0) {
       avgNightCloudCover = eveningCloudCover;
     } else {
-      // Correctly weight by number of hours in each period
+      // Prioritize evening hours for astrophotography (they're more valuable)
       avgNightCloudCover = (
-        (eveningCloudCover * eveningForecasts.length) + 
+        (eveningCloudCover * eveningForecasts.length * 1.5) + 
         (morningCloudCover * morningForecasts.length)
-      ) / totalHours;
+      ) / (eveningForecasts.length * 1.5 + morningForecasts.length);
     }
     
     console.log(`Weighted average cloud cover for night: ${avgNightCloudCover.toFixed(1)}%`);
     
-    // Calculate average wind speed for the night
+    // Calculate average wind speed for the night (prioritize evening data)
     let totalWindSpeed = 0;
     let validWindSpeedCount = 0;
     
-    for (const forecast of nightForecasts) {
+    // First add evening wind speeds with higher weight
+    for (const forecast of eveningForecasts) {
+      if (typeof forecast.windSpeed === 'number') {
+        totalWindSpeed += forecast.windSpeed * 1.5; // Higher weight for evening
+        validWindSpeedCount += 1.5;
+      }
+    }
+    
+    // Then add morning wind speeds
+    for (const forecast of morningForecasts) {
       if (typeof forecast.windSpeed === 'number') {
         totalWindSpeed += forecast.windSpeed;
-        validWindSpeedCount++;
+        validWindSpeedCount += 1;
       }
     }
     
@@ -87,14 +96,21 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       ? totalWindSpeed / validWindSpeedCount 
       : 10; // Default if no data
     
-    // Calculate average humidity for the night
+    // Calculate average humidity for the night with similar evening priority
     let totalHumidity = 0;
     let validHumidityCount = 0;
     
-    for (const forecast of nightForecasts) {
+    for (const forecast of eveningForecasts) {
+      if (typeof forecast.humidity === 'number') {
+        totalHumidity += forecast.humidity * 1.5; // Higher weight for evening
+        validHumidityCount += 1.5;
+      }
+    }
+    
+    for (const forecast of morningForecasts) {
       if (typeof forecast.humidity === 'number') {
         totalHumidity += forecast.humidity;
-        validHumidityCount++;
+        validHumidityCount += 1;
       }
     }
     
@@ -114,7 +130,8 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       weatherCondition: locationData.weatherData?.weatherCondition || "",
       aqi: locationData.weatherData?.aqi,
       clearSkyRate: locationData.weatherData?.clearSkyRate,
-      nightForecast: nightForecasts
+      nightForecast: nightForecasts,
+      isNighttimeCalculation: true // Flag to indicate this is a nighttime calculation
     });
     
     // Add detailed nighttime data to the cloud cover factor
@@ -137,6 +154,17 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
       });
     }
     
+    // Store nighttime calculation metadata for consistency checks
+    if (siqsResult) {
+      siqsResult.metadata = {
+        calculationType: 'nighttime',
+        eveningCloudCover,
+        morningCloudCover,
+        avgNightCloudCover,
+        timestamp: new Date().toISOString()
+      };
+    }
+    
     console.log(`Final SIQS score based on nighttime forecast: ${siqsResult.score.toFixed(1)}`);
     
     return siqsResult;
@@ -145,4 +173,57 @@ export function calculateNighttimeSIQS(locationData: any, forecastData: any, t: 
     console.error("Error in nighttime SIQS calculation:", error);
     return null;
   }
+}
+
+/**
+ * Helper function to determine if a given SIQS result is from a nighttime calculation
+ * @param siqsResult SIQS result to check
+ * @returns Boolean indicating if it's a nighttime calculation
+ */
+export function isNighttimeSiqsCalculation(siqsResult: any): boolean {
+  if (!siqsResult) return false;
+  
+  // Check for nighttime metadata
+  if (siqsResult.metadata?.calculationType === 'nighttime') return true;
+  
+  // Check for nighttime data in factors
+  return siqsResult.factors?.some((factor: any) => 
+    factor.nighttimeData && typeof factor.nighttimeData.average === 'number'
+  ) || false;
+}
+
+/**
+ * Ensure SIQS consistency between different views
+ * @param location Location object that may have SIQS data
+ * @returns Consistent SIQS value
+ */
+export function getConsistentSiqsValue(location: any): number {
+  if (!location) return 0;
+  
+  // If location has a siqsResult property with nighttime calculation, prioritize that
+  if (location.siqsResult && isNighttimeSiqsCalculation(location.siqsResult)) {
+    console.log("Using nighttime SIQS calculation:", location.siqsResult.score);
+    return location.siqsResult.score;
+  }
+  
+  // If location has a regular siqsResult, use that
+  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
+    console.log("Using regular SIQS calculation:", location.siqsResult.score);
+    return location.siqsResult.score;
+  }
+  
+  // If location has just a siqs property, use that
+  if (typeof location.siqs === 'number') {
+    console.log("Using direct SIQS value:", location.siqs);
+    return location.siqs;
+  }
+  
+  // Default fallback based on bortle scale if available
+  if (typeof location.bortleScale === 'number') {
+    const fallbackSiqs = Math.max(0, 10 - location.bortleScale);
+    console.log("Using fallback SIQS from Bortle scale:", fallbackSiqs);
+    return fallbackSiqs;
+  }
+  
+  return 0;
 }

@@ -18,6 +18,7 @@ export interface SIQSFactors {
   aqi?: number;         // Air Quality Index (lower is better)
   clearSkyRate?: number; // Annual clear sky rate percentage (higher is better)
   nightForecast?: any[]; // Forecast data for nighttime
+  isNighttimeCalculation?: boolean; // Flag indicating this is a nighttime calculation
 }
 
 /**
@@ -33,8 +34,19 @@ export interface SIQSResult {
     nighttimeData?: {
       average: number;   // Nighttime average value
       timeRange: string; // Time range for nighttime average
+      detail?: {
+        evening: number;
+        morning: number;
+      };
     };
   }[];
+  metadata?: {          // Metadata about the calculation
+    calculationType: string;  // Type of calculation (e.g., 'nighttime')
+    timestamp: string;        // When the calculation was performed
+    eveningCloudCover?: number;
+    morningCloudCover?: number;
+    avgNightCloudCover?: number;
+  };
 }
 
 /**
