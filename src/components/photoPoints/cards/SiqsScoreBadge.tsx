@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Loader2, Star } from 'lucide-react';
-import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 
 interface SiqsScoreBadgeProps {
@@ -15,6 +14,11 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false,
   
   // Generate a light background color based on the score color with higher opacity for better visibility
   const bgColor = `${scoreColor}60`; // Increased opacity for better visibility
+  
+  // Format the score with one decimal place
+  const formatSIQSScoreForDisplay = (score: number) => {
+    return score.toFixed(1);
+  };
   
   // Inline styles for dynamic coloring with higher contrast
   const badgeStyle = {

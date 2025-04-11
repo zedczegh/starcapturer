@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
@@ -68,7 +68,6 @@ const LocationMarker = memo(({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
-  const popupRef = useRef<L.Popup | null>(null);
   
   // Skip water locations for calculated spots (never skip certified)
   if (!isCertified && isWaterSpot(location)) {
@@ -217,7 +216,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component - Updated to use red color
+// User location marker component
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
