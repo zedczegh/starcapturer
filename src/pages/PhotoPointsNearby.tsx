@@ -289,6 +289,7 @@ const PhotoPointsNearby: React.FC = () => {
                 locations={certifiedLocations}
                 loading={loading && !locationLoading}
                 initialLoad={initialLoad}
+                userLocation={effectiveLocation}
               />
             ) : (
               <CalculatedLocations
@@ -313,6 +314,7 @@ const PhotoPointsNearby: React.FC = () => {
                 canLoadMoreCalculated={canLoadMoreCalculated}
                 loadMoreClickCount={loadMoreClickCount}
                 maxLoadMoreClicks={maxLoadMoreClicks}
+                userLocation={effectiveLocation}
               />
             )}
           </div>

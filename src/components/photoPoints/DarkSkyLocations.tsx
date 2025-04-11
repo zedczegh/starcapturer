@@ -2,9 +2,8 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import PhotoPointCard from './PhotoPointCard';
 import { motion } from 'framer-motion';
-import { Loader2, Filter } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import EmptyLocationDisplay from './EmptyLocationDisplay';
 import LocationsList from './LocationsList';
@@ -13,12 +12,14 @@ interface DarkSkyLocationsProps {
   locations: SharedAstroSpot[];
   loading: boolean;
   initialLoad: boolean;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
   locations,
   loading,
-  initialLoad
+  initialLoad,
+  userLocation
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
     // Navigate to location details page
     navigate(`/location/${locationId}`, {
@@ -68,6 +69,7 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
       loading={loading}
       initialLoad={initialLoad}
       onViewDetails={handleViewLocation}
+      userLocation={userLocation}
     />
   );
 };

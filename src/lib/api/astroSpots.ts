@@ -1,4 +1,3 @@
-
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
