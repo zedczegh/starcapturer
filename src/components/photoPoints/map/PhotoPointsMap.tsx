@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
@@ -9,7 +8,6 @@ import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
 import { getAllStoredLocations } from "@/services/calculatedLocationsService";
-import MapDataLoader from "./loaders/MapDataLoader";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -222,22 +220,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
 
   return (
     <div className={className + " relative"}>
-      <MapDataLoader 
-        loading={loadingPhase !== 'ready'} 
-        locationCount={validLocations.length}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        phase={loadingPhase}
-      />
-      
-      <Suspense fallback={
-        <div className="h-full w-full flex flex-col items-center justify-center bg-background/60">
-          <Loader className="h-10 w-10 animate-spin mb-4 text-primary/70" />
-          <p className="text-sm font-medium text-muted-foreground">
-            {t("Loading map...", "加载地图中...")}
-          </p>
-        </div>
-      }>
+      <Suspense fallback={null}>
         <LazyPhotoPointsMapContainer
           key={key}
           center={mapCenter}
@@ -259,12 +242,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onMarkerHover={handleMarkerHover}
         />
         
-        <Suspense fallback={null}>
-          <RealTimeLocationUpdater 
-            userLocation={selectedMapLocation || userLocation}
-            onLocationUpdate={onLocationUpdate}
-          />
-        </Suspense>
+        <RealTimeLocationUpdater 
+          userLocation={selectedMapLocation || userLocation}
+          onLocationUpdate={onLocationUpdate}
+        />
       </Suspense>
     </div>
   );

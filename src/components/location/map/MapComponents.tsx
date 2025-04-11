@@ -106,8 +106,7 @@ export const DarkSkyOverlay = ({
 }) => {
   const map = useMap();
   
-  // NOTE: The Circle feature is disabled due to import errors
-  // Instead, we'll create a custom circle using Leaflet directly
+  // Create a circle overlay for dark sky areas
   useEffect(() => {
     if (isDarkSkyReserve && position) {
       // Create a circle overlay for dark sky areas

@@ -24,7 +24,6 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      // Remove className from Popup props as it's not supported
     >
       <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
         <div className="font-medium text-sm">{name}</div>

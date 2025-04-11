@@ -254,6 +254,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         storeMapRef(target);
       }}
       scrollWheelZoom={true}
+      minZoom={2}
     >
       {/* Add a MapCenterHandler to properly handle center changes */}
       <MapCenterHandler center={validCenter} />

@@ -13,7 +13,6 @@ export const useMapMarkers = () => {
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHoverId = useRef<string | null>(null);
   const hoverTimestamp = useRef<number>(0);
-  const isHoverLocked = useRef<boolean>(false);
   
   // Clean up timeouts on unmount
   useEffect(() => {
@@ -28,7 +27,7 @@ export const useMapMarkers = () => {
   }, []);
 
   /**
-   * Handle hover with improved anti-flicker debounce algorithm
+   * Handle hover with improved anti-flicker algorithm
    */
   const handleHover = useCallback((id: string | null) => {
     // Prevent redundant updates for same ID
@@ -51,33 +50,28 @@ export const useMapMarkers = () => {
     // For new hover target, set with slight delay for better stability
     if (id !== null) {
       // If rapidly changing between markers, use longer delay
-      const delay = now - hoverTimestamp.current < 300 ? 80 : 50;
+      const delay = now - hoverTimestamp.current < 300 ? 40 : 20;
       
       debounceTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(id);
         lastHoverId.current = id;
         hoverTimestamp.current = Date.now();
-        isHoverLocked.current = true;
         debounceTimeoutRef.current = null;
       }, delay);
     } 
     // When leaving a marker completely
     else {
       // Add a delay to prevent flicker on quick mouse movements
-      const delay = now - hoverTimestamp.current < 200 ? 150 : 100;
-      
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverId.current = null;
-        isHoverLocked.current = false;
         hoverTimeoutRef.current = null;
-      }, delay);
+      }, 50);
     }
   }, []);
   
   return {
     hoveredLocationId,
-    handleHover,
-    isHoverLocked: isHoverLocked.current
+    handleHover
   };
 };

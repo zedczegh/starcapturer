@@ -109,3 +109,13 @@
   z-index: 1000 !important;
   transition: transform 0.1s ease-out;
 }
+
+/* Improve popup stability */
+.leaflet-popup {
+  z-index: 1000 !important;
+}
+
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+  transition-duration: 0.15s;
+  opacity: 1 !important;
+}

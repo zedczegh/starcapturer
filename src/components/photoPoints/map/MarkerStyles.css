@@ -134,8 +134,21 @@
   pointer-events: auto !important;
 }
 
-/* Add a small delay to popup display to prevent flickering */
+/* Fix popup flickering */
 .leaflet-fade-anim .leaflet-popup {
-  transition: opacity 0.15s linear;
-  transition-delay: 0.05s;
+  opacity: 1 !important;
+  transition: none;
+}
+
+/* Fix tooltip display for certified locations */
+.leaflet-marker-icon {
+  z-index: 800;
+}
+
+.leaflet-marker-icon.certified-marker {
+  z-index: 900;
+}
+
+.leaflet-marker-icon:hover {
+  z-index: 1000 !important;
 }

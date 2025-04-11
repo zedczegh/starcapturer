@@ -14,14 +14,27 @@ export const useMapInteractions = ({
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const [lastHoverId, setLastHoverId] = useState<string | null>(null);
   
   // Handle marker hover
   const handleMarkerHover = useCallback((id: string | null) => {
-    setHoveredLocationId(id);
+    // Simple hover debounce to prevent flickering
+    if (id !== lastHoverId) {
+      setLastHoverId(id);
+      if (id === null) {
+        // Add delay when clearing hover state
+        setTimeout(() => {
+          setHoveredLocationId(null);
+        }, 50);
+      } else {
+        setHoveredLocationId(id);
+      }
+    }
+    
     if (onMarkerHover) {
       onMarkerHover(id);
     }
-  }, [onMarkerHover]);
+  }, [onMarkerHover, lastHoverId]);
   
   // Handle location click
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
