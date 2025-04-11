@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -25,6 +25,18 @@ export const useMapLocations = ({
 }: UseMapLocationsProps) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
+  // Use ref to track previous props to avoid unnecessary updates
+  const prevPropsRef = useRef<{
+    userLocation: { latitude: number; longitude: number } | null,
+    locationsLength: number,
+    searchRadius: number,
+    activeView: string
+  }>({
+    userLocation: null,
+    locationsLength: 0,
+    searchRadius: 0,
+    activeView: ''
+  });
 
   // Filter out invalid locations and water spots
   const filterValidLocations = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
@@ -85,7 +97,7 @@ export const useMapLocations = ({
     return Array.from(locationMap.values());
   }, []);
 
-  // Update locations with real-time SIQS
+  // Update locations with real-time SIQS - Fix: use debounce and prevent unnecessary updates
   const updateWithRealTimeSiqs = useCallback(async () => {
     if (!mapReady || !userLocation || !locations.length) return;
     
@@ -162,26 +174,70 @@ export const useMapLocations = ({
     }
   }, [locations, userLocation, mapReady, searchRadius, activeView, filterValidLocations, separateLocationTypes]);
 
-  // Process locations
+  // Process locations - Fix: Only run when dependencies actually change
   useEffect(() => {
-    const validLocations = filterValidLocations(locations);
-    const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-    const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
+    // Check if we need to process locations again
+    const prevProps = prevPropsRef.current;
+    const userLocationChanged = 
+      (!prevProps.userLocation && userLocation) || 
+      (prevProps.userLocation && userLocation && 
+        (prevProps.userLocation.latitude !== userLocation.latitude || 
+         prevProps.userLocation.longitude !== userLocation.longitude));
     
-    // Use enhanced locations if available, otherwise use merged locations
-    const locationsToShow = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
-    setProcessedLocations(locationsToShow);
+    const locationsChanged = locations.length !== prevProps.locationsLength;
+    const searchRadiusChanged = searchRadius !== prevProps.searchRadius;
+    const activeViewChanged = activeView !== prevProps.activeView;
     
-  }, [locations, activeView, enhancedLocations, filterValidLocations, separateLocationTypes, mergeLocations]);
+    // Only update if something relevant changed
+    if (userLocationChanged || locationsChanged || searchRadiusChanged || activeViewChanged) {
+      const validLocations = filterValidLocations(locations);
+      const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+      const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
+      
+      // Use enhanced locations if available, otherwise use merged locations
+      const locationsToShow = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
+      setProcessedLocations(locationsToShow);
+      
+      // Update the ref
+      prevPropsRef.current = {
+        userLocation,
+        locationsLength: locations.length,
+        searchRadius,
+        activeView
+      };
+    }
+  }, [
+    locations, 
+    activeView, 
+    enhancedLocations, 
+    filterValidLocations, 
+    separateLocationTypes, 
+    mergeLocations, 
+    userLocation,
+    searchRadius
+  ]);
 
-  // Update locations with real-time SIQS
+  // Update locations with real-time SIQS - Fix: Add debounce and update only when needed
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      updateWithRealTimeSiqs();
+      // Check if we should update SIQS data
+      const prevProps = prevPropsRef.current;
+      const userLocationChanged = 
+        (!prevProps.userLocation && userLocation) || 
+        (prevProps.userLocation && userLocation && 
+          (prevProps.userLocation.latitude !== userLocation.latitude || 
+           prevProps.userLocation.longitude !== userLocation.longitude));
+      
+      const searchRadiusChanged = searchRadius !== prevProps.searchRadius;
+      const activeViewChanged = activeView !== prevProps.activeView;
+      
+      if (mapReady && (userLocationChanged || searchRadiusChanged || activeViewChanged)) {
+        updateWithRealTimeSiqs();
+      }
     }, 300);
     
     return () => clearTimeout(timeoutId);
-  }, [updateWithRealTimeSiqs]);
+  }, [updateWithRealTimeSiqs, mapReady, userLocation, searchRadius, activeView]);
 
   return {
     processedLocations
