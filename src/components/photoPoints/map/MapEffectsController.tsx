@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -84,19 +83,19 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     // Set world bounds to prevent infinite horizontal scrolling
     // This restricts the map to one "copy" of the world
     const worldBounds = L.latLngBounds(
-      L.latLng(-90, -180),  // Southwest corner
-      L.latLng(90, 180)     // Northeast corner
+      L.latLng(-85, -180),  // Southwest corner
+      L.latLng(85, 180)     // Northeast corner
     );
     
     map.setMaxBounds(worldBounds);
-    map.on('drag', function() {
-      map.panInsideBounds(worldBounds, { animate: false });
-    });
-
+    
+    // Fix: Remove the problematic panInsideBounds event handler
+    // and use a safer approach to keep the map within bounds
+    
     // Improve wrapping of coordinates to stay within -180 to 180 longitude
     const originalLatLng = L.latLng;
     
-    // Override Leaflet's latLng to enforce wrapping
+    // Override Leaflet's latLng to enforce wrapping but without creating an infinite recursion
     L.latLng = function(lat, lng) {
       if (lng !== undefined) {
         // Wrap longitude to stay within -180 to 180 range
@@ -110,12 +109,14 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
       L.latLng[key] = originalLatLng[key];
     });
     
-    // Enforce single world view
+    // Use a different approach to enforce single world view
     map.on('moveend', () => {
-      const mapBounds = map.getBounds();
-      if (mapBounds.getWest() < -180 || mapBounds.getEast() > 180) {
-        const center = map.getCenter();
-        center.lng = ((center.lng + 540) % 360) - 180;
+      const center = map.getCenter();
+      const wrappedLng = ((center.lng + 540) % 360) - 180;
+      
+      // Only update if the longitude is significantly different after wrapping
+      if (Math.abs(center.lng - wrappedLng) > 1) {
+        center.lng = wrappedLng;
         map.setView(center, map.getZoom(), { animate: false });
       }
     });
@@ -123,7 +124,6 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     return () => {
       if (map) {
         // Clean up event listeners
-        map.off('drag');
         map.off('moveend');
       }
     };
