@@ -5,6 +5,7 @@ import {
   formatNighttimeHoursRange, 
   calculateAverageCloudCover 
 } from "@/components/forecast/NightForecastUtils";
+import { SharedAstroSpot } from '@/lib/siqs/types'; // Import the correct type definition
 
 /**
  * Calculate SIQS based on nighttime forecasts
@@ -197,7 +198,7 @@ export function isNighttimeSiqsCalculation(siqsResult: any): boolean {
  * @param location Location object that may have SIQS data
  * @returns Consistent SIQS value
  */
-export function getConsistentSiqsValue(location: any): number {
+export function getConsistentSiqsValue(location: SharedAstroSpot | any): number {
   if (!location) return 0;
   
   // If location has a siqsResult property with nighttime calculation, prioritize that
