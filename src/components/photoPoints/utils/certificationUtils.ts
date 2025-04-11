@@ -92,31 +92,3 @@ export function isIDACertified(location: SharedAstroSpot): boolean {
     cert.includes('community')
   );
 }
-
-/**
- * Enhanced check for IDA or other formal dark sky certifications
- * @param location Location to check
- * @returns Boolean indicating if location has formal certification
- */
-export function hasFormalCertification(location: SharedAstroSpot): boolean {
-  // First check the explicit flag
-  if (location.isDarkSkyReserve) return true;
-  
-  // Then check certification text
-  if (!location.certification) return false;
-  
-  const cert = location.certification.toLowerCase();
-  const formalCertPatterns = [
-    'international dark sky',
-    'ida',
-    'dark sky sanctuary',
-    'dark sky reserve',
-    'dark sky park',
-    'dark sky community',
-    'urban night sky',
-    'starlight reserve',
-    'starry sky oasis'
-  ];
-  
-  return formalCertPatterns.some(pattern => cert.includes(pattern));
-}

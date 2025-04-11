@@ -1,69 +1,109 @@
-
 /**
- * This file provides location database functions for the application
+ * Database of locations with accurate Bortle scale values
+ * Data sourced from astronomical observations and light pollution maps
  */
 
-// Basic type for location data
-export interface LocationData {
+import { asiaLocations } from './regions/asiaLocations';
+import { americasLocations } from './regions/americasLocations';
+import { europeAfricaLocations } from './regions/europeAfricaLocations';
+import { oceaniaLocations } from './regions/oceaniaLocations';
+import { middleEastLocations } from './regions/middleEastLocations';
+import { polarLocations } from './regions/polarLocations';
+import { centralAsiaLocations } from './regions/centralAsiaLocations';
+import { chinaSuburbanLocations } from './regions/chinaSuburbanLocations';
+import { chinaMountainLocations } from './regions/chinaMountainLocations';
+import { darkSkyLocations } from './regions/darkSkyLocations';
+import { calculateDistance, deg2rad } from '@/utils/geoUtils';
+
+export interface LocationEntry {
   name: string;
-  chineseName?: string;
   coordinates: [number, number]; // [latitude, longitude]
   bortleScale: number;
-  certification?: string;
-  isDarkSkyReserve?: boolean;
-  distance?: number;
-  radius?: number;
-  type?: string;
+  radius: number; // km - the approximate radius this location's Bortle scale applies to
+  type?: 'urban' | 'rural' | 'dark-site' | 'natural' | 'suburban';
 }
 
-// Example location database
-export const locationDatabase: LocationData[] = [
-  // Default locations
-  {
-    name: "Beijing",
-    chineseName: "北京",
-    coordinates: [39.9042, 116.4074],
-    bortleScale: 9,
-  },
-  {
-    name: "Shanghai",
-    chineseName: "上海",
-    coordinates: [31.2304, 121.4737],
-    bortleScale: 9,
-  },
-  // Add more locations as needed...
+// Combine all regional location databases
+export const locationDatabase: LocationEntry[] = [
+  ...asiaLocations,
+  ...americasLocations,
+  ...europeAfricaLocations,
+  ...oceaniaLocations,
+  ...middleEastLocations,
+  ...polarLocations,
+  ...centralAsiaLocations,
+  ...chinaSuburbanLocations,
+  ...chinaMountainLocations,
+  ...darkSkyLocations  // Add dark sky locations
 ];
 
+// Export utility functions from geoUtils to avoid duplication
+export { calculateDistance, deg2rad } from '@/utils/geoUtils';
+
 /**
- * Find the closest location in the database based on coordinates
+ * Find the closest location to given coordinates
+ * With improved error handling to ensure valid output
  */
-export const findClosestLocation = (latitude: number, longitude: number) => {
+export function findClosestLocation(latitude: number, longitude: number): {
+  name: string;
+  bortleScale: number;
+  distance: number;
+  type?: string;
+} {
+  // Ensure database has content
   if (!locationDatabase || locationDatabase.length === 0) {
-    return null;
+    return {
+      name: `Unknown Location`,
+      bortleScale: 5,
+      distance: 0
+    };
   }
-  
-  let closestLocation = null;
-  let minDistance = Infinity;
-  
-  // Calculate distance using Haversine formula
-  for (const location of locationDatabase) {
-    const [locLat, locLng] = location.coordinates;
-    
-    // Calculate distance using simplified distance formula
-    const latDiff = Math.abs(latitude - locLat);
-    const lngDiff = Math.abs(longitude - locLng);
-    
-    // Rough distance in degrees
-    const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111; // 111 km per degree
-    
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestLocation = {
-        ...location,
-        distance
-      };
-    }
+
+  // Validate input coordinates
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    return {
+      name: `Unknown Location`,
+      bortleScale: 5,
+      distance: 0
+    };
   }
-  
-  return closestLocation;
-};
+
+  try {
+    // Delegate to the implementation in locationFinder.ts
+    const { findClosestLocationImpl } = require('./utils/locationFinder');
+    return findClosestLocationImpl(latitude, longitude, locationDatabase);
+  } catch (error) {
+    console.error("Error finding closest location:", error);
+    // Fallback if implementation fails
+    return {
+      name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      bortleScale: 5,
+      distance: 0
+    };
+  }
+}
+
+/**
+ * Get a friendly location name with accurate Bortle scale
+ */
+export function getLocationInfo(latitude: number, longitude: number): {
+  name: string;
+  bortleScale: number;
+  formattedName: string;
+} {
+  try {
+    const { getLocationInfoImpl } = require('./utils/locationFinder');
+    return getLocationInfoImpl(latitude, longitude, locationDatabase);
+  } catch (error) {
+    console.error("Error getting location info:", error);
+    // Fallback if implementation fails
+    return {
+      name: `Location at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+      bortleScale: 5,
+      formattedName: `Unknown Location`
+    };
+  }
+}
+
+// Keep these functions here as they are core to the API
+export { getBortleScaleDescription, getBortleScaleColor } from './utils/bortleScaleUtils';

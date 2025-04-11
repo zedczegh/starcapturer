@@ -1,6 +1,6 @@
+
 import { findClosestCity, interpolateBortleScale } from "@/utils/lightPollutionData";
 import { getCityBortleScale, isInChina, getChineseRegion } from "@/utils/chinaBortleData";
-import { findClosestLocation } from "@/data/locationDatabase";
 
 // Add more detailed data for rural northern provinces
 const northernRuralAreas = [
@@ -264,29 +264,3 @@ function estimateDefaultBortleScale(latitude: number, longitude: number): number
   // Default middle value
   return 4;
 }
-
-/**
- * Get light pollution (Bortle scale) data from our location database 
- * when API calls fail or for offline use
- */
-export const getFallbackBortleScale = (latitude: number, longitude: number): number => {
-  try {
-    const nearestLocation = findClosestLocation(latitude, longitude);
-    
-    // If we found a location relatively nearby (within 30km), use its Bortle scale
-    if (nearestLocation && nearestLocation.distance <= 30) {
-      console.log(`Using location database Bortle scale for ${nearestLocation.name}: ${nearestLocation.bortleScale}`);
-      return nearestLocation.bortleScale;
-    } else {
-      // Default values based on location type (needs to be refined)
-      // Deep rural areas: 1-3
-      // Rural areas: 4
-      // Suburbs: 5-6
-      // Cities: 7-9
-      return 4;
-    }
-  } catch (error) {
-    console.error("Error getting fallback Bortle scale:", error);
-    return 4; // Default to rural skies
-  }
-};

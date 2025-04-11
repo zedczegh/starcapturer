@@ -5,7 +5,6 @@ import { searchCache } from '../caching/searchCache';
 import { normalizeLongitude } from '@/lib/api/coordinates';
 import { getLocationNameFromCoordinates } from '@/lib/api';
 import { chineseLocationDatabase } from './data/chineseLocationData';
-import { findClosestLocation } from "@/data/locationDatabase";
 
 /**
  * Search for locations based on user input
@@ -343,39 +342,3 @@ function isInChina(latitude: number, longitude: number): boolean {
   const { isInChina } = require('../../utils/chinaBortleData');
   return isInChina(latitude, longitude);
 }
-
-/**
- * Enhance the location name with nearest known location if available
- */
-export const enhanceWithNearbyLocations = async (
-  latitude: number, 
-  longitude: number,
-  name: string,
-  language: Language = 'en'
-): Promise<string> => {
-  try {
-    // Try to find location in our database first
-    const nearestLocation = findClosestLocation(latitude, longitude);
-    
-    if (nearestLocation && nearestLocation.distance < 30) {
-      // If very close to a known location, use its name directly
-      if (nearestLocation.distance < 5) {
-        return language === 'en' ? nearestLocation.name : (nearestLocation.chineseName || nearestLocation.name);
-      }
-      
-      // If relatively close, include "near" information
-      const locName = language === 'en' ? 
-        nearestLocation.name : 
-        (nearestLocation.chineseName || nearestLocation.name);
-        
-      return language === 'en' ?
-        `${name} near ${locName}` :
-        `${name}，靠近${locName}`;
-    }
-    
-    return name;
-  } catch (error) {
-    console.error("Error enhancing location name:", error);
-    return name;
-  }
-};

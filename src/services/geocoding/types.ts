@@ -1,36 +1,38 @@
 
-/**
- * Types for geocoding services
- */
+export type Language = 'en' | 'zh';
 
-// Language codes for geocoding
-export type Language = 'en' | 'zh' | 'zh-CN' | 'zh-TW';
-
-// Location type with coordinates and metadata
 export interface Location {
   name: string;
-  chineseName?: string;
   latitude: number;
   longitude: number;
-  country?: string;
-  province?: string;
-  city?: string;
-  district?: string;
-  type?: string;
-  confidence?: number;
+  placeDetails?: string;
 }
 
-// Search result type
-export interface SearchResult {
-  locations: Location[];
-  totalCount: number;
-  source: string;
+export interface CityAlternative {
+  name: string;
+  chinese: string;
+  alternatives: string[];
+  coordinates: [number, number];
+  placeDetails?: string;
 }
 
-// Geocoding options
-export interface GeocodingOptions {
-  language?: Language;
-  limit?: number;
-  includeDetails?: boolean;
-  types?: string[];
+export interface ChineseLocation {
+  areaCode: string;
+  provinceCode: string;
+  province: string;
+  cityCode: string;
+  city: string;
+  districtCode: string;
+  district: string;
+  nameEn: string;
+  pinyin: string;
+  longitude: number;
+  latitude: number;
+  bortleScale?: number;
+}
+
+export interface GeocodeResponse {
+  success: boolean;
+  results: Location[];
+  error?: string;
 }

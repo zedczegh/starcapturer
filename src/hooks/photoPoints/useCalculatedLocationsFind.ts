@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -29,7 +28,7 @@ export const useCalculatedLocationsFind = () => {
           latitude, 
           longitude, 
           radius,
-          allowExpansion,  // Pass allowExpansion as expandRadius parameter
+          allowExpansion,
           limit
         );
         
