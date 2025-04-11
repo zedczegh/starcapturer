@@ -6,7 +6,7 @@
 
 import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs, batchCalculateSiqs } from '@/services/realTimeSiqsService';
-import { getCachedLocationSearch, cacheLocationSearch } from '@/services/locationCacheService';
+import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
@@ -30,7 +30,12 @@ export async function findLocationsWithinRadius(
   try {
     // Check cache first with more specific cache key
     const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly ? 'certified' : 'all'}-${limit}`;
-    const cachedData = getCachedLocationSearch(latitude, longitude, radius, cacheKey);
+    const cachedData = getCachedLocations(
+      certifiedOnly ? 'certified' : 'calculated',
+      latitude,
+      longitude,
+      radius
+    );
     
     if (cachedData) {
       console.log(`Using cached location search for ${latitude.toFixed(2)}, ${longitude.toFixed(2)}, radius: ${radius}km, limit: ${limit}`);
@@ -76,7 +81,13 @@ export async function findLocationsWithinRadius(
       ];
       
       // Cache the results with the specific cache key
-      cacheLocationSearch(latitude, longitude, radius, combinedPoints, cacheKey);
+      cacheLocations(
+        'certified',
+        latitude,
+        longitude,
+        radius,
+        combinedPoints
+      );
       
       return combinedPoints;
     }
@@ -105,7 +116,13 @@ export async function findLocationsWithinRadius(
     }
     
     // Cache the results with the specific cache key
-    cacheLocationSearch(latitude, longitude, radius, validPoints, cacheKey);
+    cacheLocations(
+      'calculated',
+      latitude,
+      longitude,
+      radius,
+      validPoints
+    );
     
     return validPoints;
   } catch (error) {
@@ -199,6 +216,15 @@ export async function findCalculatedLocations(
   limit: number = 10
 ): Promise<SharedAstroSpot[]> {
   try {
+    console.log(`Finding calculated locations within ${radius}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    
+    // Try to get from cache first
+    const cachedLocations = getCachedLocations('calculated', latitude, longitude, radius);
+    if (cachedLocations && cachedLocations.length > 0) {
+      console.log(`Using ${cachedLocations.length} cached calculated locations`);
+      return cachedLocations;
+    }
+
     // First try the specified radius with limited locations
     const points = await findLocationsWithinRadius(
       latitude, 
@@ -214,13 +240,29 @@ export async function findCalculatedLocations(
     );
     
     if (calculatedPoints.length > 0) {
-      // Calculate SIQS scores for these locations
-      const locationsWithSiqs = await batchCalculateSiqs(calculatedPoints);
+      console.log(`Found ${calculatedPoints.length} calculated locations within ${radius}km`);
+      
+      // Calculate SIQS scores for these locations in chunks to improve performance
+      const chunkSize = 5; // Process 5 at a time to prevent overwhelming API
+      const results = [];
+      
+      for (let i = 0; i < calculatedPoints.length; i += chunkSize) {
+        const chunk = calculatedPoints.slice(i, i + chunkSize);
+        const locationsWithSiqs = await batchCalculateSiqs(chunk);
+        results.push(...locationsWithSiqs);
+        
+        // Small delay between chunks to avoid rate limiting
+        if (i + chunkSize < calculatedPoints.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
       
       // Filter out locations with SIQS 0 (bad viewing conditions)
-      const validLocations = locationsWithSiqs.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+      const validLocations = results.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
       
       if (validLocations.length > 0) {
+        // Cache the results for future use
+        cacheLocations('calculated', latitude, longitude, radius, validLocations);
         return validLocations;
       }
     }
@@ -228,7 +270,7 @@ export async function findCalculatedLocations(
     // If no calculated points found and we can try larger radius
     if (tryLargerRadius && radius < 10000) {
       console.log(`No calculated locations found within ${radius}km, trying larger radius`);
-      // Double the radius but cap at 10000km
+      // Use exponential increase for radius but cap at 10000km
       const newRadius = Math.min(radius * 2, 10000);
       return findCalculatedLocations(latitude, longitude, newRadius, false, limit);
     }
@@ -255,6 +297,13 @@ export async function findCertifiedLocations(
   limit: number = 50
 ): Promise<SharedAstroSpot[]> {
   try {
+    // Try to get from cache first
+    const cachedLocations = getCachedLocations('certified', latitude, longitude, radius);
+    if (cachedLocations && cachedLocations.length > 0) {
+      console.log(`Using ${cachedLocations.length} cached certified locations`);
+      return cachedLocations;
+    }
+
     // Get locations with certified flag for better performance
     const points = await findLocationsWithinRadius(
       latitude, 
@@ -266,7 +315,12 @@ export async function findCertifiedLocations(
     
     if (points.length > 0) {
       // Calculate SIQS scores for these locations
-      return await batchCalculateSiqs(points);
+      const locationsWithSiqs = await batchCalculateSiqs(points);
+      
+      // Cache the results for future use
+      cacheLocations('certified', latitude, longitude, radius, locationsWithSiqs);
+      
+      return locationsWithSiqs;
     }
     
     return [];
