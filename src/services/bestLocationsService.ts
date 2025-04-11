@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from "@/lib/types/sharedTypes";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
 import { batchCalculateSiqs, clearSiqsCache } from "./realTimeSiqsService";
@@ -57,7 +57,8 @@ export async function findBestViewingLocations(
     const points = await findLocationsWithinRadius(
       userLat, 
       userLng, 
-      radius
+      radius,
+      certifiedOnly
     );
     
     if (!points || points.length === 0) {
