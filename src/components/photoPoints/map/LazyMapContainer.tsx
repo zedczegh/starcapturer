@@ -38,54 +38,24 @@ function chunkArray<T>(array: T[], chunkSize: number): T[][] {
   return chunks;
 }
 
-// Enhanced marker group with better performance
 const MarkerGroup = React.memo(({ 
   locations, 
   onLocationClick,
   hoveredLocationId,
   onMarkerHover,
   isCertified,
-  hideMarkerPopups,
-  bounds
+  hideMarkerPopups
 }: { 
   locations: SharedAstroSpot[], 
   onLocationClick?: (location: SharedAstroSpot) => void,
   hoveredLocationId: string | null,
   onMarkerHover: (id: string | null) => void,
   isCertified: boolean,
-  hideMarkerPopups: boolean,
-  bounds: L.LatLngBounds | null
+  hideMarkerPopups: boolean
 }) => {
-  // Filter locations to only include those potentially within or near the current viewport
-  // This significantly improves performance with large datasets
-  const visibleLocations = useMemo(() => {
-    if (!bounds) return locations;
-    
-    // Expand bounds by 20% to ensure markers near edges are included
-    const expandedBounds = bounds.pad(0.2);
-    
-    return locations.filter(location => {
-      if (!location || 
-          typeof location.latitude !== 'number' || 
-          typeof location.longitude !== 'number' ||
-          isNaN(location.latitude) || 
-          isNaN(location.longitude)) {
-        return false;
-      }
-      
-      // Always include certified locations for better visibility
-      if (isCertified && (location.isDarkSkyReserve || location.certification)) {
-        return true;
-      }
-      
-      // For other locations, check if they're within expanded viewport bounds
-      return expandedBounds.contains(L.latLng(location.latitude, location.longitude));
-    });
-  }, [locations, bounds, isCertified]);
-
   return (
     <>
-      {visibleLocations.map((location) => {
+      {locations.map((location) => {
         // Only render markers with valid coordinates
         if (!location || 
             typeof location.latitude !== 'number' || 
@@ -122,37 +92,6 @@ const MarkerGroup = React.memo(({
   );
 });
 
-// Component to track current map bounds
-const BoundsTracker = ({ 
-  onBoundsChange 
-}: { 
-  onBoundsChange: (bounds: L.LatLngBounds) => void 
-}) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (!map) return;
-    
-    // Initial bounds
-    onBoundsChange(map.getBounds());
-    
-    // Track bounds changes
-    const handleMoveEnd = () => {
-      onBoundsChange(map.getBounds());
-    };
-    
-    map.on('moveend', handleMoveEnd);
-    map.on('zoomend', handleMoveEnd);
-    
-    return () => {
-      map.off('moveend', handleMoveEnd);
-      map.off('zoomend', handleMoveEnd);
-    };
-  }, [map, onBoundsChange]);
-  
-  return null;
-};
-
 // Separate component to update map center properly
 const MapCenterHandler = ({ center }: { center: [number, number] }) => {
   const map = useMap();
@@ -187,10 +126,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const isCertifiedView = activeView === 'certified';
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   const [mapRendered, setMapRendered] = useState(false);
-  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const [markerChunks, setMarkerChunks] = useState<SharedAstroSpot[][]>([]);
   const mapRef = useRef<L.Map | null>(null);
-  const [isZooming, setIsZooming] = useState(false);
   
   // Make sure center coordinates are valid
   const validCenter = useMemo(() => {
@@ -215,26 +152,12 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     // Small delay to prevent immediate popup reappearance
     setTimeout(() => {
       setHideMarkerPopups(false);
-    }, 200);
+    }, 100);
   }, []);
-  
-  const handleMapZoomStart = useCallback(() => {
-    setIsZooming(true);
-    setHideMarkerPopups(true);
-    onMarkerHover(null);
-  }, [onMarkerHover]);
   
   const handleMapZoomEnd = useCallback(() => {
-    setTimeout(() => {
-      setIsZooming(false);
-      setHideMarkerPopups(false);
-    }, 300);
-  }, []);
-  
-  // Update map bounds when they change
-  const handleBoundsChange = useCallback((bounds: L.LatLngBounds) => {
-    setMapBounds(bounds);
-  }, []);
+    onMarkerHover(null);
+  }, [onMarkerHover]);
 
   // Filter out any invalid locations
   const validLocations = useMemo(() => {
@@ -331,17 +254,10 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         storeMapRef(target);
       }}
       scrollWheelZoom={true}
-      // Fixed: Use bounds prop instead of maxBounds
-      bounds={[[-85, -180], [85, 180]]}
-      minZoom={2} // Prevent zooming out too far which can cause rendering issues
     >
       {/* Add a MapCenterHandler to properly handle center changes */}
       <MapCenterHandler center={validCenter} />
       
-      {/* Track map bounds for better marker filtering */}
-      <BoundsTracker onBoundsChange={handleBoundsChange} />
-      
-      {/* Base map layer */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -354,9 +270,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         searchRadius={searchRadius}
       />
       
-      {/* Add world bounds controller to prevent navigation issues */}
-      <WorldBoundsController />
-      
       {/* Effects composer for all effects like bounds control and SIQS calculation */}
       <MapEffectsComposer 
         userLocation={userLocation}
@@ -365,11 +278,12 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onSiqsCalculated={handleSiqsCalculated}
       />
       
-      {/* Fixed: Use only the properties that are defined in MapEventsProps */}
+      {/* Add MapEvents component to handle clicks if onMapClick is provided */}
       <MapEvents 
-        onMapClick={handleMapClick}
+        onMapClick={handleMapClick} 
         onMapDragStart={handleMapDragStart}
         onMapDragEnd={handleMapDragEnd}
+        onMapZoomEnd={handleMapZoomEnd}
       />
       
       {/* Current user location marker */}
@@ -385,18 +299,18 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       {/* Search radius visualization */}
       {renderSearchRadiusCircle}
       
-      {/* Location markers rendered with viewport filtering for better performance */}
-      {mapRendered && !isZooming && (
+      {/* Location markers rendered in batches for better performance */}
+      {!hideMarkerPopups && mapRendered && markerChunks.map((chunk, i) => (
         <MarkerGroup
-          locations={validLocations}
+          key={`marker-chunk-${i}`}
+          locations={chunk}
           onLocationClick={onLocationClick}
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={onMarkerHover}
           isCertified={isCertifiedView}
           hideMarkerPopups={hideMarkerPopups}
-          bounds={mapBounds}
         />
-      )}
+      ))}
     </MapContainer>
   );
 };

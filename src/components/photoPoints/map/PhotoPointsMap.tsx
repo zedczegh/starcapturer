@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
+import MapDataLoader from "./loaders/MapDataLoader";
 import { useMapState } from "@/hooks/photoPoints/useMapState";
 import MapLocationLoader from "./MapLocationLoader";
 
@@ -180,6 +182,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
 
   return (
     <div className={className + " relative"}>
+      <MapDataLoader 
+        loading={loadingPhase !== 'ready'} 
+        locationCount={validLocations.length}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        phase={loadingPhase}
+      />
+      
       <MapLocationLoader
         activeView={activeView}
         calculatedLocations={calculatedLocations}
@@ -191,7 +201,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         }
       />
       
-      <Suspense fallback={<div className="h-full w-full bg-background/60"></div>}>
+      <Suspense fallback={
+        <div className="h-full w-full flex flex-col items-center justify-center bg-background/60">
+          <Loader className="h-10 w-10 animate-spin mb-4 text-primary/70" />
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("Loading map...", "加载地图中...")}
+          </p>
+        </div>
+      }>
         <LazyPhotoPointsMapContainer
           key={key}
           center={mapCenter}

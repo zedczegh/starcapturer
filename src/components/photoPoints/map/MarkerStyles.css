@@ -1,122 +1,141 @@
 
-/* Base marker styles */
-.custom-marker-icon {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Base marker styling for all custom markers */
+.custom-marker {
+  transition: transform 0.15s ease, filter 0.2s ease;
 }
 
-/* Ensure markers stay within viewport */
-.leaflet-marker-pane {
-  overflow: visible !important;
-  z-index: 450;
+/* Special styling for hovered markers */
+.custom-marker.hovered {
+  z-index: 1000 !important;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+  transform: scale(1.3);
 }
 
-/* Fix popup visibility issues */
-.leaflet-popup-pane {
-  z-index: 460 !important;
-  overflow: visible !important;
+/* Specific styling for marker types */
+.star-marker svg {
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.8));
+  transition: filter 0.3s ease;
 }
 
-/* Prevent popups from being clipped at map edges */
-.leaflet-popup {
-  max-width: 300px;
-  overflow: visible !important;
+.star-marker.hovered svg {
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.9));
 }
 
-.leaflet-popup-content-wrapper {
-  overflow: visible !important;
-  max-width: 100%;
-  word-wrap: break-word;
+/* Specific styling for user location marker */
+.user-location-marker svg {
+  filter: drop-shadow(0 0 3px rgba(225, 29, 72, 0.7));
 }
 
-/* Ensure tooltip stays above markers */
-.leaflet-tooltip {
-  z-index: 500 !important;
-  pointer-events: none;
-  white-space: nowrap;
-  max-width: 250px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background-color: rgba(0, 0, 0, 0.75) !important;
-  color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-radius: 4px;
-  padding: 4px 8px;
+.user-location-marker.hovered svg,
+.pulsing-marker svg {
+  filter: drop-shadow(0 0 8px rgba(225, 29, 72, 0.8));
 }
 
-/* Fix for popup arrow position */
-.leaflet-popup-tip-container {
-  overflow: visible !important;
+/* Circle marker enhancement */
+.circle-marker svg {
+  filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.6));
+  transition: all 0.2s ease;
 }
 
-/* Make certified locations more visible */
-.certified-marker {
-  z-index: 470 !important;
+.circle-marker.hovered svg {
+  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.8));
 }
 
-/* Animation for pulse effect */
+/* Pulse animations for markers */
 @keyframes pulse {
   0% {
-    transform: scale(0.8);
-    opacity: 0.7;
+    opacity: 0.8;
+    transform: scale(0.6);
   }
   50% {
-    transform: scale(1.2);
-    opacity: 0.9;
+    opacity: 0.4;
   }
   100% {
-    transform: scale(0.8);
-    opacity: 0.7;
+    opacity: 0;
+    transform: scale(1.5);
   }
 }
 
-/* Apply pulse animation to certified markers */
-.certified-marker svg circle:last-child {
+@keyframes inner-pulse {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+.pulse-circle {
   animation: pulse 2s infinite;
+  transform-origin: center;
+  transform-box: fill-box;
 }
 
-/* Add anti-aliasing to all map text */
-.leaflet-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, 
-    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.pulse-inner-circle {
+  animation: inner-pulse 1.5s infinite;
+  transform-origin: center;
+  transform-box: fill-box;
 }
 
-/* Increase contrast for dark sky reserve markers */
-.dark-sky-marker {
-  z-index: 480 !important; /* Always appear on top */
+/* Enhanced popup styling */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  padding: 0;
 }
 
-.dark-sky-marker svg {
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+.leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+  overflow: hidden;
 }
 
-/* Fix for Leaflet map container */
-.leaflet-container {
-  position: relative;
-  z-index: 1;
+.leaflet-popup-tip {
+  background-color: #1a222e;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6);
 }
 
-/* Ensure popups and tooltips stay visible */
-.leaflet-tooltip-pane {
-  z-index: 650 !important;
+.leaflet-popup-custom-compact {
+  color: #fff;
 }
 
-/* Fix for markers at map boundaries */
-.leaflet-marker-icon {
-  transition: none !important;
+.marker-popup-gradient {
+  background: linear-gradient(to bottom, #1a222e, #111827);
+  color: #e5e7eb;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) inset;
 }
 
-/* Keep markers visible during zoom */
-.leaflet-fade-anim .leaflet-tile,
-.leaflet-fade-anim .leaflet-popup,
-.leaflet-marker-icon {
-  will-change: transform, opacity;
+/* Quality-based styling */
+.siqs-excellent {
+  background: linear-gradient(to bottom, #166534, #1a222e);
 }
 
-/* Fix marker border clipping */
-.leaflet-marker-icon {
-  overflow: visible !important;
+.siqs-good {
+  background: linear-gradient(to bottom, #854d0e, #1a222e);
+}
+
+.siqs-poor {
+  background: linear-gradient(to bottom, #7f1d1d, #1a222e);
+}
+
+/* Make popups more easily clickable - reduce flickering */
+.leaflet-popup {
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+}
+
+.leaflet-popup-content {
+  pointer-events: auto !important;
+}
+
+/* Add a small delay to popup display to prevent flickering */
+.leaflet-fade-anim .leaflet-popup {
+  transition: opacity 0.15s linear;
+  transition-delay: 0.05s;
 }
