@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findLocationsWithinRadius, findCalculatedLocations } from "@/services/locationSearchService";
-import { isValidAstronomyLocation } from "@/utils/locationValidator";
+import { isWaterLocation } from "@/utils/locationValidator";
 import { Language } from "@/contexts/LanguageContext";
 
 // Maximum calculated locations to request per batch
@@ -28,8 +28,7 @@ export const searchStandardLocations = async (
       latitude,
       longitude,
       searchDistance,
-      false, // Get all locations, not just certified
-      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+      false // Get all locations, not just certified
     );
     
     if (locations.length === 0) {
@@ -44,7 +43,7 @@ export const searchStandardLocations = async (
     // Filter out any invalid locations
     const validLocations = locations.filter(loc => {
       // First check if location is valid (not on water)
-      if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+      if (!loc.latitude || !loc.longitude || isWaterLocation(loc.latitude, loc.longitude)) {
         console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
         return false;
       }
@@ -86,8 +85,7 @@ export const searchCalculatedLocations = async (
       latitude,
       longitude,
       searchDistance,
-      true, // Allow expanding the search radius
-      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+      true // Allow expanding the search radius
     );
     
     // Apply filtering to ensure valid locations
@@ -103,7 +101,7 @@ export const searchCalculatedLocations = async (
       }
       
       // Check if location is valid (not on water)
-      if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+      if (!loc.latitude || !loc.longitude || isWaterLocation(loc.latitude, loc.longitude)) {
         console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
         return false;
       }

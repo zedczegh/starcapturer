@@ -27,6 +27,14 @@ export const clearLocationCache = (): void => {
 };
 
 /**
+ * Clear the SIQS cache (re-exported in realTimeSiqsService.ts)
+ */
+export const clearSiqsCache = (): void => {
+  // This is implemented in realTimeSiqsService.ts and re-exported
+  console.log("SIQS cache cleared through locationUpdateService");
+};
+
+/**
  * Update multiple locations with real-time SIQS values in batch
  * @param locations Array of locations to update
  * @returns Updated locations with real-time SIQS values
@@ -71,12 +79,7 @@ export const updateLocationsWithRealTimeSiqs = async (
         
         const updatedLocation = {
           ...location,
-          siqs,
-          siqsResult: { 
-            score: siqs,
-            ...location.siqsResult,
-            updatedAt: new Date().toISOString()
-          }
+          siqs
         };
         
         // Cache the result

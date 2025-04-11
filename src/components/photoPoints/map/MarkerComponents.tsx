@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Marker, Popup, Tooltip } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { formatSIQSScoreForDisplay } from '@/hooks/siqs/siqsCalculationUtils';
@@ -24,15 +24,14 @@ export const UserLocationMarker: React.FC<{
     <Marker
       position={position}
       icon={userIcon}
-      zIndexOffset={1000}
     >
-      <Tooltip direction="top" offset={[0, -10]} opacity={0.9} permanent>
+      <Popup>
         <div className="text-xs">
           {currentSiqs !== null 
             ? `SIQS: ${formatSIQSScoreForDisplay(currentSiqs)}` 
             : 'Your Location'}
         </div>
-      </Tooltip>
+      </Popup>
     </Marker>
   );
 };
@@ -49,7 +48,7 @@ export const LocationMarker: React.FC<{
   // Create icon for location marker based on certification and SIQS
   const locationIcon = useMemo(() => {
     const isCertifiedLocation = Boolean(location.certification || location.isDarkSkyReserve);
-    const siqsValue = location.siqsResult?.score ?? location.siqs ?? 0;
+    const siqsValue = location.siqs ?? 0;
     
     // Calculate marker size and class
     let iconClass = 'location-marker';
@@ -94,12 +93,9 @@ export const LocationMarker: React.FC<{
     <Marker
       position={[location.latitude, location.longitude]}
       icon={locationIcon}
-      eventHandlers={{
-        click: onClick,
-        mouseover: () => onHover(locationId),
-        mouseout: () => onHover(null)
-      }}
-      zIndexOffset={isHovered ? 900 : (location.certification ? 800 : 500)}
+      onClick={onClick}
+      onMouseOver={() => onHover(locationId)}
+      onMouseOut={() => onHover(null)}
     >
       <Popup>
         <div>

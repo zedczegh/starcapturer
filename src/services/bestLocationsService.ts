@@ -2,7 +2,7 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
-import { batchCalculateSiqs, clearSiqsCache } from "./realTimeSiqsService";
+import { calculateRealTimeSiqs, clearSiqsCache } from "./realTimeSiqsService";
 
 const locationCache = new Map<string, {
   locations: SharedAstroSpot[];
@@ -97,7 +97,21 @@ export async function findBestViewingLocations(
     const locationsToProcess = sortedByDistance.slice(0, limit * 3);
     
     // Calculate SIQS for each location
-    const locationsWithSiqs = await batchCalculateSiqs(locationsToProcess);
+    const locationsWithSiqs = await Promise.all(
+      locationsToProcess.map(async (location) => {
+        try {
+          const { siqs } = await calculateRealTimeSiqs(
+            location.latitude, 
+            location.longitude,
+            location.bortleScale
+          );
+          return { ...location, siqs };
+        } catch (e) {
+          console.error("Error calculating SIQS:", e);
+          return location;
+        }
+      })
+    );
     
     // Sort by SIQS (highest first) and limit to requested number
     const sortedLocations = locationsWithSiqs

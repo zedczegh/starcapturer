@@ -4,7 +4,7 @@ import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import L from 'leaflet'; // Fixed import for L (Leaflet)
+import L from 'leaflet';
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -92,15 +92,6 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     map.on('drag', function() {
       map.panInsideBounds(worldBounds, { animate: false });
     });
-
-    // Add bounds limiting to ensure we don't show multiple copies of the world
-    const originalGetBounds = map.getBounds;
-    map.wrapLatLng = function(latlng) {
-      const lng = latlng.lng;
-      // Wrap longitude to stay within -180 to 180 range
-      const wrappedLng = ((lng + 540) % 360) - 180;
-      return L.latLng(latlng.lat, wrappedLng);
-    };
     
     return () => {
       if (map) {

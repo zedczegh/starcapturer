@@ -1,5 +1,5 @@
 
-import { clearSiqsCache } from '@/services/realTimeSiqsService/locationUpdateService';
+import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import { 
   generateSiqsCacheKey, 
   getCacheDuration, 
@@ -120,8 +120,43 @@ export const clearSiqsCache = (): void => {
   console.log("SIQS cache cleared");
 };
 
+/**
+ * Calculate SIQS for multiple locations in batch
+ * @param locations Array of locations to calculate SIQS for
+ * @returns Updated locations with SIQS values
+ */
+export const batchCalculateSiqs = async (
+  locations: any[]
+): Promise<any[]> => {
+  if (!locations || locations.length === 0) return [];
+  
+  const updatedLocations = [...locations];
+  
+  for (let i = 0; i < updatedLocations.length; i++) {
+    const location = updatedLocations[i];
+    if (!location.latitude || !location.longitude) continue;
+    
+    try {
+      const { siqs } = await calculateRealTimeSiqs(
+        location.latitude,
+        location.longitude,
+        location.bortleScale
+      );
+      
+      updatedLocations[i] = {
+        ...location,
+        siqs
+      };
+    } catch (error) {
+      console.error(`Error calculating SIQS for location ${i}:`, error);
+    }
+  }
+  
+  return updatedLocations;
+};
+
 // Re-export other SIQS functionality
 export { 
   updateLocationsWithRealTimeSiqs, 
-  clearLocationCache as clearSiqsLocationCache
+  clearLocationCache as clearSiqsLocationCache 
 } from './realTimeSiqsService/locationUpdateService';
