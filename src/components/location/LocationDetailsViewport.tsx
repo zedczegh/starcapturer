@@ -9,7 +9,6 @@ import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -34,7 +33,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const initialRefreshDoneRef = useRef(false);
   const refreshTriggerRef = useRef(false);
-  const isMobile = useIsMobile();
   
   // Check if we came from a redirect
   const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
@@ -84,7 +82,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [handleUpdateLocation, resetUpdateState, setStatusMessage, t]);
   
-  // Auto refresh with debounce protection - optimized for mobile
+  // Auto refresh on initial render - with debounce protection and redirect awareness
   useEffect(() => {
     // Skip auto-refresh if we're coming from a redirect and data is already present
     if (isRedirect && locationData?.weatherData && locationData?.siqsResult) {
@@ -97,8 +95,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       refreshTriggerRef.current = true;
       initialRefreshDoneRef.current = true;
       
-      const delay = isMobile ? 1200 : 800; // Longer delay on mobile
-      
       const timer = setTimeout(() => {
         handleRefreshAll(locationData, setLocationData, () => {
           if (locationData.latitude && locationData.longitude) {
@@ -107,14 +103,14 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
           }
           refreshTriggerRef.current = false;
         }, setStatusMessage);
-      }, delay);
+      }, 800); // Increased delay to prevent flashing
       
       return () => {
         clearTimeout(timer);
         refreshTriggerRef.current = false;
       };
     }
-  }, [locationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setLocationData, setStatusMessage, isRedirect, isMobile]);
+  }, [locationData, handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, setLocationData, setStatusMessage, isRedirect]);
   
   // Handle refresh events from external components
   useEffect(() => {
@@ -123,17 +119,13 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       
       console.log("Force refresh event received");
       refreshTriggerRef.current = true;
-      
-      // Add small delay for better mobile performance
-      setTimeout(() => {
-        handleRefreshAll(locationData, setLocationData, () => {
-          if (locationData.latitude && locationData.longitude) {
-            handleRefreshForecast(locationData.latitude, locationData.longitude);
-            handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-          }
-          refreshTriggerRef.current = false;
-        }, setStatusMessage);
-      }, isMobile ? 300 : 0);
+      handleRefreshAll(locationData, setLocationData, () => {
+        if (locationData.latitude && locationData.longitude) {
+          handleRefreshForecast(locationData.latitude, locationData.longitude);
+          handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+        }
+        refreshTriggerRef.current = false;
+      }, setStatusMessage);
     };
     
     if (containerRef.current) {
@@ -145,14 +137,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         containerRef.current.removeEventListener('forceRefresh', handleForceRefresh);
       }
     };
-  }, [handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, locationData, setLocationData, setStatusMessage, isMobile]);
-  
-  // Safe padding adjustment for mobile vs desktop
-  const paddingTop = isMobile ? "pt-16" : "pt-14";
+  }, [handleRefreshAll, handleRefreshForecast, handleRefreshLongRangeForecast, locationData, setLocationData, setStatusMessage]);
   
   return (
     <div 
-      className={`container mx-auto px-4 py-8 ${paddingTop} relative z-10`}
+      className="container mx-auto px-4 py-8 pt-14 relative z-10" /* Added pt-14 to fix navbar overlap */
       ref={containerRef}
       data-refresh-trigger="true"
     >

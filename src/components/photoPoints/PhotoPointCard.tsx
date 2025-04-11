@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -31,37 +30,11 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const isMobile = useIsMobile();
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
 
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  // Add intersection observer for better performance on mobile
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(entry.target);
-        }
-      },
-      { threshold: 0.1, rootMargin: '50px' }
-    );
-    
-    const currentElement = document.getElementById(`photo-point-${point.id || `${point.latitude}-${point.longitude}`}`);
-    if (currentElement) {
-      observer.observe(currentElement);
-    }
-    
-    return () => {
-      if (currentElement) {
-        observer.unobserve(currentElement);
-      }
-    };
-  }, [point.id, point.latitude, point.longitude]);
-  
-  // Only fetch town information when visible or not on mobile
-  useEffect(() => {
-    if ((!isMobile || isVisible) && point.latitude && point.longitude) {
+    if (point.latitude && point.longitude) {
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
@@ -108,7 +81,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       
       fetchNearestTown();
     }
-  }, [point.latitude, point.longitude, point.description, point.name, language, isMobile, isVisible]);
+  }, [point.latitude, point.longitude, point.description, point.name, language]);
 
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
@@ -156,7 +129,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 
   return (
     <div 
-      id={`photo-point-${point.id || `${point.latitude}-${point.longitude}`}`}
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
       onClick={() => onSelect?.(point)}
     >
@@ -202,7 +174,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <Button 
           size="sm" 
           variant="ghost" 
-          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary/90 hover:text-primary touch-action-manipulation"
+          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary/90 hover:text-primary"
           onClick={handleViewDetails}
         >
           {t("View", "查看")}
