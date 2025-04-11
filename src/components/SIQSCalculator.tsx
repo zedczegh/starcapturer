@@ -39,6 +39,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
+  // Check for saved location on mount
   useEffect(() => {
     if (!isMounted) {
       const savedLocation = getSavedLocation();
@@ -83,6 +84,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   
   const { seeingConditions, bortleScale } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
 
+  // Update local bortle scale when it changes
   useEffect(() => {
     if (bortleScale !== undefined) {
       setLocalBortleScale(bortleScale);
@@ -95,6 +97,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation
   } = useSIQSCalculation(setCachedData, getCachedData);
   
+  // Update location name for current language
   useEffect(() => {
     if (!isMounted || !latitude || !longitude || !locationName) return;
     
@@ -125,10 +128,12 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     updateLocationNameForLanguage();
   }, [language, latitude, longitude, locationName, setCachedData, getCachedData, setLocationName, isMounted]);
   
+  // Update calculation in progress state
   useEffect(() => {
     setCalculationInProgress(isCalculating);
   }, [isCalculating]);
   
+  // Save location when it changes
   useEffect(() => {
     if (!isMounted || !locationName || !latitude || !longitude) return;
     
@@ -140,6 +145,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     });
   }, [locationName, latitude, longitude, localBortleScale, isMounted]);
   
+  // Restore saved location
   useEffect(() => {
     if (!isMounted || noAutoLocationRequest) return;
     
@@ -155,6 +161,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [isMounted, noAutoLocationRequest, locationName, setLocationName, setLatitude, setLongitude]);
   
+  // Calculate SIQS based on current location
   const calculateSIQS = useCallback(() => {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
@@ -168,7 +175,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         lng, 
         locationName, 
         true, 
-        localBortleScale, 
+        localBortleScale || undefined, 
         seeingConditions,
         undefined,
         setStatusMessage,
@@ -180,6 +187,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
   
+  // Recalculate SIQS when location changes
   useEffect(() => {
     if (!isMounted || !locationName) return;
     
@@ -190,6 +198,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     return () => clearTimeout(handler);
   }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
   
+  // Update global SIQS value
   useEffect(() => {
     if (onSiqsCalculated) {
       onSiqsCalculated(siqsScore);

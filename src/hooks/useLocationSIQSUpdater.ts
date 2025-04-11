@@ -1,6 +1,5 @@
-
 import { useEffect, useRef, useCallback } from 'react';
-import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
+import { calculateNighttimeSiqs } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
@@ -69,7 +68,7 @@ export const useLocationSIQSUpdater = (
       
       try {
         // Always calculate SIQS based on nighttime conditions first
-        const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
+        const freshSIQSResult = calculateNighttimeSiqs(locationData, forecastData, t);
         
         if (freshSIQSResult) {
           console.log(`Updated SIQS score from nighttime data: ${freshSIQSResult.score.toFixed(2)}`);

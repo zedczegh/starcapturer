@@ -25,8 +25,8 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
 
   // Create memoized values to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
-    // Round value to 1 decimal place
-    const displayValue = Math.round(siqsScore * 10) / 10;
+    // Ensure we have a valid score and it's on a 0-10 scale
+    const displayValue = Math.min(10, Math.max(0, siqsScore));
 
     // Determine value interpretation
     let interpretation;
@@ -77,7 +77,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         </span>
       </div>
       
-      <Progress value={siqsScore * 10} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
+      <Progress value={memoizedValues.displayValue * 10} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
       
       <div className="flex justify-between items-center mt-2">
         <span className="text-sm text-muted-foreground">

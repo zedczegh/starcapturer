@@ -1,105 +1,159 @@
 
-/**
- * Utility functions for handling nighttime SIQS values
- */
+import { calculateCloudScore, calculateLightPollutionScore } from "@/lib/siqs/factors";
+import { 
+  extractNighttimeForecast, 
+  getCloudCoverInfo,
+  getCloudCoverDescription 
+} from "@/utils/siqs/forecastAnalyzer";
 
 /**
- * Extract a consistent SIQS value regardless of how it's stored in the location object
- * @param location Location object which might have siqs in different formats
- * @returns The SIQS score as a number or null if not available
- */
-export const getConsistentSiqsValue = (location: any): number | null => {
-  if (!location) return null;
-  
-  // Direct siqs property
-  if (typeof location.siqs === 'number') {
-    return location.siqs;
-  }
-  
-  // SIQS in siqsResult object
-  if (location.siqsResult) {
-    if (typeof location.siqsResult === 'number') {
-      return location.siqsResult;
-    }
-    if (typeof location.siqsResult.score === 'number') {
-      return location.siqsResult.score;
-    }
-  }
-  
-  // SIQS in result object (alternative format)
-  if (location.result && typeof location.result.siqs === 'number') {
-    return location.result.siqs;
-  }
-  
-  return null;
-};
-
-/**
- * Calculate the average of multiple SIQS values
- * @param siqsValues Array of SIQS values
- * @returns Average SIQS or null if no valid values
- */
-export const calculateAverageSiqs = (siqsValues: (number | null)[]): number | null => {
-  if (!siqsValues || siqsValues.length === 0) return null;
-  
-  const validValues = siqsValues.filter(v => v !== null && !isNaN(v as number)) as number[];
-  if (validValues.length === 0) return null;
-  
-  const sum = validValues.reduce((acc, val) => acc + val, 0);
-  return sum / validValues.length;
-};
-
-/**
- * Calculate SIQS score focusing on nighttime conditions from forecast data
- * @param locationData Current location data
+ * Calculate nighttime SIQS based on location and forecast data
+ * This function delivers consistent SIQS values across the application
+ * @param location Location data
  * @param forecastData Hourly forecast data
- * @param translator Translation function
- * @returns SIQS analysis result
+ * @param t Translation function (optional)
+ * @returns SIQS calculation result object
  */
-export const calculateNighttimeSIQS = (
-  locationData: any,
+export const calculateNighttimeSiqs = (
+  location: any,
   forecastData: any,
-  translator: any
-) => {
-  // Implementation simplified for compatibility
-  if (!locationData || !forecastData || !forecastData.hourly) {
-    console.log("Missing required data for nighttime SIQS calculation");
+  t?: any
+): any => {
+  if (!location || !forecastData) {
     return null;
   }
-  
-  // Basic calculation, return a simplified object
-  return {
-    score: locationData.siqs || 5.0,
-    isViable: true,
-    factors: []
-  };
+
+  try {
+    // Extract basic location data
+    const { bortleScale = 4 } = location;
+    
+    // Get nighttime cloud cover data if available
+    const hasHourlyData = forecastData?.hourly && 
+      forecastData.hourly.cloudcover && 
+      Array.isArray(forecastData.hourly.time) &&
+      forecastData.hourly.time.length > 0;
+    
+    // If we have hourly forecast data, use it for night calculation
+    if (hasHourlyData) {
+      const startNightHour = 18; // 6 PM
+      const endNightHour = 6;    // 6 AM next day
+      
+      // Extract nighttime forecast data
+      const { 
+        nighttimeItems,
+        eveningItems,
+        morningItems
+      } = extractNighttimeForecast(forecastData, startNightHour, endNightHour);
+      
+      // If we have nighttime data, calculate cloud cover averages
+      if (nighttimeItems.length > 0) {
+        const { 
+          avgNightCloudCover,
+          avgEveningCloudCover,
+          avgMorningCloudCover
+        } = getCloudCoverInfo(nighttimeItems, eveningItems, morningItems);
+        
+        // Calculate scores based on factors
+        const cloudScore = calculateCloudScore(avgNightCloudCover) / 10;
+        const lightPollutionScore = calculateLightPollutionScore(bortleScale) / 10;
+        
+        // Blend factors with appropriate weights
+        const cloudWeight = 0.65;
+        const lightPollutionWeight = 0.35;
+        
+        // Calculate final SIQS score
+        const siqs = (cloudScore * cloudWeight) + (lightPollutionScore * lightPollutionWeight);
+        
+        // Format factor description
+        const cloudDescription = t 
+          ? getCloudCoverDescription(avgNightCloudCover, t)
+          : getCloudCoverDescription(avgNightCloudCover);
+        
+        // Create factors array for display
+        const factors = [
+          {
+            name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+            score: cloudScore * 10, // Scale to 0-10 for display
+            description: cloudDescription,
+            nighttimeData: {
+              average: avgNightCloudCover,
+              timeRange: `${startNightHour}:00-${endNightHour}:00`,
+              detail: {
+                evening: avgEveningCloudCover,
+                morning: avgMorningCloudCover
+              }
+            }
+          },
+          {
+            name: t ? t("Light Pollution", "光污染") : "Light Pollution",
+            score: lightPollutionScore * 10, // Scale to 0-10 for display
+            description: t 
+              ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
+              : `Bortle scale ${bortleScale}`
+          }
+        ];
+        
+        // Create final SIQS result
+        return {
+          score: Math.min(10, Math.max(0, siqs * 10)), // Ensure score is in 0-10 range
+          isViable: siqs >= 0.5, // 5.0 on a 0-10 scale
+          factors,
+          metadata: {
+            calculationType: 'nighttime',
+            timestamp: new Date().toISOString(),
+            eveningCloudCover: avgEveningCloudCover,
+            morningCloudCover: avgMorningCloudCover,
+            avgNightCloudCover
+          },
+          isNighttimeCalculation: true
+        };
+      }
+    }
+    
+    // Fallback to simpler calculation without forecast data
+    return {
+      score: Math.min(10, (10 - bortleScale * 0.75) + 3),
+      isViable: true,
+      factors: [],
+      isNighttimeCalculation: false
+    };
+  } catch (error) {
+    console.error("Error calculating nighttime SIQS:", error);
+    return {
+      score: 0,
+      isViable: false,
+      factors: [],
+      isNighttimeCalculation: false
+    };
+  }
 };
 
-/**
- * Check if SIQS calculation is based on nighttime data
- */
-export const isNighttimeSiqsCalculation = (siqsData: any): boolean => {
-  return siqsData?.isNighttimeCalculation || false;
-};
+// Add alias for backward compatibility with existing code
+export const calculateNighttimeSIQS = calculateNighttimeSiqs;
 
 /**
- * Get nighttime SIQS from a location that might have daytime and nighttime values
+ * Get consistent SIQS value from any location object
+ * This ensures consistent SIQS display across the application
  * @param location Location object
- * @returns Nighttime SIQS value if available
+ * @returns SIQS value (0-10 scale)
  */
-export const getNighttimeSiqs = (location: any): number | null => {
-  if (!location) return null;
+export const getConsistentSiqsValue = (location: any): number => {
+  if (!location) return 0;
   
-  // Check for nighttime specific data
-  if (location.nighttimeSiqs !== undefined) {
-    return typeof location.nighttimeSiqs === 'number' ? location.nighttimeSiqs : null;
+  // Get SIQS from siqsResult if available (most accurate)
+  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
+    return Math.min(10, Math.max(0, location.siqsResult.score));
   }
   
-  // Check extended result structure
-  if (location.siqsResult?.metadata?.isNighttimeCalculation) {
-    return location.siqsResult.score || null;
+  // Fall back to direct siqs property
+  if (typeof location.siqs === 'number') {
+    return Math.min(10, Math.max(0, location.siqs));
   }
   
-  // Fall back to general SIQS
-  return getConsistentSiqsValue(location);
+  // Last resort: estimate from Bortle scale 
+  if (typeof location.bortleScale === 'number') {
+    return Math.min(10, Math.max(0, (10 - location.bortleScale * 0.75) + 3));
+  }
+  
+  return 0; // Default if no data available
 };
