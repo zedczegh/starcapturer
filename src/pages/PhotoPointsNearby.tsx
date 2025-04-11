@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
+import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
+import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle from '@/components/photoPoints/ViewToggle';
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import { calculateDistance } from '@/utils/geoUtils';
-import { usePhotoPointsView, DEFAULT_CALCULATED_RADIUS } from '@/hooks/photoPoints/usePhotoPointsView';
+import { usePhotoPointsView, DEFAULT_CALCULATED_RADIUS, DEFAULT_CERTIFIED_RADIUS } from '@/hooks/photoPoints/usePhotoPointsView';
 import { useLocationManagement } from '@/hooks/photoPoints/useLocationManagement';
 
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
@@ -205,7 +206,7 @@ const PhotoPointsNearby: React.FC = () => {
               certifiedLocations={certifiedLocations}
               calculatedLocations={calculatedLocations}
               activeView={activeView}
-              searchRadius={activeView === 'certified' ? 10000 : calculatedSearchRadius}
+              searchRadius={activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius}
               onLocationClick={handleLocationClick}
               onLocationUpdate={handleLocationUpdate}
             />

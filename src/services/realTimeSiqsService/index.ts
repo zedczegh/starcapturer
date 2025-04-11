@@ -1,7 +1,7 @@
 
-// Re-export all SIQS functionality from the refactored module
-export * from '../realTimeSiqs';
-export { clearSiqsCache } from '../realTimeSiqs';
+// Re-export all SIQS functionality
+export * from '../realTimeSiqsService';
+export { clearSiqsCache } from '../realTimeSiqsService';
 export { 
   updateLocationsWithRealTimeSiqs,
   clearLocationCache 

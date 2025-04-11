@@ -1,10 +1,11 @@
 
-import { useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
-import { useViewState } from './useViewState';
-import { useSearchRadius, DEFAULT_CALCULATED_RADIUS, DEFAULT_CERTIFIED_RADIUS } from './useSearchRadius';
+
+export const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
+export const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (no limit)
 
 interface UsePhotoPointsViewProps {
   onSearchRadiusChange: (radius: number) => void;
@@ -14,19 +15,20 @@ interface UsePhotoPointsViewProps {
  * Hook to manage view state for photo points
  */
 export const usePhotoPointsView = ({ onSearchRadiusChange }: UsePhotoPointsViewProps) => {
+  const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+  const [showMap, setShowMap] = useState(true);
+  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
   const { t } = useLanguage();
+
+  const handleRadiusChange = useCallback((value: number) => {
+    if (activeView === 'calculated') {
+      setCalculatedSearchRadius(value);
+      onSearchRadiusChange(value);
+    }
+  }, [onSearchRadiusChange, activeView]);
   
-  // Use separate hooks for view state and search radius
-  const { activeView, showMap, changeViewMode, toggleMapView } = useViewState();
-  
-  const { calculatedSearchRadius, handleRadiusChange } = useSearchRadius({
-    onSearchRadiusChange,
-    activeView
-  });
-  
-  // Handle view mode change with side effects
   const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
-    changeViewMode(view);
+    setActiveView(view);
     
     if (view === 'certified') {
       onSearchRadiusChange(DEFAULT_CERTIFIED_RADIUS);
@@ -35,8 +37,21 @@ export const usePhotoPointsView = ({ onSearchRadiusChange }: UsePhotoPointsViewP
     }
     
     clearLocationCache();
-  }, [changeViewMode, onSearchRadiusChange, calculatedSearchRadius]);
-  
+  }, [onSearchRadiusChange, calculatedSearchRadius]);
+
+  const toggleMapView = useCallback(() => {
+    setShowMap(prev => !prev);
+  }, []);
+
+  // Update search radius when active view changes
+  useEffect(() => {
+    if (activeView === 'certified') {
+      onSearchRadiusChange(DEFAULT_CERTIFIED_RADIUS);
+    } else {
+      onSearchRadiusChange(calculatedSearchRadius);
+    }
+  }, [activeView, calculatedSearchRadius, onSearchRadiusChange]);
+
   return {
     activeView,
     showMap,
@@ -46,6 +61,3 @@ export const usePhotoPointsView = ({ onSearchRadiusChange }: UsePhotoPointsViewP
     toggleMapView
   };
 };
-
-// Re-export constants
-export { DEFAULT_CALCULATED_RADIUS, DEFAULT_CERTIFIED_RADIUS };
