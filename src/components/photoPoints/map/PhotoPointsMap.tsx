@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -7,7 +8,7 @@ import { toast } from "sonner";
 import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
-import { getAllStoredLocations } from "@/services/calculatedLocationsService";
+import { getAllStoredLocations, storeCalculatedLocation } from "@/services/calculatedLocationsService";
 import MapDataLoader from "./loaders/MapDataLoader";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
@@ -60,6 +61,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     onLocationClick,
     onMarkerHover: (id) => console.log("Marker hover:", id)
   });
+
+  // Store new calculated locations when they're received
+  useEffect(() => {
+    // Store calculated locations for persistence
+    if (calculatedLocations.length > 0) {
+      calculatedLocations.forEach(loc => {
+        if (loc && loc.latitude && loc.longitude && !loc.isDarkSkyReserve && !loc.certification) {
+          storeCalculatedLocation(loc);
+        }
+      });
+    }
+  }, [calculatedLocations]);
 
   // Merge provided calculated locations with stored ones
   useEffect(() => {
@@ -131,7 +144,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
 
-  // Check if location has changed significantly
+  // Check if location has changed significantly but DON'T clear calculated locations
   useEffect(() => {
     if (userLocation && prevLocationRef.current) {
       const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);

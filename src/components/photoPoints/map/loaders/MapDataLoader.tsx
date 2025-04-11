@@ -45,7 +45,9 @@ const MapDataLoader: React.FC<MapDataLoaderProps> = ({
         return t("Updating for new position...", "正在为新位置更新...");
       case 'ready':
         return locationCount > 0 
-          ? t(`Loaded ${locationCount} locations`, `已加载${locationCount}个位置`) 
+          ? activeView === 'certified' 
+            ? t(`Loaded ${locationCount} certified locations`, `已加载${locationCount}个认证位置`) 
+            : t(`Loaded ${locationCount} locations`, `已加载${locationCount}个位置`) 
           : t("No locations found", "未找到位置");
       default:
         return t("Loading map data...", "正在加载地图数据...");
