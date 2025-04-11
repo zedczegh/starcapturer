@@ -1,83 +1,40 @@
 
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 /**
- * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
+ * Hook to manage map marker hover state
+ * This helps reduce complexity in the PhotoPointsMap component
+ * @returns Object with hover state and handler
  */
 export const useMapMarkers = () => {
-  // State for currently hovered location ID
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   
-  // Refs for improved hover stability
-  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastHoverId = useRef<string | null>(null);
-  const hoverTimestamp = useRef<number>(0);
-  const isHoverLocked = useRef<boolean>(false);
-  
-  // Clean up timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current !== null) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-      if (debounceTimeoutRef.current !== null) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  /**
-   * Handle hover with improved anti-flicker debounce algorithm
-   */
+  // Handle hover on markers
   const handleHover = useCallback((id: string | null) => {
-    // Prevent redundant updates for same ID
-    if (id === lastHoverId.current) return;
-    
-    // Clear any pending timeouts
-    if (hoverTimeoutRef.current !== null) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    
-    if (debounceTimeoutRef.current !== null) {
-      clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = null;
-    }
-    
-    // Track current time
-    const now = Date.now();
-    
-    // For new hover target, set with slight delay for better stability
-    if (id !== null) {
-      // If rapidly changing between markers, use longer delay
-      const delay = now - hoverTimestamp.current < 300 ? 80 : 50;
-      
-      debounceTimeoutRef.current = setTimeout(() => {
-        setHoveredLocationId(id);
-        lastHoverId.current = id;
-        hoverTimestamp.current = Date.now();
-        isHoverLocked.current = true;
-        debounceTimeoutRef.current = null;
-      }, delay);
-    } 
-    // When leaving a marker completely
-    else {
-      // Add a delay to prevent flicker on quick mouse movements
-      const delay = now - hoverTimestamp.current < 200 ? 150 : 100;
-      
-      hoverTimeoutRef.current = setTimeout(() => {
-        setHoveredLocationId(null);
-        lastHoverId.current = null;
-        isHoverLocked.current = false;
-        hoverTimeoutRef.current = null;
-      }, delay);
-    }
+    setHoveredLocationId(id);
   }, []);
   
   return {
     hoveredLocationId,
-    handleHover,
-    isHoverLocked: isHoverLocked.current
+    handleHover
   };
+};
+
+/**
+ * Hook to get the base URL for map tiles based on map provider
+ * @param provider Map provider name
+ * @returns URL template for map tiles
+ */
+export const useMapTileProvider = (provider = 'openstreetmap') => {
+  switch (provider) {
+    case 'openstreetmap':
+      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    case 'stamen':
+      return 'https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png';
+    case 'dark':
+      // Dark mode map tiles - better for astronomy apps
+      return 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png';
+    default:
+      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  }
 };
