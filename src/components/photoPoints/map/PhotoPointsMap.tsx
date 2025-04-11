@@ -8,6 +8,7 @@ import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
 import { getAllStoredLocations } from "@/services/calculatedLocationsService";
+import MapDataLoader from "./loaders/MapDataLoader";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -46,6 +47,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const lastRadiusRef = useRef<number>(searchRadius);
   const prevLocationRef = useRef<{latitude: number; longitude: number} | null>(null);
   const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
+  const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
   
   // Handle map interactions
   const {
@@ -64,6 +66,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     if (activeView === 'calculated') {
       // Get all stored locations from the global store
       const storedLocations = getAllStoredLocations();
+      
+      // Set loading phase for loader UI
+      setLoadingPhase('processing');
       
       // Merge with current calculated locations without duplicates
       const locMap = new Map<string, SharedAstroSpot>();
@@ -90,6 +95,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       setCombinedCalculatedLocations(combined);
       
       console.log(`Combined ${calculatedLocations.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
+      
+      // Set loading phase to ready after processing
+      setTimeout(() => {
+        setLoadingPhase('ready');
+      }, 500);
     }
   }, [calculatedLocations, activeView]);
   
@@ -102,6 +112,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       previousViewRef.current = activeView;
       setKey(`map-view-${activeView}-${Date.now()}`);
       console.log(`View changed to ${activeView}, forcing map component remount`);
+      
+      // Set loading state for view change
+      setLoadingPhase(activeView === 'certified' ? 'fetching' : 'processing');
     }
   }, [activeView]);
   
@@ -111,6 +124,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         Math.abs(lastRadiusRef.current - searchRadius) > 100) {
       console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
       clearLocationCache();
+      
+      // Update loading phase for radius change
+      setLoadingPhase('fetching');
     }
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
@@ -123,9 +139,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       
       if (latDiff > 0.5 || lngDiff > 0.5) {
         console.log("User location changed significantly");
+        setLoadingPhase('changing_location');
         
         // Don't clear the cache to keep existing locations, just update the ref
         prevLocationRef.current = userLocation;
+        
+        // Reset to ready after a short delay
+        setTimeout(() => {
+          setLoadingPhase('ready');
+        }, 2000);
       }
     } else if (userLocation) {
       prevLocationRef.current = userLocation;
@@ -170,6 +192,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
 
   return (
     <div className={className + " relative"}>
+      {/* Loading overlay - always shows regardless of lazy loading state */}
+      <MapDataLoader 
+        loading={loadingPhase !== 'ready'} 
+        locationCount={validLocations.length}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        phase={loadingPhase}
+      />
+      
       <Suspense fallback={
         <div className="h-full w-full flex flex-col items-center justify-center bg-background/60">
           <Loader className="h-10 w-10 animate-spin mb-4 text-primary/70" />
@@ -191,6 +222,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
             if (onMapReady) onMapReady();
             mapInitializedRef.current = true;
             setMapLoadedOnce(true);
+            setLoadingPhase('ready');
           }}
           onLocationClick={onMarkerClick}
           onMapClick={handleMapClick}

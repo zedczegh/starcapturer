@@ -38,9 +38,11 @@ const MapDataLoader: React.FC<MapDataLoaderProps> = ({
           ? t("Finding certified dark sky locations...", "正在查找认证的黑暗天空地点...")
           : t(`Calculating best spots within ${searchRadius}km...`, `正在计算${searchRadius}公里范围内的最佳地点...`);
       case 'processing':
-        return t("Processing quality scores...", "正在处理质量评分...");
+        return activeView === 'certified'
+          ? t("Processing certified locations...", "正在处理认证地点...")
+          : t("Processing stored & new calculated locations...", "正在处理存储和新计算的地点...");
       case 'changing_location':
-        return t("Updating locations for new position...", "正在更新新位置的地点...");
+        return t("Updating for new position...", "正在为新位置更新...");
       case 'ready':
         return locationCount > 0 
           ? t(`Loaded ${locationCount} locations`, `已加载${locationCount}个位置`) 

@@ -1,3 +1,4 @@
+
 import L, { Icon, Marker } from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
@@ -26,7 +27,7 @@ export class MapOptimizer {
     if (!this.markerCluster && map) {
       // Check if MarkerClusterGroup is available
       if (L.MarkerClusterGroup) {
-        this.markerCluster = L.markerClusterGroup({
+        this.markerCluster = L.MarkerClusterGroup({
           maxClusterRadius: 40,
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
@@ -132,7 +133,7 @@ export class MapOptimizer {
               // Update tooltip or popup if needed
             } else {
               // Create new marker
-              const marker = this.createMarker(location, id === (selectedId || ''));
+              const marker = this.createMarker(location, id === selectedId);
               this.visibleMarkers.set(id, marker);
               
               // Add to cluster if available, otherwise to map
@@ -177,7 +178,7 @@ export class MapOptimizer {
    * Create a marker for a location
    */
   private createMarker(location: SharedAstroSpot, isSelected: boolean): L.Marker {
-    const isCertified = location.isDarkSkyReserve || location.certification;
+    const isCertified = location.isDarkSkyReserve === true || (typeof location.certification === 'string' && location.certification !== '');
     const siqs = location.siqs || 0;
     
     // Choose icon based on location type
