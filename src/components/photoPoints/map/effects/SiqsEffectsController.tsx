@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateSiqsBasedOnMap } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
 
 interface SiqsEffectsControllerProps {
@@ -33,16 +33,15 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     // If siqs prop is provided, use that instead of calculating
     if (siqs !== undefined) {
       if (onSiqsCalculated) onSiqsCalculated(siqs);
-      currentSiqsStore.setValue(siqs);
+      currentSiqsStore.next(siqs);
       return;
     }
     
     // Otherwise calculate SIQS based on map
-    calculateRealTimeSiqs(userLocation.latitude, userLocation.longitude, 4).then(result => {
-      const calculatedSiqs = result.siqs;
+    calculateSiqsBasedOnMap(userLocation, map).then(calculatedSiqs => {
       if (typeof calculatedSiqs === 'number') {
         if (onSiqsCalculated) onSiqsCalculated(calculatedSiqs);
-        currentSiqsStore.setValue(calculatedSiqs);
+        currentSiqsStore.next(calculatedSiqs);
       }
     }).catch(err => {
       console.error("Error calculating SIQS:", err);
@@ -75,7 +74,7 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
   // If siqs prop is provided, update currentSiqsStore
   useEffect(() => {
     if (siqs !== undefined) {
-      currentSiqsStore.setValue(siqs);
+      currentSiqsStore.next(siqs);
     }
   }, [siqs]);
   
