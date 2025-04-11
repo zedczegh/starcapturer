@@ -1,8 +1,8 @@
-
 import { useCallback, useState, useRef, useEffect } from 'react';
 
 /**
  * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
+ * and improved marker stability during zoom operations
  */
 export const useMapMarkers = () => {
   // State for currently hovered location ID
@@ -14,6 +14,8 @@ export const useMapMarkers = () => {
   const lastHoverId = useRef<string | null>(null);
   const hoverTimestamp = useRef<number>(0);
   const isHoverLocked = useRef<boolean>(false);
+  const isZooming = useRef<boolean>(false);
+  const zoomEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Clean up timeouts on unmount
   useEffect(() => {
@@ -24,13 +26,53 @@ export const useMapMarkers = () => {
       if (debounceTimeoutRef.current !== null) {
         clearTimeout(debounceTimeoutRef.current);
       }
+      if (zoomEndTimerRef.current !== null) {
+        clearTimeout(zoomEndTimerRef.current);
+      }
     };
   }, []);
 
   /**
+   * Register a zoom start event to prevent hover flicker during zoom
+   */
+  const handleZoomStart = useCallback(() => {
+    isZooming.current = true;
+    
+    // Clear any existing zoom end timer
+    if (zoomEndTimerRef.current !== null) {
+      clearTimeout(zoomEndTimerRef.current);
+    }
+    
+    // Keep the current hover state locked during zoom
+    if (hoveredLocationId) {
+      isHoverLocked.current = true;
+    }
+  }, [hoveredLocationId]);
+  
+  /**
+   * Register a zoom end event to restore hover behavior after zoom
+   */
+  const handleZoomEnd = useCallback(() => {
+    // Add a small delay before allowing new hover events
+    if (zoomEndTimerRef.current !== null) {
+      clearTimeout(zoomEndTimerRef.current);
+    }
+    
+    zoomEndTimerRef.current = setTimeout(() => {
+      isZooming.current = false;
+      isHoverLocked.current = false;
+      zoomEndTimerRef.current = null;
+    }, 200);
+  }, []);
+
+  /**
    * Handle hover with improved anti-flicker debounce algorithm
+   * Enhanced to handle zoom operations better
    */
   const handleHover = useCallback((id: string | null) => {
+    // Prevent hover changes during zoom operations
+    if (isZooming.current && id !== null) return;
+    
     // Prevent redundant updates for same ID
     if (id === lastHoverId.current) return;
     
@@ -78,6 +120,8 @@ export const useMapMarkers = () => {
   return {
     hoveredLocationId,
     handleHover,
+    handleZoomStart,
+    handleZoomEnd,
     isHoverLocked: isHoverLocked.current
   };
 };

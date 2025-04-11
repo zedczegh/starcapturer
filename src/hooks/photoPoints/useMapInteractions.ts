@@ -1,6 +1,7 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useMapMarkers } from './useMapMarkers';
 
 interface UseMapInteractionsProps {
   onLocationClick?: (location: SharedAstroSpot) => void;
@@ -11,19 +12,34 @@ export const useMapInteractions = ({
   onLocationClick,
   onMarkerHover
 }: UseMapInteractionsProps) => {
-  const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const zoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Use our enhanced map markers hook
+  const {
+    hoveredLocationId,
+    handleHover: handleMarkerHover,
+    handleZoomStart,
+    handleZoomEnd
+  } = useMapMarkers();
+  
+  // Clean up any timers on unmount
+  useEffect(() => {
+    return () => {
+      if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
+      if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
+    };
+  }, []);
   
   // Handle marker hover with improved event throttling
-  const handleMarkerHover = useCallback((id: string | null) => {
-    if (hoveredLocationId !== id) {
-      setHoveredLocationId(id);
-      if (onMarkerHover) {
-        onMarkerHover(id);
-      }
+  const handleHover = useCallback((id: string | null) => {
+    handleMarkerHover(id);
+    if (onMarkerHover) {
+      onMarkerHover(id);
     }
-  }, [onMarkerHover, hoveredLocationId]);
+  }, [onMarkerHover, handleMarkerHover]);
   
   // Handle location click with enhanced debouncing
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
@@ -46,16 +62,47 @@ export const useMapInteractions = ({
   const handleMapDragStart = useCallback(() => {
     setHideMarkerPopups(true);
     handleMarkerHover(null);
+    
+    // Clear any existing timer
+    if (dragTimerRef.current) {
+      clearTimeout(dragTimerRef.current);
+    }
   }, [handleMarkerHover]);
   
   const handleMapDragEnd = useCallback(() => {
     // Optimized delay to prevent immediate popup reappearance
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        setHideMarkerPopups(false);
-      }, 100);
-    });
+    if (dragTimerRef.current) {
+      clearTimeout(dragTimerRef.current);
+    }
+    
+    dragTimerRef.current = setTimeout(() => {
+      setHideMarkerPopups(false);
+      dragTimerRef.current = null;
+    }, 200);
   }, []);
+  
+  // Handle zoom start/end events
+  const handleMapZoomStart = useCallback(() => {
+    setHideMarkerPopups(true);
+    handleZoomStart();
+    
+    if (zoomTimerRef.current) {
+      clearTimeout(zoomTimerRef.current);
+    }
+  }, [handleZoomStart]);
+  
+  const handleMapZoomEnd = useCallback(() => {
+    handleZoomEnd();
+    
+    if (zoomTimerRef.current) {
+      clearTimeout(zoomTimerRef.current);
+    }
+    
+    zoomTimerRef.current = setTimeout(() => {
+      setHideMarkerPopups(false);
+      zoomTimerRef.current = null;
+    }, 300);
+  }, [handleZoomEnd]);
   
   // Clear hover when component unmounts or on certain conditions
   useEffect(() => {
@@ -69,10 +116,12 @@ export const useMapInteractions = ({
   return {
     hoveredLocationId,
     hideMarkerPopups,
-    handleMarkerHover,
+    handleMarkerHover: handleHover,
     handleLocationClick,
     handleMapDragStart,
-    handleMapDragEnd
+    handleMapDragEnd,
+    handleMapZoomStart,
+    handleMapZoomEnd
   };
 };
 

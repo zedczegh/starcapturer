@@ -44,7 +44,19 @@ export const MapUpdater = ({ position }: { position: [number, number] }) => {
 };
 
 // Map Events Component - Handles map click events
-export const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+export const MapEvents = ({ 
+  onMapClick, 
+  onMapDragStart, 
+  onMapDragEnd,
+  onMapZoomStart,
+  onMapZoomEnd
+}: { 
+  onMapClick: (lat: number, lng: number) => void;
+  onMapDragStart?: () => void;
+  onMapDragEnd?: () => void;
+  onMapZoomStart?: () => void;
+  onMapZoomEnd?: () => void;
+}) => {
   const map = useMap();
   
   // Use direct event listener instead of useMapEvents
@@ -55,12 +67,37 @@ export const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: numbe
       onMapClick(e.latlng.lat, e.latlng.lng);
     };
     
+    const handleDragStart = () => {
+      if (onMapDragStart) onMapDragStart();
+    };
+    
+    const handleDragEnd = () => {
+      if (onMapDragEnd) onMapDragEnd();
+    };
+    
+    const handleZoomStart = () => {
+      if (onMapZoomStart) onMapZoomStart();
+    };
+    
+    const handleZoomEnd = () => {
+      if (onMapZoomEnd) onMapZoomEnd();
+    };
+    
     map.on('click', handleMapClick);
+    
+    if (onMapDragStart) map.on('dragstart', handleDragStart);
+    if (onMapDragEnd) map.on('dragend', handleDragEnd);
+    if (onMapZoomStart) map.on('zoomstart', handleZoomStart);
+    if (onMapZoomEnd) map.on('zoomend', handleZoomEnd);
     
     return () => {
       map.off('click', handleMapClick);
+      if (onMapDragStart) map.off('dragstart', handleDragStart);
+      if (onMapDragEnd) map.off('dragend', handleDragEnd);
+      if (onMapZoomStart) map.off('zoomstart', handleZoomStart);
+      if (onMapZoomEnd) map.off('zoomend', handleZoomEnd);
     };
-  }, [map, onMapClick]);
+  }, [map, onMapClick, onMapDragStart, onMapDragEnd, onMapZoomStart, onMapZoomEnd]);
   
   return null;
 };
@@ -94,6 +131,28 @@ export const MapStyles = () => {
       `}
     </style>
   );
+};
+
+// Enhanced world bounds controller to ensure markers stay within viewport
+export const WorldBoundsController = () => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    // Set minimum zoom to prevent markers from disappearing
+    map.setMinZoom(2);
+    
+    // Set maximum bounds to prevent panning outside world boundaries
+    const bounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180));
+    map.setMaxBounds(bounds);
+    
+    return () => {
+      // No cleanup needed
+    };
+  }, [map]);
+  
+  return null;
 };
 
 // Dark Sky Overlay Component - Shows special overlay for dark sky locations
