@@ -1,171 +1,81 @@
 
-import { calculateNighttimeSiqs as calculateNighttimeSiqsFromCloudCover } from '@/utils/siqs/cloudCoverUtils';
-import { 
-  extractNighttimeForecast, 
-  getCloudCoverInfo,
-  getCloudCoverDescription 
-} from "@/utils/siqs/forecastAnalyzer";
+/**
+ * Utilities for calculating SIQS based on nighttime conditions
+ */
+import { calculateNighttimeSiqsFromForecast } from '@/utils/siqs/nighttimeSiqsCalculator';
 
 /**
- * Calculate nighttime SIQS based on location and forecast data
- * This function delivers consistent SIQS values across the application
- * @param location Location data
- * @param forecastData Hourly forecast data
- * @param t Translation function (optional)
- * @returns SIQS calculation result object
+ * Calculate SIQS score based on nighttime cloud cover and other factors
+ * @param locationData Location data with coordinates and Bortle scale
+ * @param forecastData Forecast data with hourly predictions
+ * @param t Translation function
+ * @returns SIQS result object or null if calculation failed
  */
 export const calculateNighttimeSiqs = (
-  location: any,
+  locationData: any,
   forecastData: any,
-  t?: any
-): any => {
-  if (!location || !forecastData) {
+  t: any
+) => {
+  if (!locationData || !forecastData) {
+    console.log("Missing data for nighttime SIQS calculation");
     return null;
   }
-
+  
   try {
-    // Extract basic location data
-    const { bortleScale = 4 } = location;
+    // Calculate SIQS based on forecast and location
+    const siqsScore = calculateNighttimeSiqsFromForecast(locationData, forecastData);
     
-    // Get nighttime cloud cover data if available
-    const hasHourlyData = forecastData?.hourly && 
-      forecastData.hourly.cloudcover && 
-      Array.isArray(forecastData.hourly.time) &&
-      forecastData.hourly.time.length > 0;
-    
-    // If we have hourly forecast data, use it for night calculation
-    if (hasHourlyData) {
-      const startNightHour = 18; // 6 PM
-      const endNightHour = 6;    // 6 AM next day
-      
-      // Extract nighttime forecast data
-      const { 
-        nighttimeItems,
-        eveningItems,
-        morningItems
-      } = extractNighttimeForecast(forecastData, startNightHour, endNightHour);
-      
-      // If we have nighttime data, calculate cloud cover averages
-      if (nighttimeItems.length > 0) {
-        const { 
-          avgNightCloudCover,
-          avgEveningCloudCover,
-          avgMorningCloudCover
-        } = getCloudCoverInfo(nighttimeItems, eveningItems, morningItems);
-        
-        // Use our improved nighttime SIQS calculation with heavy emphasis on cloud cover
-        const siqs = calculateNighttimeSiqsFromCloudCover(avgNightCloudCover, bortleScale);
-        
-        // Format factor description
-        const cloudDescription = t 
-          ? getCloudCoverDescription(avgNightCloudCover, t)
-          : getCloudCoverDescription(avgNightCloudCover);
-        
-        // Create factors array for display
-        const factors = [
-          {
-            name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-            score: Math.min(10, Math.max(0, (100 - avgNightCloudCover) / 10)), // Invert for display
-            description: cloudDescription,
-            nighttimeData: {
-              average: avgNightCloudCover,
-              timeRange: `${startNightHour}:00-${endNightHour}:00`,
-              detail: {
-                evening: avgEveningCloudCover,
-                morning: avgMorningCloudCover
-              }
-            }
-          },
-          {
-            name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-            score: Math.max(0, 10 - bortleScale), // Invert Bortle scale to score
-            description: t 
-              ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
-              : `Bortle scale ${bortleScale}`
-          }
-        ];
-        
-        // Create final SIQS result
-        return {
-          score: siqs, // already in 0-10 range
-          isViable: siqs >= 5.0, // 5.0 on a 0-10 scale is viable
-          factors,
-          metadata: {
-            calculationType: 'nighttime',
-            timestamp: new Date().toISOString(),
-            eveningCloudCover: avgEveningCloudCover,
-            morningCloudCover: avgMorningCloudCover,
-            avgNightCloudCover
-          },
-          isNighttimeCalculation: true
-        };
-      }
+    // If score is 0 or invalid, return null for fallback to other methods
+    if (siqsScore <= 0) {
+      console.log("Invalid SIQS score calculated from forecast, using fallback");
+      return null;
     }
     
-    // Fallback to simpler calculation without forecast data
-    // Uses our improved nighttime SIQS calculation with default cloud cover value
-    const defaultCloudCover = 50; // Default to 50% cloud cover if unknown
-    const siqs = calculateNighttimeSiqsFromCloudCover(defaultCloudCover, bortleScale);
+    console.log(`Calculated nighttime SIQS: ${siqsScore}`);
+    
+    // Create factors based on calculation
+    const bortleScale = locationData.bortleScale || 5;
     
     return {
-      score: siqs, 
-      isViable: siqs >= 5.0,
+      score: siqsScore,
+      isViable: siqsScore >= 4.0,
+      isNighttimeCalculation: true,
       factors: [
         {
-          name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-          score: Math.min(10, Math.max(0, (100 - defaultCloudCover) / 10)),
+          name: t ? t("Nighttime Cloud Cover", "夜间云量") : "Nighttime Cloud Cover",
+          score: siqsScore,
           description: t 
-            ? t("Estimated cloud cover (no forecast data)", "估计的云量（无预报数据）")
-            : "Estimated cloud cover (no forecast data)"
-        },
-        {
-          name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-          score: Math.max(0, 10 - bortleScale),
-          description: t 
-            ? t(`Bortle scale ${bortleScale}`, `波特尔量表 ${bortleScale}`) 
-            : `Bortle scale ${bortleScale}`
+            ? t(`Based on nighttime forecast and Bortle scale ${bortleScale}`, 
+               `基于夜间预报和波特尔等级${bortleScale}`) 
+            : `Based on nighttime forecast and Bortle scale ${bortleScale}`
         }
-      ],
-      isNighttimeCalculation: false
+      ]
     };
   } catch (error) {
     console.error("Error calculating nighttime SIQS:", error);
-    return {
-      score: 0,
-      isViable: false,
-      factors: [],
-      isNighttimeCalculation: false
-    };
+    return null;
   }
 };
-
-// Add alias for backward compatibility with existing code
-export const calculateNighttimeSIQS = calculateNighttimeSiqs;
 
 /**
- * Get consistent SIQS value from any location object
- * This ensures consistent SIQS display across the application
- * @param location Location object
- * @returns SIQS value (0-10 scale)
+ * Ensure consistent SIQS value across the application
+ * @param locationData Location data that might contain SIQS information
+ * @returns Consistent SIQS value or null if not available
  */
-export const getConsistentSiqsValue = (location: any): number => {
-  if (!location) return 0;
+export function getConsistentSiqsValue(locationData: any): number | null {
+  if (!locationData) return null;
   
-  // Get SIQS from siqsResult if available (most accurate)
-  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
-    return Math.min(10, Math.max(0, location.siqsResult.score));
+  // First try the explicit siqs property
+  if (typeof locationData.siqs === 'number' && !isNaN(locationData.siqs)) {
+    return Math.min(10, Math.max(0, locationData.siqs));
   }
   
-  // Fall back to direct siqs property
-  if (typeof location.siqs === 'number') {
-    return Math.min(10, Math.max(0, location.siqs));
+  // Then try siqsResult.score
+  if (locationData.siqsResult?.score !== undefined && 
+      typeof locationData.siqsResult.score === 'number' && 
+      !isNaN(locationData.siqsResult.score)) {
+    return Math.min(10, Math.max(0, locationData.siqsResult.score));
   }
   
-  // Last resort: estimate from Bortle scale 
-  if (typeof location.bortleScale === 'number') {
-    // Use a more conservative estimate (lower scores)
-    return Math.min(10, Math.max(0, (10 - location.bortleScale * 0.9)));
-  }
-  
-  return 0; // Default if no data available
-};
+  return null;
+}

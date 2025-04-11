@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,6 +12,22 @@ import { isWaterLocation } from "@/utils/locationValidator";
 import { updateLocationsWithSiqs } from "@/services/bestLocationsService";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
+
+// Define explicit props interface for LazyPhotoPointsMapContainer
+interface PhotoPointsMapContainerProps {
+  center: [number, number];
+  zoom: number;
+  userLocation: { latitude: number; longitude: number } | null;
+  locations: SharedAstroSpot[];
+  searchRadius: number;
+  activeView: 'certified' | 'calculated';
+  onMapReady: () => void;
+  onLocationClick: (location: SharedAstroSpot) => void;
+  onMapClick: (lat: number, lng: number) => void;
+  hoveredLocationId: string | null;
+  onMarkerHover: (id: string | null) => void;
+  onMarkerLeave?: () => void; // Make this optional
+}
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -306,7 +321,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onMapClick={handleMapClick}
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={handleHover}
-          onMarkerLeave={clearHover}
+          // Remove onMarkerLeave here since it's now optional in the interface
         />
         
         <Suspense fallback={null}>

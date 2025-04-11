@@ -12,7 +12,7 @@ interface UseSiqsUpdaterProps {
 /**
  * Hook to manage and update SIQS scores consistently across the application
  */
-export const useSiqsUpdater = ({ 
+const useSiqsUpdater = ({ 
   initialSiqs = null,
   locationId,
   latitude,
@@ -115,23 +115,14 @@ export const useSiqsUpdater = ({
     }
   }, [locationId, latitude, longitude, initialSiqs]);
   
-  // Check for updates from global store periodically
+  // Update component state when global store changes
   useEffect(() => {
-    // Initial synchronization
-    const storedValue = currentSiqsStore.getValue();
-    if (storedValue !== null && storedValue !== siqsScore) {
-      console.log(`Syncing SIQS from global store: ${storedValue}`);
-      setSiqsScore(storedValue);
-    }
-    
-    // Setup interval to check for updates
     const intervalId = setInterval(() => {
-      const latestValue = currentSiqsStore.getValue();
-      if (latestValue !== null && latestValue !== siqsScore) {
-        console.log(`Updated SIQS from global store: ${latestValue}`);
-        setSiqsScore(latestValue);
+      const storeValue = currentSiqsStore.getValue();
+      if (storeValue !== siqsScore && storeValue !== undefined) {
+        setSiqsScore(storeValue);
       }
-    }, 3000); // Check every 3 seconds
+    }, 2000);
     
     return () => clearInterval(intervalId);
   }, [siqsScore]);
