@@ -48,6 +48,7 @@ export function handleSpecialCases(query: string, language: Language): Location[
       query.includes('stargazing') ||
       query.includes('night sky') ||
       query.includes('milky way') ||
+      // East Asian terms for dark sky
       (language === 'zh' && (
         query.includes('暗夜') || 
         query.includes('暗空') ||
@@ -55,6 +56,18 @@ export function handleSpecialCases(query: string, language: Language): Location[
         query.includes('天文') ||
         query.includes('银河') ||
         query.includes('观星'))
+      ) ||
+      (language === 'ja' && (
+        query.includes('星空') ||
+        query.includes('暗夜') ||
+        query.includes('天文') ||
+        query.includes('星見'))
+      ) ||
+      (language === 'ko' && (
+        query.includes('별하늘') ||
+        query.includes('어두운 하늘') ||
+        query.includes('밤하늘') ||
+        query.includes('천문'))
       )) {
     
     // Return special dark sky placeholder to trigger search for certified locations
@@ -64,6 +77,39 @@ export function handleSpecialCases(query: string, language: Language): Location[
       longitude: 0,
       placeDetails: "Search for Dark Sky certified locations worldwide"
     }];
+  }
+  
+  // Check if this could be an East Asian dark sky location
+  if (query.includes('xichong') || 
+      query.includes('shenzhen') ||
+      query.includes('yeongyang') ||
+      query.includes('jindo') ||
+      query.includes('firefly') ||
+      query.includes('iriomote') ||
+      query.includes('ishigaki') ||
+      query.includes('yaeyama') ||
+      query.includes('himawari') ||
+      (language === 'zh' && (
+        query.includes('西冲') ||
+        query.includes('深圳')
+      )) ||
+      (language === 'ja' && (
+        query.includes('石垣') ||
+        query.includes('西表') ||
+        query.includes('八重山') ||
+        query.includes('ひまわり')
+      )) ||
+      (language === 'ko' && (
+        query.includes('영양') ||
+        query.includes('진도') ||
+        query.includes('반딧불')
+      ))) {
+    
+    // Look for matches in smallTownsDatabase
+    const asianMatches = findSmallTownMatches(query);
+    if (asianMatches.length > 0) {
+      return asianMatches;
+    }
   }
   
   // Check if this could be a small town

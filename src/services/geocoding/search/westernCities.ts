@@ -1,4 +1,3 @@
-
 import { Location } from '../types';
 
 /**
@@ -159,6 +158,37 @@ export function getWesternCitiesDatabase(): Record<string, Location> {
       latitude: -34.4048, 
       longitude: 139.2851,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    // Newly added East Asian locations
+    "yaeyama": {
+      name: "Yaeyama Islands International Dark Sky Reserve, Japan",
+      latitude: 24.4667,
+      longitude: 124.2167,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "iriomote ishigaki": {
+      name: "Iriomote-Ishigaki National Park International Dark Sky Reserve, Japan",
+      latitude: 24.3423,
+      longitude: 124.1546,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "yeongyang": {
+      name: "Yeongyang International Dark Sky Park, South Korea",
+      latitude: 36.6552,
+      longitude: 129.1122,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "jindo": {
+      name: "Jindo Dark Sky Park, South Korea",
+      latitude: 34.4763,
+      longitude: 126.2631,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "shenzhen": {
+      name: "Shenzhen Xichong Dark Sky Community, China",
+      latitude: 22.5808,
+      longitude: 114.5034, 
+      placeDetails: "Dark Sky Community - International Dark Sky Association"
     }
   };
 }

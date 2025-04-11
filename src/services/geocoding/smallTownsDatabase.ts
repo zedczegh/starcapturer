@@ -1,4 +1,3 @@
-
 import { Location } from './types';
 
 /**
@@ -146,6 +145,49 @@ export function findSmallTownMatches(query: string): Location[] {
       latitude: 45.2292,
       longitude: -81.5264,
       placeDetails: "Dark Sky Preserve - Royal Astronomical Society of Canada"
+    },
+    // East Asian Dark Sky locations
+    "xichong": {
+      name: "Shenzhen Xichong Dark Sky Community, China",
+      latitude: 22.5808,
+      longitude: 114.5034,
+      placeDetails: "Dark Sky Community - International Dark Sky Association"
+    },
+    "yeongyang firefly": {
+      name: "Yeongyang Firefly International Dark Sky Park, South Korea",
+      latitude: 36.6552,
+      longitude: 129.1122,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "jindo": {
+      name: "Jindo Dark Sky Park, South Korea",
+      latitude: 34.4763,
+      longitude: 126.2631,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "iriomote": {
+      name: "Iriomote-Ishigaki National Park Dark Sky Reserve, Japan",
+      latitude: 24.3423,
+      longitude: 124.1546,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "yaeyama": {
+      name: "Yaeyama Islands International Dark Sky Reserve, Japan",
+      latitude: 24.4667,
+      longitude: 124.2167,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "ishigaki": {
+      name: "Iriomote-Ishigaki National Park Dark Sky Reserve, Japan",
+      latitude: 24.3423,
+      longitude: 124.1546,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "himawari": {
+      name: "Himawari Farm Dark Sky Park, Japan",
+      latitude: 42.9824, 
+      longitude: 140.9946,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
     }
   };
   

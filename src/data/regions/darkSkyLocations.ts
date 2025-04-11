@@ -1,4 +1,3 @@
-
 import { LocationEntry } from '../locationDatabase';
 
 /**
@@ -62,7 +61,7 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Julian International Dark Sky Reserve", coordinates: [33.0789, -116.5995], bortleScale: 2, radius: 45, type: 'dark-site' }, 
   { name: "Val d'Aran International Dark Sky Reserve", coordinates: [42.7014, 0.7945], bortleScale: 2, radius: 45, type: 'dark-site' },
   { name: "Northumberland International Dark Sky Reserve", coordinates: [55.2837, -2.2338], bortleScale: 2, radius: 50, type: 'dark-site' }, // New 2024
-  { name: "Yaeyama Islands International Dark Sky Reserve", coordinates: [24.4667, 124.2167], bortleScale: 2, radius: 45, type: 'dark-site' }, // New 2024
+  { name: "Yaeyama Islands International Dark Sky Reserve, Japan", coordinates: [24.4667, 124.2167], bortleScale: 2, radius: 45, type: 'dark-site' },
   { name: "Bryce Canyon National Park - Plateau Province", coordinates: [37.6283, -112.1679], bortleScale: 1, radius: 55, type: 'dark-site' }, // New 2024
   // New additions - Dark Sky Reserves
   { name: "Valles Caldera National Preserve Dark Sky Reserve", coordinates: [35.8676, -106.5195], bortleScale: 2, radius: 45, type: 'dark-site' },
@@ -225,5 +224,13 @@ export const darkSkyLocations: LocationEntry[] = [
   { name: "Mauna Kea Observatories", coordinates: [19.8236, -155.4717], bortleScale: 1, radius: 15, type: 'dark-site' },
   { name: "Paranal Observatory", coordinates: [-24.6272, -70.4048], bortleScale: 1, radius: 15, type: 'dark-site' },
   { name: "La Silla Observatory", coordinates: [-29.2576, -70.7376], bortleScale: 1, radius: 15, type: 'dark-site' },
-  { name: "Cerro Tololo Inter-American Observatory", coordinates: [-30.1689, -70.8057], bortleScale: 1, radius: 15, type: 'dark-site' }
+  { name: "Cerro Tololo Inter-American Observatory", coordinates: [-30.1689, -70.8057], bortleScale: 1, radius: 15, type: 'dark-site' },
+  
+  // East Asian Dark Sky locations (Updated 2024)
+  { name: "Yaeyama Islands International Dark Sky Reserve, Japan", coordinates: [24.4667, 124.2167], bortleScale: 2, radius: 45, type: 'dark-site' },
+  { name: "Iriomote-Ishigaki National Park Dark Sky Reserve, Japan", coordinates: [24.3423, 124.1546], bortleScale: 1, radius: 40, type: 'dark-site' },
+  { name: "Himawari Farm Dark Sky Park, Japan", coordinates: [42.9824, 140.9946], bortleScale: 2, radius: 35, type: 'dark-site' },
+  { name: "Yeongyang Firefly Eco Park Dark Sky Park, South Korea", coordinates: [36.6552, 129.1122], bortleScale: 3, radius: 30, type: 'dark-site' },
+  { name: "Jindo Dark Sky Park, South Korea", coordinates: [34.4763, 126.2631], bortleScale: 3, radius: 25, type: 'dark-site' },
+  { name: "Shenzhen Xichong Dark Sky Community, China", coordinates: [22.5808, 114.5034], bortleScale: 4, radius: 15, type: 'dark-site' },
 ];
