@@ -6,10 +6,9 @@ import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import MapEffectsController from './MapEffectsController';
+import { WorldBoundsController, MapEvents } from './MapComponents';
 import { UserLocationMarker, LocationMarker } from './MarkerComponents';
 import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
-import { MapEvents } from './MapComponents';
 import { MapController } from './MapController';
 
 // Configure Leaflet on load
@@ -126,19 +125,14 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         subdomains="abc"
       />
       
-      {/* Controller for handling map events */}
+      {/* Controller for handling map setup and controls */}
       <MapController 
         userLocation={userLocation} 
         searchRadius={searchRadius}
       />
       
-      {/* Effects controller for real-time SIQS and other effects */}
-      <MapEffectsController
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={handleSiqsCalculated}
-      />
+      {/* Controller for preventing infinite scrolling */}
+      <WorldBoundsController />
       
       {/* Add MapEvents component to handle clicks if onMapClick is provided */}
       <MapEvents 

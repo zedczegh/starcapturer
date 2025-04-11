@@ -1,24 +1,16 @@
-import React, { useCallback, useState, useEffect, useRef } from "react";
-import { Suspense, lazy } from "react";
+
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
-import './MapStyles.css'; // Import custom map styles
-import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
+import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
-import { isWaterLocation } from "@/utils/locationValidator";
+import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
-
-// Lazy load the map container to reduce initial load time
-const LazyPhotoPointsMapContainer = lazy(() => 
-  import('./LazyMapContainer').then(module => {
-    console.log("Map component loaded successfully");
-    return module;
-  })
-);
+const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -43,20 +35,27 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   onLocationClick,
   onMapReady,
   onLocationUpdate,
-  className = "h-[440px] w-full rounded-lg overflow-hidden border border-border" // Reduced map height by ~15%
+  className = "h-[440px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
   const mapInitializedRef = useRef(false);
-  const lastClickTimeRef = useRef<number>(0);
-  const clickTimeoutRef = useRef<number | null>(null);
-  const { hoveredLocationId, handleHover } = useMapMarkers();
   const previousViewRef = useRef<string>(activeView);
-  const viewChangedRef = useRef<boolean>(false);
-  const [key, setKey] = useState(`map-${Date.now()}`); // Add key for forced remount when view changes
+  const [key, setKey] = useState(`map-${Date.now()}`);
   const lastRadiusRef = useRef<number>(searchRadius);
-  const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
+  
+  // Handle map interactions
+  const {
+    hoveredLocationId,
+    handleMarkerHover,
+    handleLocationClick: onMarkerClick,
+    handleMapDragStart,
+    handleMapDragEnd
+  } = useMapInteractions({
+    onLocationClick,
+    onMarkerHover: (id) => console.log("Marker hover:", id)
+  });
   
   // Always show only the active view locations, ensuring all certified locations are included
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
@@ -65,7 +64,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
       previousViewRef.current = activeView;
-      viewChangedRef.current = true;
       setKey(`map-view-${activeView}-${Date.now()}`);
       console.log(`View changed to ${activeView}, forcing map component remount`);
     }
@@ -75,62 +73,24 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   useEffect(() => {
     if (lastRadiusRef.current !== searchRadius && 
         Math.abs(lastRadiusRef.current - searchRadius) > 100) {
-      // Radius has changed significantly, clear cache
       console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
       clearLocationCache();
-      lastRadiusRef.current = searchRadius;
-    } else {
-      lastRadiusRef.current = searchRadius;
     }
+    lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
-  
-  // Process locations to keep track of all loaded locations across radius changes
-  useEffect(() => {
-    if (activeView === 'calculated' && activeLocations.length > 0) {
-      // For calculated view, preserve all previously loaded locations
-      previousLocationsRef.current = [
-        ...previousLocationsRef.current,
-        ...activeLocations.filter(newLoc => {
-          // Filter out water locations for calculated spots
-          if (!newLoc.isDarkSkyReserve && !newLoc.certification) {
-            if (isWaterLocation(newLoc.latitude, newLoc.longitude)) {
-              return false;
-            }
-          }
-          
-          // Only add if not already in the list
-          return !previousLocationsRef.current.some(existingLoc => 
-            existingLoc.latitude === newLoc.latitude && 
-            existingLoc.longitude === newLoc.longitude
-          );
-        })
-      ];
-    }
-  }, [activeLocations, activeView]);
-  
-  // Always load certified locations in background as soon as component mounts
-  useEffect(() => {
-    if (!mapLoadedOnce && activeLocations.length > 0) {
-      // Mark that we've done initial processing
-      setMapLoadedOnce(true);
-    }
-  }, [activeLocations, mapLoadedOnce]);
   
   // Use the map hook with the selected location or user location
   const {
     mapReady,
     handleMapReady,
-    handleLocationClick,
     validLocations,
     mapCenter,
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: activeView === 'calculated' && previousLocationsRef.current.length > 0 
-      ? previousLocationsRef.current 
-      : activeLocations,
+    locations: activeLocations,
     searchRadius,
-    activeView // Pass the active view to usePhotoPointsMap
+    activeView
   });
 
   // Reset selected location when userLocation changes dramatically
@@ -139,58 +99,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
       const lngDiff = Math.abs(userLocation.longitude - selectedMapLocation.longitude);
       
-      // If user location significantly changes, update the selected location
       if (latDiff > 1 || lngDiff > 1) {
         console.log("User location changed significantly, updating selected location");
         setSelectedMapLocation(null);
-        previousLocationsRef.current = []; // Reset accumulated locations
       }
     }
   }, [userLocation, selectedMapLocation]);
 
   // Handle map click event
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    const now = Date.now();
-    
-    // Prevent double clicks by checking time since last click
-    if (now - lastClickTimeRef.current < 300) {
-      console.log("Ignoring rapid click");
-      return;
-    }
-    
-    lastClickTimeRef.current = now;
-    
-    // Clear any existing click timeout
-    if (clickTimeoutRef.current) {
-      window.clearTimeout(clickTimeoutRef.current);
-    }
-    
-    // Set a slight delay to allow for popups to close first
-    clickTimeoutRef.current = window.setTimeout(() => {
-      setSelectedMapLocation({ latitude: lat, longitude: lng });
+  const handleMapClick = (lat: number, lng: number) => {
+    setSelectedMapLocation({ latitude: lat, longitude: lng });
       
-      if (onLocationUpdate) {
-        onLocationUpdate(lat, lng);
-      }
-      
-      clickTimeoutRef.current = null;
-    }, 100);
-  }, [onLocationUpdate]);
-
-  // Clear hoveredLocationId when user is interacting with the map
-  const clearHover = useCallback(() => {
-    handleHover(null);
-  }, [handleHover]);
-
-  // Handle returning to my location
-  const handleReturnToMyLocation = useCallback(() => {
-    if (userLocation) {
-      setSelectedMapLocation(null);
-      toast.success(t("Returned to your location", "返回到您的位置"));
-    } else {
-      toast.error(t("Your location is not available", "无法获取您的位置"));
+    if (onLocationUpdate) {
+      onLocationUpdate(lat, lng);
     }
-  }, [userLocation, t]);
+  };
 
   return (
     <div className={className + " relative"}>
@@ -214,11 +137,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
             handleMapReady();
             if (onMapReady) onMapReady();
             mapInitializedRef.current = true;
+            setMapLoadedOnce(true);
           }}
-          onLocationClick={handleLocationClick}
+          onLocationClick={onMarkerClick}
           onMapClick={handleMapClick}
           hoveredLocationId={hoveredLocationId}
-          onMarkerHover={handleHover}
+          onMarkerHover={handleMarkerHover}
         />
         
         <Suspense fallback={null}>

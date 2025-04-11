@@ -17,6 +17,9 @@ const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[],
+  userLocation?: { latitude: number; longitude: number } | null,
+  searchRadius?: number,
+  activeView?: 'certified' | 'calculated',
   maxParallel: number = 3
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
