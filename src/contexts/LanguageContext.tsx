@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 
-export type Language = 'en' | 'zh';
+export type Language = 'en' | 'zh' | 'ja' | 'ko';
 
 interface LanguageContextType {
   language: Language;
@@ -20,7 +20,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (typeof window === 'undefined') return 'en'; // SSR safety check
     
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
-    if (storedLanguage === 'en' || storedLanguage === 'zh') {
+    if (storedLanguage === 'en' || storedLanguage === 'zh' || storedLanguage === 'ja' || storedLanguage === 'ko') {
       return storedLanguage;
     }
     
@@ -28,6 +28,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     const browserLanguage = navigator.language.toLowerCase();
     if (browserLanguage.startsWith('zh')) {
       return 'zh';
+    } else if (browserLanguage.startsWith('ja')) {
+      return 'ja';
+    } else if (browserLanguage.startsWith('ko')) {
+      return 'ko';
     }
     
     return 'en';
@@ -52,7 +56,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     const handleLanguageChange = (event: Event) => {
       const customEvent = event as CustomEvent;
       const newLang = customEvent.detail?.language;
-      if (newLang && (newLang === 'en' || newLang === 'zh')) {
+      if (newLang && (newLang === 'en' || newLang === 'zh' || newLang === 'ja' || newLang === 'ko')) {
         setLanguageState(newLang);
       }
     };
@@ -65,6 +69,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Memoize the translation function to prevent unnecessary re-renders
   const t = useCallback((en: string, zh: string): string => {
+    // TODO: Update this to handle ja and ko translations when needed
     return language === 'en' ? en : zh;
   }, [language]);
 
