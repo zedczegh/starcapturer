@@ -47,7 +47,6 @@ export interface SIQSResult {
     morningCloudCover?: number;
     avgNightCloudCover?: number;
   };
-  isNighttimeCalculation?: boolean; // Flag indicating this is a nighttime calculation
 }
 
 /**
@@ -61,7 +60,6 @@ export interface LocationWithSIQS {
   bortleScale?: number; // Light pollution level
   weatherData?: any;    // Weather data
   siqsResult?: SIQSResult; // SIQS calculation result
-  siqsFactors?: SIQSFactors; // The factors used in SIQS calculation
   clearSkyRate?: number;   // Annual clear sky rate
   timestamp?: string;      // When the data was collected
 }
@@ -77,24 +75,4 @@ export interface NighttimeSIQSParams {
   humidityWeight?: number; // Weight for humidity in calculation (default: 0.15)
   bortleWeight?: number;   // Weight for light pollution in calculation (default: 0.3)
   clearSkyWeight?: number; // Weight for clear sky rate (default: 0.1)
-}
-
-// Extending the SharedAstroSpot type for the app
-export interface SharedAstroSpot {
-  id?: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  bortleScale?: number;
-  siqs?: number;
-  isViable?: boolean;
-  siqsResult?: SIQSResult; // Add this property
-  siqsFactors?: SIQSFactors; // Add this property
-  distance?: number;
-  isDarkSkyReserve?: boolean;
-  certification?: string;
-  chineseName?: string;
-  description?: string;
-  timestamp?: string;
-  weatherData?: any;
 }
