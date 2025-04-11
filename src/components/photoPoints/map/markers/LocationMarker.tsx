@@ -184,7 +184,7 @@ const LocationMarker = memo(({
         click: handleClick,
         mouseover: handleMouseOver,
         mouseout: handleMouseOut
-      }}
+      } as any}
     >
       <Popup 
         closeOnClick={false}
