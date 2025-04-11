@@ -11,6 +11,9 @@ const calculatedLocationsCache = new Map<string, {
   radius: number;
 }>();
 
+// Global location store to maintain locations between user position changes
+const globalLocationStore = new Map<string, SharedAstroSpot>();
+
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
 
@@ -52,8 +55,26 @@ export async function processCalculatedLocations(
   
   console.log(`Processing ${locations.length} calculated locations with radius ${searchRadius}km`);
 
+  // Combine new locations with existing global locations
+  const combinedLocations: SharedAstroSpot[] = [...locations];
+  
+  // Add any existing locations from the global store that aren't in the new locations
+  for (const [key, storedLocation] of globalLocationStore.entries()) {
+    // Check if this location already exists in the combinedLocations array
+    const exists = combinedLocations.some(loc => {
+      if (!loc.latitude || !loc.longitude) return false;
+      
+      const locKey = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      return locKey === key;
+    });
+    
+    if (!exists) {
+      combinedLocations.push(storedLocation);
+    }
+  }
+
   // Filter locations by distance and water
-  const filteredLocations = locations.filter(loc => {
+  const filteredLocations = combinedLocations.filter(loc => {
     // Skip invalid locations
     if (!loc.latitude || !loc.longitude) return false;
 
@@ -94,6 +115,14 @@ export async function processCalculatedLocations(
     );
     
     enhancedLocations.push(...processedChunk);
+    
+    // Update global location store with these enhanced locations
+    processedChunk.forEach(loc => {
+      if (loc.latitude && loc.longitude) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        globalLocationStore.set(key, loc);
+      }
+    });
     
     // Add a small delay between chunks to avoid overwhelming the API
     if (i + chunkSize < filteredLocations.length) {
@@ -143,7 +172,10 @@ export async function processCalculatedLocations(
 export function clearCalculatedLocationsCache(): void {
   calculatedLocationsCache.clear();
   
-  // Also clear from localStorage
+  // Don't clear the global location store to maintain locations between position changes
+  console.log(`Keeping ${globalLocationStore.size} locations in global store`);
+  
+  // Only clear from localStorage
   try {
     const keys = Object.keys(localStorage);
     const locationKeys = keys.filter(key => key.startsWith('calculated_locations_'));
@@ -155,7 +187,7 @@ export function clearCalculatedLocationsCache(): void {
     console.error("Error clearing calculated locations cache from localStorage:", error);
   }
   
-  console.log("Calculated locations cache cleared");
+  console.log("Calculated locations cache cleared, but global locations preserved");
 }
 
 /**
@@ -173,6 +205,14 @@ export function loadCalculatedLocationsCache(): void {
         const data = localStorage.getItem(key);
         if (data) {
           const parsed = JSON.parse(data);
+          
+          // Add each location to the global store
+          parsed.locations.forEach((loc: SharedAstroSpot) => {
+            if (loc.latitude && loc.longitude) {
+              const locKey = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+              globalLocationStore.set(locKey, loc);
+            }
+          });
           
           // Only restore if not expired
           if (Date.now() - parsed.timestamp < CACHE_DURATION) {
@@ -196,9 +236,19 @@ export function loadCalculatedLocationsCache(): void {
     if (loadedCount > 0) {
       console.log(`Loaded ${loadedCount} calculated location caches from localStorage`);
     }
+    
+    console.log(`Loaded ${globalLocationStore.size} locations into global store`);
   } catch (error) {
     console.error("Error initializing calculated locations cache:", error);
   }
+}
+
+/**
+ * Get all stored calculated locations
+ * Useful when changing user location to keep existing spots
+ */
+export function getAllStoredLocations(): SharedAstroSpot[] {
+  return Array.from(globalLocationStore.values());
 }
 
 // Initialize cache on module load

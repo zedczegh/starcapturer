@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -8,6 +7,7 @@ import { toast } from "sonner";
 import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
+import { getAllStoredLocations } from "@/services/calculatedLocationsService";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -44,6 +44,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const previousViewRef = useRef<string>(activeView);
   const [key, setKey] = useState(`map-${Date.now()}`);
   const lastRadiusRef = useRef<number>(searchRadius);
+  const prevLocationRef = useRef<{latitude: number; longitude: number} | null>(null);
+  const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
   
   // Handle map interactions
   const {
@@ -56,9 +58,43 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     onLocationClick,
     onMarkerHover: (id) => console.log("Marker hover:", id)
   });
+
+  // Merge provided calculated locations with stored ones
+  useEffect(() => {
+    if (activeView === 'calculated') {
+      // Get all stored locations from the global store
+      const storedLocations = getAllStoredLocations();
+      
+      // Merge with current calculated locations without duplicates
+      const locMap = new Map<string, SharedAstroSpot>();
+      
+      // First add current calculated locations
+      calculatedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locMap.set(key, loc);
+        }
+      });
+      
+      // Then add stored locations that don't already exist
+      storedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          if (!locMap.has(key)) {
+            locMap.set(key, loc);
+          }
+        }
+      });
+      
+      const combined = Array.from(locMap.values());
+      setCombinedCalculatedLocations(combined);
+      
+      console.log(`Combined ${calculatedLocations.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
+    }
+  }, [calculatedLocations, activeView]);
   
   // Always show only the active view locations, ensuring all certified locations are included
-  const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
   
   // When view changes, mark it to trigger a re-render with a new key
   useEffect(() => {
@@ -78,6 +114,23 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
+
+  // Check if location has changed significantly
+  useEffect(() => {
+    if (userLocation && prevLocationRef.current) {
+      const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);
+      const lngDiff = Math.abs(userLocation.longitude - prevLocationRef.current.longitude);
+      
+      if (latDiff > 0.5 || lngDiff > 0.5) {
+        console.log("User location changed significantly");
+        
+        // Don't clear the cache to keep existing locations, just update the ref
+        prevLocationRef.current = userLocation;
+      }
+    } else if (userLocation) {
+      prevLocationRef.current = userLocation;
+    }
+  }, [userLocation]);
   
   // Use the map hook with the selected location or user location
   const {

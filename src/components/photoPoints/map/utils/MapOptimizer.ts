@@ -1,4 +1,3 @@
-
 import L, { Icon, Marker } from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
@@ -133,7 +132,7 @@ export class MapOptimizer {
               // Update tooltip or popup if needed
             } else {
               // Create new marker
-              const marker = this.createMarker(location, id === selectedId);
+              const marker = this.createMarker(location, id === (selectedId || ''));
               this.visibleMarkers.set(id, marker);
               
               // Add to cluster if available, otherwise to map

@@ -10,7 +10,7 @@ interface MapDataLoaderProps {
   locationCount: number;
   activeView: 'certified' | 'calculated';
   searchRadius?: number;
-  phase?: 'initial' | 'fetching' | 'processing' | 'ready';
+  phase?: 'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location';
 }
 
 /**
@@ -39,6 +39,8 @@ const MapDataLoader: React.FC<MapDataLoaderProps> = ({
           : t(`Calculating best spots within ${searchRadius}km...`, `正在计算${searchRadius}公里范围内的最佳地点...`);
       case 'processing':
         return t("Processing quality scores...", "正在处理质量评分...");
+      case 'changing_location':
+        return t("Updating locations for new position...", "正在更新新位置的地点...");
       case 'ready':
         return locationCount > 0 
           ? t(`Loaded ${locationCount} locations`, `已加载${locationCount}个位置`) 
