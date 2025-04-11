@@ -1,92 +1,75 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+interface Location {
+  latitude: number;
+  longitude: number;
+}
 
 /**
- * Hook for managing user location in the PhotoPoints components
+ * Hook to manage user location and location overrides
  */
 export const useLocationManagement = () => {
   const { t } = useLanguage();
+  const [manualLocationOverride, setManualLocationOverride] = useState<Location | null>(null);
+  const [userLocation, setUserLocation] = useState<Location | null>(null);
+  
+  // Get geolocation from browser
   const { 
-    loading: locationLoading, 
-    coords, 
-    getPosition, 
-    error: locationError 
-  } = useGeolocation({
-    enableHighAccuracy: true,
-    maximumAge: 60000, // Use cached position for 1 minute
-    timeout: 10000 // Timeout after 10 seconds
-  });
+    location: geoLocation, 
+    loading: locationLoading,
+    error: locationError,
+    loadAttempts: locationLoadAttempts,
+    getPosition: refreshGeolocation
+  } = useGeolocation();
   
-  const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
-  const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  
-  // Get position if not available
-  useEffect(() => {
-    if (!coords && locationLoadAttempts < 3) {
-      console.log("Getting user position, attempt:", locationLoadAttempts + 1);
-      const timeoutId = setTimeout(() => {
-        getPosition();
-        setLocationLoadAttempts(prev => prev + 1);
-      }, locationLoadAttempts * 1000); // Increase delay with each attempt
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [getPosition, coords, locationLoadAttempts]);
-  
-  // Update user location from coords if no override
-  useEffect(() => {
-    if (coords && !manualLocationOverride) {
-      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
-      setUserLocation(newLocation);
-      
-      try {
-        localStorage.setItem('userLocation', JSON.stringify(newLocation));
-        console.log("Updated user location from geolocation:", newLocation);
-      } catch (err) {
-        console.error("Error saving location to localStorage:", err);
-      }
-    }
-  }, [coords, manualLocationOverride]);
-  
-  // Fall back to saved location if geolocation fails
-  useEffect(() => {
-    if ((locationError || locationLoadAttempts >= 3) && !userLocation && !manualLocationOverride) {
-      try {
-        const savedLocation = localStorage.getItem('userLocation');
-        if (savedLocation) {
-          const parsedLocation = JSON.parse(savedLocation);
-          if (parsedLocation && typeof parsedLocation.latitude === 'number' && typeof parsedLocation.longitude === 'number') {
-            setUserLocation(parsedLocation);
-            console.log("Using saved location from localStorage as fallback:", parsedLocation);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading saved location:", err);
-      }
-    }
-  }, [locationError, userLocation, locationLoadAttempts, manualLocationOverride]);
-  
-  // Compute effective location (override or user location)
+  // Set effective location (manual override or geolocation)
   const effectiveLocation = manualLocationOverride || userLocation;
   
-  // Handle reset to current location
+  // Update user location when geolocation changes
+  useEffect(() => {
+    if (geoLocation && !manualLocationOverride) {
+      setUserLocation(geoLocation);
+    }
+  }, [geoLocation, manualLocationOverride]);
+  
+  // Load saved location from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedLocation = localStorage.getItem('userLocation');
+      if (savedLocation) {
+        const parsed = JSON.parse(savedLocation);
+        if (parsed && parsed.latitude && parsed.longitude) {
+          setUserLocation(parsed);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading saved location:", err);
+    }
+  }, []);
+  
+  // Handle location reset (clear override and use geolocation)
   const handleResetLocation = useCallback(() => {
     setManualLocationOverride(null);
-    if (coords) {
-      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
-      setUserLocation(newLocation);
-      localStorage.setItem('userLocation', JSON.stringify(newLocation));
-      toast.success(t("Reset to current location", "重置为当前位置"));
+    
+    if (geoLocation) {
+      setUserLocation(geoLocation);
+      toast.success(t("Using your current location", "正在使用您的当前位置"));
     } else {
-      getPosition();
-      toast.info(t("Getting your location...", "获取您的位置中..."));
+      refreshGeolocation();
+      toast.info(t("Getting your location...", "正在获取您的位置..."));
     }
-  }, [coords, getPosition, t]);
-
+    
+    try {
+      localStorage.removeItem('userLocation');
+    } catch (err) {
+      console.error("Error removing saved location:", err);
+    }
+  }, [geoLocation, refreshGeolocation, t]);
+  
   return {
     userLocation,
     setUserLocation,
@@ -94,6 +77,7 @@ export const useLocationManagement = () => {
     setManualLocationOverride,
     effectiveLocation,
     locationLoading,
+    locationError,
     locationLoadAttempts,
     handleResetLocation
   };
