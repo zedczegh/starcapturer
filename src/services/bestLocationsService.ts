@@ -12,6 +12,14 @@ import { SharedAstroSpot } from '@/lib/siqs/types';
  * @returns Promise resolving to locations with updated SIQS
  */
 export async function updateLocationsWithSiqs(locations: SharedAstroSpot[]): Promise<SharedAstroSpot[]> {
+  // Validate input
+  if (!locations || !Array.isArray(locations) || locations.length === 0) {
+    console.log("No locations provided to updateLocationsWithSiqs");
+    return [];
+  }
+  
+  console.log(`Updating SIQS for ${locations.length} locations`);
+  
   // Make sure all locations have an id before passing to the update function
   const locationsWithIds = locations.map(loc => {
     if (!loc.id) {

@@ -76,14 +76,14 @@ const Index = () => {
             const locationSiqs = savedLocation.siqs;
             console.log(`Index: Retrieved SIQS from saved location: ${locationSiqs}`);
             
-            if (typeof locationSiqs === 'number') {
+            if (typeof locationSiqs === 'number' && !isNaN(locationSiqs)) {
               setCurrentSiqs(locationSiqs);
               
               // Update the global store with this value
               currentSiqsStore.setValue(locationSiqs);
               
               // Using threshold of 5 for showing notification about good conditions
-              if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
+              if (locationSiqs >= 5.0 && isGoodViewingCondition(locationSiqs)) {
                 // Show notification for ideal astrophotography location
                 setTimeout(() => {
                   toast.info(
@@ -138,7 +138,7 @@ const Index = () => {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
         if (savedLocationString) {
           const savedLocation = JSON.parse(savedLocationString);
-          if (savedLocation && typeof savedLocation.siqs === 'number') {
+          if (savedLocation && typeof savedLocation.siqs === 'number' && !isNaN(savedLocation.siqs)) {
             console.log(`Index: Updating current SIQS from saved location: ${savedLocation.siqs}`);
             currentSiqsStore.setValue(savedLocation.siqs);
             setCurrentSiqs(savedLocation.siqs);
@@ -164,7 +164,7 @@ const Index = () => {
     
     // Call immediately and set up periodic refresh
     updateCurrentSiqs();
-    const intervalId = setInterval(updateCurrentSiqs, 30000); // Check every 30 seconds
+    const intervalId = setInterval(updateCurrentSiqs, 15000); // Check every 15 seconds (reduced from 30s)
     
     // Make global store available for external components
     if (typeof window !== 'undefined') {

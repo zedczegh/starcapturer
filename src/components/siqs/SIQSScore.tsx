@@ -31,7 +31,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     
     // Check if we have a valid score
     if (!isValidSiqsScore(siqsScore)) {
-      console.log("SIQSScore: Invalid or null SIQS value");
+      console.log("SIQSScore: Invalid or null SIQS value, showing placeholder");
       return {
         displayValue: null,
         interpretation: t("Not Available", "不可用"),
@@ -42,7 +42,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     }
 
     // Ensure we have a valid score and it's on a 0-10 scale
-    const displayValue = Math.min(10, Math.max(0, siqsScore!));
+    const displayValue = Math.min(10, Math.max(0, siqsScore));
     console.log(`SIQSScore: Using display value: ${displayValue}`);
 
     // Determine value interpretation

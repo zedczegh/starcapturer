@@ -116,10 +116,21 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           setCurrentSiqs(scoreValue);
           currentSiqsStore.setValue(scoreValue);
           return;
+        } else {
+          console.log("CalculatorSection: No valid SIQS in saved location, using null");
+          setCurrentSiqs(null);
+          currentSiqsStore.setValue(null);
+          return;
         }
+      } else {
+        console.log("CalculatorSection: No saved location found, using null");
+        setCurrentSiqs(null);
+        currentSiqsStore.setValue(null);
       }
     } catch (error) {
       console.error("Error reading from latest_siqs_location:", error);
+      setCurrentSiqs(null);
+      currentSiqsStore.setValue(null);
     }
     
     // Fall back to current_siqs_value
