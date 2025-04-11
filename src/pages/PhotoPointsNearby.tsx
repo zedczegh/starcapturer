@@ -3,10 +3,9 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { currentSiqsStore } from '@/components/index/CalculatorSection';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
-import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
+import ViewToggle from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import PageLoader from '@/components/loaders/PageLoader';
 import { useNavigate } from 'react-router-dom';
@@ -17,86 +16,29 @@ import { Button } from '@/components/ui/button';
 import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import { calculateDistance } from '@/utils/geoUtils';
+import { usePhotoPointsView, DEFAULT_CALCULATED_RADIUS, DEFAULT_CERTIFIED_RADIUS } from '@/hooks/photoPoints/usePhotoPointsView';
+import { useLocationManagement } from '@/hooks/photoPoints/useLocationManagement';
 
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
-const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
-const DEFAULT_CERTIFIED_RADIUS = 10000; // 10000km for certified locations (no limit)
-
 const PhotoPointsNearby: React.FC = () => {
-  // Fix the infinite loop by using useCallback for getPosition
-  const { 
-    loading: locationLoading, 
-    coords, 
-    getPosition, 
-    error: locationError 
-  } = useGeolocation({
-    enableHighAccuracy: true,
-    maximumAge: 60000, // Use cached position for 1 minute to avoid repeated calls
-    timeout: 10000 // Timeout after 10 seconds
-  });
+  // Location management hook
+  const {
+    userLocation,
+    manualLocationOverride,
+    effectiveLocation,
+    locationLoading,
+    locationLoadAttempts,
+    handleResetLocation
+  } = useLocationManagement();
   
-  const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   const [initialLoad, setInitialLoad] = useState(true);
-  const [showMap, setShowMap] = useState(true);
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
-  const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
-
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
-  // Fix the infinite loop by using useEffect for getPosition with proper dependencies
-  useEffect(() => {
-    // Only get position if we don't have coords already and haven't exceeded max attempts
-    if (!coords && locationLoadAttempts < 3) {
-      console.log("Getting user position, attempt:", locationLoadAttempts + 1);
-      const timeoutId = setTimeout(() => {
-        getPosition();
-        setLocationLoadAttempts(prev => prev + 1);
-      }, locationLoadAttempts * 1000); // Increase delay with each attempt
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [getPosition, coords, locationLoadAttempts]);
-  
-  useEffect(() => {
-    if (coords && !manualLocationOverride) {
-      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
-      setUserLocation(newLocation);
-      
-      try {
-        localStorage.setItem('userLocation', JSON.stringify(newLocation));
-        console.log("Updated user location from geolocation:", newLocation);
-      } catch (err) {
-        console.error("Error saving location to localStorage:", err);
-      }
-    }
-  }, [coords, manualLocationOverride]);
-  
-  useEffect(() => {
-    if ((locationError || locationLoadAttempts >= 3) && !userLocation && !manualLocationOverride) {
-      try {
-        const savedLocation = localStorage.getItem('userLocation');
-        if (savedLocation) {
-          const parsedLocation = JSON.parse(savedLocation);
-          if (parsedLocation && typeof parsedLocation.latitude === 'number' && typeof parsedLocation.longitude === 'number') {
-            setUserLocation(parsedLocation);
-            console.log("Using saved location from localStorage as fallback:", parsedLocation);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading saved location:", err);
-      }
-    }
-  }, [locationError, userLocation, locationLoadAttempts, manualLocationOverride]);
-
-  const effectiveLocation = manualLocationOverride || userLocation;
-
-  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
-  
+  // View management hook
   const {
     searchRadius,
     setSearchRadius,
@@ -112,7 +54,7 @@ const PhotoPointsNearby: React.FC = () => {
     maxLoadMoreClicks
   } = useRecommendedLocations(
     effectiveLocation, 
-    activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius
+    DEFAULT_CALCULATED_RADIUS
   );
 
   const {
@@ -122,27 +64,20 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedCount
   } = useCertifiedLocations(
     locations, 
-    activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius
+    searchRadius
   );
 
-  const handleRadiusChange = useCallback((value: number) => {
-    if (activeView === 'calculated') {
-      setCalculatedSearchRadius(value);
-      setSearchRadius(value);
-    }
-  }, [setSearchRadius, activeView]);
-  
-  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
-    setActiveView(view);
-    
-    if (view === 'certified') {
-      setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
-    } else {
-      setSearchRadius(calculatedSearchRadius);
-    }
-    
-    clearLocationCache();
-  }, [setSearchRadius, calculatedSearchRadius]);
+  // Use the photo points view hook
+  const {
+    activeView,
+    showMap,
+    calculatedSearchRadius,
+    handleRadiusChange,
+    handleViewChange,
+    toggleMapView
+  } = usePhotoPointsView({
+    onSearchRadiusChange: setSearchRadius
+  });
   
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     const newLocation = { latitude, longitude };
@@ -167,15 +102,6 @@ const PhotoPointsNearby: React.FC = () => {
     refreshSiqsData();
   }, [refreshSiqsData]);
 
-  // Don't call setSearchRadius in every render to avoid infinite loops
-  useEffect(() => {
-    if (activeView === 'certified') {
-      setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
-    } else {
-      setSearchRadius(calculatedSearchRadius);
-    }
-  }, [activeView, setSearchRadius, calculatedSearchRadius]);
-  
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && location.latitude && location.longitude) {
       const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
@@ -199,23 +125,7 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [navigate, t]);
 
-  const toggleMapView = useCallback(() => {
-    setShowMap(prev => !prev);
-  }, []);
-
-  const handleResetLocation = useCallback(() => {
-    setManualLocationOverride(null);
-    if (coords) {
-      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
-      setUserLocation(newLocation);
-      localStorage.setItem('userLocation', JSON.stringify(newLocation));
-      toast.success(t("Reset to current location", "重置为当前位置"));
-    } else {
-      getPosition();
-      toast.info(t("Getting your location...", "获取您的位置中..."));
-    }
-  }, [coords, getPosition, t]);
-
+  // Set initial load to false after a timeout
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoad(false);
@@ -223,10 +133,7 @@ const PhotoPointsNearby: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
-  
-  const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
-  
+  // Filter calculated locations by distance
   const filteredCalculatedLocations = calculatedLocations.filter(loc => {
     if (!effectiveLocation) return true;
     const distance = loc.distance || calculateDistance(
@@ -293,11 +200,11 @@ const PhotoPointsNearby: React.FC = () => {
           <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
             <PhotoPointsMap 
               userLocation={effectiveLocation}
-              locations={locationsToShow}
+              locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
               certifiedLocations={certifiedLocations}
               calculatedLocations={calculatedLocations}
               activeView={activeView}
-              searchRadius={displayRadius}
+              searchRadius={activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius}
               onLocationClick={handleLocationClick}
               onLocationUpdate={handleLocationUpdate}
             />

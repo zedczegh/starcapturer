@@ -15,17 +15,19 @@ export const useMapInteractions = ({
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
   
-  // Handle marker hover
+  // Handle marker hover with improved event throttling
   const handleMarkerHover = useCallback((id: string | null) => {
-    setHoveredLocationId(id);
-    if (onMarkerHover) {
-      onMarkerHover(id);
+    if (hoveredLocationId !== id) {
+      setHoveredLocationId(id);
+      if (onMarkerHover) {
+        onMarkerHover(id);
+      }
     }
-  }, [onMarkerHover]);
+  }, [onMarkerHover, hoveredLocationId]);
   
-  // Handle location click
+  // Handle location click with enhanced debouncing
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    // Simple debounce for clicks
+    // Improved debounce for clicks
     const now = Date.now();
     if (now - lastClickTime < 300) {
       return;
@@ -33,7 +35,10 @@ export const useMapInteractions = ({
     setLastClickTime(now);
     
     if (onLocationClick) {
-      onLocationClick(location);
+      // Process the click after a short delay to prevent double-click issues
+      setTimeout(() => {
+        onLocationClick(location);
+      }, 10);
     }
   }, [onLocationClick, lastClickTime]);
 
@@ -44,10 +49,12 @@ export const useMapInteractions = ({
   }, [handleMarkerHover]);
   
   const handleMapDragEnd = useCallback(() => {
-    // Small delay to prevent immediate popup reappearance
-    setTimeout(() => {
-      setHideMarkerPopups(false);
-    }, 100);
+    // Optimized delay to prevent immediate popup reappearance
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        setHideMarkerPopups(false);
+      }, 100);
+    });
   }, []);
   
   // Clear hover when component unmounts or on certain conditions
