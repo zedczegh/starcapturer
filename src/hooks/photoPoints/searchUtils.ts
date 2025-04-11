@@ -86,7 +86,7 @@ export const searchCalculatedLocations = async (
       latitude,
       longitude,
       searchDistance,
-      true, // Allow expanding the search radius
+      true, // Allow expanding the search radius (boolean as expected by the function)
       MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
     );
     

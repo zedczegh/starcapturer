@@ -1,3 +1,4 @@
+
 import { findClosestLocation } from "@/data/locationDatabase";
 
 /**
@@ -51,3 +52,6 @@ export const getCityBortleScale = (latitude: number, longitude: number): number 
     return 6; // Default to class 6 (bright suburban sky)
   }
 };
+
+// Export for compatibility with modules that reference getBortleScaleData
+export const getBortleScaleData = getBortleScale;
