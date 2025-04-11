@@ -50,25 +50,18 @@
   }
 }
 
-/* Improved popup styles */
+/* Popup styles */
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
   padding: 0;
   overflow: hidden;
-  width: auto !important;
-  min-width: 180px;
-  max-width: 220px;
-  display: flex;
 }
 
 .leaflet-popup-content {
-  margin: 0 !important;
+  margin: 0;
   padding: 0;
-  width: 100% !important;
+  width: 250px !important;
   max-width: 100%;
-  overflow-wrap: break-word;
-  display: flex;
-  white-space: normal;
 }
 
 .leaflet-popup-tip {
@@ -115,63 +108,4 @@
   transform: scale(1.25);
   z-index: 1000 !important;
   transition: transform 0.1s ease-out;
-}
-
-/* Text overflow control for popups */
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;  
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-/* Fix popup positioning inside map */
-.leaflet-popup {
-  max-width: 240px;
-  white-space: normal;
-}
-
-/* Ensure popups don't extend outside map boundaries */
-.leaflet-map-pane {
-  z-index: 2 !important;
-}
-
-.leaflet-popup-pane {
-  z-index: 3 !important;
-}
-
-/* Enhanced horizontal layout for popups */
-.leaflet-popup {
-  transform: translate3d(0, 0, 0) !important;
-}
-
-.leaflet-popup-content p {
-  margin: 0;
-  padding: 0;
-}
-
-/* Auto panning improvements */
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-/* Optimize popup placement */
-.leaflet-popup {
-  margin-bottom: 20px !important;
-}
-
-/* Ensure horizontal alignment of popup content */
-.map-tooltip-container {
-  width: auto !important;
-  max-width: 220px !important;
-}
-
-/* Improve popup stability */
-.leaflet-fade-anim .leaflet-popup {
-  transition: opacity 0.2s linear;
-  transition-delay: 0.05s;
 }

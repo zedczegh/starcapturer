@@ -45,7 +45,7 @@ const MapTooltip = React.forwardRef<
     side={side}
     avoidCollisions={avoidCollisions}
     className={cn(
-      "z-[2000] overflow-hidden rounded-md border border-border/50 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-xs text-foreground shadow-md max-w-[250px] text-left whitespace-normal",
+      "z-[2000] overflow-hidden rounded-md border border-border/50 bg-background/90 backdrop-blur-sm px-2.5 py-1 text-xs text-foreground shadow-md",
       "animate-in fade-in-50 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
       className
     )}
