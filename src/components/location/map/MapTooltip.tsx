@@ -23,9 +23,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      // maxWidth prop was causing TypeScript errors
       className="custom-popup"
-      // autoPan prop was causing TypeScript errors
     >
       <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
         <div className="font-medium text-sm">{name}</div>

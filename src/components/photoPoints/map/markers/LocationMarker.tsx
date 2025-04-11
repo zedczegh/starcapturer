@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -7,7 +8,7 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
-import { Star, Award, ExternalLink } from 'lucide-react';
+import { Star, Award, ExternalLink, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isWaterLocation } from '@/utils/locationValidator';
 
@@ -151,7 +152,9 @@ const LocationMarker = memo(({
   const siqsClass = getSiqsClass(location.siqs);
   
   // Function to navigate to location details
-  const goToLocationDetails = () => {
+  const goToLocationDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
     navigate(`/location/${locationId}`, {
@@ -177,21 +180,23 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      onClick={handleClick}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        className="location-popup"
+        className={`location-popup ${isCertified ? 'certified-popup' : 'calculated-popup'}`}
       >
-        <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
-          <div className="font-medium text-sm mb-1.5 flex items-center">
+        <div className={`py-2 px-3 w-[260px] leaflet-popup-custom-compact marker-popup-gradient ${isCertified ? 'certified-marker-popup' : siqsClass}`}>
+          <div className="font-medium text-sm mb-1.5 flex items-center gap-1.5">
             {isCertified && (
-              <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
+              <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
             )}
-            <span className="text-gray-100">{displayName}</span>
+            <span className="text-gray-100 flex-1">{displayName}</span>
           </div>
           
           {/* Show certification badge for certified locations */}
@@ -201,6 +206,12 @@ const LocationMarker = memo(({
               {location.certification}
             </div>
           )}
+          
+          {/* Location coordinates */}
+          <div className="mt-1.5 text-xs text-gray-300 flex items-center">
+            <MapPin className="h-3 w-3 mr-1 text-gray-400" />
+            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+          </div>
           
           {/* SIQS Score and Distance */}
           <div className="mt-2 flex items-center justify-between">
@@ -223,7 +234,7 @@ const LocationMarker = memo(({
               onClick={goToLocationDetails}
               className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1 px-2 rounded transition-colors"
             >
-              <ExternalLink className="h-3 w-3 mr-1" />
+              <ExternalLink className="h-3 w-3 mr-1.5" />
               {t("View Details", "查看详情")}
             </button>
           </div>

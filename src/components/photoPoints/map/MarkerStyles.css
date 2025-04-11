@@ -88,14 +88,15 @@
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   padding: 0;
-  max-width: 250px;
+  max-width: 300px;
+  min-width: 200px;
+  width: auto !important; /* Force width to be respected */
 }
 
 .leaflet-popup-content {
   margin: 0;
   width: auto !important;
   overflow: hidden;
-  max-width: 250px;
 }
 
 .leaflet-popup-tip {
@@ -107,21 +108,71 @@
   color: #fff;
 }
 
+/* Improved popup gradients */
 .marker-popup-gradient {
   background: linear-gradient(to bottom, #1a222e, #111827);
   color: #e5e7eb;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) inset;
 }
 
+.certified-marker-popup {
+  background: linear-gradient(to bottom, #4a2482, #1a222e);
+  color: #e5e7eb;
+  border-left: 3px solid #9b87f5;
+}
+
+.user-location-gradient {
+  background: linear-gradient(to bottom, #881337, #1a222e);
+  color: #e5e7eb;
+  border-left: 3px solid #e11d48;
+}
+
 /* Quality-based styling */
 .siqs-excellent {
   background: linear-gradient(to bottom, #166534, #1a222e);
+  border-left: 3px solid #4ade80;
 }
 
 .siqs-good {
   background: linear-gradient(to bottom, #854d0e, #1a222e);
+  border-left: 3px solid #facc15;
 }
 
 .siqs-poor {
   background: linear-gradient(to bottom, #7f1d1d, #1a222e);
+  border-left: 3px solid #ef4444;
+}
+
+/* Popup type-specific styling */
+.certified-popup .leaflet-popup-content-wrapper {
+  background: transparent;
+}
+
+.calculated-popup .leaflet-popup-content-wrapper {
+  background: transparent;
+}
+
+.user-location-popup .leaflet-popup-content-wrapper {
+  background: transparent;
+}
+
+/* Ensure popups stay within map bounds */
+.leaflet-popup {
+  max-width: 300px;
+}
+
+/* Popup animation */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.leaflet-popup {
+  animation: popupFadeIn 0.3s ease-out;
 }

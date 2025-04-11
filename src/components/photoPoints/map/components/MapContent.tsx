@@ -4,10 +4,8 @@ import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import { MapEffectsComposer, SiqsEffectsController } from '../MapComponents';
-
-// Import control components separately
-import L from 'leaflet';
+import MapEffectsComposer from '../effects/MapEffectsComposer';
+import SiqsEffectsController from '../effects/SiqsEffectsController';
 
 interface MapContentProps {
   center: [number, number];
@@ -43,9 +41,14 @@ const MapContent: React.FC<MapContentProps> = ({
   }, [onMapClick]);
 
   // Filter locations based on activeView
-  const displayLocations = activeView === 'certified'
-    ? locations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-    : locations;
+  const displayLocations = locations.filter(loc => {
+    // In certified view, only show certified locations
+    if (activeView === 'certified') {
+      return Boolean(loc.isDarkSkyReserve || loc.certification);
+    }
+    // In calculated view, show all locations
+    return true;
+  });
   
   return (
     <MapContainer
@@ -53,15 +56,12 @@ const MapContent: React.FC<MapContentProps> = ({
       zoom={zoom}
       scrollWheelZoom={true}
       style={{ height: '100%', width: '100%' }}
-      // Removed problematic zoomControl prop
       whenReady={() => onMapReady()}
       onClick={handleMapClick}
-      // Removed problematic preferCanvas prop
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        // Removed problematic maxZoom prop
       />
 
       {/* Map effects and styling */}
@@ -70,7 +70,11 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
       />
-      <SiqsEffectsController />
+      <SiqsEffectsController
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+      />
 
       {/* Search radius circle around user location */}
       {userLocation && activeView === 'calculated' && searchRadius && (
@@ -103,11 +107,6 @@ const MapContent: React.FC<MapContentProps> = ({
         const locationId = location.id || 
           `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        
-        // Skip calculating locations when in certified view
-        if (activeView === 'certified' && !isCertified) {
-          return null;
-        }
         
         return (
           <LocationMarker
