@@ -89,46 +89,12 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     // Set world bounds to prevent infinite horizontal scrolling
     // This restricts the map to one "copy" of the world
     const worldBounds = L.latLngBounds(
-      L.latLng(-85, -180),  // Southwest corner
-      L.latLng(85, 180)     // Northeast corner
+      L.latLng(-90, -180),  // Southwest corner
+      L.latLng(90, 180)     // Northeast corner
     );
     
     map.setMaxBounds(worldBounds);
-    
-    // Ensure zoom interactions work properly - explicitly set all interaction options
-    map.scrollWheelZoom.enable();
-    map.touchZoom.enable();
-    map.doubleClickZoom.enable();
-    map.dragging.enable(); // Ensure dragging is explicitly enabled
-    
-    // Improve wrapping of coordinates to stay within -180 to 180 longitude
-    const originalLatLng = L.latLng;
-    
-    // Override Leaflet's latLng to enforce wrapping but without creating an infinite recursion
-    L.latLng = function(lat, lng) {
-      if (lng !== undefined) {
-        // Wrap longitude to stay within -180 to 180 range
-        lng = ((lng + 540) % 360) - 180;
-      }
-      return originalLatLng(lat, lng);
-    };
-    
-    // Maintain backwards compatibility with the original function
-    Object.keys(originalLatLng).forEach(key => {
-      L.latLng[key] = originalLatLng[key];
-    });
-    
-    // Use a different approach to enforce single world view
-    map.on('moveend', () => {
-      const center = map.getCenter();
-      const wrappedLng = ((center.lng + 540) % 360) - 180;
-      
-      // Only update if the longitude is significantly different after wrapping
-      if (Math.abs(center.lng - wrappedLng) > 1) {
-        center.lng = wrappedLng;
-        map.setView(center, map.getZoom(), { animate: false });
-      }
-    });
+    map.options.maxBoundsViscosity = 1.0; // Make bounds "sticky"
     
     // Expose map instance globally for external components to use
     (window as any).leafletMap = map;
@@ -138,9 +104,6 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     
     return () => {
       if (map) {
-        // Clean up event listeners
-        map.off('moveend');
-        // Remove global reference
         delete (window as any).leafletMap;
       }
     };

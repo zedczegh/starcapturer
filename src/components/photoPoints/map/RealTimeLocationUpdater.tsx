@@ -122,6 +122,13 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
               duration: 1.5 
             });
             console.log("Map centered on current location:", latitude, longitude);
+            
+            // Force dragging to be enabled
+            if (leafletMap.dragging) {
+              leafletMap.dragging.enable();
+              console.log("Dragging explicitly enabled after location update");
+            }
+            
           } else {
             console.warn("Leaflet map instance not found in window object");
           }

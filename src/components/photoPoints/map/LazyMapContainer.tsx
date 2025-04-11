@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
@@ -61,7 +62,7 @@ const MapEvents = ({
       map.off('dragend', handleDragEnd);
       map.off('zoomend', handleZoomEnd);
       // Clean up window reference
-      (window as any).leafletMap = undefined;
+      delete (window as any).leafletMap;
     };
   }, [map, onMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
   
@@ -106,6 +107,9 @@ const MapController = ({
 
     // Improve performance by reduced rerenders on pan/zoom
     map._onResize = L.Util.throttle(map._onResize, 200, map);
+    
+    // Prevent horizontal wrapping of the world map (show only one copy)
+    map.setMaxBounds([[-90, -180], [90, 180]]);
     
     return () => {
       // Clean up if needed
@@ -220,13 +224,13 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onMapReady();
       }}
       scrollWheelZoom={true}
-      dragging={true}
       zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         subdomains="abc"
+        noWrap={true} // Prevent the map from repeating horizontally
       />
       
       {/* Controller for handling map events */}
