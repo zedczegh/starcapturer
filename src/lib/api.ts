@@ -26,5 +26,6 @@ export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
 export { 
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
-  shareAstroSpot
+  shareAstroSpot,
+  isLikelyCoastalWater
 } from './api/astroSpots';
