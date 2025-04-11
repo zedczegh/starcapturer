@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Progress } from "@/components/ui/progress";
-import { getProgressColor, getProgressColorClass } from "@/components/siqs/utils/progressColor";
+import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
