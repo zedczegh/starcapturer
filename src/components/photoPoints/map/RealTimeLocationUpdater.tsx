@@ -1,12 +1,11 @@
 
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { MapPin, Loader2 } from 'lucide-react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
+import LocationControls from './LocationControls';
+import SiqsDisplay from './SiqsDisplay';
 
 interface RealTimeLocationUpdaterProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -164,44 +163,17 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
 
   return (
     <div className="absolute bottom-4 left-4 z-[1000] flex flex-col space-y-2">
-      <Button 
-        size="sm" 
-        variant="secondary"
-        className="bg-cosmic-800/90 hover:bg-cosmic-700/90 shadow-md border border-cosmic-700/30 font-medium"
-        onClick={handleGetCurrentLocation}
-        disabled={loading}
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-        ) : (
-          <MapPin className="h-4 w-4 mr-1" />
-        )}
-        {t("My Location", "我的位置")}
-      </Button>
+      <LocationControls
+        onGetLocation={handleGetCurrentLocation}
+        onClearCache={handleClearCache}
+        loading={loading}
+        cacheCleared={cacheCleared}
+      />
       
-      <Button
-        size="sm"
-        variant="outline"
-        className={`shadow-md border border-cosmic-700/30 ${
-          cacheCleared 
-            ? "bg-green-800/30 text-green-400 hover:bg-green-800/40" 
-            : "bg-cosmic-800/90 hover:bg-cosmic-700/90 text-primary-foreground"
-        }`}
-        onClick={handleClearCache}
-        disabled={loading || cacheCleared}
-      >
-        {cacheCleared ? (
-          t("Cache Cleared", "已清除缓存")
-        ) : (
-          t("Clear Cache", "清除缓存")
-        )}
-      </Button>
-      
-      {realTimeSiqs !== null && (
-        <div className="bg-cosmic-800/90 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30">
-          <SiqsScoreBadge score={realTimeSiqs} loading={loading} />
-        </div>
-      )}
+      <SiqsDisplay 
+        realTimeSiqs={realTimeSiqs} 
+        loading={loading} 
+      />
     </div>
   );
 };

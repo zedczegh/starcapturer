@@ -1,7 +1,7 @@
 
-// Re-export all SIQS functionality from services
+// Re-export all SIQS functionality
 export * from '../realTimeSiqsService';
-export * from '../bestLocationsService';
+export { clearSiqsCache } from '../realTimeSiqsService';
 export { 
   updateLocationsWithRealTimeSiqs,
   clearLocationCache 
