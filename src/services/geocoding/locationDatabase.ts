@@ -9,6 +9,17 @@ import { locationDatabase } from '@/data/locationDatabase';
 export { chineseCityAlternatives, checkAlternativeSpellings };
 
 /**
+ * Search location database for matching locations
+ * @param query Search query
+ * @param language Current app language
+ * @returns Array of matching locations
+ */
+export async function searchLocationDatabase(query: string, language: Language = 'en'): Promise<Location[]> {
+  // Use the synchronous function and wrap in a Promise for API consistency
+  return Promise.resolve(findMatchingLocations(query, 10, language));
+}
+
+/**
  * Find locations in our internal database that match the search query
  * @param query Search query
  * @param limit Maximum number of results to return

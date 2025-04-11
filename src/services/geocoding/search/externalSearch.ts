@@ -5,6 +5,22 @@ import { findSmallTownMatches } from '../smallTownsDatabase';
 import { findMatchingLocations } from '../locationDatabase';
 
 /**
+ * Search by external geocoding provider
+ */
+export async function searchByExternalProvider(
+  query: string, 
+  language: Language
+): Promise<Location[]> {
+  try {
+    const hasChineseChars = containsChineseCharacters(query);
+    return await fetchAndProcessExternalResults(query, language, hasChineseChars);
+  } catch (error) {
+    console.error("Error searching external provider:", error);
+    return [];
+  }
+}
+
+/**
  * Fetch data from external source and process results
  */
 export async function fetchAndProcessExternalResults(

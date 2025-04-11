@@ -37,7 +37,7 @@ export async function searchLocations(
       const chineseResults = await searchChineseRegions(trimmedQuery);
       if (chineseResults.length > 0) {
         // Combine results, removing duplicates
-        return findBestMatches([...chineseResults, ...databaseResults], trimmedQuery, language);
+        return findBestMatches(chineseResults.concat(databaseResults), trimmedQuery, language);
       }
     }
     

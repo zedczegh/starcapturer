@@ -1,67 +1,53 @@
 
-import { Location, Language } from '../types';
+import { Location } from '../types';
 import { containsChineseCharacters } from '../matching';
-import { checkAlternativeSpellings } from '../chineseCityData';
-import { findMatchingLocations } from '../locationDatabase';
+import { chineseCityAlternatives } from '../chineseCityData';
 
 /**
- * Specialized search function for Chinese regions
- * Optimized to handle Chinese characters and alternative spellings
+ * Search specifically for Chinese regions using specialized data
+ * @param query Search query text
+ * @returns Array of matching Chinese locations
  */
-export async function searchChineseRegions(
-  query: string,
-  language: Language
-): Promise<Location[]> {
-  // Return empty results for empty queries
-  if (!query || !query.trim()) return [];
-
-  const hasChineseChars = containsChineseCharacters(query);
+export async function searchChineseRegions(query: string): Promise<Location[]> {
   const results: Location[] = [];
+  const queryLower = query.toLowerCase().trim();
   
-  // Method 1: Check for alternative spellings in our database
-  const alternativeResults = checkAlternativeSpellings(query);
-  if (alternativeResults.length > 0) {
-    results.push(...alternativeResults);
+  // Skip non-Chinese character queries for efficiency
+  if (!containsChineseCharacters(queryLower) && !queryRequiresChinaSearch(queryLower)) {
+    return results;
   }
   
-  // Method 2: Find matching locations from our database
-  const databaseResults = findMatchingLocations(query, 5, language);
+  // Look up direct matches in our Chinese city database
+  for (const [key, city] of Object.entries(chineseCityAlternatives)) {
+    if (city.chinese.includes(queryLower) || 
+        queryLower.includes(city.chinese) || 
+        key.includes(queryLower) || 
+        queryLower.includes(key) ||
+        city.alternatives.some(alt => alt.includes(queryLower) || queryLower.includes(alt))) {
+      
+      results.push({
+        name: city.chinese, // Use Chinese name for Chinese region searches
+        latitude: city.coordinates[0],
+        longitude: city.coordinates[1],
+        placeDetails: city.placeDetails || '中国城市'
+      });
+    }
+  }
   
-  // Combine results and prioritize Chinese matches if this is a Chinese query
-  const combinedResults = [...results, ...databaseResults];
+  // TODO: Add future enhancements like province-level administrative lookup
+  
+  return results;
+}
 
-  // Remove duplicates and prioritize Chinese matches
-  const uniqueMap = new Map<string, Location>();
+/**
+ * Helper function to determine if a query might be looking for a Chinese city
+ * even if it doesn't contain Chinese characters
+ */
+function queryRequiresChinaSearch(query: string): boolean {
+  // Check for common terms that might indicate a search for Chinese locations
+  const chinaTerms = ['china', 'chinese', 'beijing', 'shanghai', 'guangzhou', 
+                     'shenzhen', 'chengdu', 'xian', "xi'an", 'hangzhou', 
+                     'nanjing', 'suzhou', 'chongqing', 'tianjin', 'wuhan'];
   
-  for (const location of combinedResults) {
-    const key = `${location.latitude.toFixed(4)}_${location.longitude.toFixed(4)}`;
-    
-    // If we already have this location, only replace it if the new one has Chinese chars and old one doesn't
-    if (uniqueMap.has(key)) {
-      const existing = uniqueMap.get(key)!;
-      const newHasChinese = containsChineseCharacters(location.name);
-      const existingHasChinese = containsChineseCharacters(existing.name);
-      
-      if (newHasChinese && !existingHasChinese) {
-        uniqueMap.set(key, location);
-      }
-    } else {
-      uniqueMap.set(key, location);
-    }
-  }
-  
-  const uniqueResults = Array.from(uniqueMap.values());
-  
-  // Sort results by relevance: Chinese characters first when appropriate
-  return uniqueResults.sort((a, b) => {
-    if (hasChineseChars || language === 'zh') {
-      // Prioritize results with Chinese characters for Chinese queries
-      const aHasChinese = containsChineseCharacters(a.name);
-      const bHasChinese = containsChineseCharacters(b.name);
-      
-      if (aHasChinese && !bHasChinese) return -1;
-      if (!aHasChinese && bHasChinese) return 1;
-    }
-    return 0;
-  });
+  return chinaTerms.some(term => query.includes(term));
 }
