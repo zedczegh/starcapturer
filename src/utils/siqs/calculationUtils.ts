@@ -1,5 +1,6 @@
 
 import { calculateCloudScore, calculateLightPollutionScore } from '@/lib/siqs/factors';
+import { extractSiqsDisplayData } from './displayUtils';
 
 /**
  * Extract and format SIQS data consistently across the application
@@ -7,61 +8,7 @@ import { calculateCloudScore, calculateLightPollutionScore } from '@/lib/siqs/fa
  * @returns An object with formatted SIQS data
  */
 export function extractSiqsData(location: any) {
-  if (!location) {
-    return {
-      siqsValue: 0,
-      displayScore: '0.0',
-      isNighttimeCalculation: false,
-      colorClass: 'bg-red-500/80 border-red-400/50',
-      isViable: false
-    };
-  }
-  
-  // Get SIQS value with consistent approach
-  let siqsValue = 0;
-  
-  // First try siqsResult.score (most accurate)
-  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
-    siqsValue = location.siqsResult.score;
-  }
-  // Then try the siqs property
-  else if (typeof location.siqs === 'number') {
-    siqsValue = location.siqs;
-  }
-  // Lastly estimate from bortle scale
-  else if (typeof location.bortleScale === 'number') {
-    siqsValue = (10 - location.bortleScale * 0.75) + 3;
-  }
-  
-  // Ensure value is in range 0-10
-  siqsValue = Math.min(10, Math.max(0, siqsValue));
-  
-  // Format score with consistent decimal places
-  const displayScore = siqsValue.toFixed(1);
-  
-  // Check if nighttime calculation was used
-  const isNighttimeCalculation = location.siqsResult?.metadata?.calculationType === 'nighttime' ||
-    location.siqsResult?.isNighttimeCalculation === true ||
-    (Array.isArray(location.siqsResult?.factors) && 
-      location.siqsResult?.factors.some((f: any) => f.nighttimeData));
-  
-  // Determine color class based on score
-  let colorClass = 'bg-red-500/80 border-red-400/50';
-  if (siqsValue >= 7.5) {
-    colorClass = 'bg-green-500/80 border-green-400/50';
-  } else if (siqsValue >= 5.0) {
-    colorClass = 'bg-amber-500/80 border-amber-400/50';
-  } else if (siqsValue >= 2.5) {
-    colorClass = 'bg-orange-500/80 border-orange-400/50';
-  }
-  
-  return {
-    siqsValue,
-    displayScore,
-    isNighttimeCalculation,
-    colorClass,
-    isViable: siqsValue >= 5.0
-  };
+  return extractSiqsDisplayData(location);
 }
 
 /**
@@ -86,7 +33,12 @@ export function calculateBasicSiqs(cloudCover: number, bortleScale: number): num
   // Calculate weighted final score (0-10 scale)
   const siqs = (cloudScore * cloudWeight + lightPollutionScore * lightPollutionWeight) / 10;
   
-  // Ensure score is in 0-10 range
+  // Ensure score is in 0-10 range and high cloud cover results in lower score
+  // Cloud cover is the most critical factor, so ensure 100% cloud cover results in a very low score
+  if (validCloudCover >= 95) {
+    return Math.min(2.0, siqs); // Cap at 2.0 for extremely high cloud cover
+  }
+  
   return Math.min(10, Math.max(0, siqs));
 }
 
