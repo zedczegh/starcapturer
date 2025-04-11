@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, MapPin, Sun, CloudSun, GlobeLock, CloudSnow, Moon, Stars, Camera, Telescope, ExternalLink } from "lucide-react";
+import { Sparkles, MapPin, Sun, CloudSun, GlobeLock, CloudSnow, Moon, Stars, Camera, Telescope, ExternalLink, Navigation, Map, Compass } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -40,6 +40,47 @@ export const AboutContent = () => {
               {t("We're passionate about making astronomy accessible to everyone, from beginners to professionals. Our 2025 goal is to create the world's largest community of stargazers who can share their experiences and dark sky locations.", 
                 "我们热衷于让天文学变得人人可及，从初学者到专业人士。我们2025年的目标是创建全球最大的观星者社区，人们可以在这里分享他们的经验和暗空地点。")}
             </p>
+          </CardContent>
+        </Card>
+      </motion.div>
+      
+      <motion.div variants={itemVariants}>
+        <Card className="bg-cosmic-900 border-cosmic-700/50 overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Map className="text-cosmic-400" />
+              {t("Enhanced Location Discovery", "增强的位置发现")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
+            <p className="mb-4 text-cosmic-200">
+              {t("Our advanced location finding algorithm helps you discover both certified dark sky locations and calculated optimal viewing spots worldwide. We use real-time data to sort locations by quality and accessibility.", 
+                "我们先进的位置查找算法可帮助您发现全球认证的暗空位置和计算出的最佳观测点。我们使用实时数据按质量和可达性对位置进行排序。")}
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div className="bg-cosmic-800/30 p-4 rounded-md border border-cosmic-700/30">
+                <h4 className="text-sm font-semibold mb-2 text-cosmic-100 flex items-center">
+                  <Stars className="h-4 w-4 mr-2 text-indigo-400" />
+                  {t("Certified Dark Sky Locations", "认证暗空地点")}
+                </h4>
+                <p className="text-sm text-cosmic-200">
+                  {t("Access to all International Dark Sky Association (IDA) certified locations across all continents including previously hard-to-find Asian sites.", 
+                    "获取所有国际暗空协会（IDA）认证的地点，包括以前难以找到的亚洲地点。")}
+                </p>
+              </div>
+              
+              <div className="bg-cosmic-800/30 p-4 rounded-md border border-cosmic-700/30">
+                <h4 className="text-sm font-semibold mb-2 text-cosmic-100 flex items-center">
+                  <Compass className="h-4 w-4 mr-2 text-green-400" />
+                  {t("Calculated Optimal Viewing", "计算最佳观测点")}
+                </h4>
+                <p className="text-sm text-cosmic-200">
+                  {t("Our algorithm calculates locations with optimal viewing conditions based on light pollution levels, terrain features, and accessibility.", 
+                    "我们的算法根据光污染水平、地形特征和可达性计算出具有最佳观测条件的位置。")}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -123,28 +164,28 @@ export const AboutContent = () => {
             <div className="mt-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-4 rounded-md border border-blue-500/20">
               <h4 className="text-sm font-semibold mb-2 text-cosmic-100 flex items-center">
                 <Camera className="h-4 w-4 mr-1.5 text-blue-400" />
-                {t("2025 Updates", "2025年更新")}
+                {t("Real-Time Updates", "实时更新")}
               </h4>
               <ul className="space-y-2 text-sm text-cosmic-200">
                 <li className="flex items-start">
                   <Telescope className="h-4 w-4 mr-2 mt-0.5 text-purple-400 flex-shrink-0" />
                   <span>
-                    {t("Advanced camera calibration technology with AI-powered star detection", 
-                      "采用AI驱动的星星检测技术的高级相机校准功能")}
+                    {t("Location quality is constantly recalculated based on changing weather and astronomical conditions", 
+                      "根据不断变化的天气和天文条件持续重新计算地点质量")}
                   </span>
                 </li>
                 <li className="flex items-start">
                   <CloudSun className="h-4 w-4 mr-2 mt-0.5 text-green-400 flex-shrink-0" />
                   <span>
-                    {t("Enhanced 72-hour nighttime cloud forecasts with hourly precision", 
-                      "增强的72小时夜间云层预报，提供小时级精度")}
+                    {t("Improved location finding with advanced filtering and sorting algorithms", 
+                      "通过先进的过滤和排序算法改进位置查找")}
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <Stars className="h-4 w-4 mr-2 mt-0.5 text-amber-400 flex-shrink-0" />
+                  <Navigation className="h-4 w-4 mr-2 mt-0.5 text-amber-400 flex-shrink-0" />
                   <span>
-                    {t("Global network of verified dark sky locations with local weather stations", 
-                      "全球经过验证的暗空位置网络，配备本地气象站")}
+                    {t("Optimized loading speeds for faster access to global dark sky locations", 
+                      "优化加载速度，更快访问全球暗空位置")}
                   </span>
                 </li>
               </ul>
@@ -220,11 +261,11 @@ export const AboutContent = () => {
                   <div className="bg-cosmic-800/20 p-4 rounded border border-cosmic-700/30 mt-4">
                     <h4 className="text-sm font-semibold mb-2 text-cosmic-100 flex items-center">
                       <MapPin className="h-4 w-4 mr-1.5 text-red-400" />
-                      {t("Research-Backed Technology", "研究支持的技术")}
+                      {t("Optimized Location Finding", "优化的位置查找")}
                     </h4>
                     <p className="text-sm text-cosmic-200">
-                      {t("We've calibrated our measurements against professional sky quality meters (SQMs) and collaborated with astronomers worldwide to ensure our results align with real-world observations.", 
-                        "我们已经根据专业的天空质量仪（SQMs）校准了我们的测量，并与世界各地的天文学家合作，以确保我们的结果与现实世界的观测一致。")}
+                      {t("Our latest updates include an enhanced location discovery algorithm that efficiently identifies and ranks both certified dark sky locations and calculated optimal viewing spots across all continents.", 
+                        "我们的最新更新包括增强型位置发现算法，可以有效识别和排名所有大洲的认证暗空位置和计算出的最佳观测点。")}
                     </p>
                   </div>
                 </AccordionContent>
@@ -232,22 +273,22 @@ export const AboutContent = () => {
               
               <AccordionItem value="item-3" className="border-cosmic-700/30">
                 <AccordionTrigger className="text-cosmic-100 hover:text-cosmic-50 py-4">
-                  {t("Community & Sharing", "社区与分享")}
+                  {t("Global Dark Sky Access", "全球暗空访问")}
                 </AccordionTrigger>
                 <AccordionContent className="text-cosmic-200 pb-4">
                   <p className="mb-3">
-                    {t("One of Bortle Now's key features is our community of stargazers who share and verify dark sky locations around the world. Each location is verified by our algorithms and community feedback to ensure high quality data.", 
-                      "Bortle Now的主要特点之一是我们的观星者社区，他们分享和验证世界各地的暗空位置。每个位置都经过我们的算法和社区反馈验证，以确保高质量数据。")}
+                    {t("Our comprehensive database now includes certified dark sky locations across all continents, including previously underrepresented regions in Asia and the Southern Hemisphere. This ensures that users worldwide can find optimal stargazing conditions near them.", 
+                      "我们的综合数据库现在包括所有大洲的认证暗空地点，包括以前在亚洲和南半球代表性不足的地区。这确保全球用户都能在他们附近找到最佳的观星条件。")}
                   </p>
                   
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
-                      <span>{t("Verified Dark Sky Map", "已验证的暗空地图")}</span>
+                      <span>{t("Explore Dark Sky Map", "探索暗空地图")}</span>
                       <ExternalLink className="h-4 w-4 ml-2" />
                     </Button>
                     
                     <Button variant="outline" className="border-cosmic-700 text-cosmic-200 hover:bg-cosmic-800 hover:text-cosmic-50 flex justify-between">
-                      <span>{t("Community Profiles", "社区资料")}</span>
+                      <span>{t("Calculate Your SIQS", "计算您的SIQS")}</span>
                       <ExternalLink className="h-4 w-4 ml-2" />
                     </Button>
                   </div>
@@ -262,3 +303,4 @@ export const AboutContent = () => {
 };
 
 export default AboutContent;
+
