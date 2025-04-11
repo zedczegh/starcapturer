@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface UseMapInteractionsProps {
@@ -13,7 +13,8 @@ export const useMapInteractions = ({
 }: UseMapInteractionsProps) => {
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
-  const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const lastClickTimeRef = useRef<number>(0);
+  const clickDebounceTimeRef = useRef<number>(300); // Debounce time in ms
   
   // Handle marker hover
   const handleMarkerHover = useCallback((id: string | null) => {
@@ -27,15 +28,15 @@ export const useMapInteractions = ({
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     // Simple debounce for clicks
     const now = Date.now();
-    if (now - lastClickTime < 300) {
+    if (now - lastClickTimeRef.current < clickDebounceTimeRef.current) {
       return;
     }
-    setLastClickTime(now);
+    lastClickTimeRef.current = now;
     
     if (onLocationClick) {
       onLocationClick(location);
     }
-  }, [onLocationClick, lastClickTime]);
+  }, [onLocationClick]);
 
   // Handle map interaction to hide popups while interacting
   const handleMapDragStart = useCallback(() => {

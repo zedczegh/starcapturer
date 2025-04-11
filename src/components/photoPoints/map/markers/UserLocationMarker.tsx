@@ -1,9 +1,10 @@
 
 import React, { memo } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
+import MapTooltip from '@/components/location/map/MapTooltip';
 
 // User location marker component
 const UserLocationMarker = memo(({ 
@@ -19,26 +20,20 @@ const UserLocationMarker = memo(({
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
-      <Popup
-        closeOnClick={false}
-        autoClose={false}
-        // Removed problematic maxWidth prop
-        // Removed problematic autoPan prop
+      <MapTooltip
+        name={t("Your Location", "您的位置")}
         className="user-location-popup"
       >
-        <div className="p-2 leaflet-popup-custom marker-popup-gradient">
-          <strong>{t("Your Location", "您的位置")}</strong>
-          <div className="text-xs mt-1">
-            {position[0].toFixed(5)}, {position[1].toFixed(5)}
-          </div>
-          {currentSiqs !== null && (
-            <div className="text-xs mt-1.5 flex items-center">
-              <span className="mr-1">SIQS:</span>
-              <SiqsScoreBadge score={currentSiqs} compact={true} />
-            </div>
-          )}
+        <div className="text-xs mt-1">
+          {position[0].toFixed(5)}, {position[1].toFixed(5)}
         </div>
-      </Popup>
+        {currentSiqs !== null && (
+          <div className="text-xs mt-1.5 flex items-center">
+            <span className="mr-1">SIQS:</span>
+            <SiqsScoreBadge score={currentSiqs} compact={true} />
+          </div>
+        )}
+      </MapTooltip>
     </Marker>
   );
 });
