@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -89,8 +90,10 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     
     map.setMaxBounds(worldBounds);
     
-    // Fix: Remove the problematic panInsideBounds event handler
-    // and use a safer approach to keep the map within bounds
+    // Fix: Ensure zoom interactions work properly
+    map.scrollWheelZoom.enable();
+    map.touchZoom.enable();
+    map.doubleClickZoom.enable();
     
     // Improve wrapping of coordinates to stay within -180 to 180 longitude
     const originalLatLng = L.latLng;
@@ -121,10 +124,15 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
       }
     });
     
+    // Expose map instance globally for external components to use
+    (window as any).leafletMap = map;
+    
     return () => {
       if (map) {
         // Clean up event listeners
         map.off('moveend');
+        // Remove global reference
+        delete (window as any).leafletMap;
       }
     };
   }, [map, activeView, searchRadius]);
