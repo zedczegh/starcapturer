@@ -27,7 +27,9 @@ const PhotoPointsNearby: React.FC = () => {
   // Location management hook
   const {
     userLocation,
+    setUserLocation,
     manualLocationOverride,
+    setManualLocationOverride,
     effectiveLocation,
     locationLoading,
     locationLoadAttempts,
@@ -39,6 +41,18 @@ const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   
   // View management hook
+  const {
+    activeView,
+    showMap,
+    calculatedSearchRadius,
+    handleRadiusChange,
+    handleViewChange,
+    toggleMapView
+  } = usePhotoPointsView({
+    onSearchRadiusChange: (radius) => setSearchRadius(radius)
+  });
+  
+  // Set up recommended locations
   const {
     searchRadius,
     setSearchRadius,
@@ -66,18 +80,6 @@ const PhotoPointsNearby: React.FC = () => {
     locations, 
     searchRadius
   );
-
-  // Use the photo points view hook
-  const {
-    activeView,
-    showMap,
-    calculatedSearchRadius,
-    handleRadiusChange,
-    handleViewChange,
-    toggleMapView
-  } = usePhotoPointsView({
-    onSearchRadiusChange: setSearchRadius
-  });
   
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     const newLocation = { latitude, longitude };
@@ -100,7 +102,7 @@ const PhotoPointsNearby: React.FC = () => {
     }
     
     refreshSiqsData();
-  }, [refreshSiqsData]);
+  }, [refreshSiqsData, setManualLocationOverride, setUserLocation]);
 
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && location.latitude && location.longitude) {
