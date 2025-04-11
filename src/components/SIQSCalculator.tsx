@@ -1,264 +1,274 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { MapPin } from "lucide-react";
-import LocationSearch from "@/components/location/LocationSearch";
-import SIQSScore from "@/components/siqs/SIQSScore";
-import { validateCoordinates } from "@/utils/coordinateUtils";
-import { getLocationNameFromCoordinates } from "@/lib/api/location";
-import { fetchWeatherData } from "@/lib/api/weather";
-import { fetchLightPollutionData } from "@/lib/api/pollution";
-import { fetchForecastData } from "@/lib/api/forecast";
-import { calculateNighttimeSiqs } from "@/utils/nighttimeSIQS";
-import { getCurrentTimeFormatted } from "@/lib/utils";
-import useSiqsUpdater from "@/hooks/siqs/useSiqsUpdater";
+import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
+import { useLocationDataCache } from "@/hooks/useLocationData";
+import { useSIQSCalculation } from "@/hooks/useSIQSCalculation";
+import LocationSelector from "./siqs/LocationSelector";
+import SIQSScore from "./siqs/SIQSScore";
+import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
+import StatusMessage from "./siqs/StatusMessage";
+import { useLocationSelectorState } from "./siqs/hooks/useLocationSelectorState";
+import useSIQSAdvancedSettings from "./siqs/hooks/useSIQSAdvancedSettings";
+import { Language } from "@/services/geocoding/types";
+import { getLocationNameForCoordinates } from "./location/map/LocationNameService";
+import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
+import { motion } from "framer-motion";
+import { currentSiqsStore } from './index/CalculatorSection';
 
-export interface SIQSCalculatorProps {
+interface SIQSCalculatorProps {
   className?: string;
+  hideRecommendedPoints?: boolean;
   noAutoLocationRequest?: boolean;
-  onSiqsCalculated?: (value: number | null) => void;
-  initialSiqs?: number | null;
+  onSiqsCalculated?: (siqsValue: number | null) => void;
 }
 
 const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({ 
-  className = "",
+  className,
+  hideRecommendedPoints = false,
   noAutoLocationRequest = false,
-  onSiqsCalculated,
-  initialSiqs = null
+  onSiqsCalculated
 }) => {
-  const { t, language } = useLanguage();
-  const { coords, getPosition, error: locationError } = useGeolocation({
-    enableHighAccuracy: true,
-    timeout: 5000
-  });
+  const { language, t } = useLanguage();
+  const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [calculationInProgress, setCalculationInProgress] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
+  const [shouldAutoRequest, setShouldAutoRequest] = useState(!noAutoLocationRequest);
   
-  const [locationData, setLocationData] = useState({
-    name: "",
-    chineseName: "",
-    latitude: 0,
-    longitude: 0,
-    bortleScale: 4,
-    siqsResult: null,
-    timestamp: ""
-  });
+  const { setCachedData, getCachedData } = useLocationDataCache();
   
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [weatherData, setWeatherData] = useState(null);
-  const [forecastData, setForecastData] = useState(null);
-  const [forecastLoading, setForecastLoading] = useState(false);
-  
-  // Use the SIQS updater hook to handle SIQS value management
-  const { siqsScore, updateSiqsValue } = useSiqsUpdater({
-    initialSiqs: initialSiqs,
-    locationId: `loc-${locationData.latitude.toFixed(6)}-${locationData.longitude.toFixed(6)}`,
-    latitude: locationData.latitude,
-    longitude: locationData.longitude
-  });
-  
-  // Request location if not auto-disabled
   useEffect(() => {
-    if (!noAutoLocationRequest) {
-      getPosition();
-    }
-  }, [getPosition, noAutoLocationRequest]);
-  
-  // Update location and calculate SIQS when coordinates change
-  useEffect(() => {
-    if (coords && coords.latitude && coords.longitude) {
-      console.log(`SIQSCalculator: Got coordinates ${coords.latitude}, ${coords.longitude}`);
-      
-      handleLocationUpdate({
-        latitude: coords.latitude,
-        longitude: coords.longitude
-      });
-    }
-  }, [coords]);
-  
-  // Handle selected location from search
-  const handleLocationSelected = async (location: any) => {
-    if (location && location.latitude && location.longitude) {
-      console.log(`SIQSCalculator: Selected location ${location.latitude}, ${location.longitude}`);
-      
-      await handleLocationUpdate({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        name: location.name || "",
-        chineseName: location.chineseName || ""
-      });
-    }
-  };
-  
-  // Update location data and fetch related information
-  const handleLocationUpdate = async (location: any) => {
-    if (!location || !validateCoordinates(location.latitude, location.longitude)) {
-      console.error("Invalid coordinates provided to handleLocationUpdate");
-      return;
-    }
-    
-    try {
-      // Start calculation process
-      setIsCalculating(true);
-      
-      // Reset siqs before starting new calculation
-      updateSiqsValue(null);
-      if (onSiqsCalculated) onSiqsCalculated(null);
-      
-      // Update location with provided data
-      setLocationData(prev => ({
-        ...prev,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        name: location.name || prev.name,
-        chineseName: location.chineseName || prev.chineseName,
-        timestamp: getCurrentTimeFormatted()
-      }));
-      
-      // If no name provided, fetch it
-      if (!location.name) {
-        try {
-          const locationName = await getLocationNameFromCoordinates(
-            location.latitude, 
-            location.longitude,
-            language
-          );
-          
-          if (locationName) {
-            setLocationData(prev => ({
-              ...prev,
-              name: language === 'en' ? locationName : prev.name,
-              chineseName: language === 'zh' ? locationName : prev.chineseName
-            }));
-          }
-        } catch (err) {
-          console.error("Error fetching location name:", err);
-        }
+    if (!isMounted) {
+      const savedLocation = getSavedLocation();
+      if (savedLocation) {
+        console.log("Found saved location:", savedLocation.name);
+        setShouldAutoRequest(false);
       }
+    }
+  }, [isMounted]);
+  
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+  
+  const locationSelectorProps = useMemo(() => ({
+    language: language as Language,
+    noAutoLocationRequest: noAutoLocationRequest || !shouldAutoRequest,
+    bortleScale: localBortleScale,
+    setBortleScale: setLocalBortleScale,
+    setStatusMessage,
+    setShowAdvancedSettings: () => {},
+    getCachedData,
+    setCachedData
+  }), [language, noAutoLocationRequest, shouldAutoRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
+
+  const {
+    userLocation,
+    locationName,
+    latitude,
+    longitude,
+    setLocationName,
+    setLatitude,
+    setLongitude,
+    handleUseCurrentLocation,
+    handleLocationSelect,
+    handleRecommendedPointSelect
+  } = useLocationSelectorState(locationSelectorProps);
+
+  const parsedLatitude = parseFloat(latitude) || 0;
+  const parsedLongitude = parseFloat(longitude) || 0;
+  
+  const { seeingConditions, bortleScale } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
+
+  useEffect(() => {
+    if (bortleScale !== undefined) {
+      setLocalBortleScale(bortleScale);
+    }
+  }, [bortleScale]);
+
+  const {
+    isCalculating,
+    siqsScore,
+    calculateSIQSForLocation
+  } = useSIQSCalculation(setCachedData, getCachedData);
+  
+  useEffect(() => {
+    if (!isMounted || !latitude || !longitude || !locationName) return;
+    
+    if (locationName === "北京" || locationName === "Beijing") return;
+    
+    const updateLocationNameForLanguage = async () => {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
       
-      // Fetch weather data
-      const weather = await fetchWeatherData({
-        latitude: location.latitude,
-        longitude: location.longitude
-      });
+      if (isNaN(lat) || isNaN(lng)) return;
       
-      setWeatherData(weather);
-      
-      // Fetch light pollution data
       try {
-        const pollutionData = await fetchLightPollutionData(
-          location.latitude, 
-          location.longitude
+        const newName = await getLocationNameForCoordinates(
+          lat, 
+          lng, 
+          language as Language, 
+          { setCachedData, getCachedData }
         );
         
-        if (pollutionData && pollutionData.bortleScale) {
-          setLocationData(prev => ({
-            ...prev,
-            bortleScale: pollutionData.bortleScale
-          }));
+        if (newName && newName !== locationName) {
+          setLocationName(newName);
         }
-      } catch (err) {
-        console.error("Error fetching light pollution data:", err);
+      } catch (error) {
+        console.error("Error updating location name for language change:", error);
       }
-      
-      // Fetch forecast data
-      setForecastLoading(true);
-      try {
-        const forecast = await fetchForecastData({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          days: 2
-        });
-        
-        setForecastData(forecast);
-        
-        // Calculate SIQS with nighttime emphasis once forecast data is available
-        if (forecast && weather) {
-          const updatedLocationData = {
-            ...locationData,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            bortleScale: locationData.bortleScale,
-            weatherData: weather
-          };
-          
-          const siqsResult = calculateNighttimeSiqs(
-            updatedLocationData,
-            forecast,
-            t
-          );
-          
-          if (siqsResult) {
-            console.log(`SIQSCalculator: Calculated SIQS is ${siqsResult.score}`);
-            
-            // Update location data with SIQS result
-            setLocationData(prev => ({
-              ...prev,
-              siqs: siqsResult.score,
-              siqsResult
-            }));
-            
-            // Update external state via callback
-            if (onSiqsCalculated) onSiqsCalculated(siqsResult.score);
-            updateSiqsValue(siqsResult.score);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching forecast data:", err);
-        toast.error(t("Error fetching forecast data", "获取预报数据时出错"));
-      } finally {
-        setForecastLoading(false);
-        setIsCalculating(false);
+    };
+    
+    updateLocationNameForLanguage();
+  }, [language, latitude, longitude, locationName, setCachedData, getCachedData, setLocationName, isMounted]);
+  
+  useEffect(() => {
+    setCalculationInProgress(isCalculating);
+  }, [isCalculating]);
+  
+  useEffect(() => {
+    if (!isMounted || !locationName || !latitude || !longitude) return;
+    
+    saveLocation({
+      name: locationName,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      bortleScale: localBortleScale || undefined
+    });
+  }, [locationName, latitude, longitude, localBortleScale, isMounted]);
+  
+  useEffect(() => {
+    if (!isMounted || noAutoLocationRequest) return;
+    
+    const savedLocation = getSavedLocation();
+    if (savedLocation && !locationName) {
+      setLocationName(savedLocation.name);
+      setLatitude(savedLocation.latitude.toString());
+      setLongitude(savedLocation.longitude.toString());
+      if (savedLocation.bortleScale) {
+        setLocalBortleScale(savedLocation.bortleScale);
       }
-    } catch (err) {
-      console.error("Error in handleLocationUpdate:", err);
-      setIsCalculating(false);
+      console.log("Restored saved location:", savedLocation.name);
+    }
+  }, [isMounted, noAutoLocationRequest, locationName, setLocationName, setLatitude, setLongitude]);
+  
+  const calculateSIQS = useCallback(() => {
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    if (!locationName || isNaN(lat) || isNaN(lng)) return;
+    
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      setCalculationInProgress(true);
+      calculateSIQSForLocation(
+        lat, 
+        lng, 
+        locationName, 
+        true, 
+        localBortleScale, 
+        seeingConditions,
+        undefined,
+        setStatusMessage,
+        language as Language
+      )
+      .finally(() => {
+        setCalculationInProgress(false);
+      });
+    }
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, language, calculateSIQSForLocation, setStatusMessage]);
+  
+  useEffect(() => {
+    if (!isMounted || !locationName) return;
+    
+    const handler = setTimeout(() => {
+      calculateSIQS();
+    }, 500);
+    
+    return () => clearTimeout(handler);
+  }, [latitude, longitude, locationName, localBortleScale, seeingConditions, calculateSIQS, isMounted]);
+  
+  useEffect(() => {
+    if (onSiqsCalculated) {
+      onSiqsCalculated(siqsScore);
+      // Also update the global store
+      currentSiqsStore.setValue(siqsScore);
+    }
+  }, [siqsScore, onSiqsCalculated]);
+  
+  const animationVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 24 
+      }
     }
   };
   
-  // Format coordinates for display
-  const formattedCoordinates = locationData.latitude && locationData.longitude 
-    ? `${locationData.latitude.toFixed(4)}, ${locationData.longitude.toFixed(4)}` 
-    : t("Unknown", "未知");
-  
   return (
-    <Card className={`overflow-hidden shadow-lg ${className}`}>
-      <div className="p-4 md:p-6 space-y-4">
-        <div className="space-y-4">
-          <LocationSearch 
-            onLocationSelected={handleLocationSelected} 
-            placeholder={t("Search for a location", "搜索地点")} 
+    <motion.div 
+      className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300 bg-cosmic-800/60 backdrop-blur-sm`}
+      initial="hidden"
+      animate="visible"
+      variants={animationVariants}
+    >
+      <SIQSCalculatorHeader />
+      
+      <motion.div 
+        variants={animationVariants}
+        transition={{ delay: 0.1 }}
+      >
+        <StatusMessage message={statusMessage} loading={calculationInProgress} />
+      </motion.div>
+      
+      {siqsScore !== null && (
+        <motion.div 
+          variants={animationVariants}
+          transition={{ delay: 0.2 }}
+        >
+          <SIQSScore 
+            siqsScore={siqsScore} 
+            latitude={parseFloat(latitude)}
+            longitude={parseFloat(longitude)}
+            locationName={locationName}
           />
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4 mr-1 text-muted-foreground" />
-              <span>{formattedCoordinates}</span>
-            </div>
-            
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => getPosition()}
-              disabled={isCalculating}
-              className="text-xs"
-            >
-              {t("Use my location", "使用我的位置")}
-            </Button>
-          </div>
-          
-          <SIQSScore
-            siqsScore={siqsScore}
-            locationName={language === 'en' ? locationData.name : locationData.chineseName || locationData.name}
-            latitude={locationData.latitude}
-            longitude={locationData.longitude}
-          />
-        </div>
-      </div>
-    </Card>
+        </motion.div>
+      )}
+      
+      <motion.div 
+        className="space-y-4"
+        variants={animationVariants}
+        transition={{ delay: 0.3 }}
+      >
+        <LocationSelector 
+          locationName={locationName} 
+          loading={loading || calculationInProgress} 
+          handleUseCurrentLocation={handleUseCurrentLocation}
+          onSelectLocation={handleLocationSelect}
+          noAutoLocationRequest={noAutoLocationRequest || !shouldAutoRequest}
+        />
+        
+        {!hideRecommendedPoints && (
+          <motion.div 
+            variants={animationVariants}
+            transition={{ delay: 0.4 }}
+          >
+            <RecommendedPhotoPoints 
+              onSelectPoint={handleRecommendedPointSelect}
+              userLocation={userLocation}
+              hideEmptyMessage={true}
+            />
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>
   );
 };
 
-export default SIQSCalculator;
+export default React.memo(SIQSCalculator);

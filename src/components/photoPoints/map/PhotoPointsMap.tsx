@@ -1,33 +1,17 @@
+
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { Suspense, lazy } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots"; // Use the consistent type from api/astroSpots
+import { SharedAstroSpot } from "@/lib/siqs/types";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
 import { toast } from "sonner";
 import './MapStyles.css'; // Import custom map styles
 import { useMapMarkers } from "@/hooks/photoPoints/useMapMarkers";
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import { isWaterLocation } from "@/utils/locationValidator";
-import { updateLocationsWithSiqs } from "@/services/bestLocationsService";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
-
-// Define explicit props interface for LazyPhotoPointsMapContainer
-interface PhotoPointsMapContainerProps {
-  center: [number, number];
-  zoom: number;
-  userLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
-  searchRadius: number;
-  activeView: 'certified' | 'calculated';
-  onMapReady: () => void;
-  onLocationClick: (location: SharedAstroSpot) => void;
-  onMapClick: (lat: number, lng: number) => void;
-  hoveredLocationId: string | null;
-  onMarkerHover: (id: string | null) => void;
-  onMarkerLeave?: () => void; // Make this optional
-}
 
 // Lazy load the map container to reduce initial load time
 const LazyPhotoPointsMapContainer = lazy(() => 
@@ -74,8 +58,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [key, setKey] = useState(`map-${Date.now()}`); // Add key for forced remount when view changes
   const lastRadiusRef = useRef<number>(searchRadius);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
-  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Always show only the active view locations, ensuring all certified locations are included
   const activeLocations = activeView === 'certified' ? certifiedLocations : calculatedLocations;
@@ -87,9 +69,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       viewChangedRef.current = true;
       setKey(`map-view-${activeView}-${Date.now()}`);
       console.log(`View changed to ${activeView}, forcing map component remount`);
-      
-      // Reset enhanced locations when view changes
-      setEnhancedLocations([]);
     }
   }, [activeView]);
   
@@ -101,9 +80,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
       clearLocationCache();
       lastRadiusRef.current = searchRadius;
-      
-      // Reset enhanced locations when radius changes significantly
-      setEnhancedLocations([]);
     } else {
       lastRadiusRef.current = searchRadius;
     }
@@ -141,84 +117,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [activeLocations, mapLoadedOnce]);
   
-  // Update location data with real-time SIQS information
-  useEffect(() => {
-    const updateLocationsSiqs = async () => {
-      if (!userLocation || !activeLocations.length) return;
-      
-      try {
-        // Choose which locations to update based on active view
-        const locationsToUpdate = activeView === 'certified' 
-          ? certifiedLocations 
-          : calculatedLocations.filter(loc => {
-              if (!loc.latitude || !loc.longitude) return false;
-              if (isWaterLocation(loc.latitude, loc.longitude)) return false;
-              return true;
-            });
-            
-        if (locationsToUpdate.length === 0) return;
-        
-        console.log(`Updating SIQS for ${locationsToUpdate.length} ${activeView} locations`);
-        
-        // Update locations with SIQS information with emphasis on nighttime cloud cover
-        const updatedLocations = await updateLocationsWithSiqs(locationsToUpdate);
-        
-        if (updatedLocations?.length > 0) {
-          console.log(`Received ${updatedLocations.length} updated locations with SIQS values`);
-          setEnhancedLocations(prev => {
-            // Create a map for efficient lookup
-            const locationMap = new Map<string, SharedAstroSpot>();
-            
-            // Add existing locations to map
-            prev.forEach(loc => {
-              if (loc.latitude && loc.longitude) {
-                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                locationMap.set(key, loc);
-              }
-            });
-            
-            // Update or add new locations
-            updatedLocations.forEach(loc => {
-              if (loc.latitude && loc.longitude) {
-                // Skip water locations for calculated view
-                if (activeView === 'calculated' && 
-                    !loc.isDarkSkyReserve && 
-                    !loc.certification && 
-                    isWaterLocation(loc.latitude, loc.longitude)) {
-                  return;
-                }
-                
-                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                locationMap.set(key, loc);
-              }
-            });
-            
-            return Array.from(locationMap.values());
-          });
-        }
-      } catch (error) {
-        console.error("Error updating locations with SIQS:", error);
-      }
-    };
-    
-    // Clear any existing timeout to prevent multiple updates
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    
-    // Set a timeout to avoid hammering the API
-    updateTimeoutRef.current = setTimeout(() => {
-      updateLocationsSiqs();
-      updateTimeoutRef.current = null;
-    }, 500);
-    
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
-  }, [userLocation, activeView, activeLocations, certifiedLocations, calculatedLocations]);
-  
   // Use the map hook with the selected location or user location
   const {
     mapReady,
@@ -229,9 +127,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     initialZoom
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
-    locations: enhancedLocations.length > 0 ? enhancedLocations : activeLocations,
+    locations: activeView === 'calculated' && previousLocationsRef.current.length > 0 
+      ? previousLocationsRef.current 
+      : activeLocations,
     searchRadius,
-    activeView
+    activeView // Pass the active view to usePhotoPointsMap
   });
 
   // Reset selected location when userLocation changes dramatically
@@ -245,7 +145,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         console.log("User location changed significantly, updating selected location");
         setSelectedMapLocation(null);
         previousLocationsRef.current = []; // Reset accumulated locations
-        setEnhancedLocations([]); // Reset enhanced locations
       }
     }
   }, [userLocation, selectedMapLocation]);
@@ -321,7 +220,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           onMapClick={handleMapClick}
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={handleHover}
-          // Remove onMarkerLeave here since it's now optional in the interface
         />
         
         <Suspense fallback={null}>

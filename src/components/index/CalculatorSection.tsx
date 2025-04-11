@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -8,62 +7,26 @@ import { motion } from "framer-motion";
 export const currentSiqsStore = {
   value: null as number | null,
   setValue: (value: number | null) => {
+    currentSiqsStore.value = value;
+    // Also save to localStorage for persistence
     if (value !== null) {
-      // Ensure value is on a 0-10 scale and is valid
-      const validValue = Math.min(10, Math.max(0, value));
-      console.log(`Setting current SIQS value to: ${validValue.toFixed(1)}`);
-      currentSiqsStore.value = validValue;
-      // Also save to localStorage for persistence
-      localStorage.setItem('current_siqs_value', validValue.toString());
-    } else {
-      console.log("Setting current SIQS value to null");
-      currentSiqsStore.value = null;
-      // Clear from localStorage if null
-      localStorage.removeItem('current_siqs_value');
+      localStorage.setItem('current_siqs_value', value.toString());
     }
   },
   getValue: () => {
     // If no value in memory, try localStorage
     if (currentSiqsStore.value === null) {
-      try {
-        const storedValue = localStorage.getItem('current_siqs_value');
-        if (storedValue) {
-          const parsedValue = parseFloat(storedValue);
-          if (!isNaN(parsedValue)) {
-            // Ensure value is on a 0-10 scale
-            currentSiqsStore.value = Math.min(10, Math.max(0, parsedValue));
-          }
-        } else {
-          // Try getting from latest location data
-          const savedLocationString = localStorage.getItem('latest_siqs_location');
-          if (savedLocationString) {
-            const savedLocation = JSON.parse(savedLocationString);
-            if (savedLocation && typeof savedLocation.siqs === 'number') {
-              currentSiqsStore.value = Math.min(10, Math.max(0, savedLocation.siqs));
-            }
-          }
+      const storedValue = localStorage.getItem('current_siqs_value');
+      if (storedValue) {
+        const parsedValue = parseFloat(storedValue);
+        if (!isNaN(parsedValue)) {
+          currentSiqsStore.value = parsedValue;
         }
-      } catch (error) {
-        console.error("Error reading SIQS from storage:", error);
-        // Explicitly set to null on error
-        currentSiqsStore.value = null;
       }
     }
     return currentSiqsStore.value;
   }
 };
-
-// Expose to window for global access
-if (typeof window !== 'undefined') {
-  window.currentSiqsStore = currentSiqsStore;
-}
-
-// Declare window interface extension for TypeScript
-declare global {
-  interface Window {
-    currentSiqsStore?: typeof currentSiqsStore;
-  }
-}
 
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
@@ -73,7 +36,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   noAutoLocationRequest = false 
 }) => {
   const { t } = useLanguage();
-  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
   
   // Define animations
   const containerVariants = {
@@ -101,100 +64,11 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
     }
   };
   
-  // Initialize with the stored value immediately to prevent flicker
-  useEffect(() => {
-    console.log("CalculatorSection: Initializing SIQS value");
-    
-    // First try to get value from latest_siqs_location (most accurate)
-    try {
-      const savedLocationString = localStorage.getItem('latest_siqs_location');
-      if (savedLocationString) {
-        const savedLocation = JSON.parse(savedLocationString);
-        if (savedLocation && typeof savedLocation.siqs === 'number') {
-          const scoreValue = Math.min(10, Math.max(0, savedLocation.siqs));
-          console.log(`CalculatorSection: Setting SIQS from latest_siqs_location: ${scoreValue}`);
-          setCurrentSiqs(scoreValue);
-          currentSiqsStore.setValue(scoreValue);
-          return;
-        } else {
-          console.log("CalculatorSection: No valid SIQS in saved location, using null");
-          setCurrentSiqs(null);
-          currentSiqsStore.setValue(null);
-          return;
-        }
-      } else {
-        console.log("CalculatorSection: No saved location found, using null");
-        setCurrentSiqs(null);
-        currentSiqsStore.setValue(null);
-      }
-    } catch (error) {
-      console.error("Error reading from latest_siqs_location:", error);
-      setCurrentSiqs(null);
-      currentSiqsStore.setValue(null);
-    }
-    
-    // Fall back to current_siqs_value
-    const storedValue = currentSiqsStore.getValue();
-    if (storedValue !== null) {
-      console.log(`CalculatorSection: Setting SIQS from currentSiqsStore: ${storedValue}`);
-      setCurrentSiqs(storedValue);
-    } else {
-      console.log("CalculatorSection: No stored SIQS value found, using null");
-      setCurrentSiqs(null);
-      currentSiqsStore.setValue(null);
-    }
-  }, []);
-  
   // Update current SIQS value when calculated
   const handleSiqsCalculated = (value: number | null) => {
-    console.log(`CalculatorSection: SIQS calculated: ${value}`);
-    
-    if (value !== null) {
-      // Ensure value is on a 0-10 scale
-      const validValue = Math.min(10, Math.max(0, value));
-      setCurrentSiqs(validValue);
-      currentSiqsStore.setValue(validValue);
-      
-      // Also update latest_siqs_location
-      try {
-        const savedLocationString = localStorage.getItem('latest_siqs_location');
-        if (savedLocationString) {
-          const savedLocation = JSON.parse(savedLocationString);
-          if (savedLocation) {
-            savedLocation.siqs = validValue;
-            localStorage.setItem('latest_siqs_location', JSON.stringify(savedLocation));
-            console.log(`CalculatorSection: Updated latest_siqs_location with SIQS: ${validValue}`);
-          }
-        }
-      } catch (error) {
-        console.error("Error updating latest_siqs_location:", error);
-      }
-    } else {
-      setCurrentSiqs(null);
-      currentSiqsStore.setValue(null);
-      console.log("CalculatorSection: Reset SIQS to null");
-    }
+    setCurrentSiqs(value);
+    currentSiqsStore.setValue(value);
   };
-  
-  // Check for value updates from other components
-  useEffect(() => {
-    const storedValue = currentSiqsStore.getValue();
-    if (storedValue !== null && storedValue !== currentSiqs) {
-      console.log(`CalculatorSection: Syncing with currentSiqsStore: ${storedValue}`);
-      setCurrentSiqs(storedValue);
-    }
-    
-    // Poll for updates from other components
-    const intervalId = setInterval(() => {
-      const latestValue = currentSiqsStore.getValue();
-      if (latestValue !== null && latestValue !== currentSiqs) {
-        console.log(`CalculatorSection: Updating from currentSiqsStore: ${latestValue}`);
-        setCurrentSiqs(latestValue);
-      }
-    }, 3000); // Check every 3 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [currentSiqs]);
   
   return (
     <section 
@@ -260,7 +134,6 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
             className="mx-auto max-w-2xl" 
             noAutoLocationRequest={noAutoLocationRequest}
             onSiqsCalculated={handleSiqsCalculated}
-            initialSiqs={currentSiqs}
           />
         </motion.div>
       </motion.div>

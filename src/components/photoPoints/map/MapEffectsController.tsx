@@ -2,10 +2,9 @@
 import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService'; // Updated import
+import { calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import L from 'leaflet';
+import L from 'leaflet'; // Fixed import for L (Leaflet)
 
 interface MapEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -71,7 +70,7 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     
     // Clear SIQS cache when view changes
     if (activeView) {
-      clearLocationCache(); // Using imported function
+      clearSiqsCache();
     }
     
     // Add performance optimizations
@@ -83,9 +82,10 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     }
     
     // Set world bounds to prevent infinite horizontal scrolling
+    // This restricts the map to one "copy" of the world
     const worldBounds = L.latLngBounds(
-      L.latLng(-90, -180),
-      L.latLng(90, 180)
+      L.latLng(-90, -180),  // Southwest corner
+      L.latLng(90, 180)     // Northeast corner
     );
     
     map.setMaxBounds(worldBounds);
@@ -93,16 +93,18 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
       map.panInsideBounds(worldBounds, { animate: false });
     });
 
-    // Add bounds limiting
+    // Add bounds limiting to ensure we don't show multiple copies of the world
     const originalGetBounds = map.getBounds;
     map.wrapLatLng = function(latlng) {
       const lng = latlng.lng;
+      // Wrap longitude to stay within -180 to 180 range
       const wrappedLng = ((lng + 540) % 360) - 180;
       return L.latLng(latlng.lat, wrappedLng);
     };
     
     return () => {
       if (map) {
+        // Clean up event listeners
         map.off('drag');
       }
     };
