@@ -4,5 +4,5 @@ export * from '../realTimeSiqsService';
 export * from '../bestLocationsService';
 export { 
   updateLocationsWithRealTimeSiqs,
-  clearLocationCache as clearSiqsLocationCache
+  clearLocationCache 
 } from './locationUpdateService';

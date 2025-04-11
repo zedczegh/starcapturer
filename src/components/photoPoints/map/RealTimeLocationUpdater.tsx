@@ -128,7 +128,6 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
               leafletMap.dragging.enable();
               console.log("Dragging explicitly enabled after location update");
             }
-            
           } else {
             console.warn("Leaflet map instance not found in window object");
           }

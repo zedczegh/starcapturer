@@ -9,116 +9,11 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import MapEffectsController from './MapEffectsController';
 import { UserLocationMarker, LocationMarker } from './MarkerComponents';
 import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
+import { MapEvents } from './MapComponents';
+import { MapController } from './MapController';
 
 // Configure Leaflet on load
 configureLeaflet();
-
-// Map Events component to handle click events and updates
-const MapEvents = ({ 
-  onMapClick, 
-  onMapDragStart, 
-  onMapDragEnd,
-  onMapZoomEnd 
-}: { 
-  onMapClick: (lat: number, lng: number) => void;
-  onMapDragStart?: () => void;
-  onMapDragEnd?: () => void;
-  onMapZoomEnd?: () => void;
-}) => {
-  const map = useMap();
-  
-  // Set up event listeners
-  useEffect(() => {
-    if (!map) return;
-    
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-    
-    const handleDragStart = () => {
-      if (onMapDragStart) onMapDragStart();
-    };
-    
-    const handleDragEnd = () => {
-      if (onMapDragEnd) onMapDragEnd();
-    };
-    
-    const handleZoomEnd = () => {
-      if (onMapZoomEnd) onMapZoomEnd();
-    };
-    
-    map.on('click', handleClick);
-    map.on('dragstart', handleDragStart);
-    map.on('dragend', handleDragEnd);
-    map.on('zoomend', handleZoomEnd);
-    
-    // Store map reference in window for external access
-    (window as any).leafletMap = map;
-    
-    return () => {
-      // Clean up event listeners
-      map.off('click', handleClick);
-      map.off('dragstart', handleDragStart);
-      map.off('dragend', handleDragEnd);
-      map.off('zoomend', handleZoomEnd);
-      // Clean up window reference
-      delete (window as any).leafletMap;
-    };
-  }, [map, onMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
-  
-  return null;
-};
-
-// Component to handle map events and interactions
-const MapController = ({ 
-  userLocation, 
-  searchRadius
-}: { 
-  userLocation: { latitude: number; longitude: number } | null;
-  searchRadius: number;
-}) => {
-  const map = useMap();
-  const firstRenderRef = useRef(true);
-  
-  useEffect(() => {
-    if (!map) return;
-    
-    // Always enable all controls to allow dragging and interaction
-    map.scrollWheelZoom.enable();
-    map.dragging.enable();
-    map.touchZoom.enable();
-    map.doubleClickZoom.enable();
-    map.boxZoom.enable();
-    map.keyboard.enable();
-    if (map.tap) map.tap.enable();
-    
-    // Explicitly check and log if dragging is enabled
-    console.log("Map dragging enabled:", map.dragging.enabled());
-    
-    // Store map reference in window for external access
-    (window as any).leafletMap = map;
-    
-    // If user location exists, center on it
-    if (userLocation && firstRenderRef.current) {
-      // Only set view once on first render to avoid constant recentering
-      map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
-      firstRenderRef.current = false;
-    }
-
-    // Improve performance by reduced rerenders on pan/zoom
-    map._onResize = L.Util.throttle(map._onResize, 200, map);
-    
-    // Prevent horizontal wrapping of the world map (show only one copy)
-    map.setMaxBounds([[-90, -180], [90, 180]]);
-    
-    return () => {
-      // Clean up if needed
-      delete (window as any).leafletMap;
-    };
-  }, [map, userLocation]);
-
-  return null;
-};
 
 interface PhotoPointsMapContainerProps {
   center: [number, number];
@@ -224,13 +119,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onMapReady();
       }}
       scrollWheelZoom={true}
-      zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         subdomains="abc"
-        noWrap={true} // Prevent the map from repeating horizontally
       />
       
       {/* Controller for handling map events */}
