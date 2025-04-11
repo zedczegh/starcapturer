@@ -38,5 +38,6 @@ export const updateWithRealTimeSiqs = async (
 ): Promise<SharedAstroSpot[]> => {
   if (!locations?.length) return locations;
   
-  return updateLocationsWithRealTimeSiqs(locations);
+  // Cast to ensure type compatibility
+  return updateLocationsWithRealTimeSiqs(locations) as Promise<SharedAstroSpot[]>;
 };

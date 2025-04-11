@@ -1,96 +1,91 @@
 
+/**
+ * Service for updating locations with real-time SIQS data
+ */
 import { calculateRealTimeSiqs, batchCalculateSiqs } from '../realTimeSiqsService';
-import { SharedAstroSpot } from '@/lib/siqs/types';
-import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
-// Create a cache for locations to avoid redundant processing
+// Cache for location data to reduce API calls
 const locationCache = new Map<string, {
-  data: SharedAstroSpot;
+  data: any;
   timestamp: number;
 }>();
 
-// Cache lifetime in milliseconds (30 minutes)
-const LOCATION_CACHE_LIFETIME = 30 * 60 * 1000;
+// Cache lifetime in milliseconds
+const CACHE_LIFETIME = 10 * 60 * 1000; // 10 minutes
 
 /**
- * Updates a set of locations with real-time SIQS data
+ * Update a collection of locations with real-time SIQS data
  * @param locations Array of locations to update
- * @returns Promise resolving to locations with updated SIQS
+ * @returns Promise resolving to updated locations
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[]
 ): Promise<SharedAstroSpot[]> {
-  if (!locations || !Array.isArray(locations) || locations.length === 0) {
-    return [];
-  }
+  if (!locations || locations.length === 0) return [];
   
-  console.log(`Updating ${locations.length} locations with real-time SIQS`);
+  console.log(`Updating ${locations.length} locations with real-time SIQS data`);
   
-  // Filter out invalid locations
-  const validLocations = locations.filter(loc => 
-    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
-  );
-  
-  // Check cache first for each location
-  const locationsToUpdate: SharedAstroSpot[] = [];
-  const updatedLocations: SharedAstroSpot[] = [];
-  
-  for (const location of validLocations) {
-    const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-    const cachedLocation = locationCache.get(cacheKey);
-    
-    if (cachedLocation && (Date.now() - cachedLocation.timestamp) < LOCATION_CACHE_LIFETIME) {
-      // Use cached data if fresh
-      updatedLocations.push({
-        ...location,
-        siqs: cachedLocation.data.siqs,
-        isViable: cachedLocation.data.isViable,
-        siqsFactors: cachedLocation.data.siqsFactors,
-        siqsResult: cachedLocation.data.siqsResult
-      });
-    } else {
-      // Need to update this location
-      locationsToUpdate.push(location);
-    }
-  }
-  
-  if (locationsToUpdate.length > 0) {
-    try {
-      // Batch update the remaining locations
-      const freshLocations = await batchCalculateSiqs(locationsToUpdate);
-      
-      // Update the cache with fresh data
-      for (const location of freshLocations) {
-        const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-        locationCache.set(cacheKey, {
-          data: location,
-          timestamp: Date.now()
-        });
-      }
-      
-      // Combine cached and fresh results
-      const result = [...updatedLocations, ...freshLocations];
-      
-      // Ensure SIQS values are consistent across the app
-      const finalResult = result.map(location => ({
-        ...location,
-        siqs: getConsistentSiqsValue(location)
-      }));
-      
-      console.log(`Updated SIQS for ${freshLocations.length} locations`);
-      return finalResult;
-    } catch (error) {
-      console.error("Error updating locations with SIQS:", error);
-      return [...updatedLocations, ...locationsToUpdate];
-    }
-  } else {
-    // All locations were cached
-    return updatedLocations;
+  try {
+    // Use batch calculation for all locations
+    return await batchCalculateSiqs(locations);
+  } catch (error) {
+    console.error("Error updating locations with real-time SIQS:", error);
+    return locations;
   }
 }
 
 /**
- * Clear the location cache for testing or when data becomes stale
+ * Get a location from cache or external API
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param forceRefresh Whether to force a cache refresh
+ * @returns Promise resolving to location data
+ */
+export async function getLocationData(
+  latitude: number,
+  longitude: number,
+  forceRefresh: boolean = false
+): Promise<any> {
+  if (!latitude || !longitude) return null;
+  
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cachedData = locationCache.get(cacheKey);
+  
+  // Check if we have valid cached data
+  if (!forceRefresh && cachedData && (Date.now() - cachedData.timestamp) < CACHE_LIFETIME) {
+    console.log(`Using cached location data for ${cacheKey}`);
+    return cachedData.data;
+  }
+  
+  try {
+    // Calculate real-time SIQS
+    const siqsResult = await calculateRealTimeSiqs(latitude, longitude, 5);
+    
+    // Create location data
+    const locationData = {
+      latitude,
+      longitude,
+      siqs: siqsResult.siqs,
+      isViable: siqsResult.isViable,
+      siqsFactors: siqsResult.factors || []
+    };
+    
+    // Cache the result
+    locationCache.set(cacheKey, {
+      data: locationData,
+      timestamp: Date.now()
+    });
+    
+    return locationData;
+  } catch (error) {
+    console.error(`Error fetching location data for ${latitude}, ${longitude}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Clear the location cache entirely
  */
 export function clearLocationCache(): void {
   const size = locationCache.size;
@@ -99,9 +94,31 @@ export function clearLocationCache(): void {
 }
 
 /**
- * Get the current location cache size
- * @returns Number of cached entries
+ * Clear a specific location from the cache
  */
-export function getLocationCacheSize(): number {
-  return locationCache.size;
+export function clearLocationFromCache(latitude: number, longitude: number): void {
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  if (locationCache.has(cacheKey)) {
+    locationCache.delete(cacheKey);
+    console.log(`Cleared cache for location ${cacheKey}`);
+  }
+}
+
+/**
+ * Purge expired entries from the location cache
+ */
+export function purgeExpiredCache(): void {
+  let purgedCount = 0;
+  const now = Date.now();
+  
+  for (const [key, value] of locationCache.entries()) {
+    if (now - value.timestamp > CACHE_LIFETIME) {
+      locationCache.delete(key);
+      purgedCount++;
+    }
+  }
+  
+  if (purgedCount > 0) {
+    console.log(`Purged ${purgedCount} expired entries from location cache`);
+  }
 }
