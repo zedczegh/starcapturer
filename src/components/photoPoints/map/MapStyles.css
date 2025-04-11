@@ -58,6 +58,7 @@
   width: auto !important;
   min-width: 180px;
   max-width: 220px;
+  display: flex;
 }
 
 .leaflet-popup-content {
@@ -66,6 +67,8 @@
   width: 100% !important;
   max-width: 100%;
   overflow-wrap: break-word;
+  display: flex;
+  white-space: normal;
 }
 
 .leaflet-popup-tip {
@@ -126,7 +129,8 @@
 
 /* Fix popup positioning inside map */
 .leaflet-popup {
-  max-width: 90%;
+  max-width: 240px;
+  white-space: normal;
 }
 
 /* Ensure popups don't extend outside map boundaries */
@@ -146,4 +150,28 @@
 .leaflet-popup-content p {
   margin: 0;
   padding: 0;
+}
+
+/* Auto panning improvements */
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize popup placement */
+.leaflet-popup {
+  margin-bottom: 20px !important;
+}
+
+/* Ensure horizontal alignment of popup content */
+.map-tooltip-container {
+  width: auto !important;
+  max-width: 220px !important;
+}
+
+/* Improve popup stability */
+.leaflet-fade-anim .leaflet-popup {
+  transition: opacity 0.2s linear;
+  transition-delay: 0.05s;
 }

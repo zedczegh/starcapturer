@@ -24,7 +24,6 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      closeButton={false}
       offset={[0, -5]}
       autoPanPadding={[50, 50]}
       maxWidth={250}

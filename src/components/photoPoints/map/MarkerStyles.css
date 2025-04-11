@@ -89,7 +89,7 @@
   overflow: hidden;
   padding: 0;
   width: auto !important;
-  max-width: 250px;
+  max-width: 220px;
 }
 
 .leaflet-popup-content {
@@ -112,7 +112,6 @@
   white-space: normal;
   text-align: left;
   width: 100%;
-  min-width: 180px;
 }
 
 .marker-popup-gradient {
@@ -178,4 +177,18 @@
 /* Ensure popups don't overflow the container */
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
   transform: translateZ(0);
+}
+
+/* Extra fixes for popup stability */
+.leaflet-popup-pane {
+  pointer-events: none;
+}
+
+.leaflet-popup-content, .leaflet-popup-content * {
+  pointer-events: auto;
+}
+
+/* Force horizontal layout for popup content */
+.leaflet-popup-content > div {
+  width: 100%;
 }

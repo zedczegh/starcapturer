@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, memo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -99,7 +99,7 @@ const LocationMarker = memo(({
   }
   
   // Create the correct marker icon based on location type and hover state
-  const icon = useMemo(() => {
+  const icon = React.useMemo(() => {
     return getLocationMarker(location, isCertified, isHovered);
   }, [location, isCertified, isHovered]);
   
@@ -185,7 +185,6 @@ const LocationMarker = memo(({
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        closeButton={false}
         offset={[0, -5]}
         autoPanPadding={[50, 50]}
         maxWidth={220}
@@ -256,7 +255,6 @@ const UserLocationMarker = memo(({
       <Popup
         closeOnClick={false}
         autoClose={false}
-        closeButton={false}
         offset={[0, -5]}
         autoPanPadding={[50, 50]}
         maxWidth={220}

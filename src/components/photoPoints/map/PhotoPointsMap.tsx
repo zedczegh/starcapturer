@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
