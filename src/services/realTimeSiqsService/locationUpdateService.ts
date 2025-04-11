@@ -1,121 +1,107 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateRealTimeSiqs } from '../realTimeSiqsService';
+import { calculateRealTimeSiqs, batchCalculateSiqs } from '../realTimeSiqsService';
+import { SharedAstroSpot } from '@/lib/siqs/types';
+import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 
-// Cache for storing location data to avoid redundant calculations
-const locationCache: Map<string, { location: SharedAstroSpot; timestamp: number }> = new Map();
+// Create a cache for locations to avoid redundant processing
+const locationCache = new Map<string, {
+  data: SharedAstroSpot;
+  timestamp: number;
+}>();
 
-// Constants
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
-
-/**
- * Generate a cache key for a location
- * @param latitude Location latitude
- * @param longitude Location longitude 
- * @returns Cache key string
- */
-const generateLocationCacheKey = (latitude: number, longitude: number): string => {
-  return `${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-};
+// Cache lifetime in milliseconds (30 minutes)
+const LOCATION_CACHE_LIFETIME = 30 * 60 * 1000;
 
 /**
- * Clear the location cache
- */
-export const clearLocationCache = (): void => {
-  locationCache.clear();
-  console.log("Location cache cleared");
-};
-
-/**
- * Clear the SIQS cache (re-exported in realTimeSiqsService.ts)
- */
-export const clearSiqsCache = (): void => {
-  // This is implemented in realTimeSiqsService.ts and re-exported
-  console.log("SIQS cache cleared through locationUpdateService");
-};
-
-/**
- * Update multiple locations with real-time SIQS values in batch
+ * Updates a set of locations with real-time SIQS data
  * @param locations Array of locations to update
- * @returns Updated locations with real-time SIQS values
+ * @returns Promise resolving to locations with updated SIQS
  */
-export const updateLocationsWithRealTimeSiqs = async (
+export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[]
-): Promise<SharedAstroSpot[]> => {
-  if (!locations || locations.length === 0) {
-    console.log("No locations to update with real-time SIQS");
+): Promise<SharedAstroSpot[]> {
+  if (!locations || !Array.isArray(locations) || locations.length === 0) {
     return [];
   }
   
   console.log(`Updating ${locations.length} locations with real-time SIQS`);
   
-  const now = Date.now();
+  // Filter out invalid locations
+  const validLocations = locations.filter(loc => 
+    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+  );
+  
+  // Check cache first for each location
+  const locationsToUpdate: SharedAstroSpot[] = [];
   const updatedLocations: SharedAstroSpot[] = [];
   
-  // Process locations in batches to avoid overwhelming the API
-  const processBatch = async (batch: SharedAstroSpot[]): Promise<SharedAstroSpot[]> => {
-    const batchResults: SharedAstroSpot[] = [];
+  for (const location of validLocations) {
+    const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    const cachedLocation = locationCache.get(cacheKey);
     
-    for (const location of batch) {
-      if (!location.latitude || !location.longitude) continue;
-      
-      // Generate cache key for this location
-      const cacheKey = generateLocationCacheKey(location.latitude, location.longitude);
-      const cachedItem = locationCache.get(cacheKey);
-      
-      // Use cached value if available and fresh
-      if (cachedItem && (now - cachedItem.timestamp < CACHE_DURATION)) {
-        batchResults.push(cachedItem.location);
-        continue;
-      }
-      
-      try {
-        // Calculate real-time SIQS for this location
-        const { siqs } = await calculateRealTimeSiqs(
-          location.latitude,
-          location.longitude,
-          location.bortleScale
-        );
-        
-        const updatedLocation = {
-          ...location,
-          siqs
-        };
-        
-        // Cache the result
-        locationCache.set(cacheKey, {
-          location: updatedLocation,
-          timestamp: now
-        });
-        
-        batchResults.push(updatedLocation);
-      } catch (error) {
-        console.error(`Error calculating SIQS for location (${location.latitude}, ${location.longitude}):`, error);
-        batchResults.push(location);
-      }
-    }
-    
-    return batchResults;
-  };
-  
-  // Process in batches of 5 to avoid overwhelming API
-  const batchSize = 5;
-  const totalBatches = Math.ceil(locations.length / batchSize);
-  
-  for (let i = 0; i < totalBatches; i++) {
-    const start = i * batchSize;
-    const end = Math.min((i + 1) * batchSize, locations.length);
-    const batch = locations.slice(start, end);
-    
-    const batchResults = await processBatch(batch);
-    updatedLocations.push(...batchResults);
-    
-    // Add a small delay between batches
-    if (i < totalBatches - 1) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+    if (cachedLocation && (Date.now() - cachedLocation.timestamp) < LOCATION_CACHE_LIFETIME) {
+      // Use cached data if fresh
+      updatedLocations.push({
+        ...location,
+        siqs: cachedLocation.data.siqs,
+        isViable: cachedLocation.data.isViable,
+        siqsFactors: cachedLocation.data.siqsFactors,
+        siqsResult: cachedLocation.data.siqsResult
+      });
+    } else {
+      // Need to update this location
+      locationsToUpdate.push(location);
     }
   }
   
-  console.log(`Updated SIQS for ${updatedLocations.length} locations`);
-  return updatedLocations;
-};
+  if (locationsToUpdate.length > 0) {
+    try {
+      // Batch update the remaining locations
+      const freshLocations = await batchCalculateSiqs(locationsToUpdate);
+      
+      // Update the cache with fresh data
+      for (const location of freshLocations) {
+        const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+        locationCache.set(cacheKey, {
+          data: location,
+          timestamp: Date.now()
+        });
+      }
+      
+      // Combine cached and fresh results
+      const result = [...updatedLocations, ...freshLocations];
+      
+      // Ensure SIQS values are consistent across the app
+      const finalResult = result.map(location => ({
+        ...location,
+        siqs: getConsistentSiqsValue(location)
+      }));
+      
+      console.log(`Updated SIQS for ${freshLocations.length} locations`);
+      return finalResult;
+    } catch (error) {
+      console.error("Error updating locations with SIQS:", error);
+      return [...updatedLocations, ...locationsToUpdate];
+    }
+  } else {
+    // All locations were cached
+    return updatedLocations;
+  }
+}
+
+/**
+ * Clear the location cache for testing or when data becomes stale
+ */
+export function clearLocationCache(): void {
+  const size = locationCache.size;
+  locationCache.clear();
+  console.log(`Location cache cleared (${size} entries removed)`);
+}
+
+/**
+ * Get the current location cache size
+ * @returns Number of cached entries
+ */
+export function getLocationCacheSize(): number {
+  return locationCache.size;
+}

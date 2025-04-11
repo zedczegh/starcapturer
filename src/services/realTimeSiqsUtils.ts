@@ -57,7 +57,7 @@ export const safeProcessData = <T>(data: any, defaultValue: T): T => {
  * @returns Valid Bortle scale (1-9)
  */
 export const validateBortleScale = (bortleScale: number | undefined): number => {
-  if (!bortleScale || isNaN(bortleScale) || bortleScale <= 0 || bortleScale > 9) {
+  if (!bortleScale || bortleScale <= 0 || bortleScale > 9) {
     return 5; // Default fallback
   }
   return bortleScale;

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useLocationDataCache } from "@/hooks/useLocationData";
-import { useSIQSCalculation as useBaseSIQSCalculation } from "@/hooks/useSIQSCalculation";
+import { useSIQSCalculation } from "@/hooks/useSIQSCalculation";
 import LocationSelector from "./siqs/LocationSelector";
 import SIQSScore from "./siqs/SIQSScore";
 import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
@@ -15,21 +15,6 @@ import { getLocationNameForCoordinates } from "./location/map/LocationNameServic
 import { getSavedLocation, saveLocation } from "@/utils/locationStorage";
 import { motion } from "framer-motion";
 import { currentSiqsStore } from './index/CalculatorSection';
-
-// Custom hook to handle SIQS calculation without missing exports
-const useSIQSCalculation = (setCachedData: any, getCachedData: any) => {
-  // Get the base implementation but ignore problematic exports
-  const baseImplementation = useBaseSIQSCalculation(setCachedData, getCachedData);
-  
-  return {
-    ...baseImplementation,
-    // Add any missing functions that might be used
-    calculateSIQSForLocation: baseImplementation.calculateSIQSForLocation,
-    validateInputs: baseImplementation.validateInputs || ((lat: string, lng: string) => true),
-    isCalculating: baseImplementation.isCalculating || false,
-    siqsScore: baseImplementation.siqsScore || null
-  };
-};
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -241,54 +226,49 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       >
         <StatusMessage message={statusMessage} loading={calculationInProgress} />
       </motion.div>
-
-      <motion.div
-        className="mt-4"
-        variants={animationVariants}
-        transition={{ delay: 0.2 }}
-      >
-        <LocationSelector
-          latitude={latitude}
-          longitude={longitude}
-          locationName={locationName}
-          onLocationNameChange={setLocationName}
-          onLatitudeChange={setLatitude}
-          onLongitudeChange={setLongitude}
-          onUseCurrentLocation={handleUseCurrentLocation}
-          onLocationSelect={handleLocationSelect}
-          loading={loading}
-          noAutoLocationRequest={noAutoLocationRequest || !shouldAutoRequest}
-        />
-      </motion.div>
-
-      <motion.div
-        className="mt-4"
-        variants={animationVariants}
-        transition={{ delay: 0.3 }}
-      >
-        <SIQSScore 
-          score={siqsScore}
-          loading={calculationInProgress}
-        />
-      </motion.div>
-
-      {!hideRecommendedPoints && userLocation && (
-        <motion.div
-          className="mt-6" 
+      
+      {siqsScore !== null && (
+        <motion.div 
           variants={animationVariants}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.2 }}
         >
-          <h3 className="text-lg font-medium mb-2">
-            {t("Recommended Photo Points", "推荐摄影点")}
-          </h3>
-          <RecommendedPhotoPoints
-            userLocation={userLocation}
-            onSelectPoint={handleRecommendedPointSelect}
+          <SIQSScore 
+            siqsScore={siqsScore} 
+            latitude={parseFloat(latitude)}
+            longitude={parseFloat(longitude)}
+            locationName={locationName}
           />
         </motion.div>
       )}
+      
+      <motion.div 
+        className="space-y-4"
+        variants={animationVariants}
+        transition={{ delay: 0.3 }}
+      >
+        <LocationSelector 
+          locationName={locationName} 
+          loading={loading || calculationInProgress} 
+          handleUseCurrentLocation={handleUseCurrentLocation}
+          onSelectLocation={handleLocationSelect}
+          noAutoLocationRequest={noAutoLocationRequest || !shouldAutoRequest}
+        />
+        
+        {!hideRecommendedPoints && (
+          <motion.div 
+            variants={animationVariants}
+            transition={{ delay: 0.4 }}
+          >
+            <RecommendedPhotoPoints 
+              onSelectPoint={handleRecommendedPointSelect}
+              userLocation={userLocation}
+              hideEmptyMessage={true}
+            />
+          </motion.div>
+        )}
+      </motion.div>
     </motion.div>
   );
 };
 
-export default SIQSCalculator;
+export default React.memo(SIQSCalculator);

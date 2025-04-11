@@ -6,6 +6,3 @@ export {
   updateLocationsWithRealTimeSiqs,
   clearLocationCache as clearSiqsLocationCache
 } from './locationUpdateService';
-
-// Export utils for consistent usage across the app
-export * from '../realTimeSiqsUtils';

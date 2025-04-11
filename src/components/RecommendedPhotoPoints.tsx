@@ -160,8 +160,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             >
               <PhotoPointCard
                 point={location}
-                onSelect={onSelectPoint ? onSelectPoint : (() => {})}
-                onViewDetails={() => onSelectPoint ? onSelectPoint(location) : {}}
+                onSelect={onSelectPoint}
+                onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}
               />
             </motion.div>
