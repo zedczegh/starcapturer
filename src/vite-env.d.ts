@@ -1,117 +1,81 @@
-/// <reference types="vite/client" />
-/// <reference types="react-leaflet" />
-/// <reference types="leaflet" />
 
-declare module "react-leaflet" {
-  import { FC, ReactNode } from "react";
-  import * as L from "leaflet";
-  
-  // Core components
-  export const MapContainer: FC<{
-    center: [number, number];
-    zoom: number;
-    children?: ReactNode;
-    style?: React.CSSProperties;
-    className?: string;
+/// <reference types="vite/client" />
+
+// Add type declarations for react-leaflet
+declare module 'react-leaflet' {
+  import * as L from 'leaflet';
+  import * as React from 'react';
+
+  export interface MapContainerProps extends L.MapOptions {
+    center: L.LatLngExpression;
+    zoom?: number;
     scrollWheelZoom?: boolean;
-    whenReady?: (map: any) => void;
+    style?: React.CSSProperties;
+    whenCreated?: (map: L.Map) => void;
+    whenReady?: (map: { target: L.Map }) => void;
     attributionControl?: boolean;
-    onClick?: (e: any) => void;
-    [key: string]: any;
-  }>;
-  
-  export const TileLayer: FC<{
-    attribution?: string;
-    url: string;
-    subdomains?: string;
-    [key: string]: any;
-  }>;
-  
-  export const Circle: FC<{
-    center: [number, number];
-    radius: number;
-    pathOptions?: {
-      color?: string;
-      fillColor?: string;
-      fillOpacity?: number;
-      weight?: number;
-      opacity?: number;
-      dashArray?: string;
-      className?: string;
-      [key: string]: any;
-    };
-    [key: string]: any;
-  }>;
-  
-  // Marker and Popup
-  export interface MarkerProps extends L.MarkerOptions {
-    position: [number, number];
-    icon?: L.Icon;
-    eventHandlers?: {
-      click?: () => void;
-      mouseover?: () => void;
-      mouseout?: () => void;
-      [key: string]: any;
-    };
-    children?: ReactNode;
-    [key: string]: any;
-  }
-  
-  export const Marker: FC<MarkerProps>;
-  
-  export interface PopupProps {
-    children?: ReactNode;
     className?: string;
-    closeOnClick?: boolean;
+    children?: React.ReactNode;
+    onClick?: (e: any) => void;
+  }
+
+  export interface TileLayerProps extends L.TileLayerOptions {
+    url: string;
+    attribution?: string;
+    subdomains?: string | string[];
+    opacity?: number;
+    zIndex?: number;
+    children?: React.ReactNode;
+  }
+
+  export interface MarkerProps extends L.MarkerOptions {
+    position: L.LatLngExpression;
+    icon?: L.Icon | L.DivIcon;
+    onClick?: () => void;
+    onMouseOver?: () => void; 
+    onMouseOut?: () => void;
+    children?: React.ReactNode;
+  }
+
+  export interface PopupProps extends L.PopupOptions {
     autoClose?: boolean;
-    closeButton?: boolean;
-    autoPan?: boolean;
-    maxWidth?: number;
-    [key: string]: any;
+    closeOnClick?: boolean;
+    children?: React.ReactNode;
+    className?: string;
   }
   
-  export const Popup: FC<PopupProps>;
+  export interface CircleProps {
+    center: L.LatLngExpression;
+    radius: number;
+    pathOptions?: L.PathOptions;
+    children?: React.ReactNode;
+  }
+
+  export class MapContainer extends React.Component<MapContainerProps> {}
+  export class TileLayer extends React.Component<TileLayerProps> {}
+  export class Marker extends React.Component<MarkerProps> {}
+  export class Popup extends React.Component<PopupProps> {}
+  export class Circle extends React.Component<CircleProps> {}
+  export class ZoomControl extends React.Component<L.ControlOptions> {}
   
-  // Hooks
   export function useMap(): L.Map;
-  export function useMapEvents(events: Record<string, (e: any) => void>): L.Map;
-  
-  // Other components
-  export const LayerGroup: FC<{ children?: ReactNode; [key: string]: any }>;
-  export const FeatureGroup: FC<{ children?: ReactNode; [key: string]: any }>;
-  export const Tooltip: FC<{ children?: ReactNode; [key: string]: any }>;
-  export const ZoomControl: FC<{ position?: string; [key: string]: any }>;
-  export const ScaleControl: FC<{ position?: string; [key: string]: any }>;
-  export const AttributionControl: FC<{ position?: string; [key: string]: any }>;
-  
-  // GeoJSON
-  export const GeoJSON: FC<{
-    data: any;
-    style?: any;
-    pointToLayer?: (feature: any, latlng: L.LatLng) => L.Layer;
-    onEachFeature?: (feature: any, layer: L.Layer) => void;
-    filter?: (feature: any) => boolean;
-    [key: string]: any;
-  }>;
-  
-  // Other common components
-  export const Polyline: FC<{
-    positions: [number, number][] | [number, number][][];
-    [key: string]: any;
-  }>;
-  export const Polygon: FC<{
-    positions: [number, number][] | [number, number][][];
-    [key: string]: any;
-  }>;
-  export const Rectangle: FC<{
-    bounds: L.LatLngBoundsExpression;
-    [key: string]: any;
-  }>;
 }
 
-// Extend window to include global variables
-declare interface Window {
-  __REDUX_DEVTOOLS_EXTENSION_COMPOSE__?: any;
-  __INITIAL_STATE__?: any;
-  leafletMap?: any;
+// Make Leaflet available globally
+declare global {
+  interface Window {
+    L: typeof import('leaflet');
+    map?: L.Map; // Add map to window interface for direct access
+  }
+}
+
+// Define WeatherData interface globally
+interface WeatherData {
+  cloudCover: number;
+  windSpeed: number;
+  humidity: number;
+  temperature?: number;
+  precipitation?: number;
+  weatherCondition?: string;
+  aqi?: number;
 }
