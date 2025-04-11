@@ -1,5 +1,5 @@
 
-export type Language = 'en' | 'zh' | 'ja' | 'ko';
+export type Language = 'en' | 'zh';
 
 export interface Location {
   name: string;

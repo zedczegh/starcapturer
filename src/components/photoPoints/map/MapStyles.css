@@ -50,22 +50,35 @@
   }
 }
 
-/* Popup styles */
+/* Enhanced popup styles for better horizontal display */
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
   padding: 0;
   overflow: hidden;
+  min-width: 180px; /* Ensure minimum width for better readability */
+  max-width: 250px !important; /* Maximum width for horizontal display */
 }
 
 .leaflet-popup-content {
   margin: 0;
   padding: 0;
-  width: 250px !important;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 250px !important;
 }
 
 .leaflet-popup-tip {
   background: #1e1e2e;
+}
+
+/* Force horizontal layout for popup content */
+.leaflet-popup {
+  max-width: 250px !important;
+}
+
+/* Improve popup positioning */
+.custom-popup .leaflet-popup-content-wrapper {
+  width: 100%;
+  max-width: 250px;
 }
 
 /* Enhanced visibility for controls */
@@ -108,4 +121,30 @@
   transform: scale(1.25);
   z-index: 1000 !important;
   transition: transform 0.1s ease-out;
+}
+
+/* Make popups more easily clickable - reduce flickering */
+.leaflet-popup {
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+}
+
+.leaflet-popup-content {
+  pointer-events: auto !important;
+}
+
+/* Add a small delay to popup display to prevent flickering */
+.leaflet-fade-anim .leaflet-popup {
+  transition: opacity 0.15s linear;
+  transition-delay: 0.05s;
+}
+
+/* Ensure popup is positioned correctly */
+.leaflet-popup-pane {
+  z-index: 900;
+}
+
+/* Autopan improvements */
+.leaflet-popup-pane {
+  pointer-events: none;
 }

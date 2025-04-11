@@ -16,6 +16,7 @@ declare module 'react-leaflet' {
     attributionControl?: boolean;
     className?: string;
     children?: React.ReactNode;
+    onClick?: (e: any) => void;
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
@@ -33,6 +34,12 @@ declare module 'react-leaflet' {
     onClick?: () => void;
     onMouseOver?: () => void; 
     onMouseOut?: () => void;
+    eventHandlers?: {
+      click?: (e?: any) => void;
+      mouseover?: (e?: any) => void;
+      mouseout?: (e?: any) => void;
+      [key: string]: ((e?: any) => void) | undefined;
+    };
     children?: React.ReactNode;
   }
 
@@ -40,6 +47,7 @@ declare module 'react-leaflet' {
     autoClose?: boolean;
     closeOnClick?: boolean;
     children?: React.ReactNode;
+    className?: string;
   }
   
   export interface CircleProps {
@@ -54,6 +62,7 @@ declare module 'react-leaflet' {
   export class Marker extends React.Component<MarkerProps> {}
   export class Popup extends React.Component<PopupProps> {}
   export class Circle extends React.Component<CircleProps> {}
+  export class ZoomControl extends React.Component<L.ControlOptions> {}
   
   export function useMap(): L.Map;
 }
