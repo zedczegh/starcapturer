@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface UseMapInteractionsProps {
@@ -7,17 +7,15 @@ interface UseMapInteractionsProps {
   onMarkerHover?: (id: string | null) => void;
 }
 
-/**
- * Hook to manage map interactions like hover, click, and drag
- */
-const useMapInteractions = ({
+export const useMapInteractions = ({
   onLocationClick,
   onMarkerHover
 }: UseMapInteractionsProps) => {
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
+  const [lastClickTime, setLastClickTime] = useState<number>(0);
   
-  // Handle hover events
+  // Handle marker hover
   const handleMarkerHover = useCallback((id: string | null) => {
     setHoveredLocationId(id);
     if (onMarkerHover) {
@@ -25,25 +23,45 @@ const useMapInteractions = ({
     }
   }, [onMarkerHover]);
   
-  // Handle click events
+  // Handle location click
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    // Simple debounce for clicks
+    const now = Date.now();
+    if (now - lastClickTime < 300) {
+      return;
+    }
+    setLastClickTime(now);
+    
     if (onLocationClick) {
       onLocationClick(location);
     }
-  }, [onLocationClick]);
-  
-  // Handle drag events
+  }, [onLocationClick, lastClickTime]);
+
+  // Handle map interaction to hide popups while interacting
   const handleMapDragStart = useCallback(() => {
-    setIsDragging(true);
-  }, []);
+    setHideMarkerPopups(true);
+    handleMarkerHover(null);
+  }, [handleMarkerHover]);
   
   const handleMapDragEnd = useCallback(() => {
-    setIsDragging(false);
+    // Small delay to prevent immediate popup reappearance
+    setTimeout(() => {
+      setHideMarkerPopups(false);
+    }, 100);
   }, []);
   
+  // Clear hover when component unmounts or on certain conditions
+  useEffect(() => {
+    return () => {
+      if (onMarkerHover) {
+        onMarkerHover(null);
+      }
+    };
+  }, [onMarkerHover]);
+
   return {
     hoveredLocationId,
-    isDragging,
+    hideMarkerPopups,
     handleMarkerHover,
     handleLocationClick,
     handleMapDragStart,

@@ -4,7 +4,6 @@ import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
-import { MapPin } from 'lucide-react';
 
 // User location marker component
 const UserLocationMarker = memo(({ 
@@ -16,29 +15,25 @@ const UserLocationMarker = memo(({
 }) => {
   const { t } = useLanguage();
   // Using red color for user location
-  const userMarkerIcon = createCustomMarker('#e11d48', 'pulse');
+  const userMarkerIcon = createCustomMarker('#e11d48');
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
       <Popup
         closeOnClick={false}
         autoClose={false}
+        // Removed problematic maxWidth prop
+        // Removed problematic autoPan prop
         className="user-location-popup"
       >
-        <div className="p-3 w-[240px] leaflet-popup-custom user-location-gradient">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-            <strong className="text-white">{t("Your Location", "您的位置")}</strong>
-          </div>
-          
-          <div className="mt-2 text-xs flex items-center text-gray-200">
-            <MapPin className="h-3 w-3 mr-1.5 text-gray-300" />
+        <div className="p-2 leaflet-popup-custom marker-popup-gradient">
+          <strong>{t("Your Location", "您的位置")}</strong>
+          <div className="text-xs mt-1">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </div>
-          
           {currentSiqs !== null && (
-            <div className="mt-2 flex items-center">
-              <span className="text-xs mr-1.5 text-gray-200">{t("SIQS Score:", "SIQS 评分:")}</span>
+            <div className="text-xs mt-1.5 flex items-center">
+              <span className="mr-1">SIQS:</span>
               <SiqsScoreBadge score={currentSiqs} compact={true} />
             </div>
           )}
