@@ -10,8 +10,7 @@ interface MapTooltipProps {
 }
 
 /**
- * Enhanced map tooltip component with better styling and performance
- * Removed position prop as it's not needed when used as a child of Marker
+ * Enhanced map tooltip component with better styling and positioning
  */
 const MapTooltip: React.FC<MapTooltipProps> = ({ 
   name, 
@@ -24,7 +23,9 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      // Remove className from Popup props as it's not supported
+      maxWidth={250}
+      autoPan={true}
+      className="custom-popup"
     >
       <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
         <div className="font-medium text-sm">{name}</div>

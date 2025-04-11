@@ -82,18 +82,20 @@
   transform-box: fill-box;
 }
 
-/* Enhanced popup styling */
+/* Enhanced popup styling for horizontal display */
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   padding: 0;
+  max-width: 250px;
 }
 
 .leaflet-popup-content {
   margin: 0;
   width: auto !important;
   overflow: hidden;
+  max-width: 250px;
 }
 
 .leaflet-popup-tip {
@@ -122,20 +124,4 @@
 
 .siqs-poor {
   background: linear-gradient(to bottom, #7f1d1d, #1a222e);
-}
-
-/* Make popups more easily clickable - reduce flickering */
-.leaflet-popup {
-  pointer-events: auto !important;
-  z-index: 1000 !important;
-}
-
-.leaflet-popup-content {
-  pointer-events: auto !important;
-}
-
-/* Add a small delay to popup display to prevent flickering */
-.leaflet-fade-anim .leaflet-popup {
-  transition: opacity 0.15s linear;
-  transition-delay: 0.05s;
 }
