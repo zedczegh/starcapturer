@@ -13,7 +13,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { formatSiqsScore } from "@/utils/siqs/displayUtils";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -53,7 +52,6 @@ const Index = () => {
   }, [getPosition]);
   
   useEffect(() => {
-    console.log("Index: Initializing");
     // Prefetch data for popular locations when the home page loads
     prefetchPopularLocations(queryClient);
     
@@ -63,62 +61,37 @@ const Index = () => {
       const savedLocationString = localStorage.getItem('latest_siqs_location');
       
       if (savedLocationString) {
-        try {
-          // We have a saved location, parse it and mark as restored
-          const savedLocation = JSON.parse(savedLocationString);
+        // We have a saved location, parse it and mark as restored
+        const savedLocation = JSON.parse(savedLocationString);
+        
+        if (savedLocation && savedLocation.name) {
+          // Mark as restored to prevent auto-triggering current location
+          setHasRestoredLocation(true);
+          console.log("Found saved location, disabling auto location request");
           
-          if (savedLocation) {
-            // Mark as restored to prevent auto-triggering current location
-            setHasRestoredLocation(true);
-            console.log("Found saved location, disabling auto location request");
-            
-            // Use the exact SIQS value from the saved location
-            const locationSiqs = savedLocation.siqs;
-            console.log(`Index: Retrieved SIQS from saved location: ${locationSiqs}`);
-            
-            if (typeof locationSiqs === 'number') {
-              setCurrentSiqs(locationSiqs);
-              
-              // Update the global store with this value
-              currentSiqsStore.setValue(locationSiqs);
-              
-              // Using threshold of 5 for showing notification about good conditions
-              if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
-                // Show notification for ideal astrophotography location
-                setTimeout(() => {
-                  toast.info(
-                    t(
-                      `Your current location has a SIQS of ${formatSiqsScore(locationSiqs)}, which is good for astrophotography tonight!`,
-                      `您当前的位置SIQS为${formatSiqsScore(locationSiqs)}，今晚适合天文摄影！`
-                    ),
-                    {
-                      duration: 8000,
-                      icon: <Star className="text-yellow-400" />,
-                    }
-                  );
-                }, 2000);
-              }
-            } else {
-              console.log("Index: No valid SIQS in saved location, setting to null");
-              setCurrentSiqs(null);
-              currentSiqsStore.setValue(null);
-            }
+          const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          setCurrentSiqs(locationSiqs);
+          
+          // Using threshold of 5 for showing notification about good conditions
+          if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
+            // Show notification for ideal astrophotography location
+            setTimeout(() => {
+              toast.info(
+                t(
+                  "Your current location is ideal for astrophotography tonight, please find a rural spot with lower light pollution to start imaging!",
+                  "您当前的位置今晚非常适合天文摄影，请寻找光污染较少的乡村地点开始拍摄！"
+                ),
+                {
+                  duration: 8000,
+                  icon: <Star className="text-yellow-400" />,
+                }
+              );
+            }, 2000);
           }
-        } catch (parseError) {
-          console.error("Error parsing saved location:", parseError);
-          setCurrentSiqs(null);
-          currentSiqsStore.setValue(null);
         }
-      } else {
-        // No saved location, ensure we don't default to 10.0
-        console.log("Index: No saved location found, setting SIQS to null");
-        setCurrentSiqs(null);
-        currentSiqsStore.setValue(null);
       }
     } catch (error) {
       console.error("Error checking for location restoration:", error);
-      setCurrentSiqs(null);
-      currentSiqsStore.setValue(null);
     }
     
     // Scroll to calculator section or hash if present in URL
@@ -132,46 +105,23 @@ const Index = () => {
       }
     }
     
-    // Update the currentSiqsStore value from localStorage if available
+    // Update the currentSiqsStore value
     const updateCurrentSiqs = () => {
       try {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
         if (savedLocationString) {
           const savedLocation = JSON.parse(savedLocationString);
-          if (savedLocation && typeof savedLocation.siqs === 'number') {
-            console.log(`Index: Updating current SIQS from saved location: ${savedLocation.siqs}`);
+          if (savedLocation && savedLocation.siqs) {
             currentSiqsStore.setValue(savedLocation.siqs);
             setCurrentSiqs(savedLocation.siqs);
-          } else {
-            // If no SIQS value in saved location, ensure we don't default to 10.0
-            console.log("Index: No valid SIQS in saved location during update, setting to null");
-            currentSiqsStore.setValue(null);
-            setCurrentSiqs(null);
           }
-        } else {
-          // No saved location, ensure we don't default to 10.0
-          console.log("Index: No saved location found during update, setting SIQS to null");
-          currentSiqsStore.setValue(null);
-          setCurrentSiqs(null);
         }
       } catch (error) {
         console.error("Error updating current SIQS:", error);
-        // In case of error, reset SIQS to null
-        currentSiqsStore.setValue(null);
-        setCurrentSiqs(null);
       }
     };
     
-    // Call immediately and set up periodic refresh
     updateCurrentSiqs();
-    const intervalId = setInterval(updateCurrentSiqs, 30000); // Check every 30 seconds
-    
-    // Make global store available for external components
-    if (typeof window !== 'undefined') {
-      window.currentSiqsStore = currentSiqsStore;
-    }
-    
-    return () => clearInterval(intervalId);
   }, [queryClient, t]);
 
   return (

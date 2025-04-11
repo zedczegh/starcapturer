@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/lib/types/sharedTypes";
 import { Button } from "./ui/button";
 import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -51,7 +51,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: limit + 5
+    maxInitialResults: limit + 5 // Request more to ensure we have enough even after filtering
   });
 
   useEffect(() => {
@@ -148,9 +148,9 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               transition={{ duration: 0.15, delay: index * 0.03 }}
             >
               <PhotoPointCard
-                point={location as SharedAstroSpot}
-                onSelect={onSelectPoint ? (point) => onSelectPoint(point as SharedAstroSpot) : undefined}
-                onViewDetails={() => onSelectPoint?.(location as SharedAstroSpot)}
+                point={location}
+                onSelect={onSelectPoint}
+                onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}
               />
             </motion.div>
