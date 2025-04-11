@@ -185,23 +185,24 @@ const LocationMarker = memo(({
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        autoPan={true}
+        closeButton={false}
+        offset={[0, -5]}
         autoPanPadding={[50, 50]}
         maxWidth={220}
       >
-        <div className={`py-2 px-0.5 max-w-[220px] w-full leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
+        <div className={`py-2 px-3 max-w-[220px] w-full leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
             {isCertified && (
-              <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
+              <Star className="h-3.5 w-3.5 mr-1.5 text-yellow-400 fill-yellow-400" />
             )}
-            <span className="text-gray-100">{displayName}</span>
+            <span className="text-gray-100 line-clamp-1">{displayName}</span>
           </div>
           
           {/* Show certification badge for certified locations */}
           {isCertified && location.certification && (
             <div className="mt-1 text-xs font-medium text-amber-400 flex items-center">
-              <Award className="h-3 w-3 mr-1" />
-              {location.certification}
+              <Award className="h-3 w-3 mr-1.5" />
+              <span className="line-clamp-1">{location.certification}</span>
             </div>
           )}
           
@@ -226,7 +227,7 @@ const LocationMarker = memo(({
               onClick={goToLocationDetails}
               className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1 px-2 rounded transition-colors"
             >
-              <ExternalLink className="h-3 w-3 mr-1" />
+              <ExternalLink className="h-3 w-3 mr-1.5" />
               {t("View Details", "查看详情")}
             </button>
           </div>
@@ -255,18 +256,19 @@ const UserLocationMarker = memo(({
       <Popup
         closeOnClick={false}
         autoClose={false}
-        autoPan={true}
+        closeButton={false}
+        offset={[0, -5]}
         autoPanPadding={[50, 50]}
         maxWidth={220}
       >
-        <div className="p-2 leaflet-popup-custom marker-popup-gradient">
+        <div className="p-2 px-3 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
-          <div className="text-xs mt-1">
+          <div className="text-xs mt-1.5">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </div>
           {currentSiqs !== null && (
             <div className="text-xs mt-1.5 flex items-center">
-              <span className="mr-1">SIQS:</span>
+              <span className="mr-1.5">SIQS:</span>
               <SiqsScoreBadge score={currentSiqs} compact={true} />
             </div>
           )}

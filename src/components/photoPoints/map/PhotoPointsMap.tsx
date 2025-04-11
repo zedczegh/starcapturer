@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -119,11 +120,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [calculatedLocations, activeView]);
   
-  const activeLocations = activeView === 'certified' 
-    ? certifiedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-    : combinedCalculatedLocations.length > 0 
-      ? combinedCalculatedLocations
-      : calculatedLocations;
+  // Ensure we are showing the correct locations based on the current view
+  const activeLocations = useMemo(() => {
+    if (activeView === 'certified') {
+      return certifiedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification);
+    } else {
+      return combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
+    }
+  }, [activeView, certifiedLocations, combinedCalculatedLocations, calculatedLocations]);
   
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
@@ -266,4 +270,4 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   );
 };
 
-export default PhotoPointsMap;
+export default React.memo(PhotoPointsMap);
