@@ -1,8 +1,9 @@
 
+import { MatchScore } from './types';
 import { containsChineseCharacters } from './pinyinUtils';
 
 /**
- * Enhanced match score function with improved language support
+ * Enhanced match score function with improved Chinese characters support
  * and prioritization of known locations in our database
  */
 export function getMatchScore(location: string, query: string, language: string = 'en'): number {
@@ -58,21 +59,6 @@ export function getMatchScore(location: string, query: string, language: string 
   // Highly prioritize exact substring match (e.g. "cali" in "california")
   if (locationLower.includes(queryLower)) return 95 + languageBoost;
   
-  // Check for word matches
-  return calculateWordMatchScore(queryWords, locationWords, queryLower, locationLower, hasChineseQuery, languageBoost);
-}
-
-/**
- * Helper function to calculate match scores based on word matching
- */
-function calculateWordMatchScore(
-  queryWords: string[], 
-  locationWords: string[],
-  queryLower: string,
-  locationLower: string,
-  hasChineseQuery: boolean,
-  languageBoost: number
-): number {
   // Check if any location word starts with the query
   for (const word of locationWords) {
     if (word.startsWith(queryLower)) return 92 + languageBoost;
@@ -135,21 +121,9 @@ function calculateWordMatchScore(
     if (word.includes(queryLower)) return 75 + languageBoost;
   }
   
-  return calculateCharacterMatchScore(queryLower, locationLower, hasChineseQuery, languageBoost);
-}
-
-/**
- * Helper function to calculate character-based match scores
- */
-function calculateCharacterMatchScore(
-  queryLower: string,
-  locationLower: string,
-  hasChineseQuery: boolean,
-  languageBoost: number
-): number {
   // Partial word matching
   if (queryLower.length >= 2) {
-    for (const word of locationLower.split(/\s+/)) {
+    for (const word of locationWords) {
       if (word.startsWith(queryLower.substring(0, Math.min(word.length, queryLower.length)))) {
         const matchLength = Math.min(queryLower.length, word.length);
         const matchPercentage = matchLength / word.length;
@@ -160,7 +134,7 @@ function calculateCharacterMatchScore(
   
   // First letter matches beginning of a word
   if (queryLower.length === 1) {
-    for (const word of locationLower.split(/\s+/)) {
+    for (const word of locationWords) {
       if (word.startsWith(queryLower)) {
         return 40 + languageBoost;
       }
