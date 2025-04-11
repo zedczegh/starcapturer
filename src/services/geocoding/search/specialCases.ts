@@ -56,18 +56,6 @@ export function handleSpecialCases(query: string, language: Language): Location[
         query.includes('天文') ||
         query.includes('银河') ||
         query.includes('观星'))
-      ) ||
-      (language === 'ja' && (
-        query.includes('星空') ||
-        query.includes('暗夜') ||
-        query.includes('天文') ||
-        query.includes('星見'))
-      ) ||
-      (language === 'ko' && (
-        query.includes('별하늘') ||
-        query.includes('어두운 하늘') ||
-        query.includes('밤하늘') ||
-        query.includes('천문'))
       )) {
     
     // Return special dark sky placeholder to trigger search for certified locations
@@ -92,17 +80,6 @@ export function handleSpecialCases(query: string, language: Language): Location[
       (language === 'zh' && (
         query.includes('西冲') ||
         query.includes('深圳')
-      )) ||
-      (language === 'ja' && (
-        query.includes('石垣') ||
-        query.includes('西表') ||
-        query.includes('八重山') ||
-        query.includes('ひまわり')
-      )) ||
-      (language === 'ko' && (
-        query.includes('영양') ||
-        query.includes('진도') ||
-        query.includes('반딧불')
       ))) {
     
     // Look for matches in smallTownsDatabase

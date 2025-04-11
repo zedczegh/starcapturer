@@ -16,6 +16,7 @@ declare module 'react-leaflet' {
     attributionControl?: boolean;
     className?: string;
     children?: React.ReactNode;
+    minZoom?: number;
     // Don't add additional props that aren't supported
   }
 
