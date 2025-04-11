@@ -34,6 +34,12 @@ declare module 'react-leaflet' {
     onClick?: () => void;
     onMouseOver?: () => void; 
     onMouseOut?: () => void;
+    eventHandlers?: {
+      click?: (e?: any) => void;
+      mouseover?: (e?: any) => void;
+      mouseout?: (e?: any) => void;
+      [key: string]: ((e?: any) => void) | undefined;
+    };
     children?: React.ReactNode;
   }
 

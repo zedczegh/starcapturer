@@ -8,7 +8,7 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
-import { Star, Award, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isWaterLocation } from '@/utils/locationValidator';
 import MapTooltip from '@/components/location/map/MapTooltip';
@@ -184,11 +184,6 @@ const LocationMarker = memo(({
       onClick={handleClick}
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-      }}
     >
       <MapTooltip 
         name={displayName}

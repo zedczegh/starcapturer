@@ -16,7 +16,7 @@ const UserLocationMarker = memo(({
 }) => {
   const { t } = useLanguage();
   // Using red color for user location
-  const userMarkerIcon = createCustomMarker('#e11d48');
+  const userMarkerIcon = createCustomMarker('#e11d48', 'user');
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
