@@ -5,7 +5,6 @@ import { useMapLocations } from './useMapLocations';
 import { useMapUtils } from './useMapUtils';
 import { findCertifiedLocations } from '@/services/locationSearchService';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
-import { getIDADarkSkyLocations } from '@/services/idaLocationService';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -50,40 +49,19 @@ export const usePhotoPointsMap = ({
           
           // Add a small delay to prevent rapid reloading
           certifiedLoadingTimeoutRef.current = setTimeout(async () => {
-            // First get IDA certified locations from our curated list
-            const idaLocations = getIDADarkSkyLocations();
-            
-            // Then get additional certified locations from the API
-            const apiCertifiedResults = await findCertifiedLocations(
+            const certifiedResults = await findCertifiedLocations(
               userLocation.latitude,
               userLocation.longitude,
               10000, // Global radius
               150 // Increased limit to get more certified locations
             );
             
-            // Combine both lists, removing duplicates
-            const combinedResults = [...idaLocations];
-            
-            // Add API results that don't already exist in the IDA list
-            for (const apiLoc of apiCertifiedResults) {
-              // Skip if this location already exists in the combined results
-              const exists = combinedResults.some(loc => 
-                (loc.id && loc.id === apiLoc.id) || 
-                (Math.abs(loc.latitude - apiLoc.latitude) < 0.01 && 
-                 Math.abs(loc.longitude - apiLoc.longitude) < 0.01)
-              );
-              
-              if (!exists) {
-                combinedResults.push(apiLoc);
-              }
-            }
-            
-            if (combinedResults.length > 0) {
-              console.log(`Loaded ${combinedResults.length} certified dark sky locations (${idaLocations.length} from IDA database, ${apiCertifiedResults.length} from API)`);
-              setAllCertifiedLocations(combinedResults);
+            if (certifiedResults.length > 0) {
+              console.log(`Loaded ${certifiedResults.length} certified dark sky locations`);
+              setAllCertifiedLocations(certifiedResults);
               
               // Store all certified locations in the global store for persistence
-              combinedResults.forEach(location => {
+              certifiedResults.forEach(location => {
                 if (location.isDarkSkyReserve || location.certification) {
                   addLocationToStore(location);
                 }
@@ -95,13 +73,7 @@ export const usePhotoPointsMap = ({
           }, 500);
         } catch (error) {
           console.error("Error loading certified locations:", error);
-          
-          // Even if the API call fails, use our manual IDA locations
-          const idaLocations = getIDADarkSkyLocations();
-          setAllCertifiedLocations(idaLocations);
-          console.log(`Fallback to manual IDA locations: ${idaLocations.length} locations`);
-          
-          setCertifiedLocationsLoaded(true);
+          setCertifiedLocationsLoaded(true); // Mark as loaded even on error to prevent repeated attempts
         }
       }
     };

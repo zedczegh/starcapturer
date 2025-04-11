@@ -4,60 +4,38 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointCard from './PhotoPointCard';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LocationsListProps {
   locations: SharedAstroSpot[];
   loading: boolean;
   initialLoad: boolean;
   onViewDetails: (point: SharedAstroSpot) => void;
-  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 const LocationsList: React.FC<LocationsListProps> = ({
   locations,
   loading,
   initialLoad,
-  onViewDetails,
-  userLocation
+  onViewDetails
 }) => {
-  const { t } = useLanguage();
-  
-  if (locations.length === 0 && !loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground text-sm">
-          {t("No locations found", "未找到位置")}
-        </p>
-      </div>
-    );
-  }
-  
   return (
     <div className="space-y-4 pb-8">
       {/* Container for photo point cards */}
       <div className="grid grid-cols-1 gap-4">
-        {locations.map((location, index) => {
-          // Ensure we have valid coordinates
-          if (!location.latitude || !location.longitude) {
-            return null;
-          }
-          
-          return (
-            <motion.div
-              key={location.id || `${location.latitude}-${location.longitude}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-            >
-              <PhotoPointCard
-                point={location}
-                onViewDetails={onViewDetails}
-                userLocation={userLocation}
-              />
-            </motion.div>
-          );
-        })}
+        {locations.map((location, index) => (
+          <motion.div
+            key={location.id || `${location.latitude}-${location.longitude}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
+          >
+            <PhotoPointCard
+              point={location}
+              onViewDetails={onViewDetails}
+              userLocation={null} // This doesn't use current location for distance
+            />
+          </motion.div>
+        ))}
       </div>
 
       {/* Loading state for additional locations */}
