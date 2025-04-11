@@ -19,12 +19,20 @@ export const useLocationManagement = () => {
   
   // Get geolocation from browser
   const { 
-    location: geoLocation, 
+    coords: geoLocation, 
     loading: locationLoading,
     error: locationError,
-    loadAttempts: locationLoadAttempts,
     getPosition: refreshGeolocation
   } = useGeolocation();
+  
+  // Create a derived state for location load attempts (for compatibility with previous code)
+  const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
+  
+  // Increment load attempts when refreshGeolocation is called
+  const getPositionWithAttemptTracking = useCallback(() => {
+    setLocationLoadAttempts(prev => prev + 1);
+    refreshGeolocation();
+  }, [refreshGeolocation]);
   
   // Set effective location (manual override or geolocation)
   const effectiveLocation = manualLocationOverride || userLocation;
@@ -32,7 +40,11 @@ export const useLocationManagement = () => {
   // Update user location when geolocation changes
   useEffect(() => {
     if (geoLocation && !manualLocationOverride) {
-      setUserLocation(geoLocation);
+      const newLocation = {
+        latitude: geoLocation.latitude,
+        longitude: geoLocation.longitude
+      };
+      setUserLocation(newLocation);
     }
   }, [geoLocation, manualLocationOverride]);
   
@@ -56,10 +68,14 @@ export const useLocationManagement = () => {
     setManualLocationOverride(null);
     
     if (geoLocation) {
-      setUserLocation(geoLocation);
+      const newLocation = {
+        latitude: geoLocation.latitude,
+        longitude: geoLocation.longitude
+      };
+      setUserLocation(newLocation);
       toast.success(t("Using your current location", "正在使用您的当前位置"));
     } else {
-      refreshGeolocation();
+      getPositionWithAttemptTracking();
       toast.info(t("Getting your location...", "正在获取您的位置..."));
     }
     
@@ -68,7 +84,7 @@ export const useLocationManagement = () => {
     } catch (err) {
       console.error("Error removing saved location:", err);
     }
-  }, [geoLocation, refreshGeolocation, t]);
+  }, [geoLocation, getPositionWithAttemptTracking, t]);
   
   return {
     userLocation,
@@ -82,3 +98,4 @@ export const useLocationManagement = () => {
     handleResetLocation
   };
 };
+
