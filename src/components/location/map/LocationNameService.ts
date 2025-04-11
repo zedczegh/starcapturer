@@ -1,3 +1,4 @@
+
 import { getLocationNameFromCoordinates } from "@/lib/api";
 import { findClosestLocation } from "@/data/locationDatabase";
 import type { Language } from "@/services/geocoding/types";
@@ -72,12 +73,17 @@ export async function getLocationNameForCoordinates(
           finalName = enhanceRemoteLocationName(latitude, normalizedLng, null, language);
         } else {
           // Try database fallback
-          const nearest = findClosestLocation(latitude, longitude);
-          if (nearest && nearest.name) {
-            finalName = nearest.distance <= 50 
-              ? (language === 'en' ? `Near ${nearest.name}` : `靠近${nearest.name}`)
-              : (language === 'en' ? `Region of ${nearest.name}` : `${nearest.name}地区`);
-          } else {
+          try {
+            const nearest = findClosestLocation(latitude, longitude);
+            if (nearest && nearest.name) {
+              finalName = nearest.distance <= 50 
+                ? (language === 'en' ? `Near ${nearest.name}` : `靠近${nearest.name}`)
+                : (language === 'en' ? `Region of ${nearest.name}` : `${nearest.name}地区`);
+            } else {
+              finalName = language === 'en' ? 'Remote area' : '偏远地区';
+            }
+          } catch (err) {
+            console.error("Error finding closest location:", err);
             finalName = language === 'en' ? 'Remote area' : '偏远地区';
           }
         }

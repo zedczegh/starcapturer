@@ -1,7 +1,31 @@
 
 /**
- * Utility functions for geographic distance calculations
- * Re-exporting from centralized geoUtils to avoid duplication
+ * Convert degrees to radians
  */
+export function deg2rad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
 
-export { calculateDistance, deg2rad } from '@/utils/geoUtils';
+/**
+ * Calculate distance between two geographical points using the Haversine formula
+ * @param lat1 Latitude of point 1
+ * @param lng1 Longitude of point 1
+ * @param lat2 Latitude of point 2
+ * @param lng2 Longitude of point 2
+ * @returns Distance in kilometers
+ */
+export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLng = deg2rad(lng2 - lng1);
+  
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  
+  return distance;
+}
