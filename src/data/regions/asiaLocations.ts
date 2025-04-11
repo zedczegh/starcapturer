@@ -1,3 +1,4 @@
+
 import { LocationEntry } from "../locationDatabase";
 
 /**
@@ -78,4 +79,16 @@ export const asiaLocations: LocationEntry[] = [
   { name: "Sagarmatha", coordinates: [27.9881, 86.9250], bortleScale: 2.0, radius: 50, type: 'natural' },
   { name: "Tibetan Plateau", coordinates: [33.0000, 86.0000], bortleScale: 1.5, radius: 60, type: 'natural' },
   { name: "Iriomote Island", coordinates: [24.3858, 123.8161], bortleScale: 2.0, radius: 15, type: 'natural' },
+  
+  // IDA Certified Dark Sky Places in Asia
+  { name: "Yeongyang Firefly Eco Park", chineseName: "英阳萤火虫生态公园", coordinates: [36.6667, 129.1167], bortleScale: 3.2, certification: "IDA Dark Sky Park", isDarkSkyReserve: true, radius: 35, type: 'natural' },
+  { name: "Wuhu Stone Heavenly River Star Township", chineseName: "芜湖石埭天河星乡", coordinates: [31.0483, 118.2078], bortleScale: 3.8, certification: "IDA Dark Sky Park", isDarkSkyReserve: true, radius: 30, type: 'natural' },
+  { name: "Yeongyang Firefly Starlight Reserve", chineseName: "英阳萤火虫星光保护区", coordinates: [36.6469, 129.0833], bortleScale: 3.0, certification: "IDA Dark Sky Reserve", isDarkSkyReserve: true, radius: 40, type: 'natural' },
+  { name: "Gonjiam Astronomical Complex", chineseName: "坤甸天文综合体", coordinates: [37.3500, 127.3667], bortleScale: 4.2, certification: "Dark Sky Park", isDarkSkyReserve: true, radius: 25, type: 'natural' },
+  { name: "Sobaeksan National Park", chineseName: "小白山国家公园", coordinates: [36.9500, 128.4833], bortleScale: 3.5, certification: "Dark Sky Park", isDarkSkyReserve: true, radius: 35, type: 'natural' },
+  { name: "Yangmingshan National Park", chineseName: "阳明山国家公园", coordinates: [25.1667, 121.5500], bortleScale: 4.8, certification: "Urban Night Sky Place", isDarkSkyReserve: true, radius: 20, type: 'natural' },
+  { name: "Ali Astronomical Observatory", chineseName: "阿里天文台", coordinates: [32.3167, 80.0167], bortleScale: 1.0, certification: "Dark Sky Sanctuary", isDarkSkyReserve: true, radius: 70, type: 'natural' },
+  { name: "Yaeyama Islands Dark Sky", chineseName: "八重山群岛暗夜天空", coordinates: [24.3667, 123.7500], bortleScale: 2.5, certification: "Dark Sky Reserve", isDarkSkyReserve: true, radius: 45, type: 'natural' },
+  { name: "Kozushima Island", chineseName: "神津岛", coordinates: [34.2167, 139.1500], bortleScale: 2.8, certification: "Dark Sky Island", isDarkSkyReserve: true, radius: 30, type: 'natural' },
+  { name: "Tian Shan Astronomical Observatory", chineseName: "天山天文台", coordinates: [43.4783, 87.1783], bortleScale: 1.8, certification: "Dark Sky Sanctuary", isDarkSkyReserve: true, radius: 60, type: 'natural' },
 ];

@@ -13,6 +13,7 @@ const calculatedLocationsCache = new Map<string, {
 
 // Global location store to maintain locations between user position changes
 const globalLocationStore = new Map<string, SharedAstroSpot>();
+const certifiedLocationStore = new Map<string, SharedAstroSpot>(); // Separate store for certified locations
 
 // Minimum distance in kilometers between calculated spots to prevent clustering
 const MIN_LOCATION_DISTANCE = 2.5; // 2.5km minimum distance between points
@@ -75,16 +76,61 @@ export async function processCalculatedLocations(
       combinedLocations.push(storedLocation);
     }
   }
+  
+  // Always add all certified locations
+  for (const [key, certifiedLocation] of certifiedLocationStore.entries()) {
+    // Check if this certified location already exists in the combinedLocations array
+    const exists = combinedLocations.some(loc => {
+      if (!loc.latitude || !loc.longitude) return false;
+      
+      const locKey = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      return locKey === key;
+    });
+    
+    if (!exists) {
+      combinedLocations.push(certifiedLocation);
+    }
+  }
 
   // Filter locations by distance and water, maintaining minimum distance between points
   const processedLocations: SharedAstroSpot[] = [];
   
+  // First add all certified locations regardless of distance
   for (const loc of combinedLocations) {
     // Skip invalid locations
     if (!loc.latitude || !loc.longitude) continue;
+    
+    // Always include certified locations
+    if (loc.isDarkSkyReserve || loc.certification) {
+      // Calculate distance from user location
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        loc.latitude,
+        loc.longitude
+      );
+      
+      // Add distance property
+      loc.distance = distance;
+      
+      // Store in certified location store and add to processed locations
+      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      certifiedLocationStore.set(key, loc);
+      processedLocations.push(loc);
+      continue;
+    }
+  }
+  
+  // Then add non-certified locations with distance filtering and minimum distance enforcement
+  for (const loc of combinedLocations) {
+    // Skip invalid locations
+    if (!loc.latitude || !loc.longitude) continue;
+    
+    // Skip certified locations (already processed)
+    if (loc.isDarkSkyReserve || loc.certification) continue;
 
     // Skip water locations (unless they're certified sites)
-    if (!loc.isDarkSkyReserve && !loc.certification && isWaterLocation(loc.latitude, loc.longitude)) {
+    if (isWaterLocation(loc.latitude, loc.longitude)) {
       continue;
     }
 
@@ -102,27 +148,27 @@ export async function processCalculatedLocations(
     // Skip if beyond radius
     if (distance > searchRadius) continue;
     
-    // For non-certified locations, ensure minimum distance from existing processed points
-    if (!loc.isDarkSkyReserve && !loc.certification) {
-      // Check distance to all existing processed locations
-      const tooClose = processedLocations.some(existingLoc => {
-        if (existingLoc.latitude === undefined || existingLoc.longitude === undefined) return false;
-        
-        const pointDistance = calculateDistance(
-          loc.latitude,
-          loc.longitude,
-          existingLoc.latitude,
-          existingLoc.longitude
-        );
-        
-        return pointDistance < MIN_LOCATION_DISTANCE;
-      });
+    // Ensure minimum distance from existing processed points
+    const tooClose = processedLocations.some(existingLoc => {
+      if (existingLoc.latitude === undefined || existingLoc.longitude === undefined) return false;
       
-      // Skip this location if it's too close to an existing one
-      if (tooClose) {
-        console.log(`Skipping location at ${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)} - too close to existing point`);
-        continue;
-      }
+      // Don't apply minimum distance check if either location is certified
+      if (existingLoc.isDarkSkyReserve || existingLoc.certification || 
+          loc.isDarkSkyReserve || loc.certification) return false;
+      
+      const pointDistance = calculateDistance(
+        loc.latitude,
+        loc.longitude,
+        existingLoc.latitude,
+        existingLoc.longitude
+      );
+      
+      return pointDistance < MIN_LOCATION_DISTANCE;
+    });
+    
+    // Skip this location if it's too close to an existing one
+    if (tooClose) {
+      continue;
     }
     
     // Store the location in the global store and add to processed locations
@@ -151,11 +197,17 @@ export async function processCalculatedLocations(
     
     enhancedLocations.push(...processedChunk);
     
-    // Update global location store with these enhanced locations
+    // Update global location store and certified locations store with these enhanced locations
     processedChunk.forEach(loc => {
       if (loc.latitude && loc.longitude) {
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        globalLocationStore.set(key, loc);
+        
+        // Store in appropriate store based on certification status
+        if (loc.isDarkSkyReserve || loc.certification) {
+          certifiedLocationStore.set(key, loc);
+        } else {
+          globalLocationStore.set(key, loc);
+        }
       }
     });
     
@@ -167,7 +219,15 @@ export async function processCalculatedLocations(
 
   // Sort by SIQS and distance
   const sortedLocations = enhancedLocations.sort((a, b) => {
-    // If both have SIQS, sort by SIQS
+    // Certified locations always come first
+    if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
+      return -1;
+    }
+    if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
+      return 1;
+    }
+    
+    // If both are certified or non-certified, use SIQS if available
     if (a.siqs && b.siqs) {
       return b.siqs - a.siqs;
     }
@@ -208,7 +268,7 @@ export function clearCalculatedLocationsCache(): void {
   calculatedLocationsCache.clear();
   
   // Don't clear the global location store to maintain locations between position changes
-  console.log(`Keeping ${globalLocationStore.size} locations in global store`);
+  console.log(`Keeping ${globalLocationStore.size} regular locations and ${certifiedLocationStore.size} certified locations in global store`);
   
   // Only clear from localStorage
   try {
@@ -241,11 +301,17 @@ export function loadCalculatedLocationsCache(): void {
         if (data) {
           const parsed = JSON.parse(data);
           
-          // Add each location to the global store
+          // Add each location to the appropriate global store
           parsed.locations.forEach((loc: SharedAstroSpot) => {
             if (loc.latitude && loc.longitude) {
               const locKey = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-              globalLocationStore.set(locKey, loc);
+              
+              // Store in appropriate store based on certification status
+              if (loc.isDarkSkyReserve || loc.certification) {
+                certifiedLocationStore.set(locKey, loc);
+              } else {
+                globalLocationStore.set(locKey, loc);
+              }
             }
           });
           
@@ -272,7 +338,7 @@ export function loadCalculatedLocationsCache(): void {
       console.log(`Loaded ${loadedCount} calculated location caches from localStorage`);
     }
     
-    console.log(`Loaded ${globalLocationStore.size} locations into global store`);
+    console.log(`Loaded ${globalLocationStore.size} regular locations and ${certifiedLocationStore.size} certified locations into global store`);
   } catch (error) {
     console.error("Error initializing calculated locations cache:", error);
   }
@@ -283,7 +349,13 @@ export function loadCalculatedLocationsCache(): void {
  * Useful when changing user location to keep existing spots
  */
 export function getAllStoredLocations(): SharedAstroSpot[] {
-  return Array.from(globalLocationStore.values());
+  // Combine both regular and certified locations
+  const allLocations = [
+    ...Array.from(globalLocationStore.values()),
+    ...Array.from(certifiedLocationStore.values())
+  ];
+  
+  return allLocations;
 }
 
 /**
@@ -293,7 +365,13 @@ export function getAllStoredLocations(): SharedAstroSpot[] {
 export function addLocationToStore(location: SharedAstroSpot): void {
   if (location && location.latitude && location.longitude) {
     const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-    globalLocationStore.set(key, location);
+    
+    // Store in appropriate store based on certification status
+    if (location.isDarkSkyReserve || location.certification) {
+      certifiedLocationStore.set(key, location);
+    } else {
+      globalLocationStore.set(key, location);
+    }
   }
 }
 

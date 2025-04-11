@@ -13,6 +13,9 @@ interface UseMapLocationsProps {
   mapReady: boolean;
 }
 
+// Minimum distance in kilometers between calculated spots to prevent clustering
+const MIN_CALCULATED_DISTANCE = 5; // 5km minimum distance between calculated points
+
 /**
  * Hook to handle location filtering, sorting and enhancement for map display
  */
@@ -54,6 +57,51 @@ export const useMapLocations = ({
     return { certifiedLocations, calculatedLocations };
   }, []);
 
+  // Apply minimum distance filter to calculated spots to prevent clustering
+  const applyMinDistanceFilter = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+    const result: SharedAstroSpot[] = [];
+    const { certifiedLocations, calculatedLocations } = separateLocationTypes(locations);
+    
+    // Always include all certified locations
+    result.push(...certifiedLocations);
+    
+    // For calculated locations, ensure minimum distance between points
+    if (calculatedLocations.length > 0) {
+      // Sort by quality (SIQS) first
+      const sortedCalculatedLocations = [...calculatedLocations].sort((a, b) => {
+        return (b.siqs || 0) - (a.siqs || 0);
+      });
+      
+      // Add filtered calculated locations
+      sortedCalculatedLocations.forEach(location => {
+        // Check if this location is too close to any existing location
+        const tooClose = result.some(existingLocation => {
+          // Never filter out by distance for certified locations
+          if (location.isDarkSkyReserve || location.certification) return false;
+          
+          if (!location.latitude || !location.longitude || 
+              !existingLocation.latitude || !existingLocation.longitude) return false;
+          
+          const distance = calculateDistance(
+            location.latitude,
+            location.longitude,
+            existingLocation.latitude,
+            existingLocation.longitude
+          );
+          
+          return distance < MIN_CALCULATED_DISTANCE;
+        });
+        
+        // If not too close, add it to the result
+        if (!tooClose) {
+          result.push(location);
+        }
+      });
+    }
+    
+    return result;
+  }, [separateLocationTypes]);
+
   // Merge locations according to active view
   const mergeLocations = useCallback((
     certifiedLocations: SharedAstroSpot[], 
@@ -64,15 +112,17 @@ export const useMapLocations = ({
     
     // Always include all certified locations regardless of active view
     certifiedLocations.forEach(loc => {
-      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-      locationMap.set(key, loc);
+      if (loc.latitude && loc.longitude) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        locationMap.set(key, loc);
+      }
     });
     
     // Add calculated locations only if in calculated view
     if (activeView === 'calculated') {
       calculatedLocations.forEach(loc => {
         // Skip water locations for calculated spots
-        if (!isWaterLocation(loc.latitude, loc.longitude)) {
+        if (loc.latitude && loc.longitude && !isWaterLocation(loc.latitude, loc.longitude)) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           const existing = locationMap.get(key);
           if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
@@ -93,8 +143,12 @@ export const useMapLocations = ({
       const validLocations = filterValidLocations(locations);
       const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
       
-      const locationsInRadius = activeView === 'calculated' && userLocation ? 
-        calculatedLocations.filter(loc => {
+      // Always include ALL certified locations
+      let locationsToUpdate = [...certifiedLocations];
+      
+      // For calculated view, also add calculated locations in radius
+      if (activeView === 'calculated' && userLocation) {
+        const calculatedInRadius = calculatedLocations.filter(loc => {
           if (!loc.latitude || !loc.longitude) return false;
           
           // Skip water locations for calculated spots
@@ -111,12 +165,16 @@ export const useMapLocations = ({
             loc.longitude
           );
           return distance <= searchRadius * 1.1;
-        }) : 
-        // For certified view, include ALL certified locations regardless of distance
-        certifiedLocations;
+        });
+        
+        locationsToUpdate = [...locationsToUpdate, ...calculatedInRadius];
+      }
+      
+      // Apply minimum distance filter to prevent clustering
+      locationsToUpdate = applyMinDistanceFilter(locationsToUpdate);
       
       const updated = await updateLocationsWithRealTimeSiqs(
-        locationsInRadius, 
+        locationsToUpdate, 
         userLocation, 
         searchRadius,
         activeView
@@ -160,7 +218,7 @@ export const useMapLocations = ({
     } catch (error) {
       console.error('Error updating locations with real-time SIQS:', error);
     }
-  }, [locations, userLocation, mapReady, searchRadius, activeView, filterValidLocations, separateLocationTypes]);
+  }, [locations, userLocation, mapReady, searchRadius, activeView, filterValidLocations, separateLocationTypes, applyMinDistanceFilter]);
 
   // Process locations
   useEffect(() => {
@@ -168,11 +226,17 @@ export const useMapLocations = ({
     const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
     const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
     
-    // Use enhanced locations if available, otherwise use merged locations
-    const locationsToShow = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
+    // Apply minimum distance filter to prevent clustering
+    const filteredLocations = applyMinDistanceFilter(mergedLocations);
+    
+    // Use enhanced locations if available, otherwise use filtered locations
+    const locationsToShow = enhancedLocations.length > 0 ? 
+      applyMinDistanceFilter(enhancedLocations) : 
+      filteredLocations;
+    
     setProcessedLocations(locationsToShow);
     
-  }, [locations, activeView, enhancedLocations, filterValidLocations, separateLocationTypes, mergeLocations]);
+  }, [locations, activeView, enhancedLocations, filterValidLocations, separateLocationTypes, mergeLocations, applyMinDistanceFilter]);
 
   // Update locations with real-time SIQS
   useEffect(() => {

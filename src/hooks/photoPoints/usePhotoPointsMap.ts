@@ -49,11 +49,12 @@ export const usePhotoPointsMap = ({
           
           // Add a small delay to prevent rapid reloading
           certifiedLoadingTimeoutRef.current = setTimeout(async () => {
+            // Increased radius to global scope and increased limit for more certified locations
             const certifiedResults = await findCertifiedLocations(
               userLocation.latitude,
               userLocation.longitude,
-              10000, // Global radius
-              150 // Increased limit to get more certified locations
+              25000, // Global radius - increased to ensure we get ALL locations
+              300 // Significantly increased limit to get more certified locations
             );
             
             if (certifiedResults.length > 0) {
@@ -91,41 +92,37 @@ export const usePhotoPointsMap = ({
   const shouldRefreshCertified = (currentLocation: {latitude: number, longitude: number}) => {
     if (!lastUserLocation.current) return true;
     
-    // Check if location has changed significantly (more than 500km)
+    // Check if location has changed significantly (more than 2000km - increased for better coverage)
     const latDiff = Math.abs(currentLocation.latitude - lastUserLocation.current.latitude);
     const lngDiff = Math.abs(currentLocation.longitude - lastUserLocation.current.longitude);
     
-    // Rough distance calculation - if either coordinate has changed by ~5 degrees, that's roughly 500km
-    return latDiff > 5 || lngDiff > 5;
+    // Rough distance calculation - decreased threshold to refresh more often
+    return latDiff > 20 || lngDiff > 20; // Roughly 2000km at equator
   };
   
   // Combine locations - for certified view, always include all certified locations
   const combinedLocations = useCallback(() => {
-    if (activeView === 'certified' && allCertifiedLocations.length > 0) {
-      // Make a map to remove any duplicates
-      const locMap = new Map<string, SharedAstroSpot>();
-      
-      // First add certified locations from main locations array
-      locations.forEach(loc => {
+    // Always include all certified locations regardless of view
+    const locMap = new Map<string, SharedAstroSpot>();
+    
+    // First add all certified locations from the full set
+    if (allCertifiedLocations.length > 0) {
+      allCertifiedLocations.forEach(loc => {
         if (!loc.latitude || !loc.longitude) return;
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         locMap.set(key, loc);
       });
-      
-      // Then add global certified locations, not overwriting existing ones
-      allCertifiedLocations.forEach(loc => {
-        if (!loc.latitude || !loc.longitude) return;
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        if (!locMap.has(key)) {
-          locMap.set(key, loc);
-        }
-      });
-      
-      return Array.from(locMap.values());
     }
     
-    return locations;
-  }, [locations, allCertifiedLocations, activeView]);
+    // Then add locations from main locations array (will overwrite duplicates with more recent data)
+    locations.forEach(loc => {
+      if (!loc.latitude || !loc.longitude) return;
+      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      locMap.set(key, loc);
+    });
+    
+    return Array.from(locMap.values());
+  }, [locations, allCertifiedLocations]);
   
   // Use the location processing hook
   const { processedLocations } = useMapLocations({
