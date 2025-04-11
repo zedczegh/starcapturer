@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
@@ -57,8 +56,7 @@ export async function findBestViewingLocations(
     const points = await findLocationsWithinRadius(
       userLat, 
       userLng, 
-      radius,
-      certifiedOnly
+      radius
     );
     
     if (!points || points.length === 0) {
@@ -101,7 +99,7 @@ export async function findBestViewingLocations(
     
     // Sort by SIQS (highest first) and limit to requested number
     const sortedLocations = locationsWithSiqs
-      .filter(loc => loc.siqs > 0)
+      .filter(loc => loc.siqs !== undefined && loc.siqs > 0)
       .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
       .slice(0, limit);
     

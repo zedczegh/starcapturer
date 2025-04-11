@@ -1,143 +1,96 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Search } from "lucide-react";
-import MapSelector from "../MapSelector";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
+import React, { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { MapPin, Search, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface LocationSelectorProps {
-  locationName: string;
-  loading: boolean;
-  handleUseCurrentLocation: () => void;
-  onSelectLocation: (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => void;
+  onLocationSelect: (place: any) => void;
+  onUseCurrentLocation: () => void;
+  loading?: boolean;
   noAutoLocationRequest?: boolean;
 }
 
 const LocationSelector: React.FC<LocationSelectorProps> = ({
-  locationName,
-  loading,
-  handleUseCurrentLocation,
-  onSelectLocation,
+  onLocationSelect,
+  onUseCurrentLocation,
+  loading = false,
   noAutoLocationRequest = false
 }) => {
-  const { t, language } = useLanguage();
-  const autoLocationTriggered = useRef(false);
-  const [isMapOpen, setIsMapOpen] = useState(false);
-  
-  // Auto-trigger location request only once on first mount and if no location exists
-  useEffect(() => {
-    // Only auto-trigger if:
-    // 1. We don't have a location yet
-    // 2. We haven't triggered an auto-location request before
-    // 3. Auto-location is not disabled
-    // 4. Not in a loading state
-    if (!locationName && !loading && !autoLocationTriggered.current && !noAutoLocationRequest) {
-      console.log("Auto-triggering location request on first mount");
-      autoLocationTriggered.current = true;
-      
-      // Add a small delay to ensure everything is initialized
-      const timer = setTimeout(() => {
-        handleUseCurrentLocation();
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [locationName, loading, handleUseCurrentLocation, noAutoLocationRequest]);
-  
-  // Check if locationName is just coordinates or a proper name
-  const isCoordinateOnly = locationName && locationName.includes("°");
-  
-  // Format nicer display name for coordinates
-  const displayName = isCoordinateOnly ? 
-    t("Your current location", "您的当前位置") : 
-    locationName;
-  
-  const handleOpenMap = () => {
-    setIsMapOpen(true);
-  };
-  
-  const handleLocationSelected = (location: any) => {
-    onSelectLocation(location);
-    setIsMapOpen(false);
+  const { t } = useLanguage();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Show success toast
-    toast.success(
-      t("Location selected: ", "已选择位置：") + location.name,
-      { duration: 2000 }
-    );
+    if (!searchTerm.trim() || isSearching) return;
+    
+    try {
+      setIsSearching(true);
+      
+      // Mock search for demonstration
+      setTimeout(() => {
+        onLocationSelect({
+          name: searchTerm,
+          latitude: 0, // These would actually come from geocoding API
+          longitude: 0
+        });
+        setIsSearching(false);
+      }, 500);
+    } catch (error) {
+      console.error("Search error:", error);
+      setIsSearching(false);
+    }
   };
-  
-  const handleCloseMap = () => {
-    setIsMapOpen(false);
-  };
-  
+
   return (
-    <div className="flex flex-col space-y-3 relative z-10">
-      <Button 
-        variant={locationName ? "default" : "outline"}
-        type="button" 
-        onClick={handleUseCurrentLocation}
-        disabled={loading}
-        className={`w-full transition-all duration-300 bg-gradient-to-r from-cyan-600/30 to-teal-600/30 hover:from-cyan-600/40 hover:to-teal-600/40 border border-cosmic-700/40 hover:border-cosmic-700/70 ${
-          locationName 
-            ? 'shadow-md hover:shadow-lg hover:translate-y-[-1px]'
-            : 'hover:bg-primary/10'
-        }`}
-        data-location-button="true"
-      >
-        {loading ? (
-          <div className="flex items-center">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-400" />
-            {language === "zh" && <span>加载中</span>}
-          </div>
-        ) : (
-          <MapPin className="mr-2 h-4 w-4" />
-        )}
-        {locationName ? (
-          <span className="truncate max-w-[90%] font-medium">
-            {displayName}
-          </span>
-        ) : (
-          t("Use My Location", "使用我的位置")
-        )}
-      </Button>
-      
-      <Button
-        variant="secondary"
-        type="button"
-        onClick={handleOpenMap}
-        className="w-full transition-all duration-300 bg-gradient-to-r from-cyan-600/30 to-teal-600/30 hover:from-cyan-600/40 hover:to-teal-600/40 border border-cosmic-700/40 hover:border-cosmic-700/70"
-      >
-        <Search className="h-4 w-4 mr-2" />
-        {t("Search for a Location", "搜索位置")}
-      </Button>
-      
-      {isMapOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-cosmic-900 rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-cosmic-700">
-              <h3 className="text-lg font-medium">{t("Search for a Location", "搜索位置")}</h3>
+    <div className="space-y-2">
+      <form onSubmit={handleSearch} className="flex space-x-2">
+        <div className="relative flex-1">
+          <Input
+            placeholder={t("Search for a location", "搜索位置")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-9 bg-background/50 focus:bg-background/80 transition-all border-cosmic-200/30"
+            disabled={loading || isSearching}
+          />
+          {(loading || isSearching) && (
+            <div className="absolute right-3 top-0 h-full flex items-center">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
-            <div className="p-6">
-              <MapSelector 
-                onSelectLocation={handleLocationSelected}
-              />
-            </div>
-            <div className="p-4 border-t border-cosmic-700 flex justify-end">
-              <Button 
-                variant="outline"
-                onClick={handleCloseMap}
-                className="mr-2"
-              >
-                {t("Cancel", "取消")}
-              </Button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+        <Button
+          type="submit"
+          variant="outline"
+          size="icon"
+          className={cn(
+            "flex-shrink-0 bg-background/50 hover:bg-background/80",
+            loading && "opacity-50 cursor-not-allowed"
+          )}
+          disabled={loading || isSearching}
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className={cn(
+            "flex-shrink-0 bg-background/50 hover:bg-background/80",
+            (loading || noAutoLocationRequest) && "opacity-50 cursor-not-allowed"
+          )}
+          onClick={onUseCurrentLocation}
+          disabled={loading || noAutoLocationRequest}
+        >
+          <MapPin className="h-4 w-4" />
+        </Button>
+      </form>
     </div>
   );
 };
 
-export default React.memo(LocationSelector);
+export default LocationSelector;

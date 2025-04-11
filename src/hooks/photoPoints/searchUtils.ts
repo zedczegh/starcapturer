@@ -27,9 +27,7 @@ export const searchStandardLocations = async (
     const locations = await findLocationsWithinRadius(
       latitude,
       longitude,
-      searchDistance,
-      false, // Get all locations, not just certified
-      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+      searchDistance
     );
     
     if (locations.length === 0) {
@@ -44,7 +42,7 @@ export const searchStandardLocations = async (
     // Filter out any invalid locations
     const validLocations = locations.filter(loc => {
       // First check if location is valid (not on water)
-      if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+      if (!isValidAstronomyLocation(loc.latitude, loc.longitude)) {
         console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
         return false;
       }
@@ -85,9 +83,7 @@ export const searchCalculatedLocations = async (
     const calculatedLocations = await findCalculatedLocations(
       latitude,
       longitude,
-      searchDistance,
-      true, // Allow expanding the search radius
-      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
+      searchDistance
     );
     
     // Apply filtering to ensure valid locations
@@ -103,7 +99,7 @@ export const searchCalculatedLocations = async (
       }
       
       // Check if location is valid (not on water)
-      if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+      if (!isValidAstronomyLocation(loc.latitude, loc.longitude)) {
         console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
         return false;
       }

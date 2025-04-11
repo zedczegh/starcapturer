@@ -1,128 +1,131 @@
 
-import React, { useMemo } from "react";
-import { Progress } from "@/components/ui/progress";
-import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { formatSIQSScore, isSiqsViable } from '@/utils/nighttimeSIQS';
 
-interface SIQSScoreProps {
+export interface SIQSScoreProps {
   siqsScore: number;
-  locationName: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+  showFeedback?: boolean;
 }
 
-const SIQSScore: React.FC<SIQSScoreProps> = ({
-  siqsScore,
-  locationName,
+const SIQSScore: React.FC<SIQSScoreProps> = ({ 
+  siqsScore, 
   latitude,
-  longitude
+  longitude,
+  locationName,
+  showFeedback = true 
 }) => {
   const { t } = useLanguage();
-
-  // Create memoized values to prevent unnecessary re-renders
-  const memoizedValues = useMemo(() => {
-    // Round value to 1 decimal place
-    const displayValue = Math.round(siqsScore * 10) / 10;
-
-    // Determine value interpretation
-    let interpretation;
-    if (displayValue >= 8) interpretation = t("Excellent", "优秀");
-    else if (displayValue >= 6) interpretation = t("Good", "良好");
-    else if (displayValue >= 4) interpretation = t("Average", "一般");
-    else if (displayValue >= 2) interpretation = t("Poor", "较差");
-    else interpretation = t("Bad", "很差");
-
-    // Get appropriate color classes
-    const progressColor = getProgressColor(displayValue);
-    const colorClass = getProgressColorClass(displayValue);
-    const textColorClass = getProgressTextColorClass(displayValue);
+  
+  // Get color and feedback based on score
+  const { color, textColor, feedbackMessage } = useMemo(() => {
+    if (siqsScore === null || siqsScore === undefined) {
+      return { 
+        color: 'border-gray-400', 
+        textColor: 'text-gray-400',
+        feedbackMessage: t("No data available", "无可用数据")
+      };
+    }
     
-    return {
-      displayValue,
-      interpretation,
-      progressColor,
-      colorClass,
-      textColorClass
+    if (siqsScore >= 8) {
+      return { 
+        color: 'border-green-500', 
+        textColor: 'text-green-500',
+        feedbackMessage: t("Excellent viewing conditions", "极佳的观测条件")
+      };
+    }
+    
+    if (siqsScore >= 6.5) {
+      return { 
+        color: 'border-green-400', 
+        textColor: 'text-green-400',
+        feedbackMessage: t("Very good viewing conditions", "非常好的观测条件")
+      };
+    }
+    
+    if (siqsScore >= 5) {
+      return { 
+        color: 'border-yellow-400', 
+        textColor: 'text-yellow-400',
+        feedbackMessage: t("Good viewing conditions", "良好的观测条件")
+      };
+    }
+    
+    if (siqsScore >= 3.5) {
+      return { 
+        color: 'border-orange-400', 
+        textColor: 'text-orange-400',
+        feedbackMessage: t("Fair viewing conditions", "一般的观测条件")
+      };
+    }
+    
+    return { 
+      color: 'border-red-500', 
+      textColor: 'text-red-500',
+      feedbackMessage: t("Poor viewing conditions", "较差的观测条件")
     };
   }, [siqsScore, t]);
-
-  // Custom style for progress bar
-  const progressStyle = useMemo(() => ({
-    backgroundColor: memoizedValues.progressColor
-  }) as React.CSSProperties, [memoizedValues.progressColor]);
-
-  // Create a stable locationId for navigation
-  const locationId = useMemo(() => {
-    // Use a more deterministic ID format
-    return `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-  }, [latitude, longitude]);
-
+  
+  // Create location subtitle if coordinates are available
+  const locationSubtitle = useMemo(() => {
+    if (!latitude || !longitude) return '';
+    
+    return t(
+      `${locationName || ''} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+      `${locationName || ''} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+    );
+  }, [latitude, longitude, locationName, t]);
+  
+  // Ensure we have a valid score to show
+  const scoreToDisplay = useMemo(() => {
+    return typeof siqsScore === 'number' ? formatSIQSScore(siqsScore) : '0.0';
+  }, [siqsScore]);
+  
   return (
-    <motion.div 
-      className="mb-4 pb-4 border-b border-cosmic-700/30" 
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-medium">
-          {t("Estimated SIQS", "预估SIQS")}
-        </h3>
-        <span className={`text-xl font-bold px-2 py-1 rounded ${memoizedValues.textColorClass}`}>
-          {memoizedValues.displayValue.toFixed(1)}
-        </span>
-      </div>
-      
-      <Progress value={siqsScore * 10} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
-      
-      <div className="flex justify-between items-center mt-2">
-        <span className="text-sm text-muted-foreground">
-          {t("Poor", "较差")}
-        </span>
-        <span className={`text-sm font-medium ${memoizedValues.textColorClass}`}>
-          {memoizedValues.interpretation}
-        </span>
-        <span className="text-sm text-muted-foreground">
-          {t("Excellent", "优秀")}
-        </span>
-      </div>
-      
-      <div className="mt-6 flex justify-center">
-        <motion.div 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 400, damping: 15 }}
-          className="relative w-full max-w-md"
+    <div className="flex flex-col items-center my-4">
+      <div className={`text-center p-4 ${color} border-2 rounded-full w-24 h-24 flex items-center justify-center shadow-lg bg-background/30 mb-2`}>
+        <motion.span 
+          className={`text-3xl font-bold ${textColor}`}
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
-          <Link 
-            to={`/location/${locationId}`} 
-            state={{
-              id: locationId,
-              name: locationName,
-              latitude: latitude,
-              longitude: longitude,
-              siqsResult: {
-                score: memoizedValues.displayValue
-              },
-              timestamp: new Date().toISOString(),
-              fromCalculator: true // Add a flag to indicate source
-            }}
-          >
-            <Button 
-              size="lg" 
-              className="w-full bg-gradient-to-r from-blue-500/70 to-green-500/70 hover:from-blue-500/80 hover:to-green-500/80 shadow-lg hover:shadow-xl transition-all duration-300 group text-gray-50 py-2 text-sm font-medium"
-            >
-              {t("See More Details", "查看更多详情")}
-              <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-            </Button>
-          </Link>
-        </motion.div>
+          {scoreToDisplay}
+        </motion.span>
       </div>
-    </motion.div>
+      
+      <motion.div 
+        className="text-center mt-1"
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h2 className={`text-lg font-medium ${textColor}`}>
+          {t("SIQS Score", "天文观测指数")}
+        </h2>
+        
+        {locationSubtitle && (
+          <p className="text-sm text-muted-foreground mt-1">
+            {locationSubtitle}
+          </p>
+        )}
+      </motion.div>
+      
+      {showFeedback && (
+        <motion.p 
+          className={`mt-2 text-sm ${textColor}`}
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          {feedbackMessage}
+        </motion.p>
+      )}
+    </div>
   );
 };
 

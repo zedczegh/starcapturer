@@ -1,6 +1,6 @@
 
 import { calculateRealTimeSiqs, batchCalculateSiqs } from '../realTimeSiqsService';
-import { SharedAstroSpot } from '@/lib/siqs/types';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getConsistentSiqsValue } from '@/utils/nighttimeSIQS';
 
 // Create a cache for locations to avoid redundant processing

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -234,8 +233,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         >
           <SIQSScore 
             siqsScore={siqsScore} 
-            latitude={parseFloat(latitude)}
-            longitude={parseFloat(longitude)}
+            latitude={parsedLatitude}
+            longitude={parsedLongitude}
             locationName={locationName}
           />
         </motion.div>
@@ -247,10 +246,9 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         transition={{ delay: 0.3 }}
       >
         <LocationSelector 
-          locationName={locationName} 
-          loading={loading || calculationInProgress} 
-          handleUseCurrentLocation={handleUseCurrentLocation}
-          onSelectLocation={handleLocationSelect}
+          onLocationSelect={handleLocationSelect}
+          onUseCurrentLocation={handleUseCurrentLocation}
+          loading={loading || calculationInProgress}
           noAutoLocationRequest={noAutoLocationRequest || !shouldAutoRequest}
         />
         
