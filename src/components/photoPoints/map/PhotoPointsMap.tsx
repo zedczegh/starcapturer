@@ -52,6 +52,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
   const [locationStats, setLocationStats] = useState<{certified: number, calculated: number}>({ certified: 0, calculated: 0 });
   
+  // Fix: Use a ref to prevent infinite loop in marker hover handling
+  const hoverHandlerRef = useRef((id: string | null) => {
+    console.log("Marker hover:", id);
+  });
+  
   const {
     hoveredLocationId,
     handleMarkerHover,
@@ -60,7 +65,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleMapDragEnd
   } = useMapInteractions({
     onLocationClick,
-    onMarkerHover: (id) => console.log("Marker hover:", id)
+    onMarkerHover: hoverHandlerRef.current
   });
 
   // Initialize by forcing certified locations to load on first render

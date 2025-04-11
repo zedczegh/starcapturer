@@ -4,7 +4,8 @@ import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import { MapEffectsComposer, SiqsEffectsController } from '../MapComponents';
+import MapEffectsComposer from '../effects/MapEffectsComposer';
+import SiqsEffectsController from '../effects/SiqsEffectsController';
 
 interface MapContentProps {
   center: [number, number];
@@ -39,20 +40,14 @@ const MapContent: React.FC<MapContentProps> = ({
     }
   }, [onMapClick]);
 
-  // Make sure we're displaying locations appropriate for the active view
+  // Filter locations based on activeView
   const displayLocations = locations.filter(loc => {
-    // Always show certified locations
-    if (loc.isDarkSkyReserve || loc.certification) {
-      return true;
+    // In certified view, only show certified locations
+    if (activeView === 'certified') {
+      return Boolean(loc.isDarkSkyReserve || loc.certification);
     }
-    
-    // For calculated view, show calculated locations
-    if (activeView === 'calculated') {
-      return true;
-    }
-    
-    // For certified view, only show certified locations
-    return false;
+    // In calculated view, show all locations
+    return true;
   });
   
   return (
@@ -75,7 +70,11 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
       />
-      <SiqsEffectsController />
+      <SiqsEffectsController
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+      />
 
       {/* Search radius circle around user location */}
       {userLocation && activeView === 'calculated' && searchRadius && (

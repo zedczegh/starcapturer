@@ -13,13 +13,15 @@ import { prefetchPopularLocations } from "./lib/queryPrefetcher";
 // Improved loading component
 import PageLoader from "./components/loaders/PageLoader";
 
-// Lazily load pages with improved chunking for faster initial load
-const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
-const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
-const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
-const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */ "./pages/ShareLocation"));
-const PhotoPointsNearby = lazy(() => import(/* webpackChunkName: "photo-points" */ "./pages/PhotoPointsNearby"));
-const AboutSIQS = lazy(() => import(/* webpackChunkName: "about-siqs" */ "./pages/AboutSIQS"));
+// Import the Index page directly instead of lazily loading it to prevent the dynamic import error
+import Index from "./pages/Index";
+
+// Lazily load other pages with improved chunking for faster initial load
+const LocationDetails = lazy(() => import("./pages/LocationDetails"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ShareLocation = lazy(() => import("./pages/ShareLocation"));
+const PhotoPointsNearby = lazy(() => import("./pages/PhotoPointsNearby"));
+const AboutSIQS = lazy(() => import("./pages/AboutSIQS"));
 
 // Create a new QueryClient instance with optimized settings
 const queryClient = new QueryClient({
@@ -70,41 +72,49 @@ const App = () => {
           <TooltipProvider>
             <BrowserRouter>
               <div className="sci-fi-scrollbar">
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route path="/" element={
-                      <PageTransition>
-                        <Index />
-                      </PageTransition>
-                    } />
-                    <Route path="/location/:id" element={
-                      <PageTransition>
+                <Routes>
+                  <Route path="/" element={
+                    <PageTransition>
+                      <Index />
+                    </PageTransition>
+                  } />
+                  <Route path="/location/:id" element={
+                    <PageTransition>
+                      <Suspense fallback={<PageLoader />}>
                         <LocationDetails />
-                      </PageTransition>
-                    } />
-                    <Route path="/share" element={
-                      <PageTransition>
+                      </Suspense>
+                    </PageTransition>
+                  } />
+                  <Route path="/share" element={
+                    <PageTransition>
+                      <Suspense fallback={<PageLoader />}>
                         <ShareLocation />
-                      </PageTransition>
-                    } />
-                    <Route path="/photo-points" element={
-                      <PageTransition>
+                      </Suspense>
+                    </PageTransition>
+                  } />
+                  <Route path="/photo-points" element={
+                    <PageTransition>
+                      <Suspense fallback={<PageLoader />}>
                         <PhotoPointsNearby />
-                      </PageTransition>
-                    } />
-                    <Route path="/about" element={
-                      <PageTransition>
+                      </Suspense>
+                    </PageTransition>
+                  } />
+                  <Route path="/about" element={
+                    <PageTransition>
+                      <Suspense fallback={<PageLoader />}>
                         <AboutSIQS />
-                      </PageTransition>
-                    } />
-                    {/* Catch-all route */}
-                    <Route path="*" element={
-                      <PageTransition>
+                      </Suspense>
+                    </PageTransition>
+                  } />
+                  {/* Catch-all route */}
+                  <Route path="*" element={
+                    <PageTransition>
+                      <Suspense fallback={<PageLoader />}>
                         <NotFound />
-                      </PageTransition>
-                    } />
-                  </Routes>
-                </Suspense>
+                      </Suspense>
+                    </PageTransition>
+                  } />
+                </Routes>
               </div>
               <Toaster />
             </BrowserRouter>

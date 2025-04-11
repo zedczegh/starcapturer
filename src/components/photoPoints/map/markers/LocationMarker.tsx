@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -8,11 +8,9 @@ import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
-import { ExternalLink } from 'lucide-react';
+import { Star, Award, ExternalLink, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isWaterLocation } from '@/utils/locationValidator';
-import MapTooltip from '@/components/location/map/MapTooltip';
-import { Button } from '@/components/ui/button';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -93,6 +91,7 @@ const LocationMarker = memo(({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
+  const popupRef = useRef<L.Popup | null>(null);
   
   // Skip water locations for calculated spots (never skip certified)
   if (!isCertified && isWaterSpot(location)) {
@@ -181,44 +180,66 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      onClick={handleClick}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      } as any}
     >
-      <MapTooltip 
-        name={displayName}
-        className={`location-popup ${siqsClass}`}
-        certification={location.certification}
-        isDarkSkyReserve={location.isDarkSkyReserve}
+      <Popup 
+        closeOnClick={false}
+        autoClose={false}
+        className={`location-popup ${isCertified ? 'certified-popup' : 'calculated-popup'}`}
       >
-        {/* SIQS Score and Distance */}
-        <div className="mt-2 flex items-center justify-between">
-          {location.siqs !== undefined && (
-            <div className="flex items-center gap-1.5">
-              <SiqsScoreBadge score={location.siqs} compact={true} />
+        <div className={`py-2 px-3 w-[260px] leaflet-popup-custom-compact marker-popup-gradient ${isCertified ? 'certified-marker-popup' : siqsClass}`}>
+          <div className="font-medium text-sm mb-1.5 flex items-center gap-1.5">
+            {isCertified && (
+              <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+            )}
+            <span className="text-gray-100 flex-1">{displayName}</span>
+          </div>
+          
+          {/* Show certification badge for certified locations */}
+          {isCertified && location.certification && (
+            <div className="mt-1 text-xs font-medium text-amber-400 flex items-center">
+              <Award className="h-3 w-3 mr-1" />
+              {location.certification}
             </div>
           )}
           
-          {location.distance && (
-            <span className="text-xs text-gray-300 flex items-center justify-end">
-              {formatDistance(location.distance)}
-            </span>
-          )}
+          {/* Location coordinates */}
+          <div className="mt-1.5 text-xs text-gray-300 flex items-center">
+            <MapPin className="h-3 w-3 mr-1 text-gray-400" />
+            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+          </div>
+          
+          {/* SIQS Score and Distance */}
+          <div className="mt-2 flex items-center justify-between">
+            {location.siqs !== undefined && (
+              <div className="flex items-center gap-1.5">
+                <SiqsScoreBadge score={location.siqs} compact={true} />
+              </div>
+            )}
+            
+            {location.distance && (
+              <span className="text-xs text-gray-300 flex items-center justify-end">
+                {formatDistance(location.distance)}
+              </span>
+            )}
+          </div>
+          
+          {/* Link to details page */}
+          <div className="mt-2 text-center">
+            <button 
+              onClick={goToLocationDetails}
+              className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1 px-2 rounded transition-colors"
+            >
+              <ExternalLink className="h-3 w-3 mr-1.5" />
+              {t("View Details", "查看详情")}
+            </button>
+          </div>
         </div>
-        
-        {/* Link to details page */}
-        <div className="mt-2 text-center">
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            className="h-7 text-xs w-full bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary-foreground py-1 px-2 rounded transition-colors"
-            onClick={goToLocationDetails}
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            {t("View Details", "查看详情")}
-          </Button>
-        </div>
-      </MapTooltip>
+      </Popup>
     </Marker>
   );
 });
