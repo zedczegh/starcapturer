@@ -1,7 +1,9 @@
+
 import { Location } from '../types';
 
 /**
  * Get database of western cities for special case handling
+ * Enhanced with certified Dark Sky locations
  */
 export function getWesternCitiesDatabase(): Record<string, Location> {
   return {
@@ -34,6 +36,68 @@ export function getWesternCitiesDatabase(): Record<string, Location> {
       latitude: 35.6762,
       longitude: 139.6503,
       placeDetails: "Capital city of Japan"
+    },
+    // IDA Dark Sky Sanctuaries
+    "stewart island": {
+      name: "Stewart Island Dark Sky Sanctuary, New Zealand",
+      latitude: -46.9973,
+      longitude: 167.8376,
+      placeDetails: "Dark Sky Sanctuary - International Dark Sky Association"
+    },
+    "gabriela mistral": {
+      name: "Gabriela Mistral Dark Sky Sanctuary, Chile",
+      latitude: -30.2451,
+      longitude: -70.7342,
+      placeDetails: "Dark Sky Sanctuary - International Dark Sky Association"
+    },
+    // IDA Dark Sky Reserves
+    "aoraki": {
+      name: "Aoraki Mackenzie Dark Sky Reserve, New Zealand",
+      latitude: -43.9856,
+      longitude: 170.4639,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "brecon beacons": {
+      name: "Brecon Beacons Dark Sky Reserve, Wales",
+      latitude: 51.9478,
+      longitude: -3.4868,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "exmoor": {
+      name: "Exmoor Dark Sky Reserve, England",
+      latitude: 51.1146,
+      longitude: -3.6493,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "kerry": {
+      name: "Kerry Dark Sky Reserve, Ireland",
+      latitude: 51.9457,
+      longitude: -10.2273,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "mont megantic": {
+      name: "Mont-Mégantic Dark Sky Reserve, Canada",
+      latitude: 45.4568,
+      longitude: -71.1524,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
+    },
+    "natural bridges": {
+      name: "Natural Bridges National Monument Dark Sky Park, USA",
+      latitude: 37.6124,
+      longitude: -109.9847,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "cherry springs": {
+      name: "Cherry Springs State Park Dark Sky Park, USA",
+      latitude: 41.6626,
+      longitude: -77.8236,
+      placeDetails: "Dark Sky Park - International Dark Sky Association"
+    },
+    "westhavelland": {
+      name: "Westhavelland Dark Sky Reserve, Germany",
+      latitude: 52.6667,
+      longitude: 12.4833,
+      placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
     // Add more western cities as needed
   };

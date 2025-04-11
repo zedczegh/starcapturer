@@ -1,4 +1,3 @@
-
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -65,7 +64,7 @@ export async function findLocationsWithinRadius(
         limit // use passed limit
       );
       
-      // Filter out water locations
+      // Filter out water locations with enhanced detection
       const validApiPoints = filterLocations(apiPoints);
       
       if (validApiPoints.length < apiPoints.length) {
@@ -79,16 +78,19 @@ export async function findLocationsWithinRadius(
         ...localDarkSkyLocations.filter(loc => !apiIds.has(loc.name))
       ];
       
+      // Apply enhanced detection for IDA certified locations
+      const enhancedPoints = combineWithIDACertifiedLocations(combinedPoints, latitude, longitude, radius);
+      
       // Cache the results with the specific cache key
       cacheLocations(
         'certified',
         latitude,
         longitude,
         radius,
-        combinedPoints
+        enhancedPoints
       );
       
-      return combinedPoints;
+      return enhancedPoints;
     }
     
     // For all locations (not just certified), get from API with provided limit
@@ -105,7 +107,7 @@ export async function findLocationsWithinRadius(
       return [];
     }
     
-    // Filter out water locations
+    // Filter out water locations with enhanced detection
     const validPoints = filterLocations(points);
     
     if (validPoints.length < points.length) {
@@ -324,6 +326,89 @@ export async function findCertifiedLocations(
   } catch (error) {
     console.error("Error finding certified locations:", error);
     return [];
+  }
+}
+
+/**
+ * Combine locations with additional IDA certified locations
+ * Uses special knowledge about International Dark Sky Association locations
+ */
+function combineWithIDACertifiedLocations(
+  existingLocations: SharedAstroSpot[],
+  latitude: number,
+  longitude: number,
+  radius: number
+): SharedAstroSpot[] {
+  try {
+    // Key IDA certified locations that might be missing
+    const keyIDALocations: Array<{name: string, lat: number, lng: number, type: string}> = [
+      // Dark Sky Reserves
+      {name: "Alpes Azur Mercantour Dark Sky Reserve", lat: 44.1800, lng: 7.0500, type: "Dark Sky Reserve"},
+      {name: "Central Idaho Dark Sky Reserve", lat: 44.2210, lng: -114.9318, type: "Dark Sky Reserve"},
+      {name: "NamibRand Dark Sky Reserve", lat: -24.9400, lng: 16.0600, type: "Dark Sky Reserve"},
+      {name: "Cranborne Chase Dark Sky Reserve", lat: 51.0290, lng: -2.1370, type: "Dark Sky Reserve"},
+      {name: "Snowdonia Dark Sky Reserve", lat: 52.9493, lng: -3.8872, type: "Dark Sky Reserve"},
+      {name: "Rhön Dark Sky Reserve", lat: 50.3492, lng: 9.9675, type: "Dark Sky Reserve"},
+      {name: "Galloway Dark Sky Park", lat: 55.1054, lng: -4.4899, type: "Dark Sky Park"},
+      {name: "Great Barrier Island Dark Sky Sanctuary", lat: -36.2058, lng: 175.4831, type: "Dark Sky Sanctuary"},
+      {name: "Wairarapa Dark Sky Reserve", lat: -41.3446, lng: 175.5440, type: "Dark Sky Reserve"},
+      {name: "River Murray Dark Sky Reserve", lat: -34.4048, lng: 139.2851, type: "Dark Sky Reserve"},
+      
+      // Dark Sky Parks in USA
+      {name: "Death Valley National Park", lat: 36.5323, lng: -116.9325, type: "Dark Sky Park"},
+      {name: "Joshua Tree National Park", lat: 33.8734, lng: -115.9010, type: "Dark Sky Park"},
+      {name: "Grand Canyon National Park", lat: 36.1069, lng: -112.1129, type: "Dark Sky Park"},
+      {name: "Chaco Culture National Historical Park", lat: 36.0319, lng: -107.9698, type: "Dark Sky Park"},
+      {name: "Arches National Park", lat: 38.7331, lng: -109.5925, type: "Dark Sky Park"},
+      {name: "Canyonlands National Park", lat: 38.2136, lng: -109.9025, type: "Dark Sky Park"}
+    ];
+    
+    // Create a map of existing locations to avoid duplicates
+    const existingMap = new Map<string, boolean>();
+    existingLocations.forEach(loc => {
+      if (loc.name) {
+        existingMap.set(loc.name.toLowerCase(), true);
+      }
+    });
+    
+    // Add IDA locations that aren't already in our list and are within radius
+    const additionalLocations: SharedAstroSpot[] = [];
+    
+    keyIDALocations.forEach(idaLoc => {
+      // Check if this location already exists
+      if (!existingMap.has(idaLoc.name.toLowerCase())) {
+        // Check if it's within our radius
+        const distance = calculateDistance(
+          latitude, 
+          longitude,
+          idaLoc.lat,
+          idaLoc.lng
+        );
+        
+        if (distance <= radius) {
+          // Create a new location entry
+          additionalLocations.push({
+            id: `ida-${idaLoc.name.replace(/\s+/g, '-').toLowerCase()}`,
+            name: idaLoc.name,
+            latitude: idaLoc.lat,
+            longitude: idaLoc.lng,
+            bortleScale: 2, // Most IDA locations have excellent Bortle scales
+            siqs: 8.5, // High SIQS for IDA certified locations
+            isDarkSkyReserve: idaLoc.type === "Dark Sky Reserve",
+            certification: `International ${idaLoc.type}`,
+            description: `An International Dark Sky Association certified ${idaLoc.type}.`,
+            distance: distance,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    // Combine existing and additional locations
+    return [...existingLocations, ...additionalLocations];
+  } catch (error) {
+    console.error("Error adding IDA certified locations:", error);
+    return existingLocations;
   }
 }
 
