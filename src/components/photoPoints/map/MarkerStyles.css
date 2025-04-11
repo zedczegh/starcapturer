@@ -1,3 +1,4 @@
+
 /* Base marker styling for all custom markers */
 .custom-marker {
   transition: transform 0.15s ease, filter 0.2s ease;
@@ -82,68 +83,59 @@
 }
 
 /* Enhanced popup styling */
-.leaflet-popup-custom {
+.leaflet-popup-content-wrapper {
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 180px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  padding: 0;
 }
 
-.custom-popup .leaflet-popup-content-wrapper {
-  background: transparent;
-  box-shadow: none;
-  border-radius: 10px;
-}
-
-.custom-popup .leaflet-popup-content {
+.leaflet-popup-content {
   margin: 0;
   width: auto !important;
+  overflow: hidden;
 }
 
-.custom-popup .leaflet-popup-tip {
-  background: rgba(30, 41, 59, 0.85);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.leaflet-popup-tip {
+  background-color: #1a222e;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6);
+}
+
+.leaflet-popup-custom-compact {
+  color: #fff;
 }
 
 .marker-popup-gradient {
-  background: linear-gradient(to bottom, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
-  color: #f1f5f9;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(to bottom, #1a222e, #111827);
+  color: #e5e7eb;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) inset;
 }
 
-/* Color classes for different SIQS ranges */
+/* Quality-based styling */
 .siqs-excellent {
-  border-left: 3px solid #4ade80;
+  background: linear-gradient(to bottom, #166534, #1a222e);
 }
 
 .siqs-good {
-  border-left: 3px solid #facc15;
+  background: linear-gradient(to bottom, #854d0e, #1a222e);
 }
 
 .siqs-poor {
-  border-left: 3px solid #f87171;
+  background: linear-gradient(to bottom, #7f1d1d, #1a222e);
 }
 
-.location-radius-circle {
-  animation: pulse-opacity 2s infinite ease-in-out;
-}
-
-@keyframes pulse-opacity {
-  0% {
-    opacity: 0.1;
-  }
-  50% {
-    opacity: 0.2;
-  }
-  100% {
-    opacity: 0.1;
-  }
-}
-
-/* Enhanced marker hover effect */
-.leaflet-marker-icon.hovered {
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.7));
-  transform: scale(1.1) !important;
-  transition: all 0.2s ease-in-out;
+/* Make popups more easily clickable - reduce flickering */
+.leaflet-popup {
+  pointer-events: auto !important;
   z-index: 1000 !important;
+}
+
+.leaflet-popup-content {
+  pointer-events: auto !important;
+}
+
+/* Add a small delay to popup display to prevent flickering */
+.leaflet-fade-anim .leaflet-popup {
+  transition: opacity 0.15s linear;
+  transition-delay: 0.05s;
 }
