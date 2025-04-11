@@ -331,7 +331,8 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         storeMapRef(target);
       }}
       scrollWheelZoom={true}
-      maxBounds={[[-85, -180], [85, 180]]} // Prevent panning outside world bounds
+      // Fixed: Use bounds prop instead of maxBounds
+      bounds={[[-85, -180], [85, 180]]}
       minZoom={2} // Prevent zooming out too far which can cause rendering issues
     >
       {/* Add a MapCenterHandler to properly handle center changes */}
@@ -364,13 +365,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onSiqsCalculated={handleSiqsCalculated}
       />
       
-      {/* Add MapEvents component to handle clicks if onMapClick is provided */}
+      {/* Fixed: Use only the properties that are defined in MapEventsProps */}
       <MapEvents 
-        onMapClick={handleMapClick} 
+        onMapClick={handleMapClick}
         onMapDragStart={handleMapDragStart}
         onMapDragEnd={handleMapDragEnd}
-        onMapZoomStart={handleMapZoomStart}
-        onMapZoomEnd={handleMapZoomEnd}
       />
       
       {/* Current user location marker */}

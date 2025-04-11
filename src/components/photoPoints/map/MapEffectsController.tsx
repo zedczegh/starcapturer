@@ -1,93 +1,80 @@
 
-import React, { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-interface MapEventsProps {
-  onMapClick?: (lat: number, lng: number) => void;
-  onMapDragStart?: () => void;
-  onMapDragEnd?: () => void;
-  onMapZoomEnd?: () => void;
-}
-
-export function MapEvents({ 
-  onMapClick,
-  onMapDragStart,
-  onMapDragEnd,
-  onMapZoomEnd
-}: MapEventsProps) {
+// World bounds controller to ensure markers stay within viewport
+export const WorldBoundsController = () => {
   const map = useMap();
   
-  // Handle map click
-  const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
-    if (onMapClick) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    }
-  }, [onMapClick]);
-  
-  // Set up event listeners
   useEffect(() => {
     if (!map) return;
     
-    if (onMapClick) {
-      map.on('click', handleMapClick);
-    }
+    // Set minimum zoom to prevent markers from disappearing
+    map.setMinZoom(2);
     
-    if (onMapDragStart) {
-      map.on('dragstart', onMapDragStart);
-    }
-    
-    if (onMapDragEnd) {
-      map.on('dragend', onMapDragEnd);
-    }
-    
-    if (onMapZoomEnd) {
-      map.on('zoomend', onMapZoomEnd);
-    }
+    // Set maximum bounds to prevent panning outside world boundaries
+    const bounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180));
+    map.setMaxBounds(bounds);
     
     return () => {
-      if (onMapClick) {
-        map.off('click', handleMapClick);
-      }
-      
-      if (onMapDragStart) {
-        map.off('dragstart', onMapDragStart);
-      }
-      
-      if (onMapDragEnd) {
-        map.off('dragend', onMapDragEnd);
-      }
-      
-      if (onMapZoomEnd) {
-        map.off('zoomend', onMapZoomEnd);
-      }
-    };
-  }, [map, handleMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
-  
-  return null;
-}
-
-export function WorldBoundsController() {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map) return;
-    
-    // Set max bounds to prevent scrolling beyond world boundaries
-    const worldBounds = L.latLngBounds(
-      L.latLng(-85.0511, -190), // Southwest corner
-      L.latLng(85.0511, 190)   // Northeast corner
-    );
-    
-    map.setMaxBounds(worldBounds);
-    map.on('drag', () => {
-      map.panInsideBounds(worldBounds, { animate: false });
-    });
-    
-    return () => {
-      map.off('drag');
+      // No cleanup needed
     };
   }, [map]);
-
+  
   return null;
+};
+
+// Define interface to match required props
+export interface MapEventsProps {
+  onMapClick: (lat: number, lng: number) => void;
+  onMapDragStart?: () => void;
+  onMapDragEnd?: () => void;
 }
+
+// Map Events Component - Handles map click events
+export const MapEvents = ({ 
+  onMapClick, 
+  onMapDragStart, 
+  onMapDragEnd
+}: MapEventsProps) => {
+  const map = useMap();
+  
+  // Use direct event listener instead of useMapEvents
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    };
+    
+    const handleDragStart = () => {
+      if (onMapDragStart) onMapDragStart();
+    };
+    
+    const handleDragEnd = () => {
+      if (onMapDragEnd) onMapDragEnd();
+    };
+    
+    const handleZoomStart = () => {
+      // We'll handle zoom events in the map container directly
+    };
+    
+    const handleZoomEnd = () => {
+      // We'll handle zoom events in the map container directly
+    };
+    
+    map.on('click', handleMapClick);
+    
+    if (onMapDragStart) map.on('dragstart', handleDragStart);
+    if (onMapDragEnd) map.on('dragend', handleDragEnd);
+    
+    return () => {
+      map.off('click', handleMapClick);
+      if (onMapDragStart) map.off('dragstart', handleDragStart);
+      if (onMapDragEnd) map.off('dragend', handleDragEnd);
+    };
+  }, [map, onMapClick, onMapDragStart, onMapDragEnd]);
+  
+  return null;
+};

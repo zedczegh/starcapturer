@@ -15,6 +15,7 @@
 /* Fix popup visibility issues */
 .leaflet-popup-pane {
   z-index: 460 !important;
+  overflow: visible !important;
 }
 
 /* Prevent popups from being clipped at map edges */
@@ -90,4 +91,32 @@
 
 .dark-sky-marker svg {
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+}
+
+/* Fix for Leaflet map container */
+.leaflet-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure popups and tooltips stay visible */
+.leaflet-tooltip-pane {
+  z-index: 650 !important;
+}
+
+/* Fix for markers at map boundaries */
+.leaflet-marker-icon {
+  transition: none !important;
+}
+
+/* Keep markers visible during zoom */
+.leaflet-fade-anim .leaflet-tile,
+.leaflet-fade-anim .leaflet-popup,
+.leaflet-marker-icon {
+  will-change: transform, opacity;
+}
+
+/* Fix marker border clipping */
+.leaflet-marker-icon {
+  overflow: visible !important;
 }
