@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import LightPollutionIndicator from '@/components/location/LightPollutionIndicat
 import SiqsScoreBadge from './cards/SiqsScoreBadge';
 import CertificationBadge from './cards/CertificationBadge';
 import LocationMetadata from './cards/LocationMetadata';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -28,6 +30,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const actualIsMobile = useIsMobile();
+  const effectiveIsMobile = isMobile || actualIsMobile;
+  
   const [locationCounter] = useState(() => {
     // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
@@ -40,9 +47,37 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
-  // Load real-time SIQS data if requested
+  // Use intersection observer for better performance
   useEffect(() => {
-    if (showRealTimeSiqs && location.latitude && location.longitude) {
+    if (effectiveIsMobile) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.unobserve(entry.target);
+          }
+        },
+        { threshold: 0.1, rootMargin: '100px' }
+      );
+      
+      if (cardRef.current) {
+        observer.observe(cardRef.current);
+      }
+      
+      return () => {
+        if (cardRef.current) {
+          observer.unobserve(cardRef.current);
+        }
+      };
+    } else {
+      setIsVisible(true);
+    }
+  }, [effectiveIsMobile]);
+  
+  // Load real-time SIQS data if requested and component is visible
+  useEffect(() => {
+    if ((showRealTimeSiqs && location.latitude && location.longitude) && 
+        (isVisible || !effectiveIsMobile)) {
       const fetchSiqs = async () => {
         setLoadingSiqs(true);
         try {
@@ -68,7 +103,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       
       fetchSiqs();
     }
-  }, [location, showRealTimeSiqs]);
+  }, [location, showRealTimeSiqs, isVisible, effectiveIsMobile]);
 
   // If we have a real-time SIQS of 0, don't render this card
   if (realTimeSiqs === 0) {
@@ -119,22 +154,25 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   
   // Animation variants - reduced for mobile
   const cardVariants = {
-    hidden: { opacity: 0, y: isMobile ? 10 : 20 },
+    hidden: { opacity: 0, y: effectiveIsMobile ? 10 : 20 },
     visible: { 
       opacity: 1, 
       y: 0,
       transition: { 
-        duration: isMobile ? 0.2 : 0.4,
-        delay: isMobile ? index * 0.05 : index * 0.1
+        duration: effectiveIsMobile ? 0.2 : 0.4,
+        delay: effectiveIsMobile ? index * 0.05 : index * 0.1
       }
     }
   };
   
   return (
     <motion.div
+      ref={cardRef}
       variants={cardVariants}
-      className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
-      layout={!isMobile}
+      initial="hidden"
+      animate={isVisible ? "visible" : "hidden"}
+      className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${effectiveIsMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
+      layout={!effectiveIsMobile}
     >
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
@@ -170,7 +208,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           variant="ghost"
           size="sm"
           onClick={handleViewDetails}
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm"
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm touch-action-manipulation"
         >
           {t("View Details", "查看详情")}
         </Button>
