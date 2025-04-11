@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  
   const [locationCounter] = useState(() => {
     // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
@@ -40,9 +44,28 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
-  // Load real-time SIQS data if requested
+  // Set up intersection observer to only load data when card is visible
   useEffect(() => {
-    if (showRealTimeSiqs && location.latitude && location.longitude) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect(); // Once visible, disconnect observer
+        }
+      },
+      { threshold: 0.1 } // Trigger when at least 10% of the card is visible
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+  
+  // Load real-time SIQS data if requested and card is visible
+  useEffect(() => {
+    if (showRealTimeSiqs && isVisible && location.latitude && location.longitude) {
       const fetchSiqs = async () => {
         setLoadingSiqs(true);
         try {
@@ -68,7 +91,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       
       fetchSiqs();
     }
-  }, [location, showRealTimeSiqs]);
+  }, [location, showRealTimeSiqs, isVisible]);
 
   // If we have a real-time SIQS of 0, don't render this card
   if (realTimeSiqs === 0) {
@@ -125,14 +148,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       y: 0,
       transition: { 
         duration: isMobile ? 0.2 : 0.4,
-        delay: isMobile ? index * 0.05 : index * 0.1
+        delay: isMobile ? Math.min(index * 0.05, 0.3) : Math.min(index * 0.1, 0.5) // Cap maximum delay
       }
     }
   };
   
   return (
     <motion.div
+      ref={cardRef}
       variants={cardVariants}
+      initial="hidden"
+      animate={isVisible ? "visible" : "hidden"}
       className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
       layout={!isMobile}
     >

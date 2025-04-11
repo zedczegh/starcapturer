@@ -36,3 +36,6 @@ export interface GeocodeResponse {
   results: Location[];
   error?: string;
 }
+
+// Add the MatchScore interface to consolidate types
+export type { MatchScore, PinyinVariation, PinyinVariationsMap } from './matching/types';
