@@ -119,7 +119,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
             // Use animation for a smoother experience and higher zoom level
             leafletMap.setView([latitude, longitude], 12, { 
               animate: true,
-              duration: 1.5
+              duration: 1.5 
             });
             console.log("Map centered on current location:", latitude, longitude);
           } else {

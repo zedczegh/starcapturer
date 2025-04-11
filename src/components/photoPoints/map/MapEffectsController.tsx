@@ -64,9 +64,14 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
   useEffect(() => {
     if (!map) return;
     
-    // Enable map interactions
+    // Enable map interactions - ensure dragging is enabled
     map.scrollWheelZoom.enable();
     map.dragging.enable();
+    map.touchZoom.enable();
+    map.doubleClickZoom.enable();
+    map.boxZoom.enable();
+    map.keyboard.enable();
+    if (map.tap) map.tap.enable();
     
     // Clear SIQS cache when view changes
     if (activeView) {
@@ -90,10 +95,11 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     
     map.setMaxBounds(worldBounds);
     
-    // Fix: Ensure zoom interactions work properly
+    // Ensure zoom interactions work properly - explicitly set all interaction options
     map.scrollWheelZoom.enable();
     map.touchZoom.enable();
     map.doubleClickZoom.enable();
+    map.dragging.enable(); // Ensure dragging is explicitly enabled
     
     // Improve wrapping of coordinates to stay within -180 to 180 longitude
     const originalLatLng = L.latLng;
@@ -126,6 +132,9 @@ const MapEffectsController: React.FC<MapEffectsControllerProps> = ({
     
     // Expose map instance globally for external components to use
     (window as any).leafletMap = map;
+    
+    // Check if map is properly initialized
+    console.log("Map draggable:", map.dragging.enabled());
     
     return () => {
       if (map) {

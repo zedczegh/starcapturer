@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
@@ -53,7 +52,7 @@ const MapEvents = ({
     map.on('zoomend', handleZoomEnd);
     
     // Store map reference in window for external access
-    (window as any).map = map;
+    (window as any).leafletMap = map;
     
     return () => {
       // Clean up event listeners
@@ -62,7 +61,7 @@ const MapEvents = ({
       map.off('dragend', handleDragEnd);
       map.off('zoomend', handleZoomEnd);
       // Clean up window reference
-      (window as any).map = undefined;
+      (window as any).leafletMap = undefined;
     };
   }, [map, onMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
   
@@ -92,8 +91,11 @@ const MapController = ({
     map.keyboard.enable();
     if (map.tap) map.tap.enable();
     
+    // Explicitly check and log if dragging is enabled
+    console.log("Map dragging enabled:", map.dragging.enabled());
+    
     // Store map reference in window for external access
-    (window as any).map = map;
+    (window as any).leafletMap = map;
     
     // If user location exists, center on it
     if (userLocation && firstRenderRef.current) {
@@ -104,6 +106,11 @@ const MapController = ({
 
     // Improve performance by reduced rerenders on pan/zoom
     map._onResize = L.Util.throttle(map._onResize, 200, map);
+    
+    return () => {
+      // Clean up if needed
+      delete (window as any).leafletMap;
+    };
   }, [map, userLocation]);
 
   return null;
@@ -206,10 +213,15 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       className="h-full w-full"
       whenReady={(map) => {
         // Store map reference globally for external access
-        (window as any).map = map.target;
+        (window as any).leafletMap = map.target;
+        // Explicitly enable dragging
+        map.target.dragging.enable();
+        console.log("Map container ready, dragging enabled:", map.target.dragging.enabled());
         onMapReady();
       }}
       scrollWheelZoom={true}
+      dragging={true}
+      zoomControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -264,9 +276,10 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       )}
       
       {/* Location markers */}
-      {!hideMarkerPopups && validLocations.map((location) => {
+      {!hideMarkerPopups && locations.map((location) => {
         // Generate a unique ID for this location
-        const locationId = getMarkerKey(location);
+        const locationId = location.id || 
+           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}-${activeView}`;
         
         // Handle the click event for this marker
         const handleClick = () => {
