@@ -1,3 +1,4 @@
+
 // SIQS = Stellar Imaging Quality Score
 import { SIQSFactors, SIQSResult } from './siqs/types';
 import { 
@@ -116,8 +117,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       precipitation = 0,
       weatherCondition = "",
       aqi,
-      clearSkyRate,
-      isNighttimeCalculation = false // New flag to indicate nighttime calculation
+      clearSkyRate
     } = factors;
     
     // Validate critical inputs
@@ -134,8 +134,8 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
     const now = new Date();
     const isCurrentlyNightTime = isNightTime(now);
     
-    // If we have nighttime forecast data or we're told this is a nighttime calculation, prioritize that
-    if (tonightForecast.length > 0 || isNighttimeCalculation) {
+    // If we have nighttime forecast data, prioritize that for calculation
+    if (tonightForecast.length > 0) {
       console.log("Using nighttime forecast data for SIQS calculation");
       
       // Calculate average cloud cover from nighttime forecast with improved error handling
@@ -268,11 +268,7 @@ export function calculateSIQS(factors: SIQSFactors): SIQSResult {
       return {
         score: finalScore,
         isViable,
-        factors: factorsList,
-        metadata: {
-          calculationType: 'nighttime',
-          timestamp: new Date().toISOString()
-        }
+        factors: factorsList
       };
     }
     

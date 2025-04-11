@@ -57,45 +57,27 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
           };
         }
         
-        // Fix issue with high cloud cover showing high scores
-        if (nighttimeValue > 80) {
-          return {
-            ...factor,
-            name: nighttimeName,
-            score: Math.max(0, 10 - (nighttimeValue / 10)), // Ensure score is properly calculated
-            description: language === 'zh'
-              ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，不适合成像`
-              : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%, not recommended for imaging`
-          };
-        }
-        
         return { 
           ...factor, 
           name: nighttimeName,
-          score: Math.max(0, 10 - (nighttimeValue / 10)), // Ensure score is properly calculated
+          // Leave score as is but update the description to show the nighttime value
           description: language === 'zh' 
             ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description.includes('影响') ? '，可能影响成像质量' : '')
             : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description.includes('quality') ? ', may affect imaging quality' : '')
         };
       }
       
-      // Fix description-score mismatch for regular cloud cover
+      // If description mentions 0%, ensure score is 10
       if (factor.description.includes("0%")) {
         return { ...factor, score: 10 };
       }
       
-      if (factor.description.includes("Heavy cloud") || 
+      // For high cloud cover, ensure we show the actual score (could be very low)
+      if (factor.description.includes("over 50%") || 
+          factor.description.includes("超过50%") ||
+          factor.description.includes("Heavy cloud") ||
           factor.description.includes("重度云层")) {
-        // If description mentions heavy cloud cover, set score appropriately low
-        const cloudValueMatch = factor.description.match(/\((\d+)%\)/);
-        if (cloudValueMatch && cloudValueMatch[1]) {
-          const cloudValue = parseInt(cloudValueMatch[1], 10);
-          return { 
-            ...factor, 
-            score: Math.max(0, 10 - (cloudValue / 10)) // 100% cloud cover = 0 score
-          };
-        }
-        return { ...factor, score: 0 }; // Default to 0 if no percentage found
+        return factor;
       }
     }
     

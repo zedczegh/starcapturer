@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -8,15 +7,10 @@ import { motion } from "framer-motion";
 export const currentSiqsStore = {
   value: null as number | null,
   setValue: (value: number | null) => {
+    currentSiqsStore.value = value;
+    // Also save to localStorage for persistence
     if (value !== null) {
-      // Ensure value is on a 0-10 scale and is valid
-      const validValue = Math.min(10, Math.max(0, value));
-      console.log(`Setting current SIQS value to: ${validValue.toFixed(1)}`);
-      currentSiqsStore.value = validValue;
-      // Also save to localStorage for persistence
-      localStorage.setItem('current_siqs_value', validValue.toString());
-    } else {
-      currentSiqsStore.value = null;
+      localStorage.setItem('current_siqs_value', value.toString());
     }
   },
   getValue: () => {
@@ -26,8 +20,7 @@ export const currentSiqsStore = {
       if (storedValue) {
         const parsedValue = parseFloat(storedValue);
         if (!isNaN(parsedValue)) {
-          // Ensure value is on a 0-10 scale
-          currentSiqsStore.value = Math.min(10, Math.max(0, parsedValue));
+          currentSiqsStore.value = parsedValue;
         }
       }
     }
@@ -73,24 +66,9 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   
   // Update current SIQS value when calculated
   const handleSiqsCalculated = (value: number | null) => {
-    if (value !== null) {
-      // Ensure value is on a 0-10 scale
-      const validValue = Math.min(10, Math.max(0, value));
-      setCurrentSiqs(validValue);
-      currentSiqsStore.setValue(validValue);
-    } else {
-      setCurrentSiqs(null);
-      currentSiqsStore.setValue(null);
-    }
+    setCurrentSiqs(value);
+    currentSiqsStore.setValue(value);
   };
-  
-  // Check for value updates from other components
-  useEffect(() => {
-    const storedValue = currentSiqsStore.getValue();
-    if (storedValue !== currentSiqs) {
-      setCurrentSiqs(storedValue);
-    }
-  }, [currentSiqs]);
   
   return (
     <section 

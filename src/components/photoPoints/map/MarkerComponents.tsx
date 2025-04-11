@@ -30,21 +30,44 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   // Use enhanced water detection
   return isWaterLocation(
     location.latitude, 
-    location.longitude
+    location.longitude, 
+    Boolean(location.isDarkSkyReserve || location.certification)
   );
+};
+
+// Get certification type based color for markers
+const getCertificationColor = (location: SharedAstroSpot): string => {
+  if (!location.isDarkSkyReserve && !location.certification) {
+    return '#FFD700'; // Default gold
+  }
+  
+  const certification = (location.certification || '').toLowerCase();
+  
+  // Different colors for different certification types
+  if (certification.includes('reserve') || certification.includes('sanctuary')) {
+    return '#9b87f5'; // Purple for reserves
+  } else if (certification.includes('park')) {
+    return '#4ADE80'; // Green for parks
+  } else if (certification.includes('community')) {
+    return '#FFA500'; // Orange for communities
+  } else if (certification.includes('urban')) {
+    return '#0EA5E9'; // Blue for urban night skies
+  } else {
+    return '#FFD700'; // Gold for generic certified locations
+  }
 };
 
 // Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
   if (isCertified) {
-    // For certified locations, use a star-shaped marker with gold/yellow color
-    return createCustomMarker('#FFD700');
+    // For certified locations, use a color based on certification type
+    const certColor = getCertificationColor(location);
+    return createCustomMarker(certColor, 'star');
   } else {
     // For calculated locations, use a brighter color based on SIQS with circle shape
-    // Replace olive green with a brighter, more vibrant green
     const defaultColor = '#4ADE80'; // Bright green fallback
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
-    return createCustomMarker(color);
+    return createCustomMarker(color, 'circle');
   }
 };
 
@@ -68,6 +91,7 @@ const LocationMarker = memo(({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
+  const popupRef = useRef<L.Popup | null>(null);
   
   // Skip water locations for calculated spots (never skip certified)
   if (!isCertified && isWaterSpot(location)) {
@@ -140,12 +164,7 @@ const LocationMarker = memo(({
         longitude: location.longitude,
         bortleScale: location.bortleScale || 4,
         siqs: location.siqs,
-        siqsResult: location.siqs ? { 
-          score: location.siqs,
-          isViable: location.siqs >= 5.0,
-          factors: [],
-          isNighttimeCalculation: true
-        } : undefined,
+        siqsResult: location.siqs ? { score: location.siqs } : undefined,
         certification: location.certification,
         isDarkSkyReserve: location.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
@@ -160,6 +179,7 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
+      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
@@ -216,7 +236,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component
+// User location marker component - Updated to use red color
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
