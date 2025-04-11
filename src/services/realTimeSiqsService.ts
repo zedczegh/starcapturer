@@ -150,11 +150,11 @@ export async function calculateRealTimeSiqs(
  */
 export async function batchCalculateSiqs(
   locations: SharedAstroSpot[],
-  maxParallel: number = 2 // REDUCED from 3 to 2 for fewer API calls
+  maxParallel: number = 3
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   
-  console.log(`Batch calculating SIQS for ${locations.length} locations with reduced API load`);
+  console.log(`Batch calculating SIQS for ${locations.length} locations`);
   
   // Clone the locations array to avoid mutating the original
   const updatedLocations = [...locations];
@@ -171,55 +171,121 @@ export async function batchCalculateSiqs(
     if (!a.isDarkSkyReserve && b.isDarkSkyReserve) return 1;
     if (a.certification && !b.certification) return -1;
     if (!a.certification && b.certification) return 1;
-    return 0;
+    
+    // Then prioritize by darkest skies
+    return (a.bortleScale || 5) - (b.bortleScale || 5);
   });
   
-  // Process in batches with controlled concurrency
-  const processLocationBatch = async (batch: SharedAstroSpot[]) => {
-    return await Promise.all(batch.map(async (location) => {
+  // Process locations in chunks to avoid too many parallel requests with improved error handling
+  for (let i = 0; i < prioritizedLocations.length; i += maxParallel) {
+    const chunk = prioritizedLocations.slice(i, i + maxParallel);
+    const promises = chunk.map(async (location) => {
+      if (!location.latitude || !location.longitude) return location;
+      
       try {
-        if (!location || !isFinite(location.latitude) || !isFinite(location.longitude)) {
-          console.warn("Invalid location in batch:", location);
-          return location;
-        }
-        
         const result = await calculateRealTimeSiqs(
-          location.latitude, 
-          location.longitude, 
+          location.latitude,
+          location.longitude,
           location.bortleScale || 5
         );
         
+        // Update the location object with real-time SIQS
         return {
           ...location,
           siqs: result.siqs,
-          siqsResult: {
-            score: result.siqs,
-            isViable: result.isViable,
-            factors: result.factors || [],
-            isNighttimeCalculation: true
-          }
+          isViable: result.isViable,
+          siqsFactors: result.factors // Store factors for potential display
         };
-      } catch (err) {
-        console.error("Error processing location in batch:", err);
-        return location;
+      } catch (error) {
+        console.error(`Error calculating SIQS for location ${location.name}:`, error);
+        // Return location with fallback calculation based on bortleScale
+        // This ensures we still display locations even if API fails
+        const fallbackSiqs = Math.max(0, 10 - (location.bortleScale || 5));
+        return {
+          ...location,
+          siqs: fallbackSiqs,
+          isViable: fallbackSiqs >= 2.0
+        };
       }
-    }));
-  };
-  
-  // Process locations in smaller batches to avoid overloading APIs
-  const results: SharedAstroSpot[] = [];
-  
-  for (let i = 0; i < prioritizedLocations.length; i += maxParallel) {
-    const batch = prioritizedLocations.slice(i, i + maxParallel);
-    const batchResults = await processLocationBatch(batch);
-    results.push(...batchResults);
+    });
     
-    // Add a small delay between batches to prevent rate limiting
-    if (i + maxParallel < prioritizedLocations.length) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+    try {
+      // Wait for the current chunk to complete before processing next chunk
+      const results = await Promise.allSettled(promises);
+      
+      // Update the locations array with the results, handling potential rejections
+      results.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          const locationIndex = updatedLocations.findIndex(loc => 
+            loc.id === prioritizedLocations[i + idx].id
+          );
+          if (locationIndex >= 0) {
+            updatedLocations[locationIndex] = result.value;
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error in batch processing chunk:", error);
+      // Continue with next chunk if one fails
     }
   }
   
-  console.log(`Completed SIQS calculation for ${results.length} locations`);
-  return results;
+  // Filter out any locations with SIQS = 0 and sort by SIQS (highest first)
+  return updatedLocations
+    .filter(loc => loc.siqs > 0)
+    .sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+}
+
+/**
+ * Clear the SIQS cache for testing or debugging
+ */
+export function clearSiqsCache(): void {
+  const size = siqsCache.size;
+  siqsCache.clear();
+  console.log(`SIQS cache cleared (${size} entries removed)`);
+}
+
+/**
+ * Get the current SIQS cache size
+ * @returns Number of cached entries
+ */
+export function getSiqsCacheSize(): number {
+  return siqsCache.size;
+}
+
+/**
+ * Clear specific location from the SIQS cache
+ */
+export function clearLocationSiqsCache(latitude: number, longitude: number): void {
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  if (siqsCache.has(cacheKey)) {
+    siqsCache.delete(cacheKey);
+    console.log(`Cleared SIQS cache for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  }
+}
+
+/**
+ * Clear all expired cache entries to free memory
+ */
+export function cleanupExpiredCache(): void {
+  const now = Date.now();
+  let expiredCount = 0;
+  
+  for (const [key, data] of siqsCache.entries()) {
+    const isNighttime = () => {
+      const hour = new Date().getHours();
+      return hour >= 18 || hour < 8; // 6 PM to 8 AM
+    };
+    
+    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+    
+    if (now - data.timestamp > cacheDuration) {
+      siqsCache.delete(key);
+      expiredCount++;
+    }
+  }
+  
+  if (expiredCount > 0) {
+    console.log(`Cleaned up ${expiredCount} expired SIQS cache entries`);
+  }
 }
