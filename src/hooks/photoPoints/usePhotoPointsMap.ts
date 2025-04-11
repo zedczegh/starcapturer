@@ -28,6 +28,7 @@ export const usePhotoPointsMap = ({
   
   // Track last user location for performance optimization
   const lastUserLocation = useRef<{latitude: number, longitude: number} | null>(null);
+  const lastLoadTimestamp = useRef<number>(0);
 
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
@@ -36,8 +37,11 @@ export const usePhotoPointsMap = ({
   useEffect(() => {
     const loadAllCertifiedLocations = async () => {
       // Only load certified locations once or when user location changes significantly
+      // or if it's been more than 10 minutes since last load
       if (mapReady && userLocation && 
-          (!certifiedLocationsLoaded || shouldRefreshCertified(userLocation))) {
+          (!certifiedLocationsLoaded || 
+           shouldRefreshCertified(userLocation) || 
+           Date.now() - lastLoadTimestamp.current > 10 * 60 * 1000)) {
         
         try {
           console.log("Loading all certified dark sky locations globally");
@@ -53,8 +57,8 @@ export const usePhotoPointsMap = ({
             const certifiedResults = await findCertifiedLocations(
               userLocation.latitude,
               userLocation.longitude,
-              25000, // Global radius - increased to ensure we get ALL locations
-              300 // Significantly increased limit to get more certified locations
+              35000, // Global radius - increased to ensure we get ALL locations
+              500 // Further increased limit to get all certified locations
             );
             
             if (certifiedResults.length > 0) {
@@ -70,6 +74,7 @@ export const usePhotoPointsMap = ({
             }
             
             lastUserLocation.current = userLocation;
+            lastLoadTimestamp.current = Date.now();
             setCertifiedLocationsLoaded(true);
           }, 500);
         } catch (error) {
@@ -92,7 +97,7 @@ export const usePhotoPointsMap = ({
   const shouldRefreshCertified = (currentLocation: {latitude: number, longitude: number}) => {
     if (!lastUserLocation.current) return true;
     
-    // Check if location has changed significantly (more than 2000km - increased for better coverage)
+    // Check if location has changed significantly (more than 2000km)
     const latDiff = Math.abs(currentLocation.latitude - lastUserLocation.current.latitude);
     const lngDiff = Math.abs(currentLocation.longitude - lastUserLocation.current.longitude);
     

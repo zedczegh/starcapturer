@@ -14,7 +14,7 @@ interface UseMapLocationsProps {
 }
 
 // Minimum distance in kilometers between calculated spots to prevent clustering
-const MIN_CALCULATED_DISTANCE = 5; // 5km minimum distance between calculated points
+const MIN_CALCULATED_DISTANCE = 3; // Reduced to 3km minimum distance between calculated points
 
 /**
  * Hook to handle location filtering, sorting and enhancement for map display
@@ -67,13 +67,28 @@ export const useMapLocations = ({
     
     // For calculated locations, ensure minimum distance between points
     if (calculatedLocations.length > 0) {
-      // Sort by quality (SIQS) first
+      // Sort by quality (SIQS) first, then by distance if SIQS is the same
       const sortedCalculatedLocations = [...calculatedLocations].sort((a, b) => {
-        return (b.siqs || 0) - (a.siqs || 0);
+        // First compare by SIQS score
+        const siqsComparison = (b.siqs || 0) - (a.siqs || 0);
+        
+        // If SIQS scores are equal (or within 1 point), sort by distance
+        if (Math.abs(siqsComparison) <= 1) {
+          return (a.distance || Infinity) - (b.distance || Infinity);
+        }
+        
+        return siqsComparison;
       });
       
       // Add filtered calculated locations
       sortedCalculatedLocations.forEach(location => {
+        // Skip water locations for calculated spots
+        if (location.latitude && location.longitude && 
+            !location.isDarkSkyReserve && !location.certification &&
+            isWaterLocation(location.latitude, location.longitude)) {
+          return;
+        }
+        
         // Check if this location is too close to any existing location
         const tooClose = result.some(existingLocation => {
           // Never filter out by distance for certified locations
@@ -122,7 +137,8 @@ export const useMapLocations = ({
     if (activeView === 'calculated') {
       calculatedLocations.forEach(loc => {
         // Skip water locations for calculated spots
-        if (loc.latitude && loc.longitude && !isWaterLocation(loc.latitude, loc.longitude)) {
+        if (loc.latitude && loc.longitude && 
+            !isWaterLocation(loc.latitude, loc.longitude)) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           const existing = locationMap.get(key);
           if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {

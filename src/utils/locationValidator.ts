@@ -115,7 +115,15 @@ const MAJOR_LAKES = [
   { minLat: 28, maxLat: 30, minLng: 32, maxLng: 34, name: "Lake Nasser" },
   { minLat: 45, maxLat: 48, minLng: 86, maxLng: 88, name: "Lake Balkhash" },
   { minLat: 38, maxLat: 42, minLng: 66, maxLng: 70, name: "Aral Sea (remains)" },
-  { minLat: 52, maxLat: 56, minLng: 48, maxLng: 55, name: "Kuybyshev Reservoir" }
+  { minLat: 52, maxLat: 56, minLng: 48, maxLng: 55, name: "Kuybyshev Reservoir" },
+  
+  // Additional coastal regions commonly misidentified
+  { minLat: 30.5, maxLat: 31.5, minLng: 121.0, maxLng: 122.0, name: "Shanghai Bay Region" },
+  { minLat: 22.0, maxLat: 22.6, minLng: 113.8, maxLng: 114.5, name: "Hong Kong Harbor" },
+  { minLat: 37.7, maxLat: 38.0, minLng: -122.6, maxLng: -122.2, name: "San Francisco Bay" },
+  { minLat: 40.6, maxLat: 40.9, minLng: -74.1, maxLng: -73.7, name: "New York Bay" },
+  { minLat: 31.0, maxLat: 31.4, minLng: 120.0, maxLng: 120.3, name: "Taihu Lake" },
+  { minLat: 35.5, maxLat: 35.8, minLng: 139.6, maxLng: 140.1, name: "Tokyo Bay" }
 ];
 
 // Cache for water location detection to improve performance
@@ -334,7 +342,14 @@ export function isLikelyCoastalWater(latitude: number, longitude: number): boole
     "35.4,139.8", "51.5,-0.1", "40.7,-74.0", "33.6,130.4",
     "19.1,-155.5", "-33.9,151.2", "43.2,-70.6", "21.3,-157.8",
     "29.9,122.3", "24.8,118.6", "37.6,126.7", "13.7,100.5",
-    "10.8,106.7", "3.1,101.7", "-6.2,106.8", "32.9,131.0"
+    "10.8,106.7", "3.1,101.7", "-6.2,106.8", "32.9,131.0",
+    // Additional Asian coastal areas
+    "23.1,113.3", "22.5,114.1", "39.1,117.2", "34.8,126.4",
+    "30.3,122.1", "36.1,120.4", "38.9,121.6", "40.0,124.3",
+    "25.3,119.0", "24.5,118.1", "21.0,110.5", "16.8,112.8",
+    "9.0,105.8", "12.2,109.2", "20.8,107.1", "38.6,138.2",
+    "33.5,135.8", "34.7,138.9", "35.3,139.8", "35.6,140.1",
+    "43.1,141.3", "33.9,131.4", "31.6,130.6", "26.2,127.7"
   ]);
   
   const cellKey = `${gridLat},${gridLng}`;
