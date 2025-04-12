@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -8,6 +9,7 @@ import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdat
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
 import { getAllStoredLocations } from "@/services/calculatedLocationsService";
 import MapLegend from "./MapLegend";
+import LoadingIndicator from "./LoadingIndicator";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -60,28 +62,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     onMarkerHover: (id) => console.log("Marker hover:", id)
   });
 
-  useEffect(() => {
-    if (activeView === 'certified') {
-      setLoadingPhase('fetching');
-      console.log("Forcing initial load of certified locations");
-      
-      setKey(`map-certified-initial-${Date.now()}`);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (certifiedLocations.length > 0) {
-      setLocationStats(prev => ({ ...prev, certified: certifiedLocations.length }));
-      console.log(`Loaded ${certifiedLocations.length} certified locations`);
-    }
-  }, [certifiedLocations]);
-
-  useEffect(() => {
-    if (calculatedLocations.length > 0) {
-      console.log(`Received ${calculatedLocations.length} calculated locations to process`);
-    }
-  }, [calculatedLocations]);
-
+  // Process calculated locations when they change
   useEffect(() => {
     if (activeView === 'calculated') {
       const storedLocations = getAllStoredLocations();
@@ -120,6 +101,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   
   const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
   
+  // Handle view change (certified vs calculated)
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
       previousViewRef.current = activeView;
@@ -130,6 +112,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [activeView]);
   
+  // Handle search radius change
   useEffect(() => {
     if (lastRadiusRef.current !== searchRadius && 
         Math.abs(lastRadiusRef.current - searchRadius) > 100) {
@@ -141,6 +124,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
 
+  // Track significant location changes
   useEffect(() => {
     if (userLocation && prevLocationRef.current) {
       const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);
@@ -154,7 +138,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         
         setTimeout(() => {
           setLoadingPhase('ready');
-        }, 2000);
+        }, 1000);
       }
     } else if (userLocation) {
       prevLocationRef.current = userLocation;
@@ -168,6 +152,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     mapCenter,
     initialZoom,
     certifiedLocationsLoaded,
+    certifiedLocationsLoading,
+    loadingProgress,
     allCertifiedLocationsCount
   } = usePhotoPointsMap({
     userLocation: selectedMapLocation || userLocation,
@@ -176,6 +162,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
 
+  // Show success toast when certified locations are loaded
   useEffect(() => {
     if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
       console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
@@ -187,6 +174,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
 
+  // Reset selected location if user location changes significantly
   useEffect(() => {
     if (userLocation && selectedMapLocation) {
       const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
@@ -207,9 +195,22 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   };
 
+  // Show loading indicator while certified locations are loading
+  const showLoadingIndicator = activeView === 'certified' && certifiedLocationsLoading && !mapLoadedOnce;
+
   return (
     <div className="space-y-3">
       <div className={className + " relative"}>
+        {showLoadingIndicator && (
+          <LoadingIndicator 
+            progress={loadingProgress}
+            message={t(
+              "Loading certified dark sky locations...", 
+              "正在加载全球认证暗夜保护区..."
+            )}
+          />
+        )}
+        
         <Suspense fallback={null}>
           <LazyPhotoPointsMapContainer
             key={key}
