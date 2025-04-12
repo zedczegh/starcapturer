@@ -60,9 +60,15 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
       // Indicate that a refresh is needed
       setNeedsRefresh(true);
       
-      // Show toast to indicate refresh
+      // Show toast to indicate refresh with new styling
       toast.info(t("Refreshing location data...", "正在刷新位置数据..."), {
-        duration: 2000
+        duration: 500, // 0.5 second duration
+        style: {
+          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+          backdropFilter: 'blur(4px)', // Dynamic blur effect
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
       });
     } else {
       console.warn(`No existing location data found for ID: ${id}`);

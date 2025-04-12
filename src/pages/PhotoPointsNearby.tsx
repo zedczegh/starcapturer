@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -189,7 +190,15 @@ const PhotoPointsNearby: React.FC = () => {
           fromPhotoPoints: true
         } 
       });
-      toast.info(t("Opening location details", "正在打开位置详情"));
+      toast.info(t("Opening location details", "正在打开位置详情"), {
+        duration: 500, // Faster close
+        style: {
+          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+          backdropFilter: 'blur(4px)', // Dynamic blur effect
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
+      });
     }
   }, [navigate, t]);
 

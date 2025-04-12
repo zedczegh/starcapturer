@@ -35,7 +35,15 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   // Calculate real-time SIQS for current location
   const calculateCurrentSiqs = useCallback(async () => {
     if (!userLocation) {
-      toast.error(t("No location selected", "未选择位置"));
+      toast.error(t("No location selected", "未选择位置"), {
+        duration: 500, // Shorter duration
+        style: {
+          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+          backdropFilter: 'blur(4px)', // Dynamic blur effect
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
+      });
       return;
     }
 
@@ -61,7 +69,15 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       
     } catch (error) {
       console.error("Error calculating real-time SIQS:", error);
-      toast.error(t("Failed to calculate SIQS", "计算SIQS失败"));
+      toast.error(t("Failed to calculate SIQS", "计算SIQS失败"), {
+        duration: 500, // Shorter duration
+        style: {
+          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+          backdropFilter: 'blur(4px)', // Dynamic blur effect
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -72,7 +88,15 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
     try {
       clearLocationCache();
       setCacheCleared(true);
-      toast.success(t("Location cache cleared", "位置缓存已清除"));
+      toast.success(t("Location cache cleared", "位置缓存已清除"), {
+        duration: 500, // Shorter duration
+        style: {
+          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+          backdropFilter: 'blur(4px)', // Dynamic blur effect
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
+      });
       
       // Reset flag after 3 seconds
       setTimeout(() => setCacheCleared(false), 3000);
@@ -151,7 +175,15 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
           errorMsg = t("Location request timed out", "位置请求超时");
         }
         
-        toast.error(errorMsg);
+        toast.error(errorMsg, {
+          duration: 500, // Shorter duration
+          style: {
+            backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+            backdropFilter: 'blur(4px)', // Dynamic blur effect
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }
+        });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
