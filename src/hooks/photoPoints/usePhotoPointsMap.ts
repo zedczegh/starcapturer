@@ -21,6 +21,8 @@ export const usePhotoPointsMap = ({
 }: UsePhotoPointsMapProps) => {
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use our new certified locations loader
   const { 
@@ -76,6 +78,44 @@ export const usePhotoPointsMap = ({
       ? [processedLocations[0].latitude, processedLocations[0].longitude]
       : [39.9042, 116.4074]; // Default center (Beijing)
 
+  // Simulate searching state when locations or radius changes
+  useEffect(() => {
+    if (userLocation && activeView === 'calculated') {
+      // Start searching animation
+      setIsSearching(true);
+      
+      // Clear any existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      
+      // Stop searching animation after a delay
+      searchTimeoutRef.current = setTimeout(() => {
+        setIsSearching(false);
+      }, 3000);
+    }
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [userLocation, searchRadius, activeView]);
+  
+  // Also trigger searching animation when loading certified locations
+  useEffect(() => {
+    if (certifiedLocationsLoading && activeView === 'certified') {
+      setIsSearching(true);
+    } else if (!certifiedLocationsLoading && activeView === 'certified') {
+      // Add a short delay before stopping the animation
+      const timeout = setTimeout(() => {
+        setIsSearching(false);
+      }, 1000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [certifiedLocationsLoading, activeView]);
+
   const handleMapReady = useCallback(() => {
     setMapReady(true);
   }, []);
@@ -93,7 +133,8 @@ export const usePhotoPointsMap = ({
     certifiedLocationsLoaded,
     certifiedLocationsLoading,
     loadingProgress,
-    allCertifiedLocationsCount: allCertifiedLocations.length
+    allCertifiedLocationsCount: allCertifiedLocations.length,
+    isSearching
   };
 };
 
