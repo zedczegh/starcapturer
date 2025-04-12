@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,54 +11,27 @@ import { getCertificationInfo, getLocalizedCertText } from "./utils/certificatio
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
   onSelect?: (point: SharedAstroSpot) => void;
   onViewDetails: (point: SharedAstroSpot) => void;
   userLocation: { latitude: number; longitude: number } | null;
-  showRealTimeSiqs?: boolean;
 }
 
 const PhotoPointCard: React.FC<PhotoPointCardProps> = ({ 
   point, 
   onSelect,
   onViewDetails,
-  userLocation,
-  showRealTimeSiqs = false
+  userLocation
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [nearestTown, setNearestTown] = useState<string | null>(null);
   const [loadingTown, setLoadingTown] = useState(false);
-  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [loadingSiqs, setLoadingSiqs] = useState(false);
 
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
-  
-  useEffect(() => {
-    if (showRealTimeSiqs && point.latitude && point.longitude) {
-      const fetchRealTimeSiqs = async () => {
-        setLoadingSiqs(true);
-        try {
-          const result = await calculateRealTimeSiqs(
-            point.latitude,
-            point.longitude,
-            point.bortleScale || 5
-          );
-          setRealTimeSiqs(result.siqs);
-        } catch (error) {
-          console.error("Error fetching real-time SIQS:", error);
-        } finally {
-          setLoadingSiqs(false);
-        }
-      };
-      
-      fetchRealTimeSiqs();
-    }
-  }, [point.latitude, point.longitude, point.bortleScale, showRealTimeSiqs]);
   
   useEffect(() => {
     if (point.latitude && point.longitude) {
@@ -118,88 +90,92 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
     if (distance < 100) 
       return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    
-    return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
+    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
   };
 
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : point.siqs;
-  
-  const handleSelectPoint = () => {
-    if (onSelect) {
-      if (realTimeSiqs !== null) {
-        onSelect({
-          ...point,
-          siqs: realTimeSiqs
-        });
-      } else {
-        onSelect(point);
+  const getLocationId = () => {
+    if (!point || !point.latitude || !point.longitude) return null;
+    return `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!point || !point.latitude || !point.longitude) return;
+    
+    const locationId = getLocationId();
+    if (!locationId) return;
+    
+    navigate(`/location/${locationId}`, {
+      state: {
+        id: locationId,
+        name: point.name,
+        chineseName: point.chineseName,
+        latitude: point.latitude,
+        longitude: point.longitude,
+        bortleScale: point.bortleScale || 4,
+        siqsResult: {
+          score: point.siqs || 0
+        },
+        certification: point.certification,
+        isDarkSkyReserve: point.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true
       }
-    }
+    });
   };
-  
-  const handleViewDetails = () => {
-    if (realTimeSiqs !== null) {
-      onViewDetails({
-        ...point,
-        siqs: realTimeSiqs
-      });
-    } else {
-      onViewDetails(point);
-    }
-  };
+
+  const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
 
   return (
-    <div className="glassmorphism p-3 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          {certInfo && certInfo.icon ? (
-            <div className="mr-2">
-              <certInfo.icon className="w-5 h-5 text-indigo-300" />
-            </div>
-          ) : null}
-          <div>
-            <h3 className="text-sm font-medium line-clamp-1">
-              {nearestTown || point.name || t("Unknown location", "未知位置")}
-            </h3>
-            {displaySiqs !== undefined && (
-              <div className="flex items-center text-xs text-primary">
-                <Star className="h-3 w-3 mr-1 fill-primary" />
-                <span className="font-medium">
-                  {formatSIQSScore(displaySiqs, 1)}
-                  {loadingSiqs ? ' (loading...)' : ''}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end">
-          {point.distance !== undefined && (
-            <span className="text-xs text-muted-foreground">
-              {formatDistance(point.distance)}
-            </span>
-          )}
-          {certInfo && (
-            <Badge variant="outline" className="mt-1 text-xs py-0 px-1.5 h-4">
-              {getLocalizedCertText(certInfo.certType, language)}
-            </Badge>
-          )}
+    <div 
+      className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
+      onClick={() => onSelect?.(point)}
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <h4 className="font-medium text-sm line-clamp-1">
+          {pointName}
+        </h4>
+        
+        <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
+          <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
+          <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
         </div>
       </div>
       
-      <div className="flex items-center justify-between mt-2">
-        <LightPollutionIndicator 
-          bortleScale={point.bortleScale || 5} 
-          className="text-xs" 
-          showBortleNumber={false}
-          size="sm"
-        />
+      {certInfo && (
+        <div className="flex items-center mt-1.5 mb-2">
+          <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
+            {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
+            <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
+          </Badge>
+        </div>
+      )}
+      
+      <div className="flex justify-between items-center mt-2">
+        <div className="flex items-center">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
+          <span className="text-sm text-muted-foreground font-medium">
+            {formatDistance(point.distance)}
+          </span>
+        </div>
         
-        <Button
-          variant="ghost"
-          size="sm"
+        <div className="flex items-center">
+          <LightPollutionIndicator 
+            bortleScale={point.bortleScale || 4} 
+            size="sm" 
+            showBortleNumber={true}
+            className="text-xs"
+          />
+        </div>
+      </div>
+      
+      <div className="mt-3 flex justify-end">
+        <Button 
+          size="sm" 
+          variant="ghost" 
+          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary/90 hover:text-primary"
           onClick={handleViewDetails}
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-xs h-7"
         >
           {t("View", "查看")}
         </Button>
@@ -208,4 +184,4 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   );
 };
 
-export default PhotoPointCard;
+export default React.memo(PhotoPointCard);

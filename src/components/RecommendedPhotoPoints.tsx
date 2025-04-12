@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
@@ -9,7 +10,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -29,8 +29,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const currentSiqs = currentSiqsStore.getValue();
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
-  const [realTimeLocations, setRealTimeLocations] = useState<SharedAstroSpot[]>([]);
-  const [updatingRealTime, setUpdatingRealTime] = useState(false);
   
   // Start with cached data if available from localStorage
   useEffect(() => {
@@ -73,69 +71,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     }
   }, [loading, isInitialized, displayedLocations]);
 
-  // Update locations with real-time SIQS values
-  useEffect(() => {
-    const locationsToUpdate = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
-    
-    if (locationsToUpdate.length > 0 && !updatingRealTime) {
-      setUpdatingRealTime(true);
-      
-      const updateWithRealTimeSiqs = async () => {
-        try {
-          // Process locations with real-time SIQS in batches
-          const updatedLocations = [...locationsToUpdate];
-          const batchSize = 3; // Process 3 at a time to avoid overloading APIs
-          
-          for (let i = 0; i < updatedLocations.length; i += batchSize) {
-            const batch = updatedLocations.slice(i, i + batchSize);
-            const batchPromises = batch.map(async (location) => {
-              if (!location.latitude || !location.longitude) return location;
-              
-              try {
-                const result = await calculateRealTimeSiqs(
-                  location.latitude,
-                  location.longitude,
-                  location.bortleScale || 5
-                );
-                
-                return {
-                  ...location,
-                  siqs: result.siqs,
-                  isViable: result.isViable
-                };
-              } catch (err) {
-                console.error("Error calculating real-time SIQS:", err);
-                return location;
-              }
-            });
-            
-            const batchResults = await Promise.all(batchPromises);
-            
-            // Update the locations
-            batchResults.forEach((updatedLoc, idx) => {
-              updatedLocations[i + idx] = updatedLoc;
-            });
-          }
-          
-          setRealTimeLocations(updatedLocations);
-          console.log("Updated location cards with real-time SIQS values");
-        } catch (error) {
-          console.error("Error updating real-time SIQS:", error);
-        } finally {
-          setUpdatingRealTime(false);
-        }
-      };
-      
-      updateWithRealTimeSiqs();
-    }
-  }, [displayedLocations, cachedLocations, userLocation]);
-
   // Only show limited number of locations
   const limitedLocations = useMemo(() => {
-    // Use real-time data if available, otherwise use fresh or cached data
-    const locationsToUse = realTimeLocations.length > 0 
-      ? realTimeLocations 
-      : (displayedLocations.length > 0 ? displayedLocations : cachedLocations);
+    // Use fresh data if available, otherwise use cached data
+    const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
     
     // Prioritize certified locations 
     const certified = locationsToUse.filter(loc => 
@@ -154,7 +93,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     ].slice(0, limit);
     
     return sortedLocations;
-  }, [realTimeLocations, displayedLocations, cachedLocations, limit]);
+  }, [displayedLocations, cachedLocations, limit]);
 
   if (localLoading && cachedLocations.length === 0) {
     return (
@@ -224,7 +163,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
                 onSelect={onSelectPoint}
                 onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}
-                showRealTimeSiqs={true} // Added to show real-time SIQS
               />
             </motion.div>
           ))}
@@ -246,7 +184,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         </div>
       )}
 
-      {(searching || updatingRealTime) && (
+      {searching && (
         <div className="flex justify-center mt-2">
           <Loader2 className="w-4 h-4 animate-spin text-primary/60" />
         </div>
