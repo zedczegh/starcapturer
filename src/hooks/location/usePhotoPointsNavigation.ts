@@ -2,8 +2,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { saveLocationFromPhotoPoints, getLocationDetailsById } from "@/utils/locationStorage";
-import { toast } from "sonner";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PhotoPointsNavigationState {
   needsRefresh: boolean;
@@ -16,7 +14,6 @@ interface PhotoPointsNavigationState {
  */
 export function usePhotoPointsNavigation(locationId: string | undefined): PhotoPointsNavigationState {
   const location = useLocation();
-  const { t } = useLanguage();
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const refreshHandledRef = useRef(false);
   
@@ -40,7 +37,7 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
         console.error("Error processing PhotoPoints navigation:", error);
       }
     }
-  }, [location.state, locationId, t]);
+  }, [location.state, locationId]);
   
   // Helper function to process the navigation from PhotoPoints
   const processPhotoPointsNavigation = (id: string) => {
@@ -60,16 +57,8 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
       // Indicate that a refresh is needed
       setNeedsRefresh(true);
       
-      // Show toast to indicate refresh with new styling
-      toast.info(t("Refreshing location data...", "正在刷新位置数据..."), {
-        duration: 500, // 0.5 second duration
-        style: {
-          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-          backdropFilter: 'blur(4px)', // Dynamic blur effect
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }
-      });
+      // Toast notification removed
+      console.log("Refreshing location data");
     } else {
       console.warn(`No existing location data found for ID: ${id}`);
     }

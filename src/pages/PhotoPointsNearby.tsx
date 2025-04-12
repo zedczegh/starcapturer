@@ -10,7 +10,6 @@ import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewTo
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import PageLoader from '@/components/loaders/PageLoader';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
@@ -190,17 +189,9 @@ const PhotoPointsNearby: React.FC = () => {
           fromPhotoPoints: true
         } 
       });
-      toast.info(t("Opening location details", "正在打开位置详情"), {
-        duration: 500, // Faster close
-        style: {
-          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-          backdropFilter: 'blur(4px)', // Dynamic blur effect
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }
-      });
+      console.log("Opening location details", locationId);
     }
-  }, [navigate, t]);
+  }, [navigate]);
 
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
@@ -215,7 +206,7 @@ const PhotoPointsNearby: React.FC = () => {
     } else {
       getPosition();
     }
-  }, [coords, getPosition, t]);
+  }, [coords, getPosition]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

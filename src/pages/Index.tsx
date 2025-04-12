@@ -7,17 +7,12 @@ import CalculatorSection from "@/components/index/CalculatorSection";
 import ScienceSection from "@/components/index/ScienceSection";
 import PhotoPointsSection from "@/components/index/PhotoPointsSection";
 import Footer from "@/components/index/Footer";
-import { toast } from "sonner";
-import { Star } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { isGoodViewingCondition } from "@/hooks/siqs/siqsCalculationUtils";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
 
 const Index = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
-  const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   
   // Always try to get the user's location on page load for global use
@@ -72,22 +67,7 @@ const Index = () => {
           const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
           setCurrentSiqs(locationSiqs);
           
-          // Using threshold of 5 for showing notification about good conditions
-          if (locationSiqs && isGoodViewingCondition(locationSiqs)) {
-            // Show notification for ideal astrophotography location
-            setTimeout(() => {
-              toast.info(
-                t(
-                  "Your current location is ideal for astrophotography tonight, please find a rural spot with lower light pollution to start imaging!",
-                  "您当前的位置今晚非常适合天文摄影，请寻找光污染较少的乡村地点开始拍摄！"
-                ),
-                {
-                  duration: 8000,
-                  icon: <Star className="text-yellow-400" />,
-                }
-              );
-            }, 2000);
-          }
+          // Toast notification removed
         }
       }
     } catch (error) {
@@ -122,7 +102,7 @@ const Index = () => {
     };
     
     updateCurrentSiqs();
-  }, [queryClient, t]);
+  }, [queryClient]);
 
   return (
     <div className="min-h-screen bg-cosmic-950">

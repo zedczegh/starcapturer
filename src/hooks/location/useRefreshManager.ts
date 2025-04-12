@@ -1,8 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { usePhotoPointsNavigation } from "./usePhotoPointsNavigation";
-import { toast } from "sonner";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Custom hook to manage refresh logic for location details page
@@ -11,7 +9,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export function useRefreshManager(locationData: any) {
   const [shouldRefresh, setShouldRefresh] = useState<boolean>(false);
   const [refreshCount, setRefreshCount] = useState<number>(0);
-  const { t } = useLanguage();
   
   // Get the locationId from the data
   const locationId = locationData?.id;
@@ -55,16 +52,8 @@ export function useRefreshManager(locationData: any) {
     setShouldRefresh(false);
     setRefreshCount(prev => prev + 1);
     
-    // Show a brief success toast with new styling
-    toast.success(t("Location data refreshed successfully", "位置数据刷新成功"), {
-      duration: 500, // 0.5 second duration
-      style: {
-        backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-        backdropFilter: 'blur(4px)', // Dynamic blur effect
-        color: '#fff',
-        border: '1px solid rgba(255,255,255,0.1)'
-      }
-    });
+    // Toast notification removed
+    console.log("Location data refreshed successfully");
   };
   
   return {

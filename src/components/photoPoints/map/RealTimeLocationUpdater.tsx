@@ -1,7 +1,6 @@
 
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import LocationControls from './LocationControls';
@@ -35,15 +34,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   // Calculate real-time SIQS for current location
   const calculateCurrentSiqs = useCallback(async () => {
     if (!userLocation) {
-      toast.error(t("No location selected", "未选择位置"), {
-        duration: 500, // Shorter duration
-        style: {
-          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-          backdropFilter: 'blur(4px)', // Dynamic blur effect
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }
-      });
+      console.error("No location selected");
       return;
     }
 
@@ -69,41 +60,24 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       
     } catch (error) {
       console.error("Error calculating real-time SIQS:", error);
-      toast.error(t("Failed to calculate SIQS", "计算SIQS失败"), {
-        duration: 500, // Shorter duration
-        style: {
-          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-          backdropFilter: 'blur(4px)', // Dynamic blur effect
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }
-      });
     } finally {
       setLoading(false);
     }
-  }, [userLocation, t]);
+  }, [userLocation]);
 
   // Clear location cache
   const handleClearCache = useCallback(() => {
     try {
       clearLocationCache();
       setCacheCleared(true);
-      toast.success(t("Location cache cleared", "位置缓存已清除"), {
-        duration: 500, // Shorter duration
-        style: {
-          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-          backdropFilter: 'blur(4px)', // Dynamic blur effect
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }
-      });
+      console.log("Location cache cleared");
       
       // Reset flag after 3 seconds
       setTimeout(() => setCacheCleared(false), 3000);
     } catch (error) {
       console.error("Error clearing location cache:", error);
     }
-  }, [t]);
+  }, []);
 
   // Automatically calculate SIQS when location changes
   useEffect(() => {
@@ -158,36 +132,28 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
           console.error("Could not center map:", e);
         }
         
-        // Removed "Using your current location" toast notification
+        // Toast notification removed
       },
       (error) => {
         console.error("Error getting location:", error);
         setLoading(false);
         
-        // Provide user-friendly error messages
-        let errorMsg = t("Failed to get your location", "获取您的位置失败");
+        // Provide user-friendly error messages in console
+        let errorMsg = "Failed to get your location";
         
         if (error.code === 1) {
-          errorMsg = t("Location permission denied", "位置权限被拒绝");
+          errorMsg = "Location permission denied";
         } else if (error.code === 2) {
-          errorMsg = t("Location unavailable", "位置信息不可用");
+          errorMsg = "Location unavailable";
         } else if (error.code === 3) {
-          errorMsg = t("Location request timed out", "位置请求超时");
+          errorMsg = "Location request timed out";
         }
         
-        toast.error(errorMsg, {
-          duration: 500, // Shorter duration
-          style: {
-            backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
-            backdropFilter: 'blur(4px)', // Dynamic blur effect
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)'
-          }
-        });
+        console.error(errorMsg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  }, [onLocationUpdate, t]);
+  }, [onLocationUpdate]);
 
   if (!showControls) {
     return null;
