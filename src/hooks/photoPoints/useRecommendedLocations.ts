@@ -110,18 +110,7 @@ export const useRecommendedLocations = (
         setCanLoadMoreCalculated(true);
         setLoadMoreClickCount(0); // Reset click counter
         
-        // If we preserved locations and location didn't change, show a notification
-        if (isRadiusIncrease && !locationChanged && previousLocationsRef.current.length > 0) {
-          toast.info(t(
-            "Search radius increased, previous locations preserved",
-            "搜索半径已增加，保留了之前的位置"
-          ));
-        } else if (locationChanged) {
-          toast.info(t(
-            "Location updated, showing new recommendations",
-            "位置已更新，显示新的推荐"
-          ));
-        }
+        // Removed toast notifications for location changes
       }
       
       setPage(1);

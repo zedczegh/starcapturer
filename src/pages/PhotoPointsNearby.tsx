@@ -203,10 +203,8 @@ const PhotoPointsNearby: React.FC = () => {
       const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
       setUserLocation(newLocation);
       localStorage.setItem('userLocation', JSON.stringify(newLocation));
-      toast.success(t("Reset to current location", "重置为当前位置"));
     } else {
       getPosition();
-      toast.info(t("Getting your location...", "获取您的位置中..."));
     }
   }, [coords, getPosition, t]);
 

@@ -134,7 +134,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
           console.error("Could not center map:", e);
         }
         
-        toast.success(t("Using your current location", "使用您的当前位置"));
+        // Removed "Using your current location" toast notification
       },
       (error) => {
         console.error("Error getting location:", error);

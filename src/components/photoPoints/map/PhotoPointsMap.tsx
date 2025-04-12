@@ -166,11 +166,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   useEffect(() => {
     if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
       console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
-      toast.success(
-        t(`Loaded ${allCertifiedLocationsCount} dark sky locations worldwide`, 
-           `已加载全球${allCertifiedLocationsCount}个暗夜保护区`), 
-        { duration: 3000 }
-      );
+      // Removed success toast about loaded locations
     }
   }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
 
