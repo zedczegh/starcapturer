@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -42,19 +41,16 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const [locationLoading, setLocationLoading] = useState(false);
   const [updateRetries, setUpdateRetries] = useState(0);
   
-  // Create cache service
   const { setCachedData, getCachedData } = useLocationDataCache();
   const cacheService: LocationCacheService = {
     setCachedData: (key, data) => setCachedData(key, data),
     getCachedData: (key) => getCachedData(key)
   };
 
-  // Handle potential invalid coordinates with safer defaults
   const validLatitude = isFinite(latitude) ? latitude : 0;
   const validLongitude = isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
 
-  // Update position when props change
   useEffect(() => {
     if (isFinite(latitude) && isFinite(longitude) && 
        (validLatitude !== position[0] || validLongitude !== position[1])) {
@@ -64,14 +60,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
-    // Reset error state if map loads successfully
     setMapError(null);
   }, []);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     if (!editable || !onLocationUpdate) return;
     
-    // Ensure valid coordinates
     const validLat = Math.max(-90, Math.min(90, lat));
     const validLng = normalizeLongitude(lng);
     
@@ -91,11 +85,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
         });
       }
 
-      // Reset retry count if successful
       setUpdateRetries(0);
     } catch (error) {
       console.error("Error getting location name:", error);
-      // Use fallback location name if geocoding fails
       if (onLocationUpdate && updateRetries >= 2) {
         const fallbackName = t("Location", "位置") + ` ${validLat.toFixed(4)}, ${validLng.toFixed(4)}`;
         onLocationUpdate({
@@ -109,7 +101,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
     }
   }, [editable, onLocationUpdate, language, cacheService, t, updateRetries]);
 
-  // Handle map initialization error
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (isLoading && !mapError) {
@@ -163,14 +154,14 @@ const LocationMap: React.FC<LocationMapProps> = ({
         />
       </div>
       
-      {/* Simple map legend for certified locations */}
       {(isDarkSkyReserve || certification) && (
-        <div className="text-xs flex items-center bg-background/80 p-2 rounded-md border border-border">
-          <Info className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-          <Star className="h-3.5 w-3.5 mr-1.5 text-[#9b87f5] fill-[#9b87f5]" />
-          <span className="text-xs text-muted-foreground">
-            {t("This is a certified dark sky location", "这是一个认证的暗夜地点")}
-            {certification && `: ${certification}`}
+        <div className="flex items-center bg-background/90 px-3 py-2 rounded-md border border-border shadow-sm">
+          <div className="bg-muted/30 p-1 rounded-full mr-2">
+            <Star className="h-3.5 w-3.5 text-[#9b87f5] fill-[#9b87f5]" />
+          </div>
+          <span className="text-xs text-foreground/80">
+            {t("Certified Dark Sky Location", "认证暗夜地点")}
+            {certification && <span className="ml-1 font-medium text-primary/90">{certification}</span>}
           </span>
         </div>
       )}
