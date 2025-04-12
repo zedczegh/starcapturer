@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -8,6 +7,7 @@ import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
 import { getAllStoredLocations } from "@/services/calculatedLocationsService";
+import MapLegend from "./MapLegend";
 
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
 const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
@@ -60,14 +60,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     onMarkerHover: (id) => console.log("Marker hover:", id)
   });
 
-  // Initialize by forcing certified locations to load on first render
   useEffect(() => {
-    // Immediate force load of certified locations
     if (activeView === 'certified') {
       setLoadingPhase('fetching');
       console.log("Forcing initial load of certified locations");
       
-      // Reset the key to force remount of the map component
       setKey(`map-certified-initial-${Date.now()}`);
     }
   }, []);
@@ -85,7 +82,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [calculatedLocations]);
 
-  // Combine calculated locations with stored locations
   useEffect(() => {
     if (activeView === 'calculated') {
       const storedLocations = getAllStoredLocations();
@@ -122,10 +118,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [calculatedLocations, activeView]);
   
-  // Select the active locations based on the current view
   const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
   
-  // Force map remount when view changes
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
       previousViewRef.current = activeView;
@@ -136,7 +130,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [activeView]);
   
-  // Reset the cache when the radius changes significantly
   useEffect(() => {
     if (lastRadiusRef.current !== searchRadius && 
         Math.abs(lastRadiusRef.current - searchRadius) > 100) {
@@ -148,7 +141,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     lastRadiusRef.current = searchRadius;
   }, [searchRadius]);
 
-  // Handle significant location changes
   useEffect(() => {
     if (userLocation && prevLocationRef.current) {
       const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);
@@ -184,7 +176,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
 
-  // Update the user when certified locations finish loading
   useEffect(() => {
     if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
       console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
@@ -196,7 +187,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
 
-  // Reset selected location when user location changes significantly
   useEffect(() => {
     if (userLocation && selectedMapLocation) {
       const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
@@ -209,7 +199,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [userLocation, selectedMapLocation]);
 
-  // Handle map click
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedMapLocation({ latitude: lat, longitude: lng });
       
@@ -219,34 +208,44 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   };
 
   return (
-    <div className={className + " relative"}>
-      <Suspense fallback={null}>
-        <LazyPhotoPointsMapContainer
-          key={key}
-          center={mapCenter}
-          zoom={initialZoom}
-          userLocation={selectedMapLocation || userLocation}
-          locations={validLocations}
-          searchRadius={searchRadius}
-          activeView={activeView}
-          onMapReady={() => {
-            handleMapReady();
-            if (onMapReady) onMapReady();
-            mapInitializedRef.current = true;
-            setMapLoadedOnce(true);
-            setLoadingPhase('ready');
-          }}
-          onLocationClick={onMarkerClick}
-          onMapClick={handleMapClick}
-          hoveredLocationId={hoveredLocationId}
-          onMarkerHover={handleMarkerHover}
+    <div className="space-y-3">
+      <div className={className + " relative"}>
+        <Suspense fallback={null}>
+          <LazyPhotoPointsMapContainer
+            key={key}
+            center={mapCenter}
+            zoom={initialZoom}
+            userLocation={selectedMapLocation || userLocation}
+            locations={validLocations}
+            searchRadius={searchRadius}
+            activeView={activeView}
+            onMapReady={() => {
+              handleMapReady();
+              if (onMapReady) onMapReady();
+              mapInitializedRef.current = true;
+              setMapLoadedOnce(true);
+              setLoadingPhase('ready');
+            }}
+            onLocationClick={onMarkerClick}
+            onMapClick={handleMapClick}
+            hoveredLocationId={hoveredLocationId}
+            onMarkerHover={handleMarkerHover}
+          />
+          
+          <RealTimeLocationUpdater 
+            userLocation={selectedMapLocation || userLocation}
+            onLocationUpdate={onLocationUpdate}
+          />
+        </Suspense>
+      </div>
+      
+      <div className="px-1">
+        <MapLegend
+          showStarLegend={activeView === 'certified'}
+          showCircleLegend={activeView === 'calculated'}
+          className="max-w-md mx-auto text-sm"
         />
-        
-        <RealTimeLocationUpdater 
-          userLocation={selectedMapLocation || userLocation}
-          onLocationUpdate={onLocationUpdate}
-        />
-      </Suspense>
+      </div>
     </div>
   );
 };

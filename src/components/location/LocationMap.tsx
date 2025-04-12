@@ -9,6 +9,7 @@ import {
   normalizeLongitude,
   type LocationCacheService
 } from "./map/LocationNameService";
+import { Star, Info } from "lucide-react";
 
 interface LocationMapProps {
   latitude: number;
@@ -121,44 +122,58 @@ const LocationMap: React.FC<LocationMapProps> = ({
   }, [isLoading, t, mapError]);
 
   return (
-    <div className="aspect-video w-full h-[300px] relative">
-      {(isLoading || locationLoading) && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-primary-foreground/90">
-              {locationLoading 
-                ? t("Updating location...", "正在更新位置...") 
-                : t("Loading map...", "正在加载地图...")}
-            </p>
+    <div className="space-y-2">
+      <div className="aspect-video w-full h-[300px] relative">
+        {(isLoading || locationLoading) && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <Loader className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-primary-foreground/90">
+                {locationLoading 
+                  ? t("Updating location...", "正在更新位置...") 
+                  : t("Loading map...", "正在加载地图...")}
+              </p>
+            </div>
           </div>
+        )}
+        
+        {mapError && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-destructive/10 backdrop-blur-sm">
+            <div className="bg-card p-4 rounded-md shadow-lg max-w-[80%] text-center">
+              <p className="text-destructive font-medium">{mapError}</p>
+              <button
+                className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm"
+                onClick={() => window.location.reload()}
+              >
+                {t("Refresh Page", "刷新页面")}
+              </button>
+            </div>
+          </div>
+        )}
+        
+        <MapDisplay
+          position={position}
+          locationName={validName}
+          editable={editable}
+          onMapReady={handleMapReady}
+          onMapClick={handleMapClick}
+          showInfoPanel={showInfoPanel}
+          isDarkSkyReserve={isDarkSkyReserve}
+          certification={certification}
+        />
+      </div>
+      
+      {/* Simple map legend for certified locations */}
+      {(isDarkSkyReserve || certification) && (
+        <div className="text-xs flex items-center bg-background/80 p-2 rounded-md border border-border">
+          <Info className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+          <Star className="h-3.5 w-3.5 mr-1.5 text-[#9b87f5] fill-[#9b87f5]" />
+          <span className="text-xs text-muted-foreground">
+            {t("This is a certified dark sky location", "这是一个认证的暗夜地点")}
+            {certification && `: ${certification}`}
+          </span>
         </div>
       )}
-      
-      {mapError && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-destructive/10 backdrop-blur-sm">
-          <div className="bg-card p-4 rounded-md shadow-lg max-w-[80%] text-center">
-            <p className="text-destructive font-medium">{mapError}</p>
-            <button
-              className="mt-3 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm"
-              onClick={() => window.location.reload()}
-            >
-              {t("Refresh Page", "刷新页面")}
-            </button>
-          </div>
-        </div>
-      )}
-      
-      <MapDisplay
-        position={position}
-        locationName={validName}
-        editable={editable}
-        onMapReady={handleMapReady}
-        onMapClick={handleMapClick}
-        showInfoPanel={showInfoPanel}
-        isDarkSkyReserve={isDarkSkyReserve}
-        certification={certification}
-      />
     </div>
   );
 };
