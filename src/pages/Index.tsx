@@ -66,8 +66,6 @@ const Index = () => {
           
           const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
           setCurrentSiqs(locationSiqs);
-          
-          // Toast notification removed
         }
       }
     } catch (error) {

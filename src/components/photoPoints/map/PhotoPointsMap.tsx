@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
-import { toast } from "sonner";
 import './MapStyles.css';
 import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
 import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
@@ -162,11 +161,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
 
-  // Show success toast when certified locations are loaded
+  // Show success message when certified locations are loaded, but as console log instead of toast
   useEffect(() => {
     if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
       console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
-      // Removed success toast about loaded locations
     }
   }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
 

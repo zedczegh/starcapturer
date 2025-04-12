@@ -52,7 +52,7 @@ export function useRefreshManager(locationData: any) {
     setShouldRefresh(false);
     setRefreshCount(prev => prev + 1);
     
-    // Toast notification removed
+    // Log instead of toast
     console.log("Location data refreshed successfully");
   };
   

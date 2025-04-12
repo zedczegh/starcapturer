@@ -5,7 +5,6 @@ import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
-import { toast } from "sonner";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));

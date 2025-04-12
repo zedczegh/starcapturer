@@ -131,8 +131,6 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         } catch (e) {
           console.error("Could not center map:", e);
         }
-        
-        // Toast notification removed
       },
       (error) => {
         console.error("Error getting location:", error);
