@@ -1,146 +1,336 @@
 
-import React, { useState, useEffect } from 'react';
-import PhotoPointsLayout from '../components/photoPoints/PhotoPointsLayout';
-import ViewToggle from '../components/photoPoints/ViewToggle';
-import { useLanguage } from '@/contexts/LanguageContext';
-import usePhotoPointsMap from '@/hooks/photoPoints/usePhotoPointsMap';
-import { usePhotoPointsSearch } from '@/hooks/usePhotoPointsSearch';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useGeolocation } from '@/hooks/location/useGeolocation';
+import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
+import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
+import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
+import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
+import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import LocationQuality from '@/components/photoPoints/LocationQuality';
+import PageLoader from '@/components/loaders/PageLoader';
 import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { PhotoPointsMap } from '@/components/photoPoints/map';
-import LocationsList from '@/components/photoPoints/LocationsList';
-import EmptyLocationDisplay from '@/components/photoPoints/EmptyLocationDisplay';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { Button } from '@/components/ui/button';
+import { Map, List } from 'lucide-react';
+import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
+import { calculateDistance } from '@/utils/geoUtils';
 
-const PhotoPointsNearby = () => {
+const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
+const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
+const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
+
+const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
+const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
+
+const PhotoPointsNearby: React.FC = () => {
+  const { 
+    loading: locationLoading, 
+    coords, 
+    getPosition, 
+    error: locationError 
+  } = useGeolocation({
+    enableHighAccuracy: true,
+    maximumAge: 60000, // Use cached position for 1 minute to avoid repeated calls
+    timeout: 10000 // Timeout after 10 seconds
+  });
+  
+  const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [showMap, setShowMap] = useState(true);
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
+  const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // State for view toggle and search distance
-  const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
-  const [searchDistance, setSearchDistance] = useState(100);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
-  // Use the photo points search hook with the search distance
+  useEffect(() => {
+    if (!coords && locationLoadAttempts < 3) {
+      console.log("Getting user position, attempt:", locationLoadAttempts + 1);
+      const timeoutId = setTimeout(() => {
+        getPosition();
+        setLocationLoadAttempts(prev => prev + 1);
+      }, locationLoadAttempts * 1000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [getPosition, coords, locationLoadAttempts]);
+  
+  useEffect(() => {
+    if (coords && !manualLocationOverride) {
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      
+      try {
+        localStorage.setItem('userLocation', JSON.stringify(newLocation));
+        console.log("Updated user location from geolocation:", newLocation);
+      } catch (err) {
+        console.error("Error saving location to localStorage:", err);
+      }
+    }
+  }, [coords, manualLocationOverride]);
+  
+  useEffect(() => {
+    if ((locationError || locationLoadAttempts >= 3) && !userLocation && !manualLocationOverride) {
+      try {
+        const savedLocation = localStorage.getItem('userLocation');
+        if (savedLocation) {
+          const parsedLocation = JSON.parse(savedLocation);
+          if (parsedLocation && typeof parsedLocation.latitude === 'number' && typeof parsedLocation.longitude === 'number') {
+            setUserLocation(parsedLocation);
+            console.log("Using saved location from localStorage as fallback:", parsedLocation);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading saved location:", err);
+      }
+    }
+  }, [locationError, userLocation, locationLoadAttempts, manualLocationOverride]);
+
+  const effectiveLocation = manualLocationOverride || userLocation;
+
+  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
+  
   const {
-    displayedLocations,
+    searchRadius,
+    setSearchRadius,
+    locations,
     loading,
     searching,
-    refresh,
-    switchView,
-    activeView: hookActiveView
-  } = usePhotoPointsSearch({
-    userLocation: null,
-    currentSiqs: null,
-    searchRadius: searchDistance
-  });
-  
-  // Update activeView in hook when local state changes
-  useEffect(() => {
-    switchView(activeView);
-  }, [activeView, switchView]);
-  
-  // Get user location from somewhere (this would need to be implemented)
-  const userLocation = null; // This would typically come from a hook or context
-  
-  // Use the map hook
+    hasMore,
+    loadMore,
+    refreshSiqsData,
+    canLoadMoreCalculated,
+    loadMoreCalculatedLocations,
+    loadMoreClickCount,
+    maxLoadMoreClicks
+  } = useRecommendedLocations(
+    effectiveLocation, 
+    activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius
+  );
+
   const {
-    mapReady,
-    handleMapReady,
-    handleLocationClick,
-    validLocations,
-    mapCenter,
-    initialZoom,
-    certifiedLocationsLoading,
-    loadingProgress,
-    isSearching
-  } = usePhotoPointsMap({
-    userLocation,
-    locations: displayedLocations,
-    searchRadius: searchDistance,
-    activeView
-  });
+    certifiedLocations,
+    calculatedLocations,
+    certifiedCount,
+    calculatedCount
+  } = useCertifiedLocations(
+    locations
+  );
 
-  // Handle view toggle change
-  const handleViewChange = (view: 'certified' | 'calculated') => {
+  const handleRadiusChange = useCallback((value: number) => {
+    if (activeView === 'calculated') {
+      setCalculatedSearchRadius(value);
+      setSearchRadius(value);
+    }
+  }, [setSearchRadius, activeView]);
+  
+  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
     setActiveView(view);
-  };
+    
+    if (view === 'certified') {
+      setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
+    } else {
+      setSearchRadius(calculatedSearchRadius);
+    }
+    
+    clearLocationCache();
+  }, [setSearchRadius, calculatedSearchRadius]);
+  
+  const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
+    const newLocation = { latitude, longitude };
+    
+    setManualLocationOverride(newLocation);
+    setUserLocation(newLocation);
+    
+    try {
+      localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      console.log("Updated user location from map click:", newLocation);
+    } catch (err) {
+      console.error("Error saving location to localStorage:", err);
+    }
+    
+    try {
+      clearLocationCache();
+      console.log("Cleared location cache after location change");
+    } catch (err) {
+      console.error("Error clearing location cache:", err);
+    }
+    
+    refreshSiqsData();
+  }, [refreshSiqsData]);
 
-  // Handle location click for exploration
-  const handleLocationExplore = (location: any) => {
-    navigate(`/location/${location.id || 'new'}`, { state: location });
-  };
+  useEffect(() => {
+    if (activeView === 'certified') {
+      setSearchRadius(DEFAULT_CERTIFIED_RADIUS);
+    } else {
+      setSearchRadius(calculatedSearchRadius);
+    }
+  }, [activeView, setSearchRadius, calculatedSearchRadius]);
+  
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (location && location.latitude && location.longitude) {
+      const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+      navigate(`/location/${locationId}`, { 
+        state: {
+          id: locationId,
+          name: location.name,
+          chineseName: location.chineseName,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          bortleScale: location.bortleScale || 4,
+          siqs: location.siqs,
+          siqsResult: location.siqs ? { score: location.siqs } : undefined,
+          certification: location.certification,
+          isDarkSkyReserve: location.isDarkSkyReserve,
+          timestamp: new Date().toISOString(),
+          fromPhotoPoints: true
+        } 
+      });
+      toast.info(t("Opening location details", "正在打开位置详情"), {
+        duration: 500, // Faster close
+        style: {
+          backgroundColor: 'rgba(0,0,0,0.6)', // More transparent background
+          backdropFilter: 'blur(4px)', // Dynamic blur effect
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
+      });
+    }
+  }, [navigate, t]);
 
+  const toggleMapView = useCallback(() => {
+    setShowMap(prev => !prev);
+  }, []);
+
+  const handleResetLocation = useCallback(() => {
+    setManualLocationOverride(null);
+    if (coords) {
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      localStorage.setItem('userLocation', JSON.stringify(newLocation));
+    } else {
+      getPosition();
+    }
+  }, [coords, getPosition, t]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoad(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
+  
+  const displayRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
+  
+  const filteredCalculatedLocations = calculatedLocations.filter(loc => {
+    if (!effectiveLocation) return true;
+    const distance = loc.distance || calculateDistance(
+      effectiveLocation.latitude,
+      effectiveLocation.longitude,
+      loc.latitude,
+      loc.longitude
+    );
+    return distance <= calculatedSearchRadius;
+  });
+  
   return (
     <PhotoPointsLayout>
-      <div className="h-full flex flex-col">
-        {/* Controls section */}
-        <div className="flex flex-col p-4 pb-2 gap-4">
-          <ViewToggle activeView={activeView} onViewChange={handleViewChange} />
-          
-          <div className="flex gap-4 flex-col sm:flex-row items-stretch">
-            <div className="w-full sm:w-1/2">
-              <DistanceRangeSlider 
-                currentValue={searchDistance}
-                onValueChange={setSearchDistance}
-              />
-            </div>
-            
-            <div className="w-full sm:w-1/2">
-              <LocationQuality
-                bortleScale={null}
-                siqs={null}
-                weather={null}
-                isChecking={certifiedLocationsLoading}
-              />
-            </div>
-          </div>
-        </div>
-        
-        {/* Map and list view */}
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-0 h-full">
-          {/* Map */}
-          <div className="relative lg:col-span-2 h-[350px] sm:h-[450px] lg:h-full w-full">
-            {mapReady ? (
-              <PhotoPointsMap
-                userLocation={userLocation}
-                locations={validLocations}
-                searchRadius={searchDistance}
-                activeView={activeView}
-                onMapReady={handleMapReady}
-                onLocationClick={handleLocationClick}
-                mapCenter={mapCenter}
-                initialZoom={initialZoom}
-                isSearching={isSearching}
-              />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center bg-cosmic-900 bg-opacity-30">
-                <div className="animate-pulse text-primary-foreground/70">
-                  {t("Loading map...", "正在加载地图...")}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Location list */}
-          <div className="bg-cosmic-950/30 backdrop-blur-sm overflow-y-auto h-[500px] lg:h-full">
-            {validLocations.length > 0 ? (
-              <LocationsList 
-                locations={validLocations}
-                loading={loading}
-                initialLoad={!mapReady}
-                onViewDetails={handleLocationExplore}
-              />
-            ) : (
-              <EmptyLocationDisplay 
-                title={t("No locations found", "未找到位置")}
-                description={t("Try adjusting your search criteria or viewing a different area.", "尝试调整搜索条件或查看不同区域。")}
-              />
-            )}
-          </div>
-        </div>
+      <PhotoPointsHeader 
+        userLocation={effectiveLocation}
+        locationLoading={locationLoading}
+        getPosition={handleResetLocation}
+      />
+      
+      <ViewToggle
+        activeView={activeView}
+        onViewChange={handleViewChange}
+        loading={loading && !locationLoading}
+      />
+      
+      <div className="flex justify-end mb-4">
+        <Button 
+          onClick={toggleMapView}
+          variant="outline"
+          size="sm"
+          className="shadow-sm hover:bg-muted/60"
+        >
+          {showMap ? (
+            <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
+          ) : (
+            <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
+          )}
+        </Button>
       </div>
+      
+      {activeView === 'calculated' && (
+        <div className="max-w-xl mx-auto mb-6">
+          <DistanceRangeSlider
+            currentValue={calculatedSearchRadius}
+            onValueChange={handleRadiusChange}
+            minValue={100}
+            maxValue={1000}
+            stepValue={100}
+          />
+        </div>
+      )}
+      
+      {showMap && (
+        <div className="mb-4 text-center text-sm text-muted-foreground">
+          {t(
+            "Click anywhere on the map to select that location. The map will center on your current location if available.",
+            "点击地图上的任意位置以选择该位置。如果可用，地图将以您当前位置为中心。"
+          )}
+        </div>
+      )}
+      
+      {showMap ? (
+        <Suspense fallback={<PageLoader />}>
+          <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
+            <PhotoPointsMap 
+              userLocation={effectiveLocation}
+              locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+              certifiedLocations={certifiedLocations}
+              calculatedLocations={calculatedLocations}
+              activeView={activeView}
+              searchRadius={displayRadius}
+              onLocationClick={handleLocationClick}
+              onLocationUpdate={handleLocationUpdate}
+            />
+          </div>
+        </Suspense>
+      ) : (
+        <Suspense fallback={<PageLoader />}>
+          <div className="min-h-[300px]">
+            {activeView === 'certified' ? (
+              <DarkSkyLocations
+                locations={certifiedLocations}
+                loading={loading && !locationLoading}
+                initialLoad={initialLoad}
+              />
+            ) : (
+              <CalculatedLocations
+                locations={filteredCalculatedLocations}
+                loading={loading && !locationLoading}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                onRefresh={refreshSiqsData}
+                searchRadius={calculatedSearchRadius}
+                initialLoad={initialLoad}
+                onLoadMoreCalculated={loadMoreCalculatedLocations}
+                canLoadMoreCalculated={canLoadMoreCalculated}
+                loadMoreClickCount={loadMoreClickCount}
+                maxLoadMoreClicks={maxLoadMoreClicks}
+              />
+            )}
+          </div>
+        </Suspense>
+      )}
     </PhotoPointsLayout>
   );
 };
