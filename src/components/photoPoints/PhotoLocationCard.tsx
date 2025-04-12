@@ -130,7 +130,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: location.isDarkSkyReserve,
-      certification: location.certification
+      certification: location.certification,
+      siqs: realTimeSiqs !== null ? realTimeSiqs : location.siqs // Use real-time SIQS if available
     };
     
     // Save to localStorage to ensure proper refresh handling
