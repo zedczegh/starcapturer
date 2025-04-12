@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import LazyMapContainer from './LazyMapContainer';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useDebounce } from '@/hooks/useDebounce';
+import useDebounce from '@/hooks/useDebounce';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;

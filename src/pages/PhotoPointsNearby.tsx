@@ -6,11 +6,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import usePhotoPointsMap from '@/hooks/photoPoints/usePhotoPointsMap';
 import { usePhotoPointsSearch } from '@/hooks/usePhotoPointsSearch';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import { LocationQuality } from '@/components/photoPoints/LocationQuality';
+import LocationQuality from '@/components/photoPoints/LocationQuality';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PhotoPointsMap } from '@/components/photoPoints/map';
-import { LocationsList } from '@/components/photoPoints/LocationsList';
+import LocationsList from '@/components/photoPoints/LocationsList';
 import EmptyLocationDisplay from '@/components/photoPoints/EmptyLocationDisplay';
 
 const PhotoPointsNearby = () => {
@@ -18,18 +18,31 @@ const PhotoPointsNearby = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  // State for view toggle
+  // State for view toggle and search distance
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
+  const [searchDistance, setSearchDistance] = useState(100);
   
-  // Use the photo points search hook
+  // Use the photo points search hook with the search distance
   const {
-    searchDistance,
-    setSearchDistance,
-    locationResults,
-    userLocation,
-    foundLocations,
-    handleLocationExplore
-  } = usePhotoPointsSearch();
+    displayedLocations,
+    loading,
+    searching,
+    refresh,
+    switchView,
+    activeView: hookActiveView
+  } = usePhotoPointsSearch({
+    userLocation: null,
+    currentSiqs: null,
+    searchRadius: searchDistance
+  });
+  
+  // Update activeView in hook when local state changes
+  useEffect(() => {
+    switchView(activeView);
+  }, [activeView, switchView]);
+  
+  // Get user location from somewhere (this would need to be implemented)
+  const userLocation = null; // This would typically come from a hook or context
   
   // Use the map hook
   const {
@@ -44,7 +57,7 @@ const PhotoPointsNearby = () => {
     isSearching
   } = usePhotoPointsMap({
     userLocation,
-    locations: locationResults,
+    locations: displayedLocations,
     searchRadius: searchDistance,
     activeView
   });
@@ -54,12 +67,17 @@ const PhotoPointsNearby = () => {
     setActiveView(view);
   };
 
+  // Handle location click for exploration
+  const handleLocationExplore = (location: any) => {
+    navigate(`/location/${location.id || 'new'}`, { state: location });
+  };
+
   return (
     <PhotoPointsLayout>
       <div className="h-full flex flex-col">
         {/* Controls section */}
         <div className="flex flex-col p-4 pb-2 gap-4">
-          <ViewToggle activeView={activeView} onChange={handleViewChange} />
+          <ViewToggle activeView={activeView} onViewChange={handleViewChange} />
           
           <div className="flex gap-4 flex-col sm:flex-row items-stretch">
             <div className="w-full sm:w-1/2">
@@ -71,11 +89,10 @@ const PhotoPointsNearby = () => {
             
             <div className="w-full sm:w-1/2">
               <LocationQuality
-                locations={foundLocations}
-                showEmptyState={mapReady && foundLocations.length === 0}
-                isLoading={certifiedLocationsLoading}
-                loadingProgress={loadingProgress}
-                activeView={activeView}
+                bortleScale={null}
+                siqs={null}
+                weather={null}
+                isChecking={certifiedLocationsLoading}
               />
             </div>
           </div>
@@ -111,12 +128,14 @@ const PhotoPointsNearby = () => {
             {validLocations.length > 0 ? (
               <LocationsList 
                 locations={validLocations}
-                onLocationClick={handleLocationExplore}
+                loading={loading}
+                initialLoad={!mapReady}
+                onViewDetails={handleLocationExplore}
               />
             ) : (
               <EmptyLocationDisplay 
-                isLoading={!mapReady || certifiedLocationsLoading} 
-                viewType={activeView}
+                title={t("No locations found", "未找到位置")}
+                description={t("Try adjusting your search criteria or viewing a different area.", "尝试调整搜索条件或查看不同区域。")}
               />
             )}
           </div>

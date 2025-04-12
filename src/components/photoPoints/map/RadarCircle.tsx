@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { CircleMarker, useMap } from 'react-leaflet';
+import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import './RadarAnimation.css';
 
@@ -179,7 +179,7 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
     };
   }, [map, center, radiusInKm, isSearching, color, radarElement]);
   
-  // Still render the standard Circle as a fallback
+  // Just return null since we're rendering via SVG overlay
   return null;
 };
 

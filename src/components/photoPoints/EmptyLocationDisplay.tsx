@@ -6,12 +6,16 @@ interface EmptyLocationDisplayProps {
   title: string;
   description: string;
   icon?: React.ReactNode;
+  isLoading?: boolean;
+  viewType?: 'certified' | 'calculated';
 }
 
 const EmptyLocationDisplay: React.FC<EmptyLocationDisplayProps> = ({
   title,
   description,
-  icon = <Filter className="h-12 w-12 text-muted-foreground/40" />
+  icon = <Filter className="h-12 w-12 text-muted-foreground/40" />,
+  isLoading = false,
+  viewType = 'calculated'
 }) => {
   return (
     <div className="py-12 text-center">
