@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -180,7 +181,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           )}
           {certInfo && (
             <Badge variant="outline" className="mt-1 text-xs py-0 px-1.5 h-4">
-              {getLocalizedCertText(certInfo.type, language)}
+              {getLocalizedCertText(certInfo.certType, language)}
             </Badge>
           )}
         </div>
