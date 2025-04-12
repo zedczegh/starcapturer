@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from './MapMarkerUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Fix Leaflet icon issue
 // This is necessary because Leaflet's default icon paths are different in a bundled environment
@@ -15,23 +16,68 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Map Events component to handle click events
+// Map Events component to handle click events with mobile optimization
 const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
   const map = useMap();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (!map) return;
     
+    let clickTimeout: number | null = null;
+    let isDragging = false;
+    
     const handleClick = (e: L.LeafletMouseEvent) => {
+      if (isDragging) return;
       onMapClick(e.latlng.lat, e.latlng.lng);
     };
     
-    map.on('click', handleClick);
+    // Enhanced mobile touch handling
+    if (isMobile) {
+      map.on('dragstart', () => {
+        isDragging = true;
+        if (clickTimeout !== null) {
+          window.clearTimeout(clickTimeout);
+        }
+      });
+      
+      map.on('dragend', () => {
+        // Short delay to prevent click right after drag
+        setTimeout(() => {
+          isDragging = false;
+        }, 50);
+      });
+      
+      // Better touch handling for mobile
+      map.on('tap', (e: any) => {
+        if (isDragging) return;
+        
+        if (clickTimeout !== null) {
+          window.clearTimeout(clickTimeout);
+        }
+        
+        // Slight delay to ensure it's a tap not drag
+        clickTimeout = window.setTimeout(() => {
+          handleClick(e);
+        }, 50);
+      });
+    } else {
+      // Standard click for desktop
+      map.on('click', handleClick);
+    }
     
     return () => {
       map.off('click', handleClick);
+      if (isMobile) {
+        map.off('tap');
+        map.off('dragstart');
+        map.off('dragend');
+      }
+      if (clickTimeout !== null) {
+        window.clearTimeout(clickTimeout);
+      }
     };
-  }, [map, onMapClick]);
+  }, [map, onMapClick, isMobile]);
   
   return null;
 };
@@ -58,6 +104,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   certification = ''
 }) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   // Call the onMapReady callback when the component mounts
   useEffect(() => {
@@ -77,14 +124,33 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     return createCustomMarker(markerColor);
   }, [editable]);
   
+  // Configure map options for better mobile experience
+  const mapOptions: L.MapOptions = {
+    center: position,
+    zoom: 5,
+    attributionControl: true,
+    scrollWheelZoom: true,
+    // Mobile-specific options
+    tap: isMobile,
+    touchZoom: isMobile ? 'center' : true,
+    bounceAtZoomLimits: !isMobile, // Disable bounce on mobile
+    // Reduce map animation to improve performance on mobile
+    zoomAnimation: !isMobile,
+    fadeAnimation: !isMobile,
+    markerZoomAnimation: !isMobile,
+    // Increase inertia for smoother drag on mobile
+    inertia: true,
+    inertiaDeceleration: isMobile ? 2000 : 3000,
+    // Smoothness settings
+    wheelDebounceTime: isMobile ? 40 : 80,
+    zoomSnap: isMobile ? 0.5 : 1
+  };
+  
   return (
     <MapContainer
-      center={position}
-      zoom={5}
+      {...mapOptions}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       whenReady={() => onMapReady()}
-      scrollWheelZoom={true}
-      attributionControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -111,7 +177,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         </Popup>
       </Marker>
       
-      {/* Add MapEvents component to handle clicks */}
+      {/* Add MapEvents component to handle clicks with mobile optimization */}
       {editable && <MapEvents onMapClick={handleMapClick} />}
     </MapContainer>
   );
