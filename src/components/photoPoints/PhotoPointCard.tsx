@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -39,7 +38,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  // Load real-time SIQS when requested
   useEffect(() => {
     if (showRealTimeSiqs && point.latitude && point.longitude) {
       const fetchRealTimeSiqs = async () => {
@@ -127,7 +125,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   
   const handleSelectPoint = () => {
     if (onSelect) {
-      // If we have real-time SIQS, update the point with it
       if (realTimeSiqs !== null) {
         onSelect({
           ...point,
@@ -140,7 +137,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   };
   
   const handleViewDetails = () => {
-    // If we have real-time SIQS, update the point with it
     if (realTimeSiqs !== null) {
       onViewDetails({
         ...point,
@@ -194,13 +190,13 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <LightPollutionIndicator 
           bortleScale={point.bortleScale || 5} 
           className="text-xs" 
-          showText={false}
+          showBortleNumber={false}
           size="sm"
         />
         
         <Button
           variant="ghost"
-          size="xs"
+          size="sm"
           onClick={handleViewDetails}
           className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-xs h-7"
         >

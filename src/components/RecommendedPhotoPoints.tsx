@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
@@ -10,7 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
-import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService";
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -83,7 +82,41 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       
       const updateWithRealTimeSiqs = async () => {
         try {
-          const updatedLocations = await updateLocationsWithRealTimeSiqs(locationsToUpdate, userLocation);
+          // Process locations with real-time SIQS in batches
+          const updatedLocations = [...locationsToUpdate];
+          const batchSize = 3; // Process 3 at a time to avoid overloading APIs
+          
+          for (let i = 0; i < updatedLocations.length; i += batchSize) {
+            const batch = updatedLocations.slice(i, i + batchSize);
+            const batchPromises = batch.map(async (location) => {
+              if (!location.latitude || !location.longitude) return location;
+              
+              try {
+                const result = await calculateRealTimeSiqs(
+                  location.latitude,
+                  location.longitude,
+                  location.bortleScale || 5
+                );
+                
+                return {
+                  ...location,
+                  siqs: result.siqs,
+                  isViable: result.isViable
+                };
+              } catch (err) {
+                console.error("Error calculating real-time SIQS:", err);
+                return location;
+              }
+            });
+            
+            const batchResults = await Promise.all(batchPromises);
+            
+            // Update the locations
+            batchResults.forEach((updatedLoc, idx) => {
+              updatedLocations[i + idx] = updatedLoc;
+            });
+          }
+          
           setRealTimeLocations(updatedLocations);
           console.log("Updated location cards with real-time SIQS values");
         } catch (error) {
