@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
@@ -31,11 +30,14 @@ export async function findBestViewingLocations(
   try {
     console.log(`Finding best viewing locations within ${radius}km radius, certified only: ${certifiedOnly}`);
     
-    const cacheKey = `${userLat.toFixed(2)}-${userLng.toFixed(2)}-${radius}-${certifiedOnly}`;
+    // For certified locations, we don't use radius filtering
+    const effectiveRadius = certifiedOnly ? 100000 : radius;
+    
+    const cacheKey = `${userLat.toFixed(2)}-${userLng.toFixed(2)}-${effectiveRadius}-${certifiedOnly}`;
     
     const cachedData = locationCache.get(cacheKey);
     if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_LIFETIME) {
-      console.log(`Using cached locations for ${radius}km radius`);
+      console.log(`Using cached locations for ${effectiveRadius}km radius`);
       return cachedData.locations.slice(0, limit);
     }
     
@@ -57,7 +59,7 @@ export async function findBestViewingLocations(
     const points = await findLocationsWithinRadius(
       userLat, 
       userLng, 
-      radius,
+      effectiveRadius,
       certifiedOnly
     );
     
@@ -79,7 +81,7 @@ export async function findBestViewingLocations(
       }
     }
     
-    console.log(`Found ${filteredPoints.length} potential photo points within ${radius}km radius`);
+    console.log(`Found ${filteredPoints.length} potential photo points within ${effectiveRadius}km radius`);
     
     const pointsWithDistance = filteredPoints.map(point => {
       if (typeof point.distance !== 'number') {
@@ -94,7 +96,9 @@ export async function findBestViewingLocations(
     );
     
     // Limit the number of locations to process for performance
-    const locationsToProcess = sortedByDistance.slice(0, limit * 3);
+    const locationsToProcess = certifiedOnly 
+      ? sortedByDistance // Process all certified locations
+      : sortedByDistance.slice(0, limit * 3);
     
     // Calculate SIQS for each location
     const locationsWithSiqs = await batchCalculateSiqs(locationsToProcess);

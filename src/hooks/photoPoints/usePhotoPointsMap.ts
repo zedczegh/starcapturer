@@ -39,6 +39,7 @@ export const usePhotoPointsMap = ({
         console.log("Loading all certified dark sky locations globally on page load");
         
         // Use a default location if user location is not available yet
+        // This is just to have a center point for the API call, but we'll get ALL locations globally
         const searchLocation = userLocation || { latitude: 39.9042, longitude: 116.4074 };
         
         // First, try to load from cache for faster initial render
@@ -55,15 +56,17 @@ export const usePhotoPointsMap = ({
           console.error("Error loading cached certified locations:", error);
         }
         
+        // Always use max radius (100000km) to get ALL certified locations globally
+        // This effectively gets all certified locations on Earth
         const certifiedResults = await findCertifiedLocations(
           searchLocation.latitude,
           searchLocation.longitude,
-          10000, // Global radius
-          500 // Increased limit to get more certified locations
+          100000, // Global radius to get ALL locations
+          1000    // Increased limit to ensure we get ALL certified locations
         );
         
         if (certifiedResults.length > 0) {
-          console.log(`Loaded ${certifiedResults.length} certified dark sky locations`);
+          console.log(`Loaded ${certifiedResults.length} certified dark sky locations globally`);
           
           // Make sure we include East Asian locations
           const asianLocations = certifiedResults.filter(loc => 
@@ -113,171 +116,100 @@ export const usePhotoPointsMap = ({
     };
   }, []);
   
-  // Refresh certified locations when map is ready and user location changes significantly
-  useEffect(() => {
-    const refreshCertifiedLocations = async () => {
-      if (mapReady && userLocation && shouldRefreshCertified(userLocation)) {
-        try {
-          console.log("Refreshing certified dark sky locations based on new user location");
-          
-          // Clear any existing timeout
-          if (certifiedLoadingTimeoutRef.current) {
-            clearTimeout(certifiedLoadingTimeoutRef.current);
-          }
-          
-          // Add a small delay to prevent rapid reloading
-          certifiedLoadingTimeoutRef.current = setTimeout(async () => {
-            const certifiedResults = await findCertifiedLocations(
-              userLocation.latitude,
-              userLocation.longitude,
-              10000, // Global radius
-              300 // Increased limit
-            );
-            
-            if (certifiedResults.length > 0) {
-              console.log(`Refreshed ${certifiedResults.length} certified dark sky locations`);
-              setAllCertifiedLocations(prevLocations => {
-                // Combine new results with existing locations, removing duplicates
-                const existingIds = new Set(prevLocations.map(loc => loc.id));
-                const newLocations = certifiedResults.filter(loc => !existingIds.has(loc.id));
-                return [...prevLocations, ...newLocations];
-              });
-              
-              // Store all certified locations in the global store for persistence
-              certifiedResults.forEach(location => {
-                if (location.isDarkSkyReserve || location.certification) {
-                  addLocationToStore(location);
-                }
-              });
-            }
-            
-            lastUserLocation.current = userLocation;
-          }, 500);
-        } catch (error) {
-          console.error("Error refreshing certified locations:", error);
-        }
-      }
-    };
-    
-    refreshCertifiedLocations();
-    
-    return () => {
-      if (certifiedLoadingTimeoutRef.current) {
-        clearTimeout(certifiedLoadingTimeoutRef.current);
-      }
-    };
-  }, [mapReady, userLocation]);
-  
-  // Helper function to determine if certified locations should be refreshed
-  const shouldRefreshCertified = (currentLocation: {latitude: number, longitude: number}) => {
-    if (!lastUserLocation.current) return true;
-    
-    // Check if location has changed significantly (more than 500km)
-    const latDiff = Math.abs(currentLocation.latitude - lastUserLocation.current.latitude);
-    const lngDiff = Math.abs(currentLocation.longitude - lastUserLocation.current.longitude);
-    
-    // Rough distance calculation - if either coordinate has changed by ~5 degrees, that's roughly 500km
-    return latDiff > 5 || lngDiff > 5;
-  };
-  
-  // Combine locations - for certified view, always include all certified locations
+  // Combine locations - for certified view, always include all certified locations regardless of radius
   const combinedLocations = useCallback(() => {
-    if (activeView === 'certified' && allCertifiedLocations.length > 0) {
-      // Make a map to remove any duplicates
-      const locMap = new Map<string, SharedAstroSpot>();
-      
-      // First add all certified locations from global list
-      allCertifiedLocations.forEach(loc => {
-        if (!loc.latitude || !loc.longitude) return;
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        locMap.set(key, loc);
-      });
-      
-      // Then add locations from main locations array
-      locations.forEach(loc => {
-        if (!loc.latitude || !loc.longitude) return;
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        // Prefer locations from the main array as they might have more up-to-date data
-        locMap.set(key, loc);
-      });
-      
-      // Add specific East Asian dark sky locations if they're not already included
-      const eastAsianLocations = [
-        // Shenzhen Xichong Dark Sky Community
-        {
-          id: 'shenzhen-xichong',
-          name: 'Shenzhen Xichong Dark Sky Community',
-          latitude: 22.5808,
-          longitude: 114.5034,
-          isDarkSkyReserve: true,
-          certification: 'Dark Sky Community - International Dark Sky Association',
-          timestamp: new Date().toISOString()
-        },
-        // Yeongyang Firefly Dark Sky Park
-        {
-          id: 'yeongyang-firefly',
-          name: 'Yeongyang Firefly Eco Park Dark Sky Park',
-          latitude: 36.6552,
-          longitude: 129.1122,
-          isDarkSkyReserve: true,
-          certification: 'Dark Sky Park - International Dark Sky Association',
-          timestamp: new Date().toISOString()
-        },
-        // Jindo Dark Sky Park
-        {
-          id: 'jindo-dark-sky',
-          name: 'Jindo Dark Sky Park',
-          latitude: 34.4763,
-          longitude: 126.2631,
-          isDarkSkyReserve: true,
-          certification: 'Dark Sky Park - International Dark Sky Association',
-          timestamp: new Date().toISOString()
-        },
-        // Yaeyama Islands Dark Sky Reserve
-        {
-          id: 'yaeyama-dark-sky',
-          name: 'Yaeyama Islands International Dark Sky Reserve',
-          latitude: 24.4667,
-          longitude: 124.2167,
-          isDarkSkyReserve: true,
-          certification: 'Dark Sky Reserve - International Dark Sky Association',
-          timestamp: new Date().toISOString()
-        },
-        // Iriomote-Ishigaki Dark Sky Reserve
-        {
-          id: 'iriomote-ishigaki',
-          name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
-          latitude: 24.3423,
-          longitude: 124.1546,
-          isDarkSkyReserve: true,
-          certification: 'Dark Sky Reserve - International Dark Sky Association',
-          timestamp: new Date().toISOString()
-        },
-        // Himawari Farm Dark Sky Park
-        {
-          id: 'himawari-farm',
-          name: 'Himawari Farm Dark Sky Park',
-          latitude: 42.9824,
-          longitude: 140.9946,
-          isDarkSkyReserve: true,
-          certification: 'Dark Sky Park - International Dark Sky Association',
-          timestamp: new Date().toISOString()
-        }
-      ];
-      
-      // Add East Asian locations to the map if they don't exist yet
-      eastAsianLocations.forEach(loc => {
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        if (!locMap.has(key)) {
-          locMap.set(key, loc as SharedAstroSpot);
-          // Also store in global location store
-          addLocationToStore(loc as SharedAstroSpot);
-        }
-      });
-      
-      return Array.from(locMap.values());
+    if (activeView === 'certified') {
+      // For certified view, always use all certified locations regardless of distance
+      if (allCertifiedLocations.length > 0) {
+        // Make a map to remove any duplicates
+        const locMap = new Map<string, SharedAstroSpot>();
+        
+        // Add all certified locations from global list
+        allCertifiedLocations.forEach(loc => {
+          if (!loc.latitude || !loc.longitude) return;
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locMap.set(key, loc);
+        });
+        
+        // Add specific East Asian dark sky locations if they're not already included
+        const eastAsianLocations = [
+          // Shenzhen Xichong Dark Sky Community
+          {
+            id: 'shenzhen-xichong',
+            name: 'Shenzhen Xichong Dark Sky Community',
+            latitude: 22.5808,
+            longitude: 114.5034,
+            isDarkSkyReserve: true,
+            certification: 'Dark Sky Community - International Dark Sky Association',
+            timestamp: new Date().toISOString()
+          },
+          // Yeongyang Firefly Dark Sky Park
+          {
+            id: 'yeongyang-firefly',
+            name: 'Yeongyang Firefly Eco Park Dark Sky Park',
+            latitude: 36.6552,
+            longitude: 129.1122,
+            isDarkSkyReserve: true,
+            certification: 'Dark Sky Park - International Dark Sky Association',
+            timestamp: new Date().toISOString()
+          },
+          // Jindo Dark Sky Park
+          {
+            id: 'jindo-dark-sky',
+            name: 'Jindo Dark Sky Park',
+            latitude: 34.4763,
+            longitude: 126.2631,
+            isDarkSkyReserve: true,
+            certification: 'Dark Sky Park - International Dark Sky Association',
+            timestamp: new Date().toISOString()
+          },
+          // Yaeyama Islands Dark Sky Reserve
+          {
+            id: 'yaeyama-dark-sky',
+            name: 'Yaeyama Islands International Dark Sky Reserve',
+            latitude: 24.4667,
+            longitude: 124.2167,
+            isDarkSkyReserve: true,
+            certification: 'Dark Sky Reserve - International Dark Sky Association',
+            timestamp: new Date().toISOString()
+          },
+          // Iriomote-Ishigaki Dark Sky Reserve
+          {
+            id: 'iriomote-ishigaki',
+            name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
+            latitude: 24.3423,
+            longitude: 124.1546,
+            isDarkSkyReserve: true,
+            certification: 'Dark Sky Reserve - International Dark Sky Association',
+            timestamp: new Date().toISOString()
+          },
+          // Himawari Farm Dark Sky Park
+          {
+            id: 'himawari-farm',
+            name: 'Himawari Farm Dark Sky Park',
+            latitude: 42.9824,
+            longitude: 140.9946,
+            isDarkSkyReserve: true,
+            certification: 'Dark Sky Park - International Dark Sky Association',
+            timestamp: new Date().toISOString()
+          }
+        ];
+        
+        // Add East Asian locations to the map if they don't exist yet
+        eastAsianLocations.forEach(loc => {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          if (!locMap.has(key)) {
+            locMap.set(key, loc as SharedAstroSpot);
+            // Also store in global location store
+            addLocationToStore(loc as SharedAstroSpot);
+          }
+        });
+        
+        return Array.from(locMap.values());
+      }
     }
     
+    // For calculated view or if no certified locations are loaded yet
     return locations;
   }, [locations, allCertifiedLocations, activeView]);
   
