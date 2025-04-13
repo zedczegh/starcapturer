@@ -55,36 +55,11 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     backgroundColor: memoizedValues.progressColor
   }) as React.CSSProperties, [memoizedValues.progressColor]);
 
-  // Create location data for navigation - ensure we use a consistent ID format
-  const locationData = useMemo(() => {
-    const timestamp = new Date().toISOString();
-    // Create a consistent ID format based on coordinates
-    const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-    
-    return {
-      id: locationId,
-      name: locationName,
-      latitude: latitude,
-      longitude: longitude,
-      siqsResult: {
-        score: memoizedValues.displayValue,
-        isViable: memoizedValues.displayValue >= 4
-      },
-      timestamp: timestamp,
-      fromCalculator: true // Add a flag to indicate source
-    };
-  }, [latitude, longitude, locationName, memoizedValues.displayValue]);
-
-  // Store location data in localStorage for persistence
-  const handleClick = () => {
-    try {
-      // Save to localStorage with the same ID used in the link
-      localStorage.setItem(`location_${locationData.id}`, JSON.stringify(locationData));
-      console.log("Location data saved to localStorage:", locationData);
-    } catch (error) {
-      console.error("Failed to save location data to localStorage:", error);
-    }
-  };
+  // Create a stable locationId for navigation
+  const locationId = useMemo(() => {
+    // Use a more deterministic ID format
+    return `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+  }, [latitude, longitude]);
 
   return (
     <motion.div 
@@ -124,9 +99,18 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           className="relative w-full max-w-md"
         >
           <Link 
-            to={`/location/${locationData.id}`} 
-            state={locationData}
-            onClick={handleClick}
+            to={`/location/${locationId}`} 
+            state={{
+              id: locationId,
+              name: locationName,
+              latitude: latitude,
+              longitude: longitude,
+              siqsResult: {
+                score: memoizedValues.displayValue
+              },
+              timestamp: new Date().toISOString(),
+              fromCalculator: true // Add a flag to indicate source
+            }}
           >
             <Button 
               size="lg" 

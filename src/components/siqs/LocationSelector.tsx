@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, Loader2, Search } from "lucide-react";
@@ -24,11 +25,18 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const autoLocationTriggered = useRef(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   
+  // Auto-trigger location request only once on first mount and if no location exists
   useEffect(() => {
+    // Only auto-trigger if:
+    // 1. We don't have a location yet
+    // 2. We haven't triggered an auto-location request before
+    // 3. Auto-location is not disabled
+    // 4. Not in a loading state
     if (!locationName && !loading && !autoLocationTriggered.current && !noAutoLocationRequest) {
       console.log("Auto-triggering location request on first mount");
       autoLocationTriggered.current = true;
       
+      // Add a small delay to ensure everything is initialized
       const timer = setTimeout(() => {
         handleUseCurrentLocation();
       }, 500);
@@ -37,8 +45,10 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     }
   }, [locationName, loading, handleUseCurrentLocation, noAutoLocationRequest]);
   
+  // Check if locationName is just coordinates or a proper name
   const isCoordinateOnly = locationName && locationName.includes("°");
   
+  // Format nicer display name for coordinates
   const displayName = isCoordinateOnly ? 
     t("Your current location", "您的当前位置") : 
     locationName;
@@ -47,10 +57,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     setIsMapOpen(true);
   };
   
-  const handleLocationSelected = (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
+  const handleLocationSelected = (location: any) => {
     onSelectLocation(location);
     setIsMapOpen(false);
     
+    // Show success toast
     toast.success(
       t("Location selected: ", "已选择位置：") + location.name,
       { duration: 2000 }

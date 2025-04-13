@@ -20,13 +20,6 @@ interface UseLocationSelectorStateProps {
   setCachedData: (key: string, data: CachedLocationData) => void;
 }
 
-interface Location {
-  name: string;
-  latitude: number;
-  longitude: number;
-  placeDetails?: string;
-}
-
 export const useLocationSelectorState = ({
   language,
   noAutoLocationRequest,
@@ -130,8 +123,12 @@ export const useLocationSelectorState = ({
     }
   }, [language, setStatusMessage, setShowAdvancedSettings, setBortleScale]);
   
-  // Update this to use the location object parameter
-  const handleLocationSelect = useCallback(async (location: Location) => {
+  const handleLocationSelect = useCallback(async (location: { 
+    name: string; 
+    latitude: number; 
+    longitude: number; 
+    placeDetails?: string 
+  }) => {
     setLocationName(location.name);
     setLatitude(location.latitude.toFixed(6));
     setLongitude(location.longitude.toFixed(6));

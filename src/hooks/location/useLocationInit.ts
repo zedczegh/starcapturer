@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { calculateMoonPhase } from "@/utils/siqsValidation";
 import { NavigateFunction } from "react-router-dom";
 import { initializeLocationData } from "./locationInitializer";
 
@@ -24,30 +25,33 @@ export const useLocationInit = (
 
   // Initialize location data from state or localStorage
   useEffect(() => {
-    console.log("useLocationInit effect triggered with:", { id, hasInitialState: !!initialState });
-    
-    // Skip initialization if we already have location data
     if (locationData) {
-      console.log("Already have location data, skipping initialization");
       setIsLoading(false);
       return;
     }
 
-    const initData = async () => {
-      await initializeLocationData({
-        id,
-        initialState,
-        navigate,
-        toast,
-        t,
-        language,
-        setLocationData,
-        setIsLoading
-      });
-    };
-
-    initData();
+    initializeLocationData({
+      id,
+      initialState,
+      navigate,
+      toast,
+      t,
+      language,
+      setLocationData,
+      setIsLoading
+    });
   }, [id, initialState, navigate, t, toast, language, locationData]);
+
+  // Cache location data in localStorage for better persistence
+  useEffect(() => {
+    if (locationData && id) {
+      try {
+        localStorage.setItem(`location_${id}`, JSON.stringify(locationData));
+      } catch (e) {
+        console.error("Failed to save to localStorage", e);
+      }
+    }
+  }, [locationData, id]);
 
   return {
     locationData,
