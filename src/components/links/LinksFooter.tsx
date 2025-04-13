@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,15 @@ const LinksFooter = () => {
   const buttonVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
+  const handleContactUs = () => {
+    const subject = t("Astronomy Resources Inquiry", "天文资源咨询");
+    const body = t(
+      "Hello Bortle Now Team,\n\nI have a question about the astronomy resources on your website.\n\n", 
+      "你好Bortle Now团队，\n\n我对网站上的天文资源有一些问题。\n\n"
+    );
+    window.location.href = `mailto:yanzeyu886@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
@@ -83,7 +91,11 @@ const LinksFooter = () => {
           </Button>
         </a>
         
-        <Button variant="ghost" className="text-cosmic-400 hover:text-cosmic-100 hover:bg-cosmic-800/30">
+        <Button 
+          variant="ghost" 
+          className="text-cosmic-400 hover:text-cosmic-100 hover:bg-cosmic-800/30"
+          onClick={handleContactUs}
+        >
           <MessageSquare className="mr-2 h-4 w-4" />
           {t("Contact Us", "联系我们")}
         </Button>
