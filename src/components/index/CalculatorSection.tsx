@@ -1,8 +1,9 @@
+
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { currentSiqsStore } from "./CalculatorSection";
+import { currentSiqsStore } from "@/stores/siqsStore";
 
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;

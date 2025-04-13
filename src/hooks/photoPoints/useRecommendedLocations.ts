@@ -4,7 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
+import { currentSiqsStore } from '@/stores/siqsStore'; 
 import { isWaterLocation } from '@/utils/locationValidator';
 import { toast } from '@/components/ui/use-toast'; // Fix import path
 
