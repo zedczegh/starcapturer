@@ -1,18 +1,19 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCurrentPosition, ExtendedGeolocationOptions } from "@/utils/geolocationUtils";
 import NavBar from "@/components/NavBar";
 import { getBortleScaleColor, getBortleScaleDescription } from "@/data/utils/bortleScaleUtils";
 import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
-import { Camera, Clock, MapPin, Moon, Info, Shield, Star, Cloud, ArrowDown, ArrowUp, Pointer, CircleSlash, CheckCircle } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { motion, AnimatePresence } from "framer-motion";
-import ConditionItem from "@/components/weather/ConditionItem";
-import { DynamicLightbulbIcon } from "@/components/weather/DynamicIcons";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import BortleNowHeader from "@/components/bortleNow/BortleNowHeader";
+import LocationSection from "@/components/bortleNow/LocationSection";
+import BortleScaleDisplay from "@/components/bortleNow/BortleScaleDisplay";
+import CameraMeasurementSection from "@/components/bortleNow/CameraMeasurementSection";
+import CameraPermissionDialog from "@/components/bortleNow/CameraPermissionDialog";
+import CountdownOverlay from "@/components/bortleNow/CountdownOverlay";
+import { AnimatePresence } from "framer-motion";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -238,17 +239,10 @@ const BortleNow: React.FC = () => {
         description: t("Please cover your camera lens completely...", "请完全遮盖相机镜头..."),
       });
       
+      // Simulate processing time
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
-      }, 700));
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 700));
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 600));
+      }, 2000));
       
       toast({
         title: t("Dark Frame Captured", "暗帧已捕获"),
@@ -270,64 +264,6 @@ const BortleNow: React.FC = () => {
 
   const captureDarkFrame = () => {
     requestCameraPermission("dark");
-  };
-
-  const countStarsInImage = (imageData: ImageData): number => {
-    const data = imageData.data;
-    const width = imageData.width;
-    const height = imageData.height;
-    
-    const brightnessThreshold = 180;
-    const contrastThreshold = 50;
-    
-    let starCount = 0;
-    const starPixels = new Set();
-    
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const i = (y * width + x) * 4;
-        
-        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        
-        if (brightness > brightnessThreshold) {
-          let isLocalMax = true;
-          
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) continue;
-              
-              const ni = ((y + dy) * width + (x + dx)) * 4;
-              const neighborBrightness = (data[ni] + data[ni + 1] + data[ni + 2]) / 3;
-              
-              if (neighborBrightness > brightness) {
-                isLocalMax = false;
-                break;
-              }
-            }
-            if (!isLocalMax) break;
-          }
-          
-          if (isLocalMax) {
-            const starKey = `${x}-${y}`;
-            if (!starPixels.has(starKey)) {
-              starCount++;
-              
-              for (let dy = -2; dy <= 2; dy++) {
-                for (let dx = -2; dx <= 2; dx++) {
-                  const sx = x + dx;
-                  const sy = y + dy;
-                  if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
-                    starPixels.add(`${sx}-${sy}`);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    return starCount;
   };
 
   const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
@@ -360,21 +296,10 @@ const BortleNow: React.FC = () => {
         description: t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）..."),
       });
       
+      // Simulate processing time
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
-      }, 800));
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 800));
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 800));
-      
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 600));
+      }, 3000));
       
       const baseLocationBortle = bortleScale || 5;
       
@@ -420,383 +345,66 @@ const BortleNow: React.FC = () => {
     requestCameraPermission("light");
   };
 
-  const bortleColor = bortleScale ? getBortleScaleColor(bortleScale) : null;
   const bortleDescription = bortleScale ? 
     getBortleScaleDescription(bortleScale, language as 'en' | 'zh') : null;
-
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.4, ease: "easeOut" }
-    }
-  };
-
-  const circleAnimations = {
-    pulse: {
-      scale: [1, 1.03, 1],
-      boxShadow: [
-        "0 0 0 rgba(255, 255, 255, 0.1)",
-        "0 0 15px rgba(255, 255, 255, 0.3)",
-        "0 0 0 rgba(255, 255, 255, 0.1)"
-      ],
-      transition: { 
-        duration: 3,
-        repeat: Infinity,
-        repeatType: "reverse" as const
-      }
-    }
-  };
-
-  const getBortleScaleGradient = (scale: number | null) => {
-    if (scale === null) return { bg: "", text: "" };
-    
-    if (scale >= 7) {
-      return {
-        bg: "bg-gradient-to-br from-orange-500/80 to-red-500/80",
-        text: "text-white"
-      };
-    } else if (scale >= 4) {
-      return {
-        bg: "bg-gradient-to-br from-yellow-400/80 to-lime-500/80",
-        text: "text-cosmic-950"
-      };
-    } else {
-      return {
-        bg: "bg-gradient-to-br from-blue-500/80 to-cyan-500/80",
-        text: "text-white"
-      };
-    }
-  };
-
-  const bortleGradient = bortleScale ? getBortleScaleGradient(bortleScale) : { bg: "", text: "" };
 
   return (
     <>
       <NavBar />
       <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
-        <motion.div 
-          className="relative z-10"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent">
-            {t("Bortle Now", "实时光污染")}
-          </h1>
-          
-          <p className="text-center text-sm text-cosmic-300 mb-6 max-w-md mx-auto">
-            {t("Measure light pollution levels at your location using your device camera or location data", 
-               "使用设备摄像头或位置数据测量您所在位置的光污染水平")}
-          </p>
-        </motion.div>
+        {/* Header section with the new animated bar */}
+        <BortleNowHeader />
         
         {error && (
-          <motion.div 
-            className="text-red-500 mb-4 p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
+          <div className="text-red-500 mb-4 p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
             <div className="flex items-center justify-center gap-2">
-              <CircleSlash className="h-4 w-4" />
               <span>{error}</span>
             </div>
-          </motion.div>
+          </div>
         )}
         
-        <AnimatePresence>
-          {countdown !== null && (
-            <motion.div 
-              className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div 
-                className="text-6xl font-bold text-white"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 1.2, opacity: 0 }}
-                key={countdown}
-              >
-                {countdown}
-              </motion.div>
-              <div className="absolute bottom-20 text-center text-white text-lg px-6">
-                {cameraMode === "dark" ? (
-                  <p>{t("Cover your camera lens completely", "完全遮盖相机镜头")}</p>
-                ) : (
-                  <p>{t("Point your camera at the sky (zenith)", "将相机指向天空（天顶）")}</p>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Countdown overlay for camera capture */}
+        <CountdownOverlay countdown={countdown} cameraMode={cameraMode} />
+        
+        {/* Camera permission dialog */}
+        <CameraPermissionDialog 
+          open={showCameraPermissionDialog}
+          onPermissionResponse={handlePermissionResponse}
+        />
         
         <div className="space-y-6">
+          {/* Bortle scale display */}
           <AnimatePresence>
             {bortleScale && (
-              <motion.div 
-                className="relative overflow-hidden glassmorphism border-cosmic-700/30 rounded-xl p-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-cosmic-600/20 to-cosmic-900/20" />
-                
-                <div className="relative z-10">
-                  <div className="flex flex-col items-center mb-5">
-                    <motion.div 
-                      className={`relative w-32 h-32 rounded-full flex items-center justify-center ${bortleGradient.bg} backdrop-blur-sm shadow-lg border-2 border-cosmic-700/50`}
-                      variants={circleAnimations}
-                      animate="pulse"
-                    >
-                      <div className="absolute inset-0 rounded-full bg-cosmic-950/10 backdrop-blur-sm"></div>
-                      <div className="z-10 flex flex-col items-center">
-                        <span className={`text-4xl font-bold ${bortleGradient.text}`}>{bortleScale.toFixed(1)}</span>
-                        <span className={`text-xs mt-1 ${bortleGradient.text} opacity-80`}>{t("Bortle Scale", "伯特尔等级")}</span>
-                      </div>
-                    </motion.div>
-                    
-                    {isMeasuringRealtime && (
-                      <div className="absolute top-0 right-0 mt-2 mr-2">
-                        <div className="flex items-center gap-1.5 bg-blue-500/20 px-2 py-1 rounded-full">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                          <span className="text-xs text-blue-300">{t("Measuring", "测量中")}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <h3 className="text-lg font-semibold text-gradient-primary mt-4 mb-1">
-                      {t("Light Pollution Level", "光污染水平")}
-                    </h3>
-                    
-                    <div className="mt-1 flex items-center justify-center text-sm">
-                      <span className="text-blue-400 mr-3">{t("Dark", "黑暗")}</span>
-                      <DynamicLightbulbIcon bortleScale={1} animated={true} />
-                      <span className="mx-2">→</span>
-                      <DynamicLightbulbIcon bortleScale={5} animated={true} />
-                      <span className="mx-2">→</span>
-                      <DynamicLightbulbIcon bortleScale={9} animated={true} />
-                      <span className="text-red-400 ml-3">{t("Urban", "城市")}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-cosmic-900/50 p-4 rounded-lg border border-cosmic-800/30 mb-3">
-                    <p className="text-sm text-cosmic-200">
-                      {bortleDescription}
-                    </p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <ConditionItem
-                      icon={<Star className="h-5 w-5 text-primary" />}
-                      label={t("Visible Stars", "可见星星")}
-                      value={
-                        starCount !== null ? 
-                        <span className="text-lg font-medium">{starCount}</span> : 
-                        (bortleScale <= 3 
-                          ? t("Many", "许多") 
-                          : bortleScale <= 6 
-                            ? t("Some", "一些") 
-                            : t("Few", "很少"))
-                      }
-                      tooltip={t("Estimated visible stars at zenith", "天顶处估计可见星星")}
-                    />
-                    
-                    <ConditionItem
-                      icon={<Moon className="h-5 w-5 text-sky-200" />}
-                      label={t("Sky Quality", "夜空质量")}
-                      value={bortleScale <= 3 
-                        ? t("Excellent", "极好") 
-                        : bortleScale <= 6 
-                          ? t("Moderate", "中等") 
-                          : t("Poor", "较差")}
-                      tooltip={t("Overall sky darkness level", "整体夜空黑暗程度")}
-                    />
-                  </div>
-                  
-                  {cameraReadings.lightFrame ? (
-                    <div className="mt-3 flex items-center justify-center p-1 bg-green-950/30 rounded-full w-fit mx-auto">
-                      <div className="text-xs text-emerald-400 flex items-center gap-2 px-3 py-1">
-                        <Shield size={14} className="text-emerald-400" />
-                        {t("Camera-verified measurement", "相机验证的测量")}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex items-center justify-center p-1 bg-amber-950/30 rounded-full w-fit mx-auto">
-                      <div className="text-xs text-amber-400/90 flex items-center gap-2 px-3 py-1">
-                        <MapPin size={14} />
-                        {t("Based on location estimate", "基于位置估计")}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+              <BortleScaleDisplay
+                bortleScale={bortleScale}
+                starCount={starCount}
+                isMeasuringRealtime={isMeasuringRealtime}
+                cameraReadings={cameraReadings}
+                bortleDescription={bortleDescription}
+              />
             )}
           </AnimatePresence>
           
-          <motion.div 
-            className="glassmorphism border-cosmic-700/30 rounded-xl p-6 relative overflow-hidden"
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.1 }}
-          >
-            <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-cosmic-800/20 to-cosmic-900/20" />
-            
-            <div className="relative z-10">
-              <h2 className="text-lg font-medium flex items-center gap-2 mb-4">
-                <MapPin size={18} className="text-primary" />
-                {t("Your Location", "您的位置")}
-              </h2>
-              
-              {locationName && (
-                <div className="text-sm text-cosmic-200 mb-4 bg-cosmic-800/40 p-3 rounded-lg border border-cosmic-700/30">
-                  {locationName}
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="latitude" className="text-xs opacity-80 mb-1 block">{t("Latitude", "纬度")}</Label>
-                  <Input
-                    id="latitude"
-                    type="text"
-                    value={latitude}
-                    onChange={(e) => setLatitude(e.target.value)}
-                    placeholder={t("Latitude", "纬度")}
-                    disabled={isLoadingLocation}
-                    className="h-9 text-sm bg-cosmic-800/30 border-cosmic-700/50 focus-visible:ring-primary/50"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="longitude" className="text-xs opacity-80 mb-1 block">{t("Longitude", "经度")}</Label>
-                  <Input
-                    id="longitude"
-                    type="text"
-                    value={longitude}
-                    onChange={(e) => setLongitude(e.target.value)}
-                    placeholder={t("Longitude", "经度")}
-                    disabled={isLoadingLocation}
-                    className="h-9 text-sm bg-cosmic-800/30 border-cosmic-700/50 focus-visible:ring-primary/50"
-                  />
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          {/* Location section */}
+          <LocationSection
+            latitude={latitude}
+            longitude={longitude}
+            locationName={locationName}
+            isLoadingLocation={isLoadingLocation}
+            setLatitude={setLatitude}
+            setLongitude={setLongitude}
+          />
           
-          <motion.div 
-            className="glassmorphism border-cosmic-700/30 rounded-xl p-6 relative overflow-hidden"
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: 0.2 }}
-          >
-            <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-cosmic-700/20 to-cosmic-900/20" />
-            
-            <div className="relative z-10">
-              <h2 className="text-lg font-medium flex items-center gap-2 mb-4">
-                <Camera size={18} className="text-primary" />
-                {t("Camera Measurement", "相机测量")}
-              </h2>
-              
-              <div className="bg-cosmic-800/50 p-4 rounded-lg border border-cosmic-700/30 shadow-inner mb-4">
-                <p className="mb-4 text-sm text-cosmic-200">
-                  {t(
-                    "Accurate measurements use your camera to measure actual sky brightness and count visible stars. First capture a dark frame, then point your camera at the night sky.",
-                    "精确测量使用相机测量实际天空亮度并计算可见星星。首先捕获暗帧，然后将相机指向夜空。"
-                  )}
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Button
-                    variant={cameraReadings.darkFrame ? "outline" : "default"}
-                    onClick={captureDarkFrame}
-                    disabled={isProcessingImage || isMeasuringRealtime || countdown !== null}
-                    className={`relative overflow-hidden flex items-center gap-2 ${cameraReadings.darkFrame ? 'bg-cosmic-800/60 border-emerald-500/50' : 'bg-cosmic-800 hover:bg-cosmic-700'}`}
-                  >
-                    <Moon size={16} />
-                    {t("Capture Dark Frame", "捕获暗帧")}
-                    
-                    {cameraReadings.darkFrame && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10">
-                        <CheckCircle className="h-8 w-8 text-emerald-500" />
-                      </div>
-                    )}
-                    
-                    {isProcessingImage && !cameraReadings.darkFrame && (
-                      <div className="absolute inset-0 bg-primary/5 flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </Button>
-                  
-                  <Button
-                    variant={cameraReadings.lightFrame ? "outline" : "secondary"}
-                    onClick={captureLightFrame}
-                    disabled={isProcessingImage || !cameraReadings.darkFrame || isMeasuringRealtime || countdown !== null}
-                    className={`relative overflow-hidden flex items-center gap-2 ${
-                      cameraReadings.lightFrame 
-                        ? 'bg-cosmic-800/60 border-emerald-500/50 text-emerald-400' 
-                        : cameraReadings.darkFrame 
-                          ? 'bg-cosmic-700/80 hover:bg-cosmic-700' 
-                          : 'bg-cosmic-700/80 hover:bg-cosmic-700 opacity-50'
-                    }`}
-                  >
-                    <Clock size={16} />
-                    {t("Measure Sky Brightness", "测量天空亮度")}
-                    
-                    {cameraReadings.lightFrame && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/10">
-                        <CheckCircle className="h-8 w-8 text-emerald-500" />
-                      </div>
-                    )}
-                    
-                    {isProcessingImage && !cameraReadings.lightFrame && cameraReadings.darkFrame && (
-                      <div className="absolute inset-0 bg-secondary/5 flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            
-              <div className="space-y-3">
-                <h3 className="font-medium flex items-center gap-2 text-primary text-sm">
-                  <Info size={14} />
-                  {t("How to Measure", "如何测量")}
-                </h3>
-                
-                <div className="space-y-3 text-sm text-cosmic-200">
-                  <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
-                    <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">1</div>
-                    <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Cover Your Camera", "遮盖您的相机")}</p>
-                      <p className="text-xs">{t("Place your phone face down or cover the camera lens completely", "将手机正面朝下放置或完全遮盖相机镜头")}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
-                    <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">2</div>
-                    <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Capture Dark Frame", "捕获暗帧")}</p>
-                      <p className="text-xs">{t("This sets the baseline for your camera sensor", "这为您的相机传感器设置基线")}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3 bg-cosmic-800/30 p-3 rounded-lg border border-cosmic-700/20">
-                    <div className="bg-primary/20 text-primary min-w-6 h-6 flex items-center justify-center rounded-full text-xs shrink-0 mt-0.5">3</div>
-                    <div>
-                      <p className="font-medium text-cosmic-100 mb-1">{t("Point at Sky", "指向天空")}</p>
-                      <p className="text-xs">{t("Point your camera at the zenith (directly overhead) to measure light pollution and count stars", "将相机指向天顶（正上方）以测量光污染并计算星星")}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          {/* Camera measurement section */}
+          <CameraMeasurementSection
+            isProcessingImage={isProcessingImage}
+            isMeasuringRealtime={isMeasuringRealtime}
+            cameraReadings={cameraReadings}
+            countdown={countdown}
+            captureDarkFrame={captureDarkFrame}
+            captureLightFrame={captureLightFrame}
+          />
         </div>
       </div>
     </>
