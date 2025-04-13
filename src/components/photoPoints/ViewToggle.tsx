@@ -20,8 +20,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   const { t } = useLanguage();
   
   return (
-    <div className="flex flex-col items-center mb-6">
-      <div className="inline-flex bg-muted/30 p-1.5 rounded-lg shadow-sm border border-border/50 w-full max-w-md flex-col space-y-2">
+    <div className="flex justify-center mb-6">
+      <div className="inline-flex bg-muted/30 p-1.5 rounded-lg shadow-sm border border-border/50 w-full max-w-md">
         <Button
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="sm"
