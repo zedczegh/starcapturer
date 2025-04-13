@@ -1,6 +1,7 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "../realTimeSiqsService";
+import { updateCertifiedLocationsWithSiqs } from "./certifiedLocationService";
 
 // Cache for real-time SIQS data
 const locationCache = new Map<string, {
@@ -24,16 +25,35 @@ export async function updateLocationsWithRealTimeSiqs(
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   
-  console.log(`Updating ${locations.length} locations with real-time SIQS`);
+  console.log(`Updating ${locations.length} locations with real-time SIQS, view: ${activeView}`);
+  
+  // For certified view or if specifically handling certified locations in any view
+  if (activeView === 'certified') {
+    // Use the dedicated certified locations service for better handling
+    return updateCertifiedLocationsWithSiqs(locations);
+  }
   
   // Clone the locations to avoid mutating the original
   const updatedLocations = [...locations];
   
+  // Separate certified and calculated locations for different handling
+  const certifiedLocs = updatedLocations.filter(loc => 
+    loc.isDarkSkyReserve || (loc.certification && loc.certification !== '')
+  );
+  
+  const calculatedLocs = updatedLocations.filter(loc => 
+    !(loc.isDarkSkyReserve || (loc.certification && loc.certification !== ''))
+  );
+  
+  // Update certified locations first using the dedicated service
+  const updatedCertifiedLocs = await updateCertifiedLocationsWithSiqs(certifiedLocs);
+  
+  // Handle calculated locations with regular approach
   // Batch process locations for better performance
   const batchSize = Math.min(maxParallel, 3);
   
-  for (let i = 0; i < updatedLocations.length; i += batchSize) {
-    const batch = updatedLocations.slice(i, i + batchSize);
+  for (let i = 0; i < calculatedLocs.length; i += batchSize) {
+    const batch = calculatedLocs.slice(i, i + batchSize);
     const promises = batch.map(async (location) => {
       const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
       
@@ -80,11 +100,12 @@ export async function updateLocationsWithRealTimeSiqs(
     
     // Update locations
     results.forEach((result, index) => {
-      updatedLocations[i + index] = result;
+      calculatedLocs[i + index] = result;
     });
   }
   
-  return updatedLocations;
+  // Combine the updated certified and calculated locations
+  return [...updatedCertifiedLocs, ...calculatedLocs];
 }
 
 /**

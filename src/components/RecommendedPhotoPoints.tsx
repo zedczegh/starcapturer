@@ -10,6 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
+import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -29,6 +30,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const currentSiqs = currentSiqsStore.getValue();
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
+  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
   // Start with cached data if available from localStorage
   useEffect(() => {
@@ -71,10 +73,39 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     }
   }, [loading, isInitialized, displayedLocations]);
 
+  // Apply real-time SIQS to recommended locations
+  useEffect(() => {
+    const locationsToEnhance = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
+    
+    if (locationsToEnhance.length > 0) {
+      const updateWithSiqs = async () => {
+        try {
+          // Apply real-time SIQS to all locations including certified ones
+          const updated = await updateLocationsWithRealTimeSiqs(
+            locationsToEnhance,
+            userLocation,
+            100000, // Large radius to include all locations
+            'certified' // Treat all as certified to ensure updates
+          );
+          setEnhancedLocations(updated);
+        } catch (err) {
+          console.error("Error updating recommended locations with SIQS:", err);
+          setEnhancedLocations(locationsToEnhance);
+        }
+      };
+      
+      updateWithSiqs();
+    }
+  }, [displayedLocations, cachedLocations, userLocation]);
+
   // Only show limited number of locations
   const limitedLocations = useMemo(() => {
-    // Use fresh data if available, otherwise use cached data
-    const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
+    // Use enhanced data if available, otherwise fresh data, then cached data
+    const locationsToUse = enhancedLocations.length > 0 
+      ? enhancedLocations 
+      : displayedLocations.length > 0 
+        ? displayedLocations 
+        : cachedLocations;
     
     // Prioritize certified locations 
     const certified = locationsToUse.filter(loc => 
@@ -93,7 +124,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     ].slice(0, limit);
     
     return sortedLocations;
-  }, [displayedLocations, cachedLocations, limit]);
+  }, [enhancedLocations, displayedLocations, cachedLocations, limit]);
 
   if (localLoading && cachedLocations.length === 0) {
     return (
@@ -150,13 +181,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       )}
       
       <AnimatePresence>
-        <div className="space-y-3 mt-3"> {/* Added margin-top to fix layout conflicts */}
+        <div className="space-y-3 mt-3">
           {limitedLocations.map((location, index) => (
             <motion.div
               key={`${location.id || location.latitude}-${location.longitude}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
+              transition={{ duration: 0.15, delay: index * 0.03 }}
             >
               <PhotoPointCard
                 point={location}

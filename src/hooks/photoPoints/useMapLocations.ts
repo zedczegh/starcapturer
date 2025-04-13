@@ -87,7 +87,7 @@ export const useMapLocations = ({
 
   // Update locations with real-time SIQS
   const updateWithRealTimeSiqs = useCallback(async () => {
-    if (!mapReady || !userLocation || !locations.length) return;
+    if (!mapReady || !locations.length) return;
     
     try {
       const validLocations = filterValidLocations(locations);
