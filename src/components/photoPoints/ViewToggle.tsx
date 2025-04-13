@@ -21,7 +21,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   
   return (
     <div className="flex justify-center mb-6">
-      <div className="inline-flex bg-muted/30 p-1.5 rounded-lg shadow-sm border border-border/50 w-full max-w-md">
+      <div className="flex flex-col bg-muted/30 p-1.5 rounded-lg shadow-sm border border-border/50 w-full max-w-sm gap-2">
         <Button
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="sm"
