@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
+import { motion } from 'framer-motion';
 
 interface PhotoPointsHeaderProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -18,8 +19,21 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  const headerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5 }
+    }
+  };
+  
   return (
-    <>
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={headerVariants}
+    >
       {/* Back Button */}
       <div className="mb-6">
         <BackButton destination="/" />
@@ -54,7 +68,7 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           </Button>
         </div>
       )}
-    </>
+    </motion.div>
   );
 };
 
