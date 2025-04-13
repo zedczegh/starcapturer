@@ -143,9 +143,11 @@ const About = () => {
           }}
           className="space-y-8"
         >
-          <AboutContent />
-          
+          {/* First display Team and SIQS information */}
           <AboutTeam />
+          
+          {/* Then show the rest of the content */}
+          <AboutContent />
           
           <AboutTimeline />
           
