@@ -58,7 +58,7 @@ export const useMapMarkers = () => {
       // If rapidly changing between markers, use longer delay
       // Mobile needs slightly longer delay to prevent accidental triggers
       const delay = isMobile ? 
-        60 : // Mobile delay
+        80 : // Mobile delay - increased for better stability
         (now - hoverTimestamp.current < 300 ? 40 : 20); // Desktop delay
       
       debounceTimeoutRef.current = setTimeout(() => {
@@ -76,7 +76,7 @@ export const useMapMarkers = () => {
         setHoveredLocationId(null);
         lastHoverId.current = null;
         hoverTimeoutRef.current = null;
-      }, isMobile ? 150 : 50);
+      }, isMobile ? 200 : 50); // Increased delay for mobile
     }
   }, [isMobile]);
   
@@ -94,6 +94,9 @@ export const useMapMarkers = () => {
       };
     }
     
+    // Prevent default to avoid double-firing issues on some mobile browsers
+    e.stopPropagation();
+    
     // Immediately show hover state on touch start
     handleHover(id);
   }, [isMobile, handleHover]);
@@ -104,11 +107,14 @@ export const useMapMarkers = () => {
   const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
     if (!isMobile) return;
     
+    // Prevent default behaviors
+    e.stopPropagation();
+    
     // Keep hover state visible slightly longer on mobile
     // This helps with touch interactions
     setTimeout(() => {
       handleHover(null);
-    }, 1500);
+    }, 2000); // Increased from 1500ms to 2000ms for better visibility
     
     touchStartPos.current = null;
   }, [isMobile, handleHover]);
@@ -124,7 +130,8 @@ export const useMapMarkers = () => {
       const moveY = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
       
       // If moved more than threshold, consider it a drag and clear hover
-      if (moveX > 10 || moveY > 10) {
+      // Increased threshold for better touch control
+      if (moveX > 15 || moveY > 15) {
         handleHover(null);
         touchStartPos.current = null;
       }
