@@ -10,6 +10,7 @@ import { UserLocationMarker, LocationMarker } from './MarkerComponents';
 import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
 import { MapController } from './MapController';
 import MapEffectsComposer from './effects/MapEffectsComposer';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 
 // Configure Leaflet on load
 configureLeaflet();
@@ -54,18 +55,51 @@ const MarkerGroup = React.memo(({
   hideMarkerPopups: boolean,
   activeView: 'certified' | 'calculated'
 }) => {
+  // Pre-filter locations to avoid rendering water spots
+  const filteredLocations = useMemo(() => {
+    return locations.filter(location => {
+      // Skip invalid locations
+      if (!location || 
+          typeof location.latitude !== 'number' || 
+          typeof location.longitude !== 'number' ||
+          isNaN(location.latitude) || 
+          isNaN(location.longitude)) {
+        return false;
+      }
+      
+      // Individual location certification status
+      const locationIsCertified = location.isDarkSkyReserve === true || 
+        (location.certification && location.certification !== '');
+      
+      // Skip non-certified locations in certified view
+      if (activeView === 'certified' && !locationIsCertified) {
+        return false;
+      }
+      
+      // Always keep certified locations
+      if (locationIsCertified) {
+        return true;
+      }
+      
+      // Aggressive water location filtering for calculated locations
+      if (isWaterLocation(location.latitude, location.longitude, false)) {
+        console.log(`Filtered water location: ${location.name || 'unnamed'} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+        return false;
+      }
+      
+      // Additional validation
+      if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+        console.log(`Filtered invalid astronomy location: ${location.name || 'unnamed'}`);
+        return false;
+      }
+      
+      return true;
+    });
+  }, [locations, activeView]);
+  
   return (
     <>
-      {locations.map((location) => {
-        // Only render markers with valid coordinates
-        if (!location || 
-            typeof location.latitude !== 'number' || 
-            typeof location.longitude !== 'number' ||
-            isNaN(location.latitude) || 
-            isNaN(location.longitude)) {
-          return null;
-        }
-        
+      {filteredLocations.map((location) => {
         // Generate a unique ID for this location
         const locationId = location.id || 
           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
@@ -73,11 +107,6 @@ const MarkerGroup = React.memo(({
         // Individual location certification status
         const locationIsCertified = location.isDarkSkyReserve === true || 
           (location.certification && location.certification !== '');
-        
-        // Skip non-certified locations in certified view
-        if (activeView === 'certified' && !locationIsCertified) {
-          return null;
-        }
         
         // Handle the click event for this marker
         const handleClick = () => {
@@ -172,15 +201,37 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
 
   // Filter out any invalid locations
   const validLocations = useMemo(() => {
-    return locations.filter(location => 
-      location && 
-      typeof location.latitude === 'number' && 
-      typeof location.longitude === 'number' &&
-      isFinite(location.latitude) &&
-      isFinite(location.longitude) &&
-      Math.abs(location.latitude) <= 90 &&
-      Math.abs(location.longitude) <= 180
-    );
+    return locations.filter(location => {
+      // Basic validation
+      if (!location || 
+          typeof location.latitude !== 'number' || 
+          typeof location.longitude !== 'number' ||
+          isNaN(location.latitude) || 
+          isNaN(location.longitude) ||
+          Math.abs(location.latitude) > 90 ||
+          Math.abs(location.longitude) > 180) {
+        return false;
+      }
+      
+      // Skip water locations for non-certified spots
+      const isCertified = location.isDarkSkyReserve === true || 
+        (location.certification && location.certification !== '');
+      
+      if (!isCertified) {
+        // Apply strict water filtering
+        if (isWaterLocation(location.latitude, location.longitude, false)) {
+          console.log(`Pre-filtered water location: ${location.name || 'unnamed'}`);
+          return false;
+        }
+        
+        // Additional validation
+        if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
   }, [locations]);
   
   // Chunk locations for better rendering performance

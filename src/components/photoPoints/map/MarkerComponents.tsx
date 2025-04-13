@@ -1,8 +1,7 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
@@ -10,7 +9,7 @@ import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -20,19 +19,42 @@ const getSiqsClass = (siqs?: number): string => {
   return 'siqs-poor';
 };
 
-// Filter out water locations using the improved detection
+// Enhanced filtering for water locations
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
   // Never filter out certified locations
   if (location.isDarkSkyReserve || location.certification) {
     return false;
   }
   
-  // Use enhanced water detection
-  return isWaterLocation(
-    location.latitude, 
-    location.longitude, 
-    Boolean(location.isDarkSkyReserve || location.certification)
-  );
+  // Multi-layered water detection
+  // 1. Main water detection
+  if (isWaterLocation(location.latitude, location.longitude, false)) {
+    return true;
+  }
+  
+  // 2. Coastal water detection
+  if (isLikelyCoastalWater(location.latitude, location.longitude)) {
+    return true;
+  }
+  
+  // 3. Name-based detection
+  if (location.name) {
+    const lowerName = location.name.toLowerCase();
+    const waterKeywords = [
+      'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
+      'channel', 'sound', 'harbor', 'harbour', 'port', 
+      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
+      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
+    ];
+    
+    for (const keyword of waterKeywords) {
+      if (lowerName.includes(keyword)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
 };
 
 // Get certification type based color for markers
@@ -95,14 +117,24 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
   
-  // IMPORTANT: Skip rendering calculated locations in certified view
+  // Skip rendering calculated locations in certified view
   if (activeView === 'certified' && !isCertified) {
     return null;
   }
   
-  // Skip water locations for calculated spots (never skip certified)
-  if (!isCertified && isWaterSpot(location)) {
-    return null;
+  // Enhanced water location filtering with multiple checks
+  if (!isCertified) {
+    // Apply strict water detection to calculated spots
+    if (isWaterSpot(location)) {
+      console.log(`Filtered out water location: ${location.name} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+      return null;
+    }
+    
+    // Extra safety check using our general validator
+    if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+      console.log(`Filtered out invalid astronomy location: ${location.name}`);
+      return null;
+    }
   }
   
   // Create the correct marker icon based on location type and hover state
@@ -186,7 +218,6 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      // Fix: Use onMouseOver and onMouseOut instead of eventHandlers
       onMouseOver={handleMouseOver}
       onMouseOut={handleMouseOut}
     >
