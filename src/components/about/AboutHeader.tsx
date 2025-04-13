@@ -2,7 +2,7 @@
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { Sparkles, MoonStar } from "lucide-react";
+import { MoonStar } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutHeader = () => {
@@ -41,7 +41,6 @@ const AboutHeader = () => {
       >
         <MoonStar className="h-8 w-8 text-primary" />
         <div className="bg-cosmic-800/30 backdrop-blur-sm p-2 rounded-full inline-flex items-center border border-cosmic-700/30">
-          <Sparkles className="h-4 w-4 text-blue-400 mr-1.5" />
           <span className="text-xs text-cosmic-200">
             {t("Astro SIQS 1.0", "Astro SIQS 1.0")}
           </span>
