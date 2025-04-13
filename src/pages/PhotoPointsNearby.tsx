@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -232,24 +233,26 @@ const PhotoPointsNearby: React.FC = () => {
   return (
     <PhotoPointsLayout>
       <div className="flex justify-between items-center mb-4">
-        <PhotoPointsHeader 
-          userLocation={effectiveLocation}
-          locationLoading={locationLoading}
-          getPosition={handleResetLocation}
-        />
-        
-        <Button 
-          onClick={toggleMapView}
-          variant="outline"
-          size="sm"
-          className="shadow-sm hover:bg-muted/60"
-        >
-          {showMap ? (
-            <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
-          ) : (
-            <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
-          )}
-        </Button>
+        <div className="flex items-center gap-4">
+          <PhotoPointsHeader 
+            userLocation={effectiveLocation}
+            locationLoading={locationLoading}
+            getPosition={handleResetLocation}
+          />
+          
+          <Button 
+            onClick={toggleMapView}
+            variant="outline"
+            size="sm"
+            className="shadow-sm hover:bg-muted/60"
+          >
+            {showMap ? (
+              <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
+            ) : (
+              <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
+            )}
+          </Button>
+        </div>
       </div>
       
       <ViewToggle
