@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, Calculator, ArrowRight, Github, Twitter } from "lucide-react";
+import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutFooter = () => {
@@ -81,6 +81,29 @@ const AboutFooter = () => {
         </Link>
       </motion.div>
       
+      <motion.div variants={buttonVariants} className="mt-8">
+        <h4 className="text-sm font-medium text-cosmic-100 mb-3 flex items-center justify-center gap-2">
+          <Info className="h-4 w-4 text-cosmic-300" />
+          {t("Quick Links", "快速链接")}
+        </h4>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link to="/siqs" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors">
+            {t("About SIQS", "关于SIQS")}
+          </Link>
+          <a href="https://www.darksky.org" target="_blank" rel="noopener noreferrer" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
+            {t("Dark Sky Association", "暗夜协会")}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+          <Link to="/photo-points" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors">
+            {t("Photo Locations", "摄影地点")}
+          </Link>
+          <a href="https://www.cleardarksky.com" target="_blank" rel="noopener noreferrer" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
+            {t("Clear Dark Sky", "晴朗暗夜")}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      </motion.div>
+      
       {/* Social links */}
       <motion.div variants={buttonVariants} className="flex justify-center gap-4 pt-4">
         <a href="https://github.com/bortle-now" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
@@ -88,6 +111,9 @@ const AboutFooter = () => {
         </a>
         <a href="https://twitter.com/bortlenow" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
           <Twitter size={20} />
+        </a>
+        <a href="https://www.darksky.org" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
+          <BookOpen size={20} />
         </a>
       </motion.div>
       
@@ -97,7 +123,7 @@ const AboutFooter = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
       >
-        {t("Bortle Now © 2025 — Making astronomy accessible for everyone", "Bortle Now © 2025 — 让天文学人人可及")}
+        {t("Bortle Now © 2025 — Making astronomical observation accessible for everyone", "Bortle Now © 2025 — 让天文观测人人可及")}
       </motion.div>
     </motion.div>
   );
