@@ -26,7 +26,10 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
           {t("About SIQS", "关于SIQS")}
         </NavLink>
         <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
-          {t("Photo Points Nearby", "周边拍摄点")}
+          {t("Photo Points", "拍摄点")}
+        </NavLink>
+        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
+          {t("Resources", "资源")}
         </NavLink>
         <NavLink to="/share" active={location.pathname === "/share"}>
           {t("Bortle Now", "实时光污染")}

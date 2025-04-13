@@ -8,7 +8,6 @@ import SiqsSection from "./SiqsSection";
 import ScienceSection from "./ScienceSection";
 import PhotoPointsFeature from "./PhotoPointsFeature";
 import DarkSkyKnowledge from "./DarkSkyKnowledge";
-import UsefulLinks from "./UsefulLinks";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export const AboutContent = () => {
@@ -39,7 +38,6 @@ export const AboutContent = () => {
       <SiqsSection />
       <DarkSkyKnowledge />
       <ScienceSection />
-      <UsefulLinks />
       
       <motion.div 
         className="w-full h-px bg-gradient-to-r from-cosmic-800/10 via-cosmic-400/30 to-cosmic-800/10 my-8"

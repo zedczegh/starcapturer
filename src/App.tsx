@@ -19,6 +19,7 @@ const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */
 const PhotoPointsNearby = lazy(() => import(/* webpackChunkName: "photo-points" */ "./pages/PhotoPointsNearby"));
 const AboutSIQS = lazy(() => import(/* webpackChunkName: "about-siqs" */ "./pages/AboutSIQS"));
 const About = lazy(() => import(/* webpackChunkName: "about" */ "./pages/About"));
+const UsefulLinks = lazy(() => import(/* webpackChunkName: "useful-links" */ "./pages/UsefulLinks"));
 
 // Create a new QueryClient instance with optimized settings
 const queryClient = new QueryClient({
@@ -97,6 +98,11 @@ const App = () => {
                 <Route path="/about" element={
                   <PageTransition>
                     <About />
+                  </PageTransition>
+                } />
+                <Route path="/useful-links" element={
+                  <PageTransition>
+                    <UsefulLinks />
                   </PageTransition>
                 } />
                 {/* Catch-all route */}

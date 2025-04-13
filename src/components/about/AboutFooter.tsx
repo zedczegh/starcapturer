@@ -90,17 +90,10 @@ const AboutFooter = () => {
           <Link to="/siqs" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors">
             {t("About SIQS", "关于SIQS")}
           </Link>
-          <a href="https://www.darksky.org" target="_blank" rel="noopener noreferrer" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
-            {t("Dark Sky Association", "暗夜协会")}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-          <Link to="/photo-points" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors">
-            {t("Photo Locations", "摄影地点")}
+          <Link to="/useful-links" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
+            {t("All Resources", "所有资源")}
+            <ArrowRight className="h-3 w-3" />
           </Link>
-          <a href="https://www.cleardarksky.com" target="_blank" rel="noopener noreferrer" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
-            {t("Clear Dark Sky", "晴朗暗夜")}
-            <ExternalLink className="h-3 w-3" />
-          </a>
         </div>
       </motion.div>
       
