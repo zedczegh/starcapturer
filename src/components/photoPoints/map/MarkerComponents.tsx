@@ -5,13 +5,13 @@ import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { 
-  getProgressColor,
   getSiqsClass, 
   isWaterSpot, 
   getCertificationColor, 
   getLocalizedLocationName,
   getChineseCertificationType
-} from '@/components/siqs/utils/progressColor';
+} from '@/utils/markerUtils';
+import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
