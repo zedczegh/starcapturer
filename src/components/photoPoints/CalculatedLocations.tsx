@@ -93,6 +93,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         initialLoad={initialLoad}
         isMobile={isMobile}
         onViewDetails={handleViewLocation}
+        onSelectLocation={handleViewLocation}
       />
       
       <LoadMoreButtons 

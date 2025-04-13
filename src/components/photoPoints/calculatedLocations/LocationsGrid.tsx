@@ -6,18 +6,30 @@ import { motion } from 'framer-motion';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
-  onSelectLocation: (location: SharedAstroSpot) => void;
+  onSelectLocation?: (location: SharedAstroSpot) => void;
   userLocation?: { latitude: number; longitude: number } | null;
+  initialLoad?: boolean; // Added missing prop
+  isMobile?: boolean; // Added missing prop
+  onViewDetails?: (point: SharedAstroSpot) => void; // Added missing prop
 }
 
 const LocationsGrid: React.FC<LocationsGridProps> = ({
   locations,
   onSelectLocation,
-  userLocation
+  userLocation,
+  initialLoad,
+  isMobile,
+  onViewDetails
 }) => {
   if (!locations || locations.length === 0) {
     return null;
   }
+
+  const handleSelect = (location: SharedAstroSpot) => {
+    if (onSelectLocation) {
+      onSelectLocation(location);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -30,8 +42,10 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
         >
           <PhotoPointCard
             point={location}
-            onSelect={onSelectLocation}
-            onViewDetails={() => onSelectLocation(location)}
+            onSelect={handleSelect}
+            onViewDetails={() => 
+              onViewDetails ? onViewDetails(location) : handleSelect(location)
+            }
             userLocation={userLocation}
           />
         </motion.div>

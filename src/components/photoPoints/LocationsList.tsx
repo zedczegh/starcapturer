@@ -7,12 +7,18 @@ interface LocationsListProps {
   locations: SharedAstroSpot[];
   onSelectLocation: (location: SharedAstroSpot) => void;
   userLocation?: { latitude: number; longitude: number } | null;
+  loading?: boolean; // Added missing prop
+  initialLoad?: boolean; // Added missing prop
+  onViewDetails?: (point: SharedAstroSpot) => void; // Added missing prop
 }
 
 const LocationsList: React.FC<LocationsListProps> = ({ 
   locations, 
   onSelectLocation, 
-  userLocation 
+  userLocation,
+  loading,
+  initialLoad,
+  onViewDetails
 }) => {
   if (!locations || locations.length === 0) {
     return (
@@ -29,7 +35,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
           key={`${point.id || point.name}-${point.latitude}-${point.longitude}`}
           point={point}
           onSelect={onSelectLocation}
-          onViewDetails={() => onSelectLocation(point)}
+          onViewDetails={() => (onViewDetails || onSelectLocation)(point)}
           userLocation={userLocation}
         />
       ))}

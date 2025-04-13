@@ -71,6 +71,7 @@ const LocationView: React.FC<LocationViewProps> = ({
       loading={loading}
       initialLoad={initialLoad}
       onViewDetails={handleViewLocation}
+      onSelectLocation={handleViewLocation}
     />
   );
 };
