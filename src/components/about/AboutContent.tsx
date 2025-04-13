@@ -36,7 +36,7 @@ export const AboutContent = () => {
       <ScienceSection />
       
       <motion.div 
-        className="w-full h-px bg-gradient-to-r from-cosmic-800/10 via-cosmic-400/20 to-cosmic-800/10 my-8"
+        className="w-full h-px bg-gradient-to-r from-cosmic-800/10 via-cosmic-400/30 to-cosmic-800/10 my-8"
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.8 }}

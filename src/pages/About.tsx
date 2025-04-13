@@ -1,18 +1,25 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { AboutContent } from "@/components/about/AboutContent";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star } from "lucide-react";
-import AboutHeader from "@/components/about/AboutHeader";
-import AboutFooter from "@/components/about/AboutFooter";
 import { useIsMobile } from "@/hooks/use-mobile";
+import AboutHeader from "@/components/about/AboutHeader";
+import AboutContent from "@/components/about/AboutContent";
+import AboutFooter from "@/components/about/AboutFooter";
+import AboutTeam from "@/components/about/AboutTeam";
+import AboutTimeline from "@/components/about/AboutTimeline";
 
 const About = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    // Scroll to top when page loads
+    window.scrollTo(0, 0);
+  }, []);
   
   return (
     <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-20 relative overflow-hidden">
@@ -68,9 +75,33 @@ const About = () => {
           />
         ))}
         
-        {/* Background gradient */}
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl" />
-        <div className="absolute bottom-1/3 left-1/3 w-80 h-80 bg-purple-600/10 rounded-full filter blur-3xl" />
+        {/* Background gradient orbs */}
+        <motion.div 
+          className="absolute -top-20 -right-20 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl"
+          animate={{
+            y: [0, 15, 0],
+            opacity: [0.5, 0.7, 0.5],
+          }}
+          transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
+        />
+        
+        <motion.div 
+          className="absolute -bottom-32 -left-20 w-96 h-96 bg-purple-600/10 rounded-full filter blur-3xl"
+          animate={{
+            y: [0, -15, 0],
+            opacity: [0.5, 0.7, 0.5],
+          }}
+          transition={{ duration: 7, repeat: Infinity, repeatType: "reverse" }}
+        />
+        
+        <motion.div 
+          className="absolute top-1/3 left-2/3 w-80 h-80 bg-teal-600/10 rounded-full filter blur-3xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
+        />
       </div>
 
       <div className="container max-w-4xl mx-auto px-4 py-8 md:py-12 relative z-10">
@@ -113,6 +144,10 @@ const About = () => {
           className="space-y-8"
         >
           <AboutContent />
+          
+          <AboutTeam />
+          
+          <AboutTimeline />
           
           <AboutFooter />
         </motion.div>

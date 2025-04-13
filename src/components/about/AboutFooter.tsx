@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, Calculator, ArrowRight } from "lucide-react";
+import { Home, MapPin, Calculator, ArrowRight, Github, Twitter } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutFooter = () => {
@@ -18,7 +18,7 @@ const AboutFooter = () => {
 
   return (
     <motion.div 
-      className={`mt-12 text-center space-y-6 bg-cosmic-900/60 backdrop-blur-sm p-6 rounded-xl border border-cosmic-700/20 relative ${isMobile ? '' : 'overflow-hidden'}`}
+      className={`mt-12 text-center space-y-6 bg-cosmic-900/60 backdrop-blur-sm p-6 rounded-xl border border-cosmic-700/30 relative ${isMobile ? '' : 'overflow-hidden'}`}
       initial="hidden"
       animate="visible"
       variants={{
@@ -79,6 +79,16 @@ const AboutFooter = () => {
             {t("Calculate SIQS", "计算SIQS")}
           </Button>
         </Link>
+      </motion.div>
+      
+      {/* Social links */}
+      <motion.div variants={buttonVariants} className="flex justify-center gap-4 pt-4">
+        <a href="https://github.com/bortle-now" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
+          <Github size={20} />
+        </a>
+        <a href="https://twitter.com/bortlenow" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
+          <Twitter size={20} />
+        </a>
       </motion.div>
       
       <motion.div 
