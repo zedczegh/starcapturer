@@ -1,4 +1,3 @@
-
 interface LinkData {
   title: string;
   titleZh: string;
@@ -19,6 +18,33 @@ export const linksData: LinkData[] = [
     type: "Tutorial",
     description: "Tutorial for NINA backlash measurement and motor control settings",
     descriptionZh: "NINA精细测量回差并设置电调参数教程"
+  },
+  {
+    title: "NINA - Nighttime Imaging 'N' Astronomy",
+    titleZh: "NINA - 夜间成像与天文",
+    url: "https://nighttime-imaging.eu/",
+    category: "Software",
+    type: "Software",
+    description: "Free and open source astrophotography suite",
+    descriptionZh: "免费开源天文摄影软件套件"
+  },
+  {
+    title: "NINA Official Documentation",
+    titleZh: "NINA官方文档",
+    url: "https://nighttime-imaging.eu/docs/master/",
+    category: "Software",
+    type: "Tutorial",
+    description: "Official documentation for NINA software",
+    descriptionZh: "NINA软件官方文档"
+  },
+  {
+    title: "NINA Plugin Repository",
+    titleZh: "NINA插件仓库",
+    url: "https://github.com/NINA-Plugins",
+    category: "Software",
+    type: "Plugin",
+    description: "Official repository for NINA plugins",
+    descriptionZh: "NINA官方插件仓库"
   },
   
   // PixInsight
@@ -461,7 +487,7 @@ export const linksData: LinkData[] = [
     category: "Resource",
     type: "Review",
     description: "Comparative analysis of astrophotography filters",
-    descriptionZh: "天文摄影滤镜的比较分析"
+    descriptionZh: "天文摄影滤��的比较分析"
   },
   {
     title: "PC Mobile Hotspot",
@@ -543,5 +569,123 @@ export const linksData: LinkData[] = [
     type: "Resource",
     description: "Astronomy software suite for Raspberry Pi",
     descriptionZh: "树莓派上的天文软件套件"
+  },
+  
+  // Astronomy Apps
+  {
+    title: "SkySafari",
+    titleZh: "SkySafari天文应用",
+    url: "https://skysafariastronomy.com/",
+    category: "Mobile",
+    type: "App",
+    description: "Popular astronomy app for stargazing and telescope control",
+    descriptionZh: "流行的观星和望远镜控制天文应用"
+  },
+  {
+    title: "NASA App",
+    titleZh: "NASA应用",
+    url: "https://www.nasa.gov/connect/apps.html",
+    category: "Mobile",
+    type: "App",
+    description: "Official NASA app with images, news, and live streams",
+    descriptionZh: "NASA官方应用，包含图像、新闻和直播"
+  },
+  {
+    title: "ISS Detector",
+    titleZh: "国际空间站检测器",
+    url: "https://www.issdetector.com/",
+    category: "Mobile", 
+    type: "App",
+    description: "Track the ISS and other satellites in real-time",
+    descriptionZh: "实时跟踪国际空间站和其他卫星"
+  },
+  
+  // Learning Resources
+  {
+    title: "AstroBin",
+    titleZh: "AstroBin",
+    url: "https://www.astrobin.com/",
+    category: "Community",
+    type: "Gallery",
+    description: "Image hosting for astrophotographers with EXIF data sharing",
+    descriptionZh: "天文摄影师图像托管，支持EXIF数据共享"
+  },
+  {
+    title: "Cloudy Nights",
+    titleZh: "Cloudy Nights",
+    url: "https://www.cloudynights.com/",
+    category: "Community",
+    type: "Forum",
+    description: "Large astronomy and astrophotography community forum",
+    descriptionZh: "大型天文和天文摄影社区论坛"
+  },
+  {
+    title: "Astro Photography Tool",
+    titleZh: "天文摄影工具",
+    url: "https://astrophotography.tool/",
+    category: "Software",
+    type: "Tool",
+    description: "Dedicated software for astrophotography image acquisition",
+    descriptionZh: "专用天文摄影图像采集软件"
+  },
+  
+  // Calibration & Tools
+  {
+    title: "PixelMath Calculator",
+    titleZh: "像素数学计算器",
+    url: "https://pixinsight.com.ar/pics/PixelMath_Calculator.htm",
+    category: "Resource",
+    type: "Tool",
+    description: "Calculator for PixInsight's PixelMath expressions",
+    descriptionZh: "PixInsight像素数学表达式计算器"
+  },
+  {
+    title: "DeepSkyStacker",
+    titleZh: "DeepSkyStacker",
+    url: "http://deepskystacker.free.fr/",
+    category: "Software",
+    type: "Tool",
+    description: "Free stacking software for deep sky images",
+    descriptionZh: "深空图像免费堆栈软件"
+  },
+  {
+    title: "Astronomy Picture of the Day",
+    titleZh: "每日天文图片",
+    url: "https://apod.nasa.gov/apod/",
+    category: "Resource",
+    type: "Gallery",
+    description: "NASA's daily featured astronomy image and explanation",
+    descriptionZh: "NASA每日精选天文图片及解释"
+  },
+  
+  // Space Weather
+  {
+    title: "Space Weather Live",
+    titleZh: "太空天气直播",
+    url: "https://www.spaceweatherlive.com/",
+    category: "Weather",
+    type: "Space Weather",
+    description: "Real-time information about solar activity and aurora forecasts",
+    descriptionZh: "太阳活动和极光预报的实时信息"
+  },
+  {
+    title: "Aurora Forecast",
+    titleZh: "极光预报",
+    url: "https://www.swpc.noaa.gov/products/aurora-30-minute-forecast",
+    category: "Weather",
+    type: "Space Weather",
+    description: "NOAA's 30-minute aurora forecast",
+    descriptionZh: "NOAA的30分钟极光预报"
+  },
+  
+  // Star Catalogs
+  {
+    title: "SIMBAD Astronomical Database",
+    titleZh: "SIMBAD天文数据库",
+    url: "http://simbad.u-strasbg.fr/simbad/",
+    category: "Data",
+    type: "Database",
+    description: "Reference database for astronomical objects beyond the solar system",
+    descriptionZh: "太阳系外天文对象参考数据库"
   }
 ];
