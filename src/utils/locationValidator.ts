@@ -21,112 +21,80 @@ export const isWaterLocation = (
   // Enhanced water detection algorithm
   
   // Major oceans
-  // Pacific Ocean (expanded coverage)
-  if (latitude > -65 && latitude < 65 && 
-      ((longitude > 145 || longitude < -125))) {
+  // Pacific Ocean
+  if (latitude > -60 && latitude < 60 && 
+      ((longitude > 150 || longitude < -120))) {
     return true;
   }
   
-  // Atlantic Ocean (expanded coverage)
-  if (latitude > -55 && latitude < 70 && 
-      longitude > -85 && longitude < -5) {
+  // Atlantic Ocean
+  if (latitude > -50 && latitude < 65 && 
+      longitude > -80 && longitude < -10) {
     return true;
   }
   
-  // Indian Ocean (expanded coverage)
-  if (latitude > -55 && latitude < 35 && 
-      longitude > 25 && longitude < 125) {
+  // Indian Ocean
+  if (latitude > -50 && latitude < 30 && 
+      longitude > 30 && longitude < 120) {
     return true;
   }
   
-  // Mediterranean Sea (expanded coverage)
-  if (latitude > 28 && latitude < 47 && 
-      longitude > -7 && longitude < 42) {
+  // Mediterranean Sea
+  if (latitude > 30 && latitude < 45 && 
+      longitude > -5 && longitude < 40) {
     return true;
   }
   
-  // South China Sea (expanded coverage)
-  if (latitude > -2 && latitude < 27 && 
-      longitude > 103 && longitude < 127) {
+  // South China Sea
+  if (latitude > 0 && latitude < 25 && 
+      longitude > 105 && longitude < 125) {
     return true;
   }
   
-  // Caribbean Sea (expanded coverage)
-  if (latitude > 8 && latitude < 27 && 
-      longitude > -87 && longitude < -58) {
+  // Caribbean Sea
+  if (latitude > 10 && latitude < 25 && 
+      longitude > -85 && longitude < -60) {
     return true;
   }
   
-  // Gulf of Mexico (expanded coverage)
-  if (latitude > 16 && latitude < 32 && 
-      longitude > -100 && longitude < -80) {
+  // Gulf of Mexico
+  if (latitude > 18 && latitude < 30 && 
+      longitude > -98 && longitude < -82) {
     return true;
   }
   
-  // Arabian Sea (expanded coverage)
-  if (latitude > 3 && latitude < 27 && 
-      longitude > 48 && longitude < 77) {
+  // Arabian Sea
+  if (latitude > 5 && latitude < 25 && 
+      longitude > 50 && longitude < 75) {
     return true;
   }
   
   // Additional regional seas
   
-  // Baltic Sea (expanded coverage)
-  if (latitude > 51 && latitude < 68 && 
-      longitude > 8 && longitude < 32) {
+  // Baltic Sea
+  if (latitude > 53 && latitude < 66 && 
+      longitude > 10 && longitude < 30) {
     return true;
   }
   
-  // Black Sea (expanded coverage)
-  if (latitude > 38 && latitude < 50 && 
-      longitude > 25 && longitude < 44) {
+  // Black Sea
+  if (latitude > 40 && latitude < 48 && 
+      longitude > 27 && longitude < 42) {
     return true;
   }
   
-  // Red Sea (expanded coverage)
-  if (latitude > 10 && latitude < 32 && 
-      longitude > 30 && longitude < 45) {
+  // Red Sea
+  if (latitude > 12 && latitude < 30 && 
+      longitude > 32 && longitude < 43) {
     return true;
   }
   
-  // Great Lakes (expanded coverage)
-  if ((latitude > 39 && latitude < 51 && 
-       longitude > -95 && longitude < -74) &&
+  // Great Lakes
+  if ((latitude > 41 && latitude < 49 && 
+       longitude > -93 && longitude < -76) &&
       // Specific Great Lakes regions
-      ((latitude > 39 && latitude < 46 && longitude > -89 && longitude < -80) || // Lake Erie & Ontario
-       (latitude > 41 && latitude < 51 && longitude > -95 && longitude < -80))) { // Other Great Lakes
-    return true;
-  }
-  
-  // Additional water bodies
-  
-  // Caspian Sea
-  if (latitude > 36 && latitude < 48 && 
-      longitude > 46 && longitude < 56) {
-    return true;
-  }
-  
-  // Bay of Bengal
-  if (latitude > 5 && latitude < 24 && 
-      longitude > 80 && longitude < 95) {
-    return true;
-  }
-  
-  // Yellow Sea & East China Sea
-  if (latitude > 24 && latitude < 41 && 
-      longitude > 118 && longitude < 130) {
-    return true;
-  }
-  
-  // Sea of Japan
-  if (latitude > 33 && latitude < 48 && 
-      longitude > 127 && longitude < 142) {
-    return true;
-  }
-  
-  // North Sea
-  if (latitude > 51 && latitude < 62 && 
-      longitude > -4 && longitude < 9) {
+      ((latitude > 41 && latitude < 44 && longitude > -88 && longitude < -82) || // Lake Erie
+       (latitude > 43 && latitude < 49 && longitude > -93 && longitude < -82))) { // Other Great Lakes
     return true;
   }
   
@@ -146,25 +114,19 @@ export const isLikelyCoastalWater = (
 ): boolean => {
   // Enhanced coastal waters detection
   
-  // US East Coast (expanded)
-  if (latitude > 23 && latitude < 47 && 
-      longitude > -82 && longitude < -68) {
+  // US East Coast
+  if (latitude > 25 && latitude < 45 && 
+      longitude > -80 && longitude < -70) {
     // Known coastal areas with many water locations
     const knownCoastalPoints = [
-      {lat: 40.7, lng: -74.0, radius: 0.5}, // NYC area
-      {lat: 42.3, lng: -71.0, radius: 0.5}, // Boston area
-      {lat: 38.9, lng: -77.0, radius: 0.4}, // DC area
-      {lat: 25.8, lng: -80.2, radius: 0.6}, // Miami area
-      {lat: 39.2, lng: -76.5, radius: 0.4}, // Baltimore
-      {lat: 29.7, lng: -95.4, radius: 0.6}, // Houston
-      {lat: 32.8, lng: -79.9, radius: 0.4}, // Charleston
-      {lat: 33.8, lng: -78.7, radius: 0.4}, // Myrtle Beach
-      {lat: 41.5, lng: -71.3, radius: 0.4}, // Rhode Island
-      {lat: 43.0, lng: -70.7, radius: 0.4}, // Portsmouth
-      {lat: 37.5, lng: -76.0, radius: 0.5}, // Chesapeake Bay
-      {lat: 27.8, lng: -82.5, radius: 0.5}, // Tampa
-      {lat: 30.3, lng: -81.6, radius: 0.4}, // Jacksonville
-      {lat: 32.1, lng: -81.1, radius: 0.4}, // Savannah
+      {lat: 40.7, lng: -74.0, radius: 0.4}, // NYC area
+      {lat: 42.3, lng: -71.0, radius: 0.4}, // Boston area
+      {lat: 38.9, lng: -77.0, radius: 0.3}, // DC area
+      {lat: 25.8, lng: -80.2, radius: 0.5}, // Miami area
+      {lat: 39.2, lng: -76.5, radius: 0.3}, // Baltimore
+      {lat: 29.7, lng: -95.4, radius: 0.5}, // Houston
+      {lat: 32.8, lng: -79.9, radius: 0.3}, // Charleston
+      {lat: 33.8, lng: -78.7, radius: 0.3}, // Myrtle Beach
     ];
     
     for (const point of knownCoastalPoints) {
@@ -179,59 +141,18 @@ export const isLikelyCoastalWater = (
     }
   }
   
-  // US West Coast (new)
-  if (latitude > 32 && latitude < 49 && 
-      longitude > -125 && longitude < -117) {
-    // Major coastal cities and bays
-    const westCoastPoints = [
-      {lat: 37.8, lng: -122.4, radius: 0.6}, // San Francisco
-      {lat: 34.0, lng: -118.5, radius: 0.6}, // Los Angeles
-      {lat: 32.7, lng: -117.2, radius: 0.5}, // San Diego
-      {lat: 47.6, lng: -122.3, radius: 0.5}, // Seattle
-      {lat: 45.5, lng: -122.7, radius: 0.5}, // Portland
-      {lat: 38.3, lng: -123.0, radius: 0.4}, // Bodega Bay
-      {lat: 36.6, lng: -121.9, radius: 0.4}, // Monterey
-      {lat: 35.4, lng: -120.9, radius: 0.4}, // Morro Bay
-      {lat: 33.7, lng: -118.2, radius: 0.5}, // Long Beach
-      {lat: 33.6, lng: -117.9, radius: 0.4}, // Newport Beach
-    ];
-    
-    for (const point of westCoastPoints) {
-      const distance = Math.sqrt(
-        Math.pow(latitude - point.lat, 2) + 
-        Math.pow(longitude - point.lng, 2)
-      );
-      
-      if (distance < point.radius) {
-        return true;
-      }
-    }
-  }
-  
-  // European coastline (expanded)
-  if (latitude > 34 && latitude < 62 && 
-      longitude > -12 && longitude < 22) {
+  // European coastline
+  if (latitude > 36 && latitude < 60 && 
+      longitude > -10 && longitude < 20) {
     // Major coastal cities and bays
     const europeanCoastal = [
-      {lat: 51.5, lng: -0.1, radius: 0.4}, // London
-      {lat: 53.4, lng: -3.0, radius: 0.4}, // Liverpool
-      {lat: 43.3, lng: -3.0, radius: 0.4}, // Northern Spain
-      {lat: 41.4, lng: 2.2, radius: 0.4}, // Barcelona
-      {lat: 43.7, lng: 7.2, radius: 0.3}, // Monaco/Nice
-      {lat: 40.8, lng: 14.2, radius: 0.4}, // Naples
-      {lat: 37.9, lng: 23.7, radius: 0.4}, // Athens
-      {lat: 55.7, lng: 12.6, radius: 0.4}, // Copenhagen
-      {lat: 59.3, lng: 18.1, radius: 0.4}, // Stockholm
-      {lat: 60.2, lng: 24.9, radius: 0.4}, // Helsinki
-      {lat: 38.7, lng: -9.1, radius: 0.4}, // Lisbon
-      {lat: 36.8, lng: -6.3, radius: 0.4}, // Cadiz
-      {lat: 43.5, lng: -8.2, radius: 0.4}, // La Coruña
-      {lat: 47.2, lng: -1.6, radius: 0.4}, // Nantes
-      {lat: 50.8, lng: -1.1, radius: 0.4}, // Portsmouth UK
-      {lat: 48.6, lng: 2.4, radius: 0.4}, // Le Havre
-      {lat: 53.5, lng: 10.0, radius: 0.4}, // Hamburg
-      {lat: 43.3, lng: 5.4, radius: 0.4}, // Marseille
-      {lat: 45.4, lng: 12.3, radius: 0.4}, // Venice
+      {lat: 51.5, lng: -0.1, radius: 0.3}, // London
+      {lat: 53.4, lng: -3.0, radius: 0.3}, // Liverpool
+      {lat: 43.3, lng: -3.0, radius: 0.3}, // Northern Spain
+      {lat: 41.4, lng: 2.2, radius: 0.3}, // Barcelona
+      {lat: 43.7, lng: 7.2, radius: 0.2}, // Monaco/Nice
+      {lat: 40.8, lng: 14.2, radius: 0.3}, // Naples
+      {lat: 37.9, lng: 23.7, radius: 0.3}, // Athens
     ];
     
     for (const point of europeanCoastal) {
@@ -246,26 +167,16 @@ export const isLikelyCoastalWater = (
     }
   }
   
-  // East Asian coastlines (expanded)
-  if (latitude > 18 && latitude < 47 && 
-      longitude > 108 && longitude < 147) {
+  // East Asian coastlines
+  if (latitude > 20 && latitude < 45 && 
+      longitude > 110 && longitude < 145) {
     // Major coastal cities
     const asianCoastal = [
-      {lat: 35.6, lng: 139.8, radius: 0.4}, // Tokyo Bay
-      {lat: 31.2, lng: 121.5, radius: 0.4}, // Shanghai
-      {lat: 22.3, lng: 114.2, radius: 0.4}, // Hong Kong
-      {lat: 37.6, lng: 126.8, radius: 0.3}, // Seoul/Incheon
-      {lat: 35.2, lng: 129.0, radius: 0.3}, // Busan
-      {lat: 34.7, lng: 135.5, radius: 0.4}, // Osaka
-      {lat: 25.0, lng: 121.5, radius: 0.4}, // Taipei
-      {lat: 1.3, lng: 103.8, radius: 0.4}, // Singapore
-      {lat: 13.7, lng: 100.5, radius: 0.4}, // Bangkok
-      {lat: 10.8, lng: 106.7, radius: 0.4}, // Ho Chi Minh
-      {lat: 14.6, lng: 120.9, radius: 0.4}, // Manila
-      {lat: 39.1, lng: 117.2, radius: 0.4}, // Tianjin
-      {lat: 23.1, lng: 113.3, radius: 0.4}, // Guangzhou
-      {lat: 38.9, lng: 121.6, radius: 0.4}, // Dalian
-      {lat: 36.4, lng: 120.4, radius: 0.4}, // Qingdao
+      {lat: 35.6, lng: 139.8, radius: 0.3}, // Tokyo Bay
+      {lat: 31.2, lng: 121.5, radius: 0.3}, // Shanghai
+      {lat: 22.3, lng: 114.2, radius: 0.3}, // Hong Kong
+      {lat: 37.6, lng: 126.8, radius: 0.2}, // Seoul/Incheon
+      {lat: 35.2, lng: 129.0, radius: 0.2}, // Busan
     ];
     
     for (const point of asianCoastal) {
@@ -316,18 +227,14 @@ export const isValidAstronomyLocation = (
     return false;
   }
   
-  // If location has a name that suggests water (expanded list)
+  // If location has a name that suggests water (optional check)
   if (locationName) {
     const lowerName = locationName.toLowerCase();
     const waterKeywords = [
       'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
       'channel', 'sound', 'harbor', 'harbour', 'port', 
       'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach',
-      'water', 'river', 'stream', 'creek', 'estuary', 'shore',
-      'waterway', 'waterfront', 'quay', 'dock', 'jetty', 'ferry',
-      'wharf', 'dam', 'boating', 'maritime', 'cruise', 'sailing',
-      'coastline', 'coastal', 'seashore', 'oceanfront', 'bayfront'
+      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
     ];
     
     for (const keyword of waterKeywords) {

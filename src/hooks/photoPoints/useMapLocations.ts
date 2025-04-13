@@ -8,7 +8,6 @@ import {
   separateLocationTypes, 
   mergeLocations 
 } from '@/utils/locationFiltering';
-import { preFilterWaterLocations } from '@/utils/markerUtils';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -30,36 +29,24 @@ export const useMapLocations = ({
 }: UseMapLocationsProps) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
-  const [error, setError] = useState<Error | null>(null);
 
-  // Update locations with real-time SIQS with improved error handling
+  // Update locations with real-time SIQS
   const updateWithRealTimeSiqs = useCallback(async () => {
-    if (!mapReady || !locations.length) return false;
+    if (!mapReady || !locations.length) return;
     
     try {
-      // Pre-filter invalid locations before processing
-      const validLocations = locations.filter(loc => 
-        loc && typeof loc.latitude === 'number' && 
-        typeof loc.longitude === 'number' &&
-        !isNaN(loc.latitude) && !isNaN(loc.longitude)
-      );
-      
-      if (validLocations.length === 0) {
-        console.log("No valid locations to update");
-        return false;
-      }
-      
-      // Process valid locations
-      const filteredLocations = filterValidLocations(validLocations);
-      const { certifiedLocations, calculatedLocations } = separateLocationTypes(filteredLocations);
-      
-      // Pre-filter water locations from calculated spots
-      const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
+      const validLocations = filterValidLocations(locations);
+      const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
       
       // Only update locations relevant to current view
       const locationsToUpdate = activeView === 'certified' 
         ? certifiedLocations 
-        : [...certifiedLocations, ...filteredCalculatedLocations.filter(loc => {
+        : [...certifiedLocations, ...calculatedLocations.filter(loc => {
+            // Skip water locations for calculated spots
+            if (!loc.isDarkSkyReserve && !loc.certification && !loc.latitude || !loc.longitude) {
+              return false;
+            }
+            
             // Filter by distance for calculated view
             if (userLocation && loc.latitude && loc.longitude) {
               const distance = calculateDistance(
@@ -82,13 +69,10 @@ export const useMapLocations = ({
       );
       
       if (updated && updated.length > 0) {
-        // Only update state if component is still mounted
         setEnhancedLocations(prevLocations => {
           const combinedLocations = [...prevLocations];
           
-          const filteredUpdated = preFilterWaterLocations(updated);
-          
-          filteredUpdated.forEach(newLoc => {
+          updated.forEach(newLoc => {
             if (!newLoc.latitude || !newLoc.longitude) return;
             
             const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
@@ -112,54 +96,34 @@ export const useMapLocations = ({
           
           return combinedLocations;
         });
-        
-        return true;
       }
     } catch (error) {
       console.error('Error updating locations with real-time SIQS:', error);
-      setError(error instanceof Error ? error : new Error('Unknown error updating locations'));
     }
     
+    // Return false to avoid TypeScript Promise<boolean> error
     return false;
   }, [locations, userLocation, mapReady, searchRadius, activeView]);
 
   // Process locations
   useEffect(() => {
-    try {
-      if (!locations) {
-        setProcessedLocations([]);
-        return;
-      }
-      
-      // Ensure all locations are valid
-      const validLocations = filterValidLocations(locations);
-      const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-      
-      // Pre-filter water locations from calculated spots
-      const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
-      
-      const mergedLocations = mergeLocations(
-        certifiedLocations, 
-        filteredCalculatedLocations, 
-        activeView
-      );
-      
-      // Use enhanced locations if available, otherwise use merged locations
-      const locationsToShow = enhancedLocations.length > 0 ? 
-        // Apply active view filtering to enhanced locations
-        activeView === 'certified' 
-          ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-          : preFilterWaterLocations(enhancedLocations)  // Apply water filtering here too
-        : mergedLocations;
-      
-      setProcessedLocations(locationsToShow);
-    } catch (err) {
-      console.error("Error processing locations:", err);
-      setError(err instanceof Error ? err : new Error('Unknown error processing locations'));
-    }
+    const validLocations = filterValidLocations(locations);
+    const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+    const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
+    
+    // Use enhanced locations if available, otherwise use merged locations
+    const locationsToShow = enhancedLocations.length > 0 ? 
+      // Apply active view filtering to enhanced locations
+      activeView === 'certified' 
+        ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
+        : enhancedLocations
+      : mergedLocations;
+    
+    setProcessedLocations(locationsToShow);
+    
   }, [locations, activeView, enhancedLocations]);
 
-  // Update locations with real-time SIQS with debounce
+  // Update locations with real-time SIQS
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       updateWithRealTimeSiqs();
@@ -169,9 +133,6 @@ export const useMapLocations = ({
   }, [updateWithRealTimeSiqs]);
 
   return {
-    processedLocations,
-    error
+    processedLocations
   };
 };
-
-export default useMapLocations;

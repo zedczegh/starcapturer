@@ -1,10 +1,11 @@
+
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
  * Any changes should be carefully tested to avoid breaking the map functionality.
  */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from "@/utils/locationValidator";
+import { isWaterLocation } from "@/utils/locationValidator";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 
 /**
@@ -21,7 +22,6 @@ export const getSiqsClass = (siqs?: number): string => {
 
 /**
  * Determines if a location is a water spot (for filtering)
- * Enhanced with aggressive detection to completely prevent water locations
  * @param location Location to check
  * @returns boolean indicating if location is a water spot
  */
@@ -31,75 +31,12 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
     return false;
   }
   
-  // Use enhanced aggressive water detection
-  if (isWaterLocation(location.latitude, location.longitude, false)) {
-    return true;
-  }
-  
-  // Check coastal water
-  if (isLikelyCoastalWater(location.latitude, location.longitude)) {
-    return true;
-  }
-  
-  // Name-based water detection
-  if (location.name) {
-    const lowerName = location.name.toLowerCase();
-    const waterKeywords = [
-      'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
-      'channel', 'sound', 'harbor', 'harbour', 'port', 
-      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach',
-      'water', 'river', 'stream', 'creek', 'estuary', 'shore',
-      'waterway', 'waterfront', 'quay', 'dock', 'jetty', 'ferry',
-      'wharf', 'dam', 'boating', 'maritime', 'cruise', 'sailing',
-      'coastline', 'coastal', 'seashore', 'oceanfront', 'bayfront'
-    ];
-    
-    for (const keyword of waterKeywords) {
-      if (lowerName.includes(keyword)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
-};
-
-/**
- * Pre-filter locations for map display - remove water locations completely
- * @param locations Array of locations to filter
- * @returns Array with water locations removed
- */
-export const preFilterWaterLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-  return locations.filter(location => {
-    // Keep all certified locations
-    if (location.isDarkSkyReserve || location.certification) {
-      return true;
-    }
-    
-    // Filter out invalid coordinates
-    if (!location || 
-        typeof location.latitude !== 'number' || 
-        typeof location.longitude !== 'number' ||
-        isNaN(location.latitude) || 
-        isNaN(location.longitude) ||
-        Math.abs(location.latitude) > 90 ||
-        Math.abs(location.longitude) > 180) {
-      return false;
-    }
-    
-    // Filter out water locations
-    if (isWaterSpot(location)) {
-      return false;
-    }
-    
-    // Final validation
-    if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-      return false;
-    }
-    
-    return true;
-  });
+  // Use enhanced water detection
+  return isWaterLocation(
+    location.latitude, 
+    location.longitude, 
+    Boolean(location.isDarkSkyReserve || location.certification)
+  );
 };
 
 /**
