@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/locationValidator';
@@ -39,6 +38,54 @@ export const useMapLocations = ({
     );
   }, []);
 
+  // Process calculated locations to reduce redundant API calls by keeping only 1 location within 50km radius
+  const processCalculatedLocations = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+    if (!locations || locations.length <= 1) return locations;
+    
+    const processedLocations: SharedAstroSpot[] = [];
+    const locationMap = new Map<string, boolean>();
+    
+    // Sort by SIQS score (highest first) if available
+    const sortedLocations = [...locations].sort((a, b) => {
+      const aScore = a.siqs || 0;
+      const bScore = b.siqs || 0;
+      return bScore - aScore;
+    });
+    
+    for (const location of sortedLocations) {
+      // Always include certified locations
+      if (location.isDarkSkyReserve || location.certification) {
+        processedLocations.push(location);
+        continue;
+      }
+      
+      // Check if this location is within 50km of any location we already added
+      let isDuplicate = false;
+      for (const existingLocation of processedLocations) {
+        if (!existingLocation.isDarkSkyReserve && !existingLocation.certification) {
+          const distance = calculateDistance(
+            location.latitude,
+            location.longitude,
+            existingLocation.latitude,
+            existingLocation.longitude
+          );
+          
+          if (distance <= 50) { // 50km radius check
+            isDuplicate = true;
+            break;
+          }
+        }
+      }
+      
+      // If not a duplicate or within 50km of another location, add it
+      if (!isDuplicate) {
+        processedLocations.push(location);
+      }
+    }
+    
+    return processedLocations;
+  }, []);
+
   // Extract certified and calculated locations
   const separateLocationTypes = useCallback((locations: SharedAstroSpot[]) => {
     const certifiedLocations = locations.filter(location => 
@@ -51,8 +98,11 @@ export const useMapLocations = ({
       (location.certification && location.certification !== ''))
     );
 
-    return { certifiedLocations, calculatedLocations };
-  }, []);
+    // Process calculated locations to reduce redundancy
+    const processedCalculatedLocations = processCalculatedLocations(calculatedLocations);
+
+    return { certifiedLocations, calculatedLocations: processedCalculatedLocations };
+  }, [processCalculatedLocations]);
 
   // Merge locations according to active view
   const mergeLocations = useCallback((
@@ -174,7 +224,7 @@ export const useMapLocations = ({
     
   }, [locations, activeView, enhancedLocations, filterValidLocations, separateLocationTypes, mergeLocations]);
 
-  // Update locations with real-time SIQS
+  // Update locations with real-time SIQS with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       updateWithRealTimeSiqs();

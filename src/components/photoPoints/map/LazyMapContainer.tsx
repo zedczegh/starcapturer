@@ -1,115 +1,71 @@
 
-import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
-import L from 'leaflet';  
-import 'leaflet/dist/leaflet.css';
-import './MarkerStyles.css'; // Import custom marker styles
+import React, { useEffect, useRef, useState } from 'react';
+import { MapContainer, TileLayer, useMap, Marker, Circle, Popup } from 'react-leaflet';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { WorldBoundsController, MapEvents } from './MapComponents';
-import { UserLocationMarker, LocationMarker } from './MarkerComponents';
-import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
-import { MapController } from './MapController';
-import MapEffectsComposer from './effects/MapEffectsComposer';
+import { createLightPollutionMarker } from './MapMarkerUtils';
+import 'leaflet/dist/leaflet.css';
 
-// Configure Leaflet on load
-configureLeaflet();
+// Reset the Leaflet icon paths
+import { Icon, DivIcon, Marker as LeafletMarker, map } from 'leaflet';
+import { createRestaurantMarker, createUserMarker } from '@/components/location/map/MapMarkerUtils';
 
-interface PhotoPointsMapContainerProps {
+// Fix Leaflet marker icon issue
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete (Icon.Default.prototype as any)._getIconUrl;
+Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
+
+interface LazyMapContainerProps {
   center: [number, number];
+  zoom: number;
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady: () => void;
+  onMapReady?: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
-  zoom?: number;
-  hoveredLocationId: string | null;
-  onMarkerHover: (id: string | null) => void;
+  hoveredLocationId?: string | null;
+  onMarkerHover?: (id: string | null) => void;
 }
 
-// Use a function to efficiently chunk marker rendering
-function chunkArray<T>(array: T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += chunkSize) {
-    chunks.push(array.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
-const MarkerGroup = React.memo(({ 
-  locations, 
-  onLocationClick,
-  hoveredLocationId,
-  onMarkerHover,
-  isCertified,
-  hideMarkerPopups
-}: { 
-  locations: SharedAstroSpot[], 
-  onLocationClick?: (location: SharedAstroSpot) => void,
-  hoveredLocationId: string | null,
-  onMarkerHover: (id: string | null) => void,
-  isCertified: boolean,
-  hideMarkerPopups: boolean
-}) => {
-  return (
-    <>
-      {locations.map((location) => {
-        // Only render markers with valid coordinates
-        if (!location || 
-            typeof location.latitude !== 'number' || 
-            typeof location.longitude !== 'number' ||
-            isNaN(location.latitude) || 
-            isNaN(location.longitude)) {
-          return null;
-        }
-        
-        // Generate a unique ID for this location
-        const locationId = location.id || 
-          `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-        
-        // Handle the click event for this marker
-        const handleClick = () => {
-          if (onLocationClick) {
-            onLocationClick(location);
-          }
-        };
-        
-        return (
-          <LocationMarker
-            key={locationId}
-            location={location}
-            onClick={handleClick}
-            isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
-            onHover={hideMarkerPopups ? () => {} : onMarkerHover}
-            locationId={locationId}
-            isCertified={isCertified}
-          />
-        );
-      })}
-    </>
-  );
-});
-
-// Separate component to update map center properly
-const MapCenterHandler = ({ center }: { center: [number, number] }) => {
+// Component to handle map effects after it's ready
+const MapEffects = ({ onMapReady }: { onMapReady?: () => void }) => {
   const map = useMap();
   
   useEffect(() => {
-    // Only center map if coordinates are valid
-    if (center && center.length === 2 && 
-        isFinite(center[0]) && isFinite(center[1]) &&
-        Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) {
-      map.setView(center, map.getZoom(), { animate: false });
-    }
-  }, [center, map]);
+    // Fix for initial render issues - wait a moment before invalidating size
+    const timeoutId = setTimeout(() => {
+      map.invalidateSize();
+      if (onMapReady) onMapReady();
+    }, 100);
+    
+    // Also fix map on window resize
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [map, onMapReady]);
   
   return null;
 };
 
-const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
+const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
+  zoom,
   userLocation,
   locations,
   searchRadius,
@@ -117,203 +73,120 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   onMapReady,
   onLocationClick,
   onMapClick,
-  zoom = 5,
   hoveredLocationId,
   onMarkerHover
 }) => {
-  const { t } = useLanguage();
-  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
-  const isCertifiedView = activeView === 'certified';
-  const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
-  const [mapRendered, setMapRendered] = useState(false);
-  const [markerChunks, setMarkerChunks] = useState<SharedAstroSpot[][]>([]);
-  const mapRef = useRef<L.Map | null>(null);
+  const { language, t } = useLanguage();
+  const mapRef = useRef<any>(null);
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
   
-  // Make sure center coordinates are valid
-  const validCenter = useMemo(() => {
-    return (center && center.length === 2 && 
-            isFinite(center[0]) && isFinite(center[1]) &&
-            Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) ? 
-            center : [0, 0] as [number, number];
-  }, [center]);
-  
-  // Handle SIQS calculation results
-  const handleSiqsCalculated = useCallback((siqs: number) => {
-    setCurrentSiqs(siqs);
-  }, []);
-
-  // Handle map interaction to hide popups while interacting
-  const handleMapDragStart = useCallback(() => {
-    setHideMarkerPopups(true);
-    onMarkerHover(null);
-  }, [onMarkerHover]);
-  
-  const handleMapDragEnd = useCallback(() => {
-    // Small delay to prevent immediate popup reappearance
-    setTimeout(() => {
-      setHideMarkerPopups(false);
-    }, 100);
-  }, []);
-  
-  const handleMapZoomEnd = useCallback(() => {
-    onMarkerHover(null);
-  }, [onMarkerHover]);
-
-  // Filter out any invalid locations
-  const validLocations = useMemo(() => {
-    return locations.filter(location => 
-      location && 
-      typeof location.latitude === 'number' && 
-      typeof location.longitude === 'number' &&
-      isFinite(location.latitude) &&
-      isFinite(location.longitude) &&
-      Math.abs(location.latitude) <= 90 &&
-      Math.abs(location.longitude) <= 180
-    );
-  }, [locations]);
-  
-  // Chunk locations for better rendering performance
-  useEffect(() => {
-    if (validLocations.length > 0 && mapRendered) {
-      // Get optimal chunk size based on location count
-      const chunkSize = validLocations.length > 100 ? 30 : 50;
-      setMarkerChunks(chunkArray(validLocations, chunkSize));
-    }
-  }, [validLocations, mapRendered]);
-  
-  // Store map reference when ready
-  const storeMapRef = useCallback((map: L.Map) => {
-    mapRef.current = map;
-    // Explicitly enable dragging
-    map.dragging.enable();
-    console.log("Map container ready, dragging enabled:", map.dragging.enabled());
-    setMapRendered(true);
-    onMapReady();
-    
-    // Fix for Leaflet error by invalidating size
-    setTimeout(() => {
-      if (map) {
-        map.invalidateSize();
-      }
-    }, 100);
-  }, [onMapReady]);
-  
-  // Handle map click that closes popups
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    // Hide all popups
-    setHideMarkerPopups(true);
-    onMarkerHover(null);
-    
-    // After a brief delay, allow popups again
-    setTimeout(() => {
-      setHideMarkerPopups(false);
-    }, 100);
-    
-    // Pass the click to the parent
+  // Handle click on the map
+  const handleMapClick = (e: any) => {
     if (onMapClick) {
-      onMapClick(lat, lng);
+      onMapClick(e.latlng.lat, e.latlng.lng);
     }
-  }, [onMapClick, onMarkerHover]);
-
-  // Optimization: render circle conditionally
-  const renderSearchRadiusCircle = useMemo(() => {
-    if (userLocation && 
-        searchRadius && 
-        searchRadius < 1000 &&
-        typeof userLocation.latitude === 'number' &&
-        typeof userLocation.longitude === 'number' &&
-        isFinite(userLocation.latitude) &&
-        isFinite(userLocation.longitude)) {
-      
-      return (
-        <Circle 
-          center={[userLocation.latitude, userLocation.longitude]}
-          radius={searchRadius * 1000} // Convert km to meters for circle radius
-          pathOptions={{ 
-            color: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.08,
-            weight: 1.5,
-            opacity: 0.4,
-            className: 'location-radius-circle'
-          }}
-        />
-      );
-    }
-    return null;
-  }, [userLocation, searchRadius, isCertifiedView]);
-
+  };
+  
+  // Only render map when container is ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMapInitialized(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (!isMapInitialized) {
+    return <div className="w-full h-full bg-cosmic-900/50"></div>;
+  }
+  
   return (
     <MapContainer
-      center={validCenter}
+      key={`map-${activeView}-${searchRadius}-${center[0].toFixed(4)}-${center[1].toFixed(4)}`}
+      center={center}
       zoom={zoom}
-      className="h-full w-full"
-      whenReady={({ target }) => {
-        // Store map reference globally for external access
-        (window as any).leafletMap = target;
-        storeMapRef(target);
+      style={{ height: '100%', width: '100%', background: 'rgba(13, 14, 18, 0.8)' }}
+      zoomControl={false}
+      attributionControl={false}
+      onClick={handleMapClick}
+      whenReady={() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
       }}
-      scrollWheelZoom={true}
-      minZoom={2}
     >
-      {/* Add a MapCenterHandler to properly handle center changes */}
-      <MapCenterHandler center={validCenter} />
-      
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        subdomains="abc"
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        subdomains="abcd"
       />
       
-      {/* Controller for handling map setup and controls */}
-      <MapController 
-        userLocation={userLocation} 
-        searchRadius={searchRadius}
-      />
+      <MapEffects onMapReady={onMapReady} />
       
-      {/* Effects composer for all effects like bounds control and SIQS calculation */}
-      <MapEffectsComposer 
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={handleSiqsCalculated}
-      />
-      
-      {/* Add MapEvents component to handle clicks if onMapClick is provided */}
-      <MapEvents 
-        onMapClick={handleMapClick} 
-        onMapDragStart={handleMapDragStart}
-        onMapDragEnd={handleMapDragEnd}
-        onMapZoomEnd={handleMapZoomEnd}
-      />
-      
-      {/* Current user location marker */}
-      {userLocation && 
-       typeof userLocation.latitude === 'number' &&
-       typeof userLocation.longitude === 'number' && (
-        <UserLocationMarker 
+      {/* User location marker */}
+      {userLocation && (
+        <Marker 
           position={[userLocation.latitude, userLocation.longitude]}
-          currentSiqs={currentSiqs}
+          icon={createUserMarker()}
+        >
+          <Popup>
+            {t("Your location", "您的位置")}
+          </Popup>
+        </Marker>
+      )}
+      
+      {/* Search radius circle */}
+      {userLocation && searchRadius > 0 && (
+        <Circle
+          center={[userLocation.latitude, userLocation.longitude]}
+          radius={searchRadius * 1000} // Convert km to meters
+          pathOptions={{
+            color: '#4f46e5',
+            fillColor: '#4f46e5',
+            fillOpacity: 0.1,
+            weight: 1
+          }}
         />
       )}
       
-      {/* Search radius visualization */}
-      {renderSearchRadiusCircle}
-      
-      {/* Location markers rendered in batches for better performance */}
-      {!hideMarkerPopups && mapRendered && markerChunks.map((chunk, i) => (
-        <MarkerGroup
-          key={`marker-chunk-${i}`}
-          locations={chunk}
-          onLocationClick={onLocationClick}
-          hoveredLocationId={hoveredLocationId}
-          onMarkerHover={onMarkerHover}
-          isCertified={isCertifiedView}
-          hideMarkerPopups={hideMarkerPopups}
-        />
-      ))}
+      {/* Markers for locations */}
+      {locations.map((loc) => {
+        if (!loc.latitude || !loc.longitude) return null;
+        
+        // Calculate marker size based on zoom level and certification
+        const isCertified = loc.isDarkSkyReserve || loc.certification;
+        const isHovered = hoveredLocationId === loc.id;
+        const markerSize = isCertified ? 32 : 20;
+        
+        return (
+          <Marker
+            key={loc.id || `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`}
+            position={[loc.latitude, loc.longitude]}
+            icon={createLightPollutionMarker(
+              loc.bortleScale || 4, 
+              loc.siqs || 0, 
+              isCertified, 
+              isHovered,
+              markerSize
+            )}
+            eventHandlers={{
+              click: () => onLocationClick && onLocationClick(loc),
+              mouseover: () => onMarkerHover && loc.id && onMarkerHover(loc.id),
+              mouseout: () => onMarkerHover && onMarkerHover(null)
+            }}
+          >
+            <Popup>
+              <div className="text-center font-medium">
+                {loc.name || (loc.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜保护区") : t("Astronomy location", "天文位置"))}
+              </div>
+              <div className="text-xs mt-1">
+                SIQS: {loc.siqs?.toFixed(1) || 'N/A'}
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
     </MapContainer>
   );
 };
 
-export default React.memo(PhotoPointsMapContainer);
+export default React.memo(LazyMapContainer);

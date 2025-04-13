@@ -10,8 +10,25 @@ import { getAllStoredLocations } from "@/services/calculatedLocationsService";
 import MapLegend from "./MapLegend";
 import LoadingIndicator from "./LoadingIndicator";
 
+// Lazy load map components to reduce initial load time
 const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
-const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
+const LazyPhotoPointsMapContainer = lazy(() => 
+  import('./LazyMapContainer').then(module => {
+    // Add a small delay to ensure DOM is ready before rendering the map
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(module);
+      }, 50);
+    });
+  })
+);
+
+// Fallback component for when map is loading
+const MapLoadingFallback = () => (
+  <div className="w-full h-full flex items-center justify-center bg-cosmic-900/70">
+    <div className="animate-pulse text-primary/70">Loading map...</div>
+  </div>
+);
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -41,6 +58,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const { t } = useLanguage();
   const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
+  const [mapError, setMapError] = useState<Error | null>(null);
   const mapInitializedRef = useRef(false);
   const previousViewRef = useRef<string>(activeView);
   const [key, setKey] = useState(`map-${Date.now()}`);
@@ -49,6 +67,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
   const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
   const [locationStats, setLocationStats] = useState<{certified: number, calculated: number}>({ certified: 0, calculated: 0 });
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   
   const {
     hoveredLocationId,
@@ -70,15 +89,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       
       const locMap = new Map<string, SharedAstroSpot>();
       
-      calculatedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
+      // Ensure calculatedLocations is an array before processing
+      const locationsToProcess = Array.isArray(calculatedLocations) ? calculatedLocations : [];
+      
+      locationsToProcess.forEach(loc => {
+        if (loc && loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           locMap.set(key, loc);
         }
       });
       
       storedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
+        if (loc && loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           if (!locMap.has(key)) {
             locMap.set(key, loc);
@@ -90,7 +112,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       setCombinedCalculatedLocations(combined);
       setLocationStats(prev => ({ ...prev, calculated: combined.length }));
       
-      console.log(`Combined ${calculatedLocations.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
+      console.log(`Combined ${locationsToProcess.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
       
       setTimeout(() => {
         setLoadingPhase('ready');
@@ -98,7 +120,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [calculatedLocations, activeView]);
   
-  const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
+  const activeLocations = activeView === 'certified' 
+    ? (Array.isArray(certifiedLocations) ? certifiedLocations : [])
+    : (combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : 
+       (Array.isArray(calculatedLocations) ? calculatedLocations : []));
   
   // Handle view change (certified vs calculated)
   useEffect(() => {
@@ -181,6 +206,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [userLocation, selectedMapLocation]);
 
+  // Error boundary recovery
+  useEffect(() => {
+    if (mapError) {
+      const timer = setTimeout(() => {
+        setMapError(null);
+        setKey(`map-recovery-${Date.now()}`);
+        console.log("Recovering from map error");
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mapError]);
+
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedMapLocation({ latitude: lat, longitude: lng });
       
@@ -189,12 +227,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   };
 
+  // Handle map error
+  const handleMapError = (error: Error) => {
+    console.error("Map error:", error);
+    setMapError(error);
+  };
+
   // Show loading indicator while certified locations are loading
   const showLoadingIndicator = activeView === 'certified' && certifiedLocationsLoading && !mapLoadedOnce;
 
   return (
     <div className="space-y-3">
-      <div className={className + " relative"}>
+      <div className={className + " relative"} ref={mapContainerRef}>
         {showLoadingIndicator && (
           <LoadingIndicator 
             progress={loadingProgress}
@@ -205,27 +249,35 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           />
         )}
         
-        <Suspense fallback={null}>
-          <LazyPhotoPointsMapContainer
-            key={key}
-            center={mapCenter}
-            zoom={initialZoom}
-            userLocation={selectedMapLocation || userLocation}
-            locations={validLocations}
-            searchRadius={searchRadius}
-            activeView={activeView}
-            onMapReady={() => {
-              handleMapReady();
-              if (onMapReady) onMapReady();
-              mapInitializedRef.current = true;
-              setMapLoadedOnce(true);
-              setLoadingPhase('ready');
-            }}
-            onLocationClick={onMarkerClick}
-            onMapClick={handleMapClick}
-            hoveredLocationId={hoveredLocationId}
-            onMarkerHover={handleMarkerHover}
-          />
+        <Suspense fallback={<MapLoadingFallback />}>
+          {mapError ? (
+            <div className="w-full h-full flex items-center justify-center bg-cosmic-900/70">
+              <div className="text-red-400 text-center p-4">
+                <p>Map error. Retrying...</p>
+              </div>
+            </div>
+          ) : (
+            <LazyPhotoPointsMapContainer
+              key={key}
+              center={mapCenter}
+              zoom={initialZoom}
+              userLocation={selectedMapLocation || userLocation}
+              locations={validLocations}
+              searchRadius={searchRadius}
+              activeView={activeView}
+              onMapReady={() => {
+                handleMapReady();
+                if (onMapReady) onMapReady();
+                mapInitializedRef.current = true;
+                setMapLoadedOnce(true);
+                setLoadingPhase('ready');
+              }}
+              onLocationClick={onMarkerClick}
+              onMapClick={handleMapClick}
+              hoveredLocationId={hoveredLocationId}
+              onMarkerHover={handleMarkerHover}
+            />
+          )}
           
           <RealTimeLocationUpdater 
             userLocation={selectedMapLocation || userLocation}

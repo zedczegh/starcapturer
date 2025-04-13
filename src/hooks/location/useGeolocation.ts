@@ -1,60 +1,51 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
-// Define proper GeolocationOptions without language
-export interface GeolocationOptions {
-  enableHighAccuracy?: boolean;
-  timeout?: number;
-  maximumAge?: number;
-}
-
-export const useGeolocation = (options?: GeolocationOptions) => {
+export const useGeolocation = (options = {}) => {
   const [coords, setCoords] = useState<GeolocationCoordinates | null>(null);
   const [error, setError] = useState<GeolocationPositionError | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  // Success handler for geolocation
-  const handleSuccess = useCallback((position: GeolocationPosition) => {
+  const [loading, setLoading] = useState(false);
+  const requestedRef = useRef(false); // Track if we've already requested position
+  
+  const onSuccess = (position: GeolocationPosition) => {
+    setLoading(false);
     setCoords(position.coords);
     setError(null);
-    setLoading(false);
-  }, []);
+  };
 
-  // Error handler for geolocation
-  const handleError = useCallback((error: GeolocationPositionError) => {
+  const onError = (error: GeolocationPositionError) => {
+    setLoading(false);
     setError(error);
-    setLoading(false);
-    console.error("Geolocation error:", error.message);
-  }, []);
+    console.warn(`Error getting geolocation: ${error.message}`);
+  };
 
-  // Function to get current position
   const getPosition = useCallback(() => {
-    if (!navigator.geolocation) {
-      setError({ 
-        code: 0, 
-        message: "Geolocation not supported by this browser", 
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2, 
-        TIMEOUT: 3 
-      });
+    // Prevent multiple simultaneous requests
+    if (requestedRef.current) return;
+    
+    const { geolocation } = navigator;
+    
+    if (!geolocation) {
+      setError(new Error("Geolocation is not supported") as any);
       return;
     }
 
     setLoading(true);
+    requestedRef.current = true; // Mark as requested
     
-    navigator.geolocation.getCurrentPosition(
-      handleSuccess,
-      handleError,
+    geolocation.getCurrentPosition(
+      onSuccess,
+      onError,
       options
     );
-  }, [handleSuccess, handleError, options]);
+  }, [options]);
 
-  // Get position on mount if options.autoRequest is true
   useEffect(() => {
-    if (options?.enableHighAccuracy) {
-      getPosition();
-    }
-  }, [getPosition, options]);
+    // Clear request flag when component unmounts
+    return () => {
+      requestedRef.current = false;
+    };
+  }, []);
 
   return { coords, error, loading, getPosition };
 };
