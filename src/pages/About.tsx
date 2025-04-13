@@ -6,11 +6,18 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Import all the necessary components
 import AboutHeader from "@/components/about/AboutHeader";
-import AboutContent from "@/components/about/AboutContent";
-import AboutFooter from "@/components/about/AboutFooter";
 import AboutTeam from "@/components/about/AboutTeam";
+import SiqsSection from "@/components/about/SiqsSection";
+import AboutIntro from "@/components/about/AboutIntro";
+import LocationDiscoverySection from "@/components/about/LocationDiscoverySection";
+import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
+import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
+import ScienceSection from "@/components/about/ScienceSection";
 import AboutTimeline from "@/components/about/AboutTimeline";
+import AboutFooter from "@/components/about/AboutFooter";
 
 const About = () => {
   const { t } = useLanguage();
@@ -22,25 +29,26 @@ const About = () => {
   }, []);
   
   return (
-    <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-20 relative overflow-hidden">
-      {/* Background stars */}
+    <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-16 relative overflow-hidden">
+      {/* Background elements with reduced quantity for cleaner look */}
       <div className="absolute inset-0 pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {/* Subtle stars - reduced quantity */}
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute rounded-full bg-white"
             initial={{
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
-              height: `${Math.random() * 3 + 1}px`,
-              width: `${Math.random() * 3 + 1}px`,
-              opacity: Math.random() * 0.5 + 0.3
+              height: `${Math.random() * 2 + 1}px`,
+              width: `${Math.random() * 2 + 1}px`,
+              opacity: Math.random() * 0.4 + 0.2
             }}
             animate={{
               opacity: [
-                Math.random() * 0.5 + 0.3,
-                Math.random() * 0.8 + 0.5,
-                Math.random() * 0.5 + 0.3
+                Math.random() * 0.4 + 0.2,
+                Math.random() * 0.6 + 0.3,
+                Math.random() * 0.4 + 0.2
               ]
             }}
             transition={{
@@ -51,60 +59,28 @@ const About = () => {
           />
         ))}
         
-        {/* Larger animated stars with glow */}
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={`glow-${i}`}
-            className="absolute rounded-full bg-blue-400 shadow-lg shadow-blue-400/30"
-            initial={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              height: `${Math.random() * 4 + 2}px`,
-              width: `${Math.random() * 4 + 2}px`,
-              opacity: 0.6
-            }}
-            animate={{
-              opacity: [0.6, 0.9, 0.6],
-              scale: [1, 1.3, 1]
-            }}
-            transition={{
-              duration: Math.random() * 4 + 3,
-              repeat: Infinity,
-              repeatType: "reverse"
-            }}
-          />
-        ))}
-        
-        {/* Background gradient orbs */}
+        {/* Background gradient orbs - more subtle */}
         <motion.div 
-          className="absolute -top-20 -right-20 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl"
+          className="absolute -top-20 -right-20 w-80 h-80 bg-blue-600/5 rounded-full filter blur-3xl"
           animate={{
             y: [0, 15, 0],
-            opacity: [0.5, 0.7, 0.5],
-          }}
-          transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
-        />
-        
-        <motion.div 
-          className="absolute -bottom-32 -left-20 w-96 h-96 bg-purple-600/10 rounded-full filter blur-3xl"
-          animate={{
-            y: [0, -15, 0],
-            opacity: [0.5, 0.7, 0.5],
-          }}
-          transition={{ duration: 7, repeat: Infinity, repeatType: "reverse" }}
-        />
-        
-        <motion.div 
-          className="absolute top-1/3 left-2/3 w-80 h-80 bg-teal-600/10 rounded-full filter blur-3xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.3, 0.5, 0.3],
+            opacity: [0.3, 0.4, 0.3],
           }}
           transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
         />
+        
+        <motion.div 
+          className="absolute -bottom-32 -left-20 w-80 h-80 bg-purple-600/5 rounded-full filter blur-3xl"
+          animate={{
+            y: [0, -10, 0],
+            opacity: [0.3, 0.4, 0.3],
+          }}
+          transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
+        />
       </div>
 
-      <div className="container max-w-4xl mx-auto px-4 py-8 md:py-12 relative z-10">
+      <div className="container max-w-4xl mx-auto px-5 py-8 md:py-10 relative z-10">
+        {/* Header with back button */}
         <div className="flex items-center mb-6">
           <Link to="/">
             <Button variant="ghost" size="sm" className="mr-2 text-cosmic-200 hover:text-cosmic-50 hover:bg-cosmic-800/50">
@@ -126,33 +102,21 @@ const About = () => {
           )}
         </div>
         
+        {/* Main Page Header */}
         <AboutHeader />
         
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { 
-              opacity: 1,
-              transition: { 
-                staggerChildren: 0.15,
-                delayChildren: 0.1
-              }
-            }
-          }}
-          className="space-y-8"
-        >
-          {/* First display Team and SIQS information */}
+        <div className="space-y-6">
+          {/* Main sections in a more organized order */}
+          <AboutIntro />
           <AboutTeam />
-          
-          {/* Then show the rest of the content */}
-          <AboutContent />
-          
+          <SiqsSection />
+          <PhotoPointsFeature />
+          <LocationDiscoverySection />
+          <DarkSkyKnowledge />
           <AboutTimeline />
-          
+          <ScienceSection />
           <AboutFooter />
-        </motion.div>
+        </div>
       </div>
     </div>
   );

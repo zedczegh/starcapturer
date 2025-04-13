@@ -11,17 +11,18 @@ const AboutHeader = () => {
 
   return (
     <motion.div 
-      className="mb-10 text-center relative"
+      className="mb-8 text-center relative"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Simplified gradient background */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <motion.div 
-          className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-teal-400/20 rounded-full blur-3xl"
+          className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/5 to-teal-400/10 rounded-full blur-3xl"
           animate={{ 
-            scale: [1, 1.1, 1],
-            opacity: [0.7, 0.5, 0.7]
+            scale: [1, 1.05, 1],
+            opacity: [0.5, 0.4, 0.5]
           }}
           transition={{ 
             duration: 8, 
@@ -31,6 +32,7 @@ const AboutHeader = () => {
         />
       </div>
       
+      {/* SIQS Badge */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -45,8 +47,9 @@ const AboutHeader = () => {
         </div>
       </motion.div>
       
+      {/* Main title with gradient */}
       <motion.h1 
-        className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 px-4`}
+        className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400`}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
@@ -54,6 +57,7 @@ const AboutHeader = () => {
         {t("About Bortle Now", "关于 Bortle Now")}
       </motion.h1>
       
+      {/* Decorative line */}
       <motion.div
         className="w-20 h-1 bg-gradient-to-r from-blue-400 to-purple-400 mx-auto my-4 rounded-full"
         initial={{ width: 0 }}
@@ -61,8 +65,9 @@ const AboutHeader = () => {
         transition={{ delay: 0.4, duration: 0.6 }}
       />
       
+      {/* Subtitle */}
       <motion.p
-        className={`mt-4 ${isMobile ? 'text-base px-4' : 'text-lg'} text-cosmic-200 max-w-2xl mx-auto`}
+        className={`mt-4 ${isMobile ? 'text-base' : 'text-lg'} text-cosmic-200 max-w-2xl mx-auto`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.5 }}
