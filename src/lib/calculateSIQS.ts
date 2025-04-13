@@ -4,7 +4,7 @@
  * This implementation uses protected factors and validation
  */
 import { protectedFactors, calculateWeightedScore } from './siqs/protectedFactors';
-import { LightPollutionLevel } from './types';
+import { LightPollutionLevel, SIQSResult } from './siqs/types';
 
 // Type definition for SIQS calculation inputs
 export interface SIQSInputData {
@@ -31,6 +31,7 @@ export interface SIQSResult {
     nighttimeData?: any;
   }[];
   level: LightPollutionLevel;
+  isViable: boolean; // Added this property to fix the type error
 }
 
 /**
@@ -97,7 +98,7 @@ export function calculateSIQS(data: SIQSInputData): SIQSResult {
     undefined;
   
   // Store factor scores for weighted calculation
-  const factorScores = {
+  const factorScores: any = {
     cloud: cloudScore,
     lightPollution: lightPollutionScore,
     seeing: seeingScore,
@@ -212,9 +213,13 @@ export function calculateSIQS(data: SIQSInputData): SIQSResult {
     });
   }
   
+  // Determine if conditions are viable for astrophotography
+  const isViable = finalScore >= 5.0; // Consider viable if score is at least 5.0
+  
   return {
     score: finalScore,
     factors,
-    level
+    level,
+    isViable
   };
 }

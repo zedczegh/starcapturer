@@ -30,37 +30,12 @@ export interface SIQSResult {
     name: string;       // Factor name
     score: number;      // Factor score (0-10 scale)
     description: string; // Description of the factor
-    nighttimeData?: {
-      average: number;   // Nighttime average value
-      timeRange: string; // Time range for nighttime average
-    };
+    nighttimeData?: any;
   }[];
+  level: string;        // Quality level based on score
 }
 
 /**
- * Location with SIQS data
+ * Light pollution level classification
  */
-export interface LocationWithSIQS {
-  id?: string;          // Unique identifier
-  name: string;         // Location name
-  latitude: number;     // Latitude
-  longitude: number;    // Longitude
-  bortleScale?: number; // Light pollution level
-  weatherData?: any;    // Weather data
-  siqsResult?: SIQSResult; // SIQS calculation result
-  clearSkyRate?: number;   // Annual clear sky rate
-  timestamp?: string;      // When the data was collected
-}
-
-/**
- * Specific parameters for nighttime SIQS calculation
- */
-export interface NighttimeSIQSParams {
-  startHour?: number;    // Start hour for nighttime (default: 18, 6 PM)
-  endHour?: number;      // End hour for nighttime (default: 8, 8 AM next day)
-  cloudWeight?: number;  // Weight for cloud cover in calculation (default: 0.3)
-  windWeight?: number;   // Weight for wind in calculation (default: 0.15)
-  humidityWeight?: number; // Weight for humidity in calculation (default: 0.15)
-  bortleWeight?: number;   // Weight for light pollution in calculation (default: 0.3)
-  clearSkyWeight?: number; // Weight for clear sky rate (default: 0.1)
-}
+export type LightPollutionLevel = 'excellent' | 'good' | 'fair' | 'poor';
