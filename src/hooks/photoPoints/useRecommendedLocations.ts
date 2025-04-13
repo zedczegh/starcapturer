@@ -5,6 +5,7 @@ import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/locationValidator';
+import { toast } from '@/hooks/use-toast'; // Add this import
 
 interface Location {
   latitude: number;
