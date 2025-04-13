@@ -19,10 +19,8 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
 }) => {
   const scoreColor = getProgressColor(score);
   
-  // Generate a light background color based on the score color with higher opacity for better visibility
   const bgColor = `${scoreColor}60`; // Increased opacity for better visibility
   
-  // Inline styles for dynamic coloring with higher contrast
   const badgeStyle = {
     backgroundColor: bgColor,
     borderColor: scoreColor,
@@ -42,7 +40,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       )}
       <span className={`${compact ? 'text-2xs font-bold' : 'text-xs font-medium'} flex items-center`}>
         {loading ? '...' : formatSIQSScoreForDisplay(score)}
-        {realTime && !loading && <span className="ml-1 text-2xs opacity-80">•</span>}
+        {/* Removed the real-time dot */}
       </span>
     </div>
   );
