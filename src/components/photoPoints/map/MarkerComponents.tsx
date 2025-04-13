@@ -78,6 +78,7 @@ interface LocationMarkerProps {
   onHover: (id: string | null) => void;
   locationId: string;
   isCertified: boolean;
+  activeView: 'certified' | 'calculated';
 }
 
 const LocationMarker = memo(({ 
@@ -86,12 +87,18 @@ const LocationMarker = memo(({
   isHovered,
   onHover,
   locationId,
-  isCertified
+  isCertified,
+  activeView
 }: LocationMarkerProps) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
+  
+  // IMPORTANT: Skip rendering calculated locations in certified view
+  if (activeView === 'certified' && !isCertified) {
+    return null;
+  }
   
   // Skip water locations for calculated spots (never skip certified)
   if (!isCertified && isWaterSpot(location)) {

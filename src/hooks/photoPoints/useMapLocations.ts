@@ -54,12 +54,18 @@ export const useMapLocations = ({
     return { certifiedLocations, calculatedLocations };
   }, []);
 
-  // Merge locations according to active view
+  // Merge locations according to active view - UPDATED to strictly enforce view type filtering
   const mergeLocations = useCallback((
     certifiedLocations: SharedAstroSpot[], 
     calculatedLocations: SharedAstroSpot[],
     activeView: 'certified' | 'calculated'
   ) => {
+    // For certified view, ONLY include certified locations
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    }
+    
+    // For calculated view, include both types but prioritize certified locations
     const locationMap = new Map<string, SharedAstroSpot>();
     
     // Always include all certified locations regardless of active view
@@ -68,19 +74,17 @@ export const useMapLocations = ({
       locationMap.set(key, loc);
     });
     
-    // Add calculated locations only if in calculated view
-    if (activeView === 'calculated') {
-      calculatedLocations.forEach(loc => {
-        // Skip water locations for calculated spots
-        if (!isWaterLocation(loc.latitude, loc.longitude)) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          const existing = locationMap.get(key);
-          if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
-            locationMap.set(key, loc);
-          }
+    // Add calculated locations
+    calculatedLocations.forEach(loc => {
+      // Skip water locations for calculated spots
+      if (!isWaterLocation(loc.latitude, loc.longitude)) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        const existing = locationMap.get(key);
+        if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
+          locationMap.set(key, loc);
         }
-      });
-    }
+      }
+    });
     
     return Array.from(locationMap.values());
   }, []);
@@ -93,30 +97,33 @@ export const useMapLocations = ({
       const validLocations = filterValidLocations(locations);
       const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
       
-      const locationsInRadius = activeView === 'calculated' && userLocation ? 
-        calculatedLocations.filter(loc => {
-          if (!loc.latitude || !loc.longitude) return false;
-          
-          // Skip water locations for calculated spots
-          if (!loc.isDarkSkyReserve && !loc.certification) {
-            if (isWaterLocation(loc.latitude, loc.longitude)) {
-              return false;
+      // Only update locations relevant to current view
+      const locationsToUpdate = activeView === 'certified' 
+        ? certifiedLocations 
+        : [...certifiedLocations, ...calculatedLocations.filter(loc => {
+            // Skip water locations for calculated spots
+            if (!loc.isDarkSkyReserve && !loc.certification) {
+              if (isWaterLocation(loc.latitude, loc.longitude)) {
+                return false;
+              }
             }
-          }
-          
-          const distance = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            loc.latitude,
-            loc.longitude
-          );
-          return distance <= searchRadius * 1.1;
-        }) : 
-        // For certified view, include ALL certified locations regardless of distance
-        certifiedLocations;
+            
+            // Filter by distance for calculated view
+            if (userLocation) {
+              const distance = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                loc.latitude,
+                loc.longitude
+              );
+              return distance <= searchRadius * 1.1;
+            }
+            
+            return true;
+          })];
       
       const updated = await updateLocationsWithRealTimeSiqs(
-        locationsInRadius, 
+        locationsToUpdate, 
         userLocation, 
         searchRadius,
         activeView
@@ -169,7 +176,13 @@ export const useMapLocations = ({
     const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
     
     // Use enhanced locations if available, otherwise use merged locations
-    const locationsToShow = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
+    const locationsToShow = enhancedLocations.length > 0 ? 
+      // Apply active view filtering to enhanced locations
+      activeView === 'certified' 
+        ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
+        : enhancedLocations
+      : mergedLocations;
+    
     setProcessedLocations(locationsToShow);
     
   }, [locations, activeView, enhancedLocations, filterValidLocations, separateLocationTypes, mergeLocations]);

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
@@ -44,14 +43,16 @@ const MarkerGroup = React.memo(({
   hoveredLocationId,
   onMarkerHover,
   isCertified,
-  hideMarkerPopups
+  hideMarkerPopups,
+  activeView
 }: { 
   locations: SharedAstroSpot[], 
   onLocationClick?: (location: SharedAstroSpot) => void,
   hoveredLocationId: string | null,
   onMarkerHover: (id: string | null) => void,
   isCertified: boolean,
-  hideMarkerPopups: boolean
+  hideMarkerPopups: boolean,
+  activeView: 'certified' | 'calculated'
 }) => {
   return (
     <>
@@ -69,6 +70,15 @@ const MarkerGroup = React.memo(({
         const locationId = location.id || 
           `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
         
+        // Individual location certification status
+        const locationIsCertified = location.isDarkSkyReserve === true || 
+          (location.certification && location.certification !== '');
+        
+        // Skip non-certified locations in certified view
+        if (activeView === 'certified' && !locationIsCertified) {
+          return null;
+        }
+        
         // Handle the click event for this marker
         const handleClick = () => {
           if (onLocationClick) {
@@ -84,7 +94,8 @@ const MarkerGroup = React.memo(({
             isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
             onHover={hideMarkerPopups ? () => {} : onMarkerHover}
             locationId={locationId}
-            isCertified={isCertified}
+            isCertified={locationIsCertified}
+            activeView={activeView}
           />
         );
       })}
@@ -310,6 +321,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           onMarkerHover={onMarkerHover}
           isCertified={isCertifiedView}
           hideMarkerPopups={hideMarkerPopups}
+          activeView={activeView}
         />
       ))}
     </MapContainer>
