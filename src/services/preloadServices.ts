@@ -1,6 +1,5 @@
 
 import { preloadCertifiedLocations } from "./certifiedLocationsService";
-import { clearSiqsCache, cleanupExpiredCache } from "./realTimeSiqsService";
 
 /**
  * Initialize all preloading services
@@ -18,16 +17,5 @@ export function initializePreloadServices() {
       .catch(error => {
         console.error("Error preloading certified locations:", error);
       });
-      
-    // Clear outdated SIQS cache on startup
-    // The clearSiqsCache() function doesn't take arguments in its implementation
-    clearSiqsCache();
   }, 1000);
-  
-  // Register cache cleanup routine
-  const CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
-  setInterval(() => {
-    // Using the proper function for periodic cleanup
-    cleanupExpiredCache();
-  }, CLEANUP_INTERVAL);
 }
