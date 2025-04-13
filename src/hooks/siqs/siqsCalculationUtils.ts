@@ -1,3 +1,4 @@
+
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
@@ -19,13 +20,20 @@ export const normalizeScore = (score: number): number => {
 
 /**
  * Get cached SIQS score if available
+ * Added safety checks for undefined values
  */
 export function getCachedSIQSScore(
-  lat: number,
-  lng: number,
+  lat: number | undefined,
+  lng: number | undefined,
   bortleScale: number,
   moonPhase: number
 ): number | null {
+  // Safety check - return null if coordinates are invalid
+  if (lat === undefined || lng === undefined || !isFinite(lat) || !isFinite(lng)) {
+    console.log("Invalid coordinates in getCachedSIQSScore", { lat, lng });
+    return null;
+  }
+  
   const key = `${lat.toFixed(4)}-${lng.toFixed(4)}-${bortleScale}-${moonPhase.toFixed(2)}`;
   const cached = siqsScoreCache.get(key);
   
@@ -39,14 +47,21 @@ export function getCachedSIQSScore(
 
 /**
  * Cache SIQS score for future use
+ * Added safety checks for undefined values
  */
 export function cacheSIQSScore(
-  lat: number,
-  lng: number,
+  lat: number | undefined,
+  lng: number | undefined,
   bortleScale: number,
   moonPhase: number,
   score: number
 ): void {
+  // Safety check - don't cache with invalid coordinates
+  if (lat === undefined || lng === undefined || !isFinite(lat) || !isFinite(lng)) {
+    console.log("Invalid coordinates in cacheSIQSScore, not caching", { lat, lng });
+    return;
+  }
+  
   const key = `${lat.toFixed(4)}-${lng.toFixed(4)}-${bortleScale}-${moonPhase.toFixed(2)}`;
   siqsScoreCache.set(key, {
     score,
@@ -57,6 +72,7 @@ export function cacheSIQSScore(
 /**
  * Optimized function to calculate SIQS with weather data
  * Now includes clear sky rate as a factor (10% weight)
+ * Added additional validation for coordinates
  */
 export async function calculateSIQSWithWeatherData(
   weatherData: any,
@@ -65,6 +81,16 @@ export async function calculateSIQSWithWeatherData(
   moonPhase: number,
   forecastData: any | null
 ): Promise<any> {
+  // Validate weather data and coordinates
+  if (!weatherData || weatherData.latitude === undefined || weatherData.longitude === undefined) {
+    console.error("Invalid weather data in calculateSIQSWithWeatherData", { weatherData });
+    return {
+      score: 0,
+      isViable: false,
+      factors: [{ name: "Error", score: 0, description: "Invalid weather data" }]
+    };
+  }
+  
   // Check cache first for quick response
   const cachedScore = getCachedSIQSScore(
     weatherData.latitude,

@@ -44,8 +44,8 @@ export async function calculateRealTimeSiqs(
   bortleScale: number
 ): Promise<{ siqs: number; isViable: boolean; factors?: any[] }> {
   // Validate inputs
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    console.error("Invalid coordinates provided to calculateRealTimeSiqs");
+  if (latitude === undefined || longitude === undefined || !isFinite(latitude) || !isFinite(longitude)) {
+    console.error("Invalid coordinates provided to calculateRealTimeSiqs", { latitude, longitude });
     return { siqs: 0, isViable: false };
   }
   
@@ -83,8 +83,16 @@ export async function calculateRealTimeSiqs(
     
     // Default values if API calls fail
     if (!weatherData) {
+      console.error("Failed to fetch weather data", { latitude, longitude });
       return { siqs: 0, isViable: false };
     }
+    
+    // Make sure weatherData has latitude and longitude for the cache functions
+    const enhancedWeatherData = {
+      ...weatherData,
+      latitude,
+      longitude
+    };
     
     // For light pollution, use provided Bortle scale or fetch it
     let finalBortleScale = bortleScale;
@@ -99,7 +107,7 @@ export async function calculateRealTimeSiqs(
     }
     
     // Prepare weather data with clear sky rate
-    const weatherDataWithClearSky: WeatherDataWithClearSky = { ...weatherData };
+    const weatherDataWithClearSky: WeatherDataWithClearSky = { ...enhancedWeatherData };
     
     // Add clear sky rate to weather data if available
     if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
