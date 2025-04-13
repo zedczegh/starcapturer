@@ -30,14 +30,28 @@ export const useMapLocations = ({
 }: UseMapLocationsProps) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Update locations with real-time SIQS
+  // Update locations with real-time SIQS with improved error handling
   const updateWithRealTimeSiqs = useCallback(async () => {
-    if (!mapReady || !locations.length) return;
+    if (!mapReady || !locations.length) return false;
     
     try {
-      const validLocations = filterValidLocations(locations);
-      const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+      // Pre-filter invalid locations before processing
+      const validLocations = locations.filter(loc => 
+        loc && typeof loc.latitude === 'number' && 
+        typeof loc.longitude === 'number' &&
+        !isNaN(loc.latitude) && !isNaN(loc.longitude)
+      );
+      
+      if (validLocations.length === 0) {
+        console.log("No valid locations to update");
+        return false;
+      }
+      
+      // Process valid locations
+      const filteredLocations = filterValidLocations(validLocations);
+      const { certifiedLocations, calculatedLocations } = separateLocationTypes(filteredLocations);
       
       // Pre-filter water locations from calculated spots
       const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
@@ -68,10 +82,11 @@ export const useMapLocations = ({
       );
       
       if (updated && updated.length > 0) {
-        const filteredUpdated = preFilterWaterLocations(updated);
-        
+        // Only update state if component is still mounted
         setEnhancedLocations(prevLocations => {
           const combinedLocations = [...prevLocations];
+          
+          const filteredUpdated = preFilterWaterLocations(updated);
           
           filteredUpdated.forEach(newLoc => {
             if (!newLoc.latitude || !newLoc.longitude) return;
@@ -97,42 +112,54 @@ export const useMapLocations = ({
           
           return combinedLocations;
         });
+        
+        return true;
       }
     } catch (error) {
       console.error('Error updating locations with real-time SIQS:', error);
+      setError(error instanceof Error ? error : new Error('Unknown error updating locations'));
     }
     
-    // Return false to avoid TypeScript Promise<boolean> error
     return false;
   }, [locations, userLocation, mapReady, searchRadius, activeView]);
 
   // Process locations
   useEffect(() => {
-    const validLocations = filterValidLocations(locations);
-    const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-    
-    // Pre-filter water locations from calculated spots
-    const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
-    
-    const mergedLocations = mergeLocations(
-      certifiedLocations, 
-      filteredCalculatedLocations, 
-      activeView
-    );
-    
-    // Use enhanced locations if available, otherwise use merged locations
-    const locationsToShow = enhancedLocations.length > 0 ? 
-      // Apply active view filtering to enhanced locations
-      activeView === 'certified' 
-        ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-        : preFilterWaterLocations(enhancedLocations)  // Apply water filtering here too
-      : mergedLocations;
-    
-    setProcessedLocations(locationsToShow);
-    
+    try {
+      if (!locations) {
+        setProcessedLocations([]);
+        return;
+      }
+      
+      // Ensure all locations are valid
+      const validLocations = filterValidLocations(locations);
+      const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+      
+      // Pre-filter water locations from calculated spots
+      const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
+      
+      const mergedLocations = mergeLocations(
+        certifiedLocations, 
+        filteredCalculatedLocations, 
+        activeView
+      );
+      
+      // Use enhanced locations if available, otherwise use merged locations
+      const locationsToShow = enhancedLocations.length > 0 ? 
+        // Apply active view filtering to enhanced locations
+        activeView === 'certified' 
+          ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
+          : preFilterWaterLocations(enhancedLocations)  // Apply water filtering here too
+        : mergedLocations;
+      
+      setProcessedLocations(locationsToShow);
+    } catch (err) {
+      console.error("Error processing locations:", err);
+      setError(err instanceof Error ? err : new Error('Unknown error processing locations'));
+    }
   }, [locations, activeView, enhancedLocations]);
 
-  // Update locations with real-time SIQS
+  // Update locations with real-time SIQS with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       updateWithRealTimeSiqs();
@@ -142,6 +169,9 @@ export const useMapLocations = ({
   }, [updateWithRealTimeSiqs]);
 
   return {
-    processedLocations
+    processedLocations,
+    error
   };
 };
+
+export default useMapLocations;

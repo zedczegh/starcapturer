@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { currentSiqsStore } from '@/components/index/CalculatorSection';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
@@ -11,14 +10,9 @@ import PageLoader from '@/components/loaders/PageLoader';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { Button } from '@/components/ui/button';
-import { Map, List } from 'lucide-react';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import { calculateDistance } from '@/utils/geoUtils';
-
-const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
-const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
-const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
+import PhotoPointsContent from '@/components/photoPoints/PhotoPointsContent';
 
 const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
 const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
@@ -267,48 +261,28 @@ const PhotoPointsNearby: React.FC = () => {
         </div>
       )}
       
-      {showMap ? (
-        <Suspense fallback={<PageLoader />}>
-          <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
-            <PhotoPointsMap 
-              userLocation={effectiveLocation}
-              locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
-              certifiedLocations={certifiedLocations}
-              calculatedLocations={calculatedLocations}
-              activeView={activeView}
-              searchRadius={displayRadius}
-              onLocationClick={handleLocationClick}
-              onLocationUpdate={handleLocationUpdate}
-            />
-          </div>
-        </Suspense>
-      ) : (
-        <Suspense fallback={<PageLoader />}>
-          <div className="min-h-[300px]">
-            {activeView === 'certified' ? (
-              <DarkSkyLocations
-                locations={certifiedLocations}
-                loading={loading && !locationLoading}
-                initialLoad={initialLoad}
-              />
-            ) : (
-              <CalculatedLocations
-                locations={filteredCalculatedLocations}
-                loading={loading && !locationLoading}
-                hasMore={hasMore}
-                onLoadMore={loadMore}
-                onRefresh={refreshSiqsData}
-                searchRadius={calculatedSearchRadius}
-                initialLoad={initialLoad}
-                onLoadMoreCalculated={loadMoreCalculatedLocations}
-                canLoadMoreCalculated={canLoadMoreCalculated}
-                loadMoreClickCount={loadMoreClickCount}
-                maxLoadMoreClicks={maxLoadMoreClicks}
-              />
-            )}
-          </div>
-        </Suspense>
-      )}
+      <PhotoPointsContent
+        showMap={showMap}
+        userLocation={effectiveLocation}
+        activeView={activeView}
+        displayRadius={displayRadius}
+        certifiedLocations={certifiedLocations}
+        calculatedLocations={calculatedLocations}
+        filteredCalculatedLocations={filteredCalculatedLocations}
+        initialLoad={initialLoad}
+        loading={loading}
+        locationLoading={locationLoading}
+        hasMore={hasMore}
+        loadMore={loadMore}
+        refreshSiqsData={refreshSiqsData}
+        calculatedSearchRadius={calculatedSearchRadius}
+        onLocationClick={handleLocationClick}
+        onLocationUpdate={handleLocationUpdate}
+        canLoadMoreCalculated={canLoadMoreCalculated}
+        loadMoreCalculatedLocations={loadMoreCalculatedLocations}
+        loadMoreClickCount={loadMoreClickCount}
+        maxLoadMoreClicks={maxLoadMoreClicks}
+      />
     </PhotoPointsLayout>
   );
 };
