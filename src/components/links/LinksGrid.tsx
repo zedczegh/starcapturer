@@ -1,14 +1,13 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExternalLink, Grid, Layers, LayoutGrid } from "lucide-react";
+import { ExternalLink, LayoutGrid, Layers } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LinkData } from "./linksData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LinkCategory, LinkViewMode, useLinksFilters } from "@/hooks/useLinksFilters";
+import { LinkViewMode, useLinksFilters } from "@/hooks/useLinksFilters";
 import { translateCategory, translateType } from "@/utils/linkTranslations";
 
 interface LinksGridProps {
@@ -22,11 +21,9 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
   const [viewMode, setViewMode] = useState<LinkViewMode>('grid');
   
   const { 
-    categories,
-    types,
+    filteredLinks,
     selectedCategory,
     selectedType,
-    filteredLinks,
     setSelectedCategory,
     setSelectedType
   } = useLinksFilters(searchQuery, language);
@@ -59,7 +56,7 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
   return (
     <div className="space-y-6">
       {/* View mode toggle */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center sticky top-2 z-10 bg-cosmic-950/90 backdrop-blur-lg p-4 rounded-lg border border-cosmic-800/30 shadow-lg">
+      <div className="flex items-center justify-between sticky top-2 z-10 bg-cosmic-950/90 backdrop-blur-lg p-4 rounded-lg border border-cosmic-800/30 shadow-lg">
         <div className="flex gap-2">
           <Button 
             size="sm" 
@@ -85,118 +82,31 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
           {filteredLinks.length} {t("resources", "个资源")}
         </div>
       </div>
-
-      {/* Filter Tabs */}
-      <Tabs defaultValue="categories" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4 bg-cosmic-900/80">
-          <TabsTrigger value="categories" className="flex items-center gap-1.5">
-            <Layers className="h-4 w-4" />
-            {t("Categories", "类别")}
-          </TabsTrigger>
-          <TabsTrigger value="types" className="flex items-center gap-1.5">
-            <Grid className="h-4 w-4" />
-            {t("Resource Types", "资源类型")}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="categories" className="mt-0">
-          <div className="flex flex-wrap gap-2 mb-6 bg-cosmic-900/30 p-3 rounded-lg border border-cosmic-800/20">
-            <Button
-              variant={selectedCategory === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-              className={selectedCategory === null ? "bg-blue-600" : ""}
-            >
-              {t("All Categories", "所有类别")}
-            </Button>
-            
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category === selectedCategory ? null : category)}
-                className={selectedCategory === category ? "bg-blue-600" : ""}
-              >
-                {language === 'en' ? category : translateCategory(category)}
-              </Button>
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="types" className="mt-0">
-          <div className="flex flex-wrap gap-2 mb-6 bg-cosmic-900/30 p-3 rounded-lg border border-cosmic-800/20">
-            <Button
-              variant={selectedType === null ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setSelectedType(null)}
-            >
-              {t("All Types", "所有类型")}
-            </Button>
-            
-            {types.map((type) => (
-              <Button
-                key={type}
-                variant={selectedType === type ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setSelectedType(type === selectedType ? null : type)}
-              >
-                {language === 'en' ? type : translateType(type)}
-              </Button>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
       
-      {/* Active filters */}
-      {(selectedCategory || selectedType || searchQuery) && (
+      {/* Active search filter */}
+      {searchQuery && (
         <div className="flex flex-wrap items-center gap-2 p-3 bg-cosmic-900/40 rounded-lg border border-cosmic-700/20">
-          <span className="text-xs text-cosmic-400">{t("Active filters:", "活动筛选器:")}</span>
+          <span className="text-xs text-cosmic-400 mr-1">{t("Search:", "搜索:")}</span>
+          <Badge variant="outline" className="bg-green-900/30 border-green-700/30 text-cosmic-200 flex items-center gap-1">
+            "{searchQuery}"
+            <button 
+              className="ml-1 hover:text-cosmic-100" 
+              onClick={onClearSearch}
+            >
+              ×
+            </button>
+          </Badge>
           
-          {selectedCategory && (
-            <Badge variant="outline" className="bg-blue-900/30 border-blue-700/30 text-cosmic-200 flex items-center gap-1">
-              {language === 'en' ? selectedCategory : translateCategory(selectedCategory)}
-              <button 
-                className="ml-1 hover:text-cosmic-100" 
-                onClick={() => setSelectedCategory(null)}
-              >
-                ×
-              </button>
-            </Badge>
+          {(searchQuery && (selectedCategory || selectedType)) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClearAllFilters}
+              className="text-xs ml-auto text-cosmic-400 hover:text-cosmic-100"
+            >
+              {t("Clear all", "清除所有")}
+            </Button>
           )}
-          
-          {selectedType && (
-            <Badge variant="outline" className="bg-purple-900/30 border-purple-700/30 text-cosmic-200 flex items-center gap-1">
-              {language === 'en' ? selectedType : translateType(selectedType)}
-              <button 
-                className="ml-1 hover:text-cosmic-100" 
-                onClick={() => setSelectedType(null)}
-              >
-                ×
-              </button>
-            </Badge>
-          )}
-          
-          {searchQuery && (
-            <Badge variant="outline" className="bg-green-900/30 border-green-700/30 text-cosmic-200 flex items-center gap-1">
-              "{searchQuery}"
-              <button 
-                className="ml-1 hover:text-cosmic-100" 
-                onClick={onClearSearch}
-              >
-                ×
-              </button>
-            </Badge>
-          )}
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleClearAllFilters}
-            className="text-xs ml-auto text-cosmic-400 hover:text-cosmic-100"
-          >
-            {t("Clear all", "清除所有")}
-          </Button>
         </div>
       )}
       
@@ -232,9 +142,17 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          <p className="text-cosmic-300">
+          <p className="text-cosmic-300 mb-2">
             {t("No resources found with the selected filters.", "没有找到符合所选筛选条件的资源。")}
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearAllFilters}
+            className="bg-cosmic-800/40 text-cosmic-200 hover:bg-cosmic-700/60"
+          >
+            {t("Clear all filters", "清除所有过滤器")}
+          </Button>
         </motion.div>
       )}
     </div>
@@ -276,14 +194,9 @@ const LinkCard: React.FC<LinkCardProps> = ({ link, viewMode, language, index, it
 const GridViewCard: React.FC<{ link: LinkData, language: string }> = ({ link, language }) => (
   <>
     <div className="flex justify-between items-start mb-2">
-      <div className="flex items-center flex-wrap gap-1">
-        <Badge variant="outline" className="text-xs py-0.5 px-2 bg-cosmic-800/70 text-cosmic-300">
-          {language === 'en' ? link.type : translateType(link.type)}
-        </Badge>
-        <Badge variant="outline" className="text-xs py-0.5 px-2 bg-cosmic-800/70 text-cosmic-400">
-          {language === 'en' ? link.category : translateCategory(link.category)}
-        </Badge>
-      </div>
+      <Badge variant="outline" className="text-xs py-0.5 px-2 bg-blue-900/30 text-blue-300 border-blue-700/30">
+        {language === 'en' ? link.category : translateCategory(link.category)}
+      </Badge>
       <ExternalLink className="h-3 w-3 text-cosmic-500 mt-1" />
     </div>
     
@@ -295,8 +208,14 @@ const GridViewCard: React.FC<{ link: LinkData, language: string }> = ({ link, la
       {language === 'en' ? link.description : link.descriptionZh}
     </p>
     
-    <div className="text-xs text-cosmic-500 truncate bg-cosmic-900/80 p-1.5 rounded border border-cosmic-800/30">
-      {link.url}
+    <div className="flex justify-between items-center mt-2">
+      <Badge variant="outline" className="text-xs py-0.5 px-2 bg-purple-900/30 text-purple-300 border-purple-700/30">
+        {language === 'en' ? link.type : translateType(link.type)}
+      </Badge>
+      
+      <span className="text-xs text-cosmic-500 truncate max-w-[150px]">
+        {new URL(link.url).hostname.replace('www.', '')}
+      </span>
     </div>
   </>
 );
@@ -308,7 +227,7 @@ const CompactViewCard: React.FC<{ link: LinkData, language: string }> = ({ link,
         {language === 'en' ? link.title : link.titleZh}
       </h3>
       <div className="flex items-center gap-1 mt-1">
-        <Badge variant="outline" className="text-xs py-0 px-1 bg-cosmic-800/70 text-cosmic-400">
+        <Badge variant="outline" className="text-xs py-0 px-1 bg-blue-900/30 text-blue-300 border-blue-700/30">
           {language === 'en' ? link.category : translateCategory(link.category)}
         </Badge>
       </div>
@@ -321,7 +240,7 @@ const CompactViewCard: React.FC<{ link: LinkData, language: string }> = ({ link,
     </div>
     
     <div className="flex items-center justify-between md:w-1/4 mt-1 md:mt-0">
-      <Badge variant="outline" className="text-xs py-0 px-1 bg-cosmic-800/70 text-cosmic-300">
+      <Badge variant="outline" className="text-xs py-0 px-1 bg-purple-900/30 text-purple-300 border-purple-700/30">
         {language === 'en' ? link.type : translateType(link.type)}
       </Badge>
       <ExternalLink className="h-3 w-3 text-cosmic-500" />

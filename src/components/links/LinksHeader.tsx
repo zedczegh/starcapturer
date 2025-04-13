@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { Book, Link2, Search, AlertCircle, Filter } from "lucide-react";
+import { Book, Search, AlertCircle, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,18 @@ interface LinksHeaderProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
+  onToggleFilters: () => void;
+  filtersVisible: boolean;
 }
 
-const LinksHeader = ({ searchQuery, onSearchChange, onClearSearch }: LinksHeaderProps) => {
+const LinksHeader = ({ searchQuery, onSearchChange, onClearSearch, onToggleFilters, filtersVisible }: LinksHeaderProps) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   return (
     <motion.div
-      className="mb-10"
+      className="mb-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -89,22 +91,29 @@ const LinksHeader = ({ searchQuery, onSearchChange, onClearSearch }: LinksHeader
           <div className="hidden md:flex mt-1">
             <AlertCircle className="h-5 w-5 text-yellow-400" />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-base font-medium text-cosmic-100 mb-2">
               {t("Looking for specific resources?", "寻找特定资源？")}
             </h3>
             <p className="text-sm text-cosmic-200">
               {t(
-                "Use the filters below to narrow down by category or resource type. These resources are community-contributed and regularly updated.",
-                "使用下方的过滤器按类别或资源类型缩小范围。这些资源由社区贡献，并定期更新。"
+                "Use our improved filters to find exactly what you need. Browse by categories like Hardware, Software, or Tutorials; or filter by specific resource types.",
+                "使用我们改进的过滤器来找到您确切需要的内容。按硬件、软件或教程等类别浏览；或按特定资源类型过滤。"
               )}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className="bg-cosmic-800/50 text-xs border-cosmic-700/40 flex items-center gap-1.5">
-                <Filter className="h-3 w-3" /> {t("Filter by category", "按类别过滤")}
-              </Button>
-              <Button size="sm" variant="outline" className="bg-cosmic-800/50 text-xs border-cosmic-700/40 flex items-center gap-1.5">
-                <Link2 className="h-3 w-3" /> {t("Filter by type", "按类型过滤")}
+            <div className="mt-3">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="bg-cosmic-800/50 text-sm border-cosmic-700/40 hover:bg-cosmic-700/60 flex items-center gap-2"
+                onClick={onToggleFilters}
+              >
+                <Filter className="h-3.5 w-3.5" /> 
+                {t("Show Filters", "显示过滤器")}
+                {filtersVisible ? 
+                  <ChevronUp className="h-3.5 w-3.5 ml-1" /> : 
+                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                }
               </Button>
             </div>
           </div>

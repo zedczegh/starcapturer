@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,11 +9,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import LinksHeader from "@/components/links/LinksHeader";
 import LinksGrid from "@/components/links/LinksGrid";
 import LinksFooter from "@/components/links/LinksFooter";
+import LinksFilters from "@/components/links/LinksFilters";
 
 const UsefulLinks = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
+  const [filtersVisible, setFiltersVisible] = useState(false);
 
   useEffect(() => {
     // Scroll to top when page loads
@@ -28,6 +31,10 @@ const UsefulLinks = () => {
   
   const handleClearSearch = () => {
     setSearchQuery("");
+  };
+
+  const toggleFilters = () => {
+    setFiltersVisible(!filtersVisible);
   };
 
   return (
@@ -119,7 +126,13 @@ const UsefulLinks = () => {
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           onClearSearch={handleClearSearch}
+          onToggleFilters={toggleFilters}
+          filtersVisible={filtersVisible}
         />
+        
+        {filtersVisible && (
+          <LinksFilters />
+        )}
         
         <LinksGrid 
           searchQuery={searchQuery} 
