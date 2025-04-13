@@ -40,7 +40,7 @@ const AboutHeader = () => {
         <div className="bg-cosmic-800/30 backdrop-blur-sm p-2 rounded-full inline-flex items-center mb-3 border border-cosmic-700/30">
           <Sparkles className="h-4 w-4 text-blue-400 mr-1.5" />
           <span className="text-xs text-cosmic-200">
-            {t("Bortle Now 2.0", "Bortle Now 2.0")}
+            {t("Astro SIQS 1.0", "Astro SIQS 1.0")}
           </span>
         </div>
       </motion.div>
@@ -68,8 +68,8 @@ const AboutHeader = () => {
         transition={{ delay: 0.5, duration: 0.5 }}
       >
         {t(
-          "Your companion for stargazing and astrophotography in optimal conditions", 
-          "您在最佳条件下进行星空观测和天文摄影的助手"
+          "Our companion for stargazing and astrophotography in optimal conditions", 
+          "我们的星空观测和天文摄影最佳伙伴"
         )}
       </motion.p>
     </motion.div>

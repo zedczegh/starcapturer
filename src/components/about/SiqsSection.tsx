@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Stars, BookOpen, Calendar, ArrowUpRight, ChevronRight, Binary, Compass } from "lucide-react";
@@ -7,10 +6,12 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 
 const SiqsSection = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const { handleSIQSClick } = useSiqsNavigation();
   
   // Animation for child elements
   const itemVariants = {
@@ -63,12 +64,15 @@ const SiqsSection = () => {
                 {t("Calculate the Stellar Imaging Quality Score for any location to determine stargazing potential.", 
                    "计算任何位置的恒星成像质量评分，以确定观星潜力。")}
               </p>
-              <Link to="/siqs">
-                <Button size="sm" variant="secondary" className="w-full text-xs group-hover:bg-purple-600/20 transition-all">
-                  {t("Open SIQS Calculator", "打开SIQS计算器")}
-                  <ArrowUpRight className="ml-1.5 h-3 w-3" />
-                </Button>
-              </Link>
+              <Button 
+                onClick={handleSIQSClick} 
+                size="sm" 
+                variant="secondary" 
+                className="w-full text-xs group-hover:bg-purple-600/20 transition-all"
+              >
+                {t("Open SIQS Calculator", "打开SIQS计算器")}
+                <ArrowUpRight className="ml-1.5 h-3 w-3" />
+              </Button>
             </div>
           </div>
           
