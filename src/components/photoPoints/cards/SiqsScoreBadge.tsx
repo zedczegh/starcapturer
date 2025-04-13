@@ -8,19 +8,15 @@ interface SiqsScoreBadgeProps {
   score: number;
   loading?: boolean;
   compact?: boolean;
-  realTime?: boolean;
 }
 
-const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
-  score, 
-  loading = false, 
-  compact = false,
-  realTime = false
-}) => {
+const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ score, loading = false, compact = false }) => {
   const scoreColor = getProgressColor(score);
   
+  // Generate a light background color based on the score color with higher opacity for better visibility
   const bgColor = `${scoreColor}60`; // Increased opacity for better visibility
   
+  // Inline styles for dynamic coloring with higher contrast
   const badgeStyle = {
     backgroundColor: bgColor,
     borderColor: scoreColor,
@@ -38,9 +34,8 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       ) : (
         <Star className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} mr-1.5`} fill={scoreColor} />
       )}
-      <span className={`${compact ? 'text-2xs font-bold' : 'text-xs font-medium'} flex items-center`}>
+      <span className={`${compact ? 'text-2xs font-bold' : 'text-xs font-medium'}`}>
         {loading ? '...' : formatSIQSScoreForDisplay(score)}
-        {/* Removed the real-time dot */}
       </span>
     </div>
   );

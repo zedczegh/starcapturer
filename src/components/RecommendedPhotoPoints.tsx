@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -10,7 +10,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -30,8 +29,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   const currentSiqs = currentSiqsStore.getValue();
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
-  const [locationsWithRealTimeScores, setLocationsWithRealTimeScores] = useState<SharedAstroSpot[]>([]);
-  const [processingRealTimeScores, setProcessingRealTimeScores] = useState(false);
   
   // Start with cached data if available from localStorage
   useEffect(() => {
@@ -74,63 +71,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     }
   }, [loading, isInitialized, displayedLocations]);
 
-  // Calculate real-time SIQS for displayed locations
-  const calculateRealTimeScores = useCallback(async (locations: SharedAstroSpot[]) => {
-    if (!locations.length) return;
-    
-    setProcessingRealTimeScores(true);
-    
-    try {
-      // Process locations in sequence to avoid API rate limiting
-      const updatedLocations = [...locations];
-      
-      for (let i = 0; i < Math.min(updatedLocations.length, limit); i++) {
-        const location = updatedLocations[i];
-        
-        try {
-          const result = await calculateRealTimeSiqs(
-            location.latitude,
-            location.longitude,
-            location.bortleScale || 5
-          );
-          
-          updatedLocations[i] = {
-            ...location,
-            siqs: result.siqs,
-            isViable: result.isViable,
-            // Store factors in a way compatible with SharedAstroSpot
-            factors: result.factors
-          };
-        } catch (error) {
-          console.error(`Error calculating real-time SIQS for ${location.name}:`, error);
-        }
-      }
-      
-      setLocationsWithRealTimeScores(updatedLocations);
-    } catch (error) {
-      console.error("Error calculating real-time SIQS:", error);
-    } finally {
-      setProcessingRealTimeScores(false);
-    }
-  }, [limit]);
-  
-  // Trigger real-time SIQS calculation when locations change
-  useEffect(() => {
-    if (displayedLocations.length > 0) {
-      calculateRealTimeScores(displayedLocations);
-    } else if (cachedLocations.length > 0 && locationsWithRealTimeScores.length === 0) {
-      calculateRealTimeScores(cachedLocations);
-    }
-  }, [displayedLocations, cachedLocations, calculateRealTimeScores]);
-
   // Only show limited number of locations
   const limitedLocations = useMemo(() => {
-    // Use locations with real-time scores if available, otherwise use displayedLocations or cachedLocations
-    const locationsToUse = locationsWithRealTimeScores.length > 0 
-      ? locationsWithRealTimeScores 
-      : displayedLocations.length > 0 
-        ? displayedLocations 
-        : cachedLocations;
+    // Use fresh data if available, otherwise use cached data
+    const locationsToUse = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
     
     // Prioritize certified locations 
     const certified = locationsToUse.filter(loc => 
@@ -149,7 +93,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     ].slice(0, limit);
     
     return sortedLocations;
-  }, [displayedLocations, cachedLocations, limit, locationsWithRealTimeScores]);
+  }, [displayedLocations, cachedLocations, limit]);
 
   if (localLoading && cachedLocations.length === 0) {
     return (
@@ -206,20 +150,19 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       )}
       
       <AnimatePresence>
-        <div className="space-y-3 mt-3">
+        <div className="space-y-3 mt-3"> {/* Added margin-top to fix layout conflicts */}
           {limitedLocations.map((location, index) => (
             <motion.div
               key={`${location.id || location.latitude}-${location.longitude}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, delay: index * 0.03 }}
+              transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
             >
               <PhotoPointCard
                 point={location}
                 onSelect={onSelectPoint}
                 onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}
-                realTimeScore={locationsWithRealTimeScores.length > 0}
               />
             </motion.div>
           ))}
@@ -241,7 +184,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         </div>
       )}
 
-      {(searching || processingRealTimeScores) && (
+      {searching && (
         <div className="flex justify-center mt-2">
           <Loader2 className="w-4 h-4 animate-spin text-primary/60" />
         </div>
