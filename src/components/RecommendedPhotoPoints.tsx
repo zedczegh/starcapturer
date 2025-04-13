@@ -1,16 +1,15 @@
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
-import PhotoPointCard from "./photoPoints/PhotoPointCard";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { Button } from "./ui/button";
-import { ChevronRight, Loader2, MapPin } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { motion, AnimatePresence } from "framer-motion";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
+import { loadCachedLocations, saveCachedLocations } from "./photoPoints/components/PhotoPointsCache";
+import LocationsList from "./photoPoints/components/LocationsList";
+import ViewAllButton from "./photoPoints/components/ViewAllButton";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -34,17 +33,10 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   
   // Start with cached data if available from localStorage
   useEffect(() => {
-    try {
-      const savedLocations = localStorage.getItem('cachedRecommendedLocations');
-      if (savedLocations) {
-        const parsed = JSON.parse(savedLocations);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setCachedLocations(parsed);
-          setLocalLoading(false);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading cached locations:", error);
+    const cached = loadCachedLocations();
+    if (cached.length > 0) {
+      setCachedLocations(cached);
+      setLocalLoading(false);
     }
   }, []);
   
@@ -63,13 +55,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     if (!loading && !isInitialized && displayedLocations.length > 0) {
       setIsInitialized(true);
       setLocalLoading(false);
-      
-      // Save to localStorage for faster future loads
-      try {
-        localStorage.setItem('cachedRecommendedLocations', JSON.stringify(displayedLocations));
-      } catch (error) {
-        console.error("Error saving locations to cache:", error);
-      }
+      saveCachedLocations(displayedLocations);
     }
   }, [loading, isInitialized, displayedLocations]);
 
@@ -118,12 +104,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     
     // Combine with certified locations first, then add non-certified
     // to fill up to the limit
-    const sortedLocations = [
-      ...certified,
-      ...nonCertified
-    ].slice(0, limit);
-    
-    return sortedLocations;
+    return [...certified, ...nonCertified].slice(0, limit);
   }, [enhancedLocations, displayedLocations, cachedLocations, limit]);
 
   if (localLoading && cachedLocations.length === 0) {
@@ -149,23 +130,6 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             "尝试扩大您的搜索半径。"
           )}
         </p>
-        
-        {userLocation && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="mt-4 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30"
-            onClick={() => {
-              // Trigger event to find more locations
-              document.dispatchEvent(
-                new CustomEvent('expand-search-radius', { detail: { radius: 1000 } })
-              );
-            }}
-          >
-            <MapPin className="h-3.5 w-3.5 mr-1.5" />
-            {t("Expand Search", "扩大搜索")}
-          </Button>
-        )}
       </div>
     );
   }
@@ -180,40 +144,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         />
       )}
       
-      <AnimatePresence>
-        <div className="space-y-3 mt-3">
-          {limitedLocations.map((location, index) => (
-            <motion.div
-              key={`${location.id || location.latitude}-${location.longitude}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, delay: index * 0.03 }}
-            >
-              <PhotoPointCard
-                point={location}
-                onSelect={onSelectPoint}
-                onViewDetails={() => onSelectPoint?.(location)}
-                userLocation={userLocation}
-              />
-            </motion.div>
-          ))}
-        </div>
-      </AnimatePresence>
+      <LocationsList 
+        locations={limitedLocations}
+        onSelectPoint={onSelectPoint}
+        userLocation={userLocation}
+      />
 
-      {limitedLocations.length > 0 && (
-        <div className="mt-4 flex justify-center">
-          <Link to="/photo-points">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20 text-primary/90 hover:text-primary"
-            >
-              {t("View All Photo Points", "查看所有摄影点")}
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      )}
+      {limitedLocations.length > 0 && <ViewAllButton />}
 
       {searching && (
         <div className="flex justify-center mt-2">

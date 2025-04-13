@@ -1,15 +1,18 @@
-import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
+
+import React, { useCallback, useState, useRef, useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css'; // Import custom marker styles
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { WorldBoundsController, MapEvents } from './MapComponents';
-import { UserLocationMarker, LocationMarker } from './MarkerComponents';
+import { UserLocationMarker } from './markers';
 import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
 import { MapController } from './MapController';
 import MapEffectsComposer from './effects/MapEffectsComposer';
+import { chunkArray } from './markers/MarkerUtils';
+import { MapCenterHandler, MarkerGroup, SearchRadiusCircle } from './components';
 
 // Configure Leaflet on load
 configureLeaflet();
@@ -27,97 +30,6 @@ interface PhotoPointsMapContainerProps {
   hoveredLocationId: string | null;
   onMarkerHover: (id: string | null) => void;
 }
-
-// Use a function to efficiently chunk marker rendering
-function chunkArray<T>(array: T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += chunkSize) {
-    chunks.push(array.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
-const MarkerGroup = React.memo(({ 
-  locations, 
-  onLocationClick,
-  hoveredLocationId,
-  onMarkerHover,
-  isCertified,
-  hideMarkerPopups,
-  activeView
-}: { 
-  locations: SharedAstroSpot[], 
-  onLocationClick?: (location: SharedAstroSpot) => void,
-  hoveredLocationId: string | null,
-  onMarkerHover: (id: string | null) => void,
-  isCertified: boolean,
-  hideMarkerPopups: boolean,
-  activeView: 'certified' | 'calculated'
-}) => {
-  return (
-    <>
-      {locations.map((location) => {
-        // Only render markers with valid coordinates
-        if (!location || 
-            typeof location.latitude !== 'number' || 
-            typeof location.longitude !== 'number' ||
-            isNaN(location.latitude) || 
-            isNaN(location.longitude)) {
-          return null;
-        }
-        
-        // Generate a unique ID for this location
-        const locationId = location.id || 
-          `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-        
-        // Individual location certification status
-        const locationIsCertified = location.isDarkSkyReserve === true || 
-          (location.certification && location.certification !== '');
-        
-        // Skip non-certified locations in certified view
-        if (activeView === 'certified' && !locationIsCertified) {
-          return null;
-        }
-        
-        // Handle the click event for this marker
-        const handleClick = () => {
-          if (onLocationClick) {
-            onLocationClick(location);
-          }
-        };
-        
-        return (
-          <LocationMarker
-            key={locationId}
-            location={location}
-            onClick={handleClick}
-            isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
-            onHover={hideMarkerPopups ? () => {} : onMarkerHover}
-            locationId={locationId}
-            isCertified={locationIsCertified}
-            activeView={activeView}
-          />
-        );
-      })}
-    </>
-  );
-});
-
-// Separate component to update map center properly
-const MapCenterHandler = ({ center }: { center: [number, number] }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    // Only center map if coordinates are valid
-    if (center && center.length === 2 && 
-        isFinite(center[0]) && isFinite(center[1]) &&
-        Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) {
-      map.setView(center, map.getZoom(), { animate: false });
-    }
-  }, [center, map]);
-  
-  return null;
-};
 
 const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   center,
@@ -226,34 +138,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     }
   }, [onMapClick, onMarkerHover]);
 
-  // Optimization: render circle conditionally
-  const renderSearchRadiusCircle = useMemo(() => {
-    if (userLocation && 
-        searchRadius && 
-        searchRadius < 1000 &&
-        typeof userLocation.latitude === 'number' &&
-        typeof userLocation.longitude === 'number' &&
-        isFinite(userLocation.latitude) &&
-        isFinite(userLocation.longitude)) {
-      
-      return (
-        <Circle 
-          center={[userLocation.latitude, userLocation.longitude]}
-          radius={searchRadius * 1000} // Convert km to meters for circle radius
-          pathOptions={{ 
-            color: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
-            fillOpacity: 0.08,
-            weight: 1.5,
-            opacity: 0.4,
-            className: 'location-radius-circle'
-          }}
-        />
-      );
-    }
-    return null;
-  }, [userLocation, searchRadius, isCertifiedView]);
-
   return (
     <MapContainer
       center={validCenter}
@@ -309,7 +193,11 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       )}
       
       {/* Search radius visualization */}
-      {renderSearchRadiusCircle}
+      <SearchRadiusCircle 
+        userLocation={userLocation}
+        searchRadius={searchRadius}
+        isCertifiedView={isCertifiedView}
+      />
       
       {/* Location markers rendered in batches for better performance */}
       {!hideMarkerPopups && mapRendered && markerChunks.map((chunk, i) => (
@@ -319,7 +207,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           onLocationClick={onLocationClick}
           hoveredLocationId={hoveredLocationId}
           onMarkerHover={onMarkerHover}
-          isCertified={isCertifiedView}
           hideMarkerPopups={hideMarkerPopups}
           activeView={activeView}
         />
