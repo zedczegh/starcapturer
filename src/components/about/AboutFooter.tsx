@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
+import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, Info, ExternalLink } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutFooter = () => {
