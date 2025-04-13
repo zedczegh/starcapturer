@@ -3,7 +3,6 @@ import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
-import { mpsasToBortle, bortleToMpsas } from "@/utils/darkSkyMeterUtils";
 
 /**
  * Ensure SIQS value is always on a 0-10 scale
@@ -26,12 +25,6 @@ export async function calculateSIQSWithWeatherData(
   moonPhase: number,
   forecastData: any | null
 ): Promise<any> {
-  // Validate input data first
-  if (!weatherData || typeof bortleScale !== 'number' || typeof seeingConditions !== 'number') {
-    console.error("Invalid input data for SIQS calculation", { weatherData, bortleScale, seeingConditions, moonPhase });
-    throw new Error("Invalid input data for SIQS calculation");
-  }
-
   // First try to fetch clear sky rate data if not already provided
   let clearSkyRate: number | undefined = weatherData.clearSkyRate;
   
@@ -139,20 +132,6 @@ export async function calculateSIQSWithWeatherData(
     const clearSkyScoreContribution = (clearSkyRate / 100) * 10 * 0.1;
     result.score = Math.min(10, result.score * 0.9 + clearSkyScoreContribution);
     console.log(`Added clear sky rate (${clearSkyRate}%) to SIQS calculation, adjusted score: ${result.score.toFixed(2)}`);
-  }
-  
-  // Add MPSAS conversion for better correlation with astronomical standards
-  try {
-    const bortleMpsas = bortleToMpsas(bortleScale);
-    
-    if (!result.metadata) {
-      result.metadata = {};
-    }
-    
-    result.metadata.mpsas = bortleMpsas;
-    console.log(`Added MPSAS (${bortleMpsas.toFixed(2)}) to SIQS calculation`);
-  } catch (error) {
-    console.error("Error converting Bortle to MPSAS:", error);
   }
   
   return result;

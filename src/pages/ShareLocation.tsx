@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -13,9 +14,6 @@ import CameraMeasurementSection from "@/components/bortleNow/CameraMeasurementSe
 import CameraPermissionDialog from "@/components/bortleNow/CameraPermissionDialog";
 import CountdownOverlay from "@/components/bortleNow/CountdownOverlay";
 import { AnimatePresence } from "framer-motion";
-import { calculateBortleFromStars } from "@/utils/starCountUtils";
-import { bortleToMpsas, rawBrightnessToMpsas } from "@/utils/darkSkyMeterUtils";
-import { getImageQualityDescription } from "@/utils/starAnalysis";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -31,9 +29,6 @@ const BortleNow: React.FC = () => {
   
   const [bortleScale, setBortleScale] = useState<number | null>(null);
   const [starCount, setStarCount] = useState<number | null>(null);
-  const [mpsasValue, setMpsasValue] = useState<number | null>(null);
-  const [imageQuality, setImageQuality] = useState<number | null>(null);
-  
   const [cameraReadings, setCameraReadings] = useState<{
     darkFrame: boolean;
     lightFrame: boolean;
@@ -47,11 +42,6 @@ const BortleNow: React.FC = () => {
   const [cameraMode, setCameraMode] = useState<"dark" | "light" | null>(null);
   
   const [countdown, setCountdown] = useState<number | null>(null);
-  
-  const [darkFrameData, setDarkFrameData] = useState<{
-    brightness: number;
-    noise: number;
-  } | null>(null);
   
   const onLocationChange = useCallback((lat: number, lng: number) => {
     setLatitude(lat.toFixed(6));
@@ -68,15 +58,7 @@ const BortleNow: React.FC = () => {
         setBortleScale(updatedBortle);
         console.log("Updated Bortle scale from location:", updatedBortle);
         
-        try {
-          const mpsas = bortleToMpsas(updatedBortle);
-          setMpsasValue(mpsas);
-          console.log("Calculated MPSAS from Bortle scale:", mpsas);
-        } catch (err) {
-          console.error("Error calculating MPSAS:", err);
-        }
-        
-        saveBortleMeasurement(lat, lng, updatedBortle, null, null, null);
+        saveBortleMeasurement(lat, lng, updatedBortle, null);
       }
     } catch (err) {
       console.error("Error updating Bortle scale:", err);
@@ -89,9 +71,7 @@ const BortleNow: React.FC = () => {
     lat: number, 
     lng: number, 
     bortleValue: number, 
-    starCountValue: number | null,
-    skyBrightnessValue: number | null,
-    mpsasValue: number | null
+    starCountValue: number | null
   ) => {
     try {
       const measurement = {
@@ -99,33 +79,10 @@ const BortleNow: React.FC = () => {
         longitude: lng,
         bortleScale: bortleValue,
         starCount: starCountValue,
-        skyBrightness: skyBrightnessValue,
-        mpsas: mpsasValue,
         locationName: locationName || null,
         timestamp: new Date().toISOString(),
         method: starCountValue ? 'camera' : 'location'
       };
-      
-      try {
-        const starMeasurements = JSON.parse(localStorage.getItem('star_measurements') || '[]');
-        starMeasurements.push({
-          ...measurement,
-          imageQuality: imageQuality || null,
-          deviceInfo: {
-            userAgent: navigator.userAgent,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height
-          }
-        });
-        
-        if (starMeasurements.length > 100) {
-          starMeasurements.splice(0, starMeasurements.length - 100);
-        }
-        
-        localStorage.setItem('star_measurements', JSON.stringify(starMeasurements));
-      } catch (err) {
-        console.error("Error saving to star_measurements:", err);
-      }
       
       const savedMeasurements = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]');
       savedMeasurements.push(measurement);
@@ -179,50 +136,19 @@ const BortleNow: React.FC = () => {
     getCurrentLocation();
     
     try {
-      const loadLastMeasurement = async () => {
-        const starMeasurements = JSON.parse(localStorage.getItem('star_measurements') || '[]');
-        if (starMeasurements.length > 0) {
-          const lastMeasurement = starMeasurements[starMeasurements.length - 1];
-          if (lastMeasurement) {
-            const measurementTime = new Date(lastMeasurement.timestamp).getTime();
-            const currentTime = new Date().getTime();
-            const hoursDiff = (currentTime - measurementTime) / (1000 * 60 * 60);
-            
-            if (hoursDiff < 24) {
-              console.log("Loading previous star measurement:", lastMeasurement);
-              if (lastMeasurement.starCount) {
-                setStarCount(lastMeasurement.starCount);
-              }
-              if (lastMeasurement.mpsas) {
-                setMpsasValue(lastMeasurement.mpsas);
-              }
-              if (lastMeasurement.imageQuality) {
-                setImageQuality(lastMeasurement.imageQuality);
-              }
-              return;
-            }
-          }
-        }
+      const lastMeasurement = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]').pop();
+      if (lastMeasurement && lastMeasurement.bortleScale) {
+        const measurementTime = new Date(lastMeasurement.timestamp).getTime();
+        const currentTime = new Date().getTime();
+        const hoursDiff = (currentTime - measurementTime) / (1000 * 60 * 60);
         
-        const bortleMeasurements = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]');
-        if (bortleMeasurements.length > 0) {
-          const lastMeasurement = bortleMeasurements[bortleMeasurements.length - 1];
-          if (lastMeasurement) {
-            const measurementTime = new Date(lastMeasurement.timestamp).getTime();
-            const currentTime = new Date().getTime();
-            const hoursDiff = (currentTime - measurementTime) / (1000 * 60 * 60);
-            
-            if (hoursDiff < 24 && lastMeasurement.starCount) {
-              setStarCount(lastMeasurement.starCount);
-              if (lastMeasurement.mpsas) {
-                setMpsasValue(lastMeasurement.mpsas);
-              }
-            }
+        if (hoursDiff < 24) {
+          console.log("Loading previous Bortle measurement:", lastMeasurement);
+          if (lastMeasurement.starCount) {
+            setStarCount(lastMeasurement.starCount);
           }
         }
-      };
-      
-      loadLastMeasurement();
+      }
     } catch (error) {
       console.error("Error loading saved measurements:", error);
     }
@@ -313,15 +239,8 @@ const BortleNow: React.FC = () => {
         description: t("Please cover your camera lens completely...", "请完全遮盖相机镜头..."),
       });
       
+      // Simulate processing time
       await new Promise(resolve => setTimeout(() => {
-        const simulatedNoise = Math.random() * 8 + 5;
-        const simulatedDarkBrightness = Math.random() * 15 + 5;
-        
-        setDarkFrameData({
-          brightness: simulatedDarkBrightness,
-          noise: simulatedNoise
-        });
-        
         resolve(true);
       }, 2000));
       
@@ -347,6 +266,21 @@ const BortleNow: React.FC = () => {
     requestCameraPermission("dark");
   };
 
+  const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
+    const normalizedStarCount = Math.min(10, starCount / 10);
+    const normalizedBrightness = 10 - (skyBrightness / 25.5);
+    
+    const combinedMetric = (normalizedBrightness * 0.7) + (normalizedStarCount * 0.3);
+    
+    let bortle = 10 - combinedMetric;
+    
+    bortle = Math.max(1, Math.min(9, bortle));
+    
+    console.log(`Star count: ${starCount}, Brightness: ${skyBrightness}, Calculated Bortle: ${bortle.toFixed(1)}`);
+    
+    return bortle;
+  };
+
   const performLightFrameCapture = async () => {
     try {
       setError(null);
@@ -362,65 +296,37 @@ const BortleNow: React.FC = () => {
         description: t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）..."),
       });
       
-      const baseLocationBortle = bortleScale || 5;
-      
-      await new Promise(resolve => setTimeout(async () => {
-        const maxPossibleStars = Math.max(0, 200 - (baseLocationBortle * 20));
-        const variability = Math.max(0, 20 - (baseLocationBortle * 1.5));
-        
-        const detectionEfficiency = Math.random() * 0.3 + 0.7;
-        const simulatedStarCount = Math.floor(
-          (maxPossibleStars + (Math.random() * variability * 2 - variability)) * detectionEfficiency
-        );
-        
-        const baseBrightness = Math.min(255, Math.max(10, ((baseLocationBortle - 1) / 8) * 180 + 20));
-        const brightnessVariation = Math.random() * 20 - 10;
-        const simulatedSkyBrightness = Math.max(0, Math.min(255, baseBrightness + brightnessVariation));
-        
-        const simulatedImageQuality = Math.max(0, Math.min(100,
-          85 - (baseLocationBortle * 3) + (Math.random() * 15 - 7.5)
-        ));
-        
-        const simulatedMpsas = rawBrightnessToMpsas(simulatedSkyBrightness);
-        
-        const measuredBortle = calculateBortleFromStars(simulatedStarCount, simulatedSkyBrightness);
-        
-        setStarCount(simulatedStarCount);
-        setBortleScale(measuredBortle);
-        setMpsasValue(simulatedMpsas);
-        setImageQuality(simulatedImageQuality);
-        setCameraReadings(prev => ({ ...prev, lightFrame: true }));
-        
-        if (latitude && longitude) {
-          saveBortleMeasurement(
-            parseFloat(latitude), 
-            parseFloat(longitude), 
-            measuredBortle, 
-            simulatedStarCount,
-            simulatedSkyBrightness,
-            simulatedMpsas
-          );
-        }
-        
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(() => {
         resolve(true);
       }, 3000));
       
-      const qualityDesc = imageQuality !== null ? 
-        getImageQualityDescription(imageQuality) : 
-        'unknown';
+      const baseLocationBortle = bortleScale || 5;
+      
+      const simulatedStarCount = Math.max(0, Math.floor(100 * (1 - (baseLocationBortle - 1) / 8) + Math.random() * 20 - 10));
+      setStarCount(simulatedStarCount);
+      
+      const simulatedSkyBrightness = Math.min(255, Math.max(10, ((baseLocationBortle - 1) / 8) * 200 + Math.random() * 30 - 15));
+      
+      const measuredBortle = calculateBortleFromStars(simulatedStarCount, simulatedSkyBrightness);
+      
+      setBortleScale(measuredBortle);
+      setCameraReadings(prev => ({ ...prev, lightFrame: true }));
+      
+      if (latitude && longitude) {
+        saveBortleMeasurement(
+          parseFloat(latitude), 
+          parseFloat(longitude), 
+          measuredBortle, 
+          simulatedStarCount
+        );
+      }
       
       toast({
         title: t("Measurement Complete", "测量完成"),
         description: t(
-          `Sky brightness measured. Stars detected: ${starCount}. Bortle: ${bortleScale?.toFixed(1)}. Quality: ${qualityDesc}`,
-          `天空亮度已测量。检测到的星星: ${starCount}。波尔特尔等级：${bortleScale?.toFixed(1)}。质量：${
-            language === 'zh' ? 
-              qualityDesc === 'excellent' ? '极佳' : 
-              qualityDesc === 'good' ? '良好' : 
-              qualityDesc === 'fair' ? '一般' : 
-              qualityDesc === 'poor' ? '较差' : '很差'
-            : qualityDesc
-          }`
+          `Sky brightness measured. Stars detected: ${simulatedStarCount}. Bortle scale: ${measuredBortle.toFixed(1)}`,
+          `天空亮度已测量。检测到的星星: ${simulatedStarCount}。波尔特尔等级：${measuredBortle.toFixed(1)}`
         ),
       });
     } catch (error) {
@@ -446,6 +352,7 @@ const BortleNow: React.FC = () => {
     <>
       <NavBar />
       <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
+        {/* Header section with the new animated bar */}
         <BortleNowHeader />
         
         {error && (
@@ -456,21 +363,22 @@ const BortleNow: React.FC = () => {
           </div>
         )}
         
+        {/* Countdown overlay for camera capture */}
         <CountdownOverlay countdown={countdown} cameraMode={cameraMode} />
         
+        {/* Camera permission dialog */}
         <CameraPermissionDialog 
           open={showCameraPermissionDialog}
           onPermissionResponse={handlePermissionResponse}
         />
         
         <div className="space-y-6">
+          {/* Bortle scale display */}
           <AnimatePresence>
             {bortleScale && (
               <BortleScaleDisplay
                 bortleScale={bortleScale}
                 starCount={starCount}
-                mpsas={mpsasValue}
-                imageQuality={imageQuality}
                 isMeasuringRealtime={isMeasuringRealtime}
                 cameraReadings={cameraReadings}
                 bortleDescription={bortleDescription}
@@ -478,6 +386,7 @@ const BortleNow: React.FC = () => {
             )}
           </AnimatePresence>
           
+          {/* Location section */}
           <LocationSection
             latitude={latitude}
             longitude={longitude}
@@ -487,6 +396,7 @@ const BortleNow: React.FC = () => {
             setLongitude={setLongitude}
           />
           
+          {/* Camera measurement section */}
           <CameraMeasurementSection
             isProcessingImage={isProcessingImage}
             isMeasuringRealtime={isMeasuringRealtime}
