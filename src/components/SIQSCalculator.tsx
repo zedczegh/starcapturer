@@ -34,11 +34,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   const latitude = userLocation?.latitude.toString() || "";
   const longitude = userLocation?.longitude.toString() || "";
   
-  // Create wrapper function to adapt to the expected interface
-  const onSelectLocation = (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => {
-    handleLocationSelect(location);
-  };
-  
   return (
     <SIQSCalculatorContent
       className={className}
@@ -51,7 +46,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       userLocation={userLocation}
       hideRecommendedPoints={hideRecommendedPoints}
       noAutoLocationRequest={effectiveNoAutoRequest}
-      onSelectLocation={onSelectLocation}
+      onSelectLocation={handleLocationSelect}
       handleUseCurrentLocation={handleUseCurrentLocation}
       onRecommendedPointSelect={handleRecommendedPointSelect}
     />

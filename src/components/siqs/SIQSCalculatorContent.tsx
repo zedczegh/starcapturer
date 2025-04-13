@@ -20,7 +20,7 @@ interface SIQSCalculatorContentProps {
   userLocation: { latitude: number; longitude: number } | null;
   hideRecommendedPoints?: boolean;
   noAutoLocationRequest: boolean;
-  onSelectLocation: (location: { name: string; latitude: number; longitude: number; placeDetails?: string }) => void;
+  onSelectLocation: (location: string, latitude: number, longitude: number) => void;
   handleUseCurrentLocation: () => void;
   onRecommendedPointSelect: (point: SharedAstroSpot) => void;
 }
