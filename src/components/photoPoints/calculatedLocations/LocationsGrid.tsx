@@ -17,22 +17,18 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
   isMobile = false,
   onViewDetails
 }) => {
-  if (!locations || locations.length === 0) {
-    return null;
-  }
-
   return (
     <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
       {locations.map((location, index) => (
         <motion.div
-          key={location.id || `${location.latitude}-${location.longitude}-${index}`}
+          key={location.id || `${location.latitude}-${location.longitude}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
         >
           <PhotoPointCard
             point={location}
-            onViewDetails={onViewDetails ? () => onViewDetails(location) : undefined}
+            onViewDetails={onViewDetails}
             userLocation={null} // This doesn't use current location for distance
           />
         </motion.div>

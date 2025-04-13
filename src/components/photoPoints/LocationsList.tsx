@@ -18,19 +18,16 @@ const LocationsList: React.FC<LocationsListProps> = ({
   initialLoad,
   onViewDetails
 }) => {
-  // Safeguard against null locations
-  const validLocations = Array.isArray(locations) ? locations : [];
-  
   return (
     <div className="space-y-4 pb-8">
       {/* Container for photo point cards */}
       <div className="grid grid-cols-1 gap-4">
-        {validLocations.map((location, index) => (
+        {locations.map((location, index) => (
           <motion.div
-            key={location.id || `${location.latitude}-${location.longitude}-${index}`}
+            key={location.id || `${location.latitude}-${location.longitude}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
           >
             <PhotoPointCard
               point={location}
@@ -40,13 +37,6 @@ const LocationsList: React.FC<LocationsListProps> = ({
           </motion.div>
         ))}
       </div>
-
-      {/* Show empty state when no locations and not loading */}
-      {validLocations.length === 0 && !loading && !initialLoad && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No locations found</p>
-        </div>
-      )}
 
       {/* Loading state for additional locations */}
       {loading && !initialLoad && (
