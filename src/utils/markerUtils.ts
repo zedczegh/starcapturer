@@ -103,39 +103,3 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
     return location.siqs ? getProgressColor(location.siqs) : defaultColor;
   }
 };
-
-/**
- * Get location name based on current language
- * @param location Location to get name for
- * @param language Current language (en or zh)
- * @returns Localized name for the location
- */
-export const getLocalizedLocationName = (location: SharedAstroSpot, language: string): string => {
-  if (language === 'zh' && location.chineseName) {
-    return location.chineseName;
-  }
-  return location.name;
-};
-
-/**
- * Get certification type in Chinese
- * @param certification The certification string in English
- * @returns The certification translated to Chinese
- */
-export const getChineseCertificationType = (certification: string = ''): string => {
-  const certLower = certification.toLowerCase();
-  
-  if (certLower.includes('reserve')) {
-    return '国际暗夜保护区';
-  } else if (certLower.includes('sanctuary')) {
-    return '国际暗夜保护区';
-  } else if (certLower.includes('park')) {
-    return '国际暗夜公园';
-  } else if (certLower.includes('community')) {
-    return '国际暗夜社区';
-  } else if (certLower.includes('urban')) {
-    return '国际城市夜空地区';
-  } else {
-    return '国际认证暗夜地区';
-  }
-};
