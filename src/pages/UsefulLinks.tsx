@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -121,7 +120,12 @@ const UsefulLinks = () => {
           onSearchChange={handleSearchChange}
           onClearSearch={handleClearSearch}
         />
-        <LinksGrid searchQuery={searchQuery} />
+        
+        <LinksGrid 
+          searchQuery={searchQuery} 
+          onClearSearch={handleClearSearch}
+        />
+        
         <LinksFooter />
       </div>
     </div>

@@ -1,73 +1,42 @@
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExternalLink, Link2, Filter, Grid, ListFilter, Layers, LayoutGrid } from "lucide-react";
+import { ExternalLink, Grid, Layers, LayoutGrid } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { linksData } from "./linksData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LinkCategory, LinkFilters, LinkViewMode, useLinksFilters } from "@/hooks/useLinksFilters";
+import { translateCategory, translateType } from "@/utils/linkTranslations";
 
-const LinksGrid = () => {
+interface LinksGridProps {
+  searchQuery: string;
+  onClearSearch: () => void;
+}
+
+const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => {
   const { t, language } = useLanguage();
   const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<LinkViewMode>('grid');
   
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
-  
-  // Get unique categories and types for filtering
-  const categories = useMemo(() => {
-    const allCategories = new Set(linksData.map(link => link.category));
-    return Array.from(allCategories);
-  }, []);
-  
-  const types = useMemo(() => {
-    const allTypes = new Set(linksData.map(link => link.type));
-    return Array.from(allTypes);
-  }, []);
-  
-  // Filter links based on selected category, type, and search query
-  const filteredLinks = useMemo(() => {
-    let filtered = [...linksData];
-    
-    if (selectedCategory) {
-      filtered = filtered.filter(link => link.category === selectedCategory);
-    }
-    
-    if (selectedType) {
-      filtered = filtered.filter(link => link.type === selectedType);
-    }
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(link => {
-        const title = language === 'en' ? link.title.toLowerCase() : link.titleZh.toLowerCase();
-        const description = language === 'en' ? link.description.toLowerCase() : link.descriptionZh.toLowerCase();
-        const category = link.category.toLowerCase();
-        const type = link.type.toLowerCase();
-        
-        return title.includes(query) || 
-               description.includes(query) || 
-               category.includes(query) || 
-               type.includes(query) ||
-               link.url.toLowerCase().includes(query);
-      });
-    }
-    
-    return filtered;
-  }, [selectedCategory, selectedType, searchQuery, language]);
+  const { 
+    categories,
+    types,
+    selectedCategory,
+    selectedType,
+    filteredLinks,
+    setSelectedCategory,
+    setSelectedType
+  } = useLinksFilters(searchQuery, language);
   
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
-      transition: { 
-        staggerChildren: 0.05
-      }
+      transition: { staggerChildren: 0.05 }
     }
   };
   
@@ -80,13 +49,16 @@ const LinksGrid = () => {
     }
   };
 
-  // Pass search state up to parent
-  const handleClearSearch = () => {
-    setSearchQuery("");
+  // Clear all filters
+  const handleClearAllFilters = () => {
+    setSelectedCategory(null);
+    setSelectedType(null);
+    onClearSearch();
   };
   
   return (
     <div className="space-y-6">
+      {/* View mode toggle */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center sticky top-2 z-10 bg-cosmic-950/90 backdrop-blur-lg p-4 rounded-lg border border-cosmic-800/30 shadow-lg">
         <div className="flex gap-2">
           <Button 
@@ -122,7 +94,7 @@ const LinksGrid = () => {
             {t("Categories", "类别")}
           </TabsTrigger>
           <TabsTrigger value="types" className="flex items-center gap-1.5">
-            <ListFilter className="h-4 w-4" />
+            <Grid className="h-4 w-4" />
             {t("Resource Types", "资源类型")}
           </TabsTrigger>
         </TabsList>
@@ -210,7 +182,7 @@ const LinksGrid = () => {
               "{searchQuery}"
               <button 
                 className="ml-1 hover:text-cosmic-100" 
-                onClick={handleClearSearch}
+                onClick={onClearSearch}
               >
                 ×
               </button>
@@ -220,11 +192,7 @@ const LinksGrid = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => {
-              setSelectedCategory(null);
-              setSelectedType(null);
-              setSearchQuery("");
-            }}
+            onClick={handleClearAllFilters}
             className="text-xs ml-auto text-cosmic-400 hover:text-cosmic-100"
           >
             {t("Clear all", "清除所有")}
@@ -246,75 +214,14 @@ const LinksGrid = () => {
           animate="visible"
         >
           {filteredLinks.map((link, index) => (
-            <motion.a
-              key={index}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`
-                ${viewMode === 'grid' 
-                  ? 'bg-cosmic-900/60 border border-cosmic-700/30 rounded-lg p-4 hover:bg-cosmic-800/40 transition-all hover:border-cosmic-700/50 shadow-lg hover:shadow-xl'
-                  : 'bg-cosmic-900/40 border border-cosmic-800/20 rounded-lg p-3 hover:bg-cosmic-800/30 transition-all flex flex-col md:flex-row md:items-center gap-2'
-                }
-              `}
-              variants={itemVariants}
-            >
-              {viewMode === 'grid' ? (
-                // Grid view
-                <>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center flex-wrap gap-1">
-                      <Badge variant="outline" className="text-xs py-0.5 px-2 bg-cosmic-800/70 text-cosmic-300">
-                        {language === 'en' ? link.type : translateType(link.type)}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs py-0.5 px-2 bg-cosmic-800/70 text-cosmic-400">
-                        {language === 'en' ? link.category : translateCategory(link.category)}
-                      </Badge>
-                    </div>
-                    <ExternalLink className="h-3 w-3 text-cosmic-500 mt-1" />
-                  </div>
-                  
-                  <h3 className="text-cosmic-100 font-medium mb-1">
-                    {language === 'en' ? link.title : link.titleZh}
-                  </h3>
-                  
-                  <p className="text-xs text-cosmic-400 mb-2">
-                    {language === 'en' ? link.description : link.descriptionZh}
-                  </p>
-                  
-                  <div className="text-xs text-cosmic-500 truncate bg-cosmic-900/80 p-1.5 rounded border border-cosmic-800/30">
-                    {link.url}
-                  </div>
-                </>
-              ) : (
-                // Compact view
-                <>
-                  <div className="md:w-1/4">
-                    <h3 className="text-sm text-cosmic-100 font-medium">
-                      {language === 'en' ? link.title : link.titleZh}
-                    </h3>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Badge variant="outline" className="text-xs py-0 px-1 bg-cosmic-800/70 text-cosmic-400">
-                        {language === 'en' ? link.category : translateCategory(link.category)}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="md:w-2/4">
-                    <p className="text-xs text-cosmic-400">
-                      {language === 'en' ? link.description : link.descriptionZh}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between md:w-1/4 mt-1 md:mt-0">
-                    <Badge variant="outline" className="text-xs py-0 px-1 bg-cosmic-800/70 text-cosmic-300">
-                      {language === 'en' ? link.type : translateType(link.type)}
-                    </Badge>
-                    <ExternalLink className="h-3 w-3 text-cosmic-500" />
-                  </div>
-                </>
-              )}
-            </motion.a>
+            <LinkCard 
+              key={index} 
+              link={link} 
+              viewMode={viewMode} 
+              language={language}
+              index={index}
+              itemVariants={itemVariants}
+            />
           ))}
         </motion.div>
       </AnimatePresence>
@@ -334,50 +241,92 @@ const LinksGrid = () => {
   );
 };
 
-// Helper functions for translation
-function translateCategory(category: string): string {
-  const categoryMap: Record<string, string> = {
-    "Hardware": "硬件",
-    "Software": "软件",
-    "Tutorial": "教程",
-    "Data": "数据",
-    "Map": "地图",
-    "Weather": "气象",
-    "Forum": "论坛",
-    "Observatory": "天文台",
-    "Beginner": "新手",
-    "Resource": "资源",
-    "Game": "游戏",
-    "Mobile": "移动应用",
-    "Community": "社区"
-  };
-  return categoryMap[category] || category;
+interface LinkCardProps {
+  link: LinkData;
+  viewMode: LinkViewMode;
+  language: string;
+  index: number;
+  itemVariants: any;
 }
 
-function translateType(type: string): string {
-  const typeMap: Record<string, string> = {
-    "Plugin": "插件",
-    "Tutorial": "教程",
-    "Map": "地图",
-    "Weather": "气象",
-    "Tool": "工具",
-    "Light Pollution": "光污染",
-    "Database": "数据库",
-    "Forum": "论坛",
-    "Rental": "租赁",
-    "Freezing Camera": "冷冻相机",
-    "Telescope": "望远镜",
-    "Simulator": "模拟器",
-    "Resource": "资源",
-    "DIY": "DIY",
-    "Review": "测评",
-    "Open Source": "开源项目",
-    "Gallery": "欣赏",
-    "App": "应用",
-    "Software": "软件",
-    "Space Weather": "太空天气"
-  };
-  return typeMap[type] || type;
-}
+const LinkCard: React.FC<LinkCardProps> = ({ link, viewMode, language, index, itemVariants }) => {
+  return (
+    <motion.a
+      key={index}
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`
+        ${viewMode === 'grid' 
+          ? 'bg-cosmic-900/60 border border-cosmic-700/30 rounded-lg p-4 hover:bg-cosmic-800/40 transition-all hover:border-cosmic-700/50 shadow-lg hover:shadow-xl'
+          : 'bg-cosmic-900/40 border border-cosmic-800/20 rounded-lg p-3 hover:bg-cosmic-800/30 transition-all flex flex-col md:flex-row md:items-center gap-2'
+        }
+      `}
+      variants={itemVariants}
+    >
+      {viewMode === 'grid' ? (
+        <GridViewCard link={link} language={language} />
+      ) : (
+        <CompactViewCard link={link} language={language} />
+      )}
+    </motion.a>
+  );
+};
+
+const GridViewCard: React.FC<{ link: LinkData, language: string }> = ({ link, language }) => (
+  <>
+    <div className="flex justify-between items-start mb-2">
+      <div className="flex items-center flex-wrap gap-1">
+        <Badge variant="outline" className="text-xs py-0.5 px-2 bg-cosmic-800/70 text-cosmic-300">
+          {language === 'en' ? link.type : translateType(link.type)}
+        </Badge>
+        <Badge variant="outline" className="text-xs py-0.5 px-2 bg-cosmic-800/70 text-cosmic-400">
+          {language === 'en' ? link.category : translateCategory(link.category)}
+        </Badge>
+      </div>
+      <ExternalLink className="h-3 w-3 text-cosmic-500 mt-1" />
+    </div>
+    
+    <h3 className="text-cosmic-100 font-medium mb-1">
+      {language === 'en' ? link.title : link.titleZh}
+    </h3>
+    
+    <p className="text-xs text-cosmic-400 mb-2">
+      {language === 'en' ? link.description : link.descriptionZh}
+    </p>
+    
+    <div className="text-xs text-cosmic-500 truncate bg-cosmic-900/80 p-1.5 rounded border border-cosmic-800/30">
+      {link.url}
+    </div>
+  </>
+);
+
+const CompactViewCard: React.FC<{ link: LinkData, language: string }> = ({ link, language }) => (
+  <>
+    <div className="md:w-1/4">
+      <h3 className="text-sm text-cosmic-100 font-medium">
+        {language === 'en' ? link.title : link.titleZh}
+      </h3>
+      <div className="flex items-center gap-1 mt-1">
+        <Badge variant="outline" className="text-xs py-0 px-1 bg-cosmic-800/70 text-cosmic-400">
+          {language === 'en' ? link.category : translateCategory(link.category)}
+        </Badge>
+      </div>
+    </div>
+    
+    <div className="md:w-2/4">
+      <p className="text-xs text-cosmic-400">
+        {language === 'en' ? link.description : link.descriptionZh}
+      </p>
+    </div>
+    
+    <div className="flex items-center justify-between md:w-1/4 mt-1 md:mt-0">
+      <Badge variant="outline" className="text-xs py-0 px-1 bg-cosmic-800/70 text-cosmic-300">
+        {language === 'en' ? link.type : translateType(link.type)}
+      </Badge>
+      <ExternalLink className="h-3 w-3 text-cosmic-500" />
+    </div>
+  </>
+);
 
 export default LinksGrid;
