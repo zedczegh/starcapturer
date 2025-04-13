@@ -1,13 +1,12 @@
 
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { currentSiqsStore } from '@/components/index/CalculatorSection';
-import { useToast } from "@/components/ui/use-toast";
-import { useRecommendedLocationServices } from './useRecommendedLocationServices';
-import { useLocationLoadingState } from './useLocationLoadingState';
+import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
+import { isWaterLocation } from '@/utils/locationValidator';
+import { toast } from '@/components/ui/use-toast'; // Fix import path
 
 interface Location {
   latitude: number;
@@ -24,29 +23,23 @@ export const useRecommendedLocations = (
   initialRadius: number = DEFAULT_CALCULATED_RADIUS
 ) => {
   const { t } = useLanguage();
-  const { toast } = useToast();
+  const [searchRadius, setSearchRadius] = useState<number>(initialRadius);
+  const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [searching, setSearching] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
+  const prevRadiusRef = useRef<number>(searchRadius);
+  const prevLocationRef = useRef<Location | null>(userLocation);
+  const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
+  
+  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
+  const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
+  
   const currentSiqs = currentSiqsStore.getValue();
   
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
-  
-  const { 
-    filterValidLocations, 
-    separateLocationTypes, 
-    showErrorToast 
-  } = useRecommendedLocationServices();
-  
-  const {
-    searchRadius, setSearchRadius,
-    locations, setLocations,
-    loading, setLoading,
-    searching, setSearching,
-    hasMore, setHasMore,
-    page, setPage,
-    canLoadMoreCalculated, setCanLoadMoreCalculated,
-    loadMoreClickCount, setLoadMoreClickCount,
-    prevRadiusRef, prevLocationRef, previousLocationsRef
-  } = useLocationLoadingState(initialRadius);
   
   const loadLocations = useCallback(async () => {
     if (!userLocation) {
@@ -123,11 +116,7 @@ export const useRecommendedLocations = (
     } finally {
       setLoading(false);
     }
-  }, [
-    searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, 
-    sortLocationsByQuality, setLoading, setLocations, setHasMore, 
-    setCanLoadMoreCalculated, setPage, setLoadMoreClickCount, toast
-  ]);
+  }, [searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
   
   const loadMore = useCallback(async () => {
     if (!userLocation || !hasMore) {
@@ -178,11 +167,7 @@ export const useRecommendedLocations = (
     } finally {
       setLoading(false);
     }
-  }, [
-    hasMore, locations, page, searchRadius, userLocation, 
-    t, findLocationsWithinRadius, sortLocationsByQuality, 
-    setLoading, setLocations, setHasMore, setPage, toast
-  ]);
+  }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
   
   const loadMoreCalculatedLocations = useCallback(async () => {
     if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
@@ -254,17 +239,16 @@ export const useRecommendedLocations = (
     } finally {
       setSearching(false);
     }
-  }, [
-    loadMoreClickCount, locations, searchRadius, t, userLocation, 
-    findCalculatedLocations, sortLocationsByQuality, setLocations, 
-    setLoadMoreClickCount, setCanLoadMoreCalculated, setSearching, toast
-  ]);
+  }, [loadMoreClickCount, locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
   
   const refreshSiqsData = useCallback(async () => {
-    if (!userLocation) return;
+    if (!userLocation) {
+      return;
+    }
     
     try {
       setLoading(true);
+      
       await loadLocations();
     } catch (error) {
       console.error("Error refreshing SIQS data:", error);
@@ -278,7 +262,7 @@ export const useRecommendedLocations = (
     } finally {
       setLoading(false);
     }
-  }, [loadLocations, userLocation, t, setLoading, toast]);
+  }, [loadLocations, userLocation, t]);
   
   useEffect(() => {
     const radiusChanged = searchRadius !== prevRadiusRef.current;
@@ -309,14 +293,4 @@ export const useRecommendedLocations = (
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
     currentSiqs
   };
-};
-
-// Helper function needed by the hook
-const isWaterLocation = (lat: number, lng: number): boolean => {
-  try {
-    return import('@/utils/locationValidator').then(mod => mod.isWaterLocation(lat, lng, false));
-  } catch (e) {
-    console.error("Error checking water location:", e);
-    return false;
-  }
 };
