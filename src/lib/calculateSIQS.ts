@@ -4,7 +4,7 @@
  * This implementation uses protected factors and validation
  */
 import { protectedFactors, calculateWeightedScore } from './siqs/protectedFactors';
-import { LightPollutionLevel, SIQSResult } from './siqs/types';
+import { LightPollutionLevel, SIQSResult as SIQSResultType } from './siqs/types';
 
 // Type definition for SIQS calculation inputs
 export interface SIQSInputData {
@@ -31,7 +31,7 @@ export interface SIQSResult {
     nighttimeData?: any;
   }[];
   level: LightPollutionLevel;
-  isViable: boolean; // Added this property to fix the type error
+  isViable: boolean;
 }
 
 /**
