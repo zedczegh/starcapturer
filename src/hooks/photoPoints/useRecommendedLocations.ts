@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
@@ -5,7 +6,7 @@ import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/locationValidator';
-import { toast } from '@/hooks/use-toast'; // Add this import
+import { toast } from '@/components/ui/use-toast'; // Fix import path
 
 interface Location {
   latitude: number;
@@ -98,10 +99,17 @@ export const useRecommendedLocations = (
       setPage(1);
     } catch (error) {
       console.error("Error loading recommended locations:", error);
-      toast.error(t(
-        "Failed to load recommended locations. Please try again.",
-        "加载推荐位置失败。请重试。"
-      ));
+      toast({
+        variant: "destructive",
+        title: t(
+          "Failed to load recommended locations",
+          "加载推荐位置失败"
+        ),
+        description: t(
+          "Please try again.",
+          "请重试。"
+        )
+      });
       setLocations([]);
       setHasMore(false);
       setCanLoadMoreCalculated(false);
@@ -145,10 +153,17 @@ export const useRecommendedLocations = (
       }
     } catch (error) {
       console.error("Error loading more locations:", error);
-      toast.error(t(
-        "Failed to load more locations. Please try again.",
-        "加载更多位置失败。请重试。"
-      ));
+      toast({
+        variant: "destructive",
+        title: t(
+          "Failed to load more locations",
+          "加载更多位置失败"
+        ),
+        description: t(
+          "Please try again.",
+          "请重试。"
+        )
+      });
     } finally {
       setLoading(false);
     }
@@ -196,24 +211,31 @@ export const useRecommendedLocations = (
           setCanLoadMoreCalculated(false);
         }
         
-        toast.success(t(
-          `Added ${newResults.length} more locations`,
-          `添加了${newResults.length}个更多位置`
-        ));
+        toast({
+          title: t(
+            `Added ${newResults.length} more locations`,
+            `添加了${newResults.length}个更多位置`
+          )
+        });
       } else {
-        toast.info(t(
-          "No more unique locations found",
-          "未找到更多独特位置"
-        ));
+        toast({
+          title: t(
+            "No more unique locations found",
+            "未找到更多独特位置"
+          )
+        });
         
         setCanLoadMoreCalculated(false);
       }
     } catch (error) {
       console.error("Error loading more calculated locations:", error);
-      toast.error(t(
-        "Failed to load more locations",
-        "加载更多位置失败"
-      ));
+      toast({
+        variant: "destructive",
+        title: t(
+          "Failed to load more locations",
+          "加载更多位置失败"
+        )
+      });
     } finally {
       setSearching(false);
     }
@@ -230,10 +252,13 @@ export const useRecommendedLocations = (
       await loadLocations();
     } catch (error) {
       console.error("Error refreshing SIQS data:", error);
-      toast.error(t(
-        "Failed to refresh location data",
-        "刷新位置数据失败"
-      ));
+      toast({
+        variant: "destructive",
+        title: t(
+          "Failed to refresh location data",
+          "刷新位置数据失败"
+        )
+      });
     } finally {
       setLoading(false);
     }
