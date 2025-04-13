@@ -10,7 +10,6 @@ import LinksHeader from "@/components/links/LinksHeader";
 import LinksGrid from "@/components/links/LinksGrid";
 import LinksFooter from "@/components/links/LinksFooter";
 import LinksFilters from "@/components/links/LinksFilters";
-import ContactForm from "@/components/links/ContactForm";
 
 const UsefulLinks = () => {
   const { t } = useLanguage();
@@ -139,17 +138,6 @@ const UsefulLinks = () => {
           searchQuery={searchQuery} 
           onClearSearch={handleClearSearch}
         />
-        
-        {/* Contact Form Section */}
-        <motion.div
-          id="contact-form"
-          className="mt-16 mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <ContactForm />
-        </motion.div>
         
         <LinksFooter />
       </div>
