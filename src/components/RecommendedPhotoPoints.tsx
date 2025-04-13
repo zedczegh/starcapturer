@@ -98,7 +98,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
             ...location,
             siqs: result.siqs,
             isViable: result.isViable,
-            siqsFactors: result.factors
+            // Store factors in a way compatible with SharedAstroSpot
+            factors: result.factors
           };
         } catch (error) {
           console.error(`Error calculating real-time SIQS for ${location.name}:`, error);
@@ -205,13 +206,13 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       )}
       
       <AnimatePresence>
-        <div className="space-y-3 mt-3"> {/* Added margin-top to fix layout conflicts */}
+        <div className="space-y-3 mt-3">
           {limitedLocations.map((location, index) => (
             <motion.div
               key={`${location.id || location.latitude}-${location.longitude}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, delay: index * 0.03 }} // Faster animations
+              transition={{ duration: 0.15, delay: index * 0.03 }}
             >
               <PhotoPointCard
                 point={location}

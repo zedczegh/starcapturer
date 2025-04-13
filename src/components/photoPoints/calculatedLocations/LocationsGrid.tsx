@@ -1,35 +1,38 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointCard from '../PhotoPointCard';
+import { motion } from 'framer-motion';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
-  initialLoad?: boolean;
-  isMobile?: boolean;
-  onViewDetails?: (location: SharedAstroSpot) => void;
+  onSelectLocation: (location: SharedAstroSpot) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
-const LocationsGrid: React.FC<LocationsGridProps> = ({ 
+const LocationsGrid: React.FC<LocationsGridProps> = ({
   locations,
-  initialLoad = false,
-  isMobile = false,
-  onViewDetails
+  onSelectLocation,
+  userLocation
 }) => {
+  if (!locations || locations.length === 0) {
+    return null;
+  }
+
   return (
-    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {locations.map((location, index) => (
         <motion.div
-          key={location.id || `${location.latitude}-${location.longitude}`}
+          key={`${location.id || location.name}-${location.latitude}-${location.longitude}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.05 }}
         >
           <PhotoPointCard
             point={location}
-            onViewDetails={onViewDetails}
-            userLocation={null} // This doesn't use current location for distance
+            onSelect={onSelectLocation}
+            onViewDetails={() => onSelectLocation(location)}
+            userLocation={userLocation}
           />
         </motion.div>
       ))}
