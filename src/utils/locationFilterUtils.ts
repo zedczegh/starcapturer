@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/locationValidator";
@@ -102,83 +101,4 @@ export function sortLocationsByQualityAndDistance(
     // Then sort by distance
     return (a.distance || Infinity) - (b.distance || Infinity);
   });
-}
-
-/**
- * Filter calculated locations to ensure only one location per 50km radius
- * Prevents redundant API calls for nearby locations
- * @param locations Array of locations
- * @returns Filtered array with only one location per 50km radius
- */
-export function filterCalculatedLocationsForMap(
-  locations: SharedAstroSpot[]
-): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) {
-    return [];
-  }
-  
-  const DEDUPLICATION_RADIUS_KM = 50; // 50km radius for deduplication
-  const filteredLocations: SharedAstroSpot[] = [];
-  const coveredAreas = new Map<string, boolean>();
-  
-  // First, sort by SIQS to prioritize better viewing conditions
-  const sortedLocations = [...locations].sort((a, b) => 
-    ((b.siqs || 0) - (a.siqs || 0))
-  );
-  
-  // Always include certified locations
-  const certifiedLocations = sortedLocations.filter(
-    loc => loc.isDarkSkyReserve || loc.certification
-  );
-  
-  // Add certified locations to our results
-  filteredLocations.push(...certifiedLocations);
-  
-  // Mark areas covered by certified locations
-  certifiedLocations.forEach(loc => {
-    if (!loc.latitude || !loc.longitude) return;
-    
-    // Use a grid-based approach for faster lookups
-    const gridKey = `${Math.floor(loc.latitude)}:${Math.floor(loc.longitude)}`;
-    coveredAreas.set(gridKey, true);
-  });
-  
-  // Now process calculated (non-certified) locations
-  const calculatedLocations = sortedLocations.filter(
-    loc => !(loc.isDarkSkyReserve || loc.certification)
-  );
-  
-  calculatedLocations.forEach(location => {
-    if (!location.latitude || !location.longitude) return;
-    
-    // Create grid key for this location
-    const gridKey = `${Math.floor(location.latitude)}:${Math.floor(location.longitude)}`;
-    
-    // Skip if this grid cell is already covered
-    if (coveredAreas.has(gridKey)) {
-      return;
-    }
-    
-    // Check if this location is within DEDUPLICATION_RADIUS_KM of any filtered location
-    const tooClose = filteredLocations.some(existingLoc => {
-      if (!existingLoc.latitude || !existingLoc.longitude) return false;
-      
-      const distance = calculateDistance(
-        location.latitude,
-        location.longitude,
-        existingLoc.latitude,
-        existingLoc.longitude
-      );
-      
-      return distance <= DEDUPLICATION_RADIUS_KM;
-    });
-    
-    // If not too close to existing locations, add it
-    if (!tooClose) {
-      filteredLocations.push(location);
-      coveredAreas.set(gridKey, true);
-    }
-  });
-  
-  return filteredLocations;
 }

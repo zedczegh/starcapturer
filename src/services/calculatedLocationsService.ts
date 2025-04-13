@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/locationValidator';
@@ -15,10 +16,6 @@ const globalLocationStore = new Map<string, SharedAstroSpot>();
 
 // Minimum distance in kilometers between calculated spots to prevent clustering
 const MIN_LOCATION_DISTANCE = 2.5; // 2.5km minimum distance between points
-
-// Minimum distance in kilometers between API calls for calculated spots
-// This helps reduce redundant API calls for nearby locations
-const API_CALL_MIN_DISTANCE = 50; // 50km minimum distance for API calls
 
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
@@ -81,8 +78,6 @@ export async function processCalculatedLocations(
 
   // Filter locations by distance and water, maintaining minimum distance between points
   const processedLocations: SharedAstroSpot[] = [];
-  // Keep track of areas where we've already processed a location
-  const processedAreas = new Map<string, boolean>();
   
   for (const loc of combinedLocations) {
     // Skip invalid locations
@@ -107,22 +102,11 @@ export async function processCalculatedLocations(
     // Skip if beyond radius
     if (distance > searchRadius) continue;
     
-    // For non-certified locations, ensure minimum distance between points
+    // For non-certified locations, ensure minimum distance from existing processed points
     if (!loc.isDarkSkyReserve && !loc.certification) {
-      // Create a grid key for this location (for API call deduplication)
-      const gridKey = `${Math.floor(loc.latitude / (API_CALL_MIN_DISTANCE/111.32))}-${Math.floor(loc.longitude / (API_CALL_MIN_DISTANCE/111.32))}`;
-      
-      // Skip this location if we've already processed one in this grid cell
-      if (processedAreas.has(gridKey)) {
-        continue;
-      }
-      
       // Check distance to all existing processed locations
       const tooClose = processedLocations.some(existingLoc => {
         if (existingLoc.latitude === undefined || existingLoc.longitude === undefined) return false;
-        
-        // Skip this check for certified locations
-        if (existingLoc.isDarkSkyReserve || existingLoc.certification) return false;
         
         const pointDistance = calculateDistance(
           loc.latitude,
@@ -131,7 +115,6 @@ export async function processCalculatedLocations(
           existingLoc.longitude
         );
         
-        // Use minimum distance for clustering
         return pointDistance < MIN_LOCATION_DISTANCE;
       });
       
@@ -140,9 +123,6 @@ export async function processCalculatedLocations(
         console.log(`Skipping location at ${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)} - too close to existing point`);
         continue;
       }
-      
-      // Mark this area as processed to avoid redundant API calls
-      processedAreas.set(gridKey, true);
     }
     
     // Store the location in the global store and add to processed locations

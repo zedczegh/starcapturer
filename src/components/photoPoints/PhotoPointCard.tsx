@@ -2,16 +2,15 @@
 import React from "react";
 import { useNavigate } from 'react-router-dom';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ChevronRight, Award } from "lucide-react";
 import { calculateDistance } from "@/utils/geoUtils";
+import { formatDistanceDisplay } from "@/utils/formatters";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-// Import smaller component pieces
-import CardContainer from "./cards/CardContainer";
-import LocationName from "./cards/LocationName";
-import DistanceDisplay from "./cards/DistanceDisplay";
-import CertificationDisplay from "./cards/CertificationDisplay";
+import { motion } from "framer-motion";
 import SiqsScoreBadge from "./cards/SiqsScoreBadge";
-import DetailViewButton from "./cards/DetailViewButton";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -28,7 +27,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   compact = false,
   realTimeScore = false,
 }) => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   
   // Use the point's distance if available, otherwise calculate it
@@ -40,13 +39,18 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   // Determine if this is a certified location
   const isCertified = Boolean(point.isDarkSkyReserve || point.certification);
   
+  // Display name based on language and availability
+  const displayName = language === "zh" && point.chineseName 
+    ? point.chineseName 
+    : point.name;
+  
   // Direct navigation to location details
   const handleViewDetails = () => {
     const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
-        name: language === "zh" && point.chineseName ? point.chineseName : point.name,
+        name: displayName,
         latitude: point.latitude,
         longitude: point.longitude,
         timestamp: new Date().toISOString(),
@@ -56,39 +60,62 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   };
   
   return (
-    <CardContainer compact={compact} onClick={handleViewDetails}>
-      <div className="flex justify-between">
-        <div className="flex-1 mr-3">
-          <LocationName 
-            name={point.name} 
-            chineseName={point.chineseName}
-            language={language}
-            compact={compact}
-          />
-          
-          <DistanceDisplay distance={distance} compact={compact} />
-          
-          <CertificationDisplay isCertified={isCertified} compact={compact} />
-        </div>
-        
-        <div className="flex flex-col items-end gap-2">
-          <SiqsScoreBadge 
-            score={point.siqs || 0} 
-            compact={compact}
-            realTime={realTimeScore}
-          />
-          
-          {!compact && (
-            <DetailViewButton
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent double navigation
-                handleViewDetails();
-              }}
-            />
-          )}
-        </div>
-      </div>
-    </CardContainer>
+    <motion.div
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ duration: 0.2 }}
+      onClick={handleViewDetails} // Added direct click navigation
+    >
+      <Card className={`overflow-hidden border border-cosmic-800 bg-cosmic-900/70 hover:bg-cosmic-900 transition-colors ${compact ? 'shadow-sm cursor-pointer' : 'shadow-md cursor-pointer'}`}>
+        <CardContent className={compact ? "p-2.5" : "p-3"}>
+          <div className="flex justify-between">
+            <div className="flex-1 mr-3">
+              <h3 className={`font-medium text-cosmic-50 ${compact ? 'text-sm line-clamp-1' : 'text-base line-clamp-2'}`}>
+                {displayName}
+              </h3>
+              
+              {distance !== null && (
+                <p className={`text-muted-foreground mt-0.5 ${compact ? 'text-2xs' : 'text-xs'}`}>
+                  {formatDistanceDisplay(distance)}
+                </p>
+              )}
+              
+              {isCertified && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Award className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-amber-500`} />
+                  <span className={`${compact ? 'text-2xs' : 'text-xs'} text-amber-300`}>
+                    {t("Certified Dark Sky", "官方认证暗夜天空")}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col items-end gap-2">
+              <SiqsScoreBadge 
+                score={point.siqs || 0} 
+                compact={compact}
+                realTime={realTimeScore}
+              />
+              
+              {!compact && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-2 py-0 h-7 text-xs text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent double navigation
+                    handleViewDetails();
+                  }}
+                >
+                  {t("View Details", "查看详情")}
+                  <ChevronRight className="ml-1 h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
