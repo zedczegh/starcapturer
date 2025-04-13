@@ -5,6 +5,7 @@ import { MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PhotoPointsHeaderProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -18,6 +19,7 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
   getPosition
 }) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   const headerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -25,6 +27,23 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       opacity: 1, 
       y: 0,
       transition: { duration: 0.5 }
+    }
+  };
+
+  const titleVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      transition: { delay: 0.3, duration: 0.5 }
+    }
+  };
+
+  const descriptionVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { delay: 0.5, duration: 0.5 }
     }
   };
   
@@ -40,15 +59,30 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       </div>
       
       <div className="flex flex-col items-center text-center mb-8">
-        <h1 className="text-3xl font-bold mb-3">
+        <motion.h1 
+          className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 mb-3`}
+          variants={titleVariants}
+        >
           {t("Astronomy Photo Points", "天文摄影点")}
-        </h1>
-        <p className="text-muted-foreground max-w-xl">
+        </motion.h1>
+        
+        {/* Decorative line - similar to AboutHeader */}
+        <motion.div
+          className="w-20 h-1 bg-gradient-to-r from-blue-400 to-purple-400 mx-auto my-4 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: 80 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+        />
+        
+        <motion.p 
+          className="text-muted-foreground max-w-xl"
+          variants={descriptionVariants}
+        >
           {t(
             "Discover the best locations for astrophotography near you. Filter by certified dark sky areas or algorithmically calculated spots.",
             "发现您附近最佳的天文摄影地点。按认证暗夜区域或算法计算的位置进行筛选。"
           )}
-        </p>
+        </motion.p>
       </div>
       
       {/* User location section */}
