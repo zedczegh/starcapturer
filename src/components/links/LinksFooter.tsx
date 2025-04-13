@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, MessageSquare } from "lucide-react";
+import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, MessageSquare, Mail } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const LinksFooter = () => {
@@ -14,6 +14,14 @@ const LinksFooter = () => {
   const buttonVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
+  // Function to scroll to contact form
+  const scrollToContactForm = () => {
+    const contactForm = document.querySelector('#contact-form');
+    if (contactForm) {
+      contactForm.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
@@ -83,8 +91,12 @@ const LinksFooter = () => {
           </Button>
         </a>
         
-        <Button variant="ghost" className="text-cosmic-400 hover:text-cosmic-100 hover:bg-cosmic-800/30">
-          <MessageSquare className="mr-2 h-4 w-4" />
+        <Button
+          variant="ghost"
+          className="text-cosmic-400 hover:text-cosmic-100 hover:bg-cosmic-800/30"
+          onClick={scrollToContactForm}
+        >
+          <Mail className="mr-2 h-4 w-4" />
           {t("Contact Us", "联系我们")}
         </Button>
       </motion.div>
