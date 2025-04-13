@@ -4,11 +4,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, Grid, Layers, LayoutGrid } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { linksData } from "./linksData";
+import { LinkData } from "./linksData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LinkCategory, LinkFilters, LinkViewMode, useLinksFilters } from "@/hooks/useLinksFilters";
+import { LinkCategory, LinkViewMode, useLinksFilters } from "@/hooks/useLinksFilters";
 import { translateCategory, translateType } from "@/utils/linkTranslations";
 
 interface LinksGridProps {

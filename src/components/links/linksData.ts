@@ -1,691 +1,634 @@
-interface LinkData {
+
+export interface LinkData {
   title: string;
   titleZh: string;
+  description: string;
+  descriptionZh: string;
   url: string;
   category: string;
   type: string;
-  description: string;
-  descriptionZh: string;
 }
 
 export const linksData: LinkData[] = [
-  // NINA
   {
-    title: "NINA Fine Measurement Backlash and Motor Control Settings",
+    title: "NINA - Fine Measurement Tutorial",
     titleZh: "NINA精细测量回差并设置电调参数",
+    description: "Tutorial on NINA fine measurement and setting electronic adjustment parameters",
+    descriptionZh: "NINA精细测量回差并设置电调参数教程",
     url: "https://istarshooter.com/article/detail/73",
-    category: "Software",
-    type: "Tutorial",
-    description: "Tutorial for NINA backlash measurement and motor control settings",
-    descriptionZh: "NINA精细测量回差并设置电调参数教程"
+    category: "Tutorial",
+    type: "Tutorial"
   },
-  {
-    title: "NINA - Nighttime Imaging 'N' Astronomy",
-    titleZh: "NINA - 夜间成像与天文",
-    url: "https://nighttime-imaging.eu/",
-    category: "Software",
-    type: "Software",
-    description: "Free and open source astrophotography suite",
-    descriptionZh: "免费开源天文摄影软件套件"
-  },
-  {
-    title: "NINA Official Documentation",
-    titleZh: "NINA官方文档",
-    url: "https://nighttime-imaging.eu/docs/master/",
-    category: "Software",
-    type: "Tutorial",
-    description: "Official documentation for NINA software",
-    descriptionZh: "NINA软件官方文档"
-  },
-  {
-    title: "NINA Plugin Repository",
-    titleZh: "NINA插件仓库",
-    url: "https://github.com/NINA-Plugins",
-    category: "Software",
-    type: "Plugin",
-    description: "Official repository for NINA plugins",
-    descriptionZh: "NINA官方插件仓库"
-  },
-  
-  // PixInsight
   {
     title: "PixInsight",
     titleZh: "PixInsight",
+    description: "Professional astrophotography software for image processing",
+    descriptionZh: "专业的天文摄影后期处理软件",
     url: "https://www.pixinsight.com/",
     category: "Software",
-    type: "Software",
-    description: "Professional astronomical image processing software",
-    descriptionZh: "专业天文图像处理软件"
+    type: "Software"
   },
   {
-    title: "PixInsight Workflows-chaoticnebula",
+    title: "PixInsight Workflows by Chaotic Nebula",
     titleZh: "PixInsight工作流程-chaoticnebula",
+    description: "LRGB workflow tutorials for PixInsight",
+    descriptionZh: "PixInsight LRGB工作流程教程",
     url: "https://chaoticnebula.com/pixinsight-lrgb-workflow/",
     category: "Software",
-    type: "Plugin",
-    description: "LRGB workflow for PixInsight by Chaotic Nebula",
-    descriptionZh: "Chaotic Nebula的PixInsight LRGB工作流程"
+    type: "Plugin"
   },
   {
     title: "Cosmic Photons – Astrophotography",
     titleZh: "Cosmic Photons – 天文摄影",
+    description: "Resources and plugins for astrophotography",
+    descriptionZh: "天文摄影资源和插件",
     url: "https://cosmicphotons.com/",
     category: "Software",
-    type: "Plugin",
-    description: "Tools and workflows for astrophotography processing",
-    descriptionZh: "天文摄影处理的工具和工作流程"
+    type: "Plugin"
   },
   {
     title: "Astronomy Software - The Backyard Astronomy Space",
     titleZh: "天文软件 - 后院天文空间",
+    description: "Forum for astronomical software discussion",
+    descriptionZh: "天文软件讨论论坛",
     url: "https://www.backyardastro.org/forum/17-astronomy-software/",
     category: "Software",
-    type: "Plugin",
-    description: "Collection of astronomy software tools and discussions",
-    descriptionZh: "天文软件工具和讨论集合"
+    type: "Plugin"
   },
   {
     title: "AstroProcessing: NSG, PMM apps",
-    titleZh: "AstroProcessing: NSG, PMM应用程序",
+    titleZh: "AstroProcessing: NSG, PMM应用",
+    description: "Advanced apps for astronomical image processing",
+    descriptionZh: "天文图像处理高级应用",
     url: "https://www.astroprocessing.com/",
     category: "Software",
-    type: "Plugin",
-    description: "Specialized applications for astronomical image processing",
-    descriptionZh: "专业天文图像处理应用程序"
+    type: "Plugin"
   },
   {
     title: "PixInsight-Scripts / Toolbox",
-    titleZh: "PixInsight脚本 / 工具箱",
+    titleZh: "PixInsight脚本/工具箱",
+    description: "Collection of useful scripts for PixInsight",
+    descriptionZh: "PixInsight实用脚本集",
     url: "https://gitlab.com/pixinsight-scripts/toolbox",
     category: "Software",
-    type: "Plugin",
-    description: "Collection of useful scripts for PixInsight",
-    descriptionZh: "PixInsight实用脚本集合"
+    type: "Plugin"
   },
   {
     title: "New Foraxx script for PixInsight",
     titleZh: "PixInsight的新Foraxx脚本",
+    description: "Latest Foraxx script for enhanced workflows",
+    descriptionZh: "增强工作流程的最新Foraxx脚本",
     url: "https://www.astroworldcreations.com/news/new-foraxx-script-for-pixinsight",
     category: "Software",
-    type: "Plugin",
-    description: "Foraxx scripting tools for PixInsight",
-    descriptionZh: "PixInsight的Foraxx脚本工具"
+    type: "Plugin"
   },
   {
-    title: "PixInsight scripts — Seti Astro",
+    title: "PixInsight Scripts — Seti Astro",
     titleZh: "PixInsight脚本 — Seti Astro",
+    description: "PJSR scripts for advanced processing",
+    descriptionZh: "用于高级处理的PJSR脚本",
     url: "https://www.setiastro.com/pjsr-scripts",
     category: "Software",
-    type: "Plugin",
-    description: "Scripts from Seti Astro for PixInsight",
-    descriptionZh: "Seti Astro提供的PixInsight脚本"
+    type: "Plugin"
   },
   {
     title: "PixInsight Toolbox",
     titleZh: "PixInsight工具箱",
+    description: "Comprehensive toolbox for PixInsight users",
+    descriptionZh: "PixInsight用户的综合工具箱",
     url: "https://www.ideviceapps.de/pixinsight-toolbox.html",
     category: "Software",
-    type: "Plugin",
-    description: "Comprehensive toolbox for PixInsight processing",
-    descriptionZh: "PixInsight处理的综合工具箱"
+    type: "Plugin"
   },
   {
-    title: "GHS Stretch",
+    title: "GHS Stretching",
     titleZh: "GHS拉伸",
+    description: "Generalized hyperbolic stretch algorithm for PixInsight",
+    descriptionZh: "PixInsight的广义双曲拉伸算法",
     url: "https://github.com/mikec1485/GHS",
     category: "Software",
-    type: "Plugin",
-    description: "Generalized Hyperbolic Stretch for PixInsight",
-    descriptionZh: "PixInsight的广义双曲拉伸"
+    type: "Plugin"
   },
   {
     title: "RC Astro Suite",
     titleZh: "RC三件套",
+    description: "Advanced tools for astronomical image processing",
+    descriptionZh: "天文图像处理的高级工具",
     url: "https://www.rc-astro.com/",
     category: "Software",
-    type: "Plugin",
-    description: "RC Astro processing tools for PixInsight",
-    descriptionZh: "PixInsight的RC Astro处理工具"
+    type: "Plugin"
   },
   {
     title: "Herbert Walter PixInsight Scripts",
-    titleZh: "Herbert Walter PixInsight脚本",
+    titleZh: "Herbert Walter的PixInsight脚本",
+    description: "Collection of useful astronomical processing scripts",
+    descriptionZh: "实用天文处理脚本集",
     url: "https://www.skypixels.at/pixinsight_scripts.html",
     category: "Software",
-    type: "Plugin",
-    description: "Collection of PixInsight scripts by Herbert Walter",
-    descriptionZh: "Herbert Walter的PixInsight脚本集"
+    type: "Plugin"
   },
   {
     title: "Adam Block Studios",
     titleZh: "Adam Block工作室",
+    description: "Tutorials and resources for astrophotography",
+    descriptionZh: "天文摄影教程和资源",
     url: "https://www.adamblockstudios.com/",
     category: "Software",
-    type: "Tutorial",
-    description: "Astrophotography tutorials and workshops",
-    descriptionZh: "天文摄影教程和工作坊"
+    type: "Tutorial"
   },
   {
-    title: "Fernando Yang's Site",
+    title: "Fernando Yang's Website",
     titleZh: "肥尔腩多的主站",
+    description: "Resources and tutorials for astronomical imaging",
+    descriptionZh: "天文成像资源和教程",
     url: "https://fernandoyang.pt/",
     category: "Software",
-    type: "Tutorial",
-    description: "PixInsight tutorials and processing examples",
-    descriptionZh: "PixInsight教程和处理示例"
+    type: "Tutorial"
   },
   {
-    title: "Deep Space King PixInsight Tutorials",
+    title: "PixInsight Deep Space Tutorial",
     titleZh: "深空之王PixInsight教程",
+    description: "Comprehensive video tutorials for PixInsight",
+    descriptionZh: "PixInsight全面视频教程",
     url: "https://space.bilibili.com/244743682/lists/467029?type=season",
     category: "Software",
-    type: "Tutorial",
-    description: "PixInsight tutorial series in Chinese",
-    descriptionZh: "中文PixInsight教程系列"
+    type: "Tutorial"
   },
-  
-  // Maps
   {
     title: "Satellite Map",
     titleZh: "卫星地图",
+    description: "Interactive satellite tracking map",
+    descriptionZh: "交互式卫星跟踪地图",
     url: "https://satellitemap.space/?constellation=starlink",
     category: "Map",
-    type: "Map",
-    description: "Interactive satellite tracking map",
-    descriptionZh: "交互式卫星跟踪地图"
+    type: "Satellite"
   },
   {
     title: "China-VO SkyView",
-    titleZh: "China-VO天空视图",
+    titleZh: "中国虚拟天文台天空视图",
+    description: "Virtual observatory and star map from China-VO",
+    descriptionZh: "中国虚拟天文台提供的天空视图",
     url: "https://nadc.china-vo.org/skyview/",
     category: "Map",
-    type: "Map",
-    description: "Virtual observatory sky mapping tool",
-    descriptionZh: "虚拟天文台天空图工具"
+    type: "Map"
   },
   {
-    title: "Stellarium Web Online Map",
+    title: "Stellarium Web Online Star Map",
     titleZh: "虚拟天文馆在线地图",
+    description: "Web-based planetarium application",
+    descriptionZh: "基于网页的天文馆应用",
     url: "https://stellarium-web.org/",
     category: "Map",
-    type: "Map",
-    description: "Online version of the Stellarium planetarium software",
-    descriptionZh: "Stellarium天文馆软件的在线版本"
+    type: "Map"
   },
   {
-    title: "Online Star Maps",
-    titleZh: "在线星图",
+    title: "The Sky Live Online Star Maps",
+    titleZh: "实时天空在线星图",
+    description: "Interactive planetarium and sky information",
+    descriptionZh: "互动天文馆和天空信息",
     url: "https://theskylive.com/planetarium?obj=2024pt5#ra|15.79058679773252|dec|73.00498667294666|fov|80",
     category: "Map",
-    type: "Map",
-    description: "Interactive online planetarium",
-    descriptionZh: "交互式在线天文馆"
+    type: "Map"
   },
-  
-  // Weather
   {
-    title: "Windy",
-    titleZh: "Windy",
+    title: "Windy Weather Map",
+    titleZh: "Windy气象地图",
+    description: "Interactive weather forecast visualization",
+    descriptionZh: "互动气象预报可视化",
     url: "https://www.windy.com",
     category: "Weather",
-    type: "Weather",
-    description: "Detailed weather forecasts and wind patterns",
-    descriptionZh: "详细天气预报和风型"
+    type: "Weather"
   },
   {
-    title: "NMC Typhoon Network",
+    title: "NMC Typhoon Center",
     titleZh: "中央气象台台风网",
+    description: "China's official typhoon monitoring website",
+    descriptionZh: "中国官方台风监测网站",
     url: "http://typhoon.nmc.cn/web.html",
     category: "Weather",
-    type: "Weather",
-    description: "Typhoon tracking and forecasting from China Meteorological Administration",
-    descriptionZh: "中国气象局台风跟踪和预报"
+    type: "Weather"
   },
-  
-  // Data & Tools
   {
-    title: "Calculate SNR",
+    title: "SNR Calculator",
     titleZh: "计算SNR信噪比",
+    description: "Tool to calculate signal-to-noise ratio for deep sky imaging",
+    descriptionZh: "深空成像信噪比计算工具",
     url: "https://deepskydetail.shinyapps.io/Calculate_SNR/",
     category: "Data",
-    type: "Tool",
-    description: "Signal-to-noise ratio calculator for astrophotography",
-    descriptionZh: "天文摄影信噪比计算器"
+    type: "Tool"
   },
   {
     title: "Astronomy Tools",
     titleZh: "天文工具网",
+    description: "Collection of utilities for astronomers",
+    descriptionZh: "天文学家工具集合",
     url: "https://astronomy.tools/",
     category: "Data",
-    type: "Tool",
-    description: "Collection of online astronomy utilities and tools",
-    descriptionZh: "在线天文实用工具集合"
+    type: "Tool"
   },
   {
     title: "Dark Sky Map",
-    titleZh: "暗夜地图",
+    titleZh: "暗空地图",
+    description: "Map showing light pollution levels worldwide",
+    descriptionZh: "显示全球光污染水平的地图",
     url: "https://www.darkskymap.com/map",
     category: "Data",
-    type: "Light Pollution",
-    description: "Map showing dark sky locations with minimal light pollution",
-    descriptionZh: "显示光污染最小的暗夜地点的地图"
+    type: "Light Pollution"
   },
   {
     title: "Light Pollution Map",
     titleZh: "光污染地图",
+    description: "Detailed light pollution data visualization",
+    descriptionZh: "详细的光污染数据可视化",
     url: "https://www.lightpollutionmap.info/",
     category: "Data",
-    type: "Light Pollution",
-    description: "Detailed world light pollution mapping",
-    descriptionZh: "详细的世界光污染图"
+    type: "Light Pollution"
   },
   {
-    title: "Open Datasets – Erellaz",
-    titleZh: "开放数据集 – Erellaz",
+    title: "Open Astrophotography Datasets – Erellaz",
+    titleZh: "开放天文摄影数据集 – Erellaz",
+    description: "Collection of free astronomical imaging data",
+    descriptionZh: "免费天文成像数据集合",
     url: "https://erellaz.com/moana/open-datasets/",
     category: "Data",
-    type: "Database",
-    description: "Open astronomy and astrophotography datasets",
-    descriptionZh: "开放天文和天文摄影数据集"
+    type: "Database"
   },
   {
     title: "Historical Weather Query",
     titleZh: "历史天气查询",
+    description: "Database of historical weather conditions",
+    descriptionZh: "历史天气条件数据库",
     url: "https://lishi.tianqi.com/",
     category: "Data",
-    type: "Weather",
-    description: "Historical weather data archive",
-    descriptionZh: "历史天气数据档案"
+    type: "Weather"
   },
   {
     title: "OpenWeatherMap",
     titleZh: "OpenWeatherMap",
+    description: "Weather API and historical data",
+    descriptionZh: "天气API和历史数据",
     url: "https://openweathermap.org/api",
     category: "Data",
-    type: "Weather",
-    description: "Weather data API for developers",
-    descriptionZh: "开发者天气数据API"
+    type: "Weather"
   },
   {
-    title: "Major Astronomy Data Centers",
+    title: "Astronomical Data Centers",
     titleZh: "国内外主要天文数据中心",
+    description: "Directory of major astronomical data centers",
+    descriptionZh: "主要天文数据中心目录",
     url: "https://astro.bnu.edu.cn/Computational_Astronomy/html/7ziyuan/1canshu/canshu.htm",
     category: "Data",
-    type: "Database",
-    description: "Directory of major astronomical data centers worldwide",
-    descriptionZh: "全球主要天文数据中心目录"
+    type: "Database"
   },
   {
     title: "National Astronomical Data Center",
     titleZh: "国家天文科学数据中心",
+    description: "China's national astronomical science data center",
+    descriptionZh: "中国国家天文科学数据中心",
     url: "https://nadc.china-vo.org/data/",
     category: "Data",
-    type: "Database",
-    description: "China's national repository for astronomical data",
-    descriptionZh: "中国天文科学数据国家中心"
+    type: "Database"
   },
-  
-  // Forums
   {
     title: "Mufu Forum",
     titleZh: "牧夫网",
+    description: "Chinese astronomy community forum",
+    descriptionZh: "中国天文爱好者社区论坛",
     url: "https://bbs.imufu.cn/",
     category: "Forum",
-    type: "Forum",
-    description: "Chinese astronomy and astrophotography community",
-    descriptionZh: "中国天文和天文摄影社区"
+    type: "Forum"
   },
   {
-    title: "PixInsight Official Community",
+    title: "PixInsight Official Forum",
     titleZh: "PixInsight官方社区",
+    description: "Official discussion forum for PixInsight users",
+    descriptionZh: "PixInsight用户官方讨论论坛",
     url: "https://pixinsight.com/forum/index.php",
     category: "Forum",
-    type: "Forum",
-    description: "Official PixInsight forums for support and discussions",
-    descriptionZh: "PixInsight官方支持和讨论论坛"
+    type: "Forum"
   },
-  
-  // Observatory
   {
     title: "Telescope Live Observatory Rental",
     titleZh: "Telescope Live天文台租赁",
+    description: "Remote telescope rental service",
+    descriptionZh: "远程望远镜租赁服务",
     url: "https://app.telescope.live/login",
     category: "Observatory",
-    type: "Rental",
-    description: "Remote observatory rental service",
-    descriptionZh: "远程天文台租赁服务"
+    type: "Rental"
   },
-  
-  // Beginner Resources
   {
-    title: "QHYCCD Astrophotography Station",
+    title: "QHYCCD Astronomy Photography Station",
     titleZh: "QHYCCD天文摄影小站",
+    description: "Beginner tutorials for astrophotography",
+    descriptionZh: "天文摄影初学者教程",
     url: "https://www.bilibili.com/opus/679310616214634529?spm_id_from=333.999.0.0",
     category: "Beginner",
-    type: "Tutorial",
-    description: "Beginner-friendly astrophotography tutorials",
-    descriptionZh: "适合初学者的天文摄影教程"
+    type: "Tutorial"
   },
   {
-    title: "Billions of Kilometers Closer! What Can Ordinary People Photograph with a Telescope?",
+    title: "What Can a Telescope Capture?",
     titleZh: "拉近几十亿公里！普通人用天文望远镜能拍到什么？",
+    description: "Demonstration of what amateur telescopes can capture",
+    descriptionZh: "业余望远镜能拍摄的天体展示",
     url: "https://www.bilibili.com/video/BV1y84y147YW/?spm_id_from=333.1387.favlist.content.click",
     category: "Beginner",
-    type: "Tutorial",
-    description: "Demonstration of amateur telescope capabilities",
-    descriptionZh: "业余望远镜能力的演示"
+    type: "Tutorial"
   },
-  
-  // Hardware
   {
     title: "QHYCCD",
     titleZh: "QHYCCD",
+    description: "Manufacturer of astronomical cameras and equipment",
+    descriptionZh: "天文相机和设备制造商",
     url: "https://www.qhyccd.cn/",
     category: "Hardware",
-    type: "Freezing Camera",
-    description: "Professional astronomical cameras and equipment",
-    descriptionZh: "专业天文相机和设备"
+    type: "Freezing Camera"
   },
   {
     title: "ToupTek Astronomy",
     titleZh: "图谱天文",
+    description: "Astronomical imaging equipment manufacturer",
+    descriptionZh: "天文成像设备制造商",
     url: "https://www.touptek-astro.com.cn/",
     category: "Hardware",
-    type: "Freezing Camera",
-    description: "Astronomical cameras and imaging equipment",
-    descriptionZh: "天文相机和成像设备"
+    type: "Freezing Camera"
   },
   {
     title: "ZWO",
     titleZh: "ZWO",
+    description: "Manufacturer of astronomy cameras and accessories",
+    descriptionZh: "天文相机和配件制造商",
     url: "https://www.zwoastro.cn/",
     category: "Hardware",
-    type: "Freezing Camera",
-    description: "Astronomical cameras and accessories",
-    descriptionZh: "天文相机和配件"
+    type: "Freezing Camera"
   },
   {
     title: "SharpStar Optics",
     titleZh: "锐星光学",
+    description: "Telescope and astronomy equipment manufacturer",
+    descriptionZh: "望远镜和天文设备制造商",
     url: "https://www.sharpstar-optics.com/",
     category: "Hardware",
-    type: "Telescope",
-    description: "High-quality astronomical telescopes and optical equipment",
-    descriptionZh: "高质量天文望远镜和光学设备"
+    type: "Telescope"
   },
   {
     title: "Sky-Rover Optics",
     titleZh: "裕众光学",
+    description: "Manufacturer of large binocular telescopes",
+    descriptionZh: "大型双筒望远镜制造商",
     url: "http://www.sky-rover.cn/projectlist.asp?LarCode=%D4%CB%B6%AF-%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5&Midcode=%B4%F3%D0%CD%CB%AB%CD%B2%CD%FB%D4%B6%BE%B5",
     category: "Hardware",
-    type: "Telescope",
-    description: "Professional telescope manufacturer",
-    descriptionZh: "专业望远镜制造商"
+    type: "Telescope"
   },
   {
     title: "Sky-Watcher",
     titleZh: "Sky-Watcher",
+    description: "Global manufacturer of quality telescopes",
+    descriptionZh: "优质望远镜全球制造商",
     url: "https://www.skywatcher.com/",
     category: "Hardware",
-    type: "Telescope",
-    description: "Popular telescope and mount manufacturer",
-    descriptionZh: "流行望远镜和赤道仪制造商"
+    type: "Telescope"
   },
-  
-  // Games & Simulations
   {
-    title: "SPACEX ISS Docking Simulator",
-    titleZh: "SPACEX 国际空间站对接模拟器",
+    title: "SpaceX ISS Docking Simulator",
+    titleZh: "SpaceX国际空间站对接模拟器",
+    description: "Interactive simulator for docking with the ISS",
+    descriptionZh: "与国际空间站对接的互动模拟器",
     url: "https://iss-sim.spacex.com/",
     category: "Game",
-    type: "Simulator",
-    description: "Interactive ISS docking simulation by SpaceX",
-    descriptionZh: "SpaceX推出的交互式国际空间站对接模拟器"
+    type: "Simulator"
   },
-  
-  // Resources
   {
     title: "Stellarium",
     titleZh: "虚拟天文馆",
+    description: "Free open source planetarium software",
+    descriptionZh: "免费开源天文馆软件",
     url: "https://stellarium.org/",
     category: "Resource",
-    type: "Map",
-    description: "Free open source planetarium software",
-    descriptionZh: "免费开源天文馆软件"
+    type: "Map"
   },
   {
-    title: "Siril Processing Software",
-    titleZh: "Siril后期软件",
+    title: "Siril Post-Processing Software",
+    titleZh: "siril后期软件",
+    description: "Free astronomical image processing software",
+    descriptionZh: "免费天文图像处理软件",
     url: "https://siril.org/",
     category: "Resource",
-    type: "Resource",
-    description: "Free astronomical image processing software",
-    descriptionZh: "免费天文图像处理软件"
+    type: "Software"
   },
   {
     title: "Siril Tutorials",
-    titleZh: "Siril教程",
+    titleZh: "siril教程",
+    description: "Official tutorials for using Siril software",
+    descriptionZh: "使用Siril软件的官方教程",
     url: "https://siril.org/tutorials/",
     category: "Resource",
-    type: "Tutorial",
-    description: "Official tutorials for Siril image processing",
-    descriptionZh: "Siril图像处理官方教程"
+    type: "Tutorial"
   },
   {
     title: "Portable LCD with Power Bank",
     titleZh: "带充电宝功能的便携显示器",
+    description: "DIY project for a portable display with battery",
+    descriptionZh: "带电池的便携式显示器DIY项目",
     url: "https://github.com/peng-zhihui/PocketLCD",
     category: "Resource",
-    type: "DIY",
-    description: "DIY portable display with integrated power bank",
-    descriptionZh: "DIY集成电源的便携式显示器"
+    type: "DIY"
   },
   {
-    title: "Filter Comparison",
+    title: "Filter Comparison Research",
     titleZh: "滤镜比较",
+    description: "Academic research on astronomical filters",
+    descriptionZh: "天文滤镜的学术研究",
     url: "https://www.researchgate.net/profile/James-Thompson-32",
     category: "Resource",
-    type: "Review",
-    description: "Comparative analysis of astrophotography filters",
-    descriptionZh: "天文摄影滤��的比较分析"
+    type: "Review"
   },
   {
-    title: "PC Mobile Hotspot",
+    title: "PC Mobile Hotspot Setup",
     titleZh: "PC移动热点",
+    description: "Tutorial for setting up mobile hotspot for remote observation",
+    descriptionZh: "为远程观测设置移动热点的教程",
     url: "https://blog.csdn.net/qq_36349997/article/details/140780453",
     category: "Resource",
-    type: "Tutorial",
-    description: "Guide to setting up PC as mobile hotspot",
-    descriptionZh: "设置PC作为移动热点的指南"
+    type: "Tutorial"
   },
   {
     title: "QHYCCD-QUARCS",
     titleZh: "QHYCCD-QUARCS",
+    description: "Open source project for QHYCCD camera control",
+    descriptionZh: "QHYCCD相机控制开源项目",
     url: "https://github.com/QHYCCD-QUARCS",
     category: "Resource",
-    type: "Open Source",
-    description: "Open source projects from QHYCCD",
-    descriptionZh: "QHYCCD的开源项目"
+    type: "Open Source"
   },
   {
     title: "ESA/Hubble Images",
     titleZh: "ESA/哈勃图片",
+    description: "Collection of spectacular Hubble Space Telescope images",
+    descriptionZh: "壮观的哈勃太空望远镜图片集",
     url: "https://esahubble.org/images/",
     category: "Resource",
-    type: "Gallery",
-    description: "Image gallery from the Hubble Space Telescope",
-    descriptionZh: "哈勃太空望远镜的图像库"
+    type: "Gallery"
   },
   {
-    title: "Jet Propulsion Laboratory",
+    title: "JPL Spitzer Images",
     titleZh: "喷气推进实验室",
+    description: "Image gallery from the Spitzer Space Telescope",
+    descriptionZh: "斯皮策太空望远镜图像库",
     url: "https://www.spitzer.caltech.edu/images",
     category: "Resource",
-    type: "Gallery",
-    description: "Images from NASA's Spitzer Space Telescope",
-    descriptionZh: "NASA的斯皮策太空望远镜图像"
+    type: "Gallery"
   },
   {
-    title: "High Resolution Imaging Science Experiment",
+    title: "HiRISE - High Resolution Imaging",
     titleZh: "高分辨率成像科学实验",
+    description: "High Resolution Imaging Science Experiment images",
+    descriptionZh: "高分辨率成像科学实验图像",
     url: "https://www.uahirise.org/",
     category: "Resource",
-    type: "Gallery",
-    description: "High-resolution images of Mars from HiRISE",
-    descriptionZh: "HiRISE提供的火星高分辨率图像"
+    type: "Gallery"
   },
   {
     title: "In-The-Sky.org",
     titleZh: "In-The-Sky.org",
+    description: "Astronomy news and interactive sky charts",
+    descriptionZh: "天文新闻和互动天空图表",
     url: "https://in-the-sky.org/",
     category: "Resource",
-    type: "Resource",
-    description: "Astronomy news and interactive sky charts",
-    descriptionZh: "天文新闻和交互式星图"
+    type: "Gallery"
   },
   {
     title: "Nighttime Imaging 'N' Astronomy",
-    titleZh: "夜间成像与天文学",
+    titleZh: "Nighttime Imaging 'N' Astronomy",
+    description: "An astrophotography imaging suite",
+    descriptionZh: "天文摄影成像套件",
     url: "https://nighttime-imaging.eu/",
     category: "Resource",
-    type: "Resource",
-    description: "Astrophotography imaging suite",
-    descriptionZh: "天文摄影成像套件"
+    type: "Software"
   },
   {
     title: "TheSky Astronomy Software",
     titleZh: "TheSky天文软件",
+    description: "Professional astronomy software suite",
+    descriptionZh: "专业天文软件套件",
     url: "https://www.bisque.com/product-category/software/",
     category: "Resource",
-    type: "Resource",
-    description: "Professional astronomy software suite",
-    descriptionZh: "专业天文软件套件"
+    type: "Software"
   },
   {
     title: "Astroberry Server",
     titleZh: "Astroberry服务器",
+    description: "Linux distribution for astronomy imaging control",
+    descriptionZh: "天文成像控制的Linux发行版",
     url: "https://www.astroberry.io/",
     category: "Resource",
-    type: "Resource",
-    description: "Astronomy software suite for Raspberry Pi",
-    descriptionZh: "树莓派上的天文软件套件"
-  },
-  
-  // Astronomy Apps
-  {
-    title: "SkySafari",
-    titleZh: "SkySafari天文应用",
-    url: "https://skysafariastronomy.com/",
-    category: "Mobile",
-    type: "App",
-    description: "Popular astronomy app for stargazing and telescope control",
-    descriptionZh: "流行的观星和望远镜控制天文应用"
+    type: "Software"
   },
   {
-    title: "NASA App",
-    titleZh: "NASA应用",
-    url: "https://www.nasa.gov/connect/apps.html",
-    category: "Mobile",
-    type: "App",
-    description: "Official NASA app with images, news, and live streams",
-    descriptionZh: "NASA官方应用，包含图像、新闻和直播"
+    title: "AstroImaging Equipment DB",
+    titleZh: "天文成像设备数据库",
+    description: "Database of astrophotography equipment reviews and specifications",
+    descriptionZh: "天文摄影设备评测和规格数据库",
+    url: "https://www.astrodb.com/",
+    category: "Hardware",
+    type: "Database"
   },
   {
-    title: "ISS Detector",
-    titleZh: "国际空间站检测器",
-    url: "https://www.issdetector.com/",
-    category: "Mobile", 
-    type: "App",
-    description: "Track the ISS and other satellites in real-time",
-    descriptionZh: "实时跟踪国际空间站和其他卫星"
+    title: "Space Weather Prediction Center",
+    titleZh: "太空天气预报中心",
+    description: "NOAA's official source for space weather forecasts",
+    descriptionZh: "美国国家海洋和大气管理局官方太空天气预报来源",
+    url: "https://www.swpc.noaa.gov/",
+    category: "Weather",
+    type: "Space Weather"
   },
-  
-  // Learning Resources
+  {
+    title: "Astro-Physics Equipment",
+    titleZh: "Astro-Physics设备",
+    description: "High-end mounts and telescopes for astrophotography",
+    descriptionZh: "用于天文摄影的高端赤道仪和望远镜",
+    url: "https://www.astro-physics.com/",
+    category: "Hardware",
+    type: "Telescope"
+  },
+  {
+    title: "SkyChart / Cartes du Ciel",
+    titleZh: "SkyChart / 天空图",
+    description: "Free planetarium software for astronomers",
+    descriptionZh: "天文学家的免费天文馆软件",
+    url: "https://www.ap-i.net/skychart/",
+    category: "Resource",
+    type: "Map"
+  },
+  {
+    title: "AstroPlanner",
+    titleZh: "天文计划软件",
+    description: "Observation planning tool for astronomers",
+    descriptionZh: "天文学家的观测计划工具",
+    url: "https://www.astroplanner.net/",
+    category: "Resource",
+    type: "Tool"
+  },
   {
     title: "AstroBin",
     titleZh: "AstroBin",
+    description: "Image hosting for astrophotographers",
+    descriptionZh: "天文摄影师的图像托管",
     url: "https://www.astrobin.com/",
     category: "Community",
-    type: "Gallery",
-    description: "Image hosting for astrophotographers with EXIF data sharing",
-    descriptionZh: "天文摄影师图像托管，支持EXIF数据共享"
+    type: "Gallery"
   },
   {
-    title: "Cloudy Nights",
-    titleZh: "Cloudy Nights",
-    url: "https://www.cloudynights.com/",
-    category: "Community",
-    type: "Forum",
-    description: "Large astronomy and astrophotography community forum",
-    descriptionZh: "大型天文和天文摄影社区论坛"
+    title: "SharpCap",
+    titleZh: "SharpCap",
+    description: "Astronomy camera capture software",
+    descriptionZh: "天文相机捕获软件",
+    url: "https://www.sharpcap.co.uk/",
+    category: "Resource",
+    type: "Software"
   },
   {
     title: "Astro Photography Tool",
     titleZh: "天文摄影工具",
-    url: "https://astrophotography.tool/",
-    category: "Software",
-    type: "Tool",
-    description: "Dedicated software for astrophotography image acquisition",
-    descriptionZh: "专用天文摄影图像采集软件"
-  },
-  
-  // Calibration & Tools
-  {
-    title: "PixelMath Calculator",
-    titleZh: "像素数学计算器",
-    url: "https://pixinsight.com.ar/pics/PixelMath_Calculator.htm",
+    description: "Software for controlling astrophotography equipment",
+    descriptionZh: "控制天文摄影设备的软件",
+    url: "https://www.astrophotography.app/",
     category: "Resource",
-    type: "Tool",
-    description: "Calculator for PixInsight's PixelMath expressions",
-    descriptionZh: "PixInsight像素数学表达式计算器"
+    type: "Software"
   },
   {
     title: "DeepSkyStacker",
     titleZh: "DeepSkyStacker",
+    description: "Free software to stack astronomical images",
+    descriptionZh: "免费天文图像堆栈软件",
     url: "http://deepskystacker.free.fr/",
-    category: "Software",
-    type: "Tool",
-    description: "Free stacking software for deep sky images",
-    descriptionZh: "深空图像免费堆栈软件"
-  },
-  {
-    title: "Astronomy Picture of the Day",
-    titleZh: "每日天文图片",
-    url: "https://apod.nasa.gov/apod/",
     category: "Resource",
-    type: "Gallery",
-    description: "NASA's daily featured astronomy image and explanation",
-    descriptionZh: "NASA每日精选天文图片及解释"
+    type: "Software"
   },
-  
-  // Space Weather
   {
-    title: "Space Weather Live",
-    titleZh: "太空天气直播",
-    url: "https://www.spaceweatherlive.com/",
+    title: "Sequence Generator Pro",
+    titleZh: "序列生成器专业版",
+    description: "Automation software for image acquisition",
+    descriptionZh: "图像获取自动化软件",
+    url: "https://www.sequencegeneratorpro.com/",
+    category: "Resource",
+    type: "Software"
+  },
+  {
+    title: "Astronomy Clear Sky Chart",
+    titleZh: "天文晴空图表",
+    description: "Weather forecasts for astronomers",
+    descriptionZh: "天文学家的天气预报",
+    url: "https://www.cleardarksky.com/",
     category: "Weather",
-    type: "Space Weather",
-    description: "Real-time information about solar activity and aurora forecasts",
-    descriptionZh: "太阳活动和极光预报的实时信息"
+    type: "Tool"
   },
   {
-    title: "Aurora Forecast",
-    titleZh: "极光预报",
-    url: "https://www.swpc.noaa.gov/products/aurora-30-minute-forecast",
-    category: "Weather",
-    type: "Space Weather",
-    description: "NOAA's 30-minute aurora forecast",
-    descriptionZh: "NOAA的30分钟极光预报"
-  },
-  
-  // Star Catalogs
-  {
-    title: "SIMBAD Astronomical Database",
-    titleZh: "SIMBAD天文数据库",
-    url: "http://simbad.u-strasbg.fr/simbad/",
-    category: "Data",
-    type: "Database",
-    description: "Reference database for astronomical objects beyond the solar system",
-    descriptionZh: "太阳系外天文对象参考数据库"
+    title: "Mobile Observatory App",
+    titleZh: "移动天文台应用",
+    description: "Comprehensive astronomy app for mobile devices",
+    descriptionZh: "移动设备的综合天文应用",
+    url: "https://zima.co/",
+    category: "Mobile",
+    type: "App"
   }
 ];

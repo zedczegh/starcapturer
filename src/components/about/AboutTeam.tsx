@@ -1,70 +1,11 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Award, GraduationCap } from "lucide-react";
+import { Users, Award, GraduationCap, BookOpen } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface TeamMember {
-  name: string;
-  nameZh: string;
-  role: string;
-  roleZh: string;
-  avatar: string;
-  specialty: string;
-  specialtyZh: string;
-  credentials?: string;
-  credentialsZh?: string;
-}
-
-const teamMembers: TeamMember[] = [
-  {
-    name: "Dr. James Chen",
-    nameZh: "陈博士",
-    role: "Lead Astronomer",
-    roleZh: "首席天文学家",
-    avatar: "JC",
-    specialty: "Light Pollution Analysis",
-    specialtyZh: "光污染分析",
-    credentials: "Ph.D. Astronomy, Stanford University",
-    credentialsZh: "斯坦福大学天文学博士"
-  },
-  {
-    name: "Dr. Emily Rodriguez",
-    nameZh: "艾米丽·罗德里格斯",
-    role: "Dark Sky Specialist",
-    roleZh: "暗夜专家",
-    avatar: "ER",
-    specialty: "Dark Sky Conservation",
-    specialtyZh: "暗夜保护",
-    credentials: "Ph.D. Environmental Science, MIT",
-    credentialsZh: "麻省理工学院环境科学博士"
-  },
-  {
-    name: "Wei Zhang",
-    nameZh: "张伟",
-    role: "Software Architect",
-    roleZh: "软件架构师",
-    avatar: "WZ",
-    specialty: "Geospatial Analysis",
-    specialtyZh: "地理空间分析",
-    credentials: "M.S. Computer Science, Berkeley",
-    credentialsZh: "伯克利大学计算机科学硕士"
-  },
-  {
-    name: "Dr. Sophia Park",
-    nameZh: "朴素菲",
-    role: "Research Scientist",
-    roleZh: "研究科学家",
-    avatar: "SP",
-    specialty: "Astronomical Imaging",
-    specialtyZh: "天文成像",
-    credentials: "Ph.D. Astrophysics, Caltech",
-    credentialsZh: "加州理工学院天体物理学博士"
-  }
-];
 
 const AboutTeam = () => {
   const { t, language } = useLanguage();
@@ -86,61 +27,115 @@ const AboutTeam = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          <p className="mb-6 text-cosmic-200">
-            {t(
-              "Our team of astronomers, environmental scientists, and engineers work together to provide accurate sky quality measurements and promote dark sky conservation around the world.",
-              "我们的天文学家、环境科学家和工程师团队共同努力，提供准确的天空质量测量，并在全球范围内促进暗夜保护。"
-            )}
-          </p>
-
-          <div className={`grid ${isMobile ? 'grid-cols-1 gap-6' : 'grid-cols-2 gap-4'} mt-6`}>
-            {teamMembers.map((member, index) => (
-              <div 
-                key={index} 
-                className="bg-cosmic-800/30 rounded-lg p-5 border border-cosmic-700/30 transition-all hover:bg-cosmic-800/50 hover:border-cosmic-700/50"
-              >
-                <div className="flex items-center gap-4 mb-3">
-                  <Avatar className="h-12 w-12 border-2 border-cosmic-700/50">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-blue-400">
-                      {member.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-medium text-cosmic-100">
-                      {language === 'en' ? member.name : member.nameZh}
-                    </h3>
-                    <p className="text-sm text-cosmic-300">
-                      {language === 'en' ? member.role : member.roleZh}
+          <div className="bg-cosmic-800/30 rounded-lg p-5 border border-cosmic-700/30 transition-all hover:bg-cosmic-800/50 hover:border-cosmic-700/50 mb-6">
+            <div className="flex items-center gap-4 mb-3">
+              <Avatar className="h-12 w-12 border-2 border-cosmic-700/50">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-blue-400">
+                  ZC
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-medium text-cosmic-100">Zed_Czegh</h3>
+                <p className="text-sm text-cosmic-300">
+                  {t("Astrophotography Enthusiast", "天文摄影爱好者")}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center text-xs text-cosmic-400 mt-1">
+                <GraduationCap className="h-3 w-3 mr-1.5" />
+                {t("MA graduate from UAL, Doctorate student of Fine Arts at Burren College of Arts +AI", 
+                   "来自UAL的艺术硕士，伯伦艺术学院艺术博士生+人工智能")}
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 mb-4">
+            <h3 className="text-lg font-medium text-cosmic-100 mb-2 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-cosmic-400" />
+              {t("About Bortle Scale", "关于波特尔量表")}
+            </h3>
+            <p className="text-sm text-cosmic-300 mb-4">
+              {t("The Bortle scale is a nine-level numeric scale that measures the night sky's brightness of a particular location. It quantifies the astronomical observability of celestial objects and the interference caused by light pollution.", 
+                 "波特尔量表是一个九级数字量表，用于测量特定位置夜空的亮度。它量化了天体的天文可观测性以及光污染造成的干扰。")}
+            </p>
+          </div>
+          
+          <Card className="bg-cosmic-800/20 border-cosmic-700/20 overflow-hidden mt-6">
+            <CardHeader className="pb-2 pt-3 bg-gradient-to-r from-cosmic-800/60 to-cosmic-900/60 border-b border-cosmic-700/20">
+              <CardTitle className="flex items-center gap-2 text-sm text-cosmic-100">
+                {t("SIQS - Stellar Imaging Quality Score", "SIQS - 天文观测质量评分")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs text-cosmic-300">
+                {t("The SIQS (Stellar Imaging Quality Score) is our proprietary rating system that evaluates locations based on their suitability for astrophotography and stargazing.", 
+                   "SIQS（天文观测质量评分）是我们专有的评级系统，根据地点对天文摄影和观星的适宜性进行评估。")}
+              </p>
+              
+              <div className="space-y-2 mt-2">
+                <h4 className="text-xs font-medium text-cosmic-200">
+                  {t("SIQS Calculation Factors", "SIQS计算因素")}
+                </h4>
+                
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <div className="bg-cosmic-900/40 p-2 rounded border border-cosmic-800/30">
+                    <h5 className="font-medium mb-1 text-cosmic-200">{t("Cloud Analysis", "云层分析")}</h5>
+                    <p className="text-cosmic-400 text-[10px]">
+                      {t("Separate evening (6PM-12AM) and morning (1AM-8AM) cloud cover prediction with weighted importance.", 
+                        "分别对傍晚（下午6点至午夜12点）和清晨（凌晨1点至早上8点）的云层覆盖进行加权预测。")}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-900/40 p-2 rounded border border-cosmic-800/30">
+                    <h5 className="font-medium mb-1 text-cosmic-200">{t("Light Pollution", "光污染")}</h5>
+                    <p className="text-cosmic-400 text-[10px]">
+                      {t("Bortle scale measurements (1-9) show how dark the sky is at your location.", 
+                        "波特尔量表测量（1-9）显示您所在位置的天空有多暗。")}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-900/40 p-2 rounded border border-cosmic-800/30">
+                    <h5 className="font-medium mb-1 text-cosmic-200">{t("Clear Sky Rate", "晴空率")}</h5>
+                    <p className="text-cosmic-400 text-[10px]">
+                      {t("Historical percentage of nights with clear viewing conditions at this location.", 
+                        "该位置历史上晴朗观测条件的夜晚百分比。")}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-900/40 p-2 rounded border border-cosmic-800/30">
+                    <h5 className="font-medium mb-1 text-cosmic-200">{t("Weather Conditions", "天气条件")}</h5>
+                    <p className="text-cosmic-400 text-[10px]">
+                      {t("Wind, humidity, temperature, and seeing conditions that affect image clarity.", 
+                        "风速、湿度、温度和视宁度等影响图像清晰度的条件。")}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-cosmic-900/40 p-2 rounded border border-cosmic-800/30">
+                    <h5 className="font-medium mb-1 text-cosmic-200">{t("Moon Phase", "月相")}</h5>
+                    <p className="text-cosmic-400 text-[10px]">
+                      {t("Impact of current moon phase on sky brightness and viewing conditions.", 
+                        "当前月相对天空亮度和观测条件的影响。")}
                     </p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xs text-cosmic-300 bg-cosmic-800/50 px-3 py-1.5 rounded-full inline-block">
-                    {language === 'en' ? member.specialty : member.specialtyZh}
-                  </p>
-                  {member.credentials && (
-                    <div className="flex items-center text-xs text-cosmic-400 mt-2">
-                      <GraduationCap className="h-3 w-3 mr-1.5" />
-                      {language === 'en' ? member.credentials : member.credentialsZh}
-                    </div>
-                  )}
+                
+                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-3 rounded border border-blue-500/20 mt-3">
+                  <h4 className="text-xs font-medium text-cosmic-200 mb-2">
+                    {t("Real-Time Updates", "实时更新")}
+                  </h4>
+                  <ul className="text-[10px] text-cosmic-300 space-y-1.5">
+                    <li>• {t("Location quality is constantly recalculated based on changing weather and astronomical conditions", 
+                      "根据不断变化的天气和天文条件持续重新计算地点质量")}</li>
+                    <li>• {t("Improved location finding with advanced filtering and sorting algorithms", 
+                      "通过先进的过滤和排序算法改进位置查找")}</li>
+                    <li>• {t("Optimized loading speeds for faster access to global dark sky locations", 
+                      "优化加载速度，更快访问全球暗空位置")}</li>
+                  </ul>
                 </div>
               </div>
-            ))}
-          </div>
-          
-          <div className="mt-6 bg-cosmic-800/20 p-4 rounded-lg border border-cosmic-700/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Award className="h-4 w-4 text-yellow-400" />
-              <p className="text-sm font-medium text-cosmic-100">
-                {t("Research Partners", "研究合作伙伴")}
-              </p>
-            </div>
-            <p className="text-xs text-cosmic-300">
-              {t("Collaborating with the International Dark-Sky Association, NASA Night Sky Network, and major universities worldwide.", 
-                "与国际暗夜协会、NASA夜空网络和全球主要大学合作。")}
-            </p>
-          </div>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
     </motion.div>
