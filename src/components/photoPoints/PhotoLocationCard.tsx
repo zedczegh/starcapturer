@@ -1,8 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
@@ -11,6 +8,9 @@ import LightPollutionIndicator from '@/components/location/LightPollutionIndicat
 import SiqsScoreBadge from './cards/SiqsScoreBadge';
 import CertificationBadge from './cards/CertificationBadge';
 import LocationMetadata from './cards/LocationMetadata';
+import GlassmorphicCard from './cards/GlassmorphicCard';
+import CardTitle from './cards/CardTitle';
+import ViewDetailsButton from './cards/ViewDetailsButton';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -140,68 +140,43 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
   };
   
-  // Animation variants - reduced for mobile
-  const cardVariants = {
-    hidden: { opacity: 0, y: isMobile ? 10 : 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        duration: isMobile ? 0.2 : 0.4,
-        delay: isMobile ? Math.min(index * 0.05, 0.3) : Math.min(index * 0.1, 0.5) // Cap maximum delay
-      }
-    }
-  };
-  
   return (
-    <motion.div
-      ref={cardRef}
-      variants={cardVariants}
-      initial="hidden"
-      animate={isVisible ? "visible" : "hidden"}
-      className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
-      layout={!isMobile}
-    >
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
+    <div ref={cardRef}>
+      <GlassmorphicCard isVisible={isVisible} index={index} isMobile={isMobile}>
+        <div className="flex justify-between items-start mb-2">
+          <CardTitle title={displayName} isMobile={isMobile} />
+          
+          {/* SIQS Score Badge */}
+          <SiqsScoreBadge score={displaySiqs} loading={loadingSiqs} />
+        </div>
         
-        {/* SIQS Score Badge */}
-        <SiqsScoreBadge score={displaySiqs} loading={loadingSiqs} />
-      </div>
-      
-      {/* Certification Badge */}
-      <CertificationBadge 
-        certification={location.certification} 
-        isDarkSkyReserve={location.isDarkSkyReserve} 
-      />
-      
-      {/* Light pollution indicator */}
-      <div className="mb-4 mt-2">
-        <LightPollutionIndicator 
-          bortleScale={location.bortleScale || 5} 
-          size="md"
-          showBortleNumber={true}
-          className="text-base"
+        {/* Certification Badge */}
+        <CertificationBadge 
+          certification={location.certification} 
+          isDarkSkyReserve={location.isDarkSkyReserve} 
         />
-      </div>
-      
-      {/* Location metadata */}
-      <LocationMetadata 
-        distance={location.distance} 
-        date={location.date} 
-      />
-      
-      <div className="mt-4 flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleViewDetails}
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm"
-        >
-          {t("View Details", "查看详情")}
-        </Button>
-      </div>
-    </motion.div>
+        
+        {/* Light pollution indicator */}
+        <div className="mb-4 mt-2">
+          <LightPollutionIndicator 
+            bortleScale={location.bortleScale || 5} 
+            size="md"
+            showBortleNumber={true}
+            className="text-base"
+          />
+        </div>
+        
+        {/* Location metadata */}
+        <LocationMetadata 
+          distance={location.distance} 
+          date={location.date} 
+        />
+        
+        <div className="mt-4 flex justify-end">
+          <ViewDetailsButton onClick={handleViewDetails} />
+        </div>
+      </GlassmorphicCard>
+    </div>
   );
 };
 
