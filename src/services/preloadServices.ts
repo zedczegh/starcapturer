@@ -1,11 +1,14 @@
-
 import { preloadCertifiedLocations } from "./certifiedLocationsService";
+import { initializeCodeProtection } from './codeProtectionService';
 
 /**
- * Initialize all preloading services
- * This should be called early in the application lifecycle
+ * Initialize services that should be loaded early
+ * This runs before the app renders to ensure protections are in place
  */
-export function initializePreloadServices() {
+export function initializePreloadServices(): void {
+  // Initialize code protection first
+  initializeCodeProtection();
+  
   // Start preloading certified locations immediately
   // This will make them available globally as soon as possible
   setTimeout(() => {
