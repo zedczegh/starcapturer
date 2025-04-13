@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin } from 'lucide-react';
+import { MapPin, List, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
@@ -11,12 +11,18 @@ interface PhotoPointsHeaderProps {
   userLocation: { latitude: number; longitude: number } | null;
   locationLoading: boolean;
   getPosition: () => void;
+  showMapToggle?: boolean;
+  showMap?: boolean;
+  toggleMapView?: () => void;
 }
 
 const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
   userLocation,
   locationLoading,
-  getPosition
+  getPosition,
+  showMapToggle = false,
+  showMap = true,
+  toggleMapView
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -53,9 +59,24 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       animate="visible"
       variants={headerVariants}
     >
-      {/* Back Button */}
-      <div className="mb-6">
+      {/* Back Button and Map Toggle */}
+      <div className="flex justify-between items-center mb-6">
         <BackButton destination="/" />
+        
+        {showMapToggle && toggleMapView && (
+          <Button 
+            onClick={toggleMapView}
+            variant="outline"
+            size="sm"
+            className="shadow-sm hover:bg-muted/60"
+          >
+            {showMap ? (
+              <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
+            ) : (
+              <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
+            )}
+          </Button>
+        )}
       </div>
       
       <div className="flex flex-col items-center text-center mb-8">
@@ -75,7 +96,7 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
         />
         
         <motion.p 
-          className="text-muted-foreground max-w-xl"
+          className="text-muted-foreground max-w-xl mx-auto"
           variants={descriptionVariants}
         >
           {t(
