@@ -1,18 +1,35 @@
+
 import { fetchForecastData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchWeatherData } from "@/lib/api/weather";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isNighttime, processWeatherDataForSiqs, cleanupExpiredCache } from "./realTimeSiqsService/siqsUtilities";
-import { WeatherDataWithClearSky, SiqsCacheEntry } from "./realTimeSiqsService/types";
+import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 
 // Create a cache to avoid redundant API calls with improved invalidation strategy
-const siqsCache = new Map<string, SiqsCacheEntry>();
+const siqsCache = new Map<string, {
+  siqs: number;
+  timestamp: number;
+  isViable: boolean;
+  factors?: any[];
+}>();
 
 // Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
 const NIGHT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 const DAY_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+// Extended WeatherData interface with clearSkyRate
+interface WeatherDataWithClearSky extends Record<string, any> {
+  cloudCover: number;
+  temperature?: number;
+  humidity?: number;
+  windSpeed?: number;
+  precipitation?: number;
+  weatherCondition?: string;
+  aqi?: number;
+  clearSkyRate?: number;
+}
 
 /**
  * Calculate real-time SIQS for a given location
@@ -34,6 +51,12 @@ export async function calculateRealTimeSiqs(
   
   // Generate cache key
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
+  // Determine if it's nighttime for cache duration
+  const isNighttime = () => {
+    const hour = new Date().getHours();
+    return hour >= 18 || hour < 8; // 6 PM to 8 AM
+  };
   
   const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
   
@@ -84,20 +107,34 @@ export async function calculateRealTimeSiqs(
       console.log(`Using clear sky rate for location: ${clearSkyData.annualRate}%`);
     }
     
-    // Process the data with our utility function
-    const result = await processWeatherDataForSiqs(weatherDataWithClearSky, forecastData, finalBortleScale);
+    // Calculate SIQS using the optimized method with nighttime forecasts
+    const siqsResult = await calculateSIQSWithWeatherData(
+      weatherDataWithClearSky,
+      finalBortleScale,
+      3, // Default seeing conditions
+      0.5, // Default moon phase
+      forecastData
+    );
     
-    console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs.toFixed(1)}`);
+    console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
+    
+    // Ensure SIQS is positive
+    const finalSiqs = Math.max(0, siqsResult.score);
+    const isViable = finalSiqs >= 2.0; // Consistent threshold with other parts of the app
     
     // Store in cache
     siqsCache.set(cacheKey, {
-      siqs: result.siqs,
-      isViable: result.isViable,
+      siqs: finalSiqs,
+      isViable: isViable,
       timestamp: Date.now(),
-      factors: result.factors
+      factors: siqsResult.factors
     });
     
-    return result;
+    return {
+      siqs: finalSiqs,
+      isViable: isViable,
+      factors: siqsResult.factors
+    };
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
     return { siqs: 0, isViable: false };
@@ -231,7 +268,22 @@ export function clearLocationSiqsCache(latitude: number, longitude: number): voi
  * Clear all expired cache entries to free memory
  */
 export function cleanupExpiredCache(): void {
-  const expiredCount = cleanupExpiredCache(siqsCache, NIGHT_CACHE_DURATION, DAY_CACHE_DURATION);
+  const now = Date.now();
+  let expiredCount = 0;
+  
+  for (const [key, data] of siqsCache.entries()) {
+    const isNighttime = () => {
+      const hour = new Date().getHours();
+      return hour >= 18 || hour < 8; // 6 PM to 8 AM
+    };
+    
+    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+    
+    if (now - data.timestamp > cacheDuration) {
+      siqsCache.delete(key);
+      expiredCount++;
+    }
+  }
   
   if (expiredCount > 0) {
     console.log(`Cleaned up ${expiredCount} expired SIQS cache entries`);

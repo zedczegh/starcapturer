@@ -5,7 +5,6 @@ import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/locationValidator';
-import { toast } from 'sonner';
 
 interface Location {
   latitude: number;
@@ -195,7 +194,17 @@ export const useRecommendedLocations = (
         if (newClickCount >= MAX_LOAD_MORE_CLICKS) {
           setCanLoadMoreCalculated(false);
         }
+        
+        toast.success(t(
+          `Added ${newResults.length} more locations`,
+          `添加了${newResults.length}个更多位置`
+        ));
       } else {
+        toast.info(t(
+          "No more unique locations found",
+          "未找到更多独特位置"
+        ));
+        
         setCanLoadMoreCalculated(false);
       }
     } catch (error) {
