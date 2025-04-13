@@ -4,12 +4,14 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
+import { Home, MapPin, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 
 const AboutFooter = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const { handleSIQSClick } = useSiqsNavigation();
 
   const buttonVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -73,12 +75,14 @@ const AboutFooter = () => {
           </Button>
         </Link>
         
-        <Link to="/">
-          <Button variant="outline" className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors">
-            <Calculator className="mr-2 h-4 w-4 text-teal-400" />
-            {t("Calculate SIQS", "计算SIQS")}
-          </Button>
-        </Link>
+        <Button 
+          variant="outline" 
+          className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
+          onClick={handleSIQSClick}
+        >
+          <Info className="mr-2 h-4 w-4 text-teal-400" />
+          {t("Calculate SIQS", "计算SIQS")}
+        </Button>
       </motion.div>
       
       <motion.div variants={buttonVariants} className="mt-8">

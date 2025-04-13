@@ -1,10 +1,11 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoonStar, Shield, Lightbulb, ExternalLink } from "lucide-react";
+import { MoonStar, Shield, Lightbulb, ExternalLink, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Link } from "react-router-dom";
 
 const DarkSkyKnowledge = () => {
   const { t } = useLanguage();
@@ -68,20 +69,46 @@ const DarkSkyKnowledge = () => {
               </div>
             </div>
             
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-cosmic-800/40 rounded-lg border border-cosmic-700/30">
-              <div>
-                <h4 className="text-sm font-medium text-cosmic-100 mb-1">{t("Learn More", "了解更多")}</h4>
-                <p className="text-xs text-cosmic-300">{t("Visit the International Dark-Sky Association for more information", "访问国际暗夜协会获取更多信息")}</p>
+            {/* External resources section with redesigned links */}
+            <div className="space-y-4 pt-2">
+              <h3 className="text-sm font-medium text-cosmic-100 flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-400" />
+                {t("Additional Resources", "其他资源")}
+              </h3>
+              
+              <div className="flex flex-col gap-3">
+                {/* IDA Link */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 p-3 bg-cosmic-800/40 rounded-lg border border-cosmic-700/30">
+                  <div>
+                    <h4 className="text-sm font-medium text-cosmic-100 mb-0.5">{t("International Dark-Sky Association", "国际暗夜协会")}</h4>
+                    <p className="text-xs text-cosmic-300">{t("Global authority on light pollution", "全球光污染权威机构")}</p>
+                  </div>
+                  <a 
+                    href="https://www.darksky.org" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-full transition-colors"
+                  >
+                    darksky.org
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                
+                {/* More Information Link */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 p-3 bg-cosmic-800/40 rounded-lg border border-cosmic-700/30">
+                  <div>
+                    <h4 className="text-sm font-medium text-cosmic-100 mb-0.5">{t("More Information", "更多信息")}</h4>
+                    <p className="text-xs text-cosmic-300">{t("Learn more about the SIQS calculation", "了解更多关于SIQS计算的信息")}</p>
+                  </div>
+                  <Link 
+                    to="/" 
+                    className="flex items-center gap-1.5 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 px-3 py-1.5 rounded-full transition-colors"
+                  >
+                    {t("View Details", "查看详情")}
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
-              <a 
-                href="https://www.darksky.org" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="flex items-center gap-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-full transition-colors"
-              >
-                darksky.org
-                <ExternalLink className="h-3 w-3" />
-              </a>
             </div>
           </div>
         </CardContent>
