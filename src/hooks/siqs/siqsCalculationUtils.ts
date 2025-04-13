@@ -1,8 +1,11 @@
-
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
+
+// Define SIQS score cache with expiration
+const siqsScoreCache = new Map<string, { score: number, timestamp: number }>();
+const SIQS_CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Ensure SIQS value is always on a 0-10 scale
@@ -15,6 +18,43 @@ export const normalizeScore = (score: number): number => {
 };
 
 /**
+ * Get cached SIQS score if available
+ */
+export function getCachedSIQSScore(
+  lat: number,
+  lng: number,
+  bortleScale: number,
+  moonPhase: number
+): number | null {
+  const key = `${lat.toFixed(4)}-${lng.toFixed(4)}-${bortleScale}-${moonPhase.toFixed(2)}`;
+  const cached = siqsScoreCache.get(key);
+  
+  if (cached && (Date.now() - cached.timestamp < SIQS_CACHE_EXPIRY)) {
+    console.log(`Using cached SIQS score: ${cached.score}`);
+    return cached.score;
+  }
+  
+  return null;
+}
+
+/**
+ * Cache SIQS score for future use
+ */
+export function cacheSIQSScore(
+  lat: number,
+  lng: number,
+  bortleScale: number,
+  moonPhase: number,
+  score: number
+): void {
+  const key = `${lat.toFixed(4)}-${lng.toFixed(4)}-${bortleScale}-${moonPhase.toFixed(2)}`;
+  siqsScoreCache.set(key, {
+    score,
+    timestamp: Date.now()
+  });
+}
+
+/**
  * Optimized function to calculate SIQS with weather data
  * Now includes clear sky rate as a factor (10% weight)
  */
@@ -25,6 +65,21 @@ export async function calculateSIQSWithWeatherData(
   moonPhase: number,
   forecastData: any | null
 ): Promise<any> {
+  // Check cache first for quick response
+  const cachedScore = getCachedSIQSScore(
+    weatherData.latitude,
+    weatherData.longitude,
+    bortleScale,
+    moonPhase
+  );
+  
+  if (cachedScore !== null) {
+    return {
+      score: cachedScore,
+      factors: [] // Return empty factors for cached score
+    };
+  }
+
   // First try to fetch clear sky rate data if not already provided
   let clearSkyRate: number | undefined = weatherData.clearSkyRate;
   
@@ -62,6 +117,15 @@ export async function calculateSIQSWithWeatherData(
           nighttimeSIQS.score = 8.5; // Cap at 8.5 to avoid over-promising
         }
         
+        // Cache the score for future use
+        cacheSIQSScore(
+          weatherData.latitude,
+          weatherData.longitude,
+          bortleScale,
+          moonPhase,
+          nighttimeSIQS.score
+        );
+        
         return nighttimeSIQS;
       }
     } catch (error) {
@@ -88,6 +152,15 @@ export async function calculateSIQSWithWeatherData(
   if (result.score > 8.5) {
     result.score = 8.5;
   }
+  
+  // Cache the score for future use
+  cacheSIQSScore(
+    weatherData.latitude,
+    weatherData.longitude,
+    bortleScale,
+    moonPhase,
+    result.score
+  );
   
   // If we have hourly forecast data, extract nighttime info for the cloud cover factor
   if (forecastData && forecastData.hourly) {
@@ -135,6 +208,25 @@ export async function calculateSIQSWithWeatherData(
   }
   
   return result;
+}
+
+/**
+ * Clear expired cache entries
+ */
+export function clearSIQSScoreCache(maxAge = SIQS_CACHE_EXPIRY): void {
+  const now = Date.now();
+  let count = 0;
+  
+  for (const [key, value] of siqsScoreCache.entries()) {
+    if (now - value.timestamp > maxAge) {
+      siqsScoreCache.delete(key);
+      count++;
+    }
+  }
+  
+  if (count > 0) {
+    console.log(`Cleared ${count} expired SIQS score cache entries`);
+  }
 }
 
 /**

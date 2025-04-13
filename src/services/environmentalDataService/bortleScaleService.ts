@@ -6,6 +6,13 @@ import { estimateBortleScaleByLocation, findClosestKnownLocation } from "@/utils
 const DEFAULT_TIMEOUT = 5000;
 // Default cache lifetime for Bortle scale data (in milliseconds)
 const BORTLE_CACHE_LIFETIME = 12 * 60 * 60 * 1000; // 12 hours
+// Memory cache to avoid repeated database lookups
+const memoryCache = new Map<string, {
+  bortleScale: number | null;
+  source: string;
+  timestamp: number;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+}>();
 
 /**
  * Enhanced service for retrieving and calculating Bortle scale data
@@ -35,7 +42,20 @@ export const getBortleScaleData = async (
     return bortleScale;
   }
   
-  // Check for cached Bortle scale data first (fast response)
+  // Check memory cache first (fastest)
+  const memoryCacheKey = `bortle-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const memoryCachedData = memoryCache.get(memoryCacheKey);
+  
+  if (memoryCachedData && 
+      Date.now() - memoryCachedData.timestamp < BORTLE_CACHE_LIFETIME && 
+      typeof memoryCachedData.bortleScale === 'number' && 
+      memoryCachedData.bortleScale >= 1 && 
+      memoryCachedData.bortleScale <= 9) {
+    console.log(`Using memory-cached Bortle scale: ${memoryCachedData.bortleScale}, source: ${memoryCachedData.source}`);
+    return memoryCachedData.bortleScale;
+  }
+  
+  // Check persistent cache next
   const bortleCacheKey = `bortle-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   const cachedBortleData = getCachedData(bortleCacheKey, BORTLE_CACHE_LIFETIME);
   
@@ -44,6 +64,13 @@ export const getBortleScaleData = async (
       cachedBortleData.bortleScale >= 1 && 
       cachedBortleData.bortleScale <= 9) {
     console.log("Using cached Bortle scale:", cachedBortleData.bortleScale, "source:", cachedBortleData.source);
+    
+    // Update memory cache for faster future lookups
+    memoryCache.set(memoryCacheKey, {
+      ...cachedBortleData,
+      timestamp: Date.now()
+    });
+    
     return cachedBortleData.bortleScale;
   }
   
@@ -56,12 +83,16 @@ export const getBortleScaleData = async (
       if (starBortleScale !== null) {
         console.log("Using star count data for Bortle scale:", starBortleScale);
         
-        // Cache the data with source information
-        setCachedData(bortleCacheKey, { 
+        const result = {
           bortleScale: starBortleScale, 
           source: 'star_count',
-          confidence: 'high'
-        });
+          confidence: 'high' as const,
+          timestamp: Date.now()
+        };
+        
+        // Update both caches
+        setCachedData(bortleCacheKey, result);
+        memoryCache.set(memoryCacheKey, result);
         
         return starBortleScale;
       }
@@ -77,12 +108,16 @@ export const getBortleScaleData = async (
       if (terrainCorrectedScale !== null) {
         console.log("Using terrain-corrected Bortle scale:", terrainCorrectedScale);
         
-        // Cache the data with source information
-        setCachedData(bortleCacheKey, { 
+        const result = {
           bortleScale: terrainCorrectedScale, 
           source: 'terrain_corrected',
-          confidence: 'high'
-        });
+          confidence: 'high' as const,
+          timestamp: Date.now()
+        };
+        
+        // Update both caches
+        setCachedData(bortleCacheKey, result);
+        memoryCache.set(memoryCacheKey, result);
         
         return terrainCorrectedScale;
       }
@@ -99,14 +134,18 @@ export const getBortleScaleData = async (
         closestLocation.distance < 100) {
       console.log("Using database Bortle scale:", closestLocation.bortleScale, "for", closestLocation.name);
       
-      // Cache the valid Bortle scale data
-      setCachedData(bortleCacheKey, { 
+      const result = {
         bortleScale: closestLocation.bortleScale, 
         source: 'database',
         name: closestLocation.name,
         distance: closestLocation.distance,
-        confidence: 'high'
-      });
+        confidence: 'high' as const,
+        timestamp: Date.now()
+      };
+      
+      // Update both caches
+      setCachedData(bortleCacheKey, result);
+      memoryCache.set(memoryCacheKey, result);
       
       return closestLocation.bortleScale;
     }
@@ -114,17 +153,14 @@ export const getBortleScaleData = async (
     console.error("Error using local database for Bortle scale:", error);
   }
   
+  // Use Promise.race to implement API timeout
   try {
-    // Attempt to fetch Bortle scale from our API implementation with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const apiPromise = fetchLightPollutionData(latitude, longitude);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("API timeout")), timeout);
+    });
     
-    const lightPollutionData = await fetchLightPollutionData(
-      latitude, 
-      longitude
-    );
-    
-    clearTimeout(timeoutId);
+    const lightPollutionData = await Promise.race([apiPromise, timeoutPromise]) as any;
     
     if (lightPollutionData?.bortleScale !== null && 
         typeof lightPollutionData.bortleScale === 'number' && 
@@ -133,17 +169,21 @@ export const getBortleScaleData = async (
       
       console.log("Using API Bortle scale:", lightPollutionData.bortleScale);
       
-      // Cache the valid Bortle scale data
-      setCachedData(bortleCacheKey, { 
+      const result = {
         bortleScale: lightPollutionData.bortleScale,
         source: 'api',
-        confidence: 'medium'
-      });
+        confidence: 'medium' as const,
+        timestamp: Date.now()
+      };
+      
+      // Update both caches
+      setCachedData(bortleCacheKey, result);
+      memoryCache.set(memoryCacheKey, result);
       
       return lightPollutionData.bortleScale;
     }
   } catch (error) {
-    console.error("Error fetching light pollution data:", error);
+    console.error("Error or timeout fetching light pollution data:", error);
   }
   
   // If still no valid data, use our backup utility
@@ -157,12 +197,17 @@ export const getBortleScaleData = async (
       
       console.log("Using utility Bortle scale:", closestKnownLocation.bortleScale);
       
-      setCachedData(bortleCacheKey, { 
+      const result = {
         bortleScale: closestKnownLocation.bortleScale,
         source: 'utility',
         distance: closestKnownLocation.distance,
-        confidence: 'medium'
-      });
+        confidence: 'medium' as const,
+        timestamp: Date.now()
+      };
+      
+      // Update both caches
+      setCachedData(bortleCacheKey, result);
+      memoryCache.set(memoryCacheKey, result);
       
       return closestKnownLocation.bortleScale;
     }
@@ -180,13 +225,17 @@ export const getBortleScaleData = async (
       if (estimatedScale >= 1 && estimatedScale <= 9) {
         console.log("Using estimated Bortle scale:", estimatedScale);
         
-        // Cache the estimated data
-        setCachedData(bortleCacheKey, { 
+        const result = {
           bortleScale: estimatedScale, 
           estimated: true,
           source: 'estimation',
-          confidence: 'low'
-        });
+          confidence: 'low' as const,
+          timestamp: Date.now()
+        };
+        
+        // Update both caches
+        setCachedData(bortleCacheKey, result);
+        memoryCache.set(memoryCacheKey, result);
         
         if (!displayOnly && setStatusMessage) {
           setStatusMessage(language === 'en'
@@ -209,13 +258,41 @@ export const getBortleScaleData = async (
   }
   
   // Store the fact that we don't know the Bortle scale
-  setCachedData(bortleCacheKey, { 
+  const unknownResult = { 
     bortleScale: null, 
     unknown: true,
     source: 'unknown',
-    confidence: 'none'
-  });
+    confidence: 'none' as const,
+    timestamp: Date.now()
+  };
+  
+  setCachedData(bortleCacheKey, unknownResult);
+  memoryCache.set(memoryCacheKey, unknownResult);
   
   // Return null to indicate unknown Bortle scale
   return null;
 };
+
+/**
+ * Clear expired entries from memory cache
+ */
+export const clearBortleMemoryCache = (maxAge = BORTLE_CACHE_LIFETIME): void => {
+  const now = Date.now();
+  let count = 0;
+  
+  for (const [key, value] of memoryCache.entries()) {
+    if (now - value.timestamp > maxAge) {
+      memoryCache.delete(key);
+      count++;
+    }
+  }
+  
+  if (count > 0) {
+    console.log(`Cleared ${count} expired Bortle scale entries from memory cache`);
+  }
+};
+
+// Set up automatic memory cache cleanup
+setInterval(() => {
+  clearBortleMemoryCache();
+}, 60 * 60 * 1000); // Clean up once per hour
