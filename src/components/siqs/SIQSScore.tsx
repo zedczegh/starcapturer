@@ -55,11 +55,11 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     backgroundColor: memoizedValues.progressColor
   }) as React.CSSProperties, [memoizedValues.progressColor]);
 
-  // Create location data for navigation
+  // Create location data for navigation - ensure we use a consistent ID format
   const locationData = useMemo(() => {
     const timestamp = new Date().toISOString();
-    // Use a UUID-like format that will be more consistent for the LocationDetails page
-    const locationId = `loc-${Date.now()}`;
+    // Create a consistent ID format based on coordinates
+    const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
     
     return {
       id: locationId,
@@ -67,12 +67,24 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       latitude: latitude,
       longitude: longitude,
       siqsResult: {
-        score: memoizedValues.displayValue
+        score: memoizedValues.displayValue,
+        isViable: memoizedValues.displayValue >= 4
       },
       timestamp: timestamp,
       fromCalculator: true // Add a flag to indicate source
     };
   }, [latitude, longitude, locationName, memoizedValues.displayValue]);
+
+  // Store location data in localStorage for persistence
+  const handleClick = () => {
+    try {
+      // Save to localStorage with the same ID used in the link
+      localStorage.setItem(`location_${locationData.id}`, JSON.stringify(locationData));
+      console.log("Location data saved to localStorage:", locationData);
+    } catch (error) {
+      console.error("Failed to save location data to localStorage:", error);
+    }
+  };
 
   return (
     <motion.div 
@@ -114,6 +126,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           <Link 
             to={`/location/${locationData.id}`} 
             state={locationData}
+            onClick={handleClick}
           >
             <Button 
               size="lg" 

@@ -22,6 +22,8 @@ export const initializeLocationData = async ({
   setIsLoading: (loading: boolean) => void;
 }) => {
   try {
+    console.log("Initializing location data with:", { id, initialState: !!initialState });
+    
     // First try to use the state passed to the component
     if (initialState) {
       console.log("Using initialState for location data", initialState);
@@ -31,6 +33,7 @@ export const initializeLocationData = async ({
       // Save to localStorage for persistence
       if (id) {
         localStorage.setItem(`location_${id}`, JSON.stringify(initialState));
+        console.log(`Saved location data to localStorage with key: location_${id}`);
       }
       return;
     }
@@ -42,11 +45,12 @@ export const initializeLocationData = async ({
         const storedData = localStorage.getItem(`location_${id}`);
         if (storedData) {
           const parsedData = JSON.parse(storedData);
+          console.log("Found stored data for location:", parsedData);
           setLocationData(parsedData);
           setIsLoading(false);
           return;
         } else {
-          console.log("No data found in localStorage for this ID");
+          console.log("No data found in localStorage for this ID:", id);
         }
       } catch (e) {
         console.error("Failed to retrieve location data from localStorage", e);
@@ -54,7 +58,7 @@ export const initializeLocationData = async ({
     }
     
     // If we got here with no data, show error and redirect
-    console.error("No location data available");
+    console.error("No location data available, redirecting to home");
     setIsLoading(false);
     navigate("/");
     toast({

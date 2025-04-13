@@ -5,6 +5,7 @@ import { useLocationDetailsData } from "@/hooks/location/useLocationDetailsData"
 import NavBar from "@/components/NavBar";
 import PageLoader from "@/components/loaders/PageLoader";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -14,6 +15,7 @@ const LocationDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   useEffect(() => {
     // Log what data we received for debugging
@@ -26,14 +28,18 @@ const LocationDetails = () => {
         const storedData = localStorage.getItem(`location_${id}`);
         if (storedData) {
           const parsedData = JSON.parse(storedData);
+          console.log("Found location data in localStorage:", parsedData);
           navigate(`/location/${id}`, { state: parsedData, replace: true });
           return;
+        } else {
+          console.error(`No location data found in localStorage for ID: ${id}`);
         }
       } catch (e) {
         console.error("Failed to retrieve location data from localStorage", e);
+        toast.error(t("Failed to load location data", "无法加载位置数据"));
       }
     }
-  }, [id, location.state, navigate]);
+  }, [id, location.state, navigate, t]);
   
   const {
     locationData, 
