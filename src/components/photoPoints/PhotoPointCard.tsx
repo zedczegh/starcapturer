@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,6 +12,7 @@ import { getCertificationInfo, getLocalizedCertText } from "./utils/certificatio
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getLocalizedLocationName } from "@/utils/markerUtils";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -125,7 +127,8 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
+  // Get appropriate name for display based on current language
+  const pointName = getLocalizedLocationName(point, language);
 
   return (
     <div 

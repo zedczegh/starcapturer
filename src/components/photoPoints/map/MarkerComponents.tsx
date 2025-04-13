@@ -4,58 +4,19 @@ import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getProgressColor } from '@/components/siqs/utils/progressColor';
+import { 
+  getProgressColor,
+  getSiqsClass, 
+  isWaterSpot, 
+  getCertificationColor, 
+  getLocalizedLocationName,
+  getChineseCertificationType
+} from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { isWaterLocation } from '@/utils/locationValidator';
-
-// Get SIQS quality class
-const getSiqsClass = (siqs?: number): string => {
-  if (!siqs) return '';
-  if (siqs >= 7.5) return 'siqs-excellent';
-  if (siqs >= 5.5) return 'siqs-good';
-  return 'siqs-poor';
-};
-
-// Filter out water locations using the improved detection
-const isWaterSpot = (location: SharedAstroSpot): boolean => {
-  // Never filter out certified locations
-  if (location.isDarkSkyReserve || location.certification) {
-    return false;
-  }
-  
-  // Use enhanced water detection
-  return isWaterLocation(
-    location.latitude, 
-    location.longitude, 
-    Boolean(location.isDarkSkyReserve || location.certification)
-  );
-};
-
-// Get certification type based color for markers
-const getCertificationColor = (location: SharedAstroSpot): string => {
-  if (!location.isDarkSkyReserve && !location.certification) {
-    return '#FFD700'; // Default gold
-  }
-  
-  const certification = (location.certification || '').toLowerCase();
-  
-  // Different colors for different certification types
-  if (certification.includes('reserve') || certification.includes('sanctuary')) {
-    return '#9b87f5'; // Purple for reserves
-  } else if (certification.includes('park')) {
-    return '#4ADE80'; // Green for parks
-  } else if (certification.includes('community')) {
-    return '#FFA500'; // Orange for communities
-  } else if (certification.includes('urban')) {
-    return '#0EA5E9'; // Blue for urban night skies
-  } else {
-    return '#FFD700'; // Gold for generic certified locations
-  }
-};
 
 // Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
@@ -151,12 +112,15 @@ const LocationMarker = memo(({
   }, [isHovered]);
 
   // Format location name based on language
-  const displayName = language === 'zh' && location.chineseName 
-    ? location.chineseName 
-    : location.name;
+  const displayName = getLocalizedLocationName(location, language);
   
   // Get SIQS class for styling
   const siqsClass = getSiqsClass(location.siqs);
+  
+  // Format certification text based on language
+  const certificationText = isCertified && location.certification ? 
+    (language === 'zh' ? getChineseCertificationType(location.certification) : location.certification) : 
+    '';
   
   // Function to navigate to location details
   const goToLocationDetails = () => {
@@ -203,10 +167,10 @@ const LocationMarker = memo(({
           </div>
           
           {/* Show certification badge for certified locations */}
-          {isCertified && location.certification && (
+          {isCertified && certificationText && (
             <div className="mt-1 text-xs font-medium text-amber-400 flex items-center">
               <Award className="h-3 w-3 mr-1" />
-              {location.certification}
+              {certificationText}
             </div>
           )}
           

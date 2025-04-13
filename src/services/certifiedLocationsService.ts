@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
 // Cache for certified locations to avoid repeated API calls
@@ -75,18 +76,21 @@ async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
       // Add the East Asian certified locations if they might be missing
       const combinedResults = addEastAsianLocations(certifiedResults);
       
+      // Add Chinese names to all certified locations
+      const locationsWithChineseNames = addChineseNames(combinedResults);
+      
       // Update cache and timestamp
-      cachedCertifiedLocations = combinedResults;
+      cachedCertifiedLocations = locationsWithChineseNames;
       lastCacheUpdate = Date.now();
       
       // Save to localStorage for future quick loads
       try {
-        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(combinedResults));
+        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(locationsWithChineseNames));
       } catch (error) {
         console.error("Error saving certified locations to cache:", error);
       }
       
-      return combinedResults;
+      return locationsWithChineseNames;
     }
     
     return certifiedResults;
@@ -116,6 +120,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'shenzhen-xichong',
       name: 'Shenzhen Xichong Dark Sky Community',
+      chineseName: '深圳西冲暗夜社区',
       latitude: 22.5808,
       longitude: 114.5034,
       isDarkSkyReserve: true,
@@ -126,6 +131,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'yeongyang-firefly',
       name: 'Yeongyang Firefly Eco Park Dark Sky Park',
+      chineseName: '英阳萤火虫生态公园暗夜公园',
       latitude: 36.6552,
       longitude: 129.1122,
       isDarkSkyReserve: true,
@@ -136,6 +142,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'jindo-dark-sky',
       name: 'Jindo Dark Sky Park',
+      chineseName: '珍岛暗夜公园',
       latitude: 34.4763,
       longitude: 126.2631,
       isDarkSkyReserve: true,
@@ -146,6 +153,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'yaeyama-dark-sky',
       name: 'Yaeyama Islands International Dark Sky Reserve',
+      chineseName: '八重山群岛国际暗夜保护区',
       latitude: 24.4667,
       longitude: 124.2167,
       isDarkSkyReserve: true,
@@ -156,6 +164,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'iriomote-ishigaki',
       name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
+      chineseName: '西表石垣国家公园暗夜保护区',
       latitude: 24.3423,
       longitude: 124.1546,
       isDarkSkyReserve: true,
@@ -166,6 +175,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'himawari-farm',
       name: 'Himawari Farm Dark Sky Park',
+      chineseName: '向日葵农场暗夜公园',
       latitude: 42.9824,
       longitude: 140.9946,
       isDarkSkyReserve: true,
@@ -183,6 +193,109 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
   });
   
   return Array.from(locationMap.values());
+}
+
+/**
+ * Add Chinese names to all certified locations
+ */
+function addChineseNames(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  // Map of English location types to Chinese prefixes
+  const prefixMap: Record<string, string> = {
+    'reserve': '暗夜保护区',
+    'sanctuary': '暗夜保护区',
+    'park': '暗夜公园',
+    'community': '暗夜社区',
+    'urban': '城市夜空地点'
+  };
+  
+  // Map of commonly known places for better translations
+  const knownLocations: Record<string, string> = {
+    'aoraki mackenzie': '奥拉基麦肯奇',
+    'natural bridges': '自然桥',
+    'central idaho': '爱达荷中部',
+    'cherry springs': '樱泉',
+    'exmoor': '埃克斯穆尔',
+    'bodmin moor': '博德明荒原',
+    'brecon beacons': '布雷肯比肯斯',
+    'westhavelland': '西哈弗尔',
+    'mont megantic': '梅甘蒂克山',
+    'kerry': '凯里',
+    'snowdonia': '雪墩山',
+    'galloway': '加洛韦',
+    'namibrand': '纳米布兰德',
+    'alpes': '阿尔卑斯',
+    'cranborne chase': '克兰博恩蔡斯',
+    'wairarapa': '怀拉拉帕',
+    'rhön': '伦山',
+    'river murray': '墨累河',
+    'grand canyon': '大峡谷',
+    'big bend': '大弯',
+    'death valley': '死亡谷',
+    'joshua tree': '约书亚树',
+    'capitol reef': '国会礁',
+    'canyonlands': '峡谷地',
+    'arches': '拱门',
+    'flagstaff': '弗拉格斯塔夫',
+    'borrego springs': '博雷戈泉',
+    'enchanted rock': '魔法石',
+    'copper breaks': '铜断裂',
+    'capulin volcano': '卡普林火山',
+    'waterton glacier': '沃特顿冰川',
+    'claytor lake': '克拉托湖',
+    'goblin valley': '妖精谷',
+    'tonto': '汤托',
+    'hovenweep': '霍文威普',
+    'headlands': '海德兰兹',
+    'mayland earth': '美地',
+  };
+  
+  return locations.map(location => {
+    // Skip if already has a Chinese name
+    if (location.chineseName) {
+      return location;
+    }
+    
+    let chineseName = '';
+    const locationName = location.name.toLowerCase();
+    
+    // First check if it's in our known locations map
+    for (const [key, value] of Object.entries(knownLocations)) {
+      if (locationName.includes(key)) {
+        // Found a match in our known locations
+        chineseName = value;
+        break;
+      }
+    }
+    
+    // Determine the location type and corresponding prefix
+    let prefix = '国际';
+    for (const [key, value] of Object.entries(prefixMap)) {
+      if ((location.certification || '').toLowerCase().includes(key) || 
+          locationName.includes(key)) {
+        prefix = value;
+        break;
+      }
+    }
+    
+    // If no specific match was found, use a generic translation
+    if (!chineseName) {
+      const shortName = location.name
+        .replace(/Dark Sky (Reserve|Sanctuary|Park|Community)/i, '')
+        .replace(/International/i, '')
+        .replace(/National Park/i, '国家公园')
+        .replace(/State Park/i, '州立公园')
+        .trim();
+        
+      chineseName = shortName + prefix;
+    } else {
+      chineseName += prefix;
+    }
+    
+    return {
+      ...location,
+      chineseName
+    };
+  });
 }
 
 /**
