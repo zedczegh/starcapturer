@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
@@ -238,13 +237,13 @@ const PhotoPointsNearby: React.FC = () => {
         getPosition={handleResetLocation}
       />
       
-      <ViewToggle
-        activeView={activeView}
-        onViewChange={handleViewChange}
-        loading={loading && !locationLoading}
-      />
-      
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between items-center mb-4 space-x-4">
+        <ViewToggle
+          activeView={activeView}
+          onViewChange={handleViewChange}
+          loading={loading && !locationLoading}
+        />
+        
         <Button 
           onClick={toggleMapView}
           variant="outline"
