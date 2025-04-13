@@ -1,111 +1,95 @@
 
+/**
+ * Real-time SIQS location update service
+ * IMPORTANT: This file contains critical functionality for updating location data with real-time SIQS.
+ * Any changes should be carefully tested to avoid breaking the application.
+ */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateRealTimeSiqs } from "../realTimeSiqsService";
-import { updateCertifiedLocationsWithSiqs } from "./certifiedLocationService";
+import { calculateRealTimeSiqs, batchCalculateSiqs } from "../realTimeSiqsService";
+import { hasValidCoordinates } from "@/utils/locationValidator";
 
-// Cache for real-time SIQS data
+// Cache for location SIQS data to avoid redundant calculations
 const locationCache = new Map<string, {
-  siqs: number;
+  location: SharedAstroSpot;
   timestamp: number;
-  isViable: boolean;
 }>();
 
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+// Cache duration constants
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
 /**
- * Update locations with real-time SIQS data
- * With improved caching and parallel processing
+ * Update locations with real-time SIQS information
+ * @param locations Array of locations to update
+ * @param userLocation Current user location
+ * @param searchRadius Search radius in km
+ * @param activeView Current active view mode
+ * @returns Promise resolving to updated locations array
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[],
-  userLocation?: { latitude: number; longitude: number } | null,
-  searchRadius?: number,
-  activeView?: 'certified' | 'calculated',
-  maxParallel: number = 3
+  userLocation: { latitude: number; longitude: number } | null,
+  searchRadius: number,
+  activeView: 'certified' | 'calculated'
 ): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) return [];
-  
-  console.log(`Updating ${locations.length} locations with real-time SIQS, view: ${activeView}`);
-  
-  // For certified view or if specifically handling certified locations in any view
-  if (activeView === 'certified') {
-    // Use the dedicated certified locations service for better handling
-    return updateCertifiedLocationsWithSiqs(locations);
+  if (!locations || !locations.length) {
+    console.log("No locations provided for SIQS update");
+    return [];
   }
   
-  // Clone the locations to avoid mutating the original
-  const updatedLocations = [...locations];
+  console.log(`Updating SIQS for ${locations.length} locations (${activeView} view)`);
   
-  // Separate certified and calculated locations for different handling
-  const certifiedLocs = updatedLocations.filter(loc => 
-    loc.isDarkSkyReserve || (loc.certification && loc.certification !== '')
+  // Validate and filter locations
+  const validLocations = locations.filter(loc => 
+    loc && hasValidCoordinates(loc)
   );
   
-  const calculatedLocs = updatedLocations.filter(loc => 
-    !(loc.isDarkSkyReserve || (loc.certification && loc.certification !== ''))
-  );
+  // Check cache for recent calculations to avoid redundant API calls
+  const now = Date.now();
+  const cachedLocations: SharedAstroSpot[] = [];
+  const locationsToUpdate: SharedAstroSpot[] = [];
   
-  // Update certified locations first using the dedicated service
-  const updatedCertifiedLocs = await updateCertifiedLocationsWithSiqs(certifiedLocs);
-  
-  // Handle calculated locations with regular approach
-  // Batch process locations for better performance
-  const batchSize = Math.min(maxParallel, 3);
-  
-  for (let i = 0; i < calculatedLocs.length; i += batchSize) {
-    const batch = calculatedLocs.slice(i, i + batchSize);
-    const promises = batch.map(async (location) => {
-      const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-      
-      // Check cache first
-      const cachedData = locationCache.get(cacheKey);
-      if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-        console.log(`Using cached SIQS for ${location.name || 'location'}: ${cachedData.siqs}`);
-        return {
-          ...location,
-          siqs: cachedData.siqs,
-          isViable: cachedData.isViable
-        };
-      }
-      
-      try {
-        // Calculate real-time SIQS
-        const result = await calculateRealTimeSiqs(
-          location.latitude,
-          location.longitude,
-          location.bortleScale || 4
-        );
-        
-        // Cache the result
-        locationCache.set(cacheKey, {
-          siqs: result.siqs,
-          isViable: result.isViable,
-          timestamp: Date.now()
-        });
-        
-        return {
-          ...location,
-          siqs: result.siqs,
-          isViable: result.isViable
-        };
-      } catch (error) {
-        console.error(`Error calculating SIQS for location:`, error);
-        // Return original location if calculation fails
-        return location;
-      }
-    });
+  validLocations.forEach(location => {
+    if (!location.latitude || !location.longitude) return;
     
-    // Wait for the batch to complete
-    const results = await Promise.all(promises);
+    // Generate cache key
+    const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}-${activeView}`;
+    const cachedData = locationCache.get(cacheKey);
     
-    // Update locations
-    results.forEach((result, index) => {
-      calculatedLocs[i + index] = result;
-    });
+    if (cachedData && (now - cachedData.timestamp < CACHE_DURATION)) {
+      console.log(`Using cached SIQS for ${location.name || 'location'}: ${cachedData.location.siqs}`);
+      cachedLocations.push(cachedData.location);
+    } else {
+      locationsToUpdate.push(location);
+    }
+  });
+  
+  // If all locations are cached, return immediately
+  if (locationsToUpdate.length === 0) {
+    return cachedLocations;
   }
   
-  // Combine the updated certified and calculated locations
-  return [...updatedCertifiedLocs, ...calculatedLocs];
+  try {
+    // Batch calculate SIQS for locations that need updating
+    const maxParallelRequests = 5;
+    const updatedLocations = await batchCalculateSiqs(locationsToUpdate, maxParallelRequests);
+    
+    // Update cache with new data
+    updatedLocations.forEach(location => {
+      if (!location.latitude || !location.longitude) return;
+      
+      const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}-${activeView}`;
+      locationCache.set(cacheKey, {
+        location,
+        timestamp: now
+      });
+    });
+    
+    // Combine cached and newly updated locations
+    return [...cachedLocations, ...updatedLocations];
+  } catch (error) {
+    console.error("Error updating locations with real-time SIQS:", error);
+    return cachedLocations; // Return cached locations on error
+  }
 }
 
 /**
@@ -115,4 +99,12 @@ export function clearLocationCache(): void {
   const size = locationCache.size;
   locationCache.clear();
   console.log(`Location cache cleared (${size} entries removed)`);
+}
+
+/**
+ * Get the current cache size
+ * @returns Number of cached entries
+ */
+export function getLocationCacheSize(): number {
+  return locationCache.size;
 }

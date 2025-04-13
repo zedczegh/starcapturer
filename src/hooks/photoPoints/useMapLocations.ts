@@ -1,9 +1,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { isWaterLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/utils/geoUtils';
 import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import { 
+  filterValidLocations, 
+  separateLocationTypes, 
+  mergeLocations 
+} from '@/utils/locationFiltering';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -26,69 +30,6 @@ export const useMapLocations = ({
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
 
-  // Filter out invalid locations and water spots
-  const filterValidLocations = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-    return locations.filter(location => 
-      location && 
-      typeof location.latitude === 'number' && 
-      typeof location.longitude === 'number' &&
-      // Filter out water locations for calculated spots, never filter certified
-      (location.isDarkSkyReserve || 
-       location.certification || 
-       !isWaterLocation(location.latitude, location.longitude, false))
-    );
-  }, []);
-
-  // Extract certified and calculated locations
-  const separateLocationTypes = useCallback((locations: SharedAstroSpot[]) => {
-    const certifiedLocations = locations.filter(location => 
-      location.isDarkSkyReserve === true || 
-      (location.certification && location.certification !== '')
-    );
-    
-    const calculatedLocations = locations.filter(location => 
-      !(location.isDarkSkyReserve === true || 
-      (location.certification && location.certification !== ''))
-    );
-
-    return { certifiedLocations, calculatedLocations };
-  }, []);
-
-  // Merge locations according to active view - UPDATED to strictly enforce view type filtering
-  const mergeLocations = useCallback((
-    certifiedLocations: SharedAstroSpot[], 
-    calculatedLocations: SharedAstroSpot[],
-    activeView: 'certified' | 'calculated'
-  ) => {
-    // For certified view, ONLY include certified locations
-    if (activeView === 'certified') {
-      return certifiedLocations;
-    }
-    
-    // For calculated view, include both types but prioritize certified locations
-    const locationMap = new Map<string, SharedAstroSpot>();
-    
-    // Always include all certified locations regardless of active view
-    certifiedLocations.forEach(loc => {
-      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-      locationMap.set(key, loc);
-    });
-    
-    // Add calculated locations
-    calculatedLocations.forEach(loc => {
-      // Skip water locations for calculated spots
-      if (!isWaterLocation(loc.latitude, loc.longitude)) {
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        const existing = locationMap.get(key);
-        if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
-          locationMap.set(key, loc);
-        }
-      }
-    });
-    
-    return Array.from(locationMap.values());
-  }, []);
-
   // Update locations with real-time SIQS
   const updateWithRealTimeSiqs = useCallback(async () => {
     if (!mapReady || !locations.length) return;
@@ -102,14 +43,12 @@ export const useMapLocations = ({
         ? certifiedLocations 
         : [...certifiedLocations, ...calculatedLocations.filter(loc => {
             // Skip water locations for calculated spots
-            if (!loc.isDarkSkyReserve && !loc.certification) {
-              if (isWaterLocation(loc.latitude, loc.longitude)) {
-                return false;
-              }
+            if (!loc.isDarkSkyReserve && !loc.certification && !loc.latitude || !loc.longitude) {
+              return false;
             }
             
             // Filter by distance for calculated view
-            if (userLocation) {
+            if (userLocation && loc.latitude && loc.longitude) {
               const distance = calculateDistance(
                 userLocation.latitude,
                 userLocation.longitude,
@@ -136,12 +75,6 @@ export const useMapLocations = ({
           updated.forEach(newLoc => {
             if (!newLoc.latitude || !newLoc.longitude) return;
             
-            // Skip water locations for calculated spots
-            if (!newLoc.isDarkSkyReserve && !newLoc.certification && 
-                isWaterLocation(newLoc.latitude, newLoc.longitude)) {
-              return;
-            }
-            
             const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
             const exists = combinedLocations.some(
               existingLoc => existingLoc.latitude && existingLoc.longitude && 
@@ -167,7 +100,10 @@ export const useMapLocations = ({
     } catch (error) {
       console.error('Error updating locations with real-time SIQS:', error);
     }
-  }, [locations, userLocation, mapReady, searchRadius, activeView, filterValidLocations, separateLocationTypes]);
+    
+    // Return false to avoid TypeScript Promise<boolean> error
+    return false;
+  }, [locations, userLocation, mapReady, searchRadius, activeView]);
 
   // Process locations
   useEffect(() => {
@@ -185,7 +121,7 @@ export const useMapLocations = ({
     
     setProcessedLocations(locationsToShow);
     
-  }, [locations, activeView, enhancedLocations, filterValidLocations, separateLocationTypes, mergeLocations]);
+  }, [locations, activeView, enhancedLocations]);
 
   // Update locations with real-time SIQS
   useEffect(() => {
