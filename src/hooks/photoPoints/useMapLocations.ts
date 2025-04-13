@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/utils/geoUtils';
 import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import { filterCalculatedLocationsForMap } from '@/utils/locationFilterUtils';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -70,7 +71,11 @@ export const useMapLocations = ({
     
     // Add calculated locations only if in calculated view
     if (activeView === 'calculated') {
-      calculatedLocations.forEach(loc => {
+      // Apply the new filtering to avoid redundant API calls
+      // Only show one calculated location per 50km radius
+      const filteredCalculatedLocations = filterCalculatedLocationsForMap(calculatedLocations);
+      
+      filteredCalculatedLocations.forEach(loc => {
         // Skip water locations for calculated spots
         if (!isWaterLocation(loc.latitude, loc.longitude)) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -93,8 +98,12 @@ export const useMapLocations = ({
       const validLocations = filterValidLocations(locations);
       const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
       
-      const locationsInRadius = activeView === 'calculated' && userLocation ? 
-        calculatedLocations.filter(loc => {
+      let locationsInRadius = certifiedLocations;
+      
+      // For calculated view, filter calculated locations to only have 1 per 50km
+      if (activeView === 'calculated' && userLocation) {
+        // Get calculated locations within radius
+        const calculatedInRadius = calculatedLocations.filter(loc => {
           if (!loc.latitude || !loc.longitude) return false;
           
           // Skip water locations for calculated spots
@@ -111,9 +120,12 @@ export const useMapLocations = ({
             loc.longitude
           );
           return distance <= searchRadius * 1.1;
-        }) : 
-        // For certified view, include ALL certified locations regardless of distance
-        certifiedLocations;
+        });
+        
+        // Apply the 50km radius filtering to reduce API calls
+        const filteredCalculated = filterCalculatedLocationsForMap(calculatedInRadius);
+        locationsInRadius = [...certifiedLocations, ...filteredCalculated];
+      }
       
       const updated = await updateLocationsWithRealTimeSiqs(
         locationsInRadius, 
@@ -166,7 +178,12 @@ export const useMapLocations = ({
   useEffect(() => {
     const validLocations = filterValidLocations(locations);
     const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-    const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
+    
+    // Apply the 50km radius filtering for calculated locations
+    const filteredCalculatedLocations = activeView === 'calculated' ?
+      filterCalculatedLocationsForMap(calculatedLocations) : calculatedLocations;
+    
+    const mergedLocations = mergeLocations(certifiedLocations, filteredCalculatedLocations, activeView);
     
     // Use enhanced locations if available, otherwise use merged locations
     const locationsToShow = enhancedLocations.length > 0 ? enhancedLocations : mergedLocations;
