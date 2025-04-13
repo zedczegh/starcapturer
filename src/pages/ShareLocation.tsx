@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +26,6 @@ const BortleNow: React.FC = () => {
   const { t, language } = useLanguage();
   const { updateBortleScale } = useBortleUpdater();
   
-  // Bortle scale states
   const [bortleScale, setBortleScale] = useState<number | null>(null);
   const [starCount, setStarCount] = useState<number | null>(null);
   const [cameraReadings, setCameraReadings] = useState<{
@@ -38,20 +36,16 @@ const BortleNow: React.FC = () => {
     lightFrame: false,
   });
   
-  // Camera permission dialog state
   const [showCameraPermissionDialog, setShowCameraPermissionDialog] = useState(false);
   const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
   const [cameraMode, setCameraMode] = useState<"dark" | "light" | null>(null);
   
-  // Countdown timer state
   const [countdown, setCountdown] = useState<number | null>(null);
   
-  // When location changes, update Bortle scale
   const onLocationChange = useCallback((lat: number, lng: number) => {
     setLatitude(lat.toFixed(6));
     setLongitude(lng.toFixed(6));
     
-    // Auto-update Bortle scale when location changes
     updateBortleFromLocation(lat, lng);
   }, []);
 
@@ -63,7 +57,6 @@ const BortleNow: React.FC = () => {
         setBortleScale(updatedBortle);
         console.log("Updated Bortle scale from location:", updatedBortle);
         
-        // Save the Bortle measurement to localStorage for persistence
         saveBortleMeasurement(lat, lng, updatedBortle, null);
       }
     } catch (err) {
@@ -73,7 +66,6 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  // Function to save Bortle measurements
   const saveBortleMeasurement = (
     lat: number, 
     lng: number, 
@@ -81,7 +73,6 @@ const BortleNow: React.FC = () => {
     starCountValue: number | null
   ) => {
     try {
-      // Create measurement object
       const measurement = {
         latitude: lat,
         longitude: lng,
@@ -92,14 +83,11 @@ const BortleNow: React.FC = () => {
         method: starCountValue ? 'camera' : 'location'
       };
       
-      // Save to localStorage
       const savedMeasurements = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]');
       savedMeasurements.push(measurement);
       localStorage.setItem('bortleMeasurements', JSON.stringify(savedMeasurements));
       
       console.log("Saved Bortle measurement:", measurement);
-      
-      // Could add API call here to save to database in future
     } catch (error) {
       console.error("Error saving Bortle measurement:", error);
     }
@@ -121,7 +109,6 @@ const BortleNow: React.FC = () => {
         setIsLoadingLocation(false);
         onLocationChange(position.coords.latitude, position.coords.longitude);
         
-        // Fetch location name
         fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&accept-language=${language}`)
           .then(response => response.json())
           .then(data => {
@@ -145,14 +132,11 @@ const BortleNow: React.FC = () => {
   }, [language, onLocationChange, toast, t]);
 
   useEffect(() => {
-    // Get location when component loads
     getCurrentLocation();
     
-    // Load any previously saved measurements
     try {
       const lastMeasurement = JSON.parse(localStorage.getItem('bortleMeasurements') || '[]').pop();
       if (lastMeasurement && lastMeasurement.bortleScale) {
-        // Check if measurement is recent (last 24 hours)
         const measurementTime = new Date(lastMeasurement.timestamp).getTime();
         const currentTime = new Date().getTime();
         const hoursDiff = (currentTime - measurementTime) / (1000 * 60 * 60);
@@ -169,7 +153,6 @@ const BortleNow: React.FC = () => {
     }
   }, [getCurrentLocation]);
 
-  // Countdown timer effect
   useEffect(() => {
     if (countdown !== null && countdown > 0) {
       const timer = setTimeout(() => {
@@ -177,7 +160,6 @@ const BortleNow: React.FC = () => {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (countdown === 0) {
-      // When countdown reaches zero, trigger the appropriate capture
       if (cameraMode === "dark") {
         performDarkFrameCapture();
       } else if (cameraMode === "light") {
@@ -187,20 +169,17 @@ const BortleNow: React.FC = () => {
     }
   }, [countdown, cameraMode]);
 
-  // Request camera permission before capture
   const requestCameraPermission = async (mode: "dark" | "light") => {
     setCameraMode(mode);
     
-    // Check if permissions were already granted
     if (cameraPermissionGranted) {
       startCountdown(mode);
       return;
     }
     
-    // Show permission dialog
     setShowCameraPermissionDialog(true);
   };
-  
+
   const handlePermissionResponse = async (granted: boolean) => {
     setShowCameraPermissionDialog(false);
     
@@ -208,13 +187,10 @@ const BortleNow: React.FC = () => {
       setCameraPermissionGranted(true);
       
       try {
-        // Actually request browser permission
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         
-        // Stop the stream immediately, we just needed to trigger the permission
         stream.getTracks().forEach(track => track.stop());
         
-        // Start the countdown for the appropriate mode
         startCountdown(cameraMode);
       } catch (err) {
         console.error("Camera permission error:", err);
@@ -234,14 +210,11 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  // Start a countdown for frame capture
   const startCountdown = (mode: "dark" | "light" | null) => {
     if (!mode) return;
     
-    // Set initial countdown to 5 seconds
     setCountdown(5);
     
-    // Show toast for countdown
     toast({
       title: mode === "dark" 
         ? t("Preparing to capture dark frame", "准备捕获暗帧") 
@@ -250,14 +223,12 @@ const BortleNow: React.FC = () => {
     });
   };
 
-  // Perform the actual dark frame capture once countdown completes
   const performDarkFrameCapture = async () => {
     try {
       setError(null);
       setCameraReadings(prev => ({ ...prev, darkFrame: false }));
       setIsProcessingImage(true);
       
-      // Check if we have location data
       if (!latitude || !longitude) {
         throw new Error(t("Please get your location first", "请先获取您的位置"));
       }
@@ -267,7 +238,6 @@ const BortleNow: React.FC = () => {
         description: t("Please cover your camera lens completely...", "请完全遮盖相机镜头..."),
       });
       
-      // Simulate camera capture with progress updates
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
       }, 700));
@@ -298,47 +268,37 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  // Simulate Dark Sky Meter camera process to measure actual Bortle scale
   const captureDarkFrame = () => {
     requestCameraPermission("dark");
   };
 
-  // Count stars in the image
   const countStarsInImage = (imageData: ImageData): number => {
-    // This is a simplified algorithm to detect stars in an image
-    // In a real implementation, this would be more sophisticated
-    
     const data = imageData.data;
     const width = imageData.width;
     const height = imageData.height;
     
-    // Threshold values for star detection
-    const brightnessThreshold = 180; // Higher values are more likely to be stars
-    const contrastThreshold = 50;    // Minimum difference from background
+    const brightnessThreshold = 180;
+    const contrastThreshold = 50;
     
     let starCount = 0;
-    const starPixels = new Set(); // To avoid counting the same star multiple times
+    const starPixels = new Set();
     
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         const i = (y * width + x) * 4;
         
-        // Calculate pixel brightness (simple average of RGB)
         const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
         
-        // Check surrounding pixels to see if this is a local maximum (star center)
         if (brightness > brightnessThreshold) {
           let isLocalMax = true;
           
-          // Check 8 surrounding pixels
           for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) continue; // Skip the center pixel
+              if (dx === 0 && dy === 0) continue;
               
               const ni = ((y + dy) * width + (x + dx)) * 4;
               const neighborBrightness = (data[ni] + data[ni + 1] + data[ni + 2]) / 3;
               
-              // If a neighboring pixel is brighter, this is not a local max
               if (neighborBrightness > brightness) {
                 isLocalMax = false;
                 break;
@@ -348,12 +308,10 @@ const BortleNow: React.FC = () => {
           }
           
           if (isLocalMax) {
-            // Ensure this is not part of a star we've already counted
             const starKey = `${x}-${y}`;
             if (!starPixels.has(starKey)) {
               starCount++;
               
-              // Mark this and nearby pixels as part of a star
               for (let dy = -2; dy <= 2; dy++) {
                 for (let dx = -2; dx <= 2; dx++) {
                   const sx = x + dx;
@@ -372,28 +330,14 @@ const BortleNow: React.FC = () => {
     return starCount;
   };
 
-  // Calculate Bortle scale based on star count and brightness
   const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
-    // This is a simplified algorithm:
-    // - More stars generally indicate darker skies (lower Bortle)
-    // - Lower brightness values (darker sky) indicate lower Bortle
-    
-    // Normalize star count to a value between 0-10
-    // Typical range: 0 stars (urban) to 100+ stars (dark site) in a typical smartphone frame
     const normalizedStarCount = Math.min(10, starCount / 10);
-    
-    // Normalize brightness (0-255) to a reversed 0-10 scale (darker is better)
-    // 255 (white) would be 0, and 0 (black) would be 10
     const normalizedBrightness = 10 - (skyBrightness / 25.5);
     
-    // Combine the two metrics with more weight to brightness (70/30 split)
     const combinedMetric = (normalizedBrightness * 0.7) + (normalizedStarCount * 0.3);
     
-    // Convert the 0-10 scale to Bortle 1-9 scale (reversed)
-    // 9 is most light-polluted, 1 is darkest sky
     let bortle = 10 - combinedMetric;
     
-    // Ensure Bortle is in valid range 1-9
     bortle = Math.max(1, Math.min(9, bortle));
     
     console.log(`Star count: ${starCount}, Brightness: ${skyBrightness}, Calculated Bortle: ${bortle.toFixed(1)}`);
@@ -401,14 +345,12 @@ const BortleNow: React.FC = () => {
     return bortle;
   };
 
-  // Perform the actual light frame capture once countdown completes
   const performLightFrameCapture = async () => {
     try {
       setError(null);
       setCameraReadings(prev => ({ ...prev, lightFrame: false }));
       setIsProcessingImage(true);
       
-      // Check if dark frame was captured
       if (!cameraReadings.darkFrame) {
         throw new Error(t("Please capture a dark frame first", "请先捕获暗帧"));
       }
@@ -418,7 +360,6 @@ const BortleNow: React.FC = () => {
         description: t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）..."),
       });
       
-      // Simulate camera processing with progress updates
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
       }, 800));
@@ -435,23 +376,18 @@ const BortleNow: React.FC = () => {
         resolve(true);
       }, 600));
       
-      // For simulation, generate reasonable values
       const baseLocationBortle = bortleScale || 5;
       
-      // Simulate camera-based star detection
       const simulatedStarCount = Math.max(0, Math.floor(100 * (1 - (baseLocationBortle - 1) / 8) + Math.random() * 20 - 10));
       setStarCount(simulatedStarCount);
       
-      // Simulate sky brightness measurement (0-255, where lower is darker)
       const simulatedSkyBrightness = Math.min(255, Math.max(10, ((baseLocationBortle - 1) / 8) * 200 + Math.random() * 30 - 15));
       
-      // Calculate Bortle scale based on star count and brightness
       const measuredBortle = calculateBortleFromStars(simulatedStarCount, simulatedSkyBrightness);
       
       setBortleScale(measuredBortle);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
       
-      // Save measurement to localStorage and eventually database
       if (latitude && longitude) {
         saveBortleMeasurement(
           parseFloat(latitude), 
@@ -484,12 +420,10 @@ const BortleNow: React.FC = () => {
     requestCameraPermission("light");
   };
 
-  // Get Bortle scale color for UI display
   const bortleColor = bortleScale ? getBortleScaleColor(bortleScale) : null;
   const bortleDescription = bortleScale ? 
     getBortleScaleDescription(bortleScale, language as 'en' | 'zh') : null;
 
-  // Animation variants for smoother UI
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -515,26 +449,20 @@ const BortleNow: React.FC = () => {
     }
   };
 
-  // Dynamic gradient and colors based on Bortle scale
   const getBortleScaleGradient = (scale: number | null) => {
     if (scale === null) return { bg: "", text: "" };
     
-    // For high light pollution (7-9)
     if (scale >= 7) {
       return {
         bg: "bg-gradient-to-br from-orange-500/80 to-red-500/80",
         text: "text-white"
       };
-    }
-    // For moderate light pollution (4-6)
-    else if (scale >= 4) {
+    } else if (scale >= 4) {
       return {
         bg: "bg-gradient-to-br from-yellow-400/80 to-lime-500/80",
         text: "text-cosmic-950"
       };
-    }
-    // For low light pollution (1-3)
-    else {
+    } else {
       return {
         bg: "bg-gradient-to-br from-blue-500/80 to-cyan-500/80",
         text: "text-white"
@@ -548,46 +476,13 @@ const BortleNow: React.FC = () => {
     <>
       <NavBar />
       <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
-        {/* Camera Permission Dialog */}
-        <Dialog open={showCameraPermissionDialog} onOpenChange={open => !open && setShowCameraPermissionDialog(false)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t("Camera Permission Required", "需要相机权限")}</DialogTitle>
-              <DialogDescription>
-                {t(
-                  "This feature needs to access your camera to measure light levels. No images will be stored or shared.",
-                  "此功能需要访问您的相机来测量光线水平。不会存储或共享任何图像。"
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-center p-4">
-              <Camera className="h-16 w-16 text-primary opacity-80" />
-            </div>
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => handlePermissionResponse(false)}
-                className="sm:w-full"
-              >
-                {t("Deny", "拒绝")}
-              </Button>
-              <Button 
-                onClick={() => handlePermissionResponse(true)}
-                className="sm:w-full"
-              >
-                {t("Allow", "允许")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         <motion.div 
           className="relative z-10"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent">
             {t("Bortle Now", "实时光污染")}
           </h1>
           
@@ -610,7 +505,6 @@ const BortleNow: React.FC = () => {
           </motion.div>
         )}
         
-        {/* Countdown overlay */}
         <AnimatePresence>
           {countdown !== null && (
             <motion.div 
@@ -640,7 +534,6 @@ const BortleNow: React.FC = () => {
         </AnimatePresence>
         
         <div className="space-y-6">
-          {/* Enhanced Bortle Scale Display with Dynamic Circle */}
           <AnimatePresence>
             {bortleScale && (
               <motion.div 
@@ -652,7 +545,6 @@ const BortleNow: React.FC = () => {
               >
                 <div className="absolute inset-0 z-0 opacity-20 bg-gradient-to-br from-cosmic-600/20 to-cosmic-900/20" />
                 
-                {/* Dynamic circle display with pulse animation */}
                 <div className="relative z-10">
                   <div className="flex flex-col items-center mb-5">
                     <motion.div 
@@ -745,7 +637,6 @@ const BortleNow: React.FC = () => {
             )}
           </AnimatePresence>
           
-          {/* Location section - Update button removed as requested */}
           <motion.div 
             className="glassmorphism border-cosmic-700/30 rounded-xl p-6 relative overflow-hidden"
             variants={fadeInUp}
@@ -796,7 +687,6 @@ const BortleNow: React.FC = () => {
             </div>
           </motion.div>
           
-          {/* Camera measurement section */}
           <motion.div 
             className="glassmorphism border-cosmic-700/30 rounded-xl p-6 relative overflow-hidden"
             variants={fadeInUp}
@@ -873,7 +763,6 @@ const BortleNow: React.FC = () => {
                 </div>
               </div>
             
-              {/* Measurement steps */}
               <div className="space-y-3">
                 <h3 className="font-medium flex items-center gap-2 text-primary text-sm">
                   <Info size={14} />
