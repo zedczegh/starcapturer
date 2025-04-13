@@ -2,7 +2,8 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Slider } from '@/components/ui/slider';
-import { MapPin } from 'lucide-react';
+import { MapPin, Radar } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export interface DistanceRangeSliderProps {
   currentValue: number;
@@ -31,39 +32,98 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   const handleValueChange = (values: number[]) => {
     onValueChange(values[0]);
   };
+
+  // Calculate percentage for radar animation
+  const percentage = ((currentValue - minValue) / (maxValue - minValue)) * 100;
   
   return (
-    <div className="glassmorphism bg-cosmic-900/30 border border-cosmic-700/30 p-4 rounded-lg">
+    <motion.div 
+      className="glassmorphism backdrop-blur-md bg-cosmic-900/40 border border-cosmic-700/40 p-4 rounded-lg relative overflow-hidden"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
+      {/* Sci-fi decorative elements */}
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+      <div className="absolute left-0 top-0 w-0.5 h-full bg-gradient-to-b from-transparent via-primary/30 to-transparent"></div>
+      <div className="absolute right-0 top-0 w-0.5 h-full bg-gradient-to-b from-transparent via-primary/30 to-transparent"></div>
+      
       <div className="flex justify-between items-center mb-2">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground flex items-center">
+          <Radar className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
           {t("Search Radius", "搜索半径")}
         </div>
-        <div className="flex items-center gap-1.5 text-primary font-medium">
+        <motion.div 
+          className="flex items-center gap-1.5 text-primary font-medium bg-background/20 px-2 py-0.5 rounded-md border border-primary/20"
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring", stiffness: 400, damping: 10 }}
+        >
           <MapPin className="h-3.5 w-3.5" />
           <span className="text-sm">
             {formatDistance(currentValue)}
           </span>
-        </div>
+        </motion.div>
       </div>
       
-      <Slider
-        value={[currentValue]}
-        min={minValue}
-        max={maxValue}
-        step={stepValue}
-        onValueChange={handleValueChange}
-        className="mt-2"
-      />
+      <div className="relative mt-2">
+        <Slider
+          value={[currentValue]}
+          min={minValue}
+          max={maxValue}
+          step={stepValue}
+          onValueChange={handleValueChange}
+          className="mt-2 z-10 relative"
+        />
+        
+        {/* Animated radar-like effect */}
+        <motion.div 
+          className="absolute top-2.5 left-0 h-2 bg-gradient-to-r from-primary/60 to-transparent rounded-full"
+          style={{ width: `${percentage}%` }}
+          animate={{ 
+            opacity: [0.6, 1, 0.6],
+            boxShadow: [
+              '0 0 2px rgba(139, 92, 246, 0.3)',
+              '0 0 8px rgba(139, 92, 246, 0.6)',
+              '0 0 2px rgba(139, 92, 246, 0.3)'
+            ]
+          }}
+          transition={{ 
+            duration: 2, 
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+      </div>
       
       <div className="flex justify-between mt-1.5">
-        <div className="text-xs text-muted-foreground">
+        <motion.div 
+          className="text-xs text-muted-foreground"
+          whileHover={{ color: "rgba(139, 92, 246, 0.8)" }}
+        >
           {formatDistance(minValue)}
-        </div>
-        <div className="text-xs text-muted-foreground">
+        </motion.div>
+        <motion.div 
+          className="text-xs text-muted-foreground"
+          whileHover={{ color: "rgba(139, 92, 246, 0.8)" }}
+        >
           {formatDistance(maxValue)}
-        </div>
+        </motion.div>
       </div>
-    </div>
+      
+      {/* Tick marks for steps */}
+      <div className="relative h-1 mt-1">
+        {Array.from({ length: ((maxValue - minValue) / stepValue) + 1 }).map((_, i) => (
+          <div 
+            key={i} 
+            className={`absolute h-1 w-0.5 bg-primary/30 top-0 ${
+              i * stepValue + minValue <= currentValue ? 'bg-primary/60' : 'bg-muted/40'
+            }`}
+            style={{ left: `${(i * stepValue) / (maxValue - minValue) * 100}%` }}
+          />
+        ))}
+      </div>
+    </motion.div>
   );
 };
 
