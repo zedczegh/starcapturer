@@ -2,7 +2,7 @@
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, MoonStar } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutHeader = () => {
@@ -32,14 +32,15 @@ const AboutHeader = () => {
         />
       </div>
       
-      {/* SIQS Badge */}
+      {/* Logo and SIQS Badge */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className="flex justify-center"
+        className="flex justify-center items-center gap-3 mb-3"
       >
-        <div className="bg-cosmic-800/30 backdrop-blur-sm p-2 rounded-full inline-flex items-center mb-3 border border-cosmic-700/30">
+        <MoonStar className="h-8 w-8 text-primary" />
+        <div className="bg-cosmic-800/30 backdrop-blur-sm p-2 rounded-full inline-flex items-center border border-cosmic-700/30">
           <Sparkles className="h-4 w-4 text-blue-400 mr-1.5" />
           <span className="text-xs text-cosmic-200">
             {t("Astro SIQS 1.0", "Astro SIQS 1.0")}
@@ -54,7 +55,7 @@ const AboutHeader = () => {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {t("About Bortle Now", "关于 Bortle Now")}
+        {t("About SIQS", "关于 SIQS")}
       </motion.h1>
       
       {/* Decorative line */}
