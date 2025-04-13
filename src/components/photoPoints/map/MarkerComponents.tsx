@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -19,7 +20,7 @@ const getSiqsClass = (siqs?: number): string => {
   return 'siqs-poor';
 };
 
-// Enhanced filtering for water locations
+// Enhanced filtering for water locations - now with early aggressive filtering
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
   // Never filter out certified locations
   if (location.isDarkSkyReserve || location.certification) {
@@ -27,24 +28,28 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   }
   
   // Multi-layered water detection
-  // 1. Main water detection
+  // 1. Main water detection - use enhanced water detection
   if (isWaterLocation(location.latitude, location.longitude, false)) {
     return true;
   }
   
-  // 2. Coastal water detection
+  // 2. Coastal water detection - expanded coastal detection
   if (isLikelyCoastalWater(location.latitude, location.longitude)) {
     return true;
   }
   
-  // 3. Name-based detection
+  // 3. Name-based detection with expanded keywords
   if (location.name) {
     const lowerName = location.name.toLowerCase();
     const waterKeywords = [
       'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
       'channel', 'sound', 'harbor', 'harbour', 'port', 
       'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
+      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach',
+      'water', 'river', 'stream', 'creek', 'estuary', 'shore',
+      'waterway', 'waterfront', 'quay', 'dock', 'jetty', 'ferry',
+      'wharf', 'dam', 'boating', 'maritime', 'cruise', 'sailing',
+      'coastline', 'coastal', 'seashore', 'oceanfront', 'bayfront'
     ];
     
     for (const keyword of waterKeywords) {
@@ -122,17 +127,18 @@ const LocationMarker = memo(({
     return null;
   }
   
-  // Enhanced water location filtering with multiple checks
+  // MOST IMPORTANT CHANGE: Apply aggressive pre-filtering to prevent water locations
+  // from ever being rendered in the first place
   if (!isCertified) {
     // Apply strict water detection to calculated spots
     if (isWaterSpot(location)) {
-      console.log(`Filtered out water location: ${location.name} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+      // Don't render water locations at all
       return null;
     }
     
     // Extra safety check using our general validator
     if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-      console.log(`Filtered out invalid astronomy location: ${location.name}`);
+      // Don't render invalid astronomy locations at all
       return null;
     }
   }

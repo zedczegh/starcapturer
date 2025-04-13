@@ -8,6 +8,7 @@ import {
   separateLocationTypes, 
   mergeLocations 
 } from '@/utils/locationFiltering';
+import { preFilterWaterLocations } from '@/utils/markerUtils';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -38,15 +39,13 @@ export const useMapLocations = ({
       const validLocations = filterValidLocations(locations);
       const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
       
+      // Pre-filter water locations from calculated spots
+      const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
+      
       // Only update locations relevant to current view
       const locationsToUpdate = activeView === 'certified' 
         ? certifiedLocations 
-        : [...certifiedLocations, ...calculatedLocations.filter(loc => {
-            // Skip water locations for calculated spots
-            if (!loc.isDarkSkyReserve && !loc.certification && !loc.latitude || !loc.longitude) {
-              return false;
-            }
-            
+        : [...certifiedLocations, ...filteredCalculatedLocations.filter(loc => {
             // Filter by distance for calculated view
             if (userLocation && loc.latitude && loc.longitude) {
               const distance = calculateDistance(
@@ -69,10 +68,12 @@ export const useMapLocations = ({
       );
       
       if (updated && updated.length > 0) {
+        const filteredUpdated = preFilterWaterLocations(updated);
+        
         setEnhancedLocations(prevLocations => {
           const combinedLocations = [...prevLocations];
           
-          updated.forEach(newLoc => {
+          filteredUpdated.forEach(newLoc => {
             if (!newLoc.latitude || !newLoc.longitude) return;
             
             const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
@@ -109,14 +110,22 @@ export const useMapLocations = ({
   useEffect(() => {
     const validLocations = filterValidLocations(locations);
     const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-    const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
+    
+    // Pre-filter water locations from calculated spots
+    const filteredCalculatedLocations = preFilterWaterLocations(calculatedLocations);
+    
+    const mergedLocations = mergeLocations(
+      certifiedLocations, 
+      filteredCalculatedLocations, 
+      activeView
+    );
     
     // Use enhanced locations if available, otherwise use merged locations
     const locationsToShow = enhancedLocations.length > 0 ? 
       // Apply active view filtering to enhanced locations
       activeView === 'certified' 
         ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-        : enhancedLocations
+        : preFilterWaterLocations(enhancedLocations)  // Apply water filtering here too
       : mergedLocations;
     
     setProcessedLocations(locationsToShow);
