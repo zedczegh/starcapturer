@@ -21,13 +21,13 @@ const MobileNav: React.FC<MobileNavProps> = ({
       <div className="flex justify-around items-center py-3 px-2 bg-[#123341]/[0.84] backdrop-blur-xl border-t border-cosmic-100/10">
         <MobileNavButton to="/" icon={<Home className="h-5 w-5" />} label={t("Home", "首页")} active={location.pathname === "/"} />
         
-        <MobileNavButton to="/photo-points" icon={<Telescope className="h-5 w-5" />} label={t("Photo", "拍摄")} active={location.pathname === "/photo-points"} />
+        <MobileNavButton to="/share" icon={<Smartphone className="h-5 w-5" />} label={t("Bortle", "光污染")} active={location.pathname === "/share"} />
         
-        <MobileNavButton to="/useful-links" icon={<Link2 className="h-5 w-5" />} label={t("Links", "资源")} active={location.pathname === "/useful-links"} />
+        <MobileNavButton to="/photo-points" icon={<Telescope className="h-5 w-5" />} label={t("Photo", "拍摄")} active={location.pathname === "/photo-points"} />
         
         <MobileNavButton to="/about" icon={<Info className="h-5 w-5" />} label={t("About", "关于")} active={location.pathname === "/about"} />
         
-        <MobileNavButton to="/share" icon={<Smartphone className="h-5 w-5" />} label={t("Bortle", "光污染")} active={location.pathname === "/share"} />
+        <MobileNavButton to="/useful-links" icon={<Link2 className="h-5 w-5" />} label={t("Links", "资源")} active={location.pathname === "/useful-links"} />
       </div>
     </div>
   );
