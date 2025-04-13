@@ -267,18 +267,25 @@ const BortleNow: React.FC = () => {
   };
 
   const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
-    const normalizedStarCount = Math.min(10, starCount / 10);
-    const normalizedBrightness = 10 - (skyBrightness / 25.5);
-    
-    const combinedMetric = (normalizedBrightness * 0.7) + (normalizedStarCount * 0.3);
-    
-    let bortle = 10 - combinedMetric;
-    
-    bortle = Math.max(1, Math.min(9, bortle));
-    
-    console.log(`Star count: ${starCount}, Brightness: ${skyBrightness}, Calculated Bortle: ${bortle.toFixed(1)}`);
-    
-    return bortle;
+    // Integrate with our enhanced algorithm from starCountUtils
+    try {
+      // Attempt to load the optimized algorithm dynamically
+      const { calculateBortleFromStars } = require('@/utils/starCountUtils');
+      return calculateBortleFromStars(starCount, skyBrightness);
+    } catch (error) {
+      console.error("Error loading optimized star counting algorithm:", error);
+      
+      // Fallback to simplified algorithm if module loading fails
+      const normalizedStarCount = Math.min(10, starCount / 20);
+      const normalizedBrightness = 10 - (skyBrightness / 25.5);
+      
+      const combinedMetric = (normalizedBrightness * 0.65) + (normalizedStarCount * 0.35);
+      
+      let bortle = 9 - combinedMetric;
+      
+      // Ensure result is within valid range and round to 1 decimal
+      return Math.max(1, Math.min(9, Number(bortle.toFixed(1))));
+    }
   };
 
   const performLightFrameCapture = async () => {
@@ -303,11 +310,34 @@ const BortleNow: React.FC = () => {
       
       const baseLocationBortle = bortleScale || 5;
       
-      const simulatedStarCount = Math.max(0, Math.floor(100 * (1 - (baseLocationBortle - 1) / 8) + Math.random() * 20 - 10));
+      // Enhanced star count simulation using more realistic distributions
+      // Different Bortle scales have different star count distributions
+      let simulatedStarCount;
+      let simulatedSkyBrightness;
+      
+      try {
+        // Attempt to use the enhanced estimator
+        const { estimateStarCountFromBortle } = await import('@/utils/starCountUtils');
+        simulatedStarCount = estimateStarCountFromBortle(baseLocationBortle);
+        
+        // Apply some random variation to make it more natural
+        const randomFactor = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
+        simulatedStarCount = Math.round(simulatedStarCount * randomFactor);
+      } catch (error) {
+        // Fallback to basic estimation
+        console.error("Error using enhanced star count estimator:", error);
+        simulatedStarCount = Math.max(0, Math.floor(100 * (1 - (baseLocationBortle - 1) / 8) + Math.random() * 20 - 10));
+      }
+      
       setStarCount(simulatedStarCount);
       
-      const simulatedSkyBrightness = Math.min(255, Math.max(10, ((baseLocationBortle - 1) / 8) * 200 + Math.random() * 30 - 15));
+      // More realistic sky brightness based on Bortle scale
+      // Sky brightness correlates exponentially with Bortle scale
+      simulatedSkyBrightness = Math.min(255, Math.max(10, 
+        20 + Math.pow(baseLocationBortle - 1, 1.5) * 25 + (Math.random() * 20 - 10)
+      ));
       
+      // Get the improved Bortle calculation from stars
       const measuredBortle = calculateBortleFromStars(simulatedStarCount, simulatedSkyBrightness);
       
       setBortleScale(measuredBortle);
@@ -320,6 +350,25 @@ const BortleNow: React.FC = () => {
           measuredBortle, 
           simulatedStarCount
         );
+        
+        // Additionally save the sky brightness for more comprehensive data
+        try {
+          const enhancedMeasurement = {
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+            bortleScale: measuredBortle, 
+            starCount: simulatedStarCount,
+            skyBrightness: simulatedSkyBrightness,
+            timestamp: new Date().toISOString(),
+            method: 'camera'
+          };
+          
+          const measurements = JSON.parse(localStorage.getItem('star_measurements') || '[]');
+          measurements.push(enhancedMeasurement);
+          localStorage.setItem('star_measurements', JSON.stringify(measurements));
+        } catch (e) {
+          console.error("Error saving enhanced measurement:", e);
+        }
       }
       
       toast({
