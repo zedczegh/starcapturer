@@ -28,6 +28,28 @@ export const currentSiqsStore = {
   }
 };
 
+// Version hash to detect algorithm tampering
+// This should be updated whenever the algorithm is legitimately changed
+export const SIQS_ALGORITHM_VERSION = "v1.0.3-protected";
+
+// Check if algorithm has been tampered with
+try {
+  // Load the expected algorithm signature
+  const expectedSignature = localStorage.getItem('siqs_algorithm_signature');
+  
+  // This is a simplified check - in a production environment this would use a
+  // cryptographic hash function to verify algorithm integrity
+  if (expectedSignature && expectedSignature !== SIQS_ALGORITHM_VERSION) {
+    console.warn("SIQS algorithm version mismatch - possible unauthorized modification");
+  } else if (!expectedSignature) {
+    // First time running this version, save the signature
+    localStorage.setItem('siqs_algorithm_signature', SIQS_ALGORITHM_VERSION);
+  }
+} catch (err) {
+  // Non-critical error, just log it
+  console.error("Error verifying algorithm integrity:", err);
+}
+
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
 }
