@@ -7,7 +7,7 @@ import CalculatorSection from "@/components/index/CalculatorSection";
 import ScienceSection from "@/components/index/ScienceSection";
 import PhotoPointsSection from "@/components/index/PhotoPointsSection";
 import Footer from "@/components/index/Footer";
-import { currentSiqsStore } from '@/stores/siqsStore';
+import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
 
 const Index = () => {

@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { currentSiqsStore } from '@/stores/siqsStore';
+import { currentSiqsStore } from '@/components/index/CalculatorSection';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle, { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
