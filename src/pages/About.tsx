@@ -15,8 +15,6 @@ import AboutIntro from "@/components/about/AboutIntro";
 import LocationDiscoverySection from "@/components/about/LocationDiscoverySection";
 import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
 import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
-import ScienceSection from "@/components/about/ScienceSection";
-import AboutTimeline from "@/components/about/AboutTimeline";
 import AboutFooter from "@/components/about/AboutFooter";
 
 const About = () => {
@@ -113,8 +111,6 @@ const About = () => {
           <PhotoPointsFeature />
           <LocationDiscoverySection />
           <DarkSkyKnowledge />
-          <AboutTimeline />
-          <ScienceSection />
           <AboutFooter />
         </div>
       </div>

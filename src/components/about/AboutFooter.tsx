@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, Info, ExternalLink } from "lucide-react";
+import { Home, MapPin, Calculator, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutFooter = () => {
@@ -73,7 +73,7 @@ const AboutFooter = () => {
           </Button>
         </Link>
         
-        <Link to="/siqs">
+        <Link to="/">
           <Button variant="outline" className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors">
             <Calculator className="mr-2 h-4 w-4 text-teal-400" />
             {t("Calculate SIQS", "计算SIQS")}
@@ -87,7 +87,7 @@ const AboutFooter = () => {
           {t("Quick Links", "快速链接")}
         </h4>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link to="/siqs" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors">
+          <Link to="/" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors">
             {t("About SIQS", "关于SIQS")}
           </Link>
           <Link to="/useful-links" className="text-xs text-cosmic-300 hover:text-cosmic-100 bg-cosmic-800/30 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
