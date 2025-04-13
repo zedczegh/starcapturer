@@ -1,6 +1,6 @@
 
 import { preloadCertifiedLocations } from "./certifiedLocationsService";
-import { clearSiqsCache } from "./realTimeSiqsService";
+import { clearSiqsCache, cleanupExpiredCache } from "./realTimeSiqsService";
 
 /**
  * Initialize all preloading services
@@ -20,12 +20,14 @@ export function initializePreloadServices() {
       });
       
     // Clear outdated SIQS cache on startup
-    clearSiqsCache(24 * 60 * 60 * 1000); // Clear entries older than 24 hours
+    // The clearSiqsCache() function doesn't take arguments in its implementation
+    clearSiqsCache();
   }, 1000);
   
   // Register cache cleanup routine
   const CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
   setInterval(() => {
-    clearSiqsCache(12 * 60 * 60 * 1000); // Clear entries older than 12 hours during runtime
+    // Using the proper function for periodic cleanup
+    cleanupExpiredCache();
   }, CLEANUP_INTERVAL);
 }
