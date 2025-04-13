@@ -55,11 +55,24 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     backgroundColor: memoizedValues.progressColor
   }) as React.CSSProperties, [memoizedValues.progressColor]);
 
-  // Create a stable locationId for navigation
-  const locationId = useMemo(() => {
-    // Use a more deterministic ID format
-    return `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-  }, [latitude, longitude]);
+  // Create location data for navigation
+  const locationData = useMemo(() => {
+    const timestamp = new Date().toISOString();
+    // Use a UUID-like format that will be more consistent for the LocationDetails page
+    const locationId = `loc-${Date.now()}`;
+    
+    return {
+      id: locationId,
+      name: locationName,
+      latitude: latitude,
+      longitude: longitude,
+      siqsResult: {
+        score: memoizedValues.displayValue
+      },
+      timestamp: timestamp,
+      fromCalculator: true // Add a flag to indicate source
+    };
+  }, [latitude, longitude, locationName, memoizedValues.displayValue]);
 
   return (
     <motion.div 
@@ -99,18 +112,8 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
           className="relative w-full max-w-md"
         >
           <Link 
-            to={`/location/${locationId}`} 
-            state={{
-              id: locationId,
-              name: locationName,
-              latitude: latitude,
-              longitude: longitude,
-              siqsResult: {
-                score: memoizedValues.displayValue
-              },
-              timestamp: new Date().toISOString(),
-              fromCalculator: true // Add a flag to indicate source
-            }}
+            to={`/location/${locationData.id}`} 
+            state={locationData}
           >
             <Button 
               size="lg" 
