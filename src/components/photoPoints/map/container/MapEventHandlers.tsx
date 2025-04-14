@@ -72,7 +72,8 @@ export const useMapEventHandlers = ({
         // Fix for iOS Safari scroll-bounce affecting map
         if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
           document.addEventListener('touchmove', (e) => {
-            if (e.scale !== 1) {
+            // Check if the event has touches and if it's a pinch-zoom gesture
+            if (e.touches && e.touches.length > 1) {
               e.preventDefault();
             }
           }, { passive: false });

@@ -5,6 +5,13 @@ import '../MarkerStyles.css';
 import '../MapStyles.css';
 import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 
+// Add type declaration for Leaflet on window
+declare global {
+  interface Window {
+    L: typeof import('leaflet');
+  }
+}
+
 // Configure leaflet to handle marker paths
 configureLeaflet();
 
