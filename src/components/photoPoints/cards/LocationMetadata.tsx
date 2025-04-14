@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { MapPin, Calendar, Navigation, Map } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { MapPin, Calendar, Navigation, Map, Building, Road } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { formatDistance } from '@/utils/location/formatDistance';
+import { useEnhancedLocation } from '@/hooks/useEnhancedLocation';
 
 interface LocationMetadataProps {
   distance?: number;
@@ -22,7 +23,14 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  // Get nearest town if coordinates are available
+  // Get enhanced location data with street-level details
+  const { locationDetails, loading } = useEnhancedLocation({
+    latitude,
+    longitude,
+    skip: !latitude || !longitude
+  });
+  
+  // Get nearest town if coordinates are available (as fallback)
   let nearestTownInfo = null;
   if (latitude !== undefined && longitude !== undefined) {
     nearestTownInfo = findNearestTown(latitude, longitude, language);
@@ -44,21 +52,43 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
         </div>
       )}
       
+      {/* Street-level information if available */}
+      {locationDetails?.streetName && (!locationName || !locationName.includes(locationDetails.streetName)) && (
+        <div className="flex items-center">
+          <Road className="h-4 w-4 mr-1.5" />
+          <span className="line-clamp-1">{locationDetails.streetName}</span>
+        </div>
+      )}
+      
+      {/* Town/Village information */}
+      {((locationDetails?.townName && (!locationName || !locationName.includes(locationDetails.townName))) ||
+        (nearestTownInfo?.townName && (!locationName || !locationName.includes(nearestTownInfo.townName)))) && (
+        <div className="flex items-center">
+          <Building className="h-4 w-4 mr-1.5" />
+          <span>{locationDetails?.townName || nearestTownInfo?.townName}</span>
+        </div>
+      )}
+      
       {/* City/county information */}
-      {nearestTownInfo?.city && (!locationName || !locationName.includes(nearestTownInfo.city)) && (
+      {((locationDetails?.cityName && (!locationName || !locationName.includes(locationDetails.cityName))) ||
+        (nearestTownInfo?.city && (!locationName || !locationName.includes(nearestTownInfo.city)))) && (
         <div className="flex items-center">
           <Map className="h-4 w-4 mr-1.5" />
           <span>
-            {nearestTownInfo.city}
-            {nearestTownInfo.county && nearestTownInfo.county !== nearestTownInfo.city && 
-             ` (${nearestTownInfo.county})`}
+            {locationDetails?.cityName || nearestTownInfo?.city}
+            {(locationDetails?.countyName && locationDetails.countyName !== locationDetails.cityName) && 
+              ` (${locationDetails.countyName})`}
+            {(!locationDetails?.countyName && nearestTownInfo?.county && 
+              nearestTownInfo.county !== nearestTownInfo.city) && 
+              ` (${nearestTownInfo.county})`}
           </span>
         </div>
       )}
       
       {/* Nearest town information */}
-      {nearestTownInfo && nearestTownInfo.distance <= 100 && 
-       (!locationName || !locationName.includes(nearestTownInfo.townName)) && (
+      {!loading && nearestTownInfo && nearestTownInfo.distance <= 100 && 
+       (!locationName || !locationName.includes(nearestTownInfo.townName)) &&
+       (!locationDetails?.townName || locationDetails.townName !== nearestTownInfo.townName) && (
         <div className="flex items-center">
           <MapPin className="h-4 w-4 mr-1.5" />
           <span>
@@ -69,9 +99,10 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
       )}
       
       {/* Detailed location name if different from other displayed info */}
-      {nearestTownInfo && nearestTownInfo.detailedName && 
+      {!loading && nearestTownInfo && nearestTownInfo.detailedName && 
        (!locationName || !locationName.includes(nearestTownInfo.detailedName)) &&
-       (nearestTownInfo.townName !== nearestTownInfo.detailedName) && (
+       (nearestTownInfo.townName !== nearestTownInfo.detailedName) &&
+       (!locationDetails?.formattedName || locationDetails.formattedName !== nearestTownInfo.detailedName) && (
         <div className="flex items-center">
           <MapPin className="h-4 w-4 mr-1.5" />
           <span className="line-clamp-1">

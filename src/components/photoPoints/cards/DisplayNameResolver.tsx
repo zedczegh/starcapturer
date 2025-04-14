@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 
 interface DisplayNameResolverProps {
   location: SharedAstroSpot;
@@ -10,15 +11,51 @@ interface DisplayNameResolverProps {
 }
 
 export function useDisplayName({ location, language, locationCounter }: DisplayNameResolverProps) {
+  const [enhancedLocation, setEnhancedLocation] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
   // Get nearest town information with enhanced details
   const nearestTownInfo = location.latitude && location.longitude ? 
     findNearestTown(location.latitude, location.longitude, language) : null;
+  
+  // Fetch enhanced location details when coordinates are available
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (location.latitude && location.longitude) {
+      setIsLoading(true);
+      
+      getEnhancedLocationDetails(location.latitude, location.longitude, language)
+        .then(details => {
+          if (isMounted) {
+            setEnhancedLocation(details);
+            setIsLoading(false);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching enhanced location details:", error);
+          if (isMounted) {
+            setIsLoading(false);
+          }
+        });
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [location.latitude, location.longitude, language]);
   
   // Use detailed location name as the display name based on language
   let displayName;
   
   if (language === 'zh') {
-    if (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== '偏远地区') {
+    if (enhancedLocation?.formattedName && 
+        enhancedLocation.formattedName !== '偏远地区' && 
+        !isLoading) {
+      // Use enhanced name from our new service for Chinese
+      displayName = enhancedLocation.formattedName;
+    } else if (nearestTownInfo?.detailedName && 
+               nearestTownInfo.detailedName !== '偏远地区') {
       // Use detailed name from our enhanced database for Chinese
       displayName = nearestTownInfo.detailedName;
     } else if (location.chineseName) {
@@ -32,7 +69,13 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
       displayName = location.name;
     }
   } else {
-    if (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== 'Remote area') {
+    if (enhancedLocation?.formattedName && 
+        enhancedLocation.formattedName !== 'Remote area' && 
+        !isLoading) {
+      // Use enhanced name from our new service for English
+      displayName = enhancedLocation.formattedName;
+    } else if (nearestTownInfo?.detailedName && 
+               nearestTownInfo.detailedName !== 'Remote area') {
       // Use detailed name from our enhanced database for English
       displayName = nearestTownInfo.detailedName;
     } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
@@ -45,15 +88,21 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
   }
   
   // Check if we need to show original name
-  const showOriginalName = nearestTownInfo && 
-    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
-    ((language === 'zh' && location.chineseName && location.chineseName !== nearestTownInfo.detailedName) ||
-     (language === 'en' && location.name && location.name !== nearestTownInfo.detailedName));
+  const showOriginalName = (enhancedLocation || nearestTownInfo) && 
+    ((enhancedLocation && enhancedLocation.formattedName !== (language === 'en' ? 'Remote area' : '偏远地区')) ||
+     (nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区'))) && 
+    ((language === 'zh' && location.chineseName && 
+      ((enhancedLocation && location.chineseName !== enhancedLocation.formattedName) ||
+       (!enhancedLocation && location.chineseName !== nearestTownInfo.detailedName))) ||
+     (language === 'en' && location.name && 
+      ((enhancedLocation && location.name !== enhancedLocation.formattedName) ||
+       (!enhancedLocation && location.name !== nearestTownInfo.detailedName))));
   
   return { 
     displayName, 
     showOriginalName, 
-    nearestTownInfo 
+    nearestTownInfo,
+    enhancedLocation
   };
 }
 

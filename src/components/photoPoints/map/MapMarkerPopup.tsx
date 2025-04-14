@@ -7,6 +7,7 @@ import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
 import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { formatDistance } from '@/utils/location/formatDistance';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
