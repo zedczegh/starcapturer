@@ -1,10 +1,9 @@
-
 /**
  * Specialized utility for synchronizing weather data with forecast data
  * with specific handling for nighttime cloud cover
  */
 import { validateWeatherAgainstForecast } from './dataValidation';
-import { extractNightForecasts, calculateAverageCloudCover } from '@/components/forecast/NightForecastUtils';
+import { extractNightForecasts, calculateAverageCloudCover, splitEveningMorningForecasts } from '@/components/forecast/NightForecastUtils';
 
 /**
  * Synchronize weather data with forecast, with special handling for nighttime clouds
@@ -37,21 +36,11 @@ export const synchronizeWeatherWithForecast = (
       const nightForecasts = extractNightForecasts(forecastData.hourly);
       
       if (nightForecasts.length > 0) {
+        // Calculate weighted average cloud cover for nighttime
         const averageNightCloudCover = calculateAverageCloudCover(nightForecasts);
         
-        // Split into evening and morning
-        const eveningForecasts = nightForecasts.filter(forecast => {
-          const hour = new Date(forecast.time).getHours();
-          return hour >= 18 && hour <= 23;
-        });
-        
-        const morningForecasts = nightForecasts.filter(forecast => {
-          const hour = new Date(forecast.time).getHours();
-          return hour >= 0 && hour < 8;
-        });
-        
-        const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
-        const morningCloudCover = calculateAverageCloudCover(morningForecasts);
+        // Get evening and morning splits
+        const { evening: eveningCloudCover, morning: morningCloudCover } = splitEveningMorningForecasts(nightForecasts);
         
         // Add nighttime cloud data to the weather data
         updatedData = {

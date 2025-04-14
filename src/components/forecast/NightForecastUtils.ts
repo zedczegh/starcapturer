@@ -1,10 +1,9 @@
-
 /**
  * Utility functions for working with nighttime forecast data
  */
 
 /**
- * Extract the nighttime hours (6 PM to 8 AM) from forecast data
+ * Extract the nighttime hours (6 PM to 7 AM) from forecast data
  * @param hourlyData Hourly forecast data
  * @returns Array of nighttime forecast entries
  */
@@ -21,13 +20,14 @@ export function extractNightForecasts(hourlyData: any): any[] {
     const date = new Date(timeStr);
     const hour = date.getHours();
     
-    // Consider night hours from 6 PM to 8 AM
-    if (hour >= 18 || hour < 8) {
+    // Consider night hours from 6 PM to 7 AM
+    if (hour >= 18 || hour < 7) {
       const forecast = {
         time: timeStr,
         cloudCover: hourlyData.cloud_cover?.[i] || 0,
         windSpeed: hourlyData.wind_speed_10m?.[i] || hourlyData.windspeed_10m?.[i],
-        humidity: hourlyData.relative_humidity_2m?.[i]
+        humidity: hourlyData.relative_humidity_2m?.[i],
+        hour: hour // Add hour for weighted calculations
       };
       
       nightForecasts.push(forecast);
@@ -38,9 +38,10 @@ export function extractNightForecasts(hourlyData: any): any[] {
 }
 
 /**
- * Calculate average cloud cover from forecast entries
+ * Calculate weighted average cloud cover from forecast entries
+ * Hours during prime viewing time (10PM-4AM) get higher weight
  * @param forecasts Array of forecast entries
- * @returns Average cloud cover percentage
+ * @returns Weighted average cloud cover percentage
  */
 export function calculateAverageCloudCover(forecasts: any[]): number {
   if (!forecasts || forecasts.length === 0) {
@@ -48,16 +49,51 @@ export function calculateAverageCloudCover(forecasts: any[]): number {
   }
   
   let totalCloudCover = 0;
-  let validEntries = 0;
+  let totalWeight = 0;
   
   for (const forecast of forecasts) {
     if (forecast && typeof forecast.cloudCover === 'number') {
-      totalCloudCover += forecast.cloudCover;
-      validEntries++;
+      // Use weighting system based on hour
+      // Prime viewing hours (10PM-4AM) get double weight
+      let weight = 1.0;
+      const hour = forecast.hour || new Date(forecast.time).getHours();
+      
+      // Prime hours get double weight (10PM - 4AM)
+      if ((hour >= 22 && hour <= 23) || (hour >= 0 && hour <= 4)) {
+        weight = 2.0;
+      }
+      
+      totalCloudCover += forecast.cloudCover * weight;
+      totalWeight += weight;
     }
   }
   
-  return validEntries > 0 ? (totalCloudCover / validEntries) : 0;
+  return totalWeight > 0 ? (totalCloudCover / totalWeight) : 0;
+}
+
+/**
+ * Split nighttime forecasts into evening and morning segments
+ * @param forecasts Array of nighttime forecast entries
+ * @returns Object with evening and morning averages
+ */
+export function splitEveningMorningForecasts(forecasts: any[]): { evening: number; morning: number } {
+  const eveningForecasts = forecasts.filter(forecast => {
+    const hour = forecast.hour || new Date(forecast.time).getHours();
+    return hour >= 18 && hour <= 23;
+  });
+  
+  const morningForecasts = forecasts.filter(forecast => {
+    const hour = forecast.hour || new Date(forecast.time).getHours();
+    return hour >= 0 && hour < 7;
+  });
+  
+  const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
+  const morningCloudCover = calculateAverageCloudCover(morningForecasts);
+  
+  return {
+    evening: eveningCloudCover,
+    morning: morningCloudCover
+  };
 }
 
 /**
@@ -65,7 +101,7 @@ export function calculateAverageCloudCover(forecasts: any[]): number {
  * @returns Formatted time range string
  */
 export function formatNighttimeHoursRange(): string {
-  return "6PM-8AM";
+  return "6PM-7AM";
 }
 
 /**
