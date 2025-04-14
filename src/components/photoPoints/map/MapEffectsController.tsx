@@ -1,23 +1,82 @@
 
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-interface MapEffectsControllerProps {
-  onMapClick: (lat: number, lng: number) => void;
+interface MapEventsProps {
+  onMapClick?: (lat: number, lng: number) => void;
+  onMapDragStart?: () => void;
+  onMapDragEnd?: () => void;
+  onMapZoomEnd?: () => void;
 }
 
-// Prevent infinite scrolling beyond world bounds
-export const WorldBoundsController: React.FC = () => {
+export function MapEvents({ 
+  onMapClick,
+  onMapDragStart,
+  onMapDragEnd,
+  onMapZoomEnd
+}: MapEventsProps) {
   const map = useMap();
   
-  React.useEffect(() => {
+  // Handle map click
+  const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
+    if (onMapClick) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    }
+  }, [onMapClick]);
+  
+  // Set up event listeners
+  useEffect(() => {
     if (!map) return;
     
-    // Set max bounds to prevent scrolling beyond the world
-    const worldBounds = new L.LatLngBounds(
-      new L.LatLng(-85.06, -180), // Southwest corner
-      new L.LatLng(85.06, 180)    // Northeast corner
+    if (onMapClick) {
+      map.on('click', handleMapClick);
+    }
+    
+    if (onMapDragStart) {
+      map.on('dragstart', onMapDragStart);
+    }
+    
+    if (onMapDragEnd) {
+      map.on('dragend', onMapDragEnd);
+    }
+    
+    if (onMapZoomEnd) {
+      map.on('zoomend', onMapZoomEnd);
+    }
+    
+    return () => {
+      if (onMapClick) {
+        map.off('click', handleMapClick);
+      }
+      
+      if (onMapDragStart) {
+        map.off('dragstart', onMapDragStart);
+      }
+      
+      if (onMapDragEnd) {
+        map.off('dragend', onMapDragEnd);
+      }
+      
+      if (onMapZoomEnd) {
+        map.off('zoomend', onMapZoomEnd);
+      }
+    };
+  }, [map, handleMapClick, onMapDragStart, onMapDragEnd, onMapZoomEnd]);
+  
+  return null;
+}
+
+export function WorldBoundsController() {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    
+    // Set max bounds to prevent scrolling beyond world boundaries
+    const worldBounds = L.latLngBounds(
+      L.latLng(-85.0511, -190), // Southwest corner
+      L.latLng(85.0511, 190)   // Northeast corner
     );
     
     map.setMaxBounds(worldBounds);
@@ -29,29 +88,6 @@ export const WorldBoundsController: React.FC = () => {
       map.off('drag');
     };
   }, [map]);
-  
-  return null;
-};
-
-export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) => {
-  const map = useMap();
-
-  // Set up map click event handler
-  React.useEffect(() => {
-    if (!map) return;
-
-    const handleMapClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-
-    map.on('click', handleMapClick);
-
-    return () => {
-      map.off('click', handleMapClick);
-    };
-  }, [map, onMapClick]);
 
   return null;
-};
-
-export default MapEvents;
+}
