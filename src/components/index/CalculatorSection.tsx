@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
