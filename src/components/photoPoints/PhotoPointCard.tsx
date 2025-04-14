@@ -30,7 +30,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  // Get nearest town information directly from our database
+  // Get nearest town information directly from our database with enhanced details
   const nearestTownInfo = point.latitude && point.longitude ? 
     findNearestTown(point.latitude, point.longitude, language) : null;
   
@@ -76,10 +76,15 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  // Use the nearest town name as the display name or fall back to original name
-  const pointName = nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区')
-    ? nearestTownInfo.townName
-    : (language === 'en' ? point.name : (point.chineseName || point.name));
+  // Use the detailed location name as the display name
+  const pointName = nearestTownInfo?.detailedName || 
+    (language === 'en' ? point.name : (point.chineseName || point.name));
+
+  // Check if we're using our database location name vs. original name
+  const showOriginalName = nearestTownInfo && 
+    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
+    point.name && 
+    !point.name.includes(nearestTownInfo.townName);
 
   return (
     <div 
@@ -107,10 +112,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       )}
       
       {/* Show original location name if we're using nearest town as main title and they differ */}
-      {nearestTownInfo && 
-       nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
-       point.name && 
-       !point.name.includes(nearestTownInfo.townName) && (
+      {showOriginalName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">

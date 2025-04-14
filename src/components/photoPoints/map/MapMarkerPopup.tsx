@@ -16,14 +16,13 @@ interface MapMarkerPopupProps {
 const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onViewDetails }) => {
   const { language, t } = useLanguage();
   
-  // Get the nearest town name from our database
+  // Get the nearest town name with enhanced details from our database
   const nearestTownInfo = location.latitude && location.longitude ? 
     findNearestTown(location.latitude, location.longitude, language) : null;
   
-  // Use the nearest town name as the display name or fall back to original name
-  const displayName = nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区')
-    ? nearestTownInfo.townName
-    : (language === 'en' ? location.name : (location.chineseName || location.name));
+  // Use the detailed location name as the display name
+  const displayName = nearestTownInfo?.detailedName || 
+    (language === 'en' ? location.name : (location.chineseName || location.name));
   
   // Get certification info if available
   const hasCertification = location.certification || location.isDarkSkyReserve;

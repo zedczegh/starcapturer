@@ -9,7 +9,6 @@ import { siqsToColor } from "@/lib/siqs/utils";
 import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
-import { formatLocationName } from "@/utils/locationNameFormatter";
 import LightPollutionIndicator from "./location/LightPollutionIndicator";
 import { findNearestTown } from "@/utils/nearestTownCalculator";
 
@@ -56,21 +55,18 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   const scoreColor = siqsToColor(siqs);
 
-  // Get nearest town name from the location database
+  // Get detailed nearest town information from the location database
   const nearestTownInfo = findNearestTown(latitude, longitude, language);
   
-  // Use nearest town name as the main title
-  let displayName = nearestTownInfo.townName;
+  // Use the detailed location name as the main display title
+  let displayName = nearestTownInfo.detailedName;
   
-  // Fallback to formatted name if town name is generic
+  // Fallback to generic names for calculated locations
   if (displayName === (language === 'en' ? 'Remote area' : '偏远地区')) {
-    displayName = formatLocationName(name, language as any);
     // Check if the name contains coordinates or is a remote area
-    if (displayName === "Remote area" || 
-        displayName === "偏远地区" || 
-        displayName.includes("°") || 
-        displayName.includes("Location at") || 
-        displayName.includes("位置在")
+    if (name.includes("°") || 
+        name.includes("Location at") || 
+        name.includes("位置在")
     ) {
       // Use a generic name for calculated locations
       const locationMatch = name.match(/calc-loc-(\d+)/);
@@ -82,6 +78,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
       }
     }
   }
+  
+  // Determine if we should show the original name as a secondary line
+  const showOriginalName = nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') &&
+    name && !name.includes(nearestTownInfo.townName);
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {
@@ -149,6 +149,17 @@ const LocationCard: React.FC<LocationCardProps> = ({
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
+              
+              {/* Show original name if different from the nearest town name */}
+              {showOriginalName && (
+                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  <span>
+                    {language === 'en' ? name : name}
+                  </span>
+                </div>
+              )}
+              
               <div className="flex items-center text-sm text-muted-foreground mt-1">
                 <MapPin className="h-4 w-4 mr-1.5" />
                 <span className="font-medium">

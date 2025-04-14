@@ -12,6 +12,7 @@ import SiqsScoreBadge from './cards/SiqsScoreBadge';
 import CertificationBadge from './cards/CertificationBadge';
 import LocationMetadata from './cards/LocationMetadata';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { MapPin } from 'lucide-react';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -92,16 +93,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
 
-  // Get nearest town information for the location
+  // Get nearest town information with enhanced details
   const nearestTownInfo = location.latitude && location.longitude ? 
     findNearestTown(location.latitude, location.longitude, language) : null;
   
-  // Use nearest town name as the main display name
+  // Use detailed location name as the display name
   let displayName;
   
-  if (nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-    // Use nearest town from our database
-    displayName = nearestTownInfo.townName;
+  if (nearestTownInfo && nearestTownInfo.detailedName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
+    // Use detailed name from our enhanced database
+    displayName = nearestTownInfo.detailedName;
   } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
     // Fallback for potential ideal dark sites
     displayName = language === 'en' 
@@ -111,6 +112,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     // Fallback to original name 
     displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   }
+  
+  // Check if we need to show original name
+  const showOriginalName = nearestTownInfo && 
+    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
+    location.name && 
+    !location.name.includes(nearestTownInfo.townName);
   
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
   
@@ -167,6 +174,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         certification={location.certification} 
         isDarkSkyReserve={location.isDarkSkyReserve} 
       />
+      
+      {/* Show original location name if different from nearest town name */}
+      {showOriginalName && (
+        <div className="mt-1.5 mb-2 flex items-center">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {language === 'en' ? location.name : (location.chineseName || location.name)}
+          </span>
+        </div>
+      )}
       
       <div className="mb-4 mt-2">
         <LightPollutionIndicator 
