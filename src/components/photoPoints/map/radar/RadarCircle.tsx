@@ -44,7 +44,10 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
       
       // For smooth radius transition
       const animateRadius = (from: number, to: number, duration: number = 500) => {
+        // Make sure the animation works on all browsers
         const startTime = Date.now();
+        let requestAnimId: number;
+        
         const animate = () => {
           const currentTime = Date.now();
           const elapsedTime = currentTime - startTime;
@@ -61,7 +64,13 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
           }
           
           if (progress < 1) {
-            animationRef.current = requestAnimationFrame(animate);
+            // Use standard requestAnimationFrame or setTimeout fallback for Safari
+            if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+              animationRef.current = window.requestAnimationFrame(animate);
+            } else {
+              // Fallback for older browsers
+              animationRef.current = window.setTimeout(animate, 16) as unknown as number;
+            }
           } else {
             animationRef.current = null;
           }
@@ -69,10 +78,15 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
         
         // Cancel any existing animation
         if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
+          if (typeof window !== 'undefined' && 'cancelAnimationFrame' in window) {
+            window.cancelAnimationFrame(animationRef.current);
+          } else {
+            window.clearTimeout(animationRef.current as unknown as number);
+          }
+          animationRef.current = null;
         }
         
-        animationRef.current = requestAnimationFrame(animate);
+        animate();
       };
       
       if (!circleRef.current) {
@@ -88,7 +102,7 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
             dashArray: '5, 10',
             interactive: false,
             // Improve performance on all browsers
-            renderer: L.canvas ? L.canvas() : undefined,
+            renderer: typeof window !== 'undefined' && window.L && window.L.canvas ? window.L.canvas() : undefined,
           }
         ).addTo(map);
         
@@ -123,7 +137,11 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
       map.off('move', handleMapChange);
       
       if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+        if (typeof window !== 'undefined' && 'cancelAnimationFrame' in window) {
+          window.cancelAnimationFrame(animationRef.current);
+        } else {
+          window.clearTimeout(animationRef.current as unknown as number);
+        }
         animationRef.current = null;
       }
       

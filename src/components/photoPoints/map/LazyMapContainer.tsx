@@ -134,8 +134,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         whenReady={handleMapReady}
         attributionControl={true}
         // Add browser-compatible options for better performance
-        preferCanvas={true}
-        renderer={window.L?.canvas ? window.L.canvas() : undefined}
+        // Use renderer instead of preferCanvas for better TypeScript compatibility
+        renderer={typeof window !== 'undefined' && window.L?.canvas ? window.L.canvas() : undefined}
         zoomControl={false} // We'll add custom zoom controls
       >
         <TileLayer
