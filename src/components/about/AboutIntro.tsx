@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, Star, Telescope, Camera } from "lucide-react";
+import { Sparkles, Star, Telescope, Camera, Calendar, BarChart3, Waves } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -30,7 +30,61 @@ const AboutIntro = () => {
               "Bortle Now 通过提供实时天空质量指数（SIQS）评分，帮助天文摄影师找到理想的观测条件。我们的平台结合了光污染数据、天气预报和天文条件，帮助您规划完美的观星活动。")}
           </p>
           
-          {/* New Bortle Now Instructions */}
+          {/* New Features for 2025 */}
+          <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-4 rounded-lg border border-blue-700/30 mt-4">
+            <h3 className="text-sm font-medium text-cosmic-100 mb-3 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-400" />
+              {t("New for 2025", "2025年新功能")}
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-500/10 p-1.5 rounded-full mt-0.5">
+                  <BarChart3 className="h-4 w-4 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-cosmic-200">
+                    {t("Enhanced SIQS Algorithm", "增强的SIQS算法")}
+                  </p>
+                  <p className="text-xs text-cosmic-300">
+                    {t("Our improved algorithm now considers more factors for even more accurate sky quality predictions.", 
+                      "我们改进的算法现在考虑更多因素，提供更准确的天空质量预测。")}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="bg-purple-500/10 p-1.5 rounded-full mt-0.5">
+                  <Waves className="h-4 w-4 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-cosmic-200">
+                    {t("Real-time Data Validation", "实时数据验证")}
+                  </p>
+                  <p className="text-xs text-cosmic-300">
+                    {t("Automatic cross-checking of weather data against forecasts to ensure the most accurate conditions.", 
+                      "自动交叉检查天气数据与预报，确保最准确的条件信息。")}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="bg-teal-500/10 p-1.5 rounded-full mt-0.5">
+                  <Camera className="h-4 w-4 text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-cosmic-200">
+                    {t("Expanded Global Coverage", "扩展的全球覆盖范围")}
+                  </p>
+                  <p className="text-xs text-cosmic-300">
+                    {t("Now supporting more remote regions and specialized dark sky locations across all continents.", 
+                      "现在支持更多偏远地区和所有大洲的专业暗空位置。")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* How to Use Bortle Now */}
           <div className="bg-cosmic-800/30 p-4 rounded-lg border border-cosmic-700/40 mt-4">
             <h3 className="text-sm font-medium text-cosmic-100 mb-2 flex items-center gap-2">
               <Camera className="h-4 w-4 text-blue-400" />
@@ -99,6 +153,10 @@ const AboutIntro = () => {
                 <li className="flex items-center gap-2 text-xs text-cosmic-300">
                   <div className="h-1.5 w-1.5 rounded-full bg-blue-400"></div>
                   {t("Recommendations for astrophotography settings", "天文摄影设置建议")}
+                </li>
+                <li className="flex items-center gap-2 text-xs text-cosmic-300">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-400"></div>
+                  {t("Data validation status for accuracy assurance", "数据验证状态以确保准确性")}
                 </li>
               </ul>
             </div>

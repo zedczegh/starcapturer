@@ -46,14 +46,14 @@ const AboutTeam = () => {
               <div>
                 <h3 className="font-medium text-cosmic-100">Zed_Czegh</h3>
                 <p className="text-sm text-cosmic-300">
-                  {t("Astrophotography Enthusiast", "天文摄影爱好者")}
+                  {t("Professional fine art producer", "专业艺术制作人")}
                 </p>
               </div>
             </div>
             <div className="flex items-center text-xs text-cosmic-400">
               <GraduationCap className="h-3.5 w-3.5 mr-2" />
-              {t("MA graduate from UAL, Doctorate student of Fine Arts at Burren College of Arts +AI", 
-                 "来自UAL的艺术硕士，伯伦艺术学院艺术博士生+人工智能")}
+              {t("Camberwell College of Arts MA, Amateur Astronomer, Tibetologist, Loving husband and father of 1", 
+                 "坎伯韦尔艺术学院硕士，业余天文学家，藏学家，慈爱的丈夫和1个孩子的父亲")}
             </div>
           </div>
           

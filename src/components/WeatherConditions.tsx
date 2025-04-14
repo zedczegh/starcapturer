@@ -8,8 +8,9 @@ import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherCondition
 import { motion } from "framer-motion";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 import NighttimeCloudInfo from "@/components/weather/NighttimeCloudInfo";
-import { validateWeatherData as importedValidateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
+import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
+import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -27,27 +28,6 @@ interface WeatherConditionsProps {
   seeingConditions: string;
   forecastData?: any;
 }
-
-export const normalizeMoonPhase = (phase: string | number): string => {
-  if (typeof phase === 'number') {
-    if (phase >= 0 && phase <= 1) {
-      if (phase <= 0.05 || phase >= 0.95) return "New Moon";
-      if (phase < 0.25) return "Waxing Crescent";
-      if (phase < 0.30) return "First Quarter";
-      if (phase < 0.45) return "Waxing Gibbous";
-      if (phase < 0.55) return "Full Moon";
-      if (phase < 0.70) return "Waning Gibbous";
-      if (phase < 0.80) return "Last Quarter";
-      return "Waning Crescent";
-    }
-    
-    return `Moon Phase ${phase}`;
-  }
-  
-  if (!phase) return "Unknown Phase";
-  
-  return phase;
-};
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   weatherData,
@@ -109,7 +89,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   }, [forecastData]);
   
   useEffect(() => {
-    if (forecastData && importedValidateWeatherData(weatherData)) {
+    if (forecastData && validateWeatherData(weatherData)) {
       const { isValid, correctedData, discrepancies } = validateWeatherAgainstForecast(
         weatherData,
         forecastData
@@ -133,7 +113,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       } else {
         setStableWeatherData(weatherData);
       }
-    } else if (importedValidateWeatherData(weatherData)) {
+    } else if (validateWeatherData(weatherData)) {
       setStableWeatherData(weatherData);
     }
   }, [weatherData, forecastData, toast, t]);
@@ -154,6 +134,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     };
   }, [language, seeingConditions, moonPhase, stableWeatherData.condition]);
 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
