@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
@@ -11,6 +12,7 @@ import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
 import { MapController } from './MapController';
 import MapEffectsComposer from './effects/MapEffectsComposer';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import MobileMapFixer from './MobileMapFixer'; // Import the new component
 
 // Configure Leaflet on load
 configureLeaflet();
@@ -27,6 +29,11 @@ interface PhotoPointsMapContainerProps {
   zoom?: number;
   hoveredLocationId: string | null;
   onMarkerHover: (id: string | null) => void;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
+  isMobile?: boolean;
+  useMobileMapFixer?: boolean;
 }
 
 // Use a function to efficiently chunk marker rendering
@@ -45,7 +52,10 @@ const MarkerGroup = React.memo(({
   onMarkerHover,
   isCertified,
   hideMarkerPopups,
-  activeView
+  activeView,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }: { 
   locations: SharedAstroSpot[], 
   onLocationClick?: (location: SharedAstroSpot) => void,
@@ -53,7 +63,10 @@ const MarkerGroup = React.memo(({
   onMarkerHover: (id: string | null) => void,
   isCertified: boolean,
   hideMarkerPopups: boolean,
-  activeView: 'certified' | 'calculated'
+  activeView: 'certified' | 'calculated',
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void,
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void,
+  handleTouchMove?: (e: React.TouchEvent) => void
 }) => {
   // Pre-filter locations to avoid rendering water spots
   const filteredLocations = useMemo(() => {
@@ -83,13 +96,11 @@ const MarkerGroup = React.memo(({
       
       // Aggressive water location filtering for calculated locations
       if (isWaterLocation(location.latitude, location.longitude, false)) {
-        console.log(`Filtered water location: ${location.name || 'unnamed'} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
         return false;
       }
       
       // Additional validation
       if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-        console.log(`Filtered invalid astronomy location: ${location.name || 'unnamed'}`);
         return false;
       }
       
@@ -125,6 +136,9 @@ const MarkerGroup = React.memo(({
             locationId={locationId}
             isCertified={locationIsCertified}
             activeView={activeView}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
           />
         );
       })}
@@ -159,7 +173,12 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   onMapClick,
   zoom = 5,
   hoveredLocationId,
-  onMarkerHover
+  onMarkerHover,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove,
+  isMobile = false,
+  useMobileMapFixer = false
 }) => {
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -197,7 +216,16 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   
   const handleMapZoomEnd = useCallback(() => {
     onMarkerHover(null);
-  }, [onMarkerHover]);
+    
+    // On mobile, fix marker positions after zoom
+    if (isMobile && mapRef.current) {
+      const markerPane = mapRef.current.getPanes().markerPane;
+      if (markerPane) {
+        // Force hardware acceleration to fix positioning
+        markerPane.style.transform = 'translate3d(0,0,0)';
+      }
+    }
+  }, [onMarkerHover, isMobile]);
 
   // Filter out any invalid locations
   const validLocations = useMemo(() => {
@@ -220,7 +248,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       if (!isCertified) {
         // Apply strict water filtering
         if (isWaterLocation(location.latitude, location.longitude, false)) {
-          console.log(`Pre-filtered water location: ${location.name || 'unnamed'}`);
           return false;
         }
         
@@ -237,18 +264,20 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   // Chunk locations for better rendering performance
   useEffect(() => {
     if (validLocations.length > 0 && mapRendered) {
-      // Get optimal chunk size based on location count
-      const chunkSize = validLocations.length > 100 ? 30 : 50;
+      // Get optimal chunk size based on location count and device type
+      const chunkSize = isMobile ? 
+        (validLocations.length > 100 ? 20 : 30) : // Smaller chunks on mobile
+        (validLocations.length > 100 ? 30 : 50);  // Larger chunks on desktop
+      
       setMarkerChunks(chunkArray(validLocations, chunkSize));
     }
-  }, [validLocations, mapRendered]);
+  }, [validLocations, mapRendered, isMobile]);
   
   // Store map reference when ready
   const storeMapRef = useCallback((map: L.Map) => {
     mapRef.current = map;
     // Explicitly enable dragging
     map.dragging.enable();
-    console.log("Map container ready, dragging enabled:", map.dragging.enabled());
     setMapRendered(true);
     onMapReady();
     
@@ -305,18 +334,40 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     return null;
   }, [userLocation, searchRadius, isCertifiedView]);
 
+  // Configure map options with mobile optimizations
+  const mapOptions: L.MapOptions = useMemo(() => {
+    return {
+      center: validCenter,
+      zoom: zoom,
+      scrollWheelZoom: true,
+      minZoom: 2,
+      bounceAtZoomLimits: !isMobile, // Disable bounce on mobile
+      // Apply mobile-specific options
+      ...(isMobile ? {
+        // Reduce animations on mobile to improve performance
+        zoomAnimation: true,
+        fadeAnimation: true,
+        markerZoomAnimation: true,
+        // Better touch handling
+        tap: true,
+        tapTolerance: 15,
+        touchZoom: 'center',
+        inertia: true,
+        inertiaDeceleration: 2500,
+        inertiaMaxSpeed: 1800,
+      } : {})
+    };
+  }, [validCenter, zoom, isMobile]);
+
   return (
     <MapContainer
-      center={validCenter}
-      zoom={zoom}
+      {...mapOptions}
       className="h-full w-full"
       whenReady={({ target }) => {
         // Store map reference globally for external access
         (window as any).leafletMap = target;
         storeMapRef(target);
       }}
-      scrollWheelZoom={true}
-      minZoom={2}
     >
       {/* Add a MapCenterHandler to properly handle center changes */}
       <MapCenterHandler center={validCenter} />
@@ -349,6 +400,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
         onMapZoomEnd={handleMapZoomEnd}
       />
       
+      {/* Add Mobile Map Fixer for better mobile experience */}
+      {isMobile && useMobileMapFixer && <MobileMapFixer />}
+      
       {/* Current user location marker */}
       {userLocation && 
        typeof userLocation.latitude === 'number' &&
@@ -373,6 +427,9 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
           isCertified={isCertifiedView}
           hideMarkerPopups={hideMarkerPopups}
           activeView={activeView}
+          handleTouchStart={handleTouchStart}
+          handleTouchEnd={handleTouchEnd}
+          handleTouchMove={handleTouchMove}
         />
       ))}
     </MapContainer>
