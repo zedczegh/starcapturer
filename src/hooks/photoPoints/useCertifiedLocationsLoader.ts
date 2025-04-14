@@ -26,73 +26,42 @@ export function useCertifiedLocationsLoader() {
         // Preload certified locations
         const locations = await preloadCertifiedLocations();
         
-        // If component is still mounted, update state
-        if (mounted) {
-          setCertifiedLocations(locations);
-          setLoadingProgress(100);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error("Error loading certified locations:", error);
+        if (!mounted) return;
         
+        // Update progress
+        setLoadingProgress(75);
+        
+        // Get all certified locations
+        const allLocations = await getAllCertifiedLocations();
+        
+        if (!mounted) return;
+        
+        // Complete loading
+        setCertifiedLocations(allLocations);
+        setLoadingProgress(100);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading certified locations:', error);
         if (mounted) {
           setIsError(true);
           setIsLoading(false);
-          
-          // Try to use cached locations as fallback
-          try {
-            const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
-            if (cachedLocations.length > 0) {
-              setCertifiedLocations(cachedLocations);
-            }
-          } catch (e) {
-            console.error("Error parsing cached locations:", e);
-          }
         }
       }
     };
-    
-    // Simulate progress updates for better user experience
-    const progressInterval = setInterval(() => {
-      setLoadingProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return prev;
-        }
-        return prev + 10;
-      });
-    }, 300);
     
     loadLocations();
     
     return () => {
       mounted = false;
-      clearInterval(progressInterval);
     };
-  }, []);
-  
-  // Refresh certified locations
-  const refreshLocations = useCallback(async () => {
-    setIsLoading(true);
-    setLoadingProgress(10);
-    
-    try {
-      const freshLocations = await getAllCertifiedLocations();
-      setCertifiedLocations(freshLocations);
-      setLoadingProgress(100);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error refreshing certified locations:", error);
-      setIsError(true);
-      setIsLoading(false);
-    }
   }, []);
   
   return {
     certifiedLocations,
     isLoading,
     isError,
-    loadingProgress,
-    refreshLocations
+    loadingProgress
   };
 }
+
+export default useCertifiedLocationsLoader;
