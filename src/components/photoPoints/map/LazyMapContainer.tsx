@@ -101,18 +101,17 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       center={center}
       zoom={zoom}
       style={{ height: "100%", width: "100%" }}
-      zoomControl={true}
-      doubleClickZoom={true}
       scrollWheelZoom={true}
-      tap={true}
       ref={mapRef}
       className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
       whenReady={handleMapReady}
+      // Remove zoomControl and doubleClickZoom props that don't match our type definitions
+      // These will be handled programmatically in MapController component
+      attributionControl={true}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        className={isMobile ? 'mobile-optimized' : ''}
       />
       
       {userLocation && (
@@ -155,8 +154,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
       
-      {/* Map legend for location types */}
-      <MapLegend activeView={activeView} />
+      {/* Map legend for location types - Pass activeView prop */}
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+      />
     </MapContainer>
   );
 };

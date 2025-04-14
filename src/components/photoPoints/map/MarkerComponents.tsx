@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -12,6 +11,7 @@ import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 import { useIsMobile } from '@/hooks/use-mobile';
+import MarkerEventHandler from './MarkerEventHandler';
 
 // Get SIQS quality class
 const getSiqsClass = (siqs?: number): string => {
@@ -178,9 +178,11 @@ const LocationMarker = memo(({
   }, [onHover]);
   
   // Handle custom touch events for better mobile experience
-  const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
+  const handleMarkerTouchStart = useCallback((e: TouchEvent) => {
     if (handleTouchStart) {
-      handleTouchStart(e, locationId);
+      // Convert TouchEvent to React.TouchEvent
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchStart(syntheticEvent, locationId);
     }
     
     // Add hovered class to marker for style enhancement
@@ -190,15 +192,19 @@ const LocationMarker = memo(({
     }
   }, [locationId, handleTouchStart]);
   
-  const handleMarkerTouchEnd = useCallback((e: React.TouchEvent) => {
+  const handleMarkerTouchEnd = useCallback((e: TouchEvent) => {
     if (handleTouchEnd) {
-      handleTouchEnd(e, locationId);
+      // Convert TouchEvent to React.TouchEvent
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchEnd(syntheticEvent, locationId);
     }
   }, [locationId, handleTouchEnd]);
   
-  const handleMarkerTouchMove = useCallback((e: React.TouchEvent) => {
+  const handleMarkerTouchMove = useCallback((e: TouchEvent) => {
     if (handleTouchMove) {
-      handleTouchMove(e);
+      // Convert TouchEvent to React.TouchEvent
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchMove(syntheticEvent);
     }
   }, [handleTouchMove]);
   
@@ -246,21 +252,24 @@ const LocationMarker = memo(({
     });
   };
   
-  // Modified: Use direct event handlers instead of eventHandlers prop
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      eventHandlersRef={{
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-        touchstart: handleMarkerTouchStart,
-        touchend: handleMarkerTouchEnd,
-        touchmove: handleMarkerTouchMove
-      }}
     >
+      <MarkerEventHandler 
+        marker={markerRef.current}
+        eventMap={{
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut,
+          touchstart: handleMarkerTouchStart,
+          touchend: handleMarkerTouchEnd,
+          touchmove: handleMarkerTouchMove
+        }}
+      />
+      
       <Popup 
         closeOnClick={false}
         autoClose={false}
@@ -314,7 +323,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component - Updated to use red color
+// User location marker component
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
@@ -381,4 +390,3 @@ export const useMarkerEvents = () => {
 };
 
 export { LocationMarker, UserLocationMarker };
-

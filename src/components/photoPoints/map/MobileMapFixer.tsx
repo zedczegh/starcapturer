@@ -77,6 +77,23 @@ export const MobileMapFixer: React.FC = () => {
       });
     }
     
+    // Configure interaction settings
+    if (map.options) {
+      // Enable double click zoom but make it center on the clicked point
+      map.doubleClickZoom.enable();
+      
+      // Add touch-specific settings
+      if (map.tap) {
+        map.tap.disable();
+        map.tap.enable();
+      }
+      
+      // Add proper zoom controls
+      if (!map.zoomControl) {
+        map.addControl(L.control.zoom({ position: 'bottomright' }));
+      }
+    }
+    
     // Apply the initial fixes
     fixMarkerPositioning();
     

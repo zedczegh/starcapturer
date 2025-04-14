@@ -1,21 +1,25 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, Circle, Info, Satellite } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface MapLegendProps {
-  showStarLegend: boolean;
-  showCircleLegend: boolean;
+  showStarLegend?: boolean;
+  showCircleLegend?: boolean;
   className?: string;
+  activeView?: 'certified' | 'calculated';
 }
 
 const MapLegend: React.FC<MapLegendProps> = ({ 
   showStarLegend = true, 
   showCircleLegend = true,
-  className = ""
+  className = "",
+  activeView = 'calculated'
 }) => {
   const { t } = useLanguage();
+  
+  const displayStarLegend = showStarLegend || activeView === 'certified';
+  const displayCircleLegend = showCircleLegend || activeView === 'calculated';
   
   const containerVariants = {
     hidden: { opacity: 0, scale: 0.95 },
@@ -70,7 +74,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
         </span>
       </motion.div>
       
-      {showStarLegend && (
+      {displayStarLegend && (
         <motion.div 
           className="space-y-2 mb-3.5 bg-muted/20 p-2.5 rounded-md border border-primary/10"
           variants={itemVariants}
@@ -159,7 +163,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
         </motion.div>
       )}
       
-      {showCircleLegend && (
+      {displayCircleLegend && (
         <motion.div 
           className="space-y-2 bg-muted/20 p-2.5 rounded-md border border-primary/10"
           variants={itemVariants}
