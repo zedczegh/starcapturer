@@ -23,6 +23,7 @@ export interface LocationEntry {
   bortleScale: number;
   radius: number; // km - the approximate radius this location's Bortle scale applies to
   type?: 'urban' | 'rural' | 'dark-site' | 'natural' | 'suburban';
+  chineseName?: string; // Add optional chineseName field
 }
 
 // Combine all regional location databases

@@ -1,4 +1,3 @@
-
 import { Language } from "@/contexts/LanguageContext";
 
 /**
@@ -103,4 +102,46 @@ export function getRegionalName(
   
   // Default for unknown regions
   return language === 'en' ? 'Remote area' : '偏远地区';
+}
+
+/**
+ * Format a location name for display
+ * @param locationName Raw location name
+ * @param language Current app language
+ * @returns Formatted location name for display
+ */
+export function formatLocationName(
+  locationName: string,
+  language: Language = 'en'
+): string {
+  // If location is empty, return a default
+  if (!locationName) {
+    return language === 'en' ? 'Unknown location' : '未知位置';
+  }
+
+  // If location contains GPS coordinates, use a generic name
+  if (locationName.includes("°") || 
+      locationName.includes("Location at") ||
+      locationName.includes("位置在")) {
+    return language === 'en' ? 'Remote area' : '偏远地区';
+  }
+
+  // Extract the first part of a comma-separated location (typically town/city)
+  if (locationName.includes(',')) {
+    const parts = locationName.split(',');
+    // Take the first part, which is typically the town/city
+    return parts[0].trim();
+  }
+
+  // Handle special case for calculated locations
+  const locationMatch = locationName.match(/calc-loc-(\d+)/);
+  if (locationMatch) {
+    const locationNumber = parseInt(locationMatch[1]) || 1;
+    return language === 'en' 
+      ? `Potential ideal dark site ${locationNumber}`
+      : `潜在理想暗夜地点 ${locationNumber}`;
+  }
+
+  // Default to the original name
+  return locationName;
 }

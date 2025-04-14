@@ -55,7 +55,12 @@ export function findNearestTown(
   }
 
   // Find the closest town by calculating distance to all known locations
-  let closestTown = {
+  let closestTown: {
+    name: string;
+    chineseName?: string;
+    coordinates: [number, number];
+    distance: number;
+  } = {
     name: language === 'en' ? 'Remote area' : '偏远地区',
     chineseName: undefined,
     coordinates: [0, 0] as [number, number],
