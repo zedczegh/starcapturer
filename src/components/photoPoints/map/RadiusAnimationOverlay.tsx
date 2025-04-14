@@ -98,7 +98,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     styleEl.innerHTML = `
       .radar-sweep-container {
         z-index: 400;
-        opacity: 0.6;
+        opacity: 0.7;
       }
       
       .radar-sweep {
@@ -110,15 +110,13 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         border-radius: 50%;
         background: conic-gradient(
           from 0deg,
-          rgba(139, 92, 246, 0.4) 0deg,
-          rgba(139, 92, 246, 0.2) 60deg, 
-          rgba(139, 92, 246, 0.05) 120deg,
+          rgba(139, 92, 246, 0.5) 0deg,
+          rgba(139, 92, 246, 0.3) 45deg, 
+          rgba(139, 92, 246, 0.1) 90deg,
           rgba(139, 92, 246, 0) 180deg,
           rgba(139, 92, 246, 0) 360deg
         );
-        animation: radarSweep 4s linear infinite;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
-        filter: blur(1px);
+        animation: radarSweep 2.5s linear infinite;
       }
       
       @keyframes radarSweep {
@@ -131,7 +129,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       }
       
       .search-radius-circle {
-        animation: pulseRadius 3s ease-in-out infinite alternate;
+        animation: pulseRadius 2s ease-in-out infinite alternate;
       }
       
       @keyframes pulseRadius {
@@ -140,7 +138,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
           stroke-width: 1;
         }
         100% {
-          stroke-opacity: 0.6;
+          stroke-opacity: 0.7;
           stroke-width: 2;
         }
       }
