@@ -1,0 +1,95 @@
+
+import React from 'react';
+import { Circle, Info } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { itemVariants, hoverMotionProps, pulseVariants } from '../utils/legendAnimations';
+
+const CircleLegend: React.FC = () => {
+  const { t } = useLanguage();
+  
+  return (
+    <motion.div 
+      className="space-y-2 bg-muted/20 p-2.5 rounded-md border border-primary/10"
+      variants={itemVariants}
+    >
+      <h4 className="text-xs font-medium text-primary/90 flex items-center">
+        <Info className="h-3 w-3 mr-1.5 text-primary/80" />
+        {t("Calculated Locations (SIQS Score)", "计算地点（SIQS评分）")}
+      </h4>
+      <div className="grid grid-cols-1 gap-2.5">
+        <CircleLegendItem 
+          color="green-500"
+          delay={0}
+          label={t("Excellent (7.5-10)", "极佳 (7.5-10)")}
+        />
+        
+        <CircleLegendItem 
+          color="yellow-500"
+          delay={0.5}
+          label={t("Good (5.5-7.4)", "良好 (5.5-7.4)")}
+        />
+        
+        <CircleLegendItem 
+          color="orange-500"
+          delay={1}
+          label={t("Average (4.0-5.4)", "一般 (4.0-5.4)")}
+        />
+        
+        <CircleLegendItem 
+          color="red-500"
+          delay={1.5}
+          label={t("Below Average (<4.0)", "较差 (<4.0)")}
+        />
+      </div>
+    </motion.div>
+  );
+};
+
+interface CircleLegendItemProps {
+  color: string;
+  delay: number;
+  label: string;
+}
+
+const CircleLegendItem: React.FC<CircleLegendItemProps> = ({ color, delay, label }) => {
+  return (
+    <motion.div 
+      className="flex items-center"
+      {...hoverMotionProps}
+    >
+      <motion.div 
+        className={`bg-muted/30 p-1 rounded-full mr-2 border border-${color}/20`}
+        animate={{ 
+          boxShadow: [`0 0 0 rgba(${getColorRGBValues(color)}, 0)`, 
+                      `0 0 8px rgba(${getColorRGBValues(color)}, 0.5)`, 
+                      `0 0 0 rgba(${getColorRGBValues(color)}, 0)`] 
+        }}
+        transition={{ duration: 3, repeat: Infinity, delay }}
+      >
+        <Circle className={`h-3.5 w-3.5 text-${color} fill-${color}/30`} />
+      </motion.div>
+      <span className="text-xs">
+        {label}
+      </span>
+    </motion.div>
+  );
+};
+
+// Helper function to get RGB values for the animation
+function getColorRGBValues(color: string): string {
+  switch (color) {
+    case 'green-500':
+      return '34, 197, 94';
+    case 'yellow-500':
+      return '234, 179, 8';
+    case 'orange-500':
+      return '249, 115, 22';
+    case 'red-500':
+      return '239, 68, 68';
+    default:
+      return '139, 92, 246';
+  }
+}
+
+export default CircleLegend;
