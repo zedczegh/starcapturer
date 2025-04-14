@@ -91,7 +91,9 @@ const LocationMarker = memo(({
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      onClick={handleClick}
+      eventHandlers={{
+        click: handleClick
+      }}
     >
       <MarkerEventHandler 
         marker={markerRef.current}

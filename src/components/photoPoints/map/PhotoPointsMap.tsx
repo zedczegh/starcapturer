@@ -71,9 +71,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
+        // Reduce height for mobile to leave space at the bottom
         setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(80vh - 160px)'
-          : 'calc(90vh - 140px)');
+          ? 'calc(70vh - 160px)'
+          : 'calc(75vh - 140px)');
       } else {
         setMapContainerHeight('500px');
       }
@@ -122,7 +123,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   return (
     <div 
       style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300"
+      className="w-full relative rounded-md overflow-hidden transition-all duration-300 max-w-xl mx-auto mb-8"
     >
       {!mapReady && (
         <div className="absolute inset-0 z-20">
@@ -162,13 +163,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         showStarLegend={showStarLegend}
         showCircleLegend={showCircleLegend}
         onToggle={handleLegendToggle}
-        className="absolute bottom-4 right-4"
+        className="absolute bottom-4 right-4 z-10"
       />
       
       {!legendOpen && (
         <PinpointButton 
           onGetLocation={handleGetLocation} 
-          className="absolute top-4 right-4"
+          className="absolute top-4 right-4 z-10"
         />
       )}
     </div>
