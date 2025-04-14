@@ -63,9 +63,9 @@ export const useRadarPosition = ({
     
     const handleMapChange = () => {
       if (timeout) {
-        window.clearTimeout(timeout);
+        clearTimeout(timeout);
       }
-      timeout = window.setTimeout(() => {
+      timeout = setTimeout(() => {
         updateRadarPosition();
       }, 100); // Debounce for 100ms
     };
@@ -91,7 +91,7 @@ export const useRadarPosition = ({
       }
       
       if (timeout) {
-        window.clearTimeout(timeout);
+        clearTimeout(timeout);
       }
     };
   }, [map, userLocation, showAnimation, updateRadarPosition]);
