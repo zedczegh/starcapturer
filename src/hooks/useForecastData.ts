@@ -3,7 +3,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { extractFutureForecasts } from "@/components/forecast/ForecastUtils";
+import { useCleanupUtils } from "./locationDetails/useCleanupUtils";
+import { useNightForecastProcessor } from "./locationDetails/useNightForecastProcessor";
 
 export const useForecastData = () => {
   const [forecastData, setForecastData] = useState<any>(null);
@@ -21,35 +22,9 @@ export const useForecastData = () => {
   const forecastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longRangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Clean up function to abort ongoing requests
-  const cleanupRequest = useCallback((controllerRef: React.MutableRefObject<AbortController | null>) => {
-    if (controllerRef.current) {
-      controllerRef.current.abort();
-      controllerRef.current = null;
-    }
-  }, []);
-  
-  // Cleanup timeout function
-  const cleanupTimeout = useCallback((timeoutRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  // Process forecast data to extract nighttime forecast (6 PM to 6 AM)
-  const processNightForecast = useCallback((data: any) => {
-    if (!data || !data.hourly) return [];
-    
-    const futureForecasts = extractFutureForecasts(data);
-    
-    // Filter for nighttime hours (6 PM to 6 AM)
-    return futureForecasts.filter(item => {
-      const date = new Date(item.time);
-      const hour = date.getHours();
-      return hour >= 18 || hour < 6;
-    });
-  }, []);
+  // Import utility hooks
+  const { cleanupRequest, cleanupTimeout } = useCleanupUtils();
+  const { processNightForecast } = useNightForecastProcessor();
 
   // Enhanced fetch with caching consideration
   const fetchLocationForecast = useCallback(async (latitude: number, longitude: number) => {

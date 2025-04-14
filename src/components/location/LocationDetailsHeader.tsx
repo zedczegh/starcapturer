@@ -1,9 +1,9 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Sparkles, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getEnhancedLocationDetails } from "@/services/geocoding/enhancedReverseGeocoding";
+import { useLocationDetailsService } from "./header/LocationDetailsService";
 
 interface LocationDetailsHeaderProps {
   name?: string;
@@ -23,39 +23,11 @@ const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
   className
 }) => {
   const { t, language } = useLanguage();
-  const [enhancedName, setEnhancedName] = useState<string | null>(null);
-  const [locationDetails, setLocationDetails] = useState<string | null>(null);
-  
-  // Fetch enhanced location details when coordinates are available
-  useEffect(() => {
-    if (latitude && longitude) {
-      const typedLanguage = language === 'zh' ? 'zh' : 'en';
-      
-      getEnhancedLocationDetails(latitude, longitude, typedLanguage)
-        .then(details => {
-          if (details.formattedName && details.formattedName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-            setEnhancedName(details.formattedName);
-            
-            // Create a detailed location string from available components
-            const detailParts = [];
-            if (details.townName) detailParts.push(details.townName);
-            if (details.cityName && (!details.townName || details.cityName !== details.townName)) {
-              detailParts.push(details.cityName);
-            }
-            if (details.countyName && (!details.cityName || details.countyName !== details.cityName)) {
-              detailParts.push(details.countyName);
-            }
-            
-            if (detailParts.length > 0) {
-              setLocationDetails(detailParts.join(language === 'en' ? ', ' : ''));
-            }
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching enhanced location details:", error);
-        });
-    }
-  }, [latitude, longitude, language]);
+  const { enhancedName, locationDetails } = useLocationDetailsService({
+    latitude,
+    longitude,
+    language
+  });
   
   // Determine which name to display with priority to enhanced name
   const displayName = enhancedName || name || t("Location Details", "位置详情");
