@@ -3,7 +3,7 @@ import React from 'react';
 import { Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { itemVariants, hoverMotionProps, markerAnimationProps } from '../utils/legendAnimations';
+import { itemVariants, hoverMotionProps } from '../utils/legendAnimations';
 
 const StarLegend: React.FC = () => {
   const { t } = useLanguage();
@@ -53,16 +53,30 @@ interface StarLegendItemProps {
 }
 
 const StarLegendItem: React.FC<StarLegendItemProps> = ({ color, delay, label }) => {
+  // Create animation settings object without conditionals
+  const animationProps = {
+    boxShadow: [
+      `0 0 0 rgba(${hexToRgb(color)}, 0)`, 
+      `0 0 8px rgba(${hexToRgb(color)}, 0.5)`, 
+      `0 0 0 rgba(${hexToRgb(color)}, 0)`
+    ]
+  };
+  
   return (
     <motion.div 
       className="flex items-center"
       {...hoverMotionProps}
     >
       <motion.div 
-        className={`bg-muted/30 p-1 rounded-full mr-2 border border-[${color}]/20`}
-        {...markerAnimationProps(delay)}
+        className="bg-muted/30 p-1 rounded-full mr-2 border"
+        style={{ borderColor: `${color}33` }}
+        animate={animationProps}
+        transition={{ duration: 3, repeat: Infinity, delay }}
       >
-        <Star className={`h-3.5 w-3.5 text-[${color}] fill-[${color}]`} />
+        <Star 
+          className="h-3.5 w-3.5" 
+          style={{ color, fill: color }}
+        />
       </motion.div>
       <span className="text-xs">
         {label}
@@ -70,5 +84,18 @@ const StarLegendItem: React.FC<StarLegendItemProps> = ({ color, delay, label }) 
     </motion.div>
   );
 };
+
+// Helper function to convert hex color to RGB for animations
+function hexToRgb(hex: string): string {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Parse the hex values
+  const r = parseInt(hex.substring(0, 2), 16) || 0;
+  const g = parseInt(hex.substring(2, 4), 16) || 0;
+  const b = parseInt(hex.substring(4, 6), 16) || 0;
+  
+  return `${r}, ${g}, ${b}`;
+}
 
 export default StarLegend;

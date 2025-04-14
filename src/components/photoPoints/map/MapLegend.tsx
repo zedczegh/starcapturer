@@ -20,6 +20,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
   className = "",
   activeView = 'calculated'
 }) => {
+  // Determine which legends to display based on props and activeView
   const displayStarLegend = showStarLegend || activeView === 'certified';
   const displayCircleLegend = showCircleLegend || activeView === 'calculated';
   
