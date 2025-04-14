@@ -171,7 +171,8 @@ export function findNearestTown(
   // For English format: Village, County, City
   if (language === 'en') {
     if (hasVillage) detailedNameParts.push(closestTown.village!);
-    if (hasCounty) detailedNameParts.push(closestTown.county!);
+    if (hasCounty && (!hasVillage || closestTown.county !== closestTown.village)) 
+      detailedNameParts.push(closestTown.county!);
     if (hasCity && closestTown.city !== closestTown.county && closestTown.city !== closestTown.village) 
       detailedNameParts.push(closestTown.city!);
   } 
@@ -179,31 +180,43 @@ export function findNearestTown(
   else {
     if (hasCity) {
       const cityName = closestTown.cityZh || closestTown.city;
-      detailedNameParts.push(cityName!);
+      if (cityName && cityName !== '偏远地区') {
+        detailedNameParts.push(cityName);
+      }
     }
     if (hasCounty) {
       const countyName = closestTown.countyZh || closestTown.county;
-      if (countyName !== detailedNameParts[0]) {
-        detailedNameParts.push(countyName!);
+      if (countyName && (detailedNameParts.length === 0 || countyName !== detailedNameParts[0])) {
+        detailedNameParts.push(countyName);
       }
     }
     if (hasVillage) {
       const villageName = closestTown.villageZh || closestTown.village;
-      if (villageName !== detailedNameParts[0] && villageName !== detailedNameParts[1]) {
-        detailedNameParts.push(villageName!);
+      if (villageName && detailedNameParts.every(part => part !== villageName)) {
+        detailedNameParts.push(villageName);
       }
     }
   }
   
   // If we couldn't build a detailed name, fall back to city or base name
-  const detailedName = detailedNameParts.length > 0 
-    ? detailedNameParts.join(language === 'en' ? ', ' : '')
-    : (language === 'en' ? closestTown.name : (closestTown.chineseName || closestTown.name));
+  let detailedName;
+  if (detailedNameParts.length > 0) {
+    detailedName = detailedNameParts.join(language === 'en' ? ', ' : '');
+  } else if (language === 'en') {
+    detailedName = closestTown.name;
+  } else {
+    // For Chinese, use the Chinese name if available
+    detailedName = closestTown.chineseName || closestTown.name;
+  }
   
   // Use the appropriate name based on language
-  const townName = language === 'en' 
-    ? (hasVillage ? closestTown.village! : (hasCounty ? closestTown.county! : closestTown.name))
-    : (closestTown.villageZh || closestTown.countyZh || closestTown.chineseName || closestTown.name);
+  let townName;
+  if (language === 'en') {
+    townName = hasVillage ? closestTown.village! : (hasCounty ? closestTown.county! : closestTown.name);
+  } else {
+    // For Chinese, prioritize Chinese names
+    townName = closestTown.villageZh || closestTown.countyZh || closestTown.chineseName || closestTown.name;
+  }
 
   return {
     townName,

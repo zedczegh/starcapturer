@@ -20,10 +20,18 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
   const nearestTownInfo = location.latitude && location.longitude ? 
     findNearestTown(location.latitude, location.longitude, language) : null;
   
-  // Use the detailed location name as the display name based on language
-  const displayName = language === 'zh'
-    ? (nearestTownInfo?.detailedName || location.chineseName || location.name)
-    : (nearestTownInfo?.detailedName || location.name);
+  // Get the display name based on language with proper Chinese translation
+  let displayName;
+  if (language === 'zh') {
+    if (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== '偏远地区') {
+      displayName = nearestTownInfo.detailedName;
+    } else {
+      displayName = location.chineseName || location.name;
+    }
+  } else {
+    displayName = (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== 'Remote area') ? 
+      nearestTownInfo.detailedName : location.name;
+  }
   
   // Get certification info if available
   const hasCertification = location.certification || location.isDarkSkyReserve;
@@ -41,10 +49,10 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
   
   // Only show original name if it's different from the nearest town name we're using
   const showOriginalName = nearestTownInfo && 
-    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
+    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') &&
     (language === 'zh'
-      ? (location.chineseName && !location.chineseName.includes(nearestTownInfo.townName))
-      : (location.name && !location.name.includes(nearestTownInfo.townName)));
+      ? (location.chineseName && location.chineseName !== nearestTownInfo.detailedName)
+      : (location.name !== nearestTownInfo.detailedName));
   
   return (
     <div className="p-3 min-w-[200px] max-w-[260px]">

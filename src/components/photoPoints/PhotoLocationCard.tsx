@@ -100,27 +100,36 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   // Use detailed location name as the display name based on language
   let displayName;
   
-  if (nearestTownInfo && nearestTownInfo.detailedName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-    // Use detailed name from our enhanced database
-    displayName = nearestTownInfo.detailedName;
-  } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
-    // Fallback for potential ideal dark sites
-    displayName = language === 'en' 
-      ? `Potential ideal dark site ${locationCounter}`
-      : `潜在理想暗夜地点 ${locationCounter}`;
+  if (language === 'zh') {
+    if (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== '偏远地区') {
+      // Use detailed name from our enhanced database
+      displayName = nearestTownInfo.detailedName;
+    } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
+      // Fallback for potential ideal dark sites in Chinese
+      displayName = `潜在理想暗夜地点 ${locationCounter}`;
+    } else {
+      // Fallback to original Chinese name or name
+      displayName = location.chineseName || location.name;
+    }
   } else {
-    // Fallback to original name based on language
-    displayName = language === 'zh' 
-      ? (location.chineseName || location.name) 
-      : location.name;
+    if (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== 'Remote area') {
+      // Use detailed name from our enhanced database
+      displayName = nearestTownInfo.detailedName;
+    } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
+      // Fallback for potential ideal dark sites
+      displayName = `Potential ideal dark site ${locationCounter}`;
+    } else {
+      // Fallback to original name
+      displayName = location.name;
+    }
   }
   
   // Check if we need to show original name
   const showOriginalName = nearestTownInfo && 
     nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
     (language === 'zh'
-      ? (location.chineseName && !location.chineseName.includes(nearestTownInfo.townName))
-      : (location.name && !location.name.includes(nearestTownInfo.townName)));
+      ? (location.chineseName && location.chineseName !== nearestTownInfo.detailedName)
+      : (location.name && location.name !== nearestTownInfo.detailedName));
   
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
   
