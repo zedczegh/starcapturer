@@ -3,7 +3,6 @@ import React from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
-import { useEnhancedLocation } from '@/hooks/useEnhancedLocation';
 
 interface MapTooltipProps {
   name: string;
@@ -30,44 +29,16 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   const nearestTownInfo = latitude !== undefined && longitude !== undefined ? 
     findNearestTown(latitude, longitude, language) : null;
   
-  // Get enhanced location details with street-level data
-  const { locationDetails, loading } = useEnhancedLocation({
-    latitude,
-    longitude,
-    skip: !latitude || !longitude
-  });
-  
-  // Determine what to show as the primary name
-  const displayName = locationDetails?.formattedName || name;
-  
   return (
     <Popup
       closeOnClick={false}
       autoClose={false}
     >
       <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
-        <div className="font-medium text-sm">{displayName}</div>
+        <div className="font-medium text-sm">{name}</div>
         
-        {/* Display street name when available */}
-        {locationDetails?.streetName && !displayName.includes(locationDetails.streetName) && (
-          <div className="text-xs text-muted-foreground mt-1">
-            {locationDetails.streetName}
-          </div>
-        )}
-        
-        {/* Display town/city when available */}
-        {locationDetails?.townName && !displayName.includes(locationDetails.townName) && (
-          <div className="text-xs text-muted-foreground mt-1">
-            {locationDetails.townName}
-            {locationDetails.cityName && locationDetails.cityName !== locationDetails.townName &&
-              ` (${locationDetails.cityName})`}
-          </div>
-        )}
-        
-        {/* Display detailed location when available and different */}
-        {nearestTownInfo && nearestTownInfo.detailedName && 
-         !displayName.includes(nearestTownInfo.detailedName) &&
-         (!locationDetails?.formattedName || locationDetails.formattedName !== nearestTownInfo.detailedName) && (
+        {/* Display detailed location when available */}
+        {nearestTownInfo && nearestTownInfo.detailedName && (
           <div className="text-xs text-muted-foreground mt-1">
             {nearestTownInfo.detailedName}
           </div>
