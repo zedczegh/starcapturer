@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Sparkles, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocationDetailsService } from "./header/LocationDetailsService";
+import NavigationButtons from "./navigation/NavigationButtons";
 
 interface LocationDetailsHeaderProps {
   name?: string;
@@ -36,10 +37,23 @@ const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
     <div className={cn("mb-6 pt-16", className)}>
       <div className="flex flex-col items-center justify-between">
         <div className="text-center">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center justify-center mb-2">
-            <Sparkles className="h-6 w-6 mr-2 text-primary" /> 
-            {displayName}
-          </h1>
+          <div className="flex items-center justify-center mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center justify-center">
+              <Sparkles className="h-6 w-6 mr-2 text-primary" /> 
+              {displayName}
+            </h1>
+            
+            {/* Add navigation buttons if we have coordinates */}
+            {latitude !== undefined && longitude !== undefined && (
+              <div className="ml-3 flex-shrink-0">
+                <NavigationButtons 
+                  latitude={latitude}
+                  longitude={longitude}
+                  locationName={displayName}
+                />
+              </div>
+            )}
+          </div>
           
           {/* Show detailed location info if available */}
           {locationDetails && locationDetails !== displayName && (

@@ -117,6 +117,19 @@ export const generateBaiduMapUrl = (
 };
 
 /**
+ * Get a URL for directions to a location using Apple Maps
+ * For iOS devices
+ */
+export const generateAppleMapUrl = (
+  lat: number, 
+  lng: number, 
+  name: string
+): string => {
+  const encodedName = encodeURIComponent(name);
+  return `https://maps.apple.com/?q=${encodedName}&ll=${lat},${lng}&z=15`;
+};
+
+/**
  * Validate coordinates to ensure they're within valid ranges
  */
 export const validateCoordinates = (coords: { latitude: number, longitude: number }) => {
