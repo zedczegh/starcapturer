@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, Circle, Info, Satellite } from 'lucide-react';
@@ -36,6 +37,22 @@ const MapLegend: React.FC<MapLegendProps> = ({
   const itemVariants = {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0 }
+  };
+
+  // Define pulseVariants that was missing
+  const pulseVariants = {
+    pulse: {
+      boxShadow: [
+        '0 0 0 0 rgba(139, 92, 246, 0)',
+        '0 0 0 4px rgba(139, 92, 246, 0.2)',
+        '0 0 0 0 rgba(139, 92, 246, 0)'
+      ],
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        repeatDelay: 1
+      }
+    }
   };
 
   return (
