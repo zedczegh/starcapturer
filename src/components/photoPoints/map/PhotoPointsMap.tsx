@@ -59,6 +59,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
   
+  const [isSearching, setIsSearching] = useState(false);
+  
+  useEffect(() => {
+    setIsSearching(certifiedLocationsLoading || !mapReady);
+  }, [certifiedLocationsLoading, mapReady]);
+  
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -92,14 +98,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation) {
+      setIsSearching(true);
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           onLocationUpdate(latitude, longitude);
           console.log("Got user position:", latitude, longitude);
+          
+          setTimeout(() => setIsSearching(false), 1500);
         },
         (error) => {
           console.error("Error getting location:", error.message);
+          setIsSearching(false);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
@@ -144,6 +155,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={true}
+        isSearching={isSearching}
       />
       
       <MapLegend 

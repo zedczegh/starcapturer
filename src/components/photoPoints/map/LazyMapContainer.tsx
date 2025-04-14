@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -7,12 +8,10 @@ import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
-import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents, WorldBoundsController } from './MapEffectsController';
-import PinpointButton from './PinpointButton';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
+import RadiusAnimationOverlay from './RadiusAnimationOverlay';
 
 // Configure leaflet to handle marker paths
 configureLeaflet();
@@ -34,6 +33,7 @@ interface LazyMapContainerProps {
   handleTouchMove?: (e: React.TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
+  isSearching?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -52,7 +52,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   isMobile,
-  useMobileMapFixer = false
+  useMobileMapFixer = false,
+  isSearching = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -105,37 +106,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       console.log("Map clicked, updating location to:", lat, lng);
     }
   }, [onMapClick]);
-
-  // Handle getting current user location via geolocation
-  const handleGetLocation = useCallback(() => {
-    if (onMapClick) {
-      getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onMapClick(latitude, longitude);
-          
-          // Access the map instance and set view to the location
-          if (mapRef.current) {
-            const leafletMap = mapRef.current;
-            leafletMap.setView([latitude, longitude], 12, {
-              animate: true,
-              duration: 1
-            });
-          }
-          
-          console.log("Got user position:", latitude, longitude);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-    }
-  }, [onMapClick]);
   
   return (
     <MapContainer
@@ -162,6 +132,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         searchRadius={searchRadius}
         onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
       />
+      
+      {/* Add Radius Animation Overlay */}
+      {userLocation && (
+        <RadiusAnimationOverlay
+          userLocation={userLocation}
+          searchRadius={searchRadius}
+          isSearching={isSearching}
+        />
+      )}
       
       {/* Use MapEvents component for map click handling */}
       <MapEvents onMapClick={handleMapClick} />
@@ -205,9 +184,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      
-      {/* Map legend and pinpoint button are now rendered outside to correctly handle click events */}
-      
     </MapContainer>
   );
 };
