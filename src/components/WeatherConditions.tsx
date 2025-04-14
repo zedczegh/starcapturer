@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -7,7 +8,7 @@ import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherCondition
 import { motion } from "framer-motion";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 import NighttimeCloudInfo from "@/components/weather/NighttimeCloudInfo";
-import { validateWeatherData as importedValidateWeatherData } from "@/utils/validation/dataValidation";
+import { validateWeatherData as importedValidateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 
 interface WeatherConditionsProps {
