@@ -11,7 +11,6 @@ interface LocationsListProps {
   loading: boolean;
   initialLoad?: boolean;
   onLocationClick: (point: SharedAstroSpot) => void;
-  onViewDetails?: (point: SharedAstroSpot) => void; // Add this alternative prop
   onRefresh?: () => void;
   activeView?: 'certified' | 'calculated';
   hasMore?: boolean;
@@ -27,7 +26,6 @@ const LocationsList: React.FC<LocationsListProps> = ({
   loading,
   initialLoad = false,
   onLocationClick,
-  onViewDetails, // Add the new prop
   onRefresh,
   activeView = 'certified',
   hasMore = false,
@@ -81,15 +79,6 @@ const LocationsList: React.FC<LocationsListProps> = ({
     }
   };
 
-  // Choose the appropriate click handler - use onViewDetails if provided, otherwise use onLocationClick
-  const handleLocationClick = (location: SharedAstroSpot) => {
-    if (onViewDetails) {
-      onViewDetails(location);
-    } else {
-      onLocationClick(location);
-    }
-  };
-
   return (
     <div className="space-y-4 pb-8">
       {/* Container for photo point cards */}
@@ -103,7 +92,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
           >
             <PhotoPointCard
               point={location}
-              onViewDetails={() => handleLocationClick(location)}
+              onViewDetails={() => onLocationClick(location)}
               userLocation={null} // This doesn't use current location for distance
             />
           </motion.div>

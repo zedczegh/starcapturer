@@ -1,73 +1,21 @@
-
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
-import { MapEvents } from './MapEffectsController';
-import { MapEffectsComposer } from './MapComponents';
-import MapController from './MapController';
-import MobileMapFixer from './MobileMapFixer';
-import MapContainerSettings from './container/MapContainerSettings';
-import { useMapEventHandlers } from './container/MapEventHandlers';
-import { useUserLocationSiqs } from './container/UserLocationFinder';
-import MapLocationsLayer from './container/MapLocationsLayer';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MapContainer, TileLayer } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import './MarkerStyles.css';
+import './MapStyles.css';
+import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useMapUtils } from '@/hooks/photoPoints/useMapUtils';
+import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
+import MapController from './MapController';
+import MapLegend from './MapLegend';
+import MobileMapFixer from './MobileMapFixer';
+import { MapEvents, WorldBoundsController } from './MapEffectsController';
+import PinpointButton from './PinpointButton';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { MapEffectsComposer } from './MapComponents';
 
-// Component to handle optional zoom updates when radius changes significantly
-const DynamicZoomUpdater = ({ 
-  zoom, 
-  center, 
-  searchRadius 
-}: { 
-  zoom: number; 
-  center: [number, number]; 
-  searchRadius: number;
-}) => {
-  const map = useMap();
-  const { getZoomLevel } = useMapUtils();
-  const lastRadiusRef = React.useRef(searchRadius);
-  
-  // Only update zoom when searchRadius changes significantly
-  useEffect(() => {
-    if (map) {
-      // Only calculate new zoom if radius changed by more than 100km
-      if (Math.abs(lastRadiusRef.current - searchRadius) > 100) {
-        const calculatedZoom = getZoomLevel(searchRadius);
-        lastRadiusRef.current = searchRadius;
-        
-        // Only animate if the zoom difference is significant
-        const zoomDifference = Math.abs(map.getZoom() - calculatedZoom);
-        
-        // Use a higher threshold to prevent minor zoom changes
-        if (zoomDifference > 1.5) {
-          map.flyTo(center, calculatedZoom, {
-            duration: 1,  // 1 second animation
-            easeLinearity: 0.25
-          });
-          console.log(`Updating zoom to ${calculatedZoom} for radius ${searchRadius}km`);
-        }
-      }
-    }
-  }, [searchRadius, map, center, getZoomLevel]);
-  
-  // Update center only for significant distance changes
-  useEffect(() => {
-    if (map && center) {
-      // Avoid unnecessary view updates
-      const currentCenter = map.getCenter();
-      const distance = map.distance(currentCenter, center);
-      
-      // Increase threshold to 500m to reduce unnecessary updates
-      if (distance > 500) { 
-        map.setView(center, map.getZoom(), {
-          animate: true,
-          duration: 0.5
-        });
-      }
-    }
-  }, [center, map]);
-  
-  return null;
-};
+// Configure leaflet to handle marker paths
+configureLeaflet();
 
 interface LazyMapContainerProps {
   center: [number, number];
@@ -96,11 +44,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   searchRadius,
   activeView,
   onMapReady,
-  onLocationClick = () => {},
+  onLocationClick,
   onMapClick,
   zoom = 10,
   hoveredLocationId,
-  onMarkerHover = () => {},
+  onMarkerHover,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
@@ -109,91 +57,158 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   isScanning = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
+  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
+  const mapRef = useRef<any>(null);
   
-  // Find user location SIQS from available locations
-  const { currentSiqs } = useUserLocationSiqs({ userLocation, locations });
-  
-  // Get map event handlers
-  const { 
-    mapRef, 
-    handleMapReady,
-    handleMapClick 
-  } = useMapEventHandlers({
-    onMapClick,
-    onMapReady: () => {
-      setMapReady(true);
-      if (onMapReady) onMapReady();
+  // Find user location SIQS
+  useEffect(() => {
+    if (userLocation && locations.length > 0) {
+      const userLat = userLocation.latitude;
+      const userLng = userLocation.longitude;
+      
+      // Find siqs of current user location from locations
+      const sameLocation = locations.find(loc => 
+        Math.abs(loc.latitude - userLat) < 0.0001 && 
+        Math.abs(loc.longitude - userLng) < 0.0001
+      );
+      
+      if (sameLocation && sameLocation.siqs) {
+        setCurrentSiqs(sameLocation.siqs);
+      } else {
+        setCurrentSiqs(null);
+      }
     }
-  });
+  }, [userLocation, locations]);
+  
+  // Handle map ready
+  const handleMapReady = useCallback(() => {
+    setMapReady(true);
+    if (onMapReady) {
+      onMapReady();
+    }
+    
+    // Make map instance available globally for external access
+    if (mapRef.current) {
+      (window as any).leafletMap = mapRef.current;
+    }
+  }, [onMapReady]);
+  
+  // Handle location click
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
+    }
+  }, [onLocationClick]);
+  
+  // Handle map click - always allow location updates when map is clicked
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (onMapClick) {
+      onMapClick(lat, lng);
+      console.log("Map clicked, updating location to:", lat, lng);
+    }
+  }, [onMapClick]);
+  
+  // Handle getting current user location via geolocation
+  const handleGetLocation = useCallback(() => {
+    if (onMapClick) {
+      getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          onMapClick(latitude, longitude);
+          
+          // Access the map instance and set view to the location
+          if (mapRef.current) {
+            const leafletMap = mapRef.current;
+            leafletMap.setView([latitude, longitude], 12, {
+              animate: true,
+              duration: 1
+            });
+          }
+          
+          console.log("Got user position:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    }
+  }, [onMapClick]);
   
   return (
-    <>
-      {/* Initialize map settings */}
-      <MapContainerSettings />
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      style={{ height: "100%", width: "100%" }}
+      scrollWheelZoom={true}
+      ref={mapRef}
+      className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
+      whenReady={handleMapReady}
+      attributionControl={true}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
       
-      <MapContainer
+      {/* Use MapEffectsComposer to apply all map effects */}
+      <MapEffectsComposer 
         center={center}
         zoom={zoom}
-        style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
-        ref={mapRef}
-        className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
-        whenReady={handleMapReady}
-        attributionControl={true}
-        // Use renderer instead of preferCanvas for better TypeScript compatibility
-        renderer={typeof window !== 'undefined' && window.L?.canvas ? window.L.canvas() : undefined}
-        zoomControl={false} // We'll add custom zoom controls
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        {/* Dynamic zoom updater that responds to radius changes */}
-        <DynamicZoomUpdater 
-          zoom={zoom}
-          center={center}
-          searchRadius={searchRadius}
-        />
-        
-        {/* Use MapEffectsComposer to apply all map effects */}
-        <MapEffectsComposer 
-          center={center}
-          zoom={zoom}
-          userLocation={userLocation}
-          activeView={activeView}
-          searchRadius={searchRadius}
-          onSiqsCalculated={(siqs) => console.log("SIQS calculated:", siqs)}
-          isScanning={isScanning}
-        />
-        
-        {/* Use MapEvents component for map click handling */}
-        <MapEvents onMapClick={handleMapClick} />
-        
-        {/* Render all location markers */}
-        <MapLocationsLayer
-          userLocation={userLocation}
-          locations={locations}
-          hoveredLocationId={hoveredLocationId}
-          onLocationClick={onLocationClick}
-          onMarkerHover={onMarkerHover}
-          handleTouchStart={handleTouchStart}
-          handleTouchEnd={handleTouchEnd}
-          handleTouchMove={handleTouchMove}
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
+        isScanning={isScanning}
+      />
+      
+      {/* Use MapEvents component for map click handling */}
+      <MapEvents onMapClick={handleMapClick} />
+      
+      {userLocation && (
+        <UserLocationMarker 
+          position={[userLocation.latitude, userLocation.longitude]} 
           currentSiqs={currentSiqs}
-          activeView={activeView}
         />
+      )}
+      
+      {locations.map(location => {
+        if (!location.latitude || !location.longitude) return null;
         
-        {/* Add controllers */}
-        <MapController 
-          userLocation={userLocation} 
-          searchRadius={searchRadius}
-        />
+        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+        const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+        const isHovered = hoveredLocationId === locationId;
         
-        {/* Add the mobile map fixer for better mobile experience */}
-        {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      </MapContainer>
-    </>
+        return (
+          <LocationMarker
+            key={locationId}
+            location={location}
+            onClick={handleLocationClick}
+            isHovered={isHovered}
+            onHover={onMarkerHover || (() => {})}
+            locationId={locationId}
+            isCertified={isCertified}
+            activeView={activeView}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
+          />
+        );
+      })}
+      
+      {/* Add controllers */}
+      <MapController 
+        userLocation={userLocation} 
+        searchRadius={searchRadius}
+      />
+      
+      {/* Add the mobile map fixer for better mobile experience */}
+      {useMobileMapFixer && isMobile && <MobileMapFixer />}
+    </MapContainer>
   );
 };
 

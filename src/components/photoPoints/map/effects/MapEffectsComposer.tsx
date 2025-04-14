@@ -3,7 +3,6 @@ import React from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
-import RadarSweepAnimation from '../RadarSweepAnimation';
 
 interface MapEffectsComposerProps {
   center?: [number, number];
@@ -12,7 +11,6 @@ interface MapEffectsComposerProps {
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
-  isScanning?: boolean;
 }
 
 /**
@@ -24,8 +22,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   userLocation,
   activeView = 'certified',
   searchRadius = 100,
-  onSiqsCalculated,
-  isScanning = false
+  onSiqsCalculated
 }) => {
   const map = useMap();
   
@@ -48,15 +45,6 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
         searchRadius={searchRadius}
         onSiqsCalculated={onSiqsCalculated}
       />
-      
-      {/* Radar sweep animation - only show for calculated view */}
-      {activeView === 'calculated' && userLocation && (
-        <RadarSweepAnimation 
-          userLocation={userLocation}
-          searchRadius={searchRadius}
-          isScanning={isScanning}
-        />
-      )}
     </>
   );
 };
