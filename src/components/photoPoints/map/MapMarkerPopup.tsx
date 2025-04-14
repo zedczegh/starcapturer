@@ -1,13 +1,13 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
 import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
-import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { formatDistance } from '@/utils/location/formatDistance';
+import { useEnhancedLocation } from '@/hooks/useEnhancedLocation';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -23,6 +23,13 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
     location,
     language,
     locationCounter: null
+  });
+
+  // Get enhanced location details
+  const { locationDetails } = useEnhancedLocation({
+    latitude: location.latitude,
+    longitude: location.longitude,
+    skip: !location.latitude || !location.longitude
   });
   
   // Get certification info if available
@@ -64,6 +71,28 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
         </div>
       )}
       
+      {/* Show street level information if available */}
+      {locationDetails?.streetName && (
+        <div className="flex items-center mb-2">
+          <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {locationDetails.streetName}
+          </span>
+        </div>
+      )}
+      
+      {/* Show town/city information */}
+      {locationDetails?.townName && locationDetails.townName !== locationDetails.streetName && (
+        <div className="flex items-center mb-2">
+          <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {locationDetails.townName}
+            {locationDetails.cityName && locationDetails.cityName !== locationDetails.townName && 
+              `, ${locationDetails.cityName}`}
+          </span>
+        </div>
+      )}
+      
       {/* Show original location name if different from nearest town name */}
       {showOriginalName && (
         <div className="flex items-center mb-2">
@@ -75,7 +104,8 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
       )}
       
       {/* Display detailed location information from nearestTownInfo */}
-      {nearestTownInfo && nearestTownInfo.detailedName && (
+      {nearestTownInfo && nearestTownInfo.detailedName && 
+        (!locationDetails?.formattedName || locationDetails.formattedName !== nearestTownInfo.detailedName) && (
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground line-clamp-1">

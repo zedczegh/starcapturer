@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { Language } from '@/services/geocoding/types';
 
 interface DisplayNameResolverProps {
   location: SharedAstroSpot;
@@ -25,7 +26,7 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
     if (location.latitude && location.longitude) {
       setIsLoading(true);
       
-      getEnhancedLocationDetails(location.latitude, location.longitude, language)
+      getEnhancedLocationDetails(location.latitude, location.longitude, language as Language)
         .then(details => {
           if (isMounted) {
             setEnhancedLocation(details);

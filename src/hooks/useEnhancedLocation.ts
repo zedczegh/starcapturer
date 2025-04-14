@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getEnhancedLocationDetails, EnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { Language } from '@/services/geocoding/types';
 
 interface UseEnhancedLocationProps {
   latitude?: number;
@@ -35,7 +36,7 @@ export function useEnhancedLocation({
         setLoading(true);
         setError(null);
         
-        const details = await getEnhancedLocationDetails(latitude, longitude, language);
+        const details = await getEnhancedLocationDetails(latitude, longitude, language as Language);
         
         if (isMounted) {
           setLocationDetails(details);
@@ -65,7 +66,7 @@ export function useEnhancedLocation({
     error,
     refetch: () => {
       if (latitude && longitude) {
-        getEnhancedLocationDetails(latitude, longitude, language)
+        getEnhancedLocationDetails(latitude, longitude, language as Language)
           .then(details => setLocationDetails(details))
           .catch(err => setError(err));
       }

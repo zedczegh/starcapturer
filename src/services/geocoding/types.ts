@@ -1,41 +1,28 @@
 
+/**
+ * Supported languages for geocoding services
+ */
 export type Language = 'en' | 'zh';
 
+/**
+ * Basic location information
+ */
 export interface Location {
   name: string;
   latitude: number;
   longitude: number;
-  placeDetails?: string;
+  formattedAddress?: string;
 }
 
-export interface CityAlternative {
-  name: string;
-  chinese: string;
-  alternatives: string[];
-  coordinates: [number, number];
-  placeDetails?: string;
+/**
+ * Extended location with detailed naming and hierarchy
+ */
+export interface DetailedLocation extends Location {
+  streetName?: string;
+  townName?: string;
+  cityName?: string;
+  countyName?: string;
+  stateName?: string;
+  countryName?: string;
+  distance?: number;
 }
-
-export interface ChineseLocation {
-  areaCode: string;
-  provinceCode: string;
-  province: string;
-  cityCode: string;
-  city: string;
-  districtCode: string;
-  district: string;
-  nameEn: string;
-  pinyin: string;
-  longitude: number;
-  latitude: number;
-  bortleScale?: number;
-}
-
-export interface GeocodeResponse {
-  success: boolean;
-  results: Location[];
-  error?: string;
-}
-
-// Add the MatchScore interface to consolidate types
-export type { MatchScore, PinyinVariation, PinyinVariationsMap } from './matching/types';
