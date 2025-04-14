@@ -26,12 +26,14 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       <WorldBoundsController />
       
       {/* Handle real-time SIQS calculations */}
-      <SiqsEffectsController 
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={onSiqsCalculated}
-      />
+      {userLocation && (
+        <SiqsEffectsController 
+          userLocation={userLocation}
+          activeView={activeView}
+          searchRadius={searchRadius}
+          onSiqsCalculated={onSiqsCalculated}
+        />
+      )}
     </>
   );
 };
