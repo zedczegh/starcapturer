@@ -94,16 +94,32 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       return;
     }
     
-    // Create radar sweep effect
+    // Calculate the proper size based on the search radius
+    // The size should match the actual radius size on the map
+    const radiusInPixels = searchRadius * 1000 / 
+      map.getZoom() * 0.000045; // Adjust this factor based on zoom level
+    
+    // Create container element for the radar sweep
+    const container = document.createElement('div');
+    container.className = 'radar-sweep-container';
+    container.style.width = `${radiusInPixels * 2}px`;
+    container.style.height = `${radiusInPixels * 2}px`;
+    container.style.borderRadius = '50%';
+    container.style.overflow = 'hidden';
+    
+    // Create the actual sweep element
     const sweep = document.createElement('div');
     sweep.className = 'radar-sweep';
+    container.appendChild(sweep);
     
-    // Add the sweep element to the map's overlay pane
+    // Use a smaller icon size to better match the circle radius
+    const iconSize = searchRadius * 2000 / map.getZoom(); // Adjust based on zoom level
+    
     const sweepIcon = L.divIcon({
-      html: sweep,
-      className: 'radar-sweep-container',
-      iconSize: [searchRadius * 20, searchRadius * 20],
-      iconAnchor: [searchRadius * 10, searchRadius * 10]
+      html: container,
+      className: 'radar-sweep-wrapper',
+      iconSize: [iconSize, iconSize],
+      iconAnchor: [iconSize / 2, iconSize / 2]
     });
     
     const sweepMarker = L.marker(
@@ -125,8 +141,16 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     const styleEl = document.createElement('style');
     styleEl.id = 'radius-animation-styles';
     styleEl.innerHTML = `
-      .radar-sweep-container {
+      .radar-sweep-wrapper {
         z-index: 400;
+      }
+      
+      .radar-sweep-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
         opacity: 0.6;
       }
       
@@ -145,9 +169,12 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
           rgba(139, 92, 246, 0) 180deg,
           rgba(139, 92, 246, 0) 360deg
         );
-        animation: radarSweep 8s linear infinite;
+        animation: radarSweep 6s linear infinite;
         box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
         filter: blur(2px);
+        width: 100%;
+        height: 100%;
+        clip-path: circle(50%);
       }
       
       @keyframes radarSweep {
