@@ -1,5 +1,4 @@
-
-import { MotionProps } from 'framer-motion';
+import { MotionProps, Variants } from 'framer-motion';
 
 /**
  * Shared animation variants for map legend components
@@ -84,7 +83,7 @@ export const markerHoverVariants = {
 };
 
 // Legend tab animations
-export const tabGlowVariants = {
+export const tabGlowVariants: Variants = {
   initial: {
     boxShadow: "0 0 0 rgba(139, 92, 246, 0)"
   },
@@ -97,7 +96,7 @@ export const tabGlowVariants = {
     transition: {
       duration: 3,
       repeat: Infinity,
-      repeatType: "loop" // Fixed here: changed string to specific literal "loop"
+      repeatType: "loop"
     }
   }
 };
