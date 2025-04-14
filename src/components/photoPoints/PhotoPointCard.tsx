@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star } from "lucide-react";
+import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDisplayName } from "./cards/DisplayNameResolver";
+import { findNearestTown } from "@/utils/nearestTownCalculator";
+import { formatDistance } from "@/utils/location/formatDistance";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -37,7 +39,14 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     locationCounter: null
   });
   
-  const formatDistance = (distance?: number) => {
+  // Get detailed location information
+  const nearestTownInfo = useMemo(() => 
+    point.latitude && point.longitude ? 
+      findNearestTown(point.latitude, point.longitude, language) : 
+      null
+  , [point.latitude, point.longitude, language]);
+  
+  const formatCardDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
     if (distance < 1) 
@@ -114,11 +123,31 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
+      {/* Display detailed location information from nearestTownInfo */}
+      {nearestTownInfo && nearestTownInfo.detailedName && (
+        <div className="mt-1.5 mb-2 flex items-center">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {nearestTownInfo.detailedName}
+          </span>
+        </div>
+      )}
+      
+      {/* Display coordinates */}
+      {point.latitude && point.longitude && (
+        <div className="mt-1.5 mb-2 flex items-center">
+          <Navigation className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">
+            {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
+          </span>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center mt-2">
         <div className="flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
           <span className="text-sm text-muted-foreground font-medium">
-            {formatDistance(point.distance)}
+            {formatCardDistance(point.distance)}
           </span>
         </div>
         

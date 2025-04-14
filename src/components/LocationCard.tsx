@@ -11,6 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import LightPollutionIndicator from "./location/LightPollutionIndicator";
 import { useDisplayName } from "./photoPoints/cards/DisplayNameResolver";
+import { findNearestTown } from "@/utils/nearestTownCalculator";
 
 interface LocationCardProps {
   id: string;
@@ -77,6 +78,9 @@ const LocationCard: React.FC<LocationCardProps> = ({
     language,
     locationCounter: null
   });
+  
+  // Get nearest town information for more detailed location display
+  const nearestTownInfo = findNearestTown(latitude, longitude, language);
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {
@@ -152,6 +156,16 @@ const LocationCard: React.FC<LocationCardProps> = ({
                   <MapPin className="h-3.5 w-3.5 mr-1" />
                   <span>
                     {language === 'en' ? name : (chineseName || name)}
+                  </span>
+                </div>
+              )}
+              
+              {/* Display detailed location information based on nearestTownInfo */}
+              {nearestTownInfo && (
+                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  <span className="line-clamp-1">
+                    {nearestTownInfo.detailedName}
                   </span>
                 </div>
               )}
