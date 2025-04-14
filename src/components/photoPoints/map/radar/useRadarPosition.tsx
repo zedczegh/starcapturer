@@ -46,7 +46,8 @@ export const useRadarPosition = ({
     
     const size = radiusInPixels * 2;
     
-    // When position changes, this will trigger the transition in RadarElement
+    // Ensure exact centering by calculating the exact left/top position
+    // The point is at the center of the circle, so we need to subtract half the size
     setRadarStyles({
       size,
       left: point.x - radiusInPixels,

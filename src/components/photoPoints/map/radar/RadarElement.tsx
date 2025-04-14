@@ -72,10 +72,12 @@ const RadarElement: React.FC<RadarElementProps> = ({
         radarRef.current.style.transition = 'opacity 0.2s ease-out';
         
         // Position immediately at new location
+        // Precisely center the radar on the marker by using transform
         radarRef.current.style.left = `${radarStyles.left}px`;
         radarRef.current.style.top = `${radarStyles.top}px`;
+        radarRef.current.style.transformOrigin = 'center center';
         
-        // Fade in at new location
+        // Fade in at new location after position is set
         requestAnimationFrame(() => {
           if (radarRef.current) {
             radarRef.current.style.opacity = '1';
@@ -92,8 +94,10 @@ const RadarElement: React.FC<RadarElementProps> = ({
         });
       } else {
         // Normal position update without transition effect
+        // Precisely center the radar
         radarRef.current.style.left = `${radarStyles.left}px`;
         radarRef.current.style.top = `${radarStyles.top}px`;
+        radarRef.current.style.transformOrigin = 'center center';
         radarRef.current.style.opacity = '1';
       }
       

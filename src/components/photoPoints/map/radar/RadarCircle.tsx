@@ -29,7 +29,10 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
     if (!userLocation || !map) return null;
     
     // Create with proper radius (searchRadius is in km, L.circle uses meters)
-    const circle = L.circle([userLocation.latitude, userLocation.longitude], {
+    // Create the circle exactly centered on the user location
+    const latlng = L.latLng(userLocation.latitude, userLocation.longitude);
+    
+    const circle = L.circle(latlng, {
       radius: searchRadius * 1000, // Convert km to meters
       color: '#0ea5e9', // Sky blue
       fillColor: '#0ea5e9',
@@ -157,8 +160,8 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
           }
         }
       } else {
-        // Just update position and radius
-        circleRef.current.setLatLng([userLocation.latitude, userLocation.longitude]);
+        // Just update position and radius - ensure exact center positioning
+        circleRef.current.setLatLng(L.latLng(userLocation.latitude, userLocation.longitude));
         circleRef.current.setRadius(searchRadius * 1000);
       }
     }

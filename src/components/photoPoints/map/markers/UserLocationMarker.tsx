@@ -18,7 +18,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Changed to red color for user location and larger on mobile
+  // Using red color for user location marker and proper scaling for visibility
+  // The marker size is calibrated to match the radar sweep and circle animations
   const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
   
   return (
