@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ChevronLeft, Info, Star, Circle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,26 +25,14 @@ const MapLegend: React.FC<MapLegendProps> = ({
   const displayStarLegend = showStarLegend || activeView === 'certified';
   const displayCircleLegend = showCircleLegend || activeView === 'calculated';
   
-  // Enhanced event isolation function to completely prevent event propagation to map
-  const isolateEvent = (e: React.MouseEvent | React.TouchEvent) => {
+  // Function to prevent event propagation
+  const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    e.nativeEvent.stopImmediatePropagation();
-    e.nativeEvent.preventDefault();
-    return false;
   };
 
   return (
-    <div 
-      className="absolute bottom-3 right-2 z-[999]" 
-      onClick={isolateEvent} 
-      onTouchStart={isolateEvent}
-      onTouchMove={isolateEvent}
-      onTouchEnd={isolateEvent}
-      onMouseDown={isolateEvent}
-      onMouseUp={isolateEvent}
-      onPointerDown={isolateEvent}
-    >
+    <div className="absolute bottom-8 right-2 z-[999]" onClick={stopPropagation} onTouchStart={stopPropagation}>
       <div className="relative">
         {/* The collapsible panel */}
         <AnimatePresence>
@@ -56,7 +44,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
               transition={{ duration: 0.3 }}
               className={`p-3.5 rounded-lg backdrop-blur-md bg-background/80 border border-primary/30 
                          shadow-lg overflow-y-auto max-h-[80vh] w-[260px] ${className}`}
-              onClick={isolateEvent}
+              onClick={stopPropagation}
             >
               {/* Legend Header */}
               <div className="flex items-center justify-between mb-3">
@@ -70,10 +58,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
                   variant="ghost" 
                   size="sm" 
                   className="h-7 w-7 p-0"
-                  onClick={(e) => {
-                    isolateEvent(e);
-                    setIsCollapsed(true);
-                  }}
+                  onClick={() => setIsCollapsed(true)}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -176,10 +161,10 @@ const MapLegend: React.FC<MapLegendProps> = ({
             ease: "easeInOut"
           }}
           onClick={(e) => {
-            isolateEvent(e); 
+            stopPropagation(e);
             setIsCollapsed(!isCollapsed);
           }}
-          className={`flex items-center justify-center p-0 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
+          className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
                     rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all ${isCollapsed ? '' : 'hidden'}`}
           style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
         >

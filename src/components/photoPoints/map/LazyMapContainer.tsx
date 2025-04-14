@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -115,7 +114,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Use MapEvents component for map click handling */}
+      {/* Use MapEvents component instead of MapClickHandler */}
       <MapEvents onMapClick={handleMapClick} />
       
       {userLocation && (
@@ -158,16 +157,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
       
-      {/* Map legend with completely isolated events */}
-      <div className="leaflet-control-container">
-        <div className="leaflet-bottom leaflet-right">
-          <MapLegend 
-            activeView={activeView} 
-            showStarLegend={activeView === 'certified'}
-            showCircleLegend={activeView === 'calculated'}
-          />
-        </div>
-      </div>
+      {/* Map legend with improved component */}
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+      />
     </MapContainer>
   );
 };
