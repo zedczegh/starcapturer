@@ -160,3 +160,39 @@
   background-color: rgba(139, 92, 246, 0.3);
   border-radius: 20px;
 }
+
+/* Add a fancy hover effect for legend items */
+.legend-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.legend-item:hover {
+  transform: translateX(3px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Add pulse animation for the legend tab */
+@keyframes pulse-border {
+  0% { border-color: rgba(139, 92, 246, 0.2); }
+  50% { border-color: rgba(139, 92, 246, 0.6); }
+  100% { border-color: rgba(139, 92, 246, 0.2); }
+}
+
+.pulse-border {
+  animation: pulse-border 3s infinite;
+}
+
+/* Add a subtle background pattern */
+.legend-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.1) 2px, transparent 0);
+  background-size: 25px 25px;
+}
+
+/* Enhance legend title with gradient text */
+.legend-title {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(124, 58, 237, 1));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
+}

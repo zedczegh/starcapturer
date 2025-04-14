@@ -6,20 +6,37 @@ import { MotionProps } from 'framer-motion';
  */
 
 export const containerVariants = {
-  hidden: { opacity: 0, scale: 0.95 },
+  hidden: { 
+    opacity: 0, 
+    scale: 0.95,
+    transition: {
+      staggerChildren: 0.05
+    }
+  },
   visible: { 
     opacity: 1, 
     scale: 1,
     transition: { 
-      duration: 0.3,
-      staggerChildren: 0.1
+      duration: 0.4,
+      ease: "easeOut",
+      staggerChildren: 0.08,
+      delayChildren: 0.1
     }
   }
 };
 
 export const itemVariants = {
-  hidden: { opacity: 0, x: -10 },
-  visible: { opacity: 1, x: 0 }
+  hidden: { opacity: 0, x: -8, y: 2 },
+  visible: { 
+    opacity: 1, 
+    x: 0, 
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20
+    }
+  }
 };
 
 export const pulseVariants = {
@@ -51,4 +68,36 @@ export const markerAnimationProps = (delay: number = 0): MotionProps => ({
 export const hoverMotionProps: MotionProps = {
   whileHover: { x: 3 },
   transition: { type: 'spring', stiffness: 300 }
+};
+
+// Marker hover animations
+export const markerHoverVariants = {
+  rest: { 
+    scale: 1,
+    boxShadow: "0 0 0 rgba(0, 0, 0, 0.2)"
+  },
+  hover: { 
+    scale: 1.1,
+    boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
+    transition: { type: "spring", stiffness: 400, damping: 10 }
+  }
+};
+
+// Legend tab animations
+export const tabGlowVariants = {
+  initial: {
+    boxShadow: "0 0 0 rgba(139, 92, 246, 0)"
+  },
+  animate: {
+    boxShadow: [
+      "0 0 0 rgba(139, 92, 246, 0)",
+      "0 0 15px rgba(139, 92, 246, 0.5)",
+      "0 0 0 rgba(139, 92, 246, 0)"
+    ],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      repeatType: "loop"
+    }
+  }
 };

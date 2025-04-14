@@ -77,10 +77,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handle map click to update location - now only works if userLocation is not set
+  // Handle map click to update location - only if userLocation is not already set
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate && !userLocation) {
       onLocationUpdate(lat, lng);
+      console.log("Setting new location from map click:", lat, lng);
+    } else {
+      console.log("Location update prevented - user location already set");
     }
   }, [onLocationUpdate, userLocation]);
   

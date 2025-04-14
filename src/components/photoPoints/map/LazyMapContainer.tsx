@@ -1,8 +1,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
+import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
@@ -12,6 +13,19 @@ import MobileMapFixer from './MobileMapFixer';
 
 // Configure leaflet to handle marker paths
 configureLeaflet();
+
+// MapClickHandler component to handle map click events
+const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+  const map = useMapEvents({
+    click: (e) => {
+      if (onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    }
+  });
+  
+  return null;
+};
 
 interface LazyMapContainerProps {
   center: [number, number];
@@ -89,12 +103,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onLocationClick]);
   
-  // Handle map click - now prevents moving user location
+  // Handle map click - this function now checks if userLocation exists before allowing location updates
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    // Only call onMapClick if it's provided and not for user location updates
+    // Only call onMapClick if it's provided and userLocation is null
     if (onMapClick && !userLocation) {
-      // Only allow the first click to set the user location
-      // Subsequent clicks won't change the location once set
       onMapClick(lat, lng);
     }
     // If userLocation exists, we don't update it on map clicks
@@ -115,6 +127,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      
+      {/* Add MapClickHandler component to manage click events cleanly */}
+      <MapClickHandler onMapClick={handleMapClick} />
       
       {userLocation && (
         <UserLocationMarker 
