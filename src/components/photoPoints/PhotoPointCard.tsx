@@ -76,15 +76,18 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  // Use the detailed location name as the display name
-  const pointName = nearestTownInfo?.detailedName || 
-    (language === 'en' ? point.name : (point.chineseName || point.name));
+  // Use the detailed location name as the display name based on language
+  const pointName = language === 'zh' 
+    ? (nearestTownInfo?.detailedName || point.chineseName || point.name)
+    : (nearestTownInfo?.detailedName || point.name);
 
   // Check if we're using our database location name vs. original name
   const showOriginalName = nearestTownInfo && 
     nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
     point.name && 
-    !point.name.includes(nearestTownInfo.townName);
+    (language === 'zh' 
+      ? (point.chineseName && !point.chineseName.includes(nearestTownInfo.townName))
+      : !point.name.includes(nearestTownInfo.townName));
 
   return (
     <div 

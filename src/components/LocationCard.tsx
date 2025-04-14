@@ -24,11 +24,13 @@ interface LocationCardProps {
   bortleScale?: number;
   certification?: string;
   category?: string;
+  chineseName?: string;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
   id,
   name,
+  chineseName,
   latitude,
   longitude,
   siqs,
@@ -58,18 +60,21 @@ const LocationCard: React.FC<LocationCardProps> = ({
   // Get detailed nearest town information from the location database
   const nearestTownInfo = findNearestTown(latitude, longitude, language);
   
-  // Use the detailed location name as the main display title
-  let displayName = nearestTownInfo.detailedName;
+  // Use the detailed location name as the main display title based on language
+  let displayName = language === 'zh'
+    ? nearestTownInfo.detailedName
+    : nearestTownInfo.detailedName;
   
   // Fallback to generic names for calculated locations
   if (displayName === (language === 'en' ? 'Remote area' : '偏远地区')) {
     // Check if the name contains coordinates or is a remote area
-    if (name.includes("°") || 
-        name.includes("Location at") || 
-        name.includes("位置在")
+    const nameToCheck = language === 'zh' ? (chineseName || name) : name;
+    if (nameToCheck.includes("°") || 
+        nameToCheck.includes("Location at") || 
+        nameToCheck.includes("位置在")
     ) {
       // Use a generic name for calculated locations
-      const locationMatch = name.match(/calc-loc-(\d+)/);
+      const locationMatch = nameToCheck.match(/calc-loc-(\d+)/);
       if (locationMatch) {
         const locationNumber = parseInt(locationMatch[1]) || 1;
         displayName = language === 'en' 
@@ -81,7 +86,9 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   // Determine if we should show the original name as a secondary line
   const showOriginalName = nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') &&
-    name && !name.includes(nearestTownInfo.townName);
+    (language === 'zh' 
+      ? (chineseName && !chineseName.includes(nearestTownInfo.townName)) 
+      : (name && !name.includes(nearestTownInfo.townName)));
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {
@@ -96,6 +103,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
       state={{
         id,
         name,
+        chineseName,
         latitude,
         longitude,
         timestamp
@@ -155,7 +163,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
                 <div className="flex items-center text-sm text-muted-foreground mt-1">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
                   <span>
-                    {language === 'en' ? name : name}
+                    {language === 'en' ? name : (chineseName || name)}
                   </span>
                 </div>
               )}

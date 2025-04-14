@@ -20,9 +20,10 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
   const nearestTownInfo = location.latitude && location.longitude ? 
     findNearestTown(location.latitude, location.longitude, language) : null;
   
-  // Use the detailed location name as the display name
-  const displayName = nearestTownInfo?.detailedName || 
-    (language === 'en' ? location.name : (location.chineseName || location.name));
+  // Use the detailed location name as the display name based on language
+  const displayName = language === 'zh'
+    ? (nearestTownInfo?.detailedName || location.chineseName || location.name)
+    : (nearestTownInfo?.detailedName || location.name);
   
   // Get certification info if available
   const hasCertification = location.certification || location.isDarkSkyReserve;
@@ -41,8 +42,9 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
   // Only show original name if it's different from the nearest town name we're using
   const showOriginalName = nearestTownInfo && 
     nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
-    location.name && 
-    !location.name.includes(nearestTownInfo.townName);
+    (language === 'zh'
+      ? (location.chineseName && !location.chineseName.includes(nearestTownInfo.townName))
+      : (location.name && !location.name.includes(nearestTownInfo.townName)));
   
   return (
     <div className="p-3 min-w-[200px] max-w-[260px]">

@@ -97,7 +97,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const nearestTownInfo = location.latitude && location.longitude ? 
     findNearestTown(location.latitude, location.longitude, language) : null;
   
-  // Use detailed location name as the display name
+  // Use detailed location name as the display name based on language
   let displayName;
   
   if (nearestTownInfo && nearestTownInfo.detailedName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
@@ -109,15 +109,18 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       ? `Potential ideal dark site ${locationCounter}`
       : `潜在理想暗夜地点 ${locationCounter}`;
   } else {
-    // Fallback to original name 
-    displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+    // Fallback to original name based on language
+    displayName = language === 'zh' 
+      ? (location.chineseName || location.name) 
+      : location.name;
   }
   
   // Check if we need to show original name
   const showOriginalName = nearestTownInfo && 
     nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
-    location.name && 
-    !location.name.includes(nearestTownInfo.townName);
+    (language === 'zh'
+      ? (location.chineseName && !location.chineseName.includes(nearestTownInfo.townName))
+      : (location.name && !location.name.includes(nearestTownInfo.townName)));
   
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
   
@@ -128,7 +131,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const handleViewDetails = () => {
     const locationData = {
       id: location.id || `calc-loc-${Date.now()}`,
-      name: displayName,
+      name: location.name,
+      chineseName: location.chineseName,
       latitude: location.latitude,
       longitude: location.longitude,
       bortleScale: location.bortleScale,
