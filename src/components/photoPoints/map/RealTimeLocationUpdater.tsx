@@ -23,27 +23,10 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   const lastFetchRef = useRef<number>(0);
   const locationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const [cacheCleared, setCacheCleared] = useState<boolean>(false);
-  const [isLocationChanged, setIsLocationChanged] = useState(false);
 
   // Update reference to track location changes
   useEffect(() => {
     if (userLocation) {
-      // Check if location has changed
-      if (
-        locationRef.current &&
-        (locationRef.current.latitude !== userLocation.latitude ||
-         locationRef.current.longitude !== userLocation.longitude)
-      ) {
-        setIsLocationChanged(true);
-        
-        // Reset location changed flag after 5 seconds
-        const timer = setTimeout(() => {
-          setIsLocationChanged(false);
-        }, 5000);
-        
-        return () => clearTimeout(timer);
-      }
-      
       locationRef.current = userLocation;
     }
   }, [userLocation]);
@@ -179,7 +162,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       <LocationControls
         onGetLocation={handleGetCurrentLocation}
         onClearCache={handleClearCache}
-        loading={loading || isLocationChanged}
+        loading={loading}
         cacheCleared={cacheCleared}
       />
       

@@ -139,7 +139,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           userLocation={userLocation}
           searchRadius={searchRadius}
           isSearching={isSearching}
-          activeView={activeView}
         />
       )}
       

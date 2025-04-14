@@ -34,8 +34,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
-  const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
-  const [isLocationChanged, setIsLocationChanged] = useState(false);
   
   const { 
     hoveredLocationId, 
@@ -64,25 +62,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   
   useEffect(() => {
-    if (userLocation) {
-      if (!prevLocation || 
-          prevLocation.latitude !== userLocation.latitude || 
-          prevLocation.longitude !== userLocation.longitude) {
-        setIsLocationChanged(true);
-        setPrevLocation({...userLocation});
-        
-        const timer = setTimeout(() => {
-          setIsLocationChanged(false);
-        }, 5000);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [userLocation, prevLocation]);
-  
-  useEffect(() => {
-    setIsSearching(certifiedLocationsLoading || !mapReady || isLocationChanged);
-  }, [certifiedLocationsLoading, mapReady, isLocationChanged]);
+    setIsSearching(certifiedLocationsLoading || !mapReady);
+  }, [certifiedLocationsLoading, mapReady]);
   
   useEffect(() => {
     const adjustHeight = () => {
