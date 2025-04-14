@@ -1,5 +1,4 @@
-
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +8,8 @@ import { motion } from "framer-motion";
 import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
 import { getTranslatedDescription } from "@/components/siqs/utils/translations/descriptionTranslator";
+import { validateSIQSData } from "@/utils/validation/dataValidation";
+import { useToast } from "@/components/ui/use-toast";
 
 interface SIQSSummaryProps {
   siqsResult: any;
@@ -18,9 +19,40 @@ interface SIQSSummaryProps {
 
 const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, locationData }) => {
   const { t, language } = useLanguage();
+  const [validatedSiqs, setValidatedSiqs] = useState(siqsResult);
+  const { toast } = useToast();
   
-  // If no SIQS data available, show placeholder
-  if (!siqsResult) {
+  useEffect(() => {
+    const isValid = validateSIQSData(siqsResult);
+    
+    if (isValid) {
+      setValidatedSiqs(siqsResult);
+    } else if (siqsResult && typeof siqsResult.score === 'number') {
+      console.warn("SIQS data structure is invalid, creating basic object");
+      setValidatedSiqs({
+        score: siqsResult.score,
+        isViable: siqsResult.score >= 2,
+        factors: siqsResult.factors || []
+      });
+    } else {
+      console.error("Invalid SIQS data provided:", siqsResult);
+      if (!validatedSiqs) {
+        setValidatedSiqs(null);
+      }
+      
+      toast({
+        title: t("SIQS Data Issue", "SIQS数据问题"),
+        description: t(
+          "There was an issue with the SIQS data. Some information may not be accurate.",
+          "SIQS数据出现问题，部分信息可能不准确。"
+        ),
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  }, [siqsResult, t, toast, validatedSiqs]);
+  
+  if (!validatedSiqs) {
     return (
       <Card className="glassmorphism-strong">
         <CardHeader>
@@ -36,16 +68,13 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     );
   }
   
-  // Format the SIQS score for display
   const siqsScore = useMemo(() => {
-    return typeof siqsResult.score === 'number' ? 
-      Math.round(siqsResult.score * 10) / 10 : 0;
-  }, [siqsResult.score]);
+    return typeof validatedSiqs.score === 'number' ? 
+      Math.round(validatedSiqs.score * 10) / 10 : 0;
+  }, [validatedSiqs.score]);
     
-  // Get color class based on score
   const scoreColorClass = getProgressColorClass(siqsScore);
   
-  // Get quality level text
   const qualityText = useMemo(() => {
     return t(getSIQSLevel(siqsScore), 
       getSIQSLevel(siqsScore) === 'Excellent' ? "优秀" : 
@@ -55,16 +84,13 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     );
   }, [siqsScore, t]);
   
-  // Translate factor descriptions if needed
   const translatedFactors = useMemo(() => {
-    if (!siqsResult.factors || !Array.isArray(siqsResult.factors)) return [];
+    if (!validatedSiqs.factors || !Array.isArray(validatedSiqs.factors)) return [];
     
-    // First check if we need to add a Clear Sky Rate factor if it's missing
-    const factors = [...siqsResult.factors];
+    const factors = [...validatedSiqs.factors];
     const hasClearSkyFactor = factors.some(factor => 
       factor.name === 'Clear Sky Rate' || factor.name === '晴空率');
     
-    // Add Clear Sky Rate factor if it's available in weatherData but not in factors
     if (!hasClearSkyFactor && weatherData?.clearSkyRate) {
       const clearSkyRate = weatherData.clearSkyRate;
       const clearSkyScore = Math.min(10, clearSkyRate / 10);
@@ -76,9 +102,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       });
     }
     
-    // Sort factors to ensure Clear Sky Rate appears after Air Quality
     factors.sort((a, b) => {
-      // Define the order of factors
       const order = [
         'Cloud Cover', '云层覆盖',
         'Light Pollution', '光污染',
@@ -93,16 +117,13 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       const indexA = order.indexOf(a.name);
       const indexB = order.indexOf(b.name);
       
-      // If both factors are in the order array, sort by index
       if (indexA !== -1 && indexB !== -1) {
         return indexA - indexB;
       }
       
-      // If only one factor is in the order array, prioritize it
       if (indexA !== -1) return -1;
       if (indexB !== -1) return 1;
       
-      // Otherwise, keep original order
       return 0;
     });
     
@@ -111,7 +132,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       description: language === 'zh' ? 
         getTranslatedDescription(factor.description, 'zh') : 
         factor.description,
-      // Also translate factor names
       name: language === 'zh' ? 
         (factor.name === 'Cloud Cover' ? '云层覆盖' :
          factor.name === 'Light Pollution' ? '光污染' :
@@ -124,7 +144,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
          factor.name) : 
         factor.name
     }));
-  }, [siqsResult.factors, weatherData, language]);
+  }, [validatedSiqs.factors, weatherData, language]);
   
   return (
     <Card className="glassmorphism-strong">
@@ -135,7 +155,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* SIQS Score with Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">{t("Overall Score", "总分")}</h3>
@@ -169,7 +188,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
           </p>
         </div>
         
-        {/* Contributing Factors */}
         {translatedFactors.length > 0 && (
           <div className="mt-4 space-y-4">
             <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响天文观测质量的因素")}</h4>
@@ -177,7 +195,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
           </div>
         )}
         
-        {/* Dedicated Clear Sky Rate section to ensure it's displayed */}
         {weatherData?.clearSkyRate && !translatedFactors.some(f => 
           f.name === 'Clear Sky Rate' || f.name === '晴空率'
         ) && (
@@ -206,7 +223,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   );
 };
 
-// Helper function for SIQS description
 const getSIQSDescription = (score: number, t: any) => {
   if (score >= 9) {
     return t("Exceptional conditions for astrophotography.", "天文摄影的绝佳条件。");

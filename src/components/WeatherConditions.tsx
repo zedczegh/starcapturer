@@ -8,6 +8,8 @@ import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherCondition
 import { motion } from "framer-motion";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 import NighttimeCloudInfo from "@/components/weather/NighttimeCloudInfo";
+import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
+import { useToast } from "@/components/ui/use-toast";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -79,6 +81,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
+  const { toast } = useToast();
   
   // Calculate nighttime cloud cover when forecast data is available
   const nighttimeCloudData = useMemo(() => {
@@ -133,15 +136,40 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   }, [forecastData]);
   
-  // Ensure weather data is stable and validated
+  // Validate weather data against forecast data
   useEffect(() => {
-    // Only update stable weather data if we have valid new data
-    if (validateWeatherData(weatherData)) {
+    if (forecastData && validateWeatherData(weatherData)) {
+      const { isValid, correctedData, discrepancies } = validateWeatherAgainstForecast(
+        weatherData,
+        forecastData
+      );
+      
+      if (!isValid && correctedData && discrepancies) {
+        console.log("Weather data discrepancies detected:", discrepancies);
+        
+        // Update weather data with corrected values
+        setStableWeatherData(correctedData);
+        
+        // Show toast notification if significant discrepancies found
+        if (discrepancies.length > 2) { // Only show toast for multiple significant discrepancies
+          toast({
+            title: t("Weather Data Updated", "天气数据已更新"),
+            description: t(
+              "Weather data has been updated to match current forecast.",
+              "天气数据已更新以匹配当前预报。"
+            ),
+            duration: 3000,
+          });
+        }
+      } else {
+        // If data is valid, use the provided data
+        setStableWeatherData(weatherData);
+      }
+    } else if (validateWeatherData(weatherData)) {
+      // No forecast data, but weather data is valid
       setStableWeatherData(weatherData);
-    } else {
-      console.warn("Received invalid weather data, keeping previous stable data");
     }
-  }, [weatherData]);
+  }, [weatherData, forecastData, toast, t]);
   
   // Use memoized translations and normalizations for better performance
   const translatedData = useMemo(() => {
