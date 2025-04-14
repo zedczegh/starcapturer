@@ -74,34 +74,17 @@ const LocationMarker = memo(({
     handleTouchMove
   });
   
-  // Effect to manage popup state based on hover with longer visibility
+  // Only handle visual styling on hover, no auto-popup
   useEffect(() => {
     const marker = markerRef.current;
     if (!marker) return;
     
-    let closeTimer: number | null = null;
-    
     if (isHovered) {
-      marker.openPopup();
       marker.getElement()?.classList.add('hovered');
-      
-      // If a close timer was running, clear it
-      if (closeTimer) {
-        clearTimeout(closeTimer);
-        closeTimer = null;
-      }
     } else {
-      // Add a delay before closing the popup to give users time to interact
-      closeTimer = window.setTimeout(() => {
-        marker.closePopup();
-        marker.getElement()?.classList.remove('hovered');
-      }, isMobile ? 4000 : 2000); // 4s on mobile, 2s on desktop
+      marker.getElement()?.classList.remove('hovered');
     }
-    
-    return () => {
-      if (closeTimer) clearTimeout(closeTimer);
-    };
-  }, [isHovered, isMobile]);
+  }, [isHovered]);
 
   return (
     <Marker

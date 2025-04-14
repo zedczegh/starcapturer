@@ -30,10 +30,11 @@ export const useMapEventHandlers = ({
     if (mapRef.current) {
       (window as any).leafletMap = mapRef.current;
       
+      // Disable auto-zoom on click/hover
+      const map = mapRef.current;
+      
       // Mobile-specific map setup
       if (isMobile) {
-        const map = mapRef.current;
-        
         // Enhance touch interaction
         if (map.tap) {
           map.tap.disable();
@@ -65,24 +66,16 @@ export const useMapEventHandlers = ({
           }, 200); // Extra delay on mobile
         });
         
-        // Optimize touch zoom behavior
-        map.touchZoom.disable();
-        map.touchZoom.enable();
-        
-        // Fix for iOS Safari scroll-bounce affecting map
-        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-          document.addEventListener('touchmove', (e) => {
-            // Check if the event has touches and if it's a pinch-zoom gesture
-            if (e.touches && e.touches.length > 1) {
-              e.preventDefault();
-            }
-          }, { passive: false });
-        }
+        // Disable double-click zoom since we don't want auto-zooms
+        map.doubleClickZoom.disable();
+      } else {
+        // Also disable double-click zoom on desktop
+        map.doubleClickZoom.disable();
       }
     }
   }, [onMapReady, isMobile]);
   
-  // Handle map click with mobile-specific optimizations
+  // Handle map click with disabled auto-zoom
   const handleMapClick = useCallback((lat: number, lng: number) => {
     // On mobile, prevent clicks right after drag operations
     if (isMobile && isDraggingRef.current) {
@@ -122,9 +115,14 @@ export const useMapEventHandlers = ({
           onMapClick(latitude, longitude);
           
           // Access the map instance and set view to the location
+          // but don't auto-zoom too much
           if (mapRef.current) {
             const leafletMap = mapRef.current;
-            leafletMap.setView([latitude, longitude], 12, {
+            const currentZoom = leafletMap.getZoom();
+            // Don't zoom in more than level 12
+            const newZoom = Math.min(12, currentZoom);
+            
+            leafletMap.setView([latitude, longitude], newZoom, {
               animate: true,
               duration: 1
             });

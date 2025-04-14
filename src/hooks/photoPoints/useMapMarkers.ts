@@ -1,9 +1,9 @@
+
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
- * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
- * and mobile touch optimizations
+ * Custom hook for managing map marker hover states with click-based popup behavior instead of hover
  */
 export const useMapMarkers = () => {
   // State for currently hovered location ID
@@ -35,7 +35,7 @@ export const useMapMarkers = () => {
 
   /**
    * Handle hover with improved anti-flicker algorithm
-   * Mobile-optimized to handle both hover and touch events
+   * Only affects visual appearance, doesn't auto-open popups
    */
   const handleHover = useCallback((id: string | null) => {
     // Prevent redundant updates for same ID
@@ -52,35 +52,22 @@ export const useMapMarkers = () => {
       debounceTimeoutRef.current = null;
     }
     
-    // Track current time
-    const now = Date.now();
-    
-    // For new hover target, set with slight delay for better stability
+    // For new hover target, set immediately for visual feedback only
     if (id !== null) {
-      // If rapidly changing between markers, use longer delay
-      // Mobile needs slightly longer delay to prevent accidental triggers
-      const delay = isMobile ? 
-        50 : // Mobile delay - reduced for better responsiveness
-        (now - hoverTimestamp.current < 300 ? 40 : 20); // Desktop delay
-      
-      debounceTimeoutRef.current = setTimeout(() => {
-        setHoveredLocationId(id);
-        lastHoverId.current = id;
-        hoverTimestamp.current = Date.now();
-        debounceTimeoutRef.current = null;
-      }, delay);
+      setHoveredLocationId(id);
+      lastHoverId.current = id;
+      hoverTimestamp.current = Date.now();
     } 
     // When leaving a marker completely
     else {
-      // Add a delay to prevent flicker on quick mouse movements
-      // Use longer delay on mobile to improve experience
+      // Small delay to prevent flicker on quick mouse movements
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverId.current = null;
         hoverTimeoutRef.current = null;
-      }, isMobile ? 150 : 50); // Reduced from 250ms for better responsiveness
+      }, 30); // Very short delay, just for visual smoothness
     }
-  }, [isMobile]);
+  }, []);
   
   /**
    * Handle touch start event for better touch interaction
@@ -107,35 +94,8 @@ export const useMapMarkers = () => {
     // Prevent default to avoid double-firing issues on some mobile browsers
     e.stopPropagation();
     
-    // Immediately show hover state on touch start
+    // Set hover state for visual feedback only
     handleHover(id);
-    
-    // For double tap, zoom in to marker
-    if (isDoubleTap) {
-      // Find the map instance
-      const leafletMap = (window as any).leafletMap;
-      if (leafletMap) {
-        // Get current zoom and increase it
-        const currentZoom = leafletMap.getZoom();
-        const newZoom = Math.min(currentZoom + 1, 18);
-        
-        // Find marker position and zoom to it
-        const locations = document.querySelectorAll(`.leaflet-marker-icon[data-id="${id}"]`);
-        if (locations.length > 0) {
-          const rect = locations[0].getBoundingClientRect();
-          const point = {
-            x: rect.left + rect.width/2,
-            y: rect.top + rect.height/2
-          };
-          const latlng = leafletMap.containerPointToLatLng([point.x, point.y]);
-          
-          // Zoom to marker position
-          leafletMap.setView(latlng, newZoom, {
-            animate: true
-          });
-        }
-      }
-    }
   }, [isMobile, handleHover]);
   
   /**
@@ -148,22 +108,10 @@ export const useMapMarkers = () => {
     e.stopPropagation();
     
     // Only consider it a tap if minimal movement occurred
-    if (touchMoveCount.current < 5) {
-      // Keep hover state visible significantly longer on mobile
-      // This gives users enough time to read and interact with the popup
-      setTimeout(() => {
-        // Only clear if this is still the active hover
-        if (lastHoverId.current === id) {
-          handleHover(null);
-        }
-      }, 5000); // Keep popup open for 5 seconds
-    } else {
-      // If significant movement occurred, clear immediately
-      handleHover(null);
-    }
+    // Visual state is managed by the marker component's click handler now
     
     touchStartPos.current = null;
-  }, [isMobile, handleHover]);
+  }, [isMobile]);
   
   /**
    * Handle touch move to detect dragging vs tapping
@@ -178,7 +126,7 @@ export const useMapMarkers = () => {
       const moveX = Math.abs(e.touches[0].clientX - touchStartPos.current.x);
       const moveY = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
       
-      // If moved more than threshold, consider it a drag and clear hover
+      // If moved more than threshold, consider it a drag
       if (moveX > 10 || moveY > 10) {
         // If significant movement, clear hover immediately
         if (moveX > 30 || moveY > 30) {

@@ -12,7 +12,7 @@ import MapLocationsLayer from './container/MapLocationsLayer';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapUtils } from '@/hooks/photoPoints/useMapUtils';
 
-// Component to handle automatic zoom updates when radius or center changes
+// Component to handle optional zoom updates when radius changes significantly
 const DynamicZoomUpdater = ({ 
   zoom, 
   center, 
@@ -24,33 +24,40 @@ const DynamicZoomUpdater = ({
 }) => {
   const map = useMap();
   const { getZoomLevel } = useMapUtils();
+  const lastRadiusRef = React.useRef(searchRadius);
   
-  // Update zoom when searchRadius changes
+  // Only update zoom when searchRadius changes significantly
   useEffect(() => {
     if (map) {
-      const calculatedZoom = getZoomLevel(searchRadius);
-      
-      // Only animate if the zoom difference is significant
-      const zoomDifference = Math.abs(map.getZoom() - calculatedZoom);
-      
-      if (zoomDifference > 0.1) {
-        map.flyTo(center, calculatedZoom, {
-          duration: 1,  // 1 second animation
-          easeLinearity: 0.25
-        });
-        console.log(`Updating zoom to ${calculatedZoom} for radius ${searchRadius}km`);
+      // Only calculate new zoom if radius changed by more than 100km
+      if (Math.abs(lastRadiusRef.current - searchRadius) > 100) {
+        const calculatedZoom = getZoomLevel(searchRadius);
+        lastRadiusRef.current = searchRadius;
+        
+        // Only animate if the zoom difference is significant
+        const zoomDifference = Math.abs(map.getZoom() - calculatedZoom);
+        
+        // Use a higher threshold to prevent minor zoom changes
+        if (zoomDifference > 1.5) {
+          map.flyTo(center, calculatedZoom, {
+            duration: 1,  // 1 second animation
+            easeLinearity: 0.25
+          });
+          console.log(`Updating zoom to ${calculatedZoom} for radius ${searchRadius}km`);
+        }
       }
     }
   }, [searchRadius, map, center, getZoomLevel]);
   
-  // Update center when it changes
+  // Update center only for significant distance changes
   useEffect(() => {
     if (map && center) {
       // Avoid unnecessary view updates
       const currentCenter = map.getCenter();
       const distance = map.distance(currentCenter, center);
       
-      if (distance > 100) { // Only update if moved more than 100m
+      // Increase threshold to 500m to reduce unnecessary updates
+      if (distance > 500) { 
         map.setView(center, map.getZoom(), {
           animate: true,
           duration: 0.5
@@ -133,7 +140,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
         attributionControl={true}
-        // Add browser-compatible options for better performance
         // Use renderer instead of preferCanvas for better TypeScript compatibility
         renderer={typeof window !== 'undefined' && window.L?.canvas ? window.L.canvas() : undefined}
         zoomControl={false} // We'll add custom zoom controls

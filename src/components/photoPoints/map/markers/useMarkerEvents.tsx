@@ -1,3 +1,4 @@
+
 import { useCallback, useRef } from 'react';
 import L from 'leaflet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,11 +23,11 @@ export const useMarkerEvents = ({
   const touchStartedRef = useRef(false);
   const touchMoveCountRef = useRef(0);
   
-  // Handle hover events with improved hover handling
+  // Handle hover events with improved hover handling - now visual only, no auto-zoom
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
     
-    // Add hovered class to marker for style enhancement
+    // Add hovered class to marker for style enhancement only
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
@@ -67,16 +68,9 @@ export const useMarkerEvents = ({
       marker.getElement()?.classList.add('hovered');
     }
     
-    // For mobile, manually trigger hover to show popup
+    // For mobile, only highlight, don't auto-open popup
     if (isMobile) {
       onHover(locationId);
-      
-      // Open popup with delay to avoid conflicts with map pan/zoom
-      setTimeout(() => {
-        if (marker && touchStartedRef.current && touchMoveCountRef.current < 5) {
-          marker.openPopup();
-        }
-      }, 50);
     }
   }, [locationId, handleTouchStart, onHover, isMobile]);
   
@@ -90,15 +84,20 @@ export const useMarkerEvents = ({
       handleTouchEnd(syntheticEvent, locationId);
     }
     
-    // Keep popup open longer on mobile by delaying hover state change
+    // For click detection on mobile
     if (isMobile && wasStationary) {
-      // Delay hover state reset to keep popup visible
-      setTimeout(() => {
-        touchStartedRef.current = false;
-      }, 3000);
-    } else {
-      touchStartedRef.current = false;
+      const marker = markerRef.current;
+      if (marker) {
+        // Toggle popup instead of auto-opening
+        if (marker.isPopupOpen()) {
+          marker.closePopup();
+        } else {
+          marker.openPopup();
+        }
+      }
     }
+    
+    touchStartedRef.current = false;
   }, [locationId, handleTouchEnd, isMobile]);
   
   const handleMarkerTouchMove = useCallback((e: TouchEvent) => {
@@ -127,7 +126,7 @@ export const useMarkerEvents = ({
     }
   }, [handleTouchMove, onHover]);
 
-  // Create a complete event map with enhanced mobile handling
+  // Create a complete event map with improved handling
   const eventMap = {
     // Mouse events (primarily desktop)
     mouseover: handleMouseOver,
@@ -138,12 +137,17 @@ export const useMarkerEvents = ({
     touchend: handleMarkerTouchEnd,
     touchmove: handleMarkerTouchMove,
     
-    // Click event to ensure popup opens reliably on both platforms
-    click: isMobile ? undefined : () => {
+    // Click event to toggle popup (desktop and mobile)
+    click: () => {
       const marker = markerRef.current;
       if (marker) {
-        marker.openPopup();
-        onHover(locationId);
+        // Toggle popup instead of auto-opening
+        if (marker.isPopupOpen()) {
+          marker.closePopup();
+        } else {
+          marker.openPopup();
+          onHover(locationId);
+        }
       }
     }
   };
