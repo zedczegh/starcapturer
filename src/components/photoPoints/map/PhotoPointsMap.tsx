@@ -7,7 +7,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
-import MobileMapFixer from './MobileMapFixer'; // Import the new component
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -78,12 +77,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handle map click to update location
+  // Handle map click to update location - now only works if userLocation is not set
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate) {
+    if (onLocationUpdate && !userLocation) {
       onLocationUpdate(lat, lng);
     }
-  }, [onLocationUpdate]);
+  }, [onLocationUpdate, userLocation]);
   
   // Handle the location click
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
@@ -128,7 +127,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         handleTouchEnd={handleTouchEnd}
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
-        useMobileMapFixer={true} // Enable the mobile map fixer
+        useMobileMapFixer={true}
       />
     </div>
   );

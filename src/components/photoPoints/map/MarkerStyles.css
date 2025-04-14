@@ -1,4 +1,3 @@
-
 /* Enhanced marker styles with better mobile visibility */
 .leaflet-marker-icon {
   transition: transform 0.15s ease-out, filter 0.15s ease-out;
@@ -114,4 +113,50 @@
 /* Mobile-optimized tile loading */
 .mobile-optimized .leaflet-tile-loaded {
   transition: opacity 0.1s !important;
+}
+
+:root {
+  --primary-rgb: 139, 92, 246; /* Default purple - will use your app's primary color */
+}
+
+/* Enhance our collapsed legend tab with better visibility */
+.legend-tab {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  height: 80px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  box-shadow: -3px 0 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.legend-tab:hover {
+  width: 32px;
+}
+
+/* Add styles to make the content scroll nicely */
+.legend-content {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+}
+
+.legend-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.legend-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.legend-content::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
 }

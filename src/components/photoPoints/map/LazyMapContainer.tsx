@@ -89,12 +89,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onLocationClick]);
   
-  // Handle map click
+  // Handle map click - now prevents moving user location
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onMapClick) {
+    // Only call onMapClick if it's provided and not for user location updates
+    if (onMapClick && !userLocation) {
+      // Only allow the first click to set the user location
+      // Subsequent clicks won't change the location once set
       onMapClick(lat, lng);
     }
-  }, [onMapClick]);
+    // If userLocation exists, we don't update it on map clicks
+  }, [onMapClick, userLocation]);
   
   return (
     <MapContainer
