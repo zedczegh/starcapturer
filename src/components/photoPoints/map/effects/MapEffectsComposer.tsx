@@ -45,8 +45,8 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       {/* Show radar animation only for calculated view */}
       {showRadar && userLocation && (
         <RadarSweepAnimation
-          position={[userLocation.latitude, userLocation.longitude]}
-          radius={searchRadius * 1000} // Convert km to meters
+          userLocation={userLocation}
+          searchRadius={searchRadius * 1000} // Convert km to meters
           isScanning={isScanning}
           isManualRadiusChange={isManualRadiusChange}
         />

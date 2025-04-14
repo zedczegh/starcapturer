@@ -37,7 +37,6 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
           const siqsResult = await calculateRealTimeSiqs(
             userLocation.latitude, 
             userLocation.longitude,
-            undefined,
             searchRadius
           );
           

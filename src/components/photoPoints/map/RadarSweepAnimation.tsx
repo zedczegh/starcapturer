@@ -7,17 +7,17 @@ import RadarElement from './radar/RadarElement';
 import { useAnimationState } from './radar/AnimationStateManager';
 
 interface RadarSweepAnimationProps {
-  userLocation: { latitude: number; longitude: number } | null;
+  userLocation: { latitude: number; longitude: number };
   searchRadius: number;
   isScanning: boolean;
-  locationChanged?: boolean;
+  isManualRadiusChange?: boolean;
 }
 
 const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
   userLocation,
   searchRadius,
   isScanning,
-  locationChanged = false
+  isManualRadiusChange = false
 }) => {
   // Manage animation visibility state
   const { showAnimation } = useAnimationState({ 
@@ -38,9 +38,6 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
     };
   }, []);
 
-  // Don't render anything if userLocation is not available
-  if (!userLocation) return null;
-
   return (
     <>
       {/* Add radar styles to document */}
@@ -51,7 +48,7 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
         userLocation={userLocation} 
         searchRadius={searchRadius} 
         showCircle={showAnimation} 
-        locationChanged={locationChanged}
+        locationChanged={isManualRadiusChange}
       />
       
       {/* Render the radar sweep animation */}
