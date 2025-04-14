@@ -95,25 +95,20 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     }
     
     // Calculate the proper size based on the search radius
-    // The size should match the actual radius size on the map
-    const radiusInPixels = searchRadius * 1000 / 
-      map.getZoom() * 0.000045; // Adjust this factor based on zoom level
+    const radiusInMeters = searchRadius * 1000; // Convert km to meters
+    const zoom = map.getZoom();
     
     // Create container element for the radar sweep
     const container = document.createElement('div');
     container.className = 'radar-sweep-container';
-    container.style.width = `${radiusInPixels * 2}px`;
-    container.style.height = `${radiusInPixels * 2}px`;
-    container.style.borderRadius = '50%';
-    container.style.overflow = 'hidden';
     
     // Create the actual sweep element
     const sweep = document.createElement('div');
     sweep.className = 'radar-sweep';
     container.appendChild(sweep);
     
-    // Use a smaller icon size to better match the circle radius
-    const iconSize = searchRadius * 2000 / map.getZoom(); // Adjust based on zoom level
+    // Create a properly sized icon
+    const iconSize = Math.max(100, radiusInMeters / (Math.pow(2, 16 - zoom)));
     
     const sweepIcon = L.divIcon({
       html: container,
@@ -151,7 +146,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         height: 100%;
         border-radius: 50%;
         overflow: hidden;
-        opacity: 0.6;
+        opacity: 0.7;
       }
       
       .radar-sweep {
@@ -163,15 +158,15 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         border-radius: 50%;
         background: conic-gradient(
           from 0deg,
-          rgba(139, 92, 246, 0.4) 0deg,
-          rgba(139, 92, 246, 0.2) 60deg, 
-          rgba(139, 92, 246, 0.05) 120deg,
+          rgba(139, 92, 246, 0.5) 0deg,
+          rgba(139, 92, 246, 0.3) 60deg, 
+          rgba(139, 92, 246, 0.1) 120deg,
           rgba(139, 92, 246, 0) 180deg,
           rgba(139, 92, 246, 0) 360deg
         );
         animation: radarSweep 6s linear infinite;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
-        filter: blur(2px);
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        filter: blur(1px);
         width: 100%;
         height: 100%;
         clip-path: circle(50%);
