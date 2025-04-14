@@ -63,8 +63,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     const adjustHeight = () => {
       if (isMobile) {
         setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(80vh - 160px)'
-          : 'calc(90vh - 140px)');
+          ? 'calc(70vh - 180px)'
+          : 'calc(80vh - 160px)');
       } else {
         setMapContainerHeight('500px');
       }
@@ -113,7 +113,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   return (
     <div 
       style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300"
+      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
     >
       {!mapReady && (
         <div className="absolute inset-0 z-20">
@@ -144,6 +144,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={true}
+        showRadiusCircles={activeView === 'calculated'}
       />
       
       <MapLegend 

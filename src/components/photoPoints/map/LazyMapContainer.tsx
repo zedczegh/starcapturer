@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
@@ -14,7 +14,6 @@ import PinpointButton from './PinpointButton';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
 
-// Configure leaflet to handle marker paths
 configureLeaflet();
 
 interface LazyMapContainerProps {
@@ -34,6 +33,7 @@ interface LazyMapContainerProps {
   handleTouchMove?: (e: React.TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
+  showRadiusCircles?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -52,19 +52,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   isMobile,
-  useMobileMapFixer = false
+  useMobileMapFixer = false,
+  showRadiusCircles = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   
-  // Find user location SIQS
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
       const userLng = userLocation.longitude;
       
-      // Find siqs of current user location from locations
       const sameLocation = locations.find(loc => 
         Math.abs(loc.latitude - userLat) < 0.0001 && 
         Math.abs(loc.longitude - userLng) < 0.0001
@@ -78,35 +77,30 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation, locations]);
   
-  // Handle map ready
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
       onMapReady();
     }
     
-    // Make map instance available globally for external access
     if (mapRef.current) {
       (window as any).leafletMap = mapRef.current;
     }
   }, [onMapReady]);
   
-  // Handle location click
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
     }
   }, [onLocationClick]);
   
-  // Handle map click - always allow location updates when map is clicked
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onMapClick) {
       onMapClick(lat, lng);
       console.log("Map clicked, updating location to:", lat, lng);
     }
   }, [onMapClick]);
-
-  // Handle getting current user location via geolocation
+  
   const handleGetLocation = useCallback(() => {
     if (onMapClick) {
       getCurrentPosition(
@@ -114,7 +108,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           const { latitude, longitude } = position.coords;
           onMapClick(latitude, longitude);
           
-          // Access the map instance and set view to the location
           if (mapRef.current) {
             const leafletMap = mapRef.current;
             leafletMap.setView([latitude, longitude], 12, {
@@ -153,7 +146,20 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Use MapEffectsComposer to apply all map effects */}
+      {showRadiusCircles && userLocation && (
+        <Circle
+          center={[userLocation.latitude, userLocation.longitude]}
+          pathOptions={{
+            color: 'rgb(99, 102, 241)',
+            fillColor: 'rgb(99, 102, 241)',
+            fillOpacity: 0.05,
+            weight: 1,
+            dashArray: '5, 5',
+          }}
+          radius={searchRadius * 1000}
+        />
+      )}
+      
       <MapEffectsComposer 
         center={center}
         zoom={zoom}
@@ -163,7 +169,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
       />
       
-      {/* Use MapEvents component for map click handling */}
       <MapEvents onMapClick={handleMapClick} />
       
       {userLocation && (
@@ -197,16 +202,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         );
       })}
       
-      {/* Add controllers */}
       <MapController 
         userLocation={userLocation} 
         searchRadius={searchRadius}
       />
       
-      {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      
-      {/* Map legend and pinpoint button are now rendered outside to correctly handle click events */}
       
     </MapContainer>
   );
