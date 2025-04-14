@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -12,14 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
-
-// Get SIQS quality class
-const getSiqsClass = (siqs?: number): string => {
-  if (!siqs) return '';
-  if (siqs >= 7.5) return 'siqs-excellent';
-  if (siqs >= 5.5) return 'siqs-good';
-  return 'siqs-poor';
-};
+import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
 
 // Enhanced filtering for water locations
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
@@ -57,28 +51,6 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   }
   
   return false;
-};
-
-// Get certification type based color for markers
-const getCertificationColor = (location: SharedAstroSpot): string => {
-  if (!location.isDarkSkyReserve && !location.certification) {
-    return '#FFD700'; // Default gold
-  }
-  
-  const certification = (location.certification || '').toLowerCase();
-  
-  // Different colors for different certification types
-  if (certification.includes('reserve') || certification.includes('sanctuary')) {
-    return '#9b87f5'; // Purple for reserves
-  } else if (certification.includes('park')) {
-    return '#4ADE80'; // Green for parks
-  } else if (certification.includes('community')) {
-    return '#FFA500'; // Orange for communities
-  } else if (certification.includes('urban')) {
-    return '#0EA5E9'; // Blue for urban night skies
-  } else {
-    return '#FFD700'; // Gold for generic certified locations
-  }
 };
 
 // Create different marker styles for certified vs calculated locations
@@ -373,35 +345,5 @@ const UserLocationMarker = memo(({
 });
 
 UserLocationMarker.displayName = 'UserLocationMarker';
-
-// Helper hook to provide proper event handlers for markers
-export const useMarkerEvents = () => {
-  const map = useMap();
-  
-  // Initialize event handlers that properly work with Leaflet
-  useEffect(() => {
-    if (!map) return;
-    
-    // Extend Leaflet's Marker prototype to support our custom events if needed
-    if (!L.Marker.prototype._touchHandlersAdded) {
-      L.Marker.prototype._touchHandlersAdded = true;
-      
-      // Original handler reference
-      const originalOn = L.Marker.prototype.on;
-      
-      // Extend the 'on' method to handle custom events
-      L.Marker.prototype.on = function(types, fn, context) {
-        // Call the original method for standard events
-        return originalOn.call(this, types, fn, context);
-      };
-    }
-    
-    return () => {
-      // Clean up if needed
-    };
-  }, [map]);
-  
-  return { map };
-};
 
 export { LocationMarker, UserLocationMarker };
