@@ -14,32 +14,32 @@ export function calculateCloudScore(cloudCover: number): number {
     return 100;
   }
   
-  // Improved cloud cover scoring with more realistic thresholds:
-  // 0-10% cloud cover = Outstanding (90-100 points)
-  // 10-25% cloud cover = Very Good (75-90 points)
-  // 25-40% cloud cover = Good (60-75 points)
-  // 40-60% cloud cover = Fair (40-60 points)
-  // 60-80% cloud cover = Poor (20-40 points)
-  // >80% cloud cover = Very Poor (0-20 points)
+  // Improved cloud cover scoring with smoother transitions:
+  // 0-20% cloud cover = Outstanding (80-100 points)
+  // 20-35% cloud cover = Very Good (65-80 points)
+  // 35-50% cloud cover = Good (50-65 points)
+  // 50-70% cloud cover = Fair (20-50 points)
+  // 70-85% cloud cover = Poor (0-20 points)
+  // >85% cloud cover = Very Poor (0 points)
   
-  if (cloudCover <= 10) {
-    // Outstanding conditions: 0-10% -> 90-100 points
+  if (cloudCover <= 20) {
+    // Outstanding conditions: 0-20% -> 80-100 points
     return 100 - cloudCover;
-  } else if (cloudCover <= 25) {
-    // Very good conditions: 10-25% -> 75-90 points
-    return 90 - ((cloudCover - 10) * 1.0);
-  } else if (cloudCover <= 40) {
-    // Good conditions: 25-40% -> 60-75 points
-    return 75 - ((cloudCover - 25) * 1.0);
-  } else if (cloudCover <= 60) {
-    // Fair conditions: 40-60% -> 40-60 points
-    return 60 - ((cloudCover - 40) * 1.0);
-  } else if (cloudCover <= 80) {
-    // Poor conditions: 60-80% -> 20-40 points
-    return 40 - ((cloudCover - 60) * 1.0);
+  } else if (cloudCover <= 35) {
+    // Very good conditions: 20-35% -> 65-80 points
+    return 80 - ((cloudCover - 20) * 1.0);
+  } else if (cloudCover <= 50) {
+    // Good conditions: 35-50% -> 50-65 points
+    return 65 - ((cloudCover - 35) * 1.0);
+  } else if (cloudCover <= 70) {
+    // Fair conditions: 50-70% -> 20-50 points
+    return 50 - ((cloudCover - 50) * 1.5);
+  } else if (cloudCover <= 85) {
+    // Poor conditions: 70-85% -> 0-20 points
+    return Math.max(0, 20 - ((cloudCover - 70) * 1.33));
   } else {
-    // Very Poor conditions: 80-100% -> 0-20 points
-    return Math.max(0, 20 - ((cloudCover - 80) * 1.0));
+    // Very Poor conditions: 85-100% -> 0 points
+    return 0;
   }
 }
 

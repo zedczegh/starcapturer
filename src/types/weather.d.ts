@@ -10,12 +10,6 @@ declare module "@/types/weather" {
     condition: string;
     aqi?: number;
     weatherCondition?: string | number;
-    nighttimeCloudData?: {
-      average: number;
-      evening?: number;
-      morning?: number;
-      lastUpdated?: string;
-    };
   }
 
   export interface LocationData {
@@ -39,12 +33,6 @@ declare module "@/types/weather" {
       score: number;
       description: string;
     }>;
-    nighttimeCloudData?: {
-      average: number;
-      evening?: number;
-      morning?: number;
-      lastUpdated?: string;
-    };
   }
 
   export interface SharedAstroSpot {

@@ -33,12 +33,6 @@ export interface SIQSResult {
     nighttimeData?: any;
   }[];
   level: string;        // Quality level based on score
-  nighttimeCloudData?: {  // Nighttime cloud cover data (optional)
-    average: number;    // Average nighttime cloud cover
-    evening?: number;   // Evening cloud cover
-    morning?: number;   // Morning cloud cover
-    lastUpdated?: string; // Timestamp of last update
-  };
 }
 
 /**

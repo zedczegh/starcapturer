@@ -31,7 +31,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
 }) => {
   const { t, language } = useLanguage();
   
-  // ALWAYS prioritize nighttime cloud data from forecast if available
+  // Determine which cloud cover to display - prefer nighttime average if available
   const displayCloudCover = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined 
     ? nighttimeCloudData.average 
     : cloudCover;

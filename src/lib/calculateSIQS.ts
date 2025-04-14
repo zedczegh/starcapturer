@@ -1,3 +1,4 @@
+
 /**
  * Enhanced SIQS calculation with protection against algorithm tampering
  * This implementation uses protected factors and validation
@@ -26,17 +27,11 @@ export interface SIQSResult {
   factors: {
     name: string;
     score: number;
-    description: string;
+    description?: string;
     nighttimeData?: any;
   }[];
   level: LightPollutionLevel;
   isViable: boolean;
-  nighttimeCloudData?: {
-    average: number;
-    evening?: number;
-    morning?: number;
-    lastUpdated?: string;
-  };
 }
 
 /**

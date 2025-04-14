@@ -2,24 +2,23 @@
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CloudSun, CloudMoon, Sun } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface NighttimeCloudInfoProps {
   nighttimeCloudData: {
     average: number | null;
-    evening?: number;
-    morning?: number;
-  };
+    evening: number | null;
+    morning: number | null;
+  } | null;
 }
 
-const NighttimeCloudInfo: React.FC<NighttimeCloudInfoProps> = ({
-  nighttimeCloudData
-}) => {
-  const { t, language } = useLanguage();
+const NighttimeCloudInfo: React.FC<NighttimeCloudInfoProps> = ({ nighttimeCloudData }) => {
+  const { t } = useLanguage();
   
-  if (!nighttimeCloudData || nighttimeCloudData.average === null) return null;
+  if (!nighttimeCloudData || nighttimeCloudData.average === null) {
+    return null;
+  }
   
-  // Calculate cloud coverage class
+  // Calculate cloud coverage class with improved color scheme
   const getCloudClass = (value: number | null) => {
     if (value === null) return "";
     if (value < 10) return "text-green-500";
@@ -40,10 +39,12 @@ const NighttimeCloudInfo: React.FC<NighttimeCloudInfoProps> = ({
   const averageClass = getCloudClass(nighttimeCloudData.average);
   const eveningClass = getCloudClass(nighttimeCloudData.evening);
   const morningClass = getCloudClass(nighttimeCloudData.morning);
+  
+  // Quality text for tooltip or display
   const averageQuality = getCloudQualityText(nighttimeCloudData.average);
   
   return (
-    <div className="bg-cosmic-800/20 rounded-md p-3 border border-cosmic-700/30">
+    <div className="bg-cosmic-800/20 rounded-md p-3 border border-cosmic-700/30 mt-2">
       <h4 className="text-sm font-medium mb-2 flex items-center">
         <CloudMoon className="h-4 w-4 mr-1.5 text-blue-400" />
         {t("Nighttime Cloud Forecast", "夜间云层预报")}
@@ -55,7 +56,7 @@ const NighttimeCloudInfo: React.FC<NighttimeCloudInfoProps> = ({
           <span className="text-xs">
             {t("Evening", "傍晚")}:{" "}
             <span className={eveningClass}>
-              {nighttimeCloudData.evening !== undefined ? 
+              {nighttimeCloudData.evening !== null ? 
                 `${nighttimeCloudData.evening.toFixed(1)}%` : 
                 t("N/A", "暂无数据")}
             </span>
@@ -67,7 +68,7 @@ const NighttimeCloudInfo: React.FC<NighttimeCloudInfoProps> = ({
           <span className="text-xs">
             {t("Morning", "清晨")}:{" "}
             <span className={morningClass}>
-              {nighttimeCloudData.morning !== undefined ? 
+              {nighttimeCloudData.morning !== null ? 
                 `${nighttimeCloudData.morning.toFixed(1)}%` : 
                 t("N/A", "暂无数据")}
             </span>
@@ -85,9 +86,10 @@ const NighttimeCloudInfo: React.FC<NighttimeCloudInfoProps> = ({
             </span>
           </div>
           
-          <Badge className={`${averageClass} bg-opacity-20 border border-current`}>
+          {/* Quality indicator */}
+          <span className={`text-xs px-2 py-0.5 rounded-full ${averageClass} bg-opacity-20 border border-current`}>
             {averageQuality}
-          </Badge>
+          </span>
         </div>
       </div>
     </div>
