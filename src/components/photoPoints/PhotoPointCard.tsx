@@ -10,7 +10,7 @@ import { getCertificationInfo, getLocalizedCertText } from "./utils/certificatio
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { findNearestTown } from "@/utils/nearestTownCalculator";
+import { useDisplayName } from "./cards/DisplayNameResolver";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -30,9 +30,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  // Get nearest town information directly from our database with enhanced details
-  const nearestTownInfo = point.latitude && point.longitude ? 
-    findNearestTown(point.latitude, point.longitude, language) : null;
+  // Use the shared display name resolver
+  const { displayName, showOriginalName } = useDisplayName({
+    location: point,
+    language,
+    locationCounter: null
+  });
   
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
@@ -76,30 +79,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  // Use the detailed location name as the display name based on language
-  // For Chinese language, specifically use Chinese names from our database
-  let pointName;
-  if (language === 'zh') {
-    if (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== '偏远地区') {
-      pointName = nearestTownInfo.detailedName;
-    } else {
-      // Fallback to point's Chinese name if available, otherwise original name
-      pointName = point.chineseName || point.name;
-    }
-  } else {
-    // For English, use detailed name from database, or fall back to original
-    pointName = (nearestTownInfo?.detailedName && nearestTownInfo.detailedName !== 'Remote area') ? 
-      nearestTownInfo.detailedName : point.name;
-  }
-
-  // Check if we're using our database location name vs. original name
-  const showOriginalName = nearestTownInfo && 
-    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
-    point.name && 
-    (language === 'zh' 
-      ? (point.chineseName && point.chineseName !== nearestTownInfo.detailedName)
-      : (point.name !== nearestTownInfo.detailedName));
-
   return (
     <div 
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
@@ -107,7 +86,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     >
       <div className="flex items-center justify-between mb-1.5">
         <h4 className="font-medium text-sm line-clamp-1">
-          {pointName}
+          {displayName}
         </h4>
         
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">

@@ -10,7 +10,7 @@ import { CalendarClock, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import LightPollutionIndicator from "./location/LightPollutionIndicator";
-import { findNearestTown } from "@/utils/nearestTownCalculator";
+import { useDisplayName } from "./photoPoints/cards/DisplayNameResolver";
 
 interface LocationCardProps {
   id: string;
@@ -44,6 +44,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   
+  // Format date and time for display
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -55,40 +56,24 @@ const LocationCard: React.FC<LocationCardProps> = ({
     minute: "2-digit",
   });
   
+  // Get the color for the SIQS score
   const scoreColor = siqsToColor(siqs);
+  
+  // Create a dummy location object to use with the DisplayNameResolver
+  const locationObj = {
+    name,
+    chineseName,
+    latitude,
+    longitude,
+    certification
+  };
 
-  // Get detailed nearest town information from the location database
-  const nearestTownInfo = findNearestTown(latitude, longitude, language);
-  
-  // Use the detailed location name as the main display title based on language
-  let displayName = language === 'zh'
-    ? nearestTownInfo.detailedName
-    : nearestTownInfo.detailedName;
-  
-  // Fallback to generic names for calculated locations
-  if (displayName === (language === 'en' ? 'Remote area' : '偏远地区')) {
-    // Check if the name contains coordinates or is a remote area
-    const nameToCheck = language === 'zh' ? (chineseName || name) : name;
-    if (nameToCheck.includes("°") || 
-        nameToCheck.includes("Location at") || 
-        nameToCheck.includes("位置在")
-    ) {
-      // Use a generic name for calculated locations
-      const locationMatch = nameToCheck.match(/calc-loc-(\d+)/);
-      if (locationMatch) {
-        const locationNumber = parseInt(locationMatch[1]) || 1;
-        displayName = language === 'en' 
-          ? `Potential ideal dark site ${locationNumber}`
-          : `潜在理想暗夜地点 ${locationNumber}`;
-      }
-    }
-  }
-  
-  // Determine if we should show the original name as a secondary line
-  const showOriginalName = nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') &&
-    (language === 'zh' 
-      ? (chineseName && !chineseName.includes(nearestTownInfo.townName)) 
-      : (name && !name.includes(nearestTownInfo.townName)));
+  // Use the shared display name resolver
+  const { displayName, showOriginalName } = useDisplayName({
+    location: locationObj,
+    language,
+    locationCounter: null
+  });
   
   // Prefetch data when user hovers over the card
   const handleMouseEnter = useCallback(() => {

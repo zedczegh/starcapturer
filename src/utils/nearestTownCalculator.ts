@@ -1,93 +1,7 @@
 
 import { calculateDistance } from "@/data/locationDatabase";
-import { internationalLocations } from "@/data/regions/internationalLocations";
-import { chinaCityLocations } from "@/data/regions/chinaCityLocations";
-import { restrictedDrivingCities } from "@/data/regions/restrictedDrivingCities";
-import { LocationEntry } from "@/data/locationDatabase";
-
-// Enhanced location entry type with more detailed location information
-interface DetailedLocationEntry {
-  name: string;
-  coordinates: [number, number];
-  chineseName?: string;
-  village?: string;
-  villageZh?: string;
-  county?: string;
-  countyZh?: string;
-  city?: string;
-  cityZh?: string;
-  type?: 'city' | 'county' | 'village' | 'international';
-}
-
-// Convert our existing location data to the detailed format
-const combinedTownLocations: DetailedLocationEntry[] = [
-  // Use all cities from the driving restrictions database
-  ...restrictedDrivingCities.map(city => ({
-    name: city.city,
-    coordinates: city.coordinates,
-    chineseName: city.city, // Most Chinese cities should have the same name as identifier
-    city: city.city,
-    cityZh: city.city,
-    type: 'city' as const
-  })),
-  
-  // Use international locations
-  ...internationalLocations.map(location => ({
-    name: location.name,
-    coordinates: location.coordinates,
-    chineseName: location.chineseName || location.name,
-    city: location.name,
-    cityZh: location.chineseName || location.name,
-    type: 'international' as const
-  })),
-  
-  // Use China city locations with more detailed information
-  ...(Array.isArray(chinaCityLocations) ? chinaCityLocations.map(city => {
-    // Try to extract county and village info from name if available
-    let cityName = city.name;
-    let countyName = '';
-    let villageName = '';
-    
-    // In Chinese data, sometimes names are structured as "City, County, Village"
-    const nameParts = city.name.split(',').map(part => part.trim());
-    if (nameParts.length > 1) {
-      cityName = nameParts[0];
-      countyName = nameParts[1];
-      if (nameParts.length > 2) {
-        villageName = nameParts[2];
-      }
-    }
-    
-    // Same for Chinese names
-    let cityNameZh = city.chineseName || city.name;
-    let countyNameZh = '';
-    let villageNameZh = '';
-    
-    if (city.chineseName) {
-      const chineseNameParts = city.chineseName.split('，').map(part => part.trim());
-      if (chineseNameParts.length > 1) {
-        cityNameZh = chineseNameParts[0];
-        countyNameZh = chineseNameParts[1];
-        if (chineseNameParts.length > 2) {
-          villageNameZh = chineseNameParts[2];
-        }
-      }
-    }
-    
-    return {
-      name: city.name,
-      coordinates: city.coordinates,
-      chineseName: city.chineseName || city.name,
-      village: villageName || undefined,
-      villageZh: villageNameZh || undefined,
-      county: countyName || undefined,
-      countyZh: countyNameZh || undefined,
-      city: cityName,
-      cityZh: cityNameZh,
-      type: 'city' as const
-    };
-  }) : [])
-];
+import { DetailedLocationEntry, combinedTownLocations } from "./location/townData";
+import { formatDistance } from "./location/formatDistance";
 
 /**
  * Find the nearest town/city to a given location with enhanced details
@@ -146,70 +60,15 @@ export function findNearestTown(
   }
 
   // Format the distance for display
-  let formattedDistance = '';
-  if (closestTown.distance < 1) {
-    formattedDistance = language === 'en' 
-      ? `${Math.round(closestTown.distance * 1000)} m away` 
-      : `${Math.round(closestTown.distance * 1000)} 米`;
-  } else if (closestTown.distance < 10) {
-    formattedDistance = language === 'en' 
-      ? `${closestTown.distance.toFixed(1)} km away` 
-      : `${closestTown.distance.toFixed(1)} 公里`;
-  } else {
-    formattedDistance = language === 'en' 
-      ? `${Math.round(closestTown.distance)} km away` 
-      : `${Math.round(closestTown.distance)} 公里`;
-  }
+  const formattedDistance = formatDistance(closestTown.distance, language);
 
-  // Create a detailed name that includes village, county, and city when available
-  const hasVillage = closestTown.village && closestTown.village.length > 0;
-  const hasCounty = closestTown.county && closestTown.county.length > 0;
-  const hasCity = closestTown.city && closestTown.city.length > 0;
-  
-  let detailedNameParts: string[] = [];
-  
-  // For English format: Village, County, City
-  if (language === 'en') {
-    if (hasVillage) detailedNameParts.push(closestTown.village!);
-    if (hasCounty && (!hasVillage || closestTown.county !== closestTown.village)) 
-      detailedNameParts.push(closestTown.county!);
-    if (hasCity && closestTown.city !== closestTown.county && closestTown.city !== closestTown.village) 
-      detailedNameParts.push(closestTown.city!);
-  } 
-  // For Chinese format: City县County镇Village
-  else {
-    if (hasCity) {
-      const cityName = closestTown.cityZh || closestTown.city;
-      if (cityName && cityName !== '偏远地区') {
-        detailedNameParts.push(cityName);
-      }
-    }
-    if (hasCounty) {
-      const countyName = closestTown.countyZh || closestTown.county;
-      if (countyName && (detailedNameParts.length === 0 || countyName !== detailedNameParts[0])) {
-        detailedNameParts.push(countyName);
-      }
-    }
-    if (hasVillage) {
-      const villageName = closestTown.villageZh || closestTown.village;
-      if (villageName && detailedNameParts.every(part => part !== villageName)) {
-        detailedNameParts.push(villageName);
-      }
-    }
-  }
-  
-  // If we couldn't build a detailed name, fall back to city or base name
-  let detailedName;
-  if (detailedNameParts.length > 0) {
-    detailedName = detailedNameParts.join(language === 'en' ? ', ' : '');
-  } else if (language === 'en') {
-    detailedName = closestTown.name;
-  } else {
-    // For Chinese, use the Chinese name if available
-    detailedName = closestTown.chineseName || closestTown.name;
-  }
+  // Create a detailed name based on location hierarchy
+  const detailedName = createDetailedName(closestTown, language);
   
   // Use the appropriate name based on language
+  const hasVillage = closestTown.village && closestTown.village.length > 0;
+  const hasCounty = closestTown.county && closestTown.county.length > 0;
+  
   let townName;
   if (language === 'en') {
     townName = hasVillage ? closestTown.village! : (hasCounty ? closestTown.county! : closestTown.name);
@@ -225,6 +84,63 @@ export function findNearestTown(
     detailedName,
     village: hasVillage ? (language === 'en' ? closestTown.village : closestTown.villageZh) : undefined,
     county: hasCounty ? (language === 'en' ? closestTown.county : closestTown.countyZh) : undefined,
-    city: hasCity ? (language === 'en' ? closestTown.city : closestTown.cityZh) : undefined,
+    city: closestTown.city ? (language === 'en' ? closestTown.city : closestTown.cityZh) : undefined,
   };
+}
+
+/**
+ * Create a detailed name that includes village, county, and city when available
+ */
+function createDetailedName(
+  location: DetailedLocationEntry & { distance: number },
+  language: string
+): string {
+  const hasVillage = location.village && location.village.length > 0;
+  const hasCounty = location.county && location.county.length > 0;
+  const hasCity = location.city && location.city.length > 0;
+  
+  let detailedNameParts: string[] = [];
+  
+  // For English format: Village, County, City
+  if (language === 'en') {
+    if (hasVillage) detailedNameParts.push(location.village!);
+    if (hasCounty && (!hasVillage || location.county !== location.village)) 
+      detailedNameParts.push(location.county!);
+    if (hasCity && location.city !== location.county && location.city !== location.village) 
+      detailedNameParts.push(location.city!);
+  } 
+  // For Chinese format: City县County镇Village
+  else {
+    if (hasCity) {
+      const cityName = location.cityZh || location.city;
+      if (cityName && cityName !== '偏远地区') {
+        detailedNameParts.push(cityName);
+      }
+    }
+    if (hasCounty) {
+      const countyName = location.countyZh || location.county;
+      if (countyName && (detailedNameParts.length === 0 || countyName !== detailedNameParts[0])) {
+        detailedNameParts.push(countyName);
+      }
+    }
+    if (hasVillage) {
+      const villageName = location.villageZh || location.village;
+      if (villageName && detailedNameParts.every(part => part !== villageName)) {
+        detailedNameParts.push(villageName);
+      }
+    }
+  }
+  
+  // If we couldn't build a detailed name, fall back to city or base name
+  let detailedName;
+  if (detailedNameParts.length > 0) {
+    detailedName = detailedNameParts.join(language === 'en' ? ', ' : '');
+  } else if (language === 'en') {
+    detailedName = location.name;
+  } else {
+    // For Chinese, use the Chinese name if available
+    detailedName = location.chineseName || location.name;
+  }
+  
+  return detailedName;
 }
