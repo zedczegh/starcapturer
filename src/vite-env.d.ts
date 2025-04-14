@@ -19,6 +19,7 @@ declare module 'react-leaflet' {
     minZoom?: number;
     preferCanvas?: boolean;  // Added this property
     renderer?: L.Renderer;   // Added this property
+    zoomControl?: boolean;   // Added this property
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {

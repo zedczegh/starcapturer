@@ -65,11 +65,13 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
           
           if (progress < 1) {
             // Use standard requestAnimationFrame or setTimeout fallback for Safari
-            if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
-              animationRef.current = window.requestAnimationFrame(animate);
-            } else {
-              // Fallback for older browsers
-              animationRef.current = window.setTimeout(animate, 16) as unknown as number;
+            if (typeof window !== 'undefined') {
+              if ('requestAnimationFrame' in window) {
+                animationRef.current = window.requestAnimationFrame(animate);
+              } else {
+                // Fallback for older browsers
+                animationRef.current = window.setTimeout(animate, 16) as unknown as number;
+              }
             }
           } else {
             animationRef.current = null;
@@ -78,10 +80,12 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
         
         // Cancel any existing animation
         if (animationRef.current) {
-          if (typeof window !== 'undefined' && 'cancelAnimationFrame' in window) {
-            window.cancelAnimationFrame(animationRef.current);
-          } else {
-            window.clearTimeout(animationRef.current as unknown as number);
+          if (typeof window !== 'undefined') {
+            if ('cancelAnimationFrame' in window) {
+              window.cancelAnimationFrame(animationRef.current);
+            } else {
+              window.clearTimeout(animationRef.current as unknown as number);
+            }
           }
           animationRef.current = null;
         }
@@ -137,10 +141,12 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
       map.off('move', handleMapChange);
       
       if (animationRef.current) {
-        if (typeof window !== 'undefined' && 'cancelAnimationFrame' in window) {
-          window.cancelAnimationFrame(animationRef.current);
-        } else {
-          window.clearTimeout(animationRef.current as unknown as number);
+        if (typeof window !== 'undefined') {
+          if ('cancelAnimationFrame' in window) {
+            window.cancelAnimationFrame(animationRef.current);
+          } else {
+            window.clearTimeout(animationRef.current as unknown as number);
+          }
         }
         animationRef.current = null;
       }
