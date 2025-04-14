@@ -11,6 +11,7 @@ interface MapEffectsComposerProps {
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
+  isScanning?: boolean;
 }
 
 /**
@@ -22,7 +23,8 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   userLocation,
   activeView = 'certified',
   searchRadius = 100,
-  onSiqsCalculated
+  onSiqsCalculated,
+  isScanning = false
 }) => {
   const map = useMap();
   

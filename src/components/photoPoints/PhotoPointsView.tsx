@@ -54,6 +54,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   // Track when locations are being loaded
   useEffect(() => {
     setIsScanning(loading);
+    
+    // Make sure scanning state is cleared after a timeout if loading stays true too long
+    if (loading) {
+      const timeout = setTimeout(() => {
+        setIsScanning(false);
+      }, 15000); // 15 second safety timeout
+      
+      return () => clearTimeout(timeout);
+    }
   }, [loading]);
   
   // Set scanning state when loading more
@@ -84,14 +93,19 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     // Auto-reset scanning state after a delay
     setTimeout(() => {
       setIsScanning(false);
-    }, 5000);
+    }, 10000); // 10 second timeout as a fallback
   };
   
   // Reset scanning state when locations change
   useEffect(() => {
     if ((activeView === 'certified' && certifiedLocations.length > 0) || 
         (activeView === 'calculated' && calculatedLocations.length > 0)) {
-      setIsScanning(false);
+      // Delay the turning off slightly to ensure animation is visible
+      const timeout = setTimeout(() => {
+        setIsScanning(false);
+      }, 1500); // 1.5 second delay
+      
+      return () => clearTimeout(timeout);
     }
   }, [certifiedLocations, calculatedLocations, activeView]);
   
@@ -110,6 +124,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     );
   }
   
+  // Make sure to pass the current search radius based on the active view
+  const effectiveRadius = activeView === 'calculated' ? calculatedSearchRadius : searchRadius;
+  
   return (
     <>
       {showMap ? (
@@ -119,7 +136,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           certifiedLocations={certifiedLocations}
           calculatedLocations={calculatedLocations}
           activeView={activeView}
-          searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
+          searchRadius={effectiveRadius}
           onLocationClick={onLocationClick}
           onLocationUpdate={onLocationUpdate}
           isScanning={isScanning}
@@ -128,6 +145,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         <LocationsList
           locations={currentLocations}
           loading={loading}
+          initialLoad={initialLoad}
           hasMore={hasMore}
           onLoadMore={handleLoadMore}
           onLocationClick={onLocationClick}

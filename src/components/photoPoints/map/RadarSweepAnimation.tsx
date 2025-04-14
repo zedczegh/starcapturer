@@ -30,6 +30,7 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
       style.textContent = `
         .radar-container {
           pointer-events: none;
+          z-index: 400;
         }
         .radar-sweep {
           position: absolute;
@@ -44,6 +45,7 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
           animation: radar-sweep 3s linear infinite;
           z-index: 400;
           pointer-events: none;
+          box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
         }
         @keyframes radar-sweep {
           from { transform: rotate(0deg); }
@@ -68,26 +70,43 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
     if (!userLocation) return;
 
     // Create or update the radius circle
-    if (isScanning) {
-      if (!circleRef.current) {
-        circleRef.current = L.circle(
-          [userLocation.latitude, userLocation.longitude],
-          {
-            radius: searchRadius * 1000, // Convert km to meters
-            color: '#3b82f6',
-            fillColor: '#3b82f680',
-            fillOpacity: 0.1,
-            weight: 2,
-            dashArray: '5, 10',
-            interactive: false
-          }
-        ).addTo(map);
-      } else {
-        circleRef.current.setLatLng([userLocation.latitude, userLocation.longitude]);
-        circleRef.current.setRadius(searchRadius * 1000);
+    const createOrUpdateCircle = () => {
+      if (!userLocation) return;
+      
+      // Always ensure we have the right radius visible (even for small radius values)
+      const radiusInMeters = Math.max(searchRadius * 1000, 10000); // Minimum 10km radius for visibility
+      
+      if (isScanning) {
+        if (!circleRef.current) {
+          circleRef.current = L.circle(
+            [userLocation.latitude, userLocation.longitude],
+            {
+              radius: radiusInMeters,
+              color: '#3b82f6',
+              fillColor: '#3b82f680',
+              fillOpacity: 0.1,
+              weight: 2,
+              dashArray: '5, 10',
+              interactive: false
+            }
+          ).addTo(map);
+          
+          console.log(`Created circle with radius: ${radiusInMeters}m`);
+        } else {
+          circleRef.current.setLatLng([userLocation.latitude, userLocation.longitude]);
+          circleRef.current.setRadius(radiusInMeters);
+          console.log(`Updated circle with radius: ${radiusInMeters}m`);
+        }
+      } else if (circleRef.current) {
+        circleRef.current.removeFrom(map);
+        circleRef.current = null;
       }
+    };
 
-      // Create radar sweep element if it doesn't exist
+    createOrUpdateCircle();
+
+    // Create radar sweep element if it doesn't exist
+    if (isScanning) {
       if (!radarRef.current) {
         // Create radar DOM element manually
         const radar = document.createElement('div');
@@ -99,8 +118,6 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
           const container = document.createElement('div');
           container.className = 'radar-container';
           container.style.position = 'absolute';
-          container.style.zIndex = '400';
-          container.style.pointerEvents = 'none';
           container.appendChild(radar);
           mapContainer.appendChild(container);
           radarRef.current = radar;
@@ -127,13 +144,13 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
         const point = map.latLngToContainerPoint(userLatLng);
         
         // Calculate radius in pixels based on the current zoom level
-        const radiusInMeters = searchRadius * 1000;
+        const radiusInMeters = Math.max(searchRadius * 1000, 10000); // Minimum 10km for visibility
         const edge = L.latLng(
           userLocation.latitude + (radiusInMeters / 111320), // 1 degree ~ 111.32 km
           userLocation.longitude
         );
         const edgePoint = map.latLngToContainerPoint(edge);
-        const radiusInPixels = Math.max(10, Math.abs(edgePoint.x - point.x)); // Ensure minimum size
+        const radiusInPixels = Math.max(50, Math.abs(edgePoint.x - point.x)); // Ensure minimum size of 50px
         
         const size = radiusInPixels * 2;
         
@@ -152,6 +169,7 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
         }
         timeout = window.setTimeout(() => {
           updateRadarPosition();
+          createOrUpdateCircle(); // Also update circle on map changes
         }, 100); // Debounce for 100ms
       };
 
