@@ -49,7 +49,10 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     time: locationData?.weatherData?.time || new Date().toISOString(),
     condition: locationData?.weatherData?.condition || 
       determineWeatherCondition(locationData?.weatherData?.cloudCover || 0),
-    aqi: locationData?.weatherData?.aqi
+    aqi: locationData?.weatherData?.aqi,
+    
+    // Include nighttime cloud data if available
+    nighttimeCloudData: locationData?.weatherData?.nighttimeCloudData || null
   }), [locationData?.weatherData]);
 
   // Format the moon phase as a human-readable string
