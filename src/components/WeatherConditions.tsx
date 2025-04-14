@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,7 +7,7 @@ import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherCondition
 import { motion } from "framer-motion";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 import NighttimeCloudInfo from "@/components/weather/NighttimeCloudInfo";
-import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
+import { validateWeatherData as importedValidateWeatherData } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 
 interface WeatherConditionsProps {
@@ -28,10 +27,8 @@ interface WeatherConditionsProps {
   forecastData?: any;
 }
 
-// Helper function to normalize moon phase display
 export const normalizeMoonPhase = (phase: string | number): string => {
   if (typeof phase === 'number') {
-    // If it's a value between 0 and 1 (fraction of lunar cycle)
     if (phase >= 0 && phase <= 1) {
       if (phase <= 0.05 || phase >= 0.95) return "New Moon";
       if (phase < 0.25) return "Waxing Crescent";
@@ -43,33 +40,12 @@ export const normalizeMoonPhase = (phase: string | number): string => {
       return "Waning Crescent";
     }
     
-    // For any other numeric format, convert to string
     return `Moon Phase ${phase}`;
   }
   
-  // If it's already a string but empty, provide a default
   if (!phase) return "Unknown Phase";
   
-  return phase; // If it's already a string, return as is
-};
-
-// Validate weather data to ensure it's complete and has valid values
-const validateWeatherData = (data: any) => {
-  const isValid = data && 
-    typeof data.temperature === 'number' &&
-    typeof data.humidity === 'number' &&
-    typeof data.cloudCover === 'number' &&
-    typeof data.windSpeed === 'number' &&
-    typeof data.precipitation === 'number' &&
-    typeof data.time === 'string' &&
-    typeof data.condition === 'string';
-  
-  if (!isValid) {
-    console.error("Invalid weather data detected:", data);
-    return false;
-  }
-  
-  return true;
+  return phase;
 };
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
@@ -83,17 +59,14 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
   const { toast } = useToast();
   
-  // Calculate nighttime cloud cover when forecast data is available
   const nighttimeCloudData = useMemo(() => {
     if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      // Extract nighttime forecasts
       const nightForecasts = extractNightForecasts(forecastData.hourly);
       
       if (nightForecasts.length === 0) return null;
       
-      // Group forecasts by time ranges
       const eveningForecasts = nightForecasts.filter(forecast => {
         const hour = new Date(forecast.time).getHours();
         return hour >= 18 && hour <= 23;
@@ -104,11 +77,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         return hour >= 0 && hour < 8;
       });
       
-      // Calculate average cloud cover for each time range
       const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
       const morningCloudCover = calculateAverageCloudCover(morningForecasts);
       
-      // Calculate weighted average
       const totalHours = eveningForecasts.length + morningForecasts.length;
       
       let avgNightCloudCover;
@@ -136,9 +107,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   }, [forecastData]);
   
-  // Validate weather data against forecast data
   useEffect(() => {
-    if (forecastData && validateWeatherData(weatherData)) {
+    if (forecastData && importedValidateWeatherData(weatherData)) {
       const { isValid, correctedData, discrepancies } = validateWeatherAgainstForecast(
         weatherData,
         forecastData
@@ -147,11 +117,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       if (!isValid && correctedData && discrepancies) {
         console.log("Weather data discrepancies detected:", discrepancies);
         
-        // Update weather data with corrected values
         setStableWeatherData(correctedData);
         
-        // Show toast notification if significant discrepancies found
-        if (discrepancies.length > 2) { // Only show toast for multiple significant discrepancies
+        if (discrepancies.length > 2) {
           toast({
             title: t("Weather Data Updated", "天气数据已更新"),
             description: t(
@@ -162,21 +130,16 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
           });
         }
       } else {
-        // If data is valid, use the provided data
         setStableWeatherData(weatherData);
       }
-    } else if (validateWeatherData(weatherData)) {
-      // No forecast data, but weather data is valid
+    } else if (importedValidateWeatherData(weatherData)) {
       setStableWeatherData(weatherData);
     }
   }, [weatherData, forecastData, toast, t]);
   
-  // Use memoized translations and normalizations for better performance
   const translatedData = useMemo(() => {
-    // Normalize moon phase first to ensure consistent format
     const normalizedMoonPhase = normalizeMoonPhase(moonPhase);
     
-    // Translate relevant conditions for Chinese
     return {
       seeingConditions: language === 'zh' 
         ? getSeeingConditionInChinese(seeingConditions)
@@ -190,7 +153,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     };
   }, [language, seeingConditions, moonPhase, stableWeatherData.condition]);
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -239,7 +201,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             </motion.div>
           </div>
           
-          {/* Add nighttime cloud info component when data is available */}
           {nighttimeCloudData && nighttimeCloudData.average !== null && (
             <motion.div variants={itemVariants} className="mt-4">
               <NighttimeCloudInfo nighttimeCloudData={nighttimeCloudData} />
