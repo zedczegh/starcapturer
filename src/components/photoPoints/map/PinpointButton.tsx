@@ -32,7 +32,7 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({ onGetLocation }) => {
 
   return (
     <div 
-      className="absolute top-4 right-16 z-[999]" 
+      className="absolute bottom-8 left-2 z-[999]" 
       onClick={stopPropagation} 
       onTouchStart={stopPropagation}
     >

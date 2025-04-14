@@ -7,8 +7,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
-import MapLegend from './MapLegend';
-import PinpointButton from './PinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -96,23 +94,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Handle getting current user location
-  const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationUpdate(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    }
-  }, [onLocationUpdate]);
-  
   // Render map with locations
   return (
     <div 
@@ -149,15 +130,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={true}
       />
-      
-      {/* Place MapLegend and PinpointButton outside the MapContainer for better event handling */}
-      <MapLegend 
-        activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
-      />
-      
-      <PinpointButton onGetLocation={handleGetLocation} />
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -9,7 +10,7 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
-import { MapEvents, WorldBoundsController } from './MapEffectsController';
+import { MapEvents } from './MapEffectsController';
 import PinpointButton from './PinpointButton';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 
@@ -83,11 +84,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     if (onMapReady) {
       onMapReady();
     }
-    
-    // Make map instance available globally for external access
-    if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
-    }
   }, [onMapReady]);
   
   // Handle location click
@@ -152,10 +148,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Add world bounds controller to prevent infinite scrolling */}
-      <WorldBoundsController />
-      
-      {/* Use MapEvents component for map click handling */}
+      {/* Use MapEvents component instead of MapClickHandler */}
       <MapEvents onMapClick={handleMapClick} />
       
       {userLocation && (
@@ -198,8 +191,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
       
-      {/* Map legend and pinpoint button are now rendered outside to correctly handle click events */}
+      {/* Map legend with improved component */}
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+      />
       
+      {/* Add pinpoint button */}
+      <PinpointButton onGetLocation={handleGetLocation} />
     </MapContainer>
   );
 };
