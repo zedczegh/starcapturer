@@ -16,38 +16,33 @@ import { useMapUtils } from '@/hooks/photoPoints/useMapUtils';
 const DynamicZoomUpdater = ({ 
   zoom, 
   center, 
-  searchRadius 
+  searchRadius,
+  isManualRadiusChange 
 }: { 
   zoom: number; 
   center: [number, number]; 
   searchRadius: number;
+  isManualRadiusChange: boolean;
 }) => {
   const map = useMap();
   const { getZoomLevel } = useMapUtils();
   const lastRadiusRef = React.useRef(searchRadius);
   
-  // Only update zoom when searchRadius changes significantly
+  // Only update zoom when searchRadius changes manually through the slider
   useEffect(() => {
-    if (map) {
-      // Only calculate new zoom if radius changed by more than 100km
-      if (Math.abs(lastRadiusRef.current - searchRadius) > 100) {
-        const calculatedZoom = getZoomLevel(searchRadius);
-        lastRadiusRef.current = searchRadius;
-        
-        // Only animate if the zoom difference is significant
-        const zoomDifference = Math.abs(map.getZoom() - calculatedZoom);
-        
-        // Use a higher threshold to prevent minor zoom changes
-        if (zoomDifference > 1.5) {
-          map.flyTo(center, calculatedZoom, {
-            duration: 1,  // 1 second animation
-            easeLinearity: 0.25
-          });
-          console.log(`Updating zoom to ${calculatedZoom} for radius ${searchRadius}km`);
-        }
-      }
-    }
-  }, [searchRadius, map, center, getZoomLevel]);
+    if (!map || !isManualRadiusChange) return;
+    
+    // Calculate new zoom based on the radius
+    const calculatedZoom = getZoomLevel(searchRadius);
+    lastRadiusRef.current = searchRadius;
+    
+    // Perform the zoom animation
+    map.flyTo(center, calculatedZoom, {
+      duration: 1,  // 1 second animation
+      easeLinearity: 0.25
+    });
+    console.log(`Updating zoom to ${calculatedZoom} for manual radius change to ${searchRadius}km`);
+  }, [searchRadius, map, center, getZoomLevel, isManualRadiusChange]);
   
   // Update center only for significant distance changes
   useEffect(() => {
@@ -56,7 +51,7 @@ const DynamicZoomUpdater = ({
       const currentCenter = map.getCenter();
       const distance = map.distance(currentCenter, center);
       
-      // Increase threshold to 500m to reduce unnecessary updates
+      // Only update center without zooming
       if (distance > 500) { 
         map.setView(center, map.getZoom(), {
           animate: true,
@@ -87,6 +82,7 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   isScanning?: boolean;
+  isManualRadiusChange?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -106,7 +102,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
-  isScanning = false
+  isScanning = false,
+  isManualRadiusChange = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   
@@ -149,11 +146,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        {/* Dynamic zoom updater that responds to radius changes */}
+        {/* Dynamic zoom updater that responds ONLY to manual radius changes */}
         <DynamicZoomUpdater 
           zoom={zoom}
           center={center}
           searchRadius={searchRadius}
+          isManualRadiusChange={isManualRadiusChange}
         />
         
         {/* Use MapEffectsComposer to apply all map effects */}

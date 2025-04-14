@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
@@ -13,6 +12,7 @@ interface MapEffectsComposerProps {
   searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
   isScanning?: boolean;
+  isManualRadiusChange?: boolean;
 }
 
 /**
@@ -25,16 +25,18 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   activeView = 'certified',
   searchRadius = 100,
   onSiqsCalculated,
-  isScanning = false
+  isScanning = false,
+  isManualRadiusChange = false
 }) => {
   const map = useMap();
   
-  // Set view when center changes
+  // Only update center position, keep current zoom level
   React.useEffect(() => {
     if (!map || !center) return;
     
-    map.setView(center, zoom || map.getZoom());
-  }, [map, center, zoom]);
+    // Only set the center, not the zoom level
+    map.setView(center, map.getZoom());
+  }, [map, center]);
   
   return (
     <>
