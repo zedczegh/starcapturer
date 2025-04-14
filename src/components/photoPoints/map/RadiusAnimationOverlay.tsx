@@ -8,6 +8,7 @@ interface RadiusAnimationOverlayProps {
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
   isSearching: boolean;
+  activeView: 'certified' | 'calculated';
 }
 
 /**
@@ -16,11 +17,34 @@ interface RadiusAnimationOverlayProps {
 const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   userLocation,
   searchRadius,
-  isSearching
+  isSearching,
+  activeView
 }) => {
   const map = useMap();
   const [circle, setCircle] = useState<L.Circle | null>(null);
   const [radarSweep, setRadarSweep] = useState<L.Circle | null>(null);
+  const [prevLocation, setPrevLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [showAnimation, setShowAnimation] = useState(false);
+  
+  // Detect location changes
+  useEffect(() => {
+    if (!userLocation) return;
+    
+    // Check if location has changed
+    if (
+      prevLocation && 
+      (prevLocation.latitude !== userLocation.latitude || 
+       prevLocation.longitude !== userLocation.longitude)
+    ) {
+      // Only show animation for calculated view
+      if (activeView === 'calculated') {
+        setShowAnimation(true);
+        setTimeout(() => setShowAnimation(false), 6000); // Show animation for 6 seconds
+      }
+    }
+    
+    setPrevLocation(userLocation);
+  }, [userLocation, prevLocation, activeView]);
   
   // Add and manage the radius circle
   useEffect(() => {
@@ -54,10 +78,13 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     };
   }, [map, userLocation, searchRadius]);
   
-  // Create and manage the radar sweep animation when searching
+  // Create and manage the radar sweep animation when searching or location changes
   useEffect(() => {
-    if (!map || !userLocation || !isSearching) {
-      // Remove the radar sweep when not searching
+    // Only show radar for calculated view
+    const shouldShowRadar = (isSearching || showAnimation) && activeView === 'calculated';
+    
+    if (!map || !userLocation || !shouldShowRadar) {
+      // Remove the radar sweep when not showing
       if (radarSweep) {
         radarSweep.removeFrom(map);
         setRadarSweep(null);
@@ -89,7 +116,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         sweepMarker.removeFrom(map);
       }
     };
-  }, [map, userLocation, isSearching, searchRadius]);
+  }, [map, userLocation, isSearching, searchRadius, showAnimation, activeView]);
 
   // Add CSS styles for the radar sweep animation directly
   useEffect(() => {
@@ -116,7 +143,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
           rgba(139, 92, 246, 0) 180deg,
           rgba(139, 92, 246, 0) 360deg
         );
-        animation: radarSweep 4s linear infinite;
+        animation: radarSweep 6s linear infinite;
         box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
         filter: blur(1px);
       }
