@@ -94,7 +94,10 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       return;
     }
     
-    // Create radar sweep effect
+    // Calculate the radius in pixels for the animation
+    const radiusInMeters = searchRadius * 1000; // Convert km to meters
+    
+    // Create radar sweep effect that's confined to the radius
     const sweep = document.createElement('div');
     sweep.className = 'radar-sweep';
     
@@ -102,13 +105,13 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     const sweepIcon = L.divIcon({
       html: sweep,
       className: 'radar-sweep-container',
-      iconSize: [searchRadius * 20, searchRadius * 20],
-      iconAnchor: [searchRadius * 10, searchRadius * 10]
+      iconSize: [radiusInMeters / 50, radiusInMeters / 50], // Size relative to the radius
+      iconAnchor: [radiusInMeters / 100, radiusInMeters / 100]
     });
     
     const sweepMarker = L.marker(
       [userLocation.latitude, userLocation.longitude], 
-      { icon: sweepIcon }
+      { icon: sweepIcon, interactive: false }
     ).addTo(map);
     
     setRadarSweep(sweepMarker as unknown as L.Circle);
@@ -127,15 +130,17 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     styleEl.innerHTML = `
       .radar-sweep-container {
         z-index: 400;
-        opacity: 0.6;
+        opacity: 0.7;
+        pointer-events: none;
       }
       
       .radar-sweep {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        width: ${searchRadius * 2000}px;
+        height: ${searchRadius * 2000}px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         border-radius: 50%;
         background: conic-gradient(
           from 0deg,
@@ -148,14 +153,18 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         animation: radarSweep 8s linear infinite;
         box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
         filter: blur(2px);
+        mask-image: radial-gradient(circle, black 0%, black 100%);
+        -webkit-mask-image: radial-gradient(circle, black 0%, black 100%);
+        overflow: hidden;
+        clip-path: circle(50%);
       }
       
       @keyframes radarSweep {
         from {
-          transform: rotate(0deg);
+          transform: translate(-50%, -50%) rotate(0deg);
         }
         to {
-          transform: rotate(360deg);
+          transform: translate(-50%, -50%) rotate(360deg);
         }
       }
       
@@ -183,7 +192,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         existingStyle.remove();
       }
     };
-  }, []);
+  }, [searchRadius]);
   
   return null; // This component doesn't render any DOM elements directly
 };
