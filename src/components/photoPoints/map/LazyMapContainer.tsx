@@ -198,8 +198,23 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
       
-      {/* Map legend and pinpoint button are now rendered outside to correctly handle click events */}
-      
+      {/* Render PinpointButton and MapLegend outside MapContainer */}
+      <div className="leaflet-control-container">
+        <div className="leaflet-top leaflet-right">
+          <div className="leaflet-control flex flex-col space-y-2">
+            <PinpointButton 
+              onGetLocation={handleGetLocation} 
+              className="z-[1000]" 
+            />
+            <MapLegend 
+              activeView={activeView} 
+              showStarLegend={activeView === 'certified'}
+              showCircleLegend={activeView === 'calculated'}
+              className="z-[1000]"
+            />
+          </div>
+        </div>
+      </div>
     </MapContainer>
   );
 };
