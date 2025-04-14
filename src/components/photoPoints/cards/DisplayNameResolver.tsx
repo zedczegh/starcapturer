@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { Language } from '@/services/geocoding/types';
 
 interface DisplayNameResolverProps {
   location: SharedAstroSpot;
@@ -14,9 +15,12 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
   const [enhancedLocation, setEnhancedLocation] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Convert string language to Language type
+  const typedLanguage: Language = language === 'zh' ? 'zh' : 'en';
+  
   // Get nearest town information with enhanced details
   const nearestTownInfo = location.latitude && location.longitude ? 
-    findNearestTown(location.latitude, location.longitude, language) : null;
+    findNearestTown(location.latitude, location.longitude, typedLanguage) : null;
   
   // Fetch enhanced location details when coordinates are available
   useEffect(() => {
@@ -25,7 +29,7 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
     if (location.latitude && location.longitude) {
       setIsLoading(true);
       
-      getEnhancedLocationDetails(location.latitude, location.longitude, language)
+      getEnhancedLocationDetails(location.latitude, location.longitude, typedLanguage)
         .then(details => {
           if (isMounted) {
             setEnhancedLocation(details);
@@ -43,7 +47,7 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
     return () => {
       isMounted = false;
     };
-  }, [location.latitude, location.longitude, language]);
+  }, [location.latitude, location.longitude, typedLanguage]);
   
   // Use detailed location name as the display name based on language
   let displayName;

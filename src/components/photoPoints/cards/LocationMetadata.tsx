@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { MapPin, Calendar, Navigation, Map, Building, Road } from 'lucide-react';
+import { MapPin, Calendar, Navigation, Map, Building } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { formatDistance } from '@/utils/location/formatDistance';
@@ -33,7 +33,7 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
   // Get nearest town if coordinates are available (as fallback)
   let nearestTownInfo = null;
   if (latitude !== undefined && longitude !== undefined) {
-    nearestTownInfo = findNearestTown(latitude, longitude, language);
+    nearestTownInfo = findNearestTown(latitude, longitude, language === 'zh' ? 'zh' : 'en');
   }
   
   // Format date if available
@@ -55,7 +55,7 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
       {/* Street-level information if available */}
       {locationDetails?.streetName && (!locationName || !locationName.includes(locationDetails.streetName)) && (
         <div className="flex items-center">
-          <Road className="h-4 w-4 mr-1.5" />
+          <MapPin className="h-4 w-4 mr-1.5" />
           <span className="line-clamp-1">{locationDetails.streetName}</span>
         </div>
       )}
