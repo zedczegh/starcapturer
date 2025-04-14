@@ -34,6 +34,7 @@ interface LazyMapContainerProps {
   handleTouchMove?: (e: React.TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
+  isScanning?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -52,7 +53,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   isMobile,
-  useMobileMapFixer = false
+  useMobileMapFixer = false,
+  isScanning = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -105,7 +107,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       console.log("Map clicked, updating location to:", lat, lng);
     }
   }, [onMapClick]);
-
+  
   // Handle getting current user location via geolocation
   const handleGetLocation = useCallback(() => {
     if (onMapClick) {
@@ -161,6 +163,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
         onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
+        isScanning={isScanning}
       />
       
       {/* Use MapEvents component for map click handling */}
@@ -205,9 +208,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      
-      {/* Map legend and pinpoint button are now rendered outside to correctly handle click events */}
-      
     </MapContainer>
   );
 };

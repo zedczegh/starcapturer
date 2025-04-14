@@ -1,17 +1,15 @@
 
-import React, { lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { PhotoPointsViewMode } from './ViewToggle';
-import PageLoader from '@/components/loaders/PageLoader';
-import { calculateDistance } from '@/utils/geoUtils';
-
-const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
-const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
-const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
+import { useLanguage } from '@/contexts/LanguageContext';
+import PhotoPointsMap from './map/PhotoPointsMap';
+import LocationsList from './LocationsList';
+import EmptyLocationDisplay from './EmptyLocationDisplay';
+import { toast } from 'sonner';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
-  activeView: PhotoPointsViewMode;
+  activeView: 'certified' | 'calculated';
   initialLoad: boolean;
   effectiveLocation: { latitude: number; longitude: number } | null;
   certifiedLocations: SharedAstroSpot[];
@@ -23,11 +21,11 @@ interface PhotoPointsViewProps {
   loadMore: () => void;
   refreshSiqs: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (latitude: number, longitude: number) => void;
-  canLoadMoreCalculated: boolean;
-  loadMoreCalculated: () => void;
-  loadMoreClickCount: number;
-  maxLoadMoreClicks: number;
+  onLocationUpdate?: (latitude: number, longitude: number) => void;
+  canLoadMoreCalculated?: boolean;
+  loadMoreCalculated?: () => void;
+  loadMoreClickCount?: number;
+  maxLoadMoreClicks?: number;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -47,66 +45,101 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   onLocationUpdate,
   canLoadMoreCalculated,
   loadMoreCalculated,
-  loadMoreClickCount,
-  maxLoadMoreClicks
+  loadMoreClickCount = 0,
+  maxLoadMoreClicks = 3
 }) => {
-  // Filter calculated locations by distance
-  const filteredCalculatedLocations = calculatedLocations.filter(loc => {
-    if (!effectiveLocation) return true;
-    const distance = loc.distance || calculateDistance(
-      effectiveLocation.latitude,
-      effectiveLocation.longitude,
-      loc.latitude,
-      loc.longitude
-    );
-    return distance <= calculatedSearchRadius;
-  });
-
-  if (showMap) {
+  const { t } = useLanguage();
+  const [isScanning, setIsScanning] = useState(false);
+  
+  // Track when locations are being loaded
+  useEffect(() => {
+    setIsScanning(loading);
+  }, [loading]);
+  
+  // Set scanning state when loading more
+  const handleLoadMore = () => {
+    setIsScanning(true);
+    loadMore();
+  };
+  
+  // Set scanning state when loading more calculated locations
+  const handleLoadMoreCalculated = () => {
+    if (loadMoreCalculated) {
+      setIsScanning(true);
+      loadMoreCalculated();
+    }
+  };
+  
+  // Handle refreshing SIQS data
+  const handleRefreshSiqs = () => {
+    setIsScanning(true);
+    refreshSiqs();
+    
+    // Show toast notification
+    toast.info(t(
+      "Refreshing location data...",
+      "正在刷新位置数据..."
+    ));
+    
+    // Auto-reset scanning state after a delay
+    setTimeout(() => {
+      setIsScanning(false);
+    }, 5000);
+  };
+  
+  // Reset scanning state when locations change
+  useEffect(() => {
+    if ((activeView === 'certified' && certifiedLocations.length > 0) || 
+        (activeView === 'calculated' && calculatedLocations.length > 0)) {
+      setIsScanning(false);
+    }
+  }, [certifiedLocations, calculatedLocations, activeView]);
+  
+  // Get current locations based on active view
+  const currentLocations = activeView === 'certified' 
+    ? certifiedLocations 
+    : calculatedLocations;
+  
+  // If no locations and not loading, show empty state
+  if (currentLocations.length === 0 && !loading && !initialLoad) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
-          <PhotoPointsMap 
-            userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
-            certifiedLocations={certifiedLocations}
-            calculatedLocations={calculatedLocations}
-            activeView={activeView}
-            searchRadius={searchRadius}
-            onLocationClick={onLocationClick}
-            onLocationUpdate={onLocationUpdate}
-          />
-        </div>
-      </Suspense>
+      <EmptyLocationDisplay 
+        activeView={activeView}
+        onRefresh={handleRefreshSiqs}
+      />
     );
   }
   
   return (
-    <Suspense fallback={<PageLoader />}>
-      <div className="min-h-[300px]">
-        {activeView === 'certified' ? (
-          <DarkSkyLocations
-            locations={certifiedLocations}
-            loading={loading}
-            initialLoad={initialLoad}
-          />
-        ) : (
-          <CalculatedLocations
-            locations={filteredCalculatedLocations}
-            loading={loading}
-            hasMore={hasMore}
-            onLoadMore={loadMore}
-            onRefresh={refreshSiqs}
-            searchRadius={calculatedSearchRadius}
-            initialLoad={initialLoad}
-            onLoadMoreCalculated={loadMoreCalculated}
-            canLoadMoreCalculated={canLoadMoreCalculated}
-            loadMoreClickCount={loadMoreClickCount}
-            maxLoadMoreClicks={maxLoadMoreClicks}
-          />
-        )}
-      </div>
-    </Suspense>
+    <>
+      {showMap ? (
+        <PhotoPointsMap
+          userLocation={effectiveLocation}
+          locations={currentLocations}
+          certifiedLocations={certifiedLocations}
+          calculatedLocations={calculatedLocations}
+          activeView={activeView}
+          searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
+          onLocationClick={onLocationClick}
+          onLocationUpdate={onLocationUpdate}
+          isScanning={isScanning}
+        />
+      ) : (
+        <LocationsList
+          locations={currentLocations}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={handleLoadMore}
+          onLocationClick={onLocationClick}
+          onRefresh={handleRefreshSiqs}
+          activeView={activeView}
+          canLoadMoreCalculated={canLoadMoreCalculated}
+          onLoadMoreCalculated={handleLoadMoreCalculated}
+          loadMoreClickCount={loadMoreClickCount}
+          maxLoadMoreClicks={maxLoadMoreClicks}
+        />
+      )}
+    </>
   );
 };
 

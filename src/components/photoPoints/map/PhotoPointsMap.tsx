@@ -18,6 +18,7 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
+  isScanning?: boolean;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
@@ -28,7 +29,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate
+  onLocationUpdate,
+  isScanning = false
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -144,6 +146,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={true}
+        isScanning={isScanning}
       />
       
       <MapLegend 
