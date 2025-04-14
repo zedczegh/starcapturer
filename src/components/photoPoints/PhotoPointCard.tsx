@@ -6,8 +6,6 @@ import { MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
-import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { extractNearestTownName, getRegionalName } from "@/utils/locationNameFormatter";
 import { getCertificationInfo, getLocalizedCertText } from "./utils/certificationUtils";
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
@@ -30,75 +28,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [nearestTown, setNearestTown] = useState<string | null>(null);
-  const [loadingTown, setLoadingTown] = useState(false);
-
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  useEffect(() => {
-    if (point.latitude && point.longitude) {
-      const fetchNearestTown = async () => {
-        setLoadingTown(true);
-        try {
-          // First check if we already have a valid name
-          if (point.name && 
-              !point.name.includes("°") && 
-              !point.name.includes("Location at") &&
-              !point.name.includes("位置在") &&
-              !point.name.includes("Remote area") &&
-              !point.name.includes("偏远地区")) {
-            
-            const extractedName = extractNearestTownName(point.name, point.description, language);
-            setNearestTown(extractedName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // Then try to get regional name as fallback
-          const regionalName = getRegionalName(point.latitude, point.longitude, language);
-          
-          if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
-            setNearestTown(regionalName);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // If no name is available yet, find the nearest town using our new utility
-          const nearestTownInfo = findNearestTown(point.latitude, point.longitude, language);
-          
-          // Only use this if the town is reasonably close (within 50km)
-          if (nearestTownInfo.distance <= 50) {
-            const nearText = language === 'en' ? 'Near ' : '靠近';
-            setNearestTown(`${nearText}${nearestTownInfo.townName}`);
-            setLoadingTown(false);
-            return;
-          }
-          
-          // If all else fails, try to get a name from the geocoding service
-          const townName = await getLocationNameForCoordinates(
-            point.latitude,
-            point.longitude,
-            language
-          );
-          
-          if (townName) {
-            const extractedTownName = extractNearestTownName(townName, point.description, language);
-            setNearestTown(extractedTownName);
-          } else {
-            setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-          }
-        } catch (error) {
-          console.error("Error fetching nearest town:", error);
-          setNearestTown(language === 'en' ? 'Remote area' : '偏远地区');
-        } finally {
-          setLoadingTown(false);
-        }
-      };
-      
-      fetchNearestTown();
-    }
-  }, [point.latitude, point.longitude, point.description, point.name, language]);
-
+  // Get nearest town information directly from our database
+  const nearestTownInfo = point.latitude && point.longitude ? 
+    findNearestTown(point.latitude, point.longitude, language) : null;
+  
   const formatDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
@@ -141,7 +76,10 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  const pointName = language === 'en' ? point.name : (point.chineseName || point.name);
+  // Use the nearest town name as the display name or fall back to original name
+  const pointName = nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区')
+    ? nearestTownInfo.townName
+    : (language === 'en' ? point.name : (point.chineseName || point.name));
 
   return (
     <div 
@@ -168,10 +106,16 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {nearestTown && (
+      {/* Show original location name if we're using nearest town as main title and they differ */}
+      {nearestTownInfo && 
+       nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
+       point.name && 
+       !point.name.includes(nearestTownInfo.townName) && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground line-clamp-1">{nearestTown}</span>
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {language === 'en' ? point.name : (point.chineseName || point.name)}
+          </span>
         </div>
       )}
       

@@ -11,6 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { prefetchSIQSDetails } from "@/lib/queryPrefetcher";
 import { formatLocationName } from "@/utils/locationNameFormatter";
 import LightPollutionIndicator from "./location/LightPollutionIndicator";
+import { findNearestTown } from "@/utils/nearestTownCalculator";
 
 interface LocationCardProps {
   id: string;
@@ -55,24 +56,30 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   const scoreColor = siqsToColor(siqs);
 
-  // Format name more nicely
-  let displayName = formatLocationName(name, language as any);
+  // Get nearest town name from the location database
+  const nearestTownInfo = findNearestTown(latitude, longitude, language);
   
-  // Check if the name contains coordinates or is a remote area
-  if (
-    displayName === "Remote area" || 
-    displayName === "偏远地区" || 
-    displayName.includes("°") || 
-    displayName.includes("Location at") || 
-    displayName.includes("位置在")
-  ) {
-    // Use a generic name for calculated locations
-    const locationMatch = displayName.match(/calc-loc-(\d+)/);
-    if (locationMatch) {
-      const locationNumber = parseInt(locationMatch[1]) || 1;
-      displayName = language === 'en' 
-        ? `Potential ideal dark site ${locationNumber}`
-        : `潜在理想暗夜地点 ${locationNumber}`;
+  // Use nearest town name as the main title
+  let displayName = nearestTownInfo.townName;
+  
+  // Fallback to formatted name if town name is generic
+  if (displayName === (language === 'en' ? 'Remote area' : '偏远地区')) {
+    displayName = formatLocationName(name, language as any);
+    // Check if the name contains coordinates or is a remote area
+    if (displayName === "Remote area" || 
+        displayName === "偏远地区" || 
+        displayName.includes("°") || 
+        displayName.includes("Location at") || 
+        displayName.includes("位置在")
+    ) {
+      // Use a generic name for calculated locations
+      const locationMatch = name.match(/calc-loc-(\d+)/);
+      if (locationMatch) {
+        const locationNumber = parseInt(locationMatch[1]) || 1;
+        displayName = language === 'en' 
+          ? `Potential ideal dark site ${locationNumber}`
+          : `潜在理想暗夜地点 ${locationNumber}`;
+      }
     }
   }
   

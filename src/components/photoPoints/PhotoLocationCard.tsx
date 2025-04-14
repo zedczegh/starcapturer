@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +11,7 @@ import LightPollutionIndicator from '@/components/location/LightPollutionIndicat
 import SiqsScoreBadge from './cards/SiqsScoreBadge';
 import CertificationBadge from './cards/CertificationBadge';
 import LocationMetadata from './cards/LocationMetadata';
+import { findNearestTown } from '@/utils/nearestTownCalculator';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -90,13 +92,23 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
 
+  // Get nearest town information for the location
+  const nearestTownInfo = location.latitude && location.longitude ? 
+    findNearestTown(location.latitude, location.longitude, language) : null;
+  
+  // Use nearest town name as the main display name
   let displayName;
   
-  if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
+  if (nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
+    // Use nearest town from our database
+    displayName = nearestTownInfo.townName;
+  } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
+    // Fallback for potential ideal dark sites
     displayName = language === 'en' 
       ? `Potential ideal dark site ${locationCounter}`
       : `潜在理想暗夜地点 ${locationCounter}`;
   } else {
+    // Fallback to original name 
     displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   }
   

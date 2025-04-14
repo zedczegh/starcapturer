@@ -16,7 +16,14 @@ interface MapMarkerPopupProps {
 const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onViewDetails }) => {
   const { language, t } = useLanguage();
   
-  const displayName = language === 'en' ? location.name : (location.chineseName || location.name);
+  // Get the nearest town name from our database
+  const nearestTownInfo = location.latitude && location.longitude ? 
+    findNearestTown(location.latitude, location.longitude, language) : null;
+  
+  // Use the nearest town name as the display name or fall back to original name
+  const displayName = nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区')
+    ? nearestTownInfo.townName
+    : (language === 'en' ? location.name : (location.chineseName || location.name));
   
   // Get certification info if available
   const hasCertification = location.certification || location.isDarkSkyReserve;
@@ -32,14 +39,11 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
     return '';
   };
   
-  // Get nearest town information
-  const nearestTownInfo = location.latitude && location.longitude ? 
-    findNearestTown(location.latitude, location.longitude, language) : null;
-  
-  // Only show nearest town if it's reasonably close and not already in the name
-  const showNearestTown = nearestTownInfo && 
-    nearestTownInfo.distance <= 50 && 
-    !displayName.includes(nearestTownInfo.townName);
+  // Only show original name if it's different from the nearest town name we're using
+  const showOriginalName = nearestTownInfo && 
+    nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区') && 
+    location.name && 
+    !location.name.includes(nearestTownInfo.townName);
   
   return (
     <div className="p-3 min-w-[200px] max-w-[260px]">
@@ -66,12 +70,11 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
         </div>
       )}
       
-      {showNearestTown && (
+      {showOriginalName && (
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {language === 'en' ? 'Near ' : '靠近'}
-            {nearestTownInfo.townName}
+            {language === 'en' ? location.name : (location.chineseName || location.name)}
           </span>
         </div>
       )}
