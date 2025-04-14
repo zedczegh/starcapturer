@@ -21,6 +21,30 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   const map = useMap();
   const [circle, setCircle] = useState<L.Circle | null>(null);
   const [radarSweep, setRadarSweep] = useState<L.Circle | null>(null);
+  const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [showAnimation, setShowAnimation] = useState(false);
+  
+  // Detect location changes and trigger animation
+  useEffect(() => {
+    if (!userLocation) return;
+    
+    // If this is the first location or location has changed
+    if (!prevLocation || 
+        prevLocation.latitude !== userLocation.latitude || 
+        prevLocation.longitude !== userLocation.longitude) {
+      
+      // Store new location
+      setPrevLocation(userLocation);
+      
+      // Show animation for 5 seconds
+      setShowAnimation(true);
+      const timer = setTimeout(() => {
+        setShowAnimation(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [userLocation, prevLocation]);
   
   // Add and manage the radius circle
   useEffect(() => {
@@ -54,10 +78,10 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     };
   }, [map, userLocation, searchRadius]);
   
-  // Create and manage the radar sweep animation when searching
+  // Create and manage the radar sweep animation when location changes or during search
   useEffect(() => {
-    if (!map || !userLocation || !isSearching) {
-      // Remove the radar sweep when not searching
+    if (!map || !userLocation || (!isSearching && !showAnimation)) {
+      // Remove the radar sweep when not showing animation
       if (radarSweep) {
         radarSweep.removeFrom(map);
         setRadarSweep(null);
@@ -89,7 +113,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         sweepMarker.removeFrom(map);
       }
     };
-  }, [map, userLocation, isSearching, searchRadius]);
+  }, [map, userLocation, isSearching, searchRadius, showAnimation]);
 
   // Add CSS styles for the radar sweep animation directly
   useEffect(() => {
