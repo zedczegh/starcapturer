@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Info, Star, Circle } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Info, Star, Circle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
@@ -27,7 +27,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
   const displayCircleLegend = showCircleLegend || activeView === 'calculated';
 
   return (
-    <div className="absolute bottom-16 right-4 z-[999]">
+    <div className="absolute bottom-8 right-2 z-[999]">
       <div className="relative">
         {/* The collapsible panel */}
         <AnimatePresence>
@@ -37,7 +37,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 50 }}
               transition={{ duration: 0.3 }}
-              className={`p-3.5 rounded-lg backdrop-blur-md bg-background/90 border border-primary/30 
+              className={`p-3.5 rounded-lg backdrop-blur-md bg-background/80 border border-primary/30 
                          shadow-lg overflow-y-auto max-h-[80vh] w-[260px] ${className}`}
             >
               {/* Legend Header */}
@@ -134,37 +134,46 @@ const MapLegend: React.FC<MapLegendProps> = ({
           )}
         </AnimatePresence>
         
-        {/* The trigger button */}
+        {/* The trigger button - updated with gradient, exclamation mark, and new position */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <motion.button
-                initial={{ scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                initial={{ scale: 0.95, opacity: 0.8 }}
+                animate={{ 
+                  scale: [0.95, 1.05, 0.95],
+                  opacity: [0.8, 1, 0.8],
+                }}
+                transition={{ 
+                  repeat: Infinity, 
+                  duration: 3,
+                  ease: "easeInOut"
+                }}
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className={`flex items-center justify-center p-2 bg-gradient-to-r from-primary/80 to-primary/90
-                          rounded-full shadow-md border border-primary/40 transition-all ${isCollapsed ? '' : 'hidden'}`}
+                className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
+                          rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all ${isCollapsed ? '' : 'hidden'}`}
+                style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
               >
-                <div className="w-8 h-8 flex items-center justify-center">
-                  {activeView === 'certified' ? (
-                    <Star className="h-5 w-5 text-primary-foreground" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-primary-foreground" />
-                  )}
+                <div className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-600/80 to-blue-500/80">
+                  <AlertCircle className="h-5 w-5 text-white/90" strokeWidth={2.2} />
                 </div>
                 
                 {/* Add pulsing effect to button when collapsed */}
                 <motion.div 
                   className="absolute inset-0 rounded-full"
                   animate={{ 
-                    boxShadow: ["0 0 0 0 rgba(139, 92, 246, 0)", "0 0 0 8px rgba(139, 92, 246, 0)", "0 0 0 0 rgba(139, 92, 246, 0)"]
+                    boxShadow: [
+                      '0 0 0 rgba(139, 92, 246, 0)',
+                      '0 0 10px rgba(139, 92, 246, 0.7)',
+                      '0 0 20px rgba(139, 92, 246, 0.4)',
+                      '0 0 0 rgba(139, 92, 246, 0)'
+                    ]
                   }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 />
               </motion.button>
             </TooltipTrigger>
-            <TooltipContent side="left">
+            <TooltipContent side="left" className="bg-cosmic-800/90 border-blue-500/20 text-blue-100 backdrop-blur-md">
               {t("Map Legend", "地图图例")}
             </TooltipContent>
           </Tooltip>
