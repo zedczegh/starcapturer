@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RadiusAnimationOverlayProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -21,12 +22,9 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
 }) => {
   const map = useMap();
   const [circle, setCircle] = useState<L.Circle | null>(null);
-  const [radarSweep, setRadarSweep] = useState<L.Marker | null>(null);
+  const [radarSweep, setRadarSweep] = useState<L.Circle | null>(null);
   const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
-  const animationTimeoutRef = useRef<number | null>(null);
-  const updateAnimationRef = useRef<number | null>(null);
-  const isAnimatingRef = useRef<boolean>(false);
   
   // Only show animation for calculated view
   const shouldShowAnimation = activeView === 'calculated' && (isSearching || showAnimation);
@@ -45,31 +43,19 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       
       // Show animation for 5 seconds
       setShowAnimation(true);
-      
-      // Clear any existing timeout
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-      }
-      
-      // Set new timeout
-      animationTimeoutRef.current = window.setTimeout(() => {
+      const timer = setTimeout(() => {
         setShowAnimation(false);
-        animationTimeoutRef.current = null;
       }, 5000);
+      
+      return () => clearTimeout(timer);
     }
-    
-    return () => {
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-      }
-    };
   }, [userLocation, prevLocation, activeView]);
   
-  // Function to update the radius circle based on current zoom level
-  const updateRadiusCircle = React.useCallback(() => {
+  // Add and manage the radius circle
+  useEffect(() => {
     if (!map || !userLocation) return;
     
-    // Clear previous circle
+    // Clear previous circles
     if (circle) {
       circle.removeFrom(map);
     }
@@ -95,39 +81,39 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         newCircle.removeFrom(map);
       }
     };
-  }, [map, userLocation, searchRadius, circle]);
+  }, [map, userLocation, searchRadius]);
   
-  // Function to create and update the radar sweep animation
-  const createRadarSweep = React.useCallback(() => {
+  // Create and manage the radar sweep animation when location changes or during search
+  useEffect(() => {
     if (!map || !userLocation || !shouldShowAnimation) {
+      // Remove the radar sweep when not showing animation
       if (radarSweep) {
         radarSweep.removeFrom(map);
         setRadarSweep(null);
       }
       return;
     }
-
-    // Calculate the proper size based on the search radius and current zoom
-    const radiusInMeters = searchRadius * 1000; // Convert km to meters
-    const zoom = map.getZoom();
     
-    // Remove previous radar sweep to prevent duplicates
-    if (radarSweep) {
-      radarSweep.removeFrom(map);
-    }
+    // Calculate the proper size based on the search radius
+    // The size should match the actual radius size on the map
+    const radiusInPixels = searchRadius * 1000 / 
+      map.getZoom() * 0.000045; // Adjust this factor based on zoom level
     
     // Create container element for the radar sweep
     const container = document.createElement('div');
     container.className = 'radar-sweep-container';
+    container.style.width = `${radiusInPixels * 2}px`;
+    container.style.height = `${radiusInPixels * 2}px`;
+    container.style.borderRadius = '50%';
+    container.style.overflow = 'hidden';
     
     // Create the actual sweep element
     const sweep = document.createElement('div');
     sweep.className = 'radar-sweep';
     container.appendChild(sweep);
     
-    // Calculate icon size based on zoom level and radius
-    // This formula creates a more accurate scaling with zoom
-    const iconSize = Math.max(100, radiusInMeters / (Math.pow(2, 16 - zoom)));
+    // Use a smaller icon size to better match the circle radius
+    const iconSize = searchRadius * 2000 / map.getZoom(); // Adjust based on zoom level
     
     const sweepIcon = L.divIcon({
       html: container,
@@ -141,164 +127,88 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       { icon: sweepIcon }
     ).addTo(map);
     
-    setRadarSweep(sweepMarker);
-  }, [map, userLocation, shouldShowAnimation, radarSweep, searchRadius]);
-  
-  // Debounced function to update radar sweep
-  const updateRadarSweep = React.useCallback(() => {
-    // If animation is currently being updated, cancel it and queue a new update
-    if (updateAnimationRef.current !== null) {
-      cancelAnimationFrame(updateAnimationRef.current);
-    }
-    
-    // Mark as animating
-    isAnimatingRef.current = true;
-    
-    // Schedule update with requestAnimationFrame for better performance
-    updateAnimationRef.current = requestAnimationFrame(() => {
-      createRadarSweep();
-      updateAnimationRef.current = null;
-      
-      // Reset animation flag after a delay
-      setTimeout(() => {
-        isAnimatingRef.current = false;
-      }, 100);
-    });
-  }, [createRadarSweep]);
-  
-  // Add and manage the radius circle
-  useEffect(() => {
-    updateRadiusCircle();
+    setRadarSweep(sweepMarker as unknown as L.Circle);
     
     return () => {
-      if (circle) {
-        circle.removeFrom(map);
+      if (sweepMarker) {
+        sweepMarker.removeFrom(map);
       }
     };
-  }, [map, userLocation, searchRadius, updateRadiusCircle]);
-  
-  // Create and manage the radar sweep animation
-  useEffect(() => {
-    updateRadarSweep();
-    
-    return () => {
-      if (radarSweep) {
-        radarSweep.removeFrom(map);
-      }
-      
-      // Clean up any pending animation frame
-      if (updateAnimationRef.current !== null) {
-        cancelAnimationFrame(updateAnimationRef.current);
-      }
-    };
-  }, [map, userLocation, searchRadius, shouldShowAnimation, updateRadarSweep]);
-  
-  // Add map zoom listener to update both elements when zoom changes
-  useEffect(() => {
-    if (!map) return;
-    
-    let zoomTimeout: number | null = null;
-    
-    const handleZoom = () => {
-      // Clear previous timeout
-      if (zoomTimeout) {
-        clearTimeout(zoomTimeout);
-      }
-      
-      // Update the radius circle immediately as it's less resource-intensive
-      updateRadiusCircle();
-      
-      // Debounce the radar sweep update which is more resource-intensive
-      zoomTimeout = window.setTimeout(() => {
-        updateRadarSweep();
-        zoomTimeout = null;
-      }, 150);
-    };
-    
-    map.on('zoom', handleZoom);
-    
-    return () => {
-      map.off('zoom', handleZoom);
-      if (zoomTimeout) clearTimeout(zoomTimeout);
-    };
-  }, [map, updateRadiusCircle, updateRadarSweep]);
+  }, [map, userLocation, searchRadius, shouldShowAnimation]);
 
   // Add CSS styles for the radar sweep animation directly
   useEffect(() => {
-    const styleId = 'radius-animation-styles';
-    
-    // Only add styles if they don't already exist
-    if (!document.getElementById(styleId)) {
-      const styleEl = document.createElement('style');
-      styleEl.id = styleId;
-      styleEl.innerHTML = `
-        .radar-sweep-wrapper {
-          z-index: 400;
-        }
-        
-        .radar-sweep-container {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          overflow: hidden;
-          opacity: 0.7;
-        }
-        
-        .radar-sweep {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border-radius: 50%;
-          background: conic-gradient(
-            from 0deg,
-            rgba(139, 92, 246, 0.5) 0deg,
-            rgba(139, 92, 246, 0.3) 60deg, 
-            rgba(139, 92, 246, 0.1) 120deg,
-            rgba(139, 92, 246, 0) 180deg,
-            rgba(139, 92, 246, 0) 360deg
-          );
-          animation: radarSweep 6s linear infinite;
-          box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-          filter: blur(1px);
-          width: 100%;
-          height: 100%;
-          clip-path: circle(50%);
-        }
-        
-        @keyframes radarSweep {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        
-        .search-radius-circle {
-          animation: pulseRadius 4s ease-in-out infinite alternate;
-        }
-        
-        @keyframes pulseRadius {
-          0% {
-            stroke-opacity: 0.2;
-            stroke-width: 1;
-          }
-          100% {
-            stroke-opacity: 0.4;
-            stroke-width: 1.5;
-          }
-        }
-      `;
+    const styleEl = document.createElement('style');
+    styleEl.id = 'radius-animation-styles';
+    styleEl.innerHTML = `
+      .radar-sweep-wrapper {
+        z-index: 400;
+      }
       
-      document.head.appendChild(styleEl);
-    }
+      .radar-sweep-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        opacity: 0.6;
+      }
+      
+      .radar-sweep {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 50%;
+        background: conic-gradient(
+          from 0deg,
+          rgba(139, 92, 246, 0.4) 0deg,
+          rgba(139, 92, 246, 0.2) 60deg, 
+          rgba(139, 92, 246, 0.05) 120deg,
+          rgba(139, 92, 246, 0) 180deg,
+          rgba(139, 92, 246, 0) 360deg
+        );
+        animation: radarSweep 6s linear infinite;
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        filter: blur(2px);
+        width: 100%;
+        height: 100%;
+        clip-path: circle(50%);
+      }
+      
+      @keyframes radarSweep {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      
+      .search-radius-circle {
+        animation: pulseRadius 4s ease-in-out infinite alternate;
+      }
+      
+      @keyframes pulseRadius {
+        0% {
+          stroke-opacity: 0.2;
+          stroke-width: 1;
+        }
+        100% {
+          stroke-opacity: 0.4;
+          stroke-width: 1.5;
+        }
+      }
+    `;
+    
+    document.head.appendChild(styleEl);
     
     return () => {
-      // Only remove if we're unmounting completely
-      // This prevents animation flicker when component re-renders
+      const existingStyle = document.getElementById('radius-animation-styles');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
     };
   }, []);
   
