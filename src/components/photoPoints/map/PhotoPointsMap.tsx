@@ -151,7 +151,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         showStarLegend={activeView === 'certified'}
         showCircleLegend={activeView === 'calculated'}
         onToggle={handleLegendToggle}
-        className="absolute bottom-16 right-4"
+        className="absolute bottom-4 right-4"
       />
       
       {!legendOpen && (
