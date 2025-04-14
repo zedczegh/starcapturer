@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
@@ -36,7 +35,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
   
-  // Use the mapping hooks
   const { 
     hoveredLocationId, 
     handleHover,
@@ -61,16 +59,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
   
-  // Adjust map height based on screen size
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
-        // Use viewport height minus some space for headers on mobile
         setMapContainerHeight(window.innerHeight >= 700 
           ? 'calc(80vh - 160px)'
           : 'calc(90vh - 140px)');
       } else {
-        // Desktop height
         setMapContainerHeight('500px');
       }
     };
@@ -80,7 +75,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handle map click to update location - always allow location updates
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -88,7 +82,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationUpdate]);
   
-  // Handle the location click
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -97,7 +90,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Handle getting current user location
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -113,13 +105,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       );
     }
   }, [onLocationUpdate]);
-
-  // Toggle legend open/closed state
+  
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
   }, []);
   
-  // Render map with locations
   return (
     <div 
       style={{ height: mapContainerHeight }} 
@@ -156,20 +146,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         useMobileMapFixer={true}
       />
       
-      {/* Map Legend at bottom right corner with visibility controlled by legendOpen state */}
       <MapLegend 
         activeView={activeView} 
         showStarLegend={activeView === 'certified'}
         showCircleLegend={activeView === 'calculated'}
         onToggle={handleLegendToggle}
-        className="absolute bottom-10 right-1"
+        className="absolute bottom-4 right-4"
       />
       
-      {/* Only show PinpointButton when legend is closed */}
       {!legendOpen && (
         <PinpointButton 
           onGetLocation={handleGetLocation} 
-          className="absolute top-4 right-16"
+          className="absolute top-4 right-4"
         />
       )}
     </div>
