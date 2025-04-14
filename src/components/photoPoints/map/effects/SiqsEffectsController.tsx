@@ -86,7 +86,7 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     // Calculate new SIQS
     try {
       // The calculateRealTimeSiqs function returns { siqs, isViable, factors }
-      const result = await calculateRealTimeSiqs(latitude, longitude);
+      const result = await calculateRealTimeSiqs(latitude, longitude, searchRadius);
       
       if (result && typeof result.siqs === 'number') {
         // Cache and use the result
@@ -103,7 +103,7 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     } catch (error) {
       console.error("Failed to calculate SIQS:", error);
     }
-  }, [userLocation, map, activeView, lastCalculation, getSiqsFromCache, cacheSiqs, onSiqsCalculated]);
+  }, [userLocation, map, activeView, lastCalculation, getSiqsFromCache, cacheSiqs, onSiqsCalculated, searchRadius]);
   
   // Set up calculation when map and location are ready
   useEffect(() => {

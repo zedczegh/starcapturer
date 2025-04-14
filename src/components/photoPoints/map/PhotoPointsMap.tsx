@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -38,6 +39,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
+  
+  // Define legend visibility based on active view
+  const showStarLegend = activeView === 'certified';
+  const showCircleLegend = activeView === 'calculated';
   
   const { 
     hoveredLocationId, 
