@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
@@ -10,22 +10,10 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
+import { MapEvents } from './MapEffectsController';
 
 // Configure leaflet to handle marker paths
 configureLeaflet();
-
-// MapClickHandler component to handle map click events
-const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
-  const map = useMapEvents({
-    click: (e) => {
-      if (onMapClick) {
-        onMapClick(e.latlng.lat, e.latlng.lng);
-      }
-    }
-  });
-  
-  return null;
-};
 
 interface LazyMapContainerProps {
   center: [number, number];
@@ -128,8 +116,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Add MapClickHandler component to manage click events cleanly */}
-      <MapClickHandler onMapClick={handleMapClick} />
+      {/* Use MapEvents component instead of MapClickHandler */}
+      <MapEvents onMapClick={handleMapClick} />
       
       {userLocation && (
         <UserLocationMarker 
