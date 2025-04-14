@@ -1,6 +1,5 @@
 
 import React, { memo, lazy, Suspense, useEffect, useCallback, useRef } from "react";
-import LocationHeader from "@/components/location/LocationHeader";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -124,20 +123,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   }, [locationData, handleRefreshAll, setLocationData, resetUpdateState, isRedirect, hasRequiredData]);
 
   return (
-    <div className="transition-all duration-300 animate-fade-in pt-10" ref={containerRef}> {/* Added padding to fix navbar overlap */}
+    <div className="transition-all duration-300 animate-fade-in" ref={containerRef}> 
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
-      />
-      
-      <LocationHeader 
-        name={locationData.name}
-        latitude={locationData.latitude}
-        longitude={locationData.longitude}
-        timestamp={locationData.timestamp}
-        loading={loading}
-        bortleScale={locationData.bortleScale}
-        siqs={locationData.siqsResult?.score}
       />
       
       <Suspense fallback={

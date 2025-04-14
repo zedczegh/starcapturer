@@ -10,6 +10,7 @@ import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useIsMobile } from "@/hooks/use-mobile";
+import LocationDetailsHeader from "./LocationDetailsHeader";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -155,6 +156,14 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       <LocationStatusMessage 
         message={statusMessage}
         type={messageType}
+      />
+      
+      {/* Add the enhanced location details header */}
+      <LocationDetailsHeader 
+        name={locationData?.name}
+        latitude={locationData?.latitude}
+        longitude={locationData?.longitude}
+        timestamp={locationData?.timestamp}
       />
       
       {weatherAlerts && weatherAlerts.length > 0 && (

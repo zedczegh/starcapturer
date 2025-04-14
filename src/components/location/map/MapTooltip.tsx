@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { Language } from '@/services/geocoding/types';
 
 interface MapTooltipProps {
   name: string;
@@ -24,10 +26,31 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   longitude
 }) => {
   const { t, language } = useLanguage();
+  const [enhancedLocation, setEnhancedLocation] = useState<any>(null);
   
-  // Get detailed location information if coordinates are available
-  const nearestTownInfo = latitude !== undefined && longitude !== undefined ? 
-    findNearestTown(latitude, longitude, language) : null;
+  // Get enhanced location details
+  useEffect(() => {
+    if (latitude !== undefined && longitude !== undefined) {
+      const typedLanguage: Language = language === 'zh' ? 'zh' : 'en';
+      
+      getEnhancedLocationDetails(latitude, longitude, typedLanguage)
+        .then(details => {
+          setEnhancedLocation(details);
+        })
+        .catch(error => {
+          console.error("Error fetching enhanced location for map tooltip:", error);
+        });
+    }
+  }, [latitude, longitude, language]);
+  
+  // Get detailed location information if coordinates are available and enhanced details not yet loaded
+  const nearestTownInfo = (latitude !== undefined && longitude !== undefined && !enhancedLocation) ? 
+    findNearestTown(latitude, longitude, language === 'zh' ? 'zh' : 'en') : null;
+  
+  // Determine what location information to display
+  const detailedName = enhancedLocation?.formattedName || 
+                       enhancedLocation?.detailedName || 
+                       (nearestTownInfo && nearestTownInfo.detailedName);
   
   return (
     <Popup
@@ -38,9 +61,9 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         <div className="font-medium text-sm">{name}</div>
         
         {/* Display detailed location when available */}
-        {nearestTownInfo && nearestTownInfo.detailedName && (
+        {detailedName && detailedName !== name && (
           <div className="text-xs text-muted-foreground mt-1">
-            {nearestTownInfo.detailedName}
+            {detailedName}
           </div>
         )}
         
