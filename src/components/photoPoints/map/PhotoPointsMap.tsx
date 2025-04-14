@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -35,7 +34,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   
-  // Use the mapping hooks
   const { 
     hoveredLocationId, 
     handleHover,
@@ -60,16 +58,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
   
-  // Adjust map height based on screen size
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
-        // Use viewport height minus some space for headers on mobile
         setMapContainerHeight(window.innerHeight >= 700 
           ? 'calc(80vh - 160px)'
           : 'calc(90vh - 140px)');
       } else {
-        // Desktop height
         setMapContainerHeight('500px');
       }
     };
@@ -79,7 +74,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handle map click to update location - always allow location updates
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -87,7 +81,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationUpdate]);
   
-  // Handle the location click
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -96,7 +89,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Handle getting current user location
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -113,7 +105,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationUpdate]);
   
-  // Render map with locations
   return (
     <div 
       style={{ height: mapContainerHeight }} 
@@ -150,14 +141,17 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         useMobileMapFixer={true}
       />
       
-      {/* Place MapLegend and PinpointButton outside the MapContainer for better event handling */}
-      <MapLegend 
-        activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
-      />
+      <div className="absolute bottom-16 right-2 z-[999]">
+        <MapLegend 
+          activeView={activeView} 
+          showStarLegend={activeView === 'certified'}
+          showCircleLegend={activeView === 'calculated'}
+        />
+      </div>
       
-      <PinpointButton onGetLocation={handleGetLocation} />
+      <div className="absolute bottom-4 right-2 z-[999]">
+        <PinpointButton onGetLocation={handleGetLocation} />
+      </div>
     </div>
   );
 };
