@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -15,7 +15,6 @@ import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [isManualRadiusChange, setIsManualRadiusChange] = useState(false);
   
   // Get state from custom hook
   const {
@@ -65,17 +64,6 @@ const PhotoPointsNearby: React.FC = () => {
     setSearchRadius(currentSearchRadius);
   }, [currentSearchRadius, setSearchRadius]);
   
-  // Wrap handleRadiusChange to track manual changes
-  const handleManualRadiusChange = (value: number) => {
-    setIsManualRadiusChange(true);
-    handleRadiusChange(value);
-    
-    // Reset the flag after a short delay
-    setTimeout(() => {
-      setIsManualRadiusChange(false);
-    }, 100);
-  };
-  
   // Handle location click to navigate to details
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && location.latitude && location.longitude) {
@@ -121,7 +109,7 @@ const PhotoPointsNearby: React.FC = () => {
         <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
-            onValueChange={handleManualRadiusChange}
+            onValueChange={handleRadiusChange}
             minValue={100}
             maxValue={1000}
             stepValue={100}
@@ -157,7 +145,6 @@ const PhotoPointsNearby: React.FC = () => {
         loadMoreCalculated={loadMoreCalculatedLocations}
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
-        isManualRadiusChange={isManualRadiusChange}
       />
     </PhotoPointsLayout>
   );

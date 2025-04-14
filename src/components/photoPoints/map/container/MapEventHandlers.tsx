@@ -30,11 +30,8 @@ export const useMapEventHandlers = ({
     if (mapRef.current) {
       (window as any).leafletMap = mapRef.current;
       
-      // Disable auto-zoom features
+      // Disable auto-zoom on click/hover
       const map = mapRef.current;
-      
-      // Disable auto-zoom on click/hover and double-click zoom
-      map.doubleClickZoom.disable();
       
       // Mobile-specific map setup
       if (isMobile) {
@@ -68,6 +65,12 @@ export const useMapEventHandlers = ({
             isDraggingRef.current = false;
           }, 200); // Extra delay on mobile
         });
+        
+        // Disable double-click zoom since we don't want auto-zooms
+        map.doubleClickZoom.disable();
+      } else {
+        // Also disable double-click zoom on desktop
+        map.doubleClickZoom.disable();
       }
     }
   }, [onMapReady, isMobile]);
@@ -111,12 +114,15 @@ export const useMapEventHandlers = ({
           const { latitude, longitude } = position.coords;
           onMapClick(latitude, longitude);
           
-          // Access the map instance and pan to the location without zooming
+          // Access the map instance and set view to the location
+          // but don't auto-zoom too much
           if (mapRef.current) {
             const leafletMap = mapRef.current;
             const currentZoom = leafletMap.getZoom();
+            // Don't zoom in more than level 12
+            const newZoom = Math.min(12, currentZoom);
             
-            leafletMap.setView([latitude, longitude], currentZoom, {
+            leafletMap.setView([latitude, longitude], newZoom, {
               animate: true,
               duration: 1
             });

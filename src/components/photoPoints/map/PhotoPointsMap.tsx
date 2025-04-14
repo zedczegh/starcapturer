@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -20,7 +19,6 @@ interface PhotoPointsMapProps {
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
   isScanning?: boolean;
-  isManualRadiusChange?: boolean;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
@@ -32,8 +30,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   searchRadius,
   onLocationClick,
   onLocationUpdate,
-  isScanning = false,
-  isManualRadiusChange = false
+  isScanning = false
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -150,7 +147,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={true}
         isScanning={isScanning}
-        isManualRadiusChange={isManualRadiusChange}
       />
       
       <MapLegend 

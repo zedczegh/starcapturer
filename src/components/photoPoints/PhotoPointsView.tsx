@@ -26,7 +26,6 @@ interface PhotoPointsViewProps {
   loadMoreCalculated?: () => void;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  isManualRadiusChange?: boolean;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -47,8 +46,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   canLoadMoreCalculated,
   loadMoreCalculated,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 3,
-  isManualRadiusChange = false
+  maxLoadMoreClicks = 3
 }) => {
   const { t } = useLanguage();
   const [isScanning, setIsScanning] = useState(false);
@@ -142,7 +140,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           onLocationClick={onLocationClick}
           onLocationUpdate={onLocationUpdate}
           isScanning={isScanning}
-          isManualRadiusChange={isManualRadiusChange}
         />
       ) : (
         <LocationsList
