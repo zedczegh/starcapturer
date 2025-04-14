@@ -101,8 +101,7 @@ const LocationView: React.FC<LocationViewProps> = ({
       locations={locationsToDisplay}
       loading={loading}
       initialLoad={initialLoad}
-      onLocationClick={handleViewLocation}
-      onViewDetails={handleViewLocation} // Use the same handler for both props to ensure compatibility
+      onViewDetails={handleViewLocation}
     />
   );
 };

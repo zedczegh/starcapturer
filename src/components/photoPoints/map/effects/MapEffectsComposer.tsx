@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+
+import React from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
-import RadarSweepAnimation from '../RadarSweepAnimation';
 
 interface MapEffectsComposerProps {
   center?: [number, number];
@@ -11,8 +11,6 @@ interface MapEffectsComposerProps {
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
-  isScanning?: boolean;
-  isManualRadiusChange?: boolean;
 }
 
 /**
@@ -24,55 +22,16 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   userLocation,
   activeView = 'certified',
   searchRadius = 100,
-  onSiqsCalculated,
-  isScanning = false,
-  isManualRadiusChange = false
+  onSiqsCalculated
 }) => {
   const map = useMap();
-  const [lastUserLocation, setLastUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const locationChangedRef = useRef(false);
   
-  // Only update center position, keep current zoom level
-  useEffect(() => {
-    // Always initialize effect, but conditionally execute the map operation
-    if (map && center) {
-      // Only set the center, not the zoom level
-      map.setView(center, map.getZoom());
-    }
-  }, [map, center]);
-  
-  // Track user location changes - ensure this runs consistently
-  useEffect(() => {
-    // Always initialize timeout ref, even if conditions aren't met
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+  // Set view when center changes
+  React.useEffect(() => {
+    if (!map || !center) return;
     
-    if (userLocation && lastUserLocation) {
-      // Check if location has changed significantly
-      if (
-        Math.abs(userLocation.latitude - lastUserLocation.latitude) > 0.0001 || 
-        Math.abs(userLocation.longitude - lastUserLocation.longitude) > 0.0001
-      ) {
-        locationChangedRef.current = true;
-        // Set a timeout to reset the flag
-        timeout = setTimeout(() => {
-          locationChangedRef.current = false;
-        }, 1000); // Reset flag after 1 second
-        
-        // Update last location
-        setLastUserLocation(userLocation);
-      }
-    } else {
-      // Update last location even if one of them is null
-      setLastUserLocation(userLocation);
-    }
-    
-    // Cleanup function
-    return () => {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    };
-  }, [userLocation, lastUserLocation]);
+    map.setView(center, zoom || map.getZoom());
+  }, [map, center, zoom]);
   
   return (
     <>
@@ -81,21 +40,11 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       
       {/* Apply SIQS-specific effects */}
       <SiqsEffectsController 
-        userLocation={userLocation || null}
+        userLocation={userLocation}
         activeView={activeView}
         searchRadius={searchRadius}
         onSiqsCalculated={onSiqsCalculated}
       />
-      
-      {/* Radar sweep animation - ONLY render when in calculated view */}
-      {activeView === 'calculated' && userLocation && (
-        <RadarSweepAnimation 
-          userLocation={userLocation}
-          searchRadius={searchRadius}
-          isScanning={isScanning}
-          locationChanged={locationChangedRef.current}
-        />
-      )}
     </>
   );
 };

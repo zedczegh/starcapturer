@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -19,8 +18,6 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
-  isScanning?: boolean;
-  isManualRadiusChange?: boolean;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
@@ -31,18 +28,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate,
-  isScanning = false,
-  isManualRadiusChange = false
+  onLocationUpdate
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
-  
-  // Define legend visibility based on active view
-  const showStarLegend = activeView === 'certified';
-  const showCircleLegend = activeView === 'calculated';
   
   const { 
     hoveredLocationId, 
@@ -153,14 +144,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={true}
-        isScanning={isScanning}
-        isManualRadiusChange={isManualRadiusChange}
       />
       
       <MapLegend 
         activeView={activeView} 
-        showStarLegend={showStarLegend}
-        showCircleLegend={showCircleLegend}
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
         onToggle={handleLegendToggle}
         className="absolute bottom-4 right-4"
       />

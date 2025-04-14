@@ -1,9 +1,9 @@
-
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
- * Custom hook for managing map marker hover states with click-based popup behavior instead of hover
+ * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
+ * and mobile touch optimizations
  */
 export const useMapMarkers = () => {
   // State for currently hovered location ID
@@ -15,8 +15,6 @@ export const useMapMarkers = () => {
   const lastHoverId = useRef<string | null>(null);
   const hoverTimestamp = useRef<number>(0);
   const touchStartPos = useRef<{x: number, y: number} | null>(null);
-  const touchMoveCount = useRef<number>(0);
-  const lastTapTime = useRef<number>(0);
   
   // Check if on mobile device
   const isMobile = useIsMobile();
@@ -35,7 +33,7 @@ export const useMapMarkers = () => {
 
   /**
    * Handle hover with improved anti-flicker algorithm
-   * Only affects visual appearance, doesn't auto-open popups
+   * Mobile-optimized to handle both hover and touch events
    */
   const handleHover = useCallback((id: string | null) => {
     // Prevent redundant updates for same ID
@@ -52,31 +50,41 @@ export const useMapMarkers = () => {
       debounceTimeoutRef.current = null;
     }
     
-    // For new hover target, set immediately for visual feedback only
+    // Track current time
+    const now = Date.now();
+    
+    // For new hover target, set with slight delay for better stability
     if (id !== null) {
-      setHoveredLocationId(id);
-      lastHoverId.current = id;
-      hoverTimestamp.current = Date.now();
+      // If rapidly changing between markers, use longer delay
+      // Mobile needs slightly longer delay to prevent accidental triggers
+      const delay = isMobile ? 
+        100 : // Mobile delay - increased for better stability
+        (now - hoverTimestamp.current < 300 ? 40 : 20); // Desktop delay
+      
+      debounceTimeoutRef.current = setTimeout(() => {
+        setHoveredLocationId(id);
+        lastHoverId.current = id;
+        hoverTimestamp.current = Date.now();
+        debounceTimeoutRef.current = null;
+      }, delay);
     } 
     // When leaving a marker completely
     else {
-      // Small delay to prevent flicker on quick mouse movements
+      // Add a delay to prevent flicker on quick mouse movements
+      // Use longer delay on mobile to improve experience
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverId.current = null;
         hoverTimeoutRef.current = null;
-      }, 30); // Very short delay, just for visual smoothness
+      }, isMobile ? 250 : 50); // Increased delay for mobile
     }
-  }, []);
+  }, [isMobile]);
   
   /**
    * Handle touch start event for better touch interaction
    */
   const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
     if (!isMobile) return;
-    
-    // Reset touch movement counter
-    touchMoveCount.current = 0;
     
     // Store touch position to determine if it's a tap or drag later
     if (e.touches && e.touches[0]) {
@@ -86,15 +94,10 @@ export const useMapMarkers = () => {
       };
     }
     
-    // Detect double tap
-    const now = Date.now();
-    const isDoubleTap = (now - lastTapTime.current < 300);
-    lastTapTime.current = now;
-    
     // Prevent default to avoid double-firing issues on some mobile browsers
     e.stopPropagation();
     
-    // Set hover state for visual feedback only
+    // Immediately show hover state on touch start
     handleHover(id);
   }, [isMobile, handleHover]);
   
@@ -107,11 +110,14 @@ export const useMapMarkers = () => {
     // Prevent default behaviors
     e.stopPropagation();
     
-    // Only consider it a tap if minimal movement occurred
-    // Visual state is managed by the marker component's click handler now
+    // Keep hover state visible significantly longer on mobile
+    // This gives users enough time to read and interact with the popup
+    setTimeout(() => {
+      handleHover(null);
+    }, 5000); // Increased from 2500ms to 5000ms (5 seconds) for better interaction time
     
     touchStartPos.current = null;
-  }, [isMobile]);
+  }, [isMobile, handleHover]);
   
   /**
    * Handle touch move to detect dragging vs tapping
@@ -119,20 +125,15 @@ export const useMapMarkers = () => {
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isMobile || !touchStartPos.current) return;
     
-    // Increment movement counter
-    touchMoveCount.current++;
-    
     if (e.touches && e.touches[0]) {
       const moveX = Math.abs(e.touches[0].clientX - touchStartPos.current.x);
       const moveY = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
       
-      // If moved more than threshold, consider it a drag
-      if (moveX > 10 || moveY > 10) {
-        // If significant movement, clear hover immediately
-        if (moveX > 30 || moveY > 30) {
-          handleHover(null);
-          touchStartPos.current = null;
-        }
+      // If moved more than threshold, consider it a drag and clear hover
+      // Increased threshold for better touch control
+      if (moveX > 20 || moveY > 20) {
+        handleHover(null);
+        touchStartPos.current = null;
       }
     }
   }, [isMobile, handleHover]);

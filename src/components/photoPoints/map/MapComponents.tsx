@@ -1,11 +1,8 @@
 
-import React from 'react';
-import { WorldBoundsController } from './MapEffectsController';
-import SiqsEffectsController from './effects/SiqsEffectsController';
-import RadarSweepAnimation from './RadarSweepAnimation';
-
-// Export the components individually for more flexibility
-export { WorldBoundsController, SiqsEffectsController, RadarSweepAnimation };
-
-// Re-export MapEffectsComposer from its dedicated file
+// Re-export components from different files for better organization
+export { WorldBoundsController, MapEvents } from './MapEffectsController';
 export { default as MapEffectsComposer } from './effects/MapEffectsComposer';
+export { default as SiqsEffectsController } from './effects/SiqsEffectsController';
+
+// Add optimized component for lazy loading map and markers
+export { default as LazyMapContainer } from './LazyMapContainer';
