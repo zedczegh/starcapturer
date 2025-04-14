@@ -1,6 +1,8 @@
+
 import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
-import WeatherConditions, { normalizeMoonPhase } from "@/components/WeatherConditions";
+import WeatherConditions from "@/components/WeatherConditions";
+import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import { determineWeatherCondition } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
