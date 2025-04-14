@@ -11,8 +11,9 @@ interface UserLocationSiqsProps {
  * Hook to find the SIQS score at the user's location
  */
 export const useUserLocationSiqs = ({ userLocation, locations }: UserLocationSiqsProps) => {
-  // Find the current SIQS at the user location
+  // Find the current SIQS at the user location - ensure consistent hook execution
   const currentSiqs = useMemo(() => {
+    // Always run the hook, but return null if criteria aren't met
     if (!userLocation || !locations || locations.length === 0) {
       return null;
     }

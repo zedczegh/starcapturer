@@ -13,18 +13,23 @@ export const useAnimationState = ({ isScanning }: AnimationStateProps) => {
   
   // Handle animation visibility based on scanning state
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    
     if (isScanning) {
       setShowAnimation(true);
     } else {
       // Add a delay before hiding the animation for smoother UX
-      const timeout = setTimeout(() => {
+      timeout = setTimeout(() => {
         setShowAnimation(false);
       }, 2000);
-      
-      return () => {
-        clearTimeout(timeout);
-      };
     }
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
   }, [isScanning]);
   
   return { showAnimation };

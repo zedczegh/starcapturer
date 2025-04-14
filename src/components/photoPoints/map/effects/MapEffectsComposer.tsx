@@ -34,37 +34,44 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   
   // Only update center position, keep current zoom level
   useEffect(() => {
-    if (!map || !center) return;
-    
-    // Only set the center, not the zoom level
-    map.setView(center, map.getZoom());
+    // Always initialize effect, but conditionally execute the map operation
+    if (map && center) {
+      // Only set the center, not the zoom level
+      map.setView(center, map.getZoom());
+    }
   }, [map, center]);
   
-  // Track user location changes
+  // Track user location changes - ensure this runs consistently
   useEffect(() => {
-    if (!userLocation || !lastUserLocation) {
+    // Always initialize timeout ref, even if conditions aren't met
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    
+    if (userLocation && lastUserLocation) {
+      // Check if location has changed significantly
+      if (
+        Math.abs(userLocation.latitude - lastUserLocation.latitude) > 0.0001 || 
+        Math.abs(userLocation.longitude - lastUserLocation.longitude) > 0.0001
+      ) {
+        locationChangedRef.current = true;
+        // Set a timeout to reset the flag
+        timeout = window.setTimeout(() => {
+          locationChangedRef.current = false;
+        }, 1000); // Reset flag after 1 second
+        
+        // Update last location
+        setLastUserLocation(userLocation);
+      }
+    } else {
+      // Update last location even if one of them is null
       setLastUserLocation(userLocation);
-      return;
     }
     
-    // Check if location has changed significantly
-    if (
-      Math.abs(userLocation.latitude - lastUserLocation.latitude) > 0.0001 || 
-      Math.abs(userLocation.longitude - lastUserLocation.longitude) > 0.0001
-    ) {
-      locationChangedRef.current = true;
-      // Set a timeout to reset the flag
-      const timeout = window.setTimeout(() => {
-        locationChangedRef.current = false;
-      }, 1000); // Reset flag after 1 second
-      
-      // Update last location
-      setLastUserLocation(userLocation);
-      
-      return () => {
+    // Cleanup function
+    return () => {
+      if (timeout) {
         window.clearTimeout(timeout);
-      };
-    }
+      }
+    };
   }, [userLocation, lastUserLocation]);
   
   return (
@@ -80,7 +87,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
         onSiqsCalculated={onSiqsCalculated}
       />
       
-      {/* Radar sweep animation - only show for calculated view */}
+      {/* Radar sweep animation - only render when needed */}
       {activeView === 'calculated' && userLocation && (
         <RadarSweepAnimation 
           userLocation={userLocation}

@@ -26,6 +26,7 @@ export const useRadarPosition = ({
   
   // Update radar position on the map
   const updateRadarPosition = useCallback(() => {
+    // Always run the function but only set styles if conditions met
     if (!userLocation || !map || !showAnimation) {
       setRadarStyles(null);
       return;
@@ -53,17 +54,13 @@ export const useRadarPosition = ({
       left: point.x - radiusInPixels,
       top: point.y - radiusInPixels
     });
-    
   }, [map, userLocation, searchRadius, showAnimation]);
   
   // Set up event listeners for map movements
   useEffect(() => {
-    if (!map || !userLocation || !showAnimation) return;
-    
-    updateRadarPosition();
-    
-    // Set up debounced zoom and move listeners
+    // Initialize even if conditions aren't met yet
     let timeout: number | null = null;
+    
     const handleMapChange = () => {
       if (timeout) {
         window.clearTimeout(timeout);
@@ -73,15 +70,22 @@ export const useRadarPosition = ({
       }, 100); // Debounce for 100ms
     };
     
-    map.on('zoom', handleMapChange);
-    map.on('move', handleMapChange);
-    map.on('moveend', handleMapChange);
+    // Only add listeners if we need to show animation
+    if (map && userLocation && showAnimation) {
+      updateRadarPosition();
+      
+      map.on('zoom', handleMapChange);
+      map.on('move', handleMapChange);
+      map.on('moveend', handleMapChange);
+    }
     
     // Clean up
     return () => {
-      map.off('zoom', handleMapChange);
-      map.off('move', handleMapChange);
-      map.off('moveend', handleMapChange);
+      if (map) {
+        map.off('zoom', handleMapChange);
+        map.off('move', handleMapChange);
+        map.off('moveend', handleMapChange);
+      }
       
       if (timeout) {
         window.clearTimeout(timeout);

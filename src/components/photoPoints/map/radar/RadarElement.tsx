@@ -23,9 +23,10 @@ const RadarElement: React.FC<RadarElementProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const prevPositionRef = useRef<{left: number, top: number} | null>(null);
   
-  // IMPORTANT: Don't add any conditional returns before all hooks are defined
-  
+  // Handle animation state and positioning
   useEffect(() => {
+    // Always initialize refs and state regardless of conditions
+    
     // Handle animation state changes
     if (!showAnimation || !radarStyles) {
       // Clean up when animation is not shown
@@ -125,7 +126,7 @@ const RadarElement: React.FC<RadarElementProps> = ({
     };
   }, [map, radarStyles, showAnimation]);
   
-  // Always return some JSX, even if it's null
+  // Always return JSX, never conditional returns in components with hooks
   return null;
 };
 
