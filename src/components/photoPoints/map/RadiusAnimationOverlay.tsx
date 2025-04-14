@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,11 +51,11 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     }
   }, [userLocation, prevLocation, activeView]);
   
-  // Add and manage the radius circle
-  useEffect(() => {
+  // Function to update the radius circle based on current zoom level
+  const updateRadiusCircle = React.useCallback(() => {
     if (!map || !userLocation) return;
     
-    // Clear previous circles
+    // Clear previous circle
     if (circle) {
       circle.removeFrom(map);
     }
@@ -76,6 +76,9 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     
     setCircle(newCircle);
     
+    // Update radar sweep if it's showing
+    updateRadarSweep();
+    
     return () => {
       if (newCircle) {
         newCircle.removeFrom(map);
@@ -83,8 +86,8 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     };
   }, [map, userLocation, searchRadius]);
   
-  // Create and manage the radar sweep animation when location changes or during search
-  useEffect(() => {
+  // Function to update the radar sweep animation
+  const updateRadarSweep = React.useCallback(() => {
     if (!map || !userLocation || !shouldShowAnimation) {
       // Remove the radar sweep when not showing animation
       if (radarSweep) {
@@ -94,9 +97,14 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       return;
     }
     
-    // Calculate the proper size based on the search radius
+    // Calculate the proper size based on the search radius and current zoom
     const radiusInMeters = searchRadius * 1000; // Convert km to meters
     const zoom = map.getZoom();
+    
+    // Remove previous radar sweep
+    if (radarSweep) {
+      radarSweep.removeFrom(map);
+    }
     
     // Create container element for the radar sweep
     const container = document.createElement('div');
@@ -107,7 +115,8 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     sweep.className = 'radar-sweep';
     container.appendChild(sweep);
     
-    // Create a properly sized icon
+    // Calculate icon size based on zoom level and radius
+    // This formula creates a more accurate scaling with zoom
     const iconSize = Math.max(100, radiusInMeters / (Math.pow(2, 16 - zoom)));
     
     const sweepIcon = L.divIcon({
@@ -123,13 +132,45 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     ).addTo(map);
     
     setRadarSweep(sweepMarker as unknown as L.Circle);
+  }, [map, userLocation, searchRadius, shouldShowAnimation, radarSweep]);
+  
+  // Add and manage the radius circle
+  useEffect(() => {
+    updateRadiusCircle();
     
     return () => {
-      if (sweepMarker) {
-        sweepMarker.removeFrom(map);
+      if (circle) {
+        circle.removeFrom(map);
       }
     };
-  }, [map, userLocation, searchRadius, shouldShowAnimation]);
+  }, [map, userLocation, searchRadius, updateRadiusCircle]);
+  
+  // Create and manage the radar sweep animation
+  useEffect(() => {
+    updateRadarSweep();
+    
+    return () => {
+      if (radarSweep) {
+        radarSweep.removeFrom(map);
+      }
+    };
+  }, [map, userLocation, searchRadius, shouldShowAnimation, updateRadarSweep]);
+  
+  // Add map zoom listener to update both elements when zoom changes
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleZoom = () => {
+      updateRadiusCircle();
+      updateRadarSweep();
+    };
+    
+    map.on('zoom', handleZoom);
+    
+    return () => {
+      map.off('zoom', handleZoom);
+    };
+  }, [map, updateRadiusCircle, updateRadarSweep]);
 
   // Add CSS styles for the radar sweep animation directly
   useEffect(() => {
