@@ -7,9 +7,13 @@ import { toast } from 'sonner';
 
 interface PinpointButtonProps {
   onGetLocation: () => void;
+  className?: string;
 }
 
-const PinpointButton: React.FC<PinpointButtonProps> = ({ onGetLocation }) => {
+const PinpointButton: React.FC<PinpointButtonProps> = ({ 
+  onGetLocation,
+  className = "absolute top-4 right-16 z-[999]"
+}) => {
   const { t } = useLanguage();
   const [isClicking, setIsClicking] = useState(false);
   
@@ -32,7 +36,7 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({ onGetLocation }) => {
 
   return (
     <div 
-      className="absolute top-4 right-16 z-[999]" 
+      className={className}
       onClick={stopPropagation} 
       onTouchStart={stopPropagation}
     >

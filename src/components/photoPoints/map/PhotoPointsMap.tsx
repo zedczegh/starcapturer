@@ -34,6 +34,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
+  const [legendOpen, setLegendOpen] = useState(false);
   
   // Use the mapping hooks
   const { 
@@ -112,6 +113,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       );
     }
   }, [onLocationUpdate]);
+
+  // Toggle legend open/closed state
+  const handleLegendToggle = useCallback((isOpen: boolean) => {
+    setLegendOpen(isOpen);
+  }, []);
   
   // Render map with locations
   return (
@@ -150,14 +156,22 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         useMobileMapFixer={true}
       />
       
-      {/* Place MapLegend and PinpointButton outside the MapContainer for better event handling */}
+      {/* Map Legend at bottom right corner with visibility controlled by legendOpen state */}
       <MapLegend 
         activeView={activeView} 
         showStarLegend={activeView === 'certified'}
         showCircleLegend={activeView === 'calculated'}
+        onToggle={handleLegendToggle}
+        className="absolute bottom-10 right-1"
       />
       
-      <PinpointButton onGetLocation={handleGetLocation} />
+      {/* Only show PinpointButton when legend is closed */}
+      {!legendOpen && (
+        <PinpointButton 
+          onGetLocation={handleGetLocation} 
+          className="absolute top-4 right-16"
+        />
+      )}
     </div>
   );
 };

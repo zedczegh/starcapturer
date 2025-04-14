@@ -10,13 +10,15 @@ interface MapLegendProps {
   showCircleLegend?: boolean;
   className?: string;
   activeView?: 'certified' | 'calculated';
+  onToggle?: (isOpen: boolean) => void;
 }
 
 const MapLegend: React.FC<MapLegendProps> = ({ 
   showStarLegend = true, 
   showCircleLegend = true,
   className = "",
-  activeView = 'calculated'
+  activeView = 'calculated',
+  onToggle
 }) => {
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -31,19 +33,26 @@ const MapLegend: React.FC<MapLegendProps> = ({
     e.preventDefault();
   };
 
+  // Notify parent component when collapse state changes
+  useEffect(() => {
+    if (onToggle) {
+      onToggle(!isCollapsed);
+    }
+  }, [isCollapsed, onToggle]);
+
   return (
-    <div className="absolute top-4 right-2 z-[999]" onClick={stopPropagation} onTouchStart={stopPropagation}>
+    <div className={`z-[999] ${className}`} onClick={stopPropagation} onTouchStart={stopPropagation}>
       <div className="relative">
         {/* The collapsible panel */}
         <AnimatePresence>
           {!isCollapsed && (
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
               transition={{ duration: 0.3 }}
               className={`p-3.5 rounded-lg backdrop-blur-md bg-background/80 border border-primary/30 
-                         shadow-lg overflow-y-auto max-h-[80vh] w-[260px] ${className}`}
+                         shadow-lg overflow-y-auto max-h-[80vh] w-[260px]`}
               onClick={stopPropagation}
             >
               {/* Legend Header */}
