@@ -34,9 +34,9 @@ export const MapController: React.FC<MapControllerProps> = ({
       if (map.dragging._draggable) {
         map.dragging._draggable._inertia = true;
         map.dragging._draggable.options.inertia = {
-          deceleration: 2500, // Higher value = faster stop (default: 3000)
-          maxSpeed: 1800,     // Higher for more responsive feel (was 1500)
-          timeThreshold: 80, // Lower for more responsive dragging (was 100)
+          deceleration: 3000, // Higher value = faster stop (default: 3000)
+          maxSpeed: 1500,     // Lower for smoother movement (default: 1500)
+          timeThreshold: 100, // Lower for more responsive dragging (default: 200)
           linearity: 0.25     // Higher = more linear deceleration (default: 0.2)
         };
       }
@@ -48,22 +48,6 @@ export const MapController: React.FC<MapControllerProps> = ({
       // Prevent multiple finger gestures from triggering unwanted actions
       map.boxZoom.disable();
       
-      // Set better zoom settings for mobile
-      // @ts-ignore - These properties exist but are not in the type definitions
-      if (map.options) {
-        map.options.touchZoom = 'center'; // More predictable zooming behavior
-        map.options.doubleClickZoom = 'center';
-        map.options.bounceAtZoomLimits = false; // Prevent bounce effect at limits
-      }
-      
-      // Add a special handler to fix marker positioning on zoom
-      map.on('zoomanim', function() {
-        if (map._panes && map._panes.markerPane) {
-          // Force repaint with hardware acceleration to fix marker positions
-          map._panes.markerPane.style.transform = 'translate3d(0,0,0)';
-        }
-      });
-      
       // Remove tap delay for more responsive interaction
       if (map.tap) {
         map.tap.disable();
@@ -73,12 +57,8 @@ export const MapController: React.FC<MapControllerProps> = ({
         const mapPane = map.getPane('mapPane');
         if (mapPane) {
           mapPane.style.touchAction = "none";
-          mapPane.style.msTouchAction = "none";
         }
       }
-      
-      // Prevent scrolling the page when trying to zoom/pan the map
-      map.getContainer().style.touchAction = "none";
     } else {
       // Desktop settings - enable all controls
       map.scrollWheelZoom.enable();
@@ -90,16 +70,8 @@ export const MapController: React.FC<MapControllerProps> = ({
       if (map.tap) map.tap.enable();
     }
     
-    // Apply GPU acceleration to all panes for better performance
-    for (const key in map._panes) {
-      if (map._panes[key] && map._panes[key].style) {
-        map._panes[key].style.willChange = 'transform';
-        map._panes[key].style.backfaceVisibility = 'hidden';
-      }
-    }
-    
     // Improve performance by reducing re-renders
-    map._onResize = L.Util.throttle(map._onResize, 100, map);
+    map._onResize = L.Util.throttle(map._onResize, 200, map);
     
     // Store map reference for debugging
     (window as any).leafletMap = map;
@@ -111,9 +83,6 @@ export const MapController: React.FC<MapControllerProps> = ({
     }
     
     return () => {
-      // Clean up event listeners
-      map.off('zoomanim');
-      
       // Clean up global reference
       delete (window as any).leafletMap;
     };

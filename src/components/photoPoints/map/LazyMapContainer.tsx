@@ -1,42 +1,154 @@
-
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
+import L from 'leaflet';  
 import 'leaflet/dist/leaflet.css';
-import './MarkerStyles.css';
-import './MapStyles.css';
-import { LocationMarker, UserLocationMarker } from './MarkerComponents';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
-import MapController from './MapController';
-import MobileMapFixer from './MobileMapFixer';
-import { MapEvents, WorldBoundsController } from './MapEffectsController';
-import { MapEffectsComposer } from './MapComponents';
-import RadiusAnimationOverlay from './RadiusAnimationOverlay';
+import './MarkerStyles.css'; // Import custom marker styles
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { WorldBoundsController, MapEvents } from './MapComponents';
+import { UserLocationMarker, LocationMarker } from './MarkerComponents';
+import { configureLeaflet } from "@/components/location/map/MapMarkerUtils";
+import { MapController } from './MapController';
+import MapEffectsComposer from './effects/MapEffectsComposer';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 
-// Configure leaflet to handle marker paths
+// Configure Leaflet on load
 configureLeaflet();
 
-interface LazyMapContainerProps {
+interface PhotoPointsMapContainerProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady?: () => void;
+  onMapReady: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
   zoom?: number;
-  hoveredLocationId?: string | null;
-  onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
-  isMobile?: boolean;
-  useMobileMapFixer?: boolean;
-  isSearching?: boolean;
+  hoveredLocationId: string | null;
+  onMarkerHover: (id: string | null) => void;
 }
 
-const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
+// Use a function to efficiently chunk marker rendering
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+const MarkerGroup = React.memo(({ 
+  locations, 
+  onLocationClick,
+  hoveredLocationId,
+  onMarkerHover,
+  isCertified,
+  hideMarkerPopups,
+  activeView
+}: { 
+  locations: SharedAstroSpot[], 
+  onLocationClick?: (location: SharedAstroSpot) => void,
+  hoveredLocationId: string | null,
+  onMarkerHover: (id: string | null) => void,
+  isCertified: boolean,
+  hideMarkerPopups: boolean,
+  activeView: 'certified' | 'calculated'
+}) => {
+  // Pre-filter locations to avoid rendering water spots
+  const filteredLocations = useMemo(() => {
+    return locations.filter(location => {
+      // Skip invalid locations
+      if (!location || 
+          typeof location.latitude !== 'number' || 
+          typeof location.longitude !== 'number' ||
+          isNaN(location.latitude) || 
+          isNaN(location.longitude)) {
+        return false;
+      }
+      
+      // Individual location certification status
+      const locationIsCertified = location.isDarkSkyReserve === true || 
+        (location.certification && location.certification !== '');
+      
+      // Skip non-certified locations in certified view
+      if (activeView === 'certified' && !locationIsCertified) {
+        return false;
+      }
+      
+      // Always keep certified locations
+      if (locationIsCertified) {
+        return true;
+      }
+      
+      // Aggressive water location filtering for calculated locations
+      if (isWaterLocation(location.latitude, location.longitude, false)) {
+        console.log(`Filtered water location: ${location.name || 'unnamed'} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+        return false;
+      }
+      
+      // Additional validation
+      if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+        console.log(`Filtered invalid astronomy location: ${location.name || 'unnamed'}`);
+        return false;
+      }
+      
+      return true;
+    });
+  }, [locations, activeView]);
+  
+  return (
+    <>
+      {filteredLocations.map((location) => {
+        // Generate a unique ID for this location
+        const locationId = location.id || 
+          `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+        
+        // Individual location certification status
+        const locationIsCertified = location.isDarkSkyReserve === true || 
+          (location.certification && location.certification !== '');
+        
+        // Handle the click event for this marker
+        const handleClick = () => {
+          if (onLocationClick) {
+            onLocationClick(location);
+          }
+        };
+        
+        return (
+          <LocationMarker
+            key={locationId}
+            location={location}
+            onClick={handleClick}
+            isHovered={hoveredLocationId === locationId && !hideMarkerPopups}
+            onHover={hideMarkerPopups ? () => {} : onMarkerHover}
+            locationId={locationId}
+            isCertified={locationIsCertified}
+            activeView={activeView}
+          />
+        );
+      })}
+    </>
+  );
+});
+
+// Separate component to update map center properly
+const MapCenterHandler = ({ center }: { center: [number, number] }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Only center map if coordinates are valid
+    if (center && center.length === 2 && 
+        isFinite(center[0]) && isFinite(center[1]) &&
+        Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) {
+      map.setView(center, map.getZoom(), { animate: false });
+    }
+  }, [center, map]);
+  
+  return null;
+};
+
+const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   center,
   userLocation,
   locations,
@@ -45,152 +157,226 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onMapReady,
   onLocationClick,
   onMapClick,
-  zoom = 10,
+  zoom = 5,
   hoveredLocationId,
-  onMarkerHover,
-  handleTouchStart,
-  handleTouchEnd,
-  handleTouchMove,
-  isMobile,
-  useMobileMapFixer = false,
-  isSearching = false
+  onMarkerHover
 }) => {
-  const [mapReady, setMapReady] = useState(false);
+  const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
-  const mapRef = useRef<any>(null);
+  const isCertifiedView = activeView === 'certified';
+  const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
+  const [mapRendered, setMapRendered] = useState(false);
+  const [markerChunks, setMarkerChunks] = useState<SharedAstroSpot[][]>([]);
+  const mapRef = useRef<L.Map | null>(null);
   
-  // Find user location SIQS
-  useEffect(() => {
-    if (userLocation && locations.length > 0) {
-      const userLat = userLocation.latitude;
-      const userLng = userLocation.longitude;
-      
-      // Find siqs of current user location from locations
-      const sameLocation = locations.find(loc => 
-        Math.abs(loc.latitude - userLat) < 0.0001 && 
-        Math.abs(loc.longitude - userLng) < 0.0001
-      );
-      
-      if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(sameLocation.siqs);
-      } else {
-        setCurrentSiqs(null);
+  // Make sure center coordinates are valid
+  const validCenter = useMemo(() => {
+    return (center && center.length === 2 && 
+            isFinite(center[0]) && isFinite(center[1]) &&
+            Math.abs(center[0]) <= 90 && Math.abs(center[1]) <= 180) ? 
+            center : [0, 0] as [number, number];
+  }, [center]);
+  
+  // Handle SIQS calculation results
+  const handleSiqsCalculated = useCallback((siqs: number) => {
+    setCurrentSiqs(siqs);
+  }, []);
+
+  // Handle map interaction to hide popups while interacting
+  const handleMapDragStart = useCallback(() => {
+    setHideMarkerPopups(true);
+    onMarkerHover(null);
+  }, [onMarkerHover]);
+  
+  const handleMapDragEnd = useCallback(() => {
+    // Small delay to prevent immediate popup reappearance
+    setTimeout(() => {
+      setHideMarkerPopups(false);
+    }, 100);
+  }, []);
+  
+  const handleMapZoomEnd = useCallback(() => {
+    onMarkerHover(null);
+  }, [onMarkerHover]);
+
+  // Filter out any invalid locations
+  const validLocations = useMemo(() => {
+    return locations.filter(location => {
+      // Basic validation
+      if (!location || 
+          typeof location.latitude !== 'number' || 
+          typeof location.longitude !== 'number' ||
+          isNaN(location.latitude) || 
+          isNaN(location.longitude) ||
+          Math.abs(location.latitude) > 90 ||
+          Math.abs(location.longitude) > 180) {
+        return false;
       }
-    }
-  }, [userLocation, locations]);
+      
+      // Skip water locations for non-certified spots
+      const isCertified = location.isDarkSkyReserve === true || 
+        (location.certification && location.certification !== '');
+      
+      if (!isCertified) {
+        // Apply strict water filtering
+        if (isWaterLocation(location.latitude, location.longitude, false)) {
+          console.log(`Pre-filtered water location: ${location.name || 'unnamed'}`);
+          return false;
+        }
+        
+        // Additional validation
+        if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [locations]);
   
-  // Handle map ready
-  const handleMapReady = useCallback(() => {
-    setMapReady(true);
-    if (onMapReady) {
-      onMapReady();
+  // Chunk locations for better rendering performance
+  useEffect(() => {
+    if (validLocations.length > 0 && mapRendered) {
+      // Get optimal chunk size based on location count
+      const chunkSize = validLocations.length > 100 ? 30 : 50;
+      setMarkerChunks(chunkArray(validLocations, chunkSize));
     }
+  }, [validLocations, mapRendered]);
+  
+  // Store map reference when ready
+  const storeMapRef = useCallback((map: L.Map) => {
+    mapRef.current = map;
+    // Explicitly enable dragging
+    map.dragging.enable();
+    console.log("Map container ready, dragging enabled:", map.dragging.enabled());
+    setMapRendered(true);
+    onMapReady();
     
-    // Make map instance available globally for external access
-    if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
-    }
+    // Fix for Leaflet error by invalidating size
+    setTimeout(() => {
+      if (map) {
+        map.invalidateSize();
+      }
+    }, 100);
   }, [onMapReady]);
   
-  // Handle location click
-  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    }
-  }, [onLocationClick]);
-  
-  // Handle map click - always allow location updates when map is clicked
+  // Handle map click that closes popups
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    // Hide all popups
+    setHideMarkerPopups(true);
+    onMarkerHover(null);
+    
+    // After a brief delay, allow popups again
+    setTimeout(() => {
+      setHideMarkerPopups(false);
+    }, 100);
+    
+    // Pass the click to the parent
     if (onMapClick) {
       onMapClick(lat, lng);
-      console.log("Map clicked, updating location to:", lat, lng);
     }
-  }, [onMapClick]);
-  
+  }, [onMapClick, onMarkerHover]);
+
+  // Optimization: render circle conditionally
+  const renderSearchRadiusCircle = useMemo(() => {
+    if (userLocation && 
+        searchRadius && 
+        searchRadius < 1000 &&
+        typeof userLocation.latitude === 'number' &&
+        typeof userLocation.longitude === 'number' &&
+        isFinite(userLocation.latitude) &&
+        isFinite(userLocation.longitude)) {
+      
+      return (
+        <Circle 
+          center={[userLocation.latitude, userLocation.longitude]}
+          radius={searchRadius * 1000} // Convert km to meters for circle radius
+          pathOptions={{ 
+            color: isCertifiedView ? '#FFD700' : '#9b87f5',
+            fillColor: isCertifiedView ? '#FFD700' : '#9b87f5',
+            fillOpacity: 0.08,
+            weight: 1.5,
+            opacity: 0.4,
+            className: 'location-radius-circle'
+          }}
+        />
+      );
+    }
+    return null;
+  }, [userLocation, searchRadius, isCertifiedView]);
+
   return (
     <MapContainer
-      center={center}
+      center={validCenter}
       zoom={zoom}
-      style={{ height: "100%", width: "100%" }}
+      className="h-full w-full"
+      whenReady={({ target }) => {
+        // Store map reference globally for external access
+        (window as any).leafletMap = target;
+        storeMapRef(target);
+      }}
       scrollWheelZoom={true}
-      ref={mapRef}
-      className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
-      whenReady={handleMapReady}
-      attributionControl={true}
-      zoomControl={false} // Disable default zoom control, we'll add it at top-left
+      minZoom={2}
     >
-      {/* Add zoom control to top-left position */}
-      <ZoomControl position="topleft" />
+      {/* Add a MapCenterHandler to properly handle center changes */}
+      <MapCenterHandler center={validCenter} />
       
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        subdomains="abc"
       />
       
-      {/* Use MapEffectsComposer to apply all map effects */}
-      <MapEffectsComposer 
-        center={center}
-        zoom={zoom}
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
-      />
-      
-      {/* Add Radius Animation Overlay */}
-      {userLocation && (
-        <RadiusAnimationOverlay
-          userLocation={userLocation}
-          searchRadius={searchRadius}
-          isSearching={isSearching || false}
-          activeView={activeView}
-        />
-      )}
-      
-      {/* Use MapEvents component for map click handling */}
-      <MapEvents onMapClick={handleMapClick} />
-      
-      {userLocation && (
-        <UserLocationMarker 
-          position={[userLocation.latitude, userLocation.longitude]} 
-          currentSiqs={currentSiqs}
-        />
-      )}
-      
-      {locations.map(location => {
-        if (!location.latitude || !location.longitude) return null;
-        
-        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-        const isHovered = hoveredLocationId === locationId;
-        
-        return (
-          <LocationMarker
-            key={locationId}
-            location={location}
-            onClick={handleLocationClick}
-            isHovered={isHovered}
-            onHover={onMarkerHover || (() => {})}
-            locationId={locationId}
-            isCertified={isCertified}
-            activeView={activeView}
-            handleTouchStart={handleTouchStart}
-            handleTouchEnd={handleTouchEnd}
-            handleTouchMove={handleTouchMove}
-          />
-        );
-      })}
-      
-      {/* Add controllers */}
+      {/* Controller for handling map setup and controls */}
       <MapController 
         userLocation={userLocation} 
         searchRadius={searchRadius}
       />
       
-      {/* Add the mobile map fixer for better mobile experience */}
-      {useMobileMapFixer && isMobile && <MobileMapFixer />}
+      {/* Effects composer for all effects like bounds control and SIQS calculation */}
+      <MapEffectsComposer 
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={handleSiqsCalculated}
+      />
+      
+      {/* Add MapEvents component to handle clicks if onMapClick is provided */}
+      <MapEvents 
+        onMapClick={handleMapClick} 
+        onMapDragStart={handleMapDragStart}
+        onMapDragEnd={handleMapDragEnd}
+        onMapZoomEnd={handleMapZoomEnd}
+      />
+      
+      {/* Current user location marker */}
+      {userLocation && 
+       typeof userLocation.latitude === 'number' &&
+       typeof userLocation.longitude === 'number' && (
+        <UserLocationMarker 
+          position={[userLocation.latitude, userLocation.longitude]}
+          currentSiqs={currentSiqs}
+        />
+      )}
+      
+      {/* Search radius visualization */}
+      {renderSearchRadiusCircle}
+      
+      {/* Location markers rendered in batches for better performance */}
+      {!hideMarkerPopups && mapRendered && markerChunks.map((chunk, i) => (
+        <MarkerGroup
+          key={`marker-chunk-${i}`}
+          locations={chunk}
+          onLocationClick={onLocationClick}
+          hoveredLocationId={hoveredLocationId}
+          onMarkerHover={onMarkerHover}
+          isCertified={isCertifiedView}
+          hideMarkerPopups={hideMarkerPopups}
+          activeView={activeView}
+        />
+      ))}
     </MapContainer>
   );
 };
 
-export default LazyMapContainer;
+export default React.memo(PhotoPointsMapContainer);

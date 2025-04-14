@@ -1,27 +1,32 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
-import { useIsMobile } from '@/hooks/use-mobile';
-import LazyMapContainer from './LazyMapContainer';
-import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
-import PageLoader from '@/components/loaders/PageLoader';
-import MapLegend from './MapLegend';
-import PinpointButton from './PinpointButton';
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { usePhotoPointsMap } from "@/hooks/photoPoints/usePhotoPointsMap";
+import './MapStyles.css';
+import { clearLocationCache } from "@/services/realTimeSiqsService/locationUpdateService";
+import useMapInteractions from "@/hooks/photoPoints/useMapInteractions";
+import { getAllStoredLocations } from "@/services/calculatedLocationsService";
+import MapLegend from "./MapLegend";
+import LoadingIndicator from "./LoadingIndicator";
+
+const RealTimeLocationUpdater = lazy(() => import('./RealTimeLocationUpdater'));
+const LazyPhotoPointsMapContainer = lazy(() => import('./LazyMapContainer'));
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
-  activeView: 'certified' | 'calculated';
+  activeView: 'certified' | 'calculated'; 
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
+  onMapReady?: () => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
+  className?: string;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   userLocation,
   locations,
   certifiedLocations,
@@ -29,175 +34,213 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate
+  onMapReady,
+  onLocationUpdate,
+  className = "h-[440px] w-full rounded-lg overflow-hidden border border-border"
 }) => {
   const { t } = useLanguage();
-  const isMobile = useIsMobile();
-  const [mapContainerHeight, setMapContainerHeight] = useState('500px');
-  const [legendOpen, setLegendOpen] = useState(false);
-  const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
-  const [isLocationChanged, setIsLocationChanged] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [mapLoadedOnce, setMapLoadedOnce] = useState(false);
+  const mapInitializedRef = useRef(false);
+  const previousViewRef = useRef<string>(activeView);
+  const [key, setKey] = useState(`map-${Date.now()}`);
+  const lastRadiusRef = useRef<number>(searchRadius);
+  const prevLocationRef = useRef<{latitude: number; longitude: number} | null>(null);
+  const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
+  const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
+  const [locationStats, setLocationStats] = useState<{certified: number, calculated: number}>({ certified: 0, calculated: 0 });
   
-  const { 
-    hoveredLocationId, 
-    handleHover,
-    handleTouchStart,
-    handleTouchEnd,
-    handleTouchMove
-  } = useMapMarkers();
+  const {
+    hoveredLocationId,
+    handleMarkerHover,
+    handleLocationClick: onMarkerClick,
+    handleMapDragStart,
+    handleMapDragEnd
+  } = useMapInteractions({
+    onLocationClick,
+    onMarkerHover: (id) => console.log("Marker hover:", id)
+  });
+
+  // Process calculated locations when they change
+  useEffect(() => {
+    if (activeView === 'calculated') {
+      const storedLocations = getAllStoredLocations();
+      
+      setLoadingPhase('processing');
+      
+      const locMap = new Map<string, SharedAstroSpot>();
+      
+      calculatedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locMap.set(key, loc);
+        }
+      });
+      
+      storedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          if (!locMap.has(key)) {
+            locMap.set(key, loc);
+          }
+        }
+      });
+      
+      const combined = Array.from(locMap.values());
+      setCombinedCalculatedLocations(combined);
+      setLocationStats(prev => ({ ...prev, calculated: combined.length }));
+      
+      console.log(`Combined ${calculatedLocations.length} current locations with ${storedLocations.length} stored locations for a total of ${combined.length} unique locations`);
+      
+      setTimeout(() => {
+        setLoadingPhase('ready');
+      }, 500);
+    }
+  }, [calculatedLocations, activeView]);
   
-  const { 
+  const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
+  
+  // Handle view change (certified vs calculated)
+  useEffect(() => {
+    if (previousViewRef.current !== activeView) {
+      previousViewRef.current = activeView;
+      setKey(`map-view-${activeView}-${Date.now()}`);
+      console.log(`View changed to ${activeView}, forcing map component remount`);
+      
+      setLoadingPhase(activeView === 'certified' ? 'fetching' : 'processing');
+    }
+  }, [activeView]);
+  
+  // Handle search radius change
+  useEffect(() => {
+    if (lastRadiusRef.current !== searchRadius && 
+        Math.abs(lastRadiusRef.current - searchRadius) > 100) {
+      console.log(`Search radius changed from ${lastRadiusRef.current}km to ${searchRadius}km, clearing cache`);
+      clearLocationCache();
+      
+      setLoadingPhase('fetching');
+    }
+    lastRadiusRef.current = searchRadius;
+  }, [searchRadius]);
+
+  // Track significant location changes
+  useEffect(() => {
+    if (userLocation && prevLocationRef.current) {
+      const latDiff = Math.abs(userLocation.latitude - prevLocationRef.current.latitude);
+      const lngDiff = Math.abs(userLocation.longitude - prevLocationRef.current.longitude);
+      
+      if (latDiff > 0.5 || lngDiff > 0.5) {
+        console.log("User location changed significantly");
+        setLoadingPhase('changing_location');
+        
+        prevLocationRef.current = userLocation;
+        
+        setTimeout(() => {
+          setLoadingPhase('ready');
+        }, 1000);
+      }
+    } else if (userLocation) {
+      prevLocationRef.current = userLocation;
+    }
+  }, [userLocation]);
+  
+  const {
     mapReady,
     handleMapReady,
-    handleLocationClick,
     validLocations,
     mapCenter,
     initialZoom,
     certifiedLocationsLoaded,
-    certifiedLocationsLoading
+    certifiedLocationsLoading,
+    loadingProgress,
+    allCertifiedLocationsCount
   } = usePhotoPointsMap({
-    userLocation,
-    locations,
+    userLocation: selectedMapLocation || userLocation,
+    locations: activeLocations,
     searchRadius,
     activeView
   });
-  
-  // Track location changes to show searching indicator
+
+  // Show success message when certified locations are loaded, but as console log instead of toast
   useEffect(() => {
-    if (userLocation) {
-      if (!prevLocation || 
-          prevLocation.latitude !== userLocation.latitude || 
-          prevLocation.longitude !== userLocation.longitude) {
-        setIsLocationChanged(true);
-        setPrevLocation({...userLocation});
-        
-        const timer = setTimeout(() => {
-          setIsLocationChanged(false);
-        }, 3000); // Reduced from 5000ms to 3000ms for better UX
-        
-        return () => clearTimeout(timer);
+    if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
+      console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
+    }
+  }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
+
+  // Reset selected location if user location changes significantly
+  useEffect(() => {
+    if (userLocation && selectedMapLocation) {
+      const latDiff = Math.abs(userLocation.latitude - selectedMapLocation.latitude);
+      const lngDiff = Math.abs(userLocation.longitude - selectedMapLocation.longitude);
+      
+      if (latDiff > 1 || lngDiff > 1) {
+        console.log("User location changed significantly, updating selected location");
+        setSelectedMapLocation(null);
       }
     }
-  }, [userLocation, prevLocation]);
-  
-  // Update search state
-  useEffect(() => {
-    setIsSearching(certifiedLocationsLoading || !mapReady || isLocationChanged);
-  }, [certifiedLocationsLoading, mapReady, isLocationChanged]);
-  
-  // Adjust map container height
-  useEffect(() => {
-    const adjustHeight = () => {
-      if (isMobile) {
-        setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(80vh - 160px)'
-          : 'calc(90vh - 140px)');
-      } else {
-        setMapContainerHeight('500px');
-      }
-    };
-    
-    adjustHeight();
-    window.addEventListener('resize', adjustHeight);
-    return () => window.removeEventListener('resize', adjustHeight);
-  }, [isMobile]);
-  
-  // Map click handler
-  const handleMapClick = useCallback((lat: number, lng: number) => {
+  }, [userLocation, selectedMapLocation]);
+
+  const handleMapClick = (lat: number, lng: number) => {
+    setSelectedMapLocation({ latitude: lat, longitude: lng });
+      
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
-      console.log("Setting new location from map click:", lat, lng);
     }
-  }, [onLocationUpdate]);
-  
-  // Location click handler
-  const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    } else {
-      handleLocationClick(location);
-    }
-  }, [onLocationClick, handleLocationClick]);
-  
-  // Get current location
-  const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation) {
-      setIsSearching(true);
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationUpdate(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-          
-          setTimeout(() => setIsSearching(false), 1500);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-          setIsSearching(false);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    }
-  }, [onLocationUpdate]);
-  
-  // Legend toggle handler
-  const handleLegendToggle = useCallback((isOpen: boolean) => {
-    setLegendOpen(isOpen);
-  }, []);
-  
+  };
+
+  // Show loading indicator while certified locations are loading
+  const showLoadingIndicator = activeView === 'certified' && certifiedLocationsLoading && !mapLoadedOnce;
+
   return (
-    <div 
-      style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300"
-    >
-      {!mapReady && (
-        <div className="absolute inset-0 z-20">
-          <PageLoader />
-        </div>
-      )}
+    <div className="space-y-3">
+      <div className={className + " relative"}>
+        {showLoadingIndicator && (
+          <LoadingIndicator 
+            progress={loadingProgress}
+            message={t(
+              "Loading certified dark sky locations...", 
+              "正在加载全球认证暗夜保护区..."
+            )}
+          />
+        )}
+        
+        <Suspense fallback={null}>
+          <LazyPhotoPointsMapContainer
+            key={key}
+            center={mapCenter}
+            zoom={initialZoom}
+            userLocation={selectedMapLocation || userLocation}
+            locations={validLocations}
+            searchRadius={searchRadius}
+            activeView={activeView}
+            onMapReady={() => {
+              handleMapReady();
+              if (onMapReady) onMapReady();
+              mapInitializedRef.current = true;
+              setMapLoadedOnce(true);
+              setLoadingPhase('ready');
+            }}
+            onLocationClick={onMarkerClick}
+            onMapClick={handleMapClick}
+            hoveredLocationId={hoveredLocationId}
+            onMarkerHover={handleMarkerHover}
+          />
+          
+          <RealTimeLocationUpdater 
+            userLocation={selectedMapLocation || userLocation}
+            onLocationUpdate={onLocationUpdate}
+          />
+        </Suspense>
+      </div>
       
-      {certifiedLocationsLoading && !certifiedLocationsLoaded && (
-        <div className="absolute top-4 left-0 right-0 mx-auto w-auto max-w-xs z-30 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md text-center text-sm text-muted-foreground">
-          {t("Loading certified locations...", "正在加载认证地点...")}
-        </div>
-      )}
-      
-      <LazyMapContainer
-        center={mapCenter}
-        userLocation={userLocation}
-        locations={validLocations}
-        searchRadius={searchRadius}
-        activeView={activeView}
-        onMapReady={handleMapReady}
-        onLocationClick={handleLocationClicked}
-        onMapClick={handleMapClick}
-        zoom={initialZoom}
-        hoveredLocationId={hoveredLocationId}
-        onMarkerHover={handleHover}
-        handleTouchStart={handleTouchStart}
-        handleTouchEnd={handleTouchEnd}
-        handleTouchMove={handleTouchMove}
-        isMobile={isMobile}
-        useMobileMapFixer={true}
-        isSearching={isSearching}
-      />
-      
-      <MapLegend 
-        activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
-        onToggle={handleLegendToggle}
-        className="absolute bottom-4 right-4"
-      />
-      
-      {!legendOpen && (
-        <PinpointButton 
-          onGetLocation={handleGetLocation} 
-          className="absolute top-4 right-4"
+      <div className="px-1">
+        <MapLegend
+          showStarLegend={activeView === 'certified'}
+          showCircleLegend={activeView === 'calculated'}
+          className="max-w-md mx-auto text-sm"
         />
-      )}
+      </div>
     </div>
   );
 };
