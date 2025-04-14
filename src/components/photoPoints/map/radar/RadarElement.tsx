@@ -126,7 +126,7 @@ const RadarElement: React.FC<RadarElementProps> = ({
     };
   }, [map, radarStyles, showAnimation]);
   
-  // Always return JSX, never conditional returns in components with hooks
+  // Always return null, never conditional returns in components with hooks
   return null;
 };
 

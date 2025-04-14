@@ -13,7 +13,7 @@ interface UserLocationSiqsProps {
 export const useUserLocationSiqs = ({ userLocation, locations }: UserLocationSiqsProps) => {
   // Find the current SIQS at the user location - ensure consistent hook execution
   const currentSiqs = useMemo(() => {
-    // Default to null
+    // Default to null when conditions aren't met
     if (!userLocation || !locations || locations.length === 0) {
       return null;
     }

@@ -13,7 +13,8 @@ export const useAnimationState = ({ isScanning }: AnimationStateProps) => {
   
   // Handle animation visibility based on scanning state
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    // Always initialize timeout ref even if we don't use it
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     
     // Update animation state based on scanning status
     if (isScanning) {

@@ -26,7 +26,7 @@ export const useRadarPosition = ({
   
   // Update radar position on the map
   const updateRadarPosition = useCallback(() => {
-    // Initialize with null styles
+    // Initialize with null styles if conditions aren't met
     if (!userLocation || !map || !showAnimation) {
       setRadarStyles(null);
       return;
@@ -58,7 +58,7 @@ export const useRadarPosition = ({
   
   // Set up event listeners for map movements
   useEffect(() => {
-    // Initialize even if conditions aren't met yet
+    // Always create timeout ref even if we don't use it
     let timeout: ReturnType<typeof setTimeout> | null = null;
     
     const handleMapChange = () => {

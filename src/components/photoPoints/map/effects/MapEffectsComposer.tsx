@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
@@ -30,7 +29,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   isManualRadiusChange = false
 }) => {
   const map = useMap();
-  const [lastUserLocation, setLastUserLocation] = useState(userLocation);
+  const [lastUserLocation, setLastUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const locationChangedRef = useRef(false);
   
   // Only update center position, keep current zoom level
@@ -75,6 +74,9 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
     };
   }, [userLocation, lastUserLocation]);
   
+  // Determine whether to show radar animation - only in calculated view with userLocation
+  const showRadar = activeView === 'calculated' && userLocation !== null && userLocation !== undefined;
+  
   return (
     <>
       {/* Apply world bounds limit */}
@@ -82,14 +84,14 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       
       {/* Apply SIQS-specific effects */}
       <SiqsEffectsController 
-        userLocation={userLocation}
+        userLocation={userLocation || null}
         activeView={activeView}
         searchRadius={searchRadius}
         onSiqsCalculated={onSiqsCalculated}
       />
       
-      {/* Radar sweep animation - only render when needed */}
-      {activeView === 'calculated' && userLocation && (
+      {/* Radar sweep animation - only render when in calculated view */}
+      {showRadar && (
         <RadarSweepAnimation 
           userLocation={userLocation}
           searchRadius={searchRadius}
