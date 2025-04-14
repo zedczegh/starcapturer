@@ -39,7 +39,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
         onSiqsCalculated={onSiqsCalculated}
       />
 
-      {/* Radar sweep animation */}
+      {/* Radar sweep animation - only show for calculated view and when scanning */}
       {activeView === 'calculated' && userLocation && (
         <RadarSweepAnimation 
           userLocation={userLocation}
