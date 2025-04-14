@@ -105,8 +105,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       ref={mapRef}
       className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
       whenReady={handleMapReady}
-      // Remove zoomControl and doubleClickZoom props that don't match our type definitions
-      // These will be handled programmatically in MapController component
       attributionControl={true}
     >
       <TileLayer

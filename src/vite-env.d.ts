@@ -17,10 +17,6 @@ declare module 'react-leaflet' {
     className?: string;
     children?: React.ReactNode;
     minZoom?: number;
-    // Add these properties that are used but not defined in the types
-    zoomControl?: boolean;
-    doubleClickZoom?: boolean;
-    tap?: boolean;
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
@@ -29,7 +25,6 @@ declare module 'react-leaflet' {
     subdomains?: string | string[];
     opacity?: number;
     zIndex?: number;
-    className?: string;
     children?: React.ReactNode;
   }
 
@@ -37,20 +32,12 @@ declare module 'react-leaflet' {
     position: L.LatLngExpression;
     icon?: L.Icon | L.DivIcon;
     onClick?: () => void;
-    eventHandlersRef?: {
-      mouseover?: () => void;
-      mouseout?: () => void;
-      touchstart?: (e: TouchEvent) => void;
-      touchend?: (e: TouchEvent) => void;
-      touchmove?: (e: TouchEvent) => void;
-    };
     children?: React.ReactNode;
   }
 
   export interface PopupProps extends L.PopupOptions {
     autoClose?: boolean;
     closeOnClick?: boolean;
-    className?: string;
     children?: React.ReactNode;
   }
   

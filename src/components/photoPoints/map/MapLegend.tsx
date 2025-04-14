@@ -37,30 +37,14 @@ const MapLegend: React.FC<MapLegendProps> = ({
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0 }
   };
-  
-  const pulseVariants = {
-    pulse: {
-      boxShadow: [
-        '0 0 0 0 rgba(139, 92, 246, 0)',
-        '0 0 0 4px rgba(139, 92, 246, 0.2)',
-        '0 0 0 0 rgba(139, 92, 246, 0)'
-      ],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        repeatDelay: 1
-      }
-    }
-  };
 
   return (
     <motion.div 
-      className={`p-3.5 rounded-lg backdrop-blur-md bg-background/80 border border-primary/20 shadow-lg ${className} relative overflow-hidden`}
+      className={`p-3 rounded-lg backdrop-blur-md bg-background/80 border border-primary/20 shadow-lg ${className} absolute bottom-12 right-3 max-w-[250px] z-[999] max-h-[80vh] overflow-y-auto`}
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      {/* Sci-fi decorative elements */}
       <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
       <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
       
