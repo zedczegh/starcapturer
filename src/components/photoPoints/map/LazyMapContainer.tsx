@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -158,7 +157,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
       
-      {/* Map legend with completely redesigned component */}
+      {/* Map legend with improved component */}
       <MapLegend 
         activeView={activeView} 
         showStarLegend={activeView === 'certified'}
