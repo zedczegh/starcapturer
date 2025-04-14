@@ -1,37 +1,37 @@
 
 import React from 'react';
+import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
 
 interface MapEffectsComposerProps {
-  userLocation: { latitude: number; longitude: number } | null;
-  activeView: 'certified' | 'calculated';
-  searchRadius: number;
-  onSiqsCalculated?: (siqs: number) => void;
+  center?: [number, number];
+  zoom?: number;
 }
 
 /**
- * Component to compose all map effects in a single component
- * This makes it easier to maintain different effects and prevent prop drilling
+ * A component that composes various map effects
  */
-const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
-  userLocation,
-  activeView, 
-  searchRadius,
-  onSiqsCalculated
+const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
+  center,
+  zoom
 }) => {
+  const map = useMap();
+  
+  // Set view when center changes
+  React.useEffect(() => {
+    if (!map || !center) return;
+    
+    map.setView(center, zoom || map.getZoom());
+  }, [map, center, zoom]);
+  
   return (
     <>
-      {/* Prevent infinite scrolling of the map */}
+      {/* Apply world bounds limit */}
       <WorldBoundsController />
       
-      {/* Handle real-time SIQS calculations */}
-      <SiqsEffectsController 
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={onSiqsCalculated}
-      />
+      {/* Apply SIQS-specific effects */}
+      <SiqsEffectsController />
     </>
   );
 };

@@ -32,7 +32,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
   };
 
   return (
-    <div className="absolute bottom-8 right-2 z-[999]" onClick={stopPropagation} onTouchStart={stopPropagation}>
+    <div className="absolute top-4 right-2 z-[999]" onClick={stopPropagation} onTouchStart={stopPropagation}>
       <div className="relative">
         {/* The collapsible panel */}
         <AnimatePresence>
