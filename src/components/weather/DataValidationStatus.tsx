@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { InfoCircle } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -39,7 +39,7 @@ const DataValidationStatus: React.FC<DataValidationStatusProps> = ({
               {isValid ? "Valid" : "Invalid"}
             </Badge>
             {!isValid && discrepancies && (
-              <InfoCircle className="w-3.5 h-3.5 ml-1 text-amber-400" />
+              <InfoIcon className="w-3.5 h-3.5 ml-1 text-amber-400" />
             )}
           </div>
         </TooltipTrigger>
