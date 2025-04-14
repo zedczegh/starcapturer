@@ -56,17 +56,32 @@ export const MobileMapFixer: React.FC = () => {
         tilePane.style.webkitBackfaceVisibility = 'hidden';
       }
       
+      // Disable existing handlers that might interfere
+      if (map.tap) {
+        map.tap.disable();
+      }
+      
+      // Re-enable with better settings
+      setTimeout(() => {
+        if (map.tap) {
+          map.tap.enable();
+        }
+      }, 100);
+      
       // Fix for sticky touches on iOS
-      map.getContainer().addEventListener('touchstart', function(e) {
+      const mapContainer = map.getContainer();
+      const preventScroll = (e: TouchEvent) => {
         if (e.touches.length === 1) {
-          // Prevent page from scrolling
           e.preventDefault();
         }
-      }, { passive: false });
+      };
+      
+      // Add passive: false to ensure preventDefault works
+      mapContainer.addEventListener('touchstart', preventScroll, { passive: false });
       
       // Fix for markers not appearing after zoom on iOS
       map.on('zoom', () => {
-        if (map._panes.markerPane) {
+        if (map._panes && map._panes.markerPane) {
           // Toggle visibility to force iOS to redraw markers
           map._panes.markerPane.style.display = 'none';
           setTimeout(() => {
@@ -76,23 +91,46 @@ export const MobileMapFixer: React.FC = () => {
           }, 10);
         }
       });
+      
+      // Return cleanup function
+      return () => {
+        mapContainer.removeEventListener('touchstart', preventScroll);
+      };
     }
     
-    // Configure interaction settings
+    // Configure interaction settings for all mobile devices
     if (map.options) {
-      // Enable double click zoom but make it center on the clicked point
-      map.doubleClickZoom.enable();
+      // Disable and re-enable features to reset any problematic settings
+      map.dragging.disable();
+      map.touchZoom.disable();
+      map.doubleClickZoom.disable();
+      map.scrollWheelZoom.disable();
       
-      // Add touch-specific settings
-      if (map.tap) {
-        map.tap.disable();
-        map.tap.enable();
-      }
-      
-      // Add proper zoom controls
-      if (!map.zoomControl) {
-        map.addControl(L.control.zoom({ position: 'bottomright' }));
-      }
+      // Re-enable with better settings
+      setTimeout(() => {
+        // Enable drag with improved mobile settings
+        map.dragging.enable();
+        
+        // Enable touch zoom centered on pinch point
+        map.touchZoom.enable();
+        
+        // Enable double click zoom but make it center on the clicked point
+        map.doubleClickZoom.enable();
+        
+        // Enable scroll wheel zoom with reduced sensitivity
+        map.scrollWheelZoom.enable();
+        
+        // Add touch-specific settings
+        if (map.tap) {
+          map.tap.disable();
+          map.tap.enable();
+        }
+        
+        // Add proper zoom controls if missing
+        if (!map.zoomControl) {
+          map.addControl(L.control.zoom({ position: 'bottomright' }));
+        }
+      }, 100);
     }
     
     // Apply the initial fixes
