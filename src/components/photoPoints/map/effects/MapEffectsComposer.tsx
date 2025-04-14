@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
@@ -54,7 +55,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       ) {
         locationChangedRef.current = true;
         // Set a timeout to reset the flag
-        timeout = window.setTimeout(() => {
+        timeout = setTimeout(() => {
           locationChangedRef.current = false;
         }, 1000); // Reset flag after 1 second
         
@@ -69,7 +70,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
     // Cleanup function
     return () => {
       if (timeout) {
-        window.clearTimeout(timeout);
+        clearTimeout(timeout);
       }
     };
   }, [userLocation, lastUserLocation]);

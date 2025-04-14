@@ -15,6 +15,7 @@ export const useAnimationState = ({ isScanning }: AnimationStateProps) => {
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     
+    // Update animation state based on scanning status
     if (isScanning) {
       setShowAnimation(true);
     } else {
