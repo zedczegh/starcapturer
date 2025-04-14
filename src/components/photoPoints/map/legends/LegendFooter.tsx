@@ -7,18 +7,15 @@ import { itemVariants } from '../utils/legendAnimations';
 const LegendFooter: React.FC = () => {
   const { t } = useLanguage();
   
-  // Define animation properties to avoid conditional hook usage
-  const textAnimateProps = { 
-    textShadow: ['0 0 0px rgba(139, 92, 246, 0)', '0 0 2px rgba(139, 92, 246, 0.5)', '0 0 0px rgba(139, 92, 246, 0)'] 
-  };
-  
   return (
     <motion.div 
       className="mt-3 text-xs text-muted-foreground bg-background/70 p-2 rounded-md border border-primary/10 shadow-sm"
       variants={itemVariants}
     >
       <motion.p
-        animate={textAnimateProps}
+        animate={{ 
+          textShadow: ['0 0 0px rgba(139, 92, 246, 0)', '0 0 2px rgba(139, 92, 246, 0.5)', '0 0 0px rgba(139, 92, 246, 0)'] 
+        }}
         transition={{ duration: 3, repeat: Infinity }}
       >
         {t(
