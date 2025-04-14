@@ -1,3 +1,4 @@
+
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -82,9 +83,19 @@ export const useMapMarkers = () => {
   
   /**
    * Handle touch start event for better touch interaction
+   * Enhanced with better event checking
    */
   const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
     if (!isMobile) return;
+    
+    // Check if the event came from the legend component
+    const target = e.target as HTMLElement;
+    if (target && (
+        target.closest('.leaflet-control-container') || 
+        target.closest('[data-map-legend="true"]')
+    )) {
+      return; // Don't process touch events from the legend
+    }
     
     // Store touch position to determine if it's a tap or drag later
     if (e.touches && e.touches[0]) {
@@ -102,10 +113,19 @@ export const useMapMarkers = () => {
   }, [isMobile, handleHover]);
   
   /**
-   * Handle touch end event for better touch interaction
+   * Handle touch end event with improved event filtering
    */
   const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
     if (!isMobile) return;
+    
+    // Check if the event came from the legend component
+    const target = e.target as HTMLElement;
+    if (target && (
+        target.closest('.leaflet-control-container') || 
+        target.closest('[data-map-legend="true"]')
+    )) {
+      return; // Don't process touch events from the legend
+    }
     
     // Prevent default behaviors
     e.stopPropagation();
@@ -114,16 +134,25 @@ export const useMapMarkers = () => {
     // This gives users enough time to read and interact with the popup
     setTimeout(() => {
       handleHover(null);
-    }, 5000); // Increased from 2500ms to 5000ms (5 seconds) for better interaction time
+    }, 6000); // Increased to 6 seconds for better interaction time
     
     touchStartPos.current = null;
   }, [isMobile, handleHover]);
   
   /**
-   * Handle touch move to detect dragging vs tapping
+   * Handle touch move with improved event filtering
    */
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isMobile || !touchStartPos.current) return;
+    
+    // Check if the event came from the legend component
+    const target = e.target as HTMLElement;
+    if (target && (
+        target.closest('.leaflet-control-container') || 
+        target.closest('[data-map-legend="true"]')
+    )) {
+      return; // Don't process touch events from the legend
+    }
     
     if (e.touches && e.touches[0]) {
       const moveX = Math.abs(e.touches[0].clientX - touchStartPos.current.x);
