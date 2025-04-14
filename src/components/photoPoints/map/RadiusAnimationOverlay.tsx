@@ -10,9 +10,6 @@ interface RadiusAnimationOverlayProps {
   activeView: 'certified' | 'calculated';
 }
 
-/**
- * Simplified component that displays a radius circle with minimal animation effects
- */
 const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   userLocation,
   searchRadius,
@@ -20,19 +17,29 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   activeView
 }) => {
   const map = useMap();
-  const [circle, setCircle] = useState<L.Circle | null>(null);
   const circleRef = useRef<L.Circle | null>(null);
   
   // Only show animation for calculated view with active searching
   const shouldShowAnimation = activeView === 'calculated' && isSearching;
   
   // Function to update the radius circle based on current zoom level
-  const updateRadiusCircle = React.useCallback(() => {
+  useEffect(() => {
+    // Clean up function to remove circle when component unmounts
+    return () => {
+      if (circleRef.current && map) {
+        circleRef.current.removeFrom(map);
+      }
+    };
+  }, [map]);
+  
+  // Create or update circle when relevant props change
+  useEffect(() => {
     if (!map || !userLocation) return;
     
     // Clear previous circle
     if (circleRef.current) {
       circleRef.current.removeFrom(map);
+      circleRef.current = null;
     }
     
     // Create the circle showing the search radius
@@ -45,37 +52,32 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         fillOpacity: 0.05,
         weight: 1,
         dashArray: shouldShowAnimation ? '5, 5' : '',
-        className: 'search-radius-circle'
+        className: shouldShowAnimation ? 'search-radius-circle' : ''
       }
     ).addTo(map);
     
     circleRef.current = newCircle;
-    setCircle(newCircle);
     
-  }, [map, userLocation, searchRadius, shouldShowAnimation]);
-  
-  // Add and manage the radius circle
-  useEffect(() => {
-    if (!userLocation) return;
-    updateRadiusCircle();
-    
-    // Add zoom listener to update the circle size when zooming
+    // Listen for zoom events to update circle
     const handleZoom = () => {
-      updateRadiusCircle();
+      if (circleRef.current && map && userLocation) {
+        // Just update the position and radius if needed
+        circleRef.current.setLatLng([userLocation.latitude, userLocation.longitude]);
+        circleRef.current.setRadius(searchRadius * 1000);
+      }
     };
     
     map.on('zoom', handleZoom);
     
     return () => {
       map.off('zoom', handleZoom);
-      if (circleRef.current) {
-        circleRef.current.removeFrom(map);
-      }
     };
-  }, [map, userLocation, searchRadius, updateRadiusCircle]);
+  }, [map, userLocation, searchRadius, shouldShowAnimation]);
 
-  // Add minimal CSS styles - much simpler animation
+  // Add extremely minimal CSS styles - only if animation is needed
   useEffect(() => {
+    if (!shouldShowAnimation) return;
+    
     const styleId = 'radius-animation-styles';
     
     // Only add styles if they don't already exist
@@ -84,19 +86,13 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       styleEl.id = styleId;
       styleEl.innerHTML = `
         .search-radius-circle {
-          animation: pulseRadius 3s ease-in-out infinite alternate;
+          animation: pulseOpacity 2s ease-in-out infinite alternate;
           pointer-events: none;
         }
         
-        @keyframes pulseRadius {
-          0% {
-            stroke-opacity: 0.2;
-            stroke-width: 1;
-          }
-          100% {
-            stroke-opacity: 0.4;
-            stroke-width: 1.5;
-          }
+        @keyframes pulseOpacity {
+          0% { stroke-opacity: 0.2; }
+          100% { stroke-opacity: 0.4; }
         }
       `;
       
@@ -104,9 +100,9 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     }
     
     return () => {
-      // We don't remove the style element to prevent flickering on re-renders
+      // We don't remove the style element since other instances might use it
     };
-  }, []);
+  }, [shouldShowAnimation]);
   
   return null; // This component doesn't render any DOM elements directly
 };

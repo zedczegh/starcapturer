@@ -2,7 +2,6 @@
 import React from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
-import SiqsEffectsController from './SiqsEffectsController';
 
 interface MapEffectsComposerProps {
   center?: [number, number];
@@ -30,21 +29,17 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   React.useEffect(() => {
     if (!map || !center) return;
     
-    map.setView(center, zoom || map.getZoom());
+    // Use flyTo for smoother transitions
+    map.flyTo(center, zoom || map.getZoom(), {
+      duration: 0.8,  // Shorter animation time for better performance
+      easeLinearity: 0.5
+    });
   }, [map, center, zoom]);
   
   return (
     <>
       {/* Apply world bounds limit */}
       <WorldBoundsController />
-      
-      {/* Apply SIQS-specific effects */}
-      <SiqsEffectsController 
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={onSiqsCalculated}
-      />
     </>
   );
 };

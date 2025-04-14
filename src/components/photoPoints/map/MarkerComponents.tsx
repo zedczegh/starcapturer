@@ -180,35 +180,6 @@ const LocationMarker = memo(({
     }
   }, [handleTouchMove]);
   
-  // Effect to manage popup state based on hover with longer visibility
-  useEffect(() => {
-    const marker = markerRef.current;
-    if (!marker) return;
-    
-    let closeTimer: number | null = null;
-    
-    if (isHovered) {
-      marker.openPopup();
-      marker.getElement()?.classList.add('hovered');
-      
-      // If a close timer was running, clear it
-      if (closeTimer) {
-        clearTimeout(closeTimer);
-        closeTimer = null;
-      }
-    } else {
-      // Add a delay before closing the popup to give users time to interact
-      closeTimer = window.setTimeout(() => {
-        marker.closePopup();
-        marker.getElement()?.classList.remove('hovered');
-      }, isMobile ? 4000 : 2000); // 4s on mobile, 2s on desktop
-    }
-    
-    return () => {
-      if (closeTimer) clearTimeout(closeTimer);
-    };
-  }, [isHovered, isMobile]);
-
   // Format location name based on language
   const displayName = language === 'zh' && location.chineseName 
     ? location.chineseName 
@@ -238,25 +209,19 @@ const LocationMarker = memo(({
       }
     });
   };
-  
+
+  // Don't use PopupPane wrapper anymore, just use the regular Popup
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      onClick={handleClick}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
     >
-      <MarkerEventHandler 
-        marker={markerRef.current}
-        eventMap={{
-          mouseover: handleMouseOver,
-          mouseout: handleMouseOut,
-          touchstart: handleMarkerTouchStart,
-          touchend: handleMarkerTouchEnd,
-          touchmove: handleMarkerTouchMove
-        }}
-      />
-      
       <Popup 
         closeOnClick={false}
         autoClose={false}

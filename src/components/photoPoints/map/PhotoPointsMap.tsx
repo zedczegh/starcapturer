@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -36,6 +37,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [legendOpen, setLegendOpen] = useState(false);
   const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [isLocationChanged, setIsLocationChanged] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   
   const { 
     hoveredLocationId, 
@@ -61,8 +63,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
   
-  const [isSearching, setIsSearching] = useState(false);
-  
+  // Track location changes to show searching indicator
   useEffect(() => {
     if (userLocation) {
       if (!prevLocation || 
@@ -73,17 +74,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         
         const timer = setTimeout(() => {
           setIsLocationChanged(false);
-        }, 5000);
+        }, 3000); // Reduced from 5000ms to 3000ms for better UX
         
         return () => clearTimeout(timer);
       }
     }
   }, [userLocation, prevLocation]);
   
+  // Update search state
   useEffect(() => {
     setIsSearching(certifiedLocationsLoading || !mapReady || isLocationChanged);
   }, [certifiedLocationsLoading, mapReady, isLocationChanged]);
   
+  // Adjust map container height
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -100,6 +103,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
+  // Map click handler
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -107,6 +111,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationUpdate]);
   
+  // Location click handler
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -115,6 +120,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
+  // Get current location
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation) {
       setIsSearching(true);
@@ -136,6 +142,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     }
   }, [onLocationUpdate]);
   
+  // Legend toggle handler
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
   }, []);

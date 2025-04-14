@@ -92,21 +92,25 @@
   transition: none !important;
 }
 
-/* Enhanced popup styles for better readability */
+/* Enhanced popup styles for better visibility and clickability */
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
   padding: 0;
   overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 .leaflet-popup-content {
   margin: 0;
   padding: 10px;
+  min-width: 200px;
 }
 
+/* Make popups more visible */
 .leaflet-popup-tip {
   width: 14px;
   height: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Make popups clickable and visible */
@@ -119,6 +123,15 @@
 .leaflet-marker-icon {
   z-index: 900;
   pointer-events: auto !important;
+  cursor: pointer;
+}
+
+/* Hover state for markers */
+.leaflet-marker-icon.hovered {
+  z-index: 950 !important;
+  filter: brightness(1.2);
+  transform: scale(1.15);
+  transition: all 0.2s ease;
 }
 
 /* Improved attribution control positioning on small screens */
@@ -134,3 +147,27 @@
   }
 }
 
+/* Ensure popup panes are above other elements */
+.leaflet-popup-pane {
+  z-index: 1000 !important;
+}
+
+/* Fix z-index issues */
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+
+.marker-popup-gradient {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  color: #e2e8f0;
+}
+
+/* Fix for radius animation */
+@keyframes pulseOpacity {
+  0% { stroke-opacity: 0.2; }
+  100% { stroke-opacity: 0.4; }
+}
+
+.search-radius-circle {
+  pointer-events: none !important;
+}
