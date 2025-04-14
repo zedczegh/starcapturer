@@ -32,7 +32,13 @@ declare module "@/types/weather" {
       name: string;
       score: number;
       description: string;
+      nighttimeData?: any;
     }>;
+    nighttimeCloudData?: {
+      average: number | null;
+      evening: number | null;
+      morning: number | null;
+    } | null;
   }
 
   export interface SharedAstroSpot {

@@ -17,7 +17,6 @@ declare module 'react-leaflet' {
     className?: string;
     children?: React.ReactNode;
     minZoom?: number;
-    // Don't add additional props that aren't supported
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
@@ -33,8 +32,6 @@ declare module 'react-leaflet' {
     position: L.LatLngExpression;
     icon?: L.Icon | L.DivIcon;
     onClick?: () => void;
-    onMouseOver?: () => void; 
-    onMouseOut?: () => void;
     children?: React.ReactNode;
   }
 

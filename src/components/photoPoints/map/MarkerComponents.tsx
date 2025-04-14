@@ -1,5 +1,6 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -10,14 +11,9 @@ import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
-
-// Get SIQS quality class
-const getSiqsClass = (siqs?: number): string => {
-  if (!siqs) return '';
-  if (siqs >= 7.5) return 'siqs-excellent';
-  if (siqs >= 5.5) return 'siqs-good';
-  return 'siqs-poor';
-};
+import { useIsMobile } from '@/hooks/use-mobile';
+import MarkerEventHandler from './MarkerEventHandler';
+import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
 
 // Enhanced filtering for water locations
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
@@ -57,39 +53,20 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   return false;
 };
 
-// Get certification type based color for markers
-const getCertificationColor = (location: SharedAstroSpot): string => {
-  if (!location.isDarkSkyReserve && !location.certification) {
-    return '#FFD700'; // Default gold
-  }
-  
-  const certification = (location.certification || '').toLowerCase();
-  
-  // Different colors for different certification types
-  if (certification.includes('reserve') || certification.includes('sanctuary')) {
-    return '#9b87f5'; // Purple for reserves
-  } else if (certification.includes('park')) {
-    return '#4ADE80'; // Green for parks
-  } else if (certification.includes('community')) {
-    return '#FFA500'; // Orange for communities
-  } else if (certification.includes('urban')) {
-    return '#0EA5E9'; // Blue for urban night skies
-  } else {
-    return '#FFD700'; // Gold for generic certified locations
-  }
-};
-
 // Create different marker styles for certified vs calculated locations
-const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean) => {
+const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean) => {
+  // Enhanced appearance for mobile
+  const sizeMultiplier = isMobile ? 1.2 : 1.0; // 20% larger on mobile
+  
   if (isCertified) {
     // For certified locations, use a color based on certification type
     const certColor = getCertificationColor(location);
-    return createCustomMarker(certColor, 'star');
+    return createCustomMarker(certColor, 'star', sizeMultiplier);
   } else {
     // For calculated locations, use a brighter color based on SIQS with circle shape
     const defaultColor = '#4ADE80'; // Bright green fallback
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
-    return createCustomMarker(color, 'circle');
+    return createCustomMarker(color, 'circle', sizeMultiplier);
   }
 };
 
@@ -101,6 +78,9 @@ interface LocationMarkerProps {
   locationId: string;
   isCertified: boolean;
   activeView: 'certified' | 'calculated';
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 const LocationMarker = memo(({ 
@@ -110,12 +90,15 @@ const LocationMarker = memo(({
   onHover,
   locationId,
   isCertified,
-  activeView
+  activeView,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }: LocationMarkerProps) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
-  const popupRef = useRef<L.Popup | null>(null);
+  const isMobile = useIsMobile();
   
   // Skip rendering calculated locations in certified view
   if (activeView === 'certified' && !isCertified) {
@@ -126,21 +109,19 @@ const LocationMarker = memo(({
   if (!isCertified) {
     // Apply strict water detection to calculated spots
     if (isWaterSpot(location)) {
-      console.log(`Filtered out water location: ${location.name} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
       return null;
     }
     
     // Extra safety check using our general validator
     if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-      console.log(`Filtered out invalid astronomy location: ${location.name}`);
       return null;
     }
   }
   
-  // Create the correct marker icon based on location type and hover state
+  // Create the correct marker icon based on location type, hover state, and device type
   const icon = useMemo(() => {
-    return getLocationMarker(location, isCertified, isHovered);
-  }, [location, isCertified, isHovered]);
+    return getLocationMarker(location, isCertified, isHovered, isMobile);
+  }, [location, isCertified, isHovered, isMobile]);
   
   // Handle click event
   const handleClick = useCallback(() => {
@@ -168,19 +149,65 @@ const LocationMarker = memo(({
     }
   }, [onHover]);
   
-  // Effect to manage popup state based on hover
+  // Handle custom touch events for better mobile experience
+  const handleMarkerTouchStart = useCallback((e: TouchEvent) => {
+    if (handleTouchStart) {
+      // Convert TouchEvent to React.TouchEvent
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchStart(syntheticEvent, locationId);
+    }
+    
+    // Add hovered class to marker for style enhancement
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.add('hovered');
+    }
+  }, [locationId, handleTouchStart]);
+  
+  const handleMarkerTouchEnd = useCallback((e: TouchEvent) => {
+    if (handleTouchEnd) {
+      // Convert TouchEvent to React.TouchEvent
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchEnd(syntheticEvent, locationId);
+    }
+  }, [locationId, handleTouchEnd]);
+  
+  const handleMarkerTouchMove = useCallback((e: TouchEvent) => {
+    if (handleTouchMove) {
+      // Convert TouchEvent to React.TouchEvent
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchMove(syntheticEvent);
+    }
+  }, [handleTouchMove]);
+  
+  // Effect to manage popup state based on hover with longer visibility
   useEffect(() => {
     const marker = markerRef.current;
     if (!marker) return;
     
+    let closeTimer: number | null = null;
+    
     if (isHovered) {
       marker.openPopup();
       marker.getElement()?.classList.add('hovered');
+      
+      // If a close timer was running, clear it
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+      }
     } else {
-      marker.closePopup();
-      marker.getElement()?.classList.remove('hovered');
+      // Add a delay before closing the popup to give users time to interact
+      closeTimer = window.setTimeout(() => {
+        marker.closePopup();
+        marker.getElement()?.classList.remove('hovered');
+      }, isMobile ? 4000 : 2000); // 4s on mobile, 2s on desktop
     }
-  }, [isHovered]);
+    
+    return () => {
+      if (closeTimer) clearTimeout(closeTimer);
+    };
+  }, [isHovered, isMobile]);
 
   // Format location name based on language
   const displayName = language === 'zh' && location.chineseName 
@@ -218,9 +245,18 @@ const LocationMarker = memo(({
       icon={icon}
       ref={markerRef}
       onClick={handleClick}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
     >
+      <MarkerEventHandler 
+        marker={markerRef.current}
+        eventMap={{
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut,
+          touchstart: handleMarkerTouchStart,
+          touchend: handleMarkerTouchEnd,
+          touchmove: handleMarkerTouchMove
+        }}
+      />
+      
       <Popup 
         closeOnClick={false}
         autoClose={false}
@@ -256,11 +292,11 @@ const LocationMarker = memo(({
             )}
           </div>
           
-          {/* Link to details page */}
+          {/* Link to details page - larger touch target on mobile */}
           <div className="mt-2 text-center">
             <button 
               onClick={goToLocationDetails}
-              className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1 px-2 rounded transition-colors"
+              className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               {t("View Details", "查看详情")}
@@ -274,7 +310,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component - Updated to use red color
+// User location marker component
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
@@ -283,8 +319,10 @@ const UserLocationMarker = memo(({
   currentSiqs: number | null 
 }) => {
   const { t } = useLanguage();
-  // Changed to red color for user location
-  const userMarkerIcon = createCustomMarker('#e11d48');
+  const isMobile = useIsMobile();
+  
+  // Changed to red color for user location and larger on mobile
+  const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
