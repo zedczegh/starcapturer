@@ -158,7 +158,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       {/* Add the mobile map fixer for better mobile experience */}
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
       
-      {/* Map legend for location types - Pass activeView prop */}
+      {/* Map legend with completely redesigned component */}
       <MapLegend 
         activeView={activeView} 
         showStarLegend={activeView === 'certified'}
