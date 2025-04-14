@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,6 +12,7 @@ import { getCertificationInfo, getLocalizedCertText } from "./utils/certificatio
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { findNearestTown } from "@/utils/nearestTownCalculator";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -38,6 +40,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       const fetchNearestTown = async () => {
         setLoadingTown(true);
         try {
+          // First check if we already have a valid name
           if (point.name && 
               !point.name.includes("°") && 
               !point.name.includes("Location at") &&
@@ -51,6 +54,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             return;
           }
           
+          // Then try to get regional name as fallback
           const regionalName = getRegionalName(point.latitude, point.longitude, language);
           
           if (regionalName && regionalName !== (language === 'en' ? 'Remote area' : '偏远地区')) {
@@ -59,6 +63,18 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             return;
           }
           
+          // If no name is available yet, find the nearest town using our new utility
+          const nearestTownInfo = findNearestTown(point.latitude, point.longitude, language);
+          
+          // Only use this if the town is reasonably close (within 50km)
+          if (nearestTownInfo.distance <= 50) {
+            const nearText = language === 'en' ? 'Near ' : '靠近';
+            setNearestTown(`${nearText}${nearestTownInfo.townName}`);
+            setLoadingTown(false);
+            return;
+          }
+          
+          // If all else fails, try to get a name from the geocoding service
           const townName = await getLocationNameForCoordinates(
             point.latitude,
             point.longitude,
@@ -149,6 +165,13 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
             <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
           </Badge>
+        </div>
+      )}
+      
+      {nearestTown && (
+        <div className="mt-1.5 mb-2 flex items-center">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground line-clamp-1">{nearestTown}</span>
         </div>
       )}
       

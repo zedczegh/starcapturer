@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -33,9 +32,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const cardRef = useRef<HTMLDivElement | null>(null);
   
   const [locationCounter] = useState(() => {
-    // Generate a counter for potential locations if this is a calculated location
     if (!location.id && !location.certification && !location.isDarkSkyReserve) {
-      // Get or set a counter for potential dark sites
       const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
       const newCounter = storedCounter + 1;
       localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
@@ -44,16 +41,15 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
-  // Set up intersection observer to only load data when card is visible
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
           setIsVisible(true);
-          observer.disconnect(); // Once visible, disconnect observer
+          observer.disconnect();
         }
       },
-      { threshold: 0.1 } // Trigger when at least 10% of the card is visible
+      { threshold: 0.1 }
     );
 
     if (cardRef.current) {
@@ -63,7 +59,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return () => observer.disconnect();
   }, []);
   
-  // Load real-time SIQS data if requested and card is visible
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && location.latitude && location.longitude) {
       const fetchSiqs = async () => {
@@ -75,11 +70,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             location.bortleScale || 5
           );
           
-          // Only update if SIQS is greater than 0
           if (result.siqs > 0) {
             setRealTimeSiqs(result.siqs);
           } else {
-            // If we got a zero score, hide this card
             setRealTimeSiqs(0);
           }
         } catch (error) {
@@ -93,34 +86,27 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [location, showRealTimeSiqs, isVisible]);
 
-  // If we have a real-time SIQS of 0, don't render this card
   if (realTimeSiqs === 0) {
     return null;
   }
 
-  // Get display name based on language and location type
   let displayName;
   
-  // If it's a calculated location, use the "Potential ideal dark site" format
   if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
     displayName = language === 'en' 
       ? `Potential ideal dark site ${locationCounter}`
       : `潜在理想暗夜地点 ${locationCounter}`;
   } else {
-    // Otherwise use the provided name
     displayName = language === 'en' ? location.name : (location.chineseName || location.name);
   }
   
-  // Get SIQS score to display (real-time or stored)
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
   
-  // If the SIQS score is 0 and we're not currently loading, don't render
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
   const handleViewDetails = () => {
-    // Prepare location data for details page
     const locationData = {
       id: location.id || `calc-loc-${Date.now()}`,
       name: displayName,
@@ -133,14 +119,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       certification: location.certification
     };
     
-    // Save to localStorage to ensure proper refresh handling
     saveLocationFromPhotoPoints(locationData);
     
-    // Navigate to location details with state
     navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
   };
   
-  // Animation variants - reduced for mobile
   const cardVariants = {
     hidden: { opacity: 0, y: isMobile ? 10 : 20 },
     visible: { 
@@ -148,7 +131,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       y: 0,
       transition: { 
         duration: isMobile ? 0.2 : 0.4,
-        delay: isMobile ? Math.min(index * 0.05, 0.3) : Math.min(index * 0.1, 0.5) // Cap maximum delay
+        delay: isMobile ? Math.min(index * 0.05, 0.3) : Math.min(index * 0.1, 0.5)
       }
     }
   };
@@ -165,17 +148,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
         
-        {/* SIQS Score Badge */}
         <SiqsScoreBadge score={displaySiqs} loading={loadingSiqs} />
       </div>
       
-      {/* Certification Badge */}
       <CertificationBadge 
         certification={location.certification} 
         isDarkSkyReserve={location.isDarkSkyReserve} 
       />
       
-      {/* Light pollution indicator */}
       <div className="mb-4 mt-2">
         <LightPollutionIndicator 
           bortleScale={location.bortleScale || 5} 
@@ -185,10 +165,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         />
       </div>
       
-      {/* Location metadata */}
       <LocationMetadata 
         distance={location.distance} 
-        date={location.date} 
+        date={location.date}
+        latitude={location.latitude}
+        longitude={location.longitude}
+        locationName={displayName}
       />
       
       <div className="mt-4 flex justify-end">
