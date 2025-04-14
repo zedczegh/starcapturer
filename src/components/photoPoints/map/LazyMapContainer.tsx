@@ -117,7 +117,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
       whenReady={handleMapReady}
       attributionControl={true}
+      zoomControl={false} // Disable default zoom control to place it top-left
     >
+      {/* Add zoom control separately to position it at the top-left */}
+      <div className="leaflet-top leaflet-left" style={{ zIndex: 1000 }}>
+        <div className="leaflet-control-zoom leaflet-bar leaflet-control">
+          <a className="leaflet-control-zoom-in" href="#" title="Zoom in" role="button" aria-label="Zoom in"
+             onClick={(e) => { e.preventDefault(); mapRef.current && mapRef.current.zoomIn(); }}>+</a>
+          <a className="leaflet-control-zoom-out" href="#" title="Zoom out" role="button" aria-label="Zoom out"
+             onClick={(e) => { e.preventDefault(); mapRef.current && mapRef.current.zoomOut(); }}>−</a>
+        </div>
+      </div>
+      
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

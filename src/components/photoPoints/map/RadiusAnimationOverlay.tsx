@@ -27,6 +27,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   const animationTimeoutRef = useRef<number | null>(null);
   const updateAnimationRef = useRef<number | null>(null);
   const isAnimatingRef = useRef<boolean>(false);
+  const lastLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
   
   // Only show animation for calculated view
   const shouldShowAnimation = activeView === 'calculated' && (isSearching || showAnimation);
@@ -35,12 +36,14 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   useEffect(() => {
     if (!userLocation || activeView !== 'calculated') return;
     
-    // If this is the first location or location has changed
-    if (!prevLocation || 
-        prevLocation.latitude !== userLocation.latitude || 
-        prevLocation.longitude !== userLocation.longitude) {
-      
+    // Check if this is a new location or significant change
+    const isNewLocation = !lastLocationRef.current || 
+      Math.abs(lastLocationRef.current.latitude - userLocation.latitude) > 0.0001 || 
+      Math.abs(lastLocationRef.current.longitude - userLocation.longitude) > 0.0001;
+    
+    if (isNewLocation) {
       // Store new location
+      lastLocationRef.current = userLocation;
       setPrevLocation(userLocation);
       
       // Show animation for 5 seconds
@@ -63,7 +66,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         clearTimeout(animationTimeoutRef.current);
       }
     };
-  }, [userLocation, prevLocation, activeView]);
+  }, [userLocation, activeView]);
   
   // Function to update the radius circle based on current zoom level
   const updateRadiusCircle = React.useCallback(() => {
@@ -120,9 +123,13 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     const container = document.createElement('div');
     container.className = 'radar-sweep-container';
     
-    // Create the actual sweep element
+    // Create the actual sweep element with clip path to restrict it to the circle radius
     const sweep = document.createElement('div');
     sweep.className = 'radar-sweep';
+    
+    // Use clip path to limit radar animation to circle
+    sweep.style.clipPath = 'circle(50%)';
+    
     container.appendChild(sweep);
     
     // Calculate icon size based on zoom level and radius
@@ -168,6 +175,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   
   // Add and manage the radius circle
   useEffect(() => {
+    if (!userLocation) return;
     updateRadiusCircle();
     
     return () => {
@@ -179,6 +187,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   
   // Create and manage the radar sweep animation
   useEffect(() => {
+    if (!userLocation) return;
     updateRadarSweep();
     
     return () => {
@@ -195,7 +204,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
   
   // Add map zoom listener to update both elements when zoom changes
   useEffect(() => {
-    if (!map) return;
+    if (!map || !userLocation) return;
     
     let zoomTimeout: number | null = null;
     
@@ -221,7 +230,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       map.off('zoom', handleZoom);
       if (zoomTimeout) clearTimeout(zoomTimeout);
     };
-  }, [map, updateRadiusCircle, updateRadarSweep]);
+  }, [map, updateRadiusCircle, updateRadarSweep, userLocation]);
 
   // Add CSS styles for the radar sweep animation directly
   useEffect(() => {
@@ -234,6 +243,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       styleEl.innerHTML = `
         .radar-sweep-wrapper {
           z-index: 400;
+          pointer-events: none;
         }
         
         .radar-sweep-container {
@@ -243,6 +253,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
           border-radius: 50%;
           overflow: hidden;
           opacity: 0.7;
+          pointer-events: none;
         }
         
         .radar-sweep {
@@ -266,6 +277,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
           width: 100%;
           height: 100%;
           clip-path: circle(50%);
+          pointer-events: none;
         }
         
         @keyframes radarSweep {
@@ -279,6 +291,7 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
         
         .search-radius-circle {
           animation: pulseRadius 4s ease-in-out infinite alternate;
+          pointer-events: none;
         }
         
         @keyframes pulseRadius {
