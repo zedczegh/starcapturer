@@ -123,6 +123,25 @@ export function findNearestTown(
       selectedLocation = location;
       continue;
     }
+    
+    // When in a remote area, prefer larger population centers for better context
+    if (selectedLocation.distance > 50 && 
+        location.distance < 100 && 
+        location.population && 
+        selectedLocation.population && 
+        location.population > selectedLocation.population * 5) {
+      selectedLocation = location;
+      continue;
+    }
+    
+    // For very remote locations, include province/region information when available
+    if (selectedLocation.distance > 80 && 
+        location.distance < 150 && 
+        ((language === 'zh' && location.provinceZh) || 
+         (language === 'en' && location.province))) {
+      selectedLocation = location;
+      continue;
+    }
   }
   
   // Format the distance for display
@@ -180,6 +199,9 @@ function createDetailedName(
   const hasVillage = location.village && location.village.length > 0;
   const hasCounty = location.county && location.county.length > 0;
   const hasCity = location.city && location.city.length > 0;
+  const hasProvince = language === 'en' ? 
+    (location.province && location.province.length > 0) : 
+    (location.provinceZh && location.provinceZh.length > 0);
   
   let detailedNameParts: string[] = [];
   
@@ -194,6 +216,13 @@ function createDetailedName(
         (!hasCounty || location.city !== location.county) && 
         (!hasVillage || location.city !== location.village)) 
       detailedNameParts.push(location.city!);
+      
+    // Add province for remote locations or when available
+    if (hasProvince && 
+        (!hasCity || location.province !== location.city) &&
+        location.distance > 30) {
+      detailedNameParts.push(location.province!);
+    }
   } 
   // For Chinese format: City县County镇Village
   else {
@@ -218,6 +247,19 @@ function createDetailedName(
         detailedNameParts.push(villageName);
       }
     }
+    
+    // Add province for remote locations or when available
+    if (hasProvince && location.distance > 30) {
+      const provinceName = location.provinceZh;
+      if (provinceName && !detailedNameParts.some(part => part === provinceName)) {
+        if (detailedNameParts.length === 0) {
+          detailedNameParts.push(provinceName);
+        } else {
+          // For Chinese, province typically comes first
+          detailedNameParts.unshift(provinceName);
+        }
+      }
+    }
   }
   
   // If we couldn't build a detailed name, fall back to city or base name
@@ -232,6 +274,14 @@ function createDetailedName(
   } else {
     // For Chinese, use the Chinese name if available
     detailedName = location.chineseName || location.name;
+  }
+  
+  // For very far locations, add distance context
+  if (location.distance > 80) {
+    const distanceText = formatDistance(location.distance, language);
+    detailedName = language === 'en' 
+      ? `${detailedName} (${distanceText})`
+      : `${detailedName}（${distanceText}）`;
   }
   
   return detailedName;

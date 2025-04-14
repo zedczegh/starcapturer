@@ -3,7 +3,7 @@ import React from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Star, Award, Shield, MapPin } from 'lucide-react';
+import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
 import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
@@ -18,15 +18,11 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
   const { language, t } = useLanguage();
   
   // Use the shared display name resolver
-  const { displayName, showOriginalName } = useDisplayName({
+  const { displayName, showOriginalName, nearestTownInfo } = useDisplayName({
     location,
     language,
     locationCounter: null
   });
-  
-  // Get detailed location information
-  const nearestTownInfo = location.latitude && location.longitude ? 
-    findNearestTown(location.latitude, location.longitude, language) : null;
   
   // Get certification info if available
   const hasCertification = location.certification || location.isDarkSkyReserve;
@@ -83,6 +79,16 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground line-clamp-1">
             {nearestTownInfo.detailedName}
+          </span>
+        </div>
+      )}
+      
+      {/* Show distance if available */}
+      {location.distance !== undefined && (
+        <div className="flex items-center mb-2">
+          <Navigation className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
+            {formatDistance(location.distance, language)}
           </span>
         </div>
       )}

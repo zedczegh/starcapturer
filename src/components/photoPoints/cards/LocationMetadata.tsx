@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { MapPin, Calendar } from 'lucide-react';
+import { MapPin, Calendar, Navigation, Map } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { formatDistance } from '@/utils/location/formatDistance';
 
 interface LocationMetadataProps {
   distance?: number;
@@ -21,16 +22,6 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  const formatDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
-    
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
-  };
-  
   // Get nearest town if coordinates are available
   let nearestTownInfo = null;
   if (latitude !== undefined && longitude !== undefined) {
@@ -45,28 +36,63 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
   
   return (
     <div className="space-y-2 text-sm text-muted-foreground">
+      {/* Distance information */}
       {distance !== undefined && (
         <div className="flex items-center">
-          <MapPin className="h-4 w-4 mr-1.5" />
-          <span>{formatDistance(distance)}</span>
+          <Navigation className="h-4 w-4 mr-1.5" />
+          <span>{formatDistance(distance, language)}</span>
         </div>
       )}
       
-      {nearestTownInfo && nearestTownInfo.distance <= 100 && !locationName?.includes(nearestTownInfo.townName) && (
+      {/* City/county information */}
+      {nearestTownInfo?.city && (!locationName || !locationName.includes(nearestTownInfo.city)) && (
+        <div className="flex items-center">
+          <Map className="h-4 w-4 mr-1.5" />
+          <span>
+            {nearestTownInfo.city}
+            {nearestTownInfo.county && nearestTownInfo.county !== nearestTownInfo.city && 
+             ` (${nearestTownInfo.county})`}
+          </span>
+        </div>
+      )}
+      
+      {/* Nearest town information */}
+      {nearestTownInfo && nearestTownInfo.distance <= 100 && 
+       (!locationName || !locationName.includes(nearestTownInfo.townName)) && (
         <div className="flex items-center">
           <MapPin className="h-4 w-4 mr-1.5" />
           <span>
             {language === 'en' ? 'Near ' : '靠近'}
             {nearestTownInfo.townName}
-            {nearestTownInfo.distance > 0 ? ` (${nearestTownInfo.formattedDistance})` : ''}
           </span>
         </div>
       )}
       
+      {/* Detailed location name if different from other displayed info */}
+      {nearestTownInfo && nearestTownInfo.detailedName && 
+       (!locationName || !locationName.includes(nearestTownInfo.detailedName)) &&
+       (nearestTownInfo.townName !== nearestTownInfo.detailedName) && (
+        <div className="flex items-center">
+          <MapPin className="h-4 w-4 mr-1.5" />
+          <span className="line-clamp-1">
+            {nearestTownInfo.detailedName}
+          </span>
+        </div>
+      )}
+      
+      {/* Date information */}
       {formattedDate && (
         <div className="flex items-center">
           <Calendar className="h-4 w-4 mr-1.5" />
           <span>{formattedDate}</span>
+        </div>
+      )}
+      
+      {/* Coordinates for precise location */}
+      {latitude !== undefined && longitude !== undefined && (
+        <div className="flex items-center text-xs opacity-75">
+          <MapPin className="h-3 w-3 mr-1" />
+          <span>{latitude.toFixed(4)}, {longitude.toFixed(4)}</span>
         </div>
       )}
     </div>

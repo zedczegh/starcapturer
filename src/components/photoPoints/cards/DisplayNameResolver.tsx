@@ -50,7 +50,11 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
     ((language === 'zh' && location.chineseName && location.chineseName !== nearestTownInfo.detailedName) ||
      (language === 'en' && location.name && location.name !== nearestTownInfo.detailedName));
   
-  return { displayName, showOriginalName, nearestTownInfo };
+  return { 
+    displayName, 
+    showOriginalName, 
+    nearestTownInfo 
+  };
 }
 
 export default useDisplayName;
