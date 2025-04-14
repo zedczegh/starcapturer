@@ -71,6 +71,24 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       Math.round(validatedSiqs.score * 10) / 10 : 0;
   }, [validatedSiqs.score]);
   
+  // Use night cloud data if available, using the same data source as in other components
+  const enrichedWeatherData = useMemo(() => {
+    const result = { ...weatherData };
+    
+    // Use nighttime cloud data from siqsResult if available
+    if (validatedSiqs.nighttimeCloudData) {
+      if (!result.nighttimeCloudData) {
+        result.nighttimeCloudData = validatedSiqs.nighttimeCloudData;
+      }
+      // Override cloudCover with the forecast average for consistency
+      if (typeof validatedSiqs.nighttimeCloudData.average === 'number') {
+        result.cloudCover = validatedSiqs.nighttimeCloudData.average;
+      }
+    }
+    
+    return result;
+  }, [weatherData, validatedSiqs]);
+  
   // Process and translate factors
   const translatedFactors = useMemo(() => {
     if (!validatedSiqs.factors || !Array.isArray(validatedSiqs.factors)) return [];
@@ -79,8 +97,8 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     const hasClearSkyFactor = factors.some(factor => 
       factor.name === 'Clear Sky Rate' || factor.name === '晴空率');
     
-    if (!hasClearSkyFactor && weatherData?.clearSkyRate) {
-      const clearSkyRate = weatherData.clearSkyRate;
+    if (!hasClearSkyFactor && enrichedWeatherData?.clearSkyRate) {
+      const clearSkyRate = enrichedWeatherData.clearSkyRate;
       const clearSkyScore = Math.min(10, clearSkyRate / 10);
       
       factors.push({
@@ -116,6 +134,17 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       return 0;
     });
     
+    // Update cloud cover factor to use forecast data if available
+    if (enrichedWeatherData?.nighttimeCloudData?.average !== undefined) {
+      for (let i = 0; i < factors.length; i++) {
+        if (factors[i].name === 'Cloud Cover' || factors[i].name === '云层覆盖') {
+          factors[i].description = language === 'zh' 
+            ? `${Math.round(enrichedWeatherData.nighttimeCloudData.average)}%的夜间云层覆盖`
+            : `${Math.round(enrichedWeatherData.nighttimeCloudData.average)}% night cloud cover`;
+        }
+      }
+    }
+    
     // Translate factor names and descriptions
     return factors.map(factor => ({
       ...factor,
@@ -134,7 +163,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
          factor.name) : 
         factor.name
     }));
-  }, [validatedSiqs.factors, weatherData, language]);
+  }, [validatedSiqs.factors, enrichedWeatherData, language]);
   
   return (
     <Card className="glassmorphism-strong">
@@ -153,7 +182,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         
         <SIQSFactorsDisplay 
           factors={translatedFactors} 
-          weatherData={weatherData} 
+          weatherData={enrichedWeatherData} 
         />
       </CardContent>
     </Card>
