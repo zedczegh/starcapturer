@@ -22,9 +22,11 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
 }) => {
   const map = useMap();
   const [circle, setCircle] = useState<L.Circle | null>(null);
-  const [radarSweep, setRadarSweep] = useState<L.Circle | null>(null);
+  const [radarSweep, setRadarSweep] = useState<L.Marker | null>(null);
   const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
+  const animationRef = useRef<number | null>(null);
+  const isAnimatingRef = useRef<boolean>(false);
   
   // Only show animation for calculated view
   const shouldShowAnimation = activeView === 'calculated' && (isSearching || showAnimation);
@@ -76,9 +78,6 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     
     setCircle(newCircle);
     
-    // Update radar sweep if it's showing
-    updateRadarSweep();
-    
     return () => {
       if (newCircle) {
         newCircle.removeFrom(map);
@@ -86,52 +85,77 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
     };
   }, [map, userLocation, searchRadius]);
   
-  // Function to update the radar sweep animation
+  // Function to update the radar sweep animation - with debouncing
   const updateRadarSweep = React.useCallback(() => {
-    if (!map || !userLocation || !shouldShowAnimation) {
-      // Remove the radar sweep when not showing animation
-      if (radarSweep) {
-        radarSweep.removeFrom(map);
-        setRadarSweep(null);
+    // Prevent rapid updates during zoom
+    if (isAnimatingRef.current) {
+      // Clear any pending animation frame
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
       }
+      
+      // Schedule update after a short delay
+      animationRef.current = requestAnimationFrame(() => {
+        createRadarSweep();
+        animationRef.current = null;
+      });
       return;
     }
     
-    // Calculate the proper size based on the search radius and current zoom
-    const radiusInMeters = searchRadius * 1000; // Convert km to meters
-    const zoom = map.getZoom();
+    isAnimatingRef.current = true;
+    createRadarSweep();
     
-    // Remove previous radar sweep
-    if (radarSweep) {
-      radarSweep.removeFrom(map);
+    // Reset animation flag after delay
+    setTimeout(() => {
+      isAnimatingRef.current = false;
+    }, 200);
+    
+    function createRadarSweep() {
+      if (!map || !userLocation || !shouldShowAnimation) {
+        // Remove the radar sweep when not showing animation
+        if (radarSweep) {
+          radarSweep.removeFrom(map);
+          setRadarSweep(null);
+        }
+        return;
+      }
+      
+      // Calculate the proper size based on the search radius and current zoom
+      const radiusInMeters = searchRadius * 1000; // Convert km to meters
+      const zoom = map.getZoom();
+      
+      // Remove previous radar sweep to prevent duplicates
+      if (radarSweep) {
+        radarSweep.removeFrom(map);
+      }
+      
+      // Create container element for the radar sweep
+      const container = document.createElement('div');
+      container.className = 'radar-sweep-container';
+      
+      // Create the actual sweep element
+      const sweep = document.createElement('div');
+      sweep.className = 'radar-sweep';
+      container.appendChild(sweep);
+      
+      // Calculate icon size based on zoom level and radius
+      // This formula creates a more accurate scaling with zoom
+      const iconSize = Math.max(100, radiusInMeters / (Math.pow(2, 16 - zoom)));
+      
+      const sweepIcon = L.divIcon({
+        html: container,
+        className: 'radar-sweep-wrapper',
+        iconSize: [iconSize, iconSize],
+        iconAnchor: [iconSize / 2, iconSize / 2]
+      });
+      
+      const sweepMarker = L.marker(
+        [userLocation.latitude, userLocation.longitude], 
+        { icon: sweepIcon }
+      ).addTo(map);
+      
+      setRadarSweep(sweepMarker);
     }
-    
-    // Create container element for the radar sweep
-    const container = document.createElement('div');
-    container.className = 'radar-sweep-container';
-    
-    // Create the actual sweep element
-    const sweep = document.createElement('div');
-    sweep.className = 'radar-sweep';
-    container.appendChild(sweep);
-    
-    // Calculate icon size based on zoom level and radius
-    // This formula creates a more accurate scaling with zoom
-    const iconSize = Math.max(100, radiusInMeters / (Math.pow(2, 16 - zoom)));
-    
-    const sweepIcon = L.divIcon({
-      html: container,
-      className: 'radar-sweep-wrapper',
-      iconSize: [iconSize, iconSize],
-      iconAnchor: [iconSize / 2, iconSize / 2]
-    });
-    
-    const sweepMarker = L.marker(
-      [userLocation.latitude, userLocation.longitude], 
-      { icon: sweepIcon }
-    ).addTo(map);
-    
-    setRadarSweep(sweepMarker as unknown as L.Circle);
   }, [map, userLocation, searchRadius, shouldShowAnimation, radarSweep]);
   
   // Add and manage the radius circle
@@ -153,22 +177,42 @@ const RadiusAnimationOverlay: React.FC<RadiusAnimationOverlayProps> = ({
       if (radarSweep) {
         radarSweep.removeFrom(map);
       }
+      
+      // Clean up any pending animation frame
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+      }
     };
   }, [map, userLocation, searchRadius, shouldShowAnimation, updateRadarSweep]);
   
   // Add map zoom listener to update both elements when zoom changes
+  // Use a debounced version to prevent excessive updates
   useEffect(() => {
     if (!map) return;
     
+    let zoomTimeout: number | null = null;
+    
     const handleZoom = () => {
+      // Clear previous timeout
+      if (zoomTimeout) {
+        clearTimeout(zoomTimeout);
+      }
+      
+      // Update the radius circle immediately as it's less resource-intensive
       updateRadiusCircle();
-      updateRadarSweep();
+      
+      // Debounce the radar sweep update which is more resource-intensive
+      zoomTimeout = window.setTimeout(() => {
+        updateRadarSweep();
+        zoomTimeout = null;
+      }, 100);
     };
     
     map.on('zoom', handleZoom);
     
     return () => {
       map.off('zoom', handleZoom);
+      if (zoomTimeout) clearTimeout(zoomTimeout);
     };
   }, [map, updateRadiusCircle, updateRadarSweep]);
 
