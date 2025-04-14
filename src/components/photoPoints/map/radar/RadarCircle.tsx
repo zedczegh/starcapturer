@@ -70,7 +70,9 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
                 animationRef.current = window.requestAnimationFrame(animate);
               } else {
                 // Fallback for older browsers
-                animationRef.current = window.setTimeout(animate, 16) as unknown as number;
+                // Explicitly cast window to Window & typeof globalThis
+                const win = window as Window & typeof globalThis;
+                animationRef.current = win.setTimeout(animate, 16) as unknown as number;
               }
             }
           } else {
@@ -84,7 +86,9 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
             if ('cancelAnimationFrame' in window) {
               window.cancelAnimationFrame(animationRef.current);
             } else {
-              window.clearTimeout(animationRef.current as unknown as number);
+              // Explicitly cast window to Window & typeof globalThis
+              const win = window as Window & typeof globalThis;
+              win.clearTimeout(animationRef.current as unknown as number);
             }
           }
           animationRef.current = null;
@@ -145,7 +149,9 @@ const RadarCircle: React.FC<RadarCircleProps> = ({
           if ('cancelAnimationFrame' in window) {
             window.cancelAnimationFrame(animationRef.current);
           } else {
-            window.clearTimeout(animationRef.current as unknown as number);
+            // Explicitly cast window to Window & typeof globalThis
+            const win = window as Window & typeof globalThis;
+            win.clearTimeout(animationRef.current as unknown as number);
           }
         }
         animationRef.current = null;
