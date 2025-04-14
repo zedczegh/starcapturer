@@ -97,7 +97,7 @@ export const tabGlowVariants = {
     transition: {
       duration: 3,
       repeat: Infinity,
-      repeatType: "loop"
+      repeatType: "loop" // Fixed here: changed string to specific literal "loop"
     }
   }
 };
