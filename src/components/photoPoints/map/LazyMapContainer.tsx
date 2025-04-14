@@ -163,6 +163,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           searchRadius={searchRadius}
           onSiqsCalculated={(siqs) => console.log("SIQS calculated:", siqs)}
           isScanning={isScanning}
+          isManualRadiusChange={isManualRadiusChange}
         />
         
         {/* Use MapEvents component for map click handling */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
@@ -29,11 +29,11 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   isManualRadiusChange = false
 }) => {
   const map = useMap();
-  const [lastUserLocation, setLastUserLocation] = React.useState(userLocation);
-  const locationChangedRef = React.useRef(false);
+  const [lastUserLocation, setLastUserLocation] = useState(userLocation);
+  const locationChangedRef = useRef(false);
   
   // Only update center position, keep current zoom level
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !center) return;
     
     // Only set the center, not the zoom level
@@ -41,7 +41,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   }, [map, center]);
   
   // Track user location changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!userLocation || !lastUserLocation) {
       setLastUserLocation(userLocation);
       return;
