@@ -4,6 +4,7 @@
  */
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import { isNighttimeCloudDataStale } from '@/utils/validation/weatherDataSync';
+import { SIQSResult } from '@/lib/siqs/types';
 
 /**
  * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
@@ -65,7 +66,7 @@ export const calculateNighttimeSIQS = (
   locationData: any,
   forecastData: any,
   translator: any
-) => {
+): SIQSResult | null => {
   if (!forecastData || !forecastData.hourly || !locationData) {
     console.log("Missing required data for nighttime SIQS calculation");
     return null;
@@ -102,6 +103,7 @@ export const calculateNighttimeSIQS = (
     return {
       score: 0,
       isViable: false,
+      level: 'Poor',
       factors: [
         {
           name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
