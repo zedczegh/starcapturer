@@ -208,19 +208,34 @@ const LocationMarker = memo(({
     }
   }, [handleTouchMove]);
   
-  // Effect to manage popup state based on hover
+  // Effect to manage popup state based on hover with longer visibility
   useEffect(() => {
     const marker = markerRef.current;
     if (!marker) return;
     
+    let closeTimer: number | null = null;
+    
     if (isHovered) {
       marker.openPopup();
       marker.getElement()?.classList.add('hovered');
+      
+      // If a close timer was running, clear it
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+      }
     } else {
-      marker.closePopup();
-      marker.getElement()?.classList.remove('hovered');
+      // Add a delay before closing the popup to give users time to interact
+      closeTimer = window.setTimeout(() => {
+        marker.closePopup();
+        marker.getElement()?.classList.remove('hovered');
+      }, isMobile ? 4000 : 2000); // 4s on mobile, 2s on desktop
     }
-  }, [isHovered]);
+    
+    return () => {
+      if (closeTimer) clearTimeout(closeTimer);
+    };
+  }, [isHovered, isMobile]);
 
   // Format location name based on language
   const displayName = language === 'zh' && location.chineseName 
@@ -309,7 +324,7 @@ const LocationMarker = memo(({
           <div className="mt-2 text-center">
             <button 
               onClick={goToLocationDetails}
-              className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1 ${isMobile ? 'py-2' : 'py-1'} px-2 rounded transition-colors`}
+              className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               {t("View Details", "查看详情")}

@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -111,11 +110,11 @@ export const useMapMarkers = () => {
     // Prevent default behaviors
     e.stopPropagation();
     
-    // Keep hover state visible slightly longer on mobile
-    // This helps with touch interactions
+    // Keep hover state visible significantly longer on mobile
+    // This gives users enough time to read and interact with the popup
     setTimeout(() => {
       handleHover(null);
-    }, 2500); // Increased from 2000ms to 2500ms for better visibility
+    }, 5000); // Increased from 2500ms to 5000ms (5 seconds) for better interaction time
     
     touchStartPos.current = null;
   }, [isMobile, handleHover]);

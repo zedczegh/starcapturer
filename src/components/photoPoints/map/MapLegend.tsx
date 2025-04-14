@@ -81,26 +81,27 @@ const MapLegend: React.FC<MapLegendProps> = ({
     >
       {/* Improved tab as an arrowhead for collapsed state */}
       <motion.div 
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full h-16"
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-[95%] h-16"
         variants={tabGlowVariants}
         animate={isCollapsed ? "animate" : "initial"}
       >
         {/* Custom arrowhead with Legend label */}
         <div className="relative">
           {/* Arrow shape */}
-          <div 
-            className="w-8 h-20 bg-primary/80 backdrop-blur-sm flex items-center justify-center 
-                       rounded-l-md shadow-md transform rotate-0 cursor-pointer border-l border-t border-b border-primary/30"
+          <motion.div 
+            className="w-8 h-20 bg-gradient-to-r from-primary/80 to-primary flex items-center justify-center 
+                      rounded-l-md shadow-md cursor-pointer border-l border-t border-b border-primary/30"
             style={{
-              backgroundImage: 'linear-gradient(90deg, hsla(277, 75%, 84%, 1) 0%, hsla(297, 50%, 51%, 1) 100%)',
               clipPath: 'polygon(0 0, 100% 20%, 100% 80%, 0 100%)'
             }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
           >
             <ChevronLeft 
               className="h-5 w-5 text-primary-foreground transform transition-transform ml-1"
               style={{ transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)' }}
             />
-          </div>
+          </motion.div>
           
           {/* "Guides" label - vertical text */}
           {isCollapsed && (
