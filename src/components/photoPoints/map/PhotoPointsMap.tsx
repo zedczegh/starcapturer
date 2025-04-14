@@ -18,7 +18,6 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
-  isScanning?: boolean;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
@@ -29,13 +28,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate,
-  isScanning = false
+  onLocationUpdate
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
+  const [prevLocation, setPrevLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [isLocationChanged, setIsLocationChanged] = useState(false);
   
   const { 
     hoveredLocationId, 
@@ -60,6 +60,29 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     searchRadius,
     activeView
   });
+  
+  const [isSearching, setIsSearching] = useState(false);
+  
+  useEffect(() => {
+    if (userLocation) {
+      if (!prevLocation || 
+          prevLocation.latitude !== userLocation.latitude || 
+          prevLocation.longitude !== userLocation.longitude) {
+        setIsLocationChanged(true);
+        setPrevLocation({...userLocation});
+        
+        const timer = setTimeout(() => {
+          setIsLocationChanged(false);
+        }, 5000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [userLocation, prevLocation]);
+  
+  useEffect(() => {
+    setIsSearching(certifiedLocationsLoading || !mapReady || isLocationChanged);
+  }, [certifiedLocationsLoading, mapReady, isLocationChanged]);
   
   useEffect(() => {
     const adjustHeight = () => {
@@ -94,14 +117,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation) {
+      setIsSearching(true);
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           onLocationUpdate(latitude, longitude);
           console.log("Got user position:", latitude, longitude);
+          
+          setTimeout(() => setIsSearching(false), 1500);
         },
         (error) => {
           console.error("Error getting location:", error.message);
+          setIsSearching(false);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
@@ -146,7 +174,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={true}
-        isScanning={isScanning}
+        isSearching={isSearching}
       />
       
       <MapLegend 
