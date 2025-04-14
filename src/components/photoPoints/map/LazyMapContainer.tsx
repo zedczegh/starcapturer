@@ -117,7 +117,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
       whenReady={handleMapReady}
       attributionControl={true}
-      zoomControl={false} // Disable default zoom control to place it top-left
+      // Removed zoomControl property, we'll add it manually
     >
       {/* Add zoom control separately to position it at the top-left */}
       <div className="leaflet-top leaflet-left" style={{ zIndex: 1000 }}>
@@ -145,7 +145,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       />
       
       {/* Add Radius Animation Overlay */}
-      {userLocation && (
+      {userLocation && activeView === 'calculated' && (
         <RadiusAnimationOverlay
           userLocation={userLocation}
           searchRadius={searchRadius}

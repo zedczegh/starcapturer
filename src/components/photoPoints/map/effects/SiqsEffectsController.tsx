@@ -23,7 +23,7 @@ const CACHE_DURATION = 30 * 60 * 1000;
  * Component to handle real-time SIQS calculations and map effects
  * Optimized with debouncing, memoization and caching for better performance
  */
-export const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
+const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
   userLocation,
   activeView,
   searchRadius,
@@ -113,6 +113,7 @@ export const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     
     try {
       const defaultBortleScale = 4; // Default if not available
+      // Fixed argument count here
       const result = await calculateRealTimeSiqs(
         userLocation.latitude, 
         userLocation.longitude, 
@@ -136,10 +137,10 @@ export const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
   useEffect(() => {
     if (!userLocation) return;
     
-    // For calculated view, always calculate SIQS to ensure fresh data
-    // For certified view, only calculate if not already calculated recently
+    // For calculated view, only calculate SIQS when needed
+    // Reduced calculation frequency to improve performance
     const needsCalculation = 
-      activeView === 'calculated' || 
+      (activeView === 'calculated' && lastCalculation === 0) || 
       lastLocationRef.current !== `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}`;
     
     if (!needsCalculation) return;
@@ -149,19 +150,19 @@ export const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
       clearTimeout(calculationTimeoutRef.current);
     }
     
-    // Set a new timeout for calculation
+    // Set a new timeout with a longer delay to reduce CPU usage
     calculationTimeoutRef.current = setTimeout(() => {
       calculateUserSiqs();
-    }, 500);
+    }, 1000); // Increased from 500ms to 1000ms
     
     return () => {
       if (calculationTimeoutRef.current) {
         clearTimeout(calculationTimeoutRef.current);
       }
     };
-  }, [userLocation, activeView, calculateUserSiqs]);
+  }, [userLocation, activeView, calculateUserSiqs, lastCalculation]);
   
-  // Clear old cache entries periodically
+  // Clear old cache entries less frequently
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
@@ -173,28 +174,30 @@ export const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
         }
       }
       
-      // Clean up localStorage cache
-      try {
-        const keys = Object.keys(localStorage);
-        const siqsKeys = keys.filter(key => key.startsWith('siqs_cache_'));
-        
-        siqsKeys.forEach(key => {
-          const data = localStorage.getItem(key);
-          if (data) {
-            try {
-              const parsed = JSON.parse(data);
-              if (now - parsed.timestamp > CACHE_DURATION) {
-                localStorage.removeItem(key);
+      // Clean up localStorage cache (less frequently)
+      if (Math.random() < 0.2) { // Only clean 20% of the time to reduce overhead
+        try {
+          const keys = Object.keys(localStorage);
+          const siqsKeys = keys.filter(key => key.startsWith('siqs_cache_'));
+          
+          siqsKeys.forEach(key => {
+            const data = localStorage.getItem(key);
+            if (data) {
+              try {
+                const parsed = JSON.parse(data);
+                if (now - parsed.timestamp > CACHE_DURATION) {
+                  localStorage.removeItem(key);
+                }
+              } catch (e) {
+                localStorage.removeItem(key); // Remove invalid cache entries
               }
-            } catch (e) {
-              localStorage.removeItem(key); // Remove invalid cache entries
             }
-          }
-        });
-      } catch (e) {
-        console.error("Error cleaning up SIQS cache:", e);
+          });
+        } catch (e) {
+          console.error("Error cleaning up SIQS cache:", e);
+        }
       }
-    }, 5 * 60 * 1000); // Run every 5 minutes
+    }, 10 * 60 * 1000); // Run every 10 minutes instead of 5 to reduce overhead
     
     return () => {
       clearInterval(cleanupInterval);

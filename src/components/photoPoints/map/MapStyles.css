@@ -76,9 +76,9 @@
   transform: scale(1.1);
 }
 
-/* Improved animations for better performance */
-.location-radius-circle {
-  transition: stroke-dashoffset 0.5s ease;
+/* Simplified animations for better performance */
+.search-radius-circle {
+  transition: opacity 0.5s ease;
 }
 
 /* Styling for dark sky markers */
@@ -109,6 +109,18 @@
   height: 14px;
 }
 
+/* Make popups clickable and visible */
+.leaflet-popup {
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+/* Ensure markers are clickable */
+.leaflet-marker-icon {
+  z-index: 900;
+  pointer-events: auto !important;
+}
+
 /* Improved attribution control positioning on small screens */
 @media (max-width: 480px) {
   .leaflet-control-attribution {
@@ -121,3 +133,4 @@
     backdrop-filter: blur(2px);
   }
 }
+
