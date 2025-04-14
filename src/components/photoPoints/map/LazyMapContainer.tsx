@@ -12,6 +12,7 @@ import MobileMapFixer from './MobileMapFixer';
 import { MapEvents, WorldBoundsController } from './MapEffectsController';
 import PinpointButton from './PinpointButton';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { MapEffectsComposer } from './MapComponents';
 
 // Configure leaflet to handle marker paths
 configureLeaflet();
@@ -152,8 +153,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Add world bounds controller to prevent infinite scrolling */}
-      <WorldBoundsController />
+      {/* Use MapEffectsComposer to apply all map effects */}
+      <MapEffectsComposer 
+        center={center}
+        zoom={zoom}
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
+      />
       
       {/* Use MapEvents component for map click handling */}
       <MapEvents onMapClick={handleMapClick} />

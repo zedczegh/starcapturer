@@ -7,6 +7,10 @@ import SiqsEffectsController from './SiqsEffectsController';
 interface MapEffectsComposerProps {
   center?: [number, number];
   zoom?: number;
+  userLocation?: { latitude: number; longitude: number } | null;
+  activeView?: 'certified' | 'calculated';
+  searchRadius?: number;
+  onSiqsCalculated?: (siqs: number) => void;
 }
 
 /**
@@ -14,7 +18,11 @@ interface MapEffectsComposerProps {
  */
 const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
   center,
-  zoom
+  zoom,
+  userLocation,
+  activeView = 'certified',
+  searchRadius = 100,
+  onSiqsCalculated
 }) => {
   const map = useMap();
   
@@ -31,7 +39,12 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       <WorldBoundsController />
       
       {/* Apply SIQS-specific effects */}
-      <SiqsEffectsController />
+      <SiqsEffectsController 
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={onSiqsCalculated}
+      />
     </>
   );
 };
