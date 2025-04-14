@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
@@ -318,7 +317,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       }}
       scrollWheelZoom={true}
       minZoom={2}
-      attributionControl={true}
     >
       {/* Add a MapCenterHandler to properly handle center changes */}
       <MapCenterHandler center={validCenter} />

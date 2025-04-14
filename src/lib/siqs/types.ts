@@ -33,11 +33,6 @@ export interface SIQSResult {
     nighttimeData?: any;
   }[];
   level: string;        // Quality level based on score
-  nighttimeCloudData?: {
-    average: number | null;
-    evening: number | null;
-    morning: number | null;
-  } | null;
 }
 
 /**
