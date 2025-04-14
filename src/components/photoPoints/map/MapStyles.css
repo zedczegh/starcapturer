@@ -88,21 +88,6 @@
   height: 14px;
 }
 
-/* Improved touch interactions for markers */
-.leaflet-marker-icon.hovered {
-  z-index: 1000 !important; 
-}
-
-.leaflet-marker-icon {
-  cursor: pointer;
-  z-index: 800;
-}
-
-/* Increase z-index for popups to ensure they're above all markers */
-.leaflet-popup {
-  z-index: 1000 !important;
-}
-
 /* Improved attribution control positioning on small screens */
 @media (max-width: 480px) {
   .leaflet-control-attribution {

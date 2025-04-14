@@ -1,54 +1,62 @@
-
 import React from 'react';
+import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
 import RadarSweepAnimation from '../RadarSweepAnimation';
 
 interface MapEffectsComposerProps {
-  center: [number, number];
-  zoom: number;
-  userLocation: { latitude: number; longitude: number } | null;
-  activeView: 'certified' | 'calculated';
-  searchRadius: number;
+  center?: [number, number];
+  zoom?: number;
+  userLocation?: { latitude: number; longitude: number } | null;
+  activeView?: 'certified' | 'calculated';
+  searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
   isScanning?: boolean;
   isManualRadiusChange?: boolean;
 }
 
-const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
+/**
+ * A component that composes various map effects
+ */
+const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
+  center,
+  zoom,
   userLocation,
-  activeView,
-  searchRadius,
+  activeView = 'certified',
+  searchRadius = 100,
   onSiqsCalculated,
   isScanning = false,
   isManualRadiusChange = false
 }) => {
-  // Only render radar animation for calculated view
-  const showRadar = activeView === 'calculated' && isScanning;
-
+  const map = useMap();
+  
+  // Only update center position, keep current zoom level
+  React.useEffect(() => {
+    if (!map || !center) return;
+    
+    // Only set the center, not the zoom level
+    map.setView(center, map.getZoom());
+  }, [map, center]);
+  
   return (
     <>
-      {/* Apply world bounds to prevent infinite scrolling */}
+      {/* Apply world bounds limit */}
       <WorldBoundsController />
       
-      {/* Apply SIQS effects if user location is available */}
-      {userLocation && (
-        <SiqsEffectsController
-          userLocation={userLocation}
-          activeView={activeView}
-          isScanning={isScanning}
-          searchRadius={searchRadius}
-          onSiqsCalculated={onSiqsCalculated}
-        />
-      )}
+      {/* Apply SIQS-specific effects */}
+      <SiqsEffectsController 
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={onSiqsCalculated}
+      />
       
-      {/* Show radar animation only for calculated view */}
-      {showRadar && userLocation && (
-        <RadarSweepAnimation
+      {/* Radar sweep animation - only show for calculated view */}
+      {activeView === 'calculated' && userLocation && (
+        <RadarSweepAnimation 
           userLocation={userLocation}
-          searchRadius={searchRadius * 1000} // Convert km to meters
+          searchRadius={searchRadius}
           isScanning={isScanning}
-          isManualRadiusChange={isManualRadiusChange}
         />
       )}
     </>

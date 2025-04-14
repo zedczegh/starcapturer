@@ -40,10 +40,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
   
-  // Define legend visibility based on active view
-  const showStarLegend = activeView === 'certified';
-  const showCircleLegend = activeView === 'calculated';
-  
   const { 
     hoveredLocationId, 
     handleHover,
@@ -71,10 +67,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
-        // Reduce height for mobile to leave space at the bottom
         setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(70vh - 160px)'
-          : 'calc(75vh - 140px)');
+          ? 'calc(80vh - 160px)'
+          : 'calc(90vh - 140px)');
       } else {
         setMapContainerHeight('500px');
       }
@@ -123,7 +118,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   return (
     <div 
       style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300 max-w-xl mx-auto mb-8"
+      className="w-full relative rounded-md overflow-hidden transition-all duration-300"
     >
       {!mapReady && (
         <div className="absolute inset-0 z-20">
@@ -160,16 +155,16 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       
       <MapLegend 
         activeView={activeView} 
-        showStarLegend={showStarLegend}
-        showCircleLegend={showCircleLegend}
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
         onToggle={handleLegendToggle}
-        className="absolute bottom-4 right-4 z-10"
+        className="absolute bottom-4 right-4"
       />
       
       {!legendOpen && (
         <PinpointButton 
           onGetLocation={handleGetLocation} 
-          className="absolute top-4 right-4 z-10"
+          className="absolute top-4 right-4"
         />
       )}
     </div>

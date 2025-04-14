@@ -1,98 +1,54 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
+/**
+ * Component for managing radar animation styles
+ */
 const RadarAnimationStyles: React.FC = () => {
-  React.useEffect(() => {
-    // Create style element if it doesn't exist
-    if (!document.getElementById('radar-animation-styles')) {
+  const styleRef = useRef<HTMLStyleElement | null>(null);
+  
+  // Create and add styles only once
+  useEffect(() => {
+    if (!styleRef.current) {
       const style = document.createElement('style');
-      style.id = 'radar-animation-styles';
-      style.innerHTML = `
-        /* Radar container styles */
+      style.textContent = `
         .radar-container {
-          z-index: 400;
           pointer-events: none;
+          z-index: 400;
         }
-        
-        /* Radar sweep animation */
         .radar-sweep {
           position: absolute;
-          transform-origin: center center;
-          border-radius: 50%;
-          background: transparent;
-          border: 2px solid transparent;
-          overflow: hidden;
-          opacity: 0.7;
-          transition: opacity 0.3s ease-out;
-        }
-        
-        .radar-sweep::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
           border-radius: 50%;
           background: conic-gradient(
-            from 0deg,
-            rgba(150, 130, 255, 0.2) 0%,
-            rgba(150, 130, 255, 0) 15%,
-            rgba(150, 130, 255, 0) 85%,
-            rgba(150, 130, 255, 0.2) 100%
+            rgba(59, 130, 246, 0.8) 0deg,
+            rgba(59, 130, 246, 0.1) 30deg,
+            rgba(59, 130, 246, 0) 120deg,
+            rgba(59, 130, 246, 0) 360deg
           );
-          animation: radar-rotate 4s linear infinite;
-          transform-origin: center center;
+          transform-origin: center;
+          animation: radar-sweep 4s linear infinite;
+          z-index: 400;
+          pointer-events: none;
+          box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
         }
-        
-        @keyframes radar-rotate {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        
-        /* Pulse effect for the radar */
-        .radar-pulse {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border-radius: 50%;
-          border: 2px solid rgba(150, 130, 255, 0.6);
-          animation: radar-pulse 2s infinite;
-        }
-        
-        @keyframes radar-pulse {
-          0% {
-            transform: scale(0.95);
-            opacity: 0.7;
-          }
-          70% {
-            transform: scale(1.05);
-            opacity: 0;
-          }
-          100% {
-            transform: scale(0.95);
-            opacity: 0;
-          }
+        @keyframes radar-sweep {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `;
       document.head.appendChild(style);
+      styleRef.current = style;
     }
     
+    // Clean up styles when component is unmounted
     return () => {
-      // Clean up the style element on unmount
-      const styleElement = document.getElementById('radar-animation-styles');
-      if (styleElement) {
-        document.head.removeChild(styleElement);
+      if (styleRef.current && styleRef.current.parentNode) {
+        styleRef.current.parentNode.removeChild(styleRef.current);
+        styleRef.current = null;
       }
     };
   }, []);
-  
+
   return null;
 };
 

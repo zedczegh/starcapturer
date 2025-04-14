@@ -26,7 +26,6 @@ export const useRadarPosition = ({
   
   // Update radar position on the map
   const updateRadarPosition = useCallback(() => {
-    // Initialize with null styles if conditions aren't met
     if (!userLocation || !map || !showAnimation) {
       setRadarStyles(null);
       return;
@@ -47,51 +46,41 @@ export const useRadarPosition = ({
     
     const size = radiusInPixels * 2;
     
-    // Ensure exact centering by calculating the exact left/top position
-    // The point is at the center of the circle, so we need to subtract half the size
     setRadarStyles({
       size,
       left: point.x - radiusInPixels,
       top: point.y - radiusInPixels
     });
+    
   }, [map, userLocation, searchRadius, showAnimation]);
   
   // Set up event listeners for map movements
   useEffect(() => {
-    // Always create timeout ref even if we don't use it
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    if (!map || !userLocation || !showAnimation) return;
     
+    updateRadarPosition();
+    
+    // Set up debounced zoom and move listeners
+    let timeout: number | null = null;
     const handleMapChange = () => {
       if (timeout) {
-        clearTimeout(timeout);
+        window.clearTimeout(timeout);
       }
-      timeout = setTimeout(() => {
+      timeout = window.setTimeout(() => {
         updateRadarPosition();
       }, 100); // Debounce for 100ms
     };
     
-    // Only add listeners if we need to show animation
-    if (map && userLocation && showAnimation) {
-      updateRadarPosition();
-      
-      map.on('zoom', handleMapChange);
-      map.on('move', handleMapChange);
-      map.on('moveend', handleMapChange);
-    } else {
-      // Always call updateRadarPosition to ensure proper state
-      updateRadarPosition();
-    }
+    map.on('zoom', handleMapChange);
+    map.on('move', handleMapChange);
     
     // Clean up
     return () => {
-      if (map) {
-        map.off('zoom', handleMapChange);
-        map.off('move', handleMapChange);
-        map.off('moveend', handleMapChange);
-      }
+      map.off('zoom', handleMapChange);
+      map.off('move', handleMapChange);
       
       if (timeout) {
-        clearTimeout(timeout);
+        window.clearTimeout(timeout);
       }
     };
   }, [map, userLocation, showAnimation, updateRadarPosition]);

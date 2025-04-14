@@ -11,7 +11,6 @@ import { useUserLocationSiqs } from './container/UserLocationFinder';
 import MapLocationsLayer from './container/MapLocationsLayer';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapUtils } from '@/hooks/photoPoints/useMapUtils';
-import './MapStyles.css'; // Make sure we import the styles
 
 // Component to handle optional zoom updates when radius changes significantly
 const DynamicZoomUpdater = ({ 
@@ -164,11 +163,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           searchRadius={searchRadius}
           onSiqsCalculated={(siqs) => console.log("SIQS calculated:", siqs)}
           isScanning={isScanning}
-          isManualRadiusChange={isManualRadiusChange}
         />
         
         {/* Use MapEvents component for map click handling */}
-        {onMapClick && <MapEvents onMapClick={handleMapClick} />}
+        <MapEvents onMapClick={handleMapClick} />
         
         {/* Render all location markers */}
         <MapLocationsLayer

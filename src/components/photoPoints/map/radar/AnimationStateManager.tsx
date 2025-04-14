@@ -1,38 +1,62 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { toast } from "sonner";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AnimationStateProps {
   isScanning: boolean;
+  onStateChange?: (isVisible: boolean) => void;
 }
 
 /**
  * Custom hook to manage animation visibility state
  */
-export const useAnimationState = ({ isScanning }: AnimationStateProps) => {
+export const useAnimationState = ({ 
+  isScanning, 
+  onStateChange 
+}: AnimationStateProps) => {
   const [showAnimation, setShowAnimation] = useState(false);
+  const visibilityTimeoutRef = useRef<number | null>(null);
+  const { t } = useLanguage();
   
-  // Handle animation visibility based on scanning state
+  // Handle animation visibility state
   useEffect(() => {
-    // Always initialize timeout ref even if we don't use it
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    
-    // Update animation state based on scanning status
+    // When scanning starts, immediately show animation
     if (isScanning) {
       setShowAnimation(true);
-    } else {
-      // Add a delay before hiding the animation for smoother UX
-      timeout = setTimeout(() => {
+      if (onStateChange) onStateChange(true);
+      
+      // Clear any existing timeout
+      if (visibilityTimeoutRef.current) {
+        window.clearTimeout(visibilityTimeoutRef.current);
+        visibilityTimeoutRef.current = null;
+      }
+      
+      // Initial notification
+      toast.info(t(
+        "Scanning for locations within radius...",
+        "正在扫描半径内的位置..."
+      ));
+    } else if (showAnimation) {
+      // When scanning stops, keep animation visible for a while
+      if (visibilityTimeoutRef.current) {
+        window.clearTimeout(visibilityTimeoutRef.current);
+      }
+      
+      // Keep animation visible for 10 seconds after scanning completes
+      visibilityTimeoutRef.current = window.setTimeout(() => {
         setShowAnimation(false);
-      }, 2000);
+        if (onStateChange) onStateChange(false);
+        visibilityTimeoutRef.current = null;
+      }, 10000); // Increased from 6s to 10s as per request
     }
     
-    // Cleanup function to prevent memory leaks
     return () => {
-      if (timeout) {
-        clearTimeout(timeout);
+      if (visibilityTimeoutRef.current) {
+        window.clearTimeout(visibilityTimeoutRef.current);
+        visibilityTimeoutRef.current = null;
       }
     };
-  }, [isScanning]);
+  }, [isScanning, showAnimation, t, onStateChange]);
   
   return { showAnimation };
 };
