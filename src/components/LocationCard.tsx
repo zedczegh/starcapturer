@@ -59,13 +59,16 @@ const LocationCard: React.FC<LocationCardProps> = ({
   // Get the color for the SIQS score
   const scoreColor = siqsToColor(siqs);
   
-  // Create a dummy location object to use with the DisplayNameResolver
+  // Create a location object that fully matches SharedAstroSpot interface
   const locationObj = {
+    id,  // Add the id from props
     name,
     chineseName,
     latitude,
     longitude,
-    certification
+    bortleScale, // Add the bortleScale from props
+    certification,
+    timestamp,  // Add the timestamp from props
   };
 
   // Use the shared display name resolver
