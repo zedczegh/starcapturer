@@ -1,6 +1,6 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -126,7 +126,6 @@ const LocationMarker = memo(({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
-  const popupRef = useRef<L.Popup | null>(null);
   const isMobile = useIsMobile();
   
   // Skip rendering calculated locations in certified view
@@ -247,29 +246,24 @@ const LocationMarker = memo(({
     });
   };
   
-  // Create event handlers object for marker
-  const eventHandlers = useMemo(() => ({
-    click: handleClick,
-    mouseover: handleMouseOver,
-    mouseout: handleMouseOut,
-    // Add touch events handlers for mobile
-    touchstart: handleMarkerTouchStart,
-    touchend: handleMarkerTouchEnd,
-    touchmove: handleMarkerTouchMove
-  }), [handleClick, handleMouseOver, handleMouseOut, 
-      handleMarkerTouchStart, handleMarkerTouchEnd, handleMarkerTouchMove]);
-  
+  // Modified: Use direct event handlers instead of eventHandlers prop
   return (
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
       ref={markerRef}
-      eventHandlers={eventHandlers}
+      onClick={handleClick}
+      eventHandlersRef={{
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut,
+        touchstart: handleMarkerTouchStart,
+        touchend: handleMarkerTouchEnd,
+        touchmove: handleMarkerTouchMove
+      }}
     >
       <Popup 
         closeOnClick={false}
         autoClose={false}
-        className={isMobile ? "mobile-popup" : ""}
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
@@ -356,4 +350,35 @@ const UserLocationMarker = memo(({
 
 UserLocationMarker.displayName = 'UserLocationMarker';
 
+// Helper hook to provide proper event handlers for markers
+export const useMarkerEvents = () => {
+  const map = useMap();
+  
+  // Initialize event handlers that properly work with Leaflet
+  useEffect(() => {
+    if (!map) return;
+    
+    // Extend Leaflet's Marker prototype to support our custom events if needed
+    if (!L.Marker.prototype._touchHandlersAdded) {
+      L.Marker.prototype._touchHandlersAdded = true;
+      
+      // Original handler reference
+      const originalOn = L.Marker.prototype.on;
+      
+      // Extend the 'on' method to handle custom events
+      L.Marker.prototype.on = function(types, fn, context) {
+        // Call the original method for standard events
+        return originalOn.call(this, types, fn, context);
+      };
+    }
+    
+    return () => {
+      // Clean up if needed
+    };
+  }, [map]);
+  
+  return { map };
+};
+
 export { LocationMarker, UserLocationMarker };
+
