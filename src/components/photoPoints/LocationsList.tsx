@@ -9,15 +9,33 @@ import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/
 interface LocationsListProps {
   locations: SharedAstroSpot[];
   loading: boolean;
-  initialLoad: boolean;
-  onViewDetails: (point: SharedAstroSpot) => void;
+  initialLoad?: boolean;
+  onLocationClick: (point: SharedAstroSpot) => void;
+  onViewDetails?: (point: SharedAstroSpot) => void; // Add this alternative prop
+  onRefresh?: () => void;
+  activeView?: 'certified' | 'calculated';
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  canLoadMoreCalculated?: boolean;
+  onLoadMoreCalculated?: () => void;
+  loadMoreClickCount?: number;
+  maxLoadMoreClicks?: number;
 }
 
 const LocationsList: React.FC<LocationsListProps> = ({
   locations,
   loading,
-  initialLoad,
-  onViewDetails
+  initialLoad = false,
+  onLocationClick,
+  onViewDetails, // Add the new prop
+  onRefresh,
+  activeView = 'certified',
+  hasMore = false,
+  onLoadMore,
+  canLoadMoreCalculated = false,
+  onLoadMoreCalculated,
+  loadMoreClickCount = 0,
+  maxLoadMoreClicks = 3
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
@@ -49,6 +67,29 @@ const LocationsList: React.FC<LocationsListProps> = ({
 
   const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
   
+  // Handle load more
+  const handleLoadMore = () => {
+    if (onLoadMore) {
+      onLoadMore();
+    }
+  };
+  
+  // Handle load more calculated
+  const handleLoadMoreCalculated = () => {
+    if (onLoadMoreCalculated) {
+      onLoadMoreCalculated();
+    }
+  };
+
+  // Choose the appropriate click handler - use onViewDetails if provided, otherwise use onLocationClick
+  const handleLocationClick = (location: SharedAstroSpot) => {
+    if (onViewDetails) {
+      onViewDetails(location);
+    } else {
+      onLocationClick(location);
+    }
+  };
+
   return (
     <div className="space-y-4 pb-8">
       {/* Container for photo point cards */}
@@ -62,7 +103,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
           >
             <PhotoPointCard
               point={location}
-              onViewDetails={onViewDetails}
+              onViewDetails={() => handleLocationClick(location)}
               userLocation={null} // This doesn't use current location for distance
             />
           </motion.div>
@@ -73,6 +114,45 @@ const LocationsList: React.FC<LocationsListProps> = ({
       {loading && !initialLoad && (
         <div className="flex justify-center pt-4">
           <Loader2 className="h-6 w-6 animate-spin text-primary/60" />
+        </div>
+      )}
+
+      {/* Load more buttons */}
+      {!loading && hasMore && onLoadMore && (
+        <div className="flex justify-center pt-4">
+          <button
+            className="px-4 py-2 bg-primary/80 hover:bg-primary text-primary-foreground rounded-md text-sm"
+            onClick={handleLoadMore}
+          >
+            Load More Locations
+          </button>
+        </div>
+      )}
+
+      {/* Load more calculated button */}
+      {!loading && canLoadMoreCalculated && activeView === 'calculated' && onLoadMoreCalculated && (
+        <div className="flex justify-center pt-4">
+          <button
+            className="px-4 py-2 bg-primary/80 hover:bg-primary text-primary-foreground rounded-md text-sm"
+            onClick={handleLoadMoreCalculated}
+            disabled={loadMoreClickCount >= maxLoadMoreClicks}
+          >
+            {loadMoreClickCount < maxLoadMoreClicks 
+              ? `Load More Calculated Locations (${loadMoreClickCount}/${maxLoadMoreClicks})` 
+              : "Maximum locations reached"}
+          </button>
+        </div>
+      )}
+
+      {/* Refresh button */}
+      {onRefresh && (
+        <div className="flex justify-center pt-4">
+          <button
+            className="px-4 py-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground rounded-md text-sm"
+            onClick={onRefresh}
+          >
+            Refresh Data
+          </button>
         </div>
       )}
     </div>

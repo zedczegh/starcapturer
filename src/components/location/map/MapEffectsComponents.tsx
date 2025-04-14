@@ -89,7 +89,7 @@ export function MapEvents({
           isDragging = false;
           dragThreshold = 0;
           onMapDragEnd();
-        }, 50);
+        }, 100); // Increased from 50ms to 100ms for mobile
       });
     } else {
       map.on('dragend', () => {
@@ -97,17 +97,46 @@ export function MapEvents({
         setTimeout(() => {
           isDragging = false;
           dragThreshold = 0;
-        }, 50);
+        }, 100); // Increased from 50ms to 100ms for mobile
       });
     }
     
-    // Handle zoom end events
+    // Handle zoom end events with improved stability
     if (onMapZoomEnd) {
-      map.on('zoomend', onMapZoomEnd);
+      map.on('zoomend', () => {
+        // Ensure markers are positioned correctly after zoom
+        requestAnimationFrame(() => {
+          if (map && map._panes && map._panes.markerPane) {
+            // Force GPU acceleration for marker repositioning
+            map._panes.markerPane.style.transform = 'translate3d(0,0,0)';
+          }
+          onMapZoomEnd();
+        });
+      });
+    } else {
+      map.on('zoomend', () => {
+        // Ensure markers are positioned correctly after zoom
+        if (map && map._panes && map._panes.markerPane) {
+          map._panes.markerPane.style.transform = 'translate3d(0,0,0)';
+        }
+      });
     }
     
     // Enhanced mobile-specific handling
     if (isMobile) {
+      // Fix for iOS Safari issues with markers during zoom
+      map.on('zoomanim', (e: any) => {
+        if (map && map._panes) {
+          // Apply hardware acceleration to all panes
+          for (const pane in map._panes) {
+            if (map._panes[pane].style) {
+              map._panes[pane].style.willChange = 'transform';
+              map._panes[pane].style.backfaceVisibility = 'hidden';
+            }
+          }
+        }
+      });
+      
       // Replace standard click with a custom handler for mobile
       map.off('click', handleMapClick);
       
@@ -153,18 +182,35 @@ export function MapEvents({
         
         clickTimeout = window.setTimeout(() => {
           handleMapClick(e);
-        }, 50);
+        }, 100); // Increased from 50ms to 100ms for better reliability
+      });
+      
+      // Add special handler for fixing marker positioning on mobile
+      map.on('moveend', () => {
+        if (map && map._panes && map._panes.markerPane) {
+          // Force repaint of markers to fix positioning issues
+          requestAnimationFrame(() => {
+            map._panes.markerPane.style.transform = 'translate3d(0,0,0)';
+            setTimeout(() => {
+              if (map._panes.markerPane) {
+                map._panes.markerPane.style.transform = '';
+              }
+            }, 10);
+          });
+        }
       });
     }
     
     return () => {
       map.off('click', handleMapClick);
+      map.off('zoomend');
+      map.off('moveend');
       if (onMapDragStart) map.off('dragstart');
       if (onMapDragEnd) map.off('dragend');
-      if (onMapZoomEnd) map.off('zoomend');
       
       if (isMobile) {
         map.off('tap');
+        map.off('zoomanim');
         map.getContainer().removeEventListener('touchstart', () => {});
         map.getContainer().removeEventListener('touchmove', () => {});
       }
@@ -244,10 +290,10 @@ export function MapInteractionManager({
         // Improve mobile dragging by adjusting inertia settings
         map.dragging._draggable._inertia = true;
         map.dragging._draggable.options.inertia = {
-          deceleration: 2800,  // Adjusted for smoother stops
-          maxSpeed: 1300,      // Reduced for better control
-          timeThreshold: 150,  // Increased for more consistent behavior
-          linearity: 0.3       // Adjusted for smoother deceleration
+          deceleration: 2200,  // Adjusted for smoother stops (was 2800)
+          maxSpeed: 1500,      // Increased for more responsive feel (was 1300)
+          timeThreshold: 100,  // Lower for faster response (was 150)
+          linearity: 0.25      // Adjusted for smoother deceleration (was 0.3)
         };
       }
     } else {
@@ -261,21 +307,33 @@ export function MapInteractionManager({
         map.touchZoom.disable();
         map.touchZoom.enable();
         
+        // Apply better pinch-to-zoom settings for mobile
+        if (map.options) {
+          // @ts-ignore - These properties exist but are not in the type definitions
+          map.options.touchZoom = 'center';  // Zoom to center for more predictable behavior
+          map.options.bounceAtZoomLimits = false; // Prevent bounce for smoother experience
+        }
+        
         // Enable double click zoom but with optimized settings
         map.doubleClickZoom.disable();
         map.doubleClickZoom.enable();
-        
-        // Set touch zoom to center for better mobile experience
-        // @ts-ignore - This property exists but is not in the type definitions
-        if (map.options) {
-          map.options.touchZoom = 'center';
-        }
         
         // Fix pinch zoom on iOS Safari
         const mapPane = map.getPane('mapPane');
         if (mapPane) {
           mapPane.style.willChange = 'transform';
           mapPane.style.transform = 'translate3d(0, 0, 0)';
+          mapPane.style.transformOrigin = '0 0';
+          mapPane.style.backfaceVisibility = 'hidden';
+        }
+        
+        // Fix marker pane for better mobile performance
+        const markerPane = map.getPane('markerPane');
+        if (markerPane) {
+          markerPane.style.willChange = 'transform';
+          markerPane.style.transform = 'translate3d(0, 0, 0)';
+          markerPane.style.transformOrigin = '0 0';
+          markerPane.style.backfaceVisibility = 'hidden';
         }
       } else {
         map.scrollWheelZoom.enable();
@@ -292,6 +350,14 @@ export function MapInteractionManager({
     if (map._mapPane) {
       map._mapPane.style.willChange = 'transform';
       map._mapPane.style.backfaceVisibility = 'hidden';
+      
+      // Apply GPU acceleration to all panes
+      for (const key in map._panes) {
+        if (map._panes[key] && map._panes[key].style) {
+          map._panes[key].style.willChange = 'transform';
+          map._panes[key].style.backfaceVisibility = 'hidden';
+        }
+      }
     }
     
     // Reduce tile fade animation on mobile for better performance
@@ -299,14 +365,32 @@ export function MapInteractionManager({
       const tilePane = map.getPane('tilePane');
       if (tilePane) {
         tilePane.className = tilePane.className + ' mobile-optimized';
-        document.head.insertAdjacentHTML('beforeend', `
-          <style>
+        
+        // Add CSS directly to head for mobile optimization
+        if (!document.getElementById('leaflet-mobile-styles')) {
+          const styleEl = document.createElement('style');
+          styleEl.id = 'leaflet-mobile-styles';
+          styleEl.textContent = `
             .mobile-optimized .leaflet-tile-loaded {
-              transition: opacity 0.1s;
+              transition: opacity 0.1s !important;
             }
-          </style>
-        `);
+            .leaflet-marker-icon {
+              transform-origin: bottom center !important;
+            }
+            .leaflet-touch .leaflet-control-zoom a {
+              width: 36px !important;
+              height: 36px !important;
+              line-height: 36px !important;
+              font-size: 18px !important;
+            }
+          `;
+          document.head.appendChild(styleEl);
+        }
       }
+      
+      // Fix common iOS Safari issues with fixed positioning
+      map._container.style.width = '100%';
+      map._container.style.height = '100%';
     }
     
     // Call onReady callback if provided
@@ -319,6 +403,12 @@ export function MapInteractionManager({
       if (map._mapPane) {
         map._mapPane.style.willChange = 'auto';
         map._mapPane.style.backfaceVisibility = 'visible';
+      }
+      
+      // Remove mobile-specific CSS
+      const mobileStyles = document.getElementById('leaflet-mobile-styles');
+      if (mobileStyles) {
+        mobileStyles.remove();
       }
     };
   }, [map, draggable, zoomable, onReady, isMobile]);
