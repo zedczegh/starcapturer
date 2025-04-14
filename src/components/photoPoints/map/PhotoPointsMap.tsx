@@ -77,15 +77,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handle map click to update location - only if userLocation is not already set
+  // Handle map click to update location - always allow location updates
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate && !userLocation) {
+    if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
       console.log("Setting new location from map click:", lat, lng);
-    } else {
-      console.log("Location update prevented - user location already set");
     }
-  }, [onLocationUpdate, userLocation]);
+  }, [onLocationUpdate]);
   
   // Handle the location click
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {

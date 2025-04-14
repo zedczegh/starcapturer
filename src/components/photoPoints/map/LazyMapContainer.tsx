@@ -91,14 +91,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onLocationClick]);
   
-  // Handle map click - this function now checks if userLocation exists before allowing location updates
+  // Handle map click - always allow location updates when map is clicked
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    // Only call onMapClick if it's provided and userLocation is null
-    if (onMapClick && !userLocation) {
+    if (onMapClick) {
       onMapClick(lat, lng);
+      console.log("Map clicked, updating location to:", lat, lng);
     }
-    // If userLocation exists, we don't update it on map clicks
-  }, [onMapClick, userLocation]);
+  }, [onMapClick]);
   
   return (
     <MapContainer
