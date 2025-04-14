@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -10,6 +11,8 @@ import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
+import PinpointButton from './PinpointButton';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 // Configure leaflet to handle marker paths
 configureLeaflet();
@@ -97,6 +100,37 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       console.log("Map clicked, updating location to:", lat, lng);
     }
   }, [onMapClick]);
+
+  // Handle getting current user location via geolocation
+  const handleGetLocation = useCallback(() => {
+    if (onMapClick) {
+      getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          onMapClick(latitude, longitude);
+          
+          // Access the map instance and set view to the location
+          if (mapRef.current) {
+            const leafletMap = mapRef.current;
+            leafletMap.setView([latitude, longitude], 12, {
+              animate: true,
+              duration: 1
+            });
+          }
+          
+          console.log("Got user position:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    }
+  }, [onMapClick]);
   
   return (
     <MapContainer
@@ -163,6 +197,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         showStarLegend={activeView === 'certified'}
         showCircleLegend={activeView === 'calculated'}
       />
+      
+      {/* Add pinpoint button */}
+      <PinpointButton onGetLocation={handleGetLocation} />
     </MapContainer>
   );
 };
