@@ -74,9 +74,6 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
     };
   }, [userLocation, lastUserLocation]);
   
-  // Determine whether to show radar animation - only in calculated view with userLocation
-  const showRadar = activeView === 'calculated' && userLocation !== null && userLocation !== undefined;
-  
   return (
     <>
       {/* Apply world bounds limit */}
@@ -90,8 +87,8 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
         onSiqsCalculated={onSiqsCalculated}
       />
       
-      {/* Radar sweep animation - only render when in calculated view */}
-      {showRadar && (
+      {/* Radar sweep animation - ONLY render when in calculated view */}
+      {activeView === 'calculated' && userLocation && (
         <RadarSweepAnimation 
           userLocation={userLocation}
           searchRadius={searchRadius}

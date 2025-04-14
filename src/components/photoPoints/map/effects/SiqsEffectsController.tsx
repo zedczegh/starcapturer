@@ -85,14 +85,15 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     
     // Calculate new SIQS
     try {
+      // The calculateRealTimeSiqs function returns { siqs, isViable, factors }
       const result = await calculateRealTimeSiqs(latitude, longitude);
       
-      if (result && typeof result.score === 'number') {
+      if (result && typeof result.siqs === 'number') {
         // Cache and use the result
-        cacheSiqs(latitude, longitude, result.score);
+        cacheSiqs(latitude, longitude, result.siqs);
         
         if (onSiqsCalculated) {
-          onSiqsCalculated(result.score);
+          onSiqsCalculated(result.siqs);
         }
         
         // Update tracking variables

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -155,8 +154,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       
       <MapLegend 
         activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
+        showStarLegend={showStarLegend}
+        showCircleLegend={showCircleLegend}
         onToggle={handleLegendToggle}
         className="absolute bottom-4 right-4"
       />
