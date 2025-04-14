@@ -125,7 +125,7 @@ export const calculateNighttimeSIQS = (
   const avgPrecipitation = calculateAverageValue(nightForecast, 'precipitation');
   
   // Calculate SIQS using the average nighttime conditions
-  const siqsResult = calculateSIQS({
+  const siqsInputs = {
     cloudCover: avgCloudCover,
     bortleScale: locationData.bortleScale || 5,
     seeingConditions: locationData.seeingConditions || 3,
@@ -136,7 +136,21 @@ export const calculateNighttimeSIQS = (
     aqi: weatherData?.aqi,
     // Add nighttime forecast data for more detailed analysis
     nightForecast: nightForecast
-  });
+  };
+  
+  const calculatedResult = calculateSIQS(siqsInputs);
+  
+  // Create a properly typed SIQSResult object
+  const siqsResult: SIQSResult = {
+    score: calculatedResult.score,
+    isViable: calculatedResult.isViable,
+    level: calculatedResult.level,
+    factors: calculatedResult.factors.map(factor => ({
+      name: factor.name,
+      score: factor.score,
+      description: factor.description || 'No description provided' // Ensure description is always defined
+    }))
+  };
   
   console.log(`Calculated nighttime SIQS: ${siqsResult.score}`);
   
