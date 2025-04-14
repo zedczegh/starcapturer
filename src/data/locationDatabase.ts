@@ -13,6 +13,8 @@ import { centralAsiaLocations } from './regions/centralAsiaLocations';
 import { chinaSuburbanLocations } from './regions/chinaSuburbanLocations';
 import { chinaMountainLocations } from './regions/chinaMountainLocations';
 import { darkSkyLocations } from './regions/darkSkyLocations';
+import { chinaCityLocations } from './regions/chinaCityLocations';
+import { internationalLocations } from './regions/internationalLocations';
 import { calculateDistance, deg2rad } from '@/utils/geoUtils';
 
 export interface LocationEntry {
@@ -34,7 +36,9 @@ export const locationDatabase: LocationEntry[] = [
   ...centralAsiaLocations,
   ...chinaSuburbanLocations,
   ...chinaMountainLocations,
-  ...darkSkyLocations  // Add dark sky locations
+  ...darkSkyLocations,
+  ...chinaCityLocations,     // Add the new China city locations
+  ...internationalLocations  // Add the new international locations
 ];
 
 // Export utility functions from geoUtils to avoid duplication
