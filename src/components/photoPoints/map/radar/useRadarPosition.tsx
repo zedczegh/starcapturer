@@ -46,6 +46,7 @@ export const useRadarPosition = ({
     
     const size = radiusInPixels * 2;
     
+    // When position changes, this will trigger the transition in RadarElement
     setRadarStyles({
       size,
       left: point.x - radiusInPixels,
@@ -73,11 +74,13 @@ export const useRadarPosition = ({
     
     map.on('zoom', handleMapChange);
     map.on('move', handleMapChange);
+    map.on('moveend', handleMapChange);
     
     // Clean up
     return () => {
       map.off('zoom', handleMapChange);
       map.off('move', handleMapChange);
+      map.off('moveend', handleMapChange);
       
       if (timeout) {
         window.clearTimeout(timeout);

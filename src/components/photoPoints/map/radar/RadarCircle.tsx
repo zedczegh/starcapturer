@@ -1,168 +1,198 @@
 
-import React, { useRef, useEffect } from 'react';
-import L from 'leaflet';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 
 interface RadarCircleProps {
-  userLocation: { latitude: number; longitude: number } | null;
+  userLocation: { latitude: number; longitude: number };
   searchRadius: number;
   showCircle: boolean;
+  locationChanged?: boolean;
 }
 
 /**
- * Component that renders a circle around user location with specified radius
- * Enhanced with smooth transitions and browser compatibility
+ * Component that renders a circle around the user location to show search radius
  */
-const RadarCircle: React.FC<RadarCircleProps> = ({ 
-  userLocation, 
+const RadarCircle: React.FC<RadarCircleProps> = ({
+  userLocation,
   searchRadius,
-  showCircle
+  showCircle,
+  locationChanged = false
 }) => {
   const map = useMap();
   const circleRef = useRef<L.Circle | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const prevRadiusRef = useRef<number>(0);
+  const animationTimeoutRef = useRef<number | null>(null);
+  const [visible, setVisible] = useState(false);
   
+  // Helper to create circle with proper styling
+  const createCircle = useCallback(() => {
+    if (!userLocation || !map) return null;
+    
+    // Create with proper radius (searchRadius is in km, L.circle uses meters)
+    const circle = L.circle([userLocation.latitude, userLocation.longitude], {
+      radius: searchRadius * 1000, // Convert km to meters
+      color: '#0ea5e9', // Sky blue
+      fillColor: '#0ea5e9',
+      fillOpacity: 0.05,
+      weight: 1.5,
+      opacity: 0.7,
+      className: 'radar-circle'
+    });
+    
+    // Add CSS for smooth transitions
+    if (!document.getElementById('radar-circle-style')) {
+      const style = document.createElement('style');
+      style.id = 'radar-circle-style';
+      style.innerHTML = `
+        .radar-circle {
+          transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+          transform-origin: center center !important;
+        }
+        
+        .radar-circle-pulse {
+          animation: radar-circle-pulse 2s ease-out 1;
+        }
+        
+        @keyframes radar-circle-pulse {
+          0% {
+            stroke-opacity: 0.3;
+            stroke-width: 1;
+            transform: scale(0.8);
+          }
+          50% {
+            stroke-opacity: 0.8;
+            stroke-width: 2;
+          }
+          100% {
+            stroke-opacity: 0.7;
+            stroke-width: 1.5;
+            transform: scale(1);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    return circle;
+  }, [map, searchRadius, userLocation]);
+  
+  // Handle circle lifecycle
   useEffect(() => {
-    if (!userLocation) return;
-    
-    // Ensure we always have a radius circle showing with the animation
-    const radiusInMeters = Math.max(searchRadius * 1000, 5000); // Minimum 5km for visibility
-    
-    // Create or update the radius circle with smooth animation
-    const createOrUpdateCircle = () => {
-      if (!userLocation || !showCircle) {
-        // Remove circle when not needed
-        if (circleRef.current) {
-          circleRef.current.removeFrom(map);
-          circleRef.current = null;
-        }
-        return;
-      }
-
-      const latLng = [userLocation.latitude, userLocation.longitude] as [number, number];
-      
-      // For smooth radius transition
-      const animateRadius = (from: number, to: number, duration: number = 500) => {
-        // Make sure the animation works on all browsers
-        const startTime = Date.now();
-        let requestAnimId: number;
-        
-        const animate = () => {
-          const currentTime = Date.now();
-          const elapsedTime = currentTime - startTime;
-          const progress = Math.min(elapsedTime / duration, 1);
-          
-          // Ease in-out function for smoother animation
-          const easeInOut = (t: number) => 
-            t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-          
-          const currentRadius = from + (to - from) * easeInOut(progress);
-          
-          if (circleRef.current) {
-            circleRef.current.setRadius(currentRadius);
-          }
-          
-          if (progress < 1) {
-            // Use standard requestAnimationFrame or setTimeout fallback for Safari
-            if (typeof window !== 'undefined') {
-              if ('requestAnimationFrame' in window) {
-                animationRef.current = window.requestAnimationFrame(animate);
-              } else {
-                // Fallback for older browsers
-                // Explicitly cast window to Window & typeof globalThis
-                const win = window as Window & typeof globalThis;
-                animationRef.current = win.setTimeout(animate, 16) as unknown as number;
-              }
-            }
-          } else {
-            animationRef.current = null;
-          }
-        };
-        
-        // Cancel any existing animation
-        if (animationRef.current) {
-          if (typeof window !== 'undefined') {
-            if ('cancelAnimationFrame' in window) {
-              window.cancelAnimationFrame(animationRef.current);
-            } else {
-              // Explicitly cast window to Window & typeof globalThis
-              const win = window as Window & typeof globalThis;
-              win.clearTimeout(animationRef.current as unknown as number);
-            }
-          }
-          animationRef.current = null;
-        }
-        
-        animate();
-      };
-      
-      if (!circleRef.current) {
-        // Create new circle
-        circleRef.current = L.circle(
-          latLng,
-          {
-            radius: radiusInMeters,
-            color: '#3b82f6',
-            fillColor: '#3b82f680',
-            fillOpacity: 0.1,
-            weight: 2,
-            dashArray: '5, 10',
-            interactive: false,
-            // Improve performance on all browsers
-            renderer: typeof window !== 'undefined' && window.L && window.L.canvas ? window.L.canvas() : undefined,
-          }
-        ).addTo(map);
-        
-        console.log(`Created circle with radius: ${radiusInMeters}m`);
-        prevRadiusRef.current = radiusInMeters;
-      } else {
-        // Update circle position
-        circleRef.current.setLatLng(latLng);
-        
-        // Animate the radius change if it's different
-        if (Math.abs(prevRadiusRef.current - radiusInMeters) > 10) {
-          animateRadius(prevRadiusRef.current, radiusInMeters);
-          prevRadiusRef.current = radiusInMeters;
-          console.log(`Animating circle radius to: ${radiusInMeters}m`);
-        }
-      }
-    };
-    
-    createOrUpdateCircle();
-    
-    // Update circle on map move/zoom
-    const handleMapChange = () => {
-      createOrUpdateCircle();
-    };
-    
-    map.on('zoom', handleMapChange);
-    map.on('move', handleMapChange);
-    
-    // Clean up
-    return () => {
-      map.off('zoom', handleMapChange);
-      map.off('move', handleMapChange);
-      
-      if (animationRef.current) {
-        if (typeof window !== 'undefined') {
-          if ('cancelAnimationFrame' in window) {
-            window.cancelAnimationFrame(animationRef.current);
-          } else {
-            // Explicitly cast window to Window & typeof globalThis
-            const win = window as Window & typeof globalThis;
-            win.clearTimeout(animationRef.current as unknown as number);
-          }
-        }
-        animationRef.current = null;
-      }
-      
+    // Only create/show circle when requested
+    if (!showCircle) {
+      // Hide the circle
       if (circleRef.current) {
         circleRef.current.removeFrom(map);
         circleRef.current = null;
       }
+      setVisible(false);
+      return;
+    }
+    
+    // Create or update circle
+    if (!circleRef.current) {
+      const circle = createCircle();
+      if (circle) {
+        // Add to map
+        circle.addTo(map);
+        circleRef.current = circle;
+        
+        // Start with 0 opacity and animate in
+        const pathElement = circle.getElement();
+        if (pathElement) {
+          pathElement.style.opacity = '0';
+          
+          // Animate in
+          window.setTimeout(() => {
+            if (pathElement) {
+              pathElement.style.opacity = '1';
+              // Add pulse animation class
+              pathElement.classList.add('radar-circle-pulse');
+              
+              // Remove class after animation completes
+              animationTimeoutRef.current = window.setTimeout(() => {
+                pathElement.classList.remove('radar-circle-pulse');
+              }, 2000);
+            }
+          }, 100);
+        }
+        
+        setVisible(true);
+      }
+    } else {
+      // Update existing circle
+      if (locationChanged) {
+        // Handle location change
+        const newCircle = createCircle();
+        if (newCircle) {
+          // Remove old circle
+          circleRef.current.removeFrom(map);
+          
+          // Add new circle
+          newCircle.addTo(map);
+          circleRef.current = newCircle;
+          
+          // Add animation for location change
+          const pathElement = newCircle.getElement();
+          if (pathElement) {
+            pathElement.style.opacity = '0';
+            
+            // Animate in
+            window.setTimeout(() => {
+              if (pathElement) {
+                pathElement.style.opacity = '1';
+                // Add pulse animation class
+                pathElement.classList.add('radar-circle-pulse');
+                
+                // Remove class after animation completes
+                if (animationTimeoutRef.current !== null) {
+                  window.clearTimeout(animationTimeoutRef.current);
+                }
+                
+                animationTimeoutRef.current = window.setTimeout(() => {
+                  pathElement.classList.remove('radar-circle-pulse');
+                }, 2000);
+              }
+            }, 100);
+          }
+        }
+      } else {
+        // Just update position and radius
+        circleRef.current.setLatLng([userLocation.latitude, userLocation.longitude]);
+        circleRef.current.setRadius(searchRadius * 1000);
+      }
+    }
+    
+    return () => {
+      // Clean up timeouts
+      if (animationTimeoutRef.current !== null) {
+        window.clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
     };
-  }, [map, userLocation, searchRadius, showCircle]);
+  }, [map, createCircle, showCircle, userLocation, searchRadius, locationChanged]);
+  
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (circleRef.current) {
+        circleRef.current.removeFrom(map);
+        circleRef.current = null;
+      }
+      
+      // Clean up style element
+      const styleElement = document.getElementById('radar-circle-style');
+      if (styleElement) {
+        document.head.removeChild(styleElement);
+      }
+      
+      // Clean up timeouts
+      if (animationTimeoutRef.current !== null) {
+        window.clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
+    };
+  }, [map]);
   
   return null;
 };

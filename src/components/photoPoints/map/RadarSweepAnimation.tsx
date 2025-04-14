@@ -10,12 +10,14 @@ interface RadarSweepAnimationProps {
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
   isScanning: boolean;
+  locationChanged?: boolean;
 }
 
 const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
   userLocation,
   searchRadius,
-  isScanning
+  isScanning,
+  locationChanged = false
 }) => {
   // Manage animation visibility state
   const { showAnimation } = useAnimationState({ 
@@ -49,6 +51,7 @@ const RadarSweepAnimation: React.FC<RadarSweepAnimationProps> = ({
         userLocation={userLocation} 
         searchRadius={searchRadius} 
         showCircle={showAnimation} 
+        locationChanged={locationChanged}
       />
       
       {/* Render the radar sweep animation */}
