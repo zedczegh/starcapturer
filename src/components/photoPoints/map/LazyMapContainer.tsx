@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -87,11 +86,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     if (onMapReady) {
       onMapReady();
     }
-    
-    // Set global map reference for debugging
-    if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
-    }
   }, [onMapReady]);
   
   // Location click handler
@@ -109,22 +103,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Get user's geolocation
+  // Get user's geolocation without auto-centering
   const handleGetLocation = useCallback(() => {
     if (onMapClick) {
       getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           onMapClick(latitude, longitude);
-          
-          if (mapRef.current) {
-            const leafletMap = mapRef.current;
-            leafletMap.setView([latitude, longitude], 12, {
-              animate: true,
-              duration: 1
-            });
-          }
-          
           console.log("Got user position:", latitude, longitude);
         },
         (error) => {
@@ -139,23 +124,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Effect to ensure map is properly sized and invalidate size on container resize
+  // Effect to ensure map is properly sized
   useEffect(() => {
     if (!mapRef.current) return;
     
     const map = mapRef.current;
     
-    // Handle window resize events to properly resize the map
     const handleResize = () => {
-      // Add a small delay to ensure the DOM has updated
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 100);
+      if (map) map.invalidateSize();
     };
     
     window.addEventListener('resize', handleResize);
     
-    // Initial invalidateSize to prevent _leaflet_pos errors
     setTimeout(() => {
       if (map) map.invalidateSize();
     }, 200);
@@ -176,7 +156,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
         attributionControl={true}
-        key={`map-${center[0]}-${center[1]}-${searchRadius}`}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
