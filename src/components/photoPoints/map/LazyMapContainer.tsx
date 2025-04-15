@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -95,7 +96,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onLocationClick]);
   
-  // Map click handler
+  // Map click handler - removed auto zoom capability
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onMapClick) {
       onMapClick(lat, lng);
@@ -144,12 +145,20 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       window.removeEventListener('resize', handleResize);
     };
   }, [mapRef.current]);
+
+  // Get appropriate zoom level based on active view
+  const getDefaultZoom = () => {
+    if (activeView === 'calculated') {
+      return 7; // More zoomed out for calculated view
+    }
+    return zoom; // Use provided zoom for certified view
+  };
   
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
       <MapContainer
         center={center}
-        zoom={zoom}
+        zoom={getDefaultZoom()}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
         ref={mapRef}
@@ -178,7 +187,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         
         <MapEffectsComposer 
           center={center}
-          zoom={zoom}
+          zoom={undefined} // Remove zoom to prevent auto-zooming
           userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}
