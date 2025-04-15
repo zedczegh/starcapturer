@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -87,6 +86,31 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
+  const filterLocationsByRadius = useCallback((loc: SharedAstroSpot) => {
+    if (!userLocation) return true;
+    if (loc.isDarkSkyReserve || loc.certification) return true;
+    
+    const distance = loc.distance || calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      loc.latitude,
+      loc.longitude
+    );
+    
+    return distance <= searchRadius;
+  }, [userLocation, searchRadius]);
+
+  const getCurrentSiqs = (location: SharedAstroSpot): number | null => {
+    if (typeof location.siqs === 'number') {
+      return location.siqs;
+    } else if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
+      return location.siqs.score;
+    } else if (location.siqsResult) {
+      return location.siqsResult.score;
+    }
+    return null;
+  };
+
   useEffect(() => {
     if (userLocation && locations.length > 0 && isMountedRef.current) {
       const userLat = userLocation.latitude;
@@ -206,12 +230,17 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {Array.isArray(locations) && locations.map(location => {
+        {Array.isArray(locations) && locations.filter(filterLocationsByRadius).map(location => {
           if (!location || !location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
           const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
+          
+          // Skip non-certified locations that are in the sea
+          if (!isCertified && isWaterLocation(location.latitude, location.longitude)) {
+            return null;
+          }
           
           return (
             <LocationMarker
