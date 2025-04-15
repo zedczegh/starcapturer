@@ -1,43 +1,30 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
-import PageLoader from '@/components/loaders/PageLoader';
 import MapLegend from './MapLegend';
 import CenteringPinpointButton from './CenteringPinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
-  certifiedLocations: SharedAstroSpot[];
-  calculatedLocations: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
-  const { 
-    userLocation,
-    locations,
-    certifiedLocations,
-    calculatedLocations,
-    activeView,
-    searchRadius,
-    onLocationClick,
-    onLocationUpdate
-  } = props;
-  
-  const { t } = useLanguage();
-  const isMobile = useIsMobile();
-  const [mapContainerHeight, setMapContainerHeight] = useState('450px');
-  const [legendOpen, setLegendOpen] = useState(false);
-  
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
+  userLocation,
+  locations,
+  activeView,
+  searchRadius,
+  onLocationClick,
+  onLocationUpdate
+}) => {
   const { 
     hoveredLocationId, 
     handleHover,
@@ -46,43 +33,23 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
+  const isMobile = useIsMobile();
+  const [legendOpen, setLegendOpen] = useState(false);
+  
   const { 
     mapReady,
     handleMapReady,
     handleLocationClick,
     validLocations,
     mapCenter,
-    initialZoom,
-    certifiedLocationsLoaded,
-    certifiedLocationsLoading
+    initialZoom
   } = usePhotoPointsMap({
     userLocation,
     locations,
     searchRadius,
     activeView
   });
-  
-  useEffect(() => {
-    const adjustHeight = () => {
-      if (isMobile) {
-        setMapContainerHeight('calc(70vh - 200px)');
-      } else {
-        setMapContainerHeight('450px');
-      }
-    };
-    
-    adjustHeight();
-    window.addEventListener('resize', adjustHeight);
-    return () => window.removeEventListener('resize', adjustHeight);
-  }, [isMobile]);
-  
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
-      console.log("Setting new location from map click:", lat, lng);
-    }
-  }, [onLocationUpdate]);
-  
+
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -90,45 +57,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       handleLocationClick(location);
     }
   }, [onLocationClick, handleLocationClick]);
-  
-  const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationUpdate(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
+
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (onLocationUpdate) {
+      onLocationUpdate(lat, lng);
     }
   }, [onLocationUpdate]);
-  
+
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
   }, []);
-  
+
   return (
-    <div 
-      style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
-    >
-      {!mapReady && (
-        <div className="absolute inset-0 z-20">
-          <PageLoader />
-        </div>
-      )}
-      
-      {/* Only show certified locations loading message when in certified view */}
-      {activeView === 'certified' && certifiedLocationsLoading && !certifiedLocationsLoaded && (
-        <div className="absolute top-4 left-0 right-0 mx-auto w-auto max-w-xs z-30 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md text-center text-sm text-muted-foreground">
-          {t("Loading certified locations...", "正在加载认证地点...")}
-        </div>
-      )}
-      
+    <div className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2" style={{ height: isMobile ? 'calc(70vh - 200px)' : '450px' }}>
       <LazyMapContainer
         center={mapCenter}
         userLocation={userLocation}
@@ -150,7 +91,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       />
       
       <MapLegend 
-        activeView={activeView} 
+        activeView={activeView}
         showStarLegend={activeView === 'certified'}
         showCircleLegend={activeView === 'calculated'}
         onToggle={handleLegendToggle}
@@ -159,7 +100,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       
       {!legendOpen && (
         <CenteringPinpointButton 
-          onGetLocation={handleGetLocation}
           userLocation={userLocation}
           className="absolute top-4 right-4"
         />

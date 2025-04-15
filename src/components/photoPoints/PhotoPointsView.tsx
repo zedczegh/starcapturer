@@ -1,5 +1,4 @@
-
-import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useCallback, useState, useEffect, memo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
@@ -31,7 +30,7 @@ interface PhotoPointsViewProps {
   maxLoadMoreClicks: number;
 }
 
-const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
+const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
   const {
     showMap,
     activeView,
@@ -78,15 +77,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && onLocationClick) {
-      const safeLocation = {
-        ...location,
-        id: location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`,
-        name: location.name || 'Unknown Location',
-        latitude: location.latitude,
-        longitude: location.longitude
-      };
-      
-      onLocationClick(safeLocation);
+      onLocationClick(location);
     }
   }, [onLocationClick]);
   
@@ -127,8 +118,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
           <PhotoPointsMap 
             userLocation={effectiveLocation}
             locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
-            certifiedLocations={certifiedLocations}
-            calculatedLocations={calculatedLocations}
             activeView={activeView}
             searchRadius={searchRadius}
             onLocationClick={handleLocationClick}
@@ -169,6 +158,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
       </div>
     </Suspense>
   );
-};
+});
 
 export default PhotoPointsView;
