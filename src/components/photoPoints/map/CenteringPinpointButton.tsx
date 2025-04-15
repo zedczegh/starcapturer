@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import PinpointButton from './PinpointButton';
 
@@ -9,27 +9,39 @@ interface CenteringPinpointButtonProps {
   className?: string;
 }
 
+/**
+ * A wrapper around PinpointButton that centers the map on the user's location
+ */
 const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
   onGetLocation,
   userLocation,
   className
 }) => {
-  // Try to use map context, but don't fail if not available
+  // State to track if we have a valid map reference
+  const [hasValidMap, setHasValidMap] = useState(false);
   let map: any = null;
   
+  // Always call useMap, but handle the error if not in a MapContainer context
   try {
-    // This will throw an error if not inside a MapContainer
     map = useMap();
+    // Set state indicating we have a valid map reference
+    useEffect(() => {
+      setHasValidMap(true);
+    }, []);
   } catch (error) {
-    // If not in a MapContainer context, we'll just use regular PinpointButton
-    console.log("CenteringPinpointButton not used within MapContainer context");
+    // If not in a MapContainer context, we'll just handle it gracefully
+    useEffect(() => {
+      console.log("CenteringPinpointButton not used within MapContainer context");
+      setHasValidMap(false);
+    }, []);
   }
 
   const handleGetLocationAndCenter = useCallback(() => {
+    // Always trigger the location update
     onGetLocation();
     
     // Only attempt to center the map if we have a valid map reference
-    if (map && userLocation) {
+    if (hasValidMap && map && userLocation) {
       // Add a short delay to let the location update before centering
       setTimeout(() => {
         if (userLocation && map) {
@@ -41,7 +53,7 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
         }
       }, 300);
     }
-  }, [onGetLocation, userLocation, map]);
+  }, [onGetLocation, userLocation, map, hasValidMap]);
 
   return (
     <PinpointButton
