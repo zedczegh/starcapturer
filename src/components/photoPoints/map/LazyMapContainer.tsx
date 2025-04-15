@@ -8,12 +8,11 @@ import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
-import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
-import { MapEvents, WorldBoundsController } from './MapEffectsController';
-import PinpointButton from './PinpointButton';
+import { MapEvents } from './MapEffectsController';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
+import { getLocationId } from './markers/MarkerUtils';
 
 // Configure Leaflet before any map component renders
 configureLeaflet();
@@ -48,11 +47,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onLocationClick,
   onMapClick,
   zoom = 10,
-  hoveredLocationId,
-  onMarkerHover,
-  handleTouchStart,
-  handleTouchEnd,
-  handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
   showRadiusCircles = false
@@ -62,7 +56,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // Effect to find SIQS value of user's current location
+  // Find SIQS value of user's current location
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -81,7 +75,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation, locations]);
   
-  // Handler for when the map is ready
+  // Handler for map ready event
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
@@ -109,45 +103,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Get user's geolocation
-  const handleGetLocation = useCallback(() => {
-    if (onMapClick) {
-      getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onMapClick(latitude, longitude);
-          
-          if (mapRef.current) {
-            const leafletMap = mapRef.current;
-            leafletMap.setView([latitude, longitude], 12, {
-              animate: true,
-              duration: 1
-            });
-          }
-          
-          console.log("Got user position:", latitude, longitude);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-    }
-  }, [onMapClick]);
-  
-  // Effect to ensure map is properly sized and invalidate size on container resize
+  // Ensure map is properly sized on resize
   useEffect(() => {
     if (!mapRef.current) return;
     
     const map = mapRef.current;
     
-    // Handle window resize events to properly resize the map
     const handleResize = () => {
-      // Add a small delay to ensure the DOM has updated
       setTimeout(() => {
         if (map) map.invalidateSize();
       }, 100);
@@ -155,7 +117,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     
     window.addEventListener('resize', handleResize);
     
-    // Initial invalidateSize to prevent _leaflet_pos errors
+    // Initial invalidateSize
     setTimeout(() => {
       if (map) map.invalidateSize();
     }, 200);
@@ -219,22 +181,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           if (!location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-          const isHovered = hoveredLocationId === locationId;
+          const locationId = getLocationId(location);
           
           return (
             <LocationMarker
               key={locationId}
               location={location}
               onClick={handleLocationClick}
-              isHovered={isHovered}
-              onHover={onMarkerHover || (() => {})}
               locationId={locationId}
               isCertified={isCertified}
               activeView={activeView}
-              handleTouchStart={handleTouchStart}
-              handleTouchEnd={handleTouchEnd}
-              handleTouchMove={handleTouchMove}
             />
           );
         })}
