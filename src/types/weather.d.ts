@@ -58,5 +58,13 @@ declare module "@/types/weather" {
     };
     distance?: number;
     isViable?: boolean;
+    siqsFactors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+    certification?: string;
+    isDarkSkyReserve?: boolean;
   }
 }
+

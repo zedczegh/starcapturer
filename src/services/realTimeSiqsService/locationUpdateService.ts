@@ -112,7 +112,7 @@ async function updateLocationWithSiqs(
       ...location,
       siqs: result.siqs,
       isViable: result.isViable,
-      siqsFactors: result.factors
+      // Remove siqsFactors property as it's not in the SharedAstroSpot type
     };
   } catch (error) {
     console.error(`Error calculating SIQS for location:`, error);
@@ -129,3 +129,13 @@ export function clearSiqsCache(): void {
   siqsCache.clear();
   console.log(`SIQS cache cleared (${size} entries removed)`);
 }
+
+/**
+ * Clear the location cache
+ * This is an alias for clearSiqsCache for backward compatibility
+ */
+export function clearLocationCache(): void {
+  clearSiqsCache();
+  console.log("Location cache cleared via clearLocationCache alias");
+}
+
