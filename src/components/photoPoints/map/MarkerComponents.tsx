@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -16,8 +15,9 @@ import MarkerEventHandler from './MarkerEventHandler';
 import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
+// Helper function to determine if a location is a water spot
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
-  if (location.isDarkSkyReserve || location.certification) {
+  if (location.isDarkSkyReserve || location.certification || location.type === 'lodging') {
     return false;
   }
   
@@ -48,6 +48,7 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   return false;
 };
 
+// Get marker for location
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean) => {
   const sizeMultiplier = isMobile ? 1.2 : 1.0;
   
@@ -55,7 +56,7 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
     const certColor = getCertificationColor(location);
     return createCustomMarker(certColor, 'star', sizeMultiplier);
   } else {
-    const defaultColor = '#4ADE80';
+    const defaultColor = '#4ADE80'; // Bright green fallback
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
     return createCustomMarker(color, 'circle', sizeMultiplier);
   }
@@ -98,20 +99,23 @@ const LocationMarker = memo(({
   const siqsClass = getSiqsClass(location.siqs);
   
   const shouldRender = useMemo(() => {
-    // Always show certified locations in certified view
-    if (activeView === 'certified') {
-      return isCertified;
+    // Always show certified locations in all views
+    if (isCertified) {
+      return true;
     }
     
-    // For calculated view, show all locations but filter water spots
-    if (!isCertified) {
-      if (isWaterSpot(location)) {
-        return false;
-      }
-      
-      if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-        return false;
-      }
+    // For certified view, ONLY show certified locations
+    if (activeView === 'certified') {
+      return false;
+    }
+    
+    // For calculated view, filter water spots
+    if (isWaterSpot(location)) {
+      return false;
+    }
+    
+    if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+      return false;
     }
     
     return true;
@@ -120,6 +124,13 @@ const LocationMarker = memo(({
   const icon = useMemo(() => {
     return getLocationMarker(location, isCertified, isHovered, isMobile);
   }, [location, isCertified, isHovered, isMobile]);
+  
+  // For debugging
+  useEffect(() => {
+    if (isCertified) {
+      console.log(`Rendering certified location: ${location.name}, certification: ${location.certification || location.type}, shouldRender: ${shouldRender}`);
+    }
+  }, [location, isCertified, shouldRender]);
   
   const handleClick = useCallback(() => {
     onClick(location);
@@ -205,13 +216,6 @@ const LocationMarker = memo(({
     }
   }, [location, navigate]);
   
-  // For debugging
-  useEffect(() => {
-    if (isCertified) {
-      console.log(`Rendering certified location: ${location.name}, certification: ${location.certification}, shouldRender: ${shouldRender}`);
-    }
-  }, [location, isCertified, shouldRender]);
-  
   if (!shouldRender) {
     return null;
   }
@@ -254,10 +258,10 @@ const LocationMarker = memo(({
             <span className="text-gray-100">{displayName || t("Unnamed Location", "未命名位置")}</span>
           </div>
           
-          {isCertified && location.certification && (
+          {isCertified && (location.certification || location.type === 'lodging') && (
             <div className="mt-1 text-xs font-medium text-primary flex items-center">
               <Award className="h-3 w-3 mr-1" />
-              {location.certification}
+              {location.certification || (location.type === 'lodging' ? 'Dark Sky Lodging' : '')}
             </div>
           )}
           

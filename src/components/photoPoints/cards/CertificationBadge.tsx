@@ -26,7 +26,7 @@ const CertificationBadge: React.FC<CertificationBadgeProps> = ({
   const { language } = useLanguage();
   
   // If there's no certification, don't render anything
-  if (!certification && !isDarkSkyReserve) {
+  if (!certification && !isDarkSkyReserve && !type) {
     return null;
   }
   
@@ -50,7 +50,7 @@ export function getCertificationInfo({ certification, isDarkSkyReserve, type }: 
   isDarkSkyReserve?: boolean;
   type?: string;
 }): CertificationInfo | null {
-  if (!certification && !isDarkSkyReserve) {
+  if (!certification && !isDarkSkyReserve && !type) {
     return null;
   }
   
@@ -60,37 +60,37 @@ export function getCertificationInfo({ certification, isDarkSkyReserve, type }: 
     return {
       icon: Hotel,
       text: 'Dark Sky Lodging',
-      color: 'text-blue-900 border-blue-900/30 bg-blue-900/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('sanctuary') || cert.includes('reserve') || isDarkSkyReserve) {
     return {
       icon: Globe,
       text: 'Dark Sky Reserve',
-      color: 'text-blue-400 border-blue-400/30 bg-blue-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('park')) {
     return {
       icon: Trees,
       text: 'Dark Sky Park',
-      color: 'text-green-400 border-green-400/30 bg-green-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('community')) {
     return {
       icon: Building2,
       text: 'Dark Sky Community',
-      color: 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('urban')) {
     return {
       icon: Building2,
       text: 'Urban Night Sky',
-      color: 'text-purple-400 border-purple-400/30 bg-purple-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else {
     return {
       icon: ShieldCheck,
       text: 'Certified Location',
-      color: 'text-blue-300 border-blue-300/30 bg-blue-300/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   }
 }

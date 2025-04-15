@@ -49,8 +49,6 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
     return '#FFD700'; // Default gold
   }
   
-  const certification = (location.certification || '').toLowerCase();
-  
   // Use a consistent primary color for all certified locations for better UI
   return '#9b87f5'; // Primary purple for all certified locations
 };

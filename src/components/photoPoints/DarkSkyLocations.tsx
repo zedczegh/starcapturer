@@ -27,6 +27,7 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
     
     return locations.filter(location => {
       const certification = (location.certification || '').toLowerCase();
+      const locationType = (location.type || '').toLowerCase();
       
       switch (selectedCertificationType) {
         case 'reserve':
@@ -38,9 +39,11 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
         case 'community':
           return certification.includes('community');
         case 'urban':
-          return certification.includes('urban');
+          return certification.includes('urban') || 
+                 certification.includes('night sky place');
         case 'lodging':
-          return certification.includes('lodging');
+          return certification.includes('lodging') || 
+                 locationType === 'lodging';
         default:
           return true;
       }
