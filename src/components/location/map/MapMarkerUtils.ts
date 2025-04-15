@@ -28,62 +28,78 @@ export const configureLeaflet = () => {
 };
 
 /**
- * Create an SVG marker icon for the map
+ * Create a custom marker icon for the map
  * @param color - Color of the marker
- * @param shape - Shape of the marker (circle or star)
- * @param sizeMultiplier - Multiplier for marker size (useful for mobile)
- * @returns Leaflet DivIcon with the SVG marker
+ * @returns L.DivIcon instance or null during SSR
  */
-export const createCustomMarker = (
-  color: string = '#3b82f6', 
+export function createCustomMarker(
+  color: string = '#f43f5e', 
   shape: 'circle' | 'star' = 'circle',
   sizeMultiplier: number = 1.0
-): L.DivIcon => {
-  // Base size for markers, can be scaled for mobile devices
-  const baseSize = sizeMultiplier * 24;
-  const baseStrokeWidth = sizeMultiplier * 1.5;
+): L.DivIcon | null {
+  // Return null during SSR to prevent errors
+  if (typeof window === 'undefined') return null;
   
-  // Generate SVG based on shape
-  let svgContent = '';
-  
-  if (shape === 'star') {
-    // Star shape for certified locations
-    svgContent = `
-      <svg xmlns="http://www.w3.org/2000/svg" 
-        width="${baseSize}" height="${baseSize}" 
-        viewBox="0 0 24 24" 
-        fill="${color}" stroke="#FFFFFF" 
-        stroke-width="${baseStrokeWidth}" 
-        stroke-linecap="round" 
-        stroke-linejoin="round">
+  try {
+    const baseSize = 24 * sizeMultiplier;
+    let html = '';
+    
+    if (shape === 'star') {
+      // Star-shaped marker for certified locations
+      html = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24" fill="${color}" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-      </svg>
-    `;
-  } else {
-    // Circle shape for calculated locations
-    svgContent = `
-      <svg xmlns="http://www.w3.org/2000/svg" 
-        width="${baseSize}" height="${baseSize}" 
-        viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" 
-            fill="${color}" 
-            stroke="#FFFFFF" 
-            stroke-width="${baseStrokeWidth}" />
-      </svg>
-    `;
+        </svg>
+      `;
+    } else {
+      // Circle-shaped marker for calculated locations
+      html = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" fill="${color}" stroke="#FFFFFF" stroke-width="1.5" />
+        </svg>
+      `;
+    }
+
+    const icon = L.divIcon({
+      className: "custom-marker-icon",
+      iconAnchor: [baseSize/2, baseSize/2],
+      popupAnchor: [0, -baseSize/2],
+      html: html,
+      iconSize: [baseSize, baseSize]
+    });
+
+    return icon;
+  } catch (error) {
+    console.error("Error creating custom marker:", error);
+    // Return default icon as fallback
+    return new L.Icon.Default();
   }
+}
+
+/**
+ * Configure Leaflet default settings
+ * Avoids SSR issues by running only on client side
+ */
+export function configureLeaflet(): void {
+  if (typeof window === 'undefined') return;
   
-  // Calculate icon size with shadow/margin consideration
-  const iconSize = baseSize + (sizeMultiplier * 8);
-  
-  return L.divIcon({
-    html: svgContent,
-    className: 'custom-map-marker',
-    iconSize: [iconSize, iconSize],
-    iconAnchor: [iconSize/2, iconSize/2],
-    popupAnchor: [0, -(iconSize/2)]
-  });
-};
+  try {
+    // Only run this on the client side
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+  } catch (error) {
+    console.error("Error configuring Leaflet:", error);
+  }
+}
+
+// Call configure function immediately but only on client
+if (typeof window !== 'undefined') {
+  configureLeaflet();
+}
 
 /**
  * Format geo coordinates to a readable string

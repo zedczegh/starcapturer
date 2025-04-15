@@ -15,22 +15,20 @@ interface CertificationInfo {
 interface CertificationBadgeProps {
   certification?: string;
   isDarkSkyReserve?: boolean;
-  type?: string;
 }
 
 const CertificationBadge: React.FC<CertificationBadgeProps> = ({
   certification,
-  isDarkSkyReserve,
-  type
+  isDarkSkyReserve
 }) => {
   const { language } = useLanguage();
   
   // If there's no certification, don't render anything
-  if (!certification && !isDarkSkyReserve && !type) {
+  if (!certification && !isDarkSkyReserve) {
     return null;
   }
   
-  const certInfo = getCertificationInfo({ certification, isDarkSkyReserve, type });
+  const certInfo = getCertificationInfo({ certification, isDarkSkyReserve });
   
   if (!certInfo) return null;
   
@@ -45,18 +43,17 @@ const CertificationBadge: React.FC<CertificationBadgeProps> = ({
 };
 
 // Helper function to get certification info
-export function getCertificationInfo({ certification, isDarkSkyReserve, type }: { 
+export function getCertificationInfo({ certification, isDarkSkyReserve }: { 
   certification?: string; 
   isDarkSkyReserve?: boolean;
-  type?: string;
 }): CertificationInfo | null {
-  if (!certification && !isDarkSkyReserve && !type) {
+  if (!certification && !isDarkSkyReserve) {
     return null;
   }
   
   const cert = (certification || '').toLowerCase();
   
-  if (cert.includes('lodging') || type === 'lodging') {
+  if (cert.includes('lodging')) {
     return {
       icon: Hotel,
       text: 'Dark Sky Lodging',
