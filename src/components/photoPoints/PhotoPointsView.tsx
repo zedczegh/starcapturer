@@ -99,16 +99,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
-  // Console output for debugging
+  // Debugging outputs
   useEffect(() => {
-    console.log(`PhotoPointsView - Certified locations count: ${certifiedLocations?.length || 0}`);
-    console.log(`PhotoPointsView - Active view: ${activeView}`);
-    
-    if (certifiedLocations?.length > 0) {
-      // Log a sample of certified locations for debugging
-      console.log(`Sample certified location: ${JSON.stringify(certifiedLocations[0])}`);
-    }
-  }, [certifiedLocations, activeView]);
+    console.log(`PhotoPointsView rendering`);
+    console.log(`- Active view: ${activeView}`);
+    console.log(`- Certified locations: ${certifiedLocations?.length || 0}`);
+    console.log(`- Calculated locations: ${calculatedLocations?.length || 0}`);
+    console.log(`- Show map: ${showMap}`);
+    console.log(`- Search radius: ${searchRadius}`);
+  }, [activeView, certifiedLocations, calculatedLocations, showMap, searchRadius]);
   
   // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
@@ -130,7 +129,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
-            searchRadius={searchRadius}
+            searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
             onLocationClick={handleLocationClick}
             onLocationUpdate={onLocationUpdate}
           />

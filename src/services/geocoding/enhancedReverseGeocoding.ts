@@ -1,7 +1,7 @@
-
 import { Language } from './types';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { formatDistance } from '@/utils/location/formatDistance';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 /**
  * Enhanced response from reverse geocoding including detailed address components
@@ -21,6 +21,7 @@ export interface EnhancedLocationDetails {
   latitude: number;
   longitude: number;
   detailedName?: string;
+  isWater?: boolean; // Flag to indicate if location is in water
 }
 
 /**
@@ -36,6 +37,7 @@ interface GeocodeCache {
 // In-memory cache to prevent excessive API calls
 const geocodeCache: GeocodeCache = {};
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_CACHE_ENTRIES = 100; // Limit cache size for performance
 
 /**
  * Normalize coordinates for consistent lookup and caching
@@ -56,6 +58,7 @@ function generateCacheKey(latitude: number, longitude: number, language: Languag
 
 /**
  * Format address components based on language preferences
+ * Optimized for performance
  */
 function formatAddressComponents(
   components: Record<string, string>,
@@ -79,16 +82,57 @@ function formatAddressComponents(
     }
   }
   
-  // Remove duplicates while preserving order
-  const uniqueParts = [...new Set(parts)];
+  // Remove duplicates while preserving order - using Set for performance
+  const seenValues = new Set<string>();
+  const uniqueParts = parts.filter(part => {
+    if (seenValues.has(part)) return false;
+    seenValues.add(part);
+    return true;
+  });
   
   // Join with appropriate separator
   return uniqueParts.join(language === 'en' ? ', ' : '');
 }
 
 /**
+ * Cleanup old entries from cache to prevent memory leaks
+ */
+function cleanupCache(): void {
+  const now = Date.now();
+  const cacheKeys = Object.keys(geocodeCache);
+  
+  // If cache is within limits, just check for expired entries
+  if (cacheKeys.length <= MAX_CACHE_ENTRIES) {
+    for (const key of cacheKeys) {
+      if (now - geocodeCache[key].timestamp > CACHE_EXPIRY) {
+        delete geocodeCache[key];
+      }
+    }
+    return;
+  }
+  
+  // If cache exceeds max size, sort by timestamp and keep only most recent
+  const keysByAge = cacheKeys
+    .map(key => ({ key, timestamp: geocodeCache[key].timestamp }))
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, MAX_CACHE_ENTRIES - 10) // Keep 10 fewer than max to avoid frequent cleanup
+    .map(item => item.key);
+  
+  // Create new cache with only the keys we want to keep
+  const newCache: GeocodeCache = {};
+  keysByAge.forEach(key => {
+    newCache[key] = geocodeCache[key];
+  });
+  
+  // Replace cache with cleaned version
+  Object.keys(geocodeCache).forEach(key => delete geocodeCache[key]);
+  Object.assign(geocodeCache, newCache);
+}
+
+/**
  * Enhanced reverse geocoding service that combines multiple data sources
- * to get detailed address information from coordinates
+ * to get detailed address information from coordinates.
+ * Optimized for faster response times and better water detection.
  */
 export async function getEnhancedLocationDetails(
   latitude: number,
@@ -104,12 +148,14 @@ export async function getEnhancedLocationDetails(
     const [normalizedLat, normalizedLng] = normalizeCoordinates(latitude, longitude);
     const cacheKey = generateCacheKey(normalizedLat, normalizedLng, language);
     
-    // Check cache first
+    // Check cache first for fast response
     const now = Date.now();
     if (geocodeCache[cacheKey] && (now - geocodeCache[cacheKey].timestamp < CACHE_EXPIRY)) {
-      console.log(`Using cached geocoding data for ${normalizedLat}, ${normalizedLng}`);
       return geocodeCache[cacheKey].data;
     }
+    
+    // Check for water location first to avoid unnecessary API calls
+    const isWater = isWaterLocation(normalizedLat, normalizedLng);
     
     // Get nearest town info from our internal database first
     const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
@@ -125,74 +171,100 @@ export async function getEnhancedLocationDetails(
       formattedDistance: nearestTownInfo.formattedDistance,
       detailedName: nearestTownInfo.detailedName,
       latitude: normalizedLat,
-      longitude: normalizedLng
+      longitude: normalizedLng,
+      isWater // Add water flag
     };
     
-    // Try to enhance with OpenStreetMap Nominatim API for more detailed data like street names
-    try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${normalizedLat}&lon=${normalizedLng}&format=json&accept-language=${language}`;
-      
-      const response = await fetch(nominatimUrl, {
-        headers: {
-          'User-Agent': 'AstroSpotApp/1.0'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+    // Only make API call if not a water location
+    if (!isWater) {
+      try {
+        // Setup promise with timeout to avoid long-running requests
+        const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number) => {
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), timeout);
+          
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          });
+          
+          clearTimeout(id);
+          return response;
+        };
         
-        if (data.address) {
-          const addressComponents: Record<string, string> = {};
-          const address = data.address;
+        const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?lat=${normalizedLat}&lon=${normalizedLng}&format=json&accept-language=${language}`;
+        
+        const response = await fetchWithTimeout(
+          nominatimUrl, 
+          {
+            headers: {
+              'User-Agent': 'AstroSpotApp/1.0'
+            }
+          },
+          3000 // 3 second timeout for faster response
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
           
-          // Extract address components
-          if (address.road || address.pedestrian || address.footway) {
-            addressComponents.street = address.road || address.pedestrian || address.footway;
-          }
-          
-          if (address.village || address.town || address.suburb || address.hamlet) {
-            addressComponents.town = address.village || address.town || address.suburb || address.hamlet;
-          }
-          
-          if (address.city) {
-            addressComponents.city = address.city;
-          }
-          
-          if (address.county) {
-            addressComponents.county = address.county;
-          }
-          
-          if (address.state) {
-            addressComponents.state = address.state;
-          }
-          
-          if (address.country) {
-            addressComponents.country = address.country;
-          }
-          
-          if (address.postcode) {
-            addressComponents.postcode = address.postcode;
-          }
-          
-          // Update our result with the enhanced data
-          result.streetName = addressComponents.street;
-          result.townName = addressComponents.town || result.townName;
-          result.cityName = addressComponents.city || result.cityName;
-          result.countyName = addressComponents.county || result.countyName;
-          result.stateName = addressComponents.state;
-          result.countryName = addressComponents.country;
-          result.postalCode = addressComponents.postcode;
-          
-          // Generate a better formatted name with the detailed components
-          const formattedName = formatAddressComponents(addressComponents, language);
-          if (formattedName) {
-            result.formattedName = formattedName;
+          if (data.address) {
+            const addressComponents: Record<string, string> = {};
+            const address = data.address;
+            
+            // Extract address components - with faster property access
+            if (address.road || address.pedestrian || address.footway) {
+              addressComponents.street = address.road || address.pedestrian || address.footway;
+            }
+            
+            if (address.village || address.town || address.suburb || address.hamlet) {
+              addressComponents.town = address.village || address.town || address.suburb || address.hamlet;
+            }
+            
+            if (address.city) {
+              addressComponents.city = address.city;
+            }
+            
+            if (address.county) {
+              addressComponents.county = address.county;
+            }
+            
+            if (address.state) {
+              addressComponents.state = address.state;
+            }
+            
+            if (address.country) {
+              addressComponents.country = address.country;
+            }
+            
+            if (address.postcode) {
+              addressComponents.postcode = address.postcode;
+            }
+            
+            // Update our result with the enhanced data
+            result.streetName = addressComponents.street;
+            result.townName = addressComponents.town || result.townName;
+            result.cityName = addressComponents.city || result.cityName;
+            result.countyName = addressComponents.county || result.countyName;
+            result.stateName = addressComponents.state;
+            result.countryName = addressComponents.country;
+            result.postalCode = addressComponents.postcode;
+            
+            // Generate a better formatted name with the detailed components
+            const formattedName = formatAddressComponents(addressComponents, language);
+            if (formattedName) {
+              result.formattedName = formattedName;
+            }
           }
         }
+      } catch (error) {
+        console.warn("Error enhancing location with Nominatim API:", error);
+        // Continue with what we have from our database
       }
-    } catch (error) {
-      console.warn("Error enhancing location with Nominatim API:", error);
-      // Continue with what we have from our database
+    } else {
+      // Override name for water locations
+      result.formattedName = language === 'en' ? 
+        `Water location near ${result.formattedName}` : 
+        `水域位置 靠近 ${result.formattedName}`;
     }
     
     // Cache the result
@@ -200,6 +272,11 @@ export async function getEnhancedLocationDetails(
       timestamp: now,
       data: result
     };
+    
+    // Periodically clean up cache
+    if (Object.keys(geocodeCache).length > MAX_CACHE_ENTRIES) {
+      cleanupCache();
+    }
     
     return result;
   } catch (error) {
@@ -214,13 +291,15 @@ export async function getEnhancedLocationDetails(
         `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 
         `位置 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
       latitude,
-      longitude
+      longitude,
+      isWater: isWaterLocation(latitude, longitude)
     };
   }
 }
 
 /**
  * Additional utility to get street-level location information
+ * with faster execution time
  */
 export async function getStreetLevelLocation(
   latitude: number,
@@ -229,6 +308,7 @@ export async function getStreetLevelLocation(
 ): Promise<{
   streetName?: string;
   fullAddress: string;
+  isWater: boolean;
 }> {
   // Get the enhanced location details
   const details = await getEnhancedLocationDetails(latitude, longitude, language);
@@ -236,6 +316,7 @@ export async function getStreetLevelLocation(
   // Return a structured response focusing on street-level details
   return {
     streetName: details.streetName,
-    fullAddress: details.formattedName
+    fullAddress: details.formattedName,
+    isWater: details.isWater || false
   };
 }

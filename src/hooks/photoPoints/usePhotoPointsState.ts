@@ -32,7 +32,7 @@ export const usePhotoPointsState = () => {
     }
   }, [currentPosition]);
 
-  // Default calculated search radius set to 500km
+  // Default calculated search radius set to 500km exactly as requested
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState(500);
   
   // Determine the current search radius based on active view

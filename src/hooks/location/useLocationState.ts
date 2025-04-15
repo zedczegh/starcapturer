@@ -17,15 +17,17 @@ export const useLocationState = () => {
     getPosition
   } = useGeolocation();
   
-  // When geolocation updates, sync with effective location
+  // When geolocation updates, sync with effective location - only on initial load
   useEffect(() => {
-    if (currentPosition) {
+    if (currentPosition && !effectiveLocation) {
       setEffectiveLocation({
         latitude: currentPosition.latitude,
         longitude: currentPosition.longitude
       });
+      
+      console.log(`Initial location set from geolocation: ${currentPosition.latitude}, ${currentPosition.longitude}`);
     }
-  }, [currentPosition]);
+  }, [currentPosition, effectiveLocation]);
   
   // Handle location update from map or other sources
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {

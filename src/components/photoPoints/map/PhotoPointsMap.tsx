@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
@@ -49,6 +49,16 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
+  // Determine which locations to display based on active view
+  const locationsToShow = useMemo(() => {
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    } else {
+      // For calculated view, include both certified and calculated locations
+      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)] as SharedAstroSpot[];
+    }
+  }, [activeView, certifiedLocations, calculatedLocations]);
+  
   // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
     mapReady,
@@ -61,7 +71,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
+    locations: locationsToShow,
     searchRadius,
     activeView
   });
@@ -72,13 +82,20 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   const optimizedLocations = useMemo(() => {
     // If no valid locations available, return empty array
     if (!validLocations || validLocations.length === 0) {
+      console.log("No valid locations to display");
       return [];
     }
 
-    if (!isMobile) return validLocations;
+    if (!isMobile) {
+      console.log(`Displaying all ${validLocations.length} locations (desktop)`);
+      return validLocations;
+    }
     
     // For mobile, limit the number of displayed locations
-    if (validLocations.length <= 30) return validLocations;
+    if (validLocations.length <= 30) {
+      console.log(`Displaying all ${validLocations.length} locations (mobile, under limit)`);
+      return validLocations;
+    }
     
     // Always keep certified locations
     const certified = validLocations.filter(loc => 
@@ -91,6 +108,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
       .slice(0, 50); // Hard limit for performance
     
+    console.log(`Optimized for mobile: ${certified.length} certified + ${nonCertified.length} calculated locations`);
     return [...certified, ...nonCertified];
   }, [validLocations, isMobile, activeView]);
   
@@ -197,7 +215,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           showStarLegend={activeView === 'certified'}
           showCircleLegend={activeView === 'calculated'}
           onToggle={handleLegendToggle}
-          className="absolute bottom-4 right-4"
+          className="absolute top-4 right-4 z-[999]"
         />
       )}
       
@@ -205,7 +223,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       <CenteringPinpointButton
         onGetLocation={handleGetLocation}
         userLocation={userLocation}
-        className="absolute top-4 right-4 z-[999]"
+        className="absolute top-4 right-16 z-[999]"
       />
     </div>
   );

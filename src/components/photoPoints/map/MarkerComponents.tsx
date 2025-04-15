@@ -1,65 +1,21 @@
 
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup, useMap } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
-import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
-import { prepareLocationForNavigation } from '@/utils/locationNavigation';
-
-const isWaterSpot = (location: SharedAstroSpot): boolean => {
-  if (location.isDarkSkyReserve || location.certification) {
-    return false;
-  }
-  
-  if (isWaterLocation(location.latitude, location.longitude, false)) {
-    return true;
-  }
-  
-  if (isLikelyCoastalWater(location.latitude, location.longitude)) {
-    return true;
-  }
-  
-  if (location.name) {
-    const lowerName = location.name.toLowerCase();
-    const waterKeywords = [
-      'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
-      'channel', 'sound', 'harbor', 'harbour', 'port', 
-      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
-    ];
-    
-    for (const keyword of waterKeywords) {
-      if (lowerName.includes(keyword)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
-};
-
-const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean) => {
-  const sizeMultiplier = isMobile ? 1.2 : 1.0;
-  
-  if (isCertified) {
-    const certColor = getCertificationColor(location);
-    return createCustomMarker(certColor, 'star', sizeMultiplier);
-  } else {
-    const defaultColor = '#4ADE80';
-    const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
-    return createCustomMarker(color, 'circle', sizeMultiplier);
-  }
-};
+import { formatDistance } from '@/utils/geoUtils';
+import { 
+  getSiqsClass, 
+  getLocationMarker, 
+  isWaterSpot, 
+  isValidAstronomyLocation
+} from './MarkerUtils';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -97,17 +53,26 @@ const LocationMarker = memo(({
       : location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
-  const siqsClass = getSiqsClass(location.siqs);
+  // Fix TS error by safely handling null siqsScore
+  const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
+    (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
   
+  const siqsClass = getSiqsClass(siqsScore);
+  
+  // Don't show certified locations in calculated view unless they are actively displayed
   const shouldRender = useMemo(() => {
-    if (isCertified) {
-      return true;
-    }
-    
+    // In certified view, only show certified locations
     if (activeView === 'certified') {
-      return false;
+      return isCertified;
     }
     
+    // In calculated view...
+    // Always show certified locations if the location is certified
+    if (isCertified) {
+      return true; 
+    }
+    
+    // For non-certified locations, filter out water
     if (isWaterSpot(location)) {
       return false;
     }
@@ -152,6 +117,10 @@ const LocationMarker = memo(({
   const goToLocationDetails = useCallback(() => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
+    // Handle the siqs value safely
+    const siqsScore = location.siqs !== undefined && location.siqs !== null ?
+      (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
+    
     const navigationData = {
       id: locationId,
       name: location.name || 'Unnamed Location',
@@ -164,9 +133,9 @@ const LocationMarker = memo(({
       fromPhotoPoints: true,
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
-      siqsResult: (location.siqs) ? { 
-        score: location.siqs,
-        isViable: location.siqs >= 2
+      siqsResult: location.siqs ? { 
+        score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
+        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : (siqsScore !== null && siqsScore >= 2)
       } : undefined
     };
     
@@ -187,6 +156,7 @@ const LocationMarker = memo(({
     onHover(null);
   }, [onHover]);
   
+  // Touch event handlers
   const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
     if (handleTouchStart) {
       handleTouchStart(e, locationId);
@@ -255,9 +225,9 @@ const LocationMarker = memo(({
           )}
           
           <div className="mt-2 flex items-center justify-between">
-            {location.siqs !== undefined && (
+            {location.siqs !== undefined && location.siqs !== null && (
               <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={location.siqs} compact={true} />
+                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : location.siqs.score} compact={true} />
               </div>
             )}
             
@@ -295,7 +265,8 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
+  // Directly import createCustomMarker to avoid require
+  const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
