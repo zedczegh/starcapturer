@@ -1,8 +1,4 @@
 
-/**
- * Utility functions for creating map markers and icons
- * These functions help with marker creation and customization
- */
 import L from 'leaflet';
 
 /**
@@ -13,9 +9,9 @@ export const configureLeaflet = () => {
   delete L.Icon.Default.prototype._getIconUrl;
   
   L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
   
   // Configure performance optimizations when running on mobile
@@ -76,26 +72,6 @@ export function createCustomMarker(
   }
 }
 
-/**
- * Configure Leaflet default settings
- * Avoids SSR issues by running only on client side
- */
-export function configureLeaflet(): void {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    // Only run this on the client side
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
-  } catch (error) {
-    console.error("Error configuring Leaflet:", error);
-  }
-}
-
 // Call configure function immediately but only on client
 if (typeof window !== 'undefined') {
   configureLeaflet();
@@ -110,3 +86,4 @@ if (typeof window !== 'undefined') {
 export const formatCoordinates = (lat: number, lng: number): string => {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 };
+
