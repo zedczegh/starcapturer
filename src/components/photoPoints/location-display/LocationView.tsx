@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import EmptyLocationDisplay from '../EmptyLocationDisplay';
 import LocationsList from '../LocationsList';
 import { Loader2 } from 'lucide-react';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface LocationViewProps {
   locations: SharedAstroSpot[];
@@ -24,6 +25,8 @@ const LocationView: React.FC<LocationViewProps> = ({
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const locationsPerPage = 10;
   
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
@@ -81,13 +84,57 @@ const LocationView: React.FC<LocationViewProps> = ({
     navigate(`/location/${locationId}`, { state: locationState });
   };
   
+  // Calculate pagination values
+  const totalPages = Math.ceil(locations.length / locationsPerPage);
+  const indexOfLastLocation = currentPage * locationsPerPage;
+  const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
+  const currentLocations = locations.slice(indexOfFirstLocation, indexOfLastLocation);
+  
   return (
-    <LocationsList 
-      locations={locations}
-      loading={loading}
-      initialLoad={initialLoad}
-      onViewDetails={handleViewLocation}
-    />
+    <div className="space-y-6">
+      <LocationsList 
+        locations={currentLocations}
+        loading={loading}
+        initialLoad={initialLoad}
+        onViewDetails={handleViewLocation}
+      />
+      
+      {totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            {currentPage > 1 && (
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  aria-label={t("Previous page", "上一页")}
+                />
+              </PaginationItem>
+            )}
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <PaginationItem key={page}>
+                <PaginationLink
+                  isActive={page === currentPage}
+                  onClick={() => setCurrentPage(page)}
+                  aria-label={t(`Page ${page}`, `第${page}页`)}
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
+            {currentPage < totalPages && (
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  aria-label={t("Next page", "下一页")}
+                />
+              </PaginationItem>
+            )}
+          </PaginationContent>
+        </Pagination>
+      )}
+    </div>
   );
 };
 
