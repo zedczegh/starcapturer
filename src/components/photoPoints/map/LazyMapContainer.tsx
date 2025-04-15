@@ -166,7 +166,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         zoom={getDefaultZoom()}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={!isMobile}
-        doubleClickZoom={!isMobile}
+        // Remove doubleClickZoom prop from MapContainer as it's not in the type definition
+        // Instead, we'll handle this in the MapController component
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
@@ -241,6 +242,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         <MapController 
           userLocation={userLocation} 
           searchRadius={searchRadius}
+          doubleClickZoom={!isMobile} // Move doubleClickZoom control to MapController
         />
       </MapContainer>
     </div>
