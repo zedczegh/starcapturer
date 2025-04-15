@@ -5,7 +5,7 @@ import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 // Default radius constants
-const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
+const DEFAULT_CALCULATED_RADIUS = 500; // Updated from 100km to 500km for calculated locations
 const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
 
 export function usePhotoPointsState() {
@@ -29,14 +29,15 @@ export function usePhotoPointsState() {
   const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
+  const [disableAutoRefresh, setDisableAutoRefresh] = useState(false);
   
   // Refs for handling view changes
   const isViewChangeInProgress = useRef(false);
   const viewChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Try to get position on mount
+  // Try to get position on mount but only if no manual override exists
   useEffect(() => {
-    if (!coords && locationLoadAttempts < 3) {
+    if (!coords && locationLoadAttempts < 3 && !manualLocationOverride) {
       console.log("Getting user position, attempt:", locationLoadAttempts + 1);
       const timeoutId = setTimeout(() => {
         getPosition();
@@ -45,9 +46,9 @@ export function usePhotoPointsState() {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [getPosition, coords, locationLoadAttempts]);
+  }, [getPosition, coords, locationLoadAttempts, manualLocationOverride]);
   
-  // Update user location when coordinates are available
+  // Update user location when coordinates are available but only if not manually overridden
   useEffect(() => {
     if (coords && !manualLocationOverride) {
       const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
@@ -147,11 +148,13 @@ export function usePhotoPointsState() {
     
     setManualLocationOverride(newLocation);
     setUserLocation(newLocation);
+    setDisableAutoRefresh(true); // Disable auto-refresh when user manually updates location
     
     try {
       localStorage.setItem('userLocation', JSON.stringify(newLocation));
       clearLocationCache();
       console.log("Updated user location from map click:", newLocation);
+      console.log("Auto-refresh disabled due to manual location update");
     } catch (err) {
       console.error("Error handling location update:", err);
     }
@@ -159,6 +162,8 @@ export function usePhotoPointsState() {
 
   const handleResetLocation = useCallback(() => {
     setManualLocationOverride(null);
+    setDisableAutoRefresh(false); // Re-enable auto-refresh when user resets to current location
+    
     if (coords) {
       const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
       setUserLocation(newLocation);
@@ -180,6 +185,7 @@ export function usePhotoPointsState() {
     effectiveLocation,
     calculatedSearchRadius,
     currentSearchRadius,
+    disableAutoRefresh,
     
     setActiveView,
     toggleMapView,
