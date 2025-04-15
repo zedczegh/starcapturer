@@ -227,6 +227,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       />
     </div>
   );
-});
+};
 
 export default PhotoPointsMap;
