@@ -18,8 +18,9 @@ export {
   cleanupExpiredCache
 };
 
-// Helper function to clear the location cache for external use
+// Helper function to clear all caches for external use
 export function clearLocationCache(): void {
   clearSiqsCache();
-  console.log("Location cache cleared");
+  cleanupExpiredCache();
+  console.log("All location caches cleared");
 }
