@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { createCustomMarker } from './MapMarkerUtils';
+import { createCustomMarker, getFastTileLayer } from './MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Fix Leaflet icon issue
@@ -154,6 +154,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
+  // Get optimized tile layer
+  const { url: tileUrl, attribution } = getFastTileLayer();
+  
   // Call the onMapReady callback when the component mounts
   useEffect(() => {
     onMapReady();
@@ -192,7 +195,12 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     inertiaDeceleration: isMobile ? 2000 : 3000,
     // Smoothness settings
     wheelDebounceTime: isMobile ? 40 : 80,
-    zoomSnap: isMobile ? 0.5 : 1
+    zoomSnap: isMobile ? 0.5 : 1,
+    // Performance improvements
+    preferCanvas: true,
+    renderer: L.canvas(),
+    // Reduce unnecessary tile loading
+    worldCopyJump: true,
   };
   
   return (
@@ -202,8 +210,13 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       whenReady={() => onMapReady()}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={attribution}
+        url={tileUrl}
+        updateWhenZooming={false}
+        updateWhenIdle={true}
+        tileSize={256}
+        maxZoom={19}
+        keepBuffer={isMobile ? 1 : 2}
       />
       <Marker position={position} icon={markerIcon}>
         <Popup>

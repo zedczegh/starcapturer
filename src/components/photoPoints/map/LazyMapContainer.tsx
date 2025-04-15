@@ -6,7 +6,7 @@ import './MarkerStyles.css';
 import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
+import { configureLeaflet, getFastTileLayer } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
@@ -60,6 +60,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Get the optimized tile layer
+  const { url: tileUrl, attribution } = getFastTileLayer();
   
   // Ensure stable references to prevent unnecessary re-renders
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
@@ -145,10 +148,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
         attributionControl={true}
+        preferCanvas={true}
+        renderer={L.canvas()}
+        worldCopyJump={true}
+        bounceAtZoomLimits={!isMobile}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={attribution}
+          url={tileUrl}
+          updateWhenZooming={false}
+          updateWhenIdle={true}
+          maxZoom={19}
+          keepBuffer={isMobile ? 1 : 2}
         />
         
         {showRadiusCircles && userLocation && (

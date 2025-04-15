@@ -29,6 +29,14 @@ export const configureLeaflet = () => {
     L.Map.prototype.options.preferCanvas = true;
     L.Map.prototype.options.renderer = L.canvas();
   }
+  
+  // Optimize tile loading globally
+  L.TileLayer.prototype.options.updateWhenIdle = true;
+  L.TileLayer.prototype.options.updateWhenZooming = false;
+  L.TileLayer.prototype.options.updateInterval = 150;
+  
+  // Reduce tile load requests when moving
+  L.GridLayer.prototype.options.keepBuffer = isMobile ? 1 : 2;
 };
 
 /**
@@ -107,4 +115,16 @@ if (typeof window !== 'undefined') {
  */
 export const formatCoordinates = (lat: number, lng: number): string => {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+};
+
+/**
+ * Get a faster tile URL by using a CDN and adjusting attribution
+ * @returns Optimized tile URL and attribution
+ */
+export const getFastTileLayer = (): {url: string, attribution: string} => {
+  // Use a faster tile server with better worldwide distribution
+  const fastTileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  
+  return { url: fastTileUrl, attribution };
 };

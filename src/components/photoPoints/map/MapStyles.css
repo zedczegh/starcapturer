@@ -100,3 +100,47 @@
     backdrop-filter: blur(2px);
   }
 }
+
+/* Tile loading optimization */
+.leaflet-tile {
+  visibility: hidden;
+}
+
+.leaflet-tile-loaded {
+  visibility: visible;
+  /* Disable fade-in animation for performance */
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* Reduce DOM repaints when loading tiles */
+.leaflet-tile-container {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Improve performance by reducing the number of layers */
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
+/* Optimize panning performance */
+.leaflet-container {
+  transform-origin: 0 0;
+}
+
+/* Optimize for mobile devices */
+@media (max-width: 768px) {
+  .leaflet-container {
+    /* Mobile-specific optimizations */
+    touch-action: manipulation;
+  }
+  
+  /* Disable complex shadows on mobile */
+  .leaflet-popup-tip-container,
+  .leaflet-popup-tip {
+    box-shadow: none !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  }
+}
