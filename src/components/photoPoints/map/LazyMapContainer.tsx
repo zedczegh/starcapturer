@@ -62,6 +62,27 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
+  // Ensure stable references to prevent unnecessary re-renders
+  const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
+    }
+  }, [onLocationClick]);
+  
+  const stableOnMapClick = useCallback((lat: number, lng: number) => {
+    if (onMapClick) {
+      onMapClick(lat, lng);
+      console.log("Map clicked, updating location to:", lat, lng);
+    }
+  }, [onMapClick]);
+  
+  const handleSiqsCalculated = useCallback((siqs: number) => {
+    setCurrentSiqs(siqs);
+  }, []);
+  
+  // Ensure userLocation is always passed as a stable reference
+  const safeUserLocation = userLocation || null;
+  
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -86,19 +107,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       onMapReady();
     }
   }, [onMapReady]);
-  
-  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    }
-  }, [onLocationClick]);
-  
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onMapClick) {
-      onMapClick(lat, lng);
-      console.log("Map clicked, updating location to:", lat, lng);
-    }
-  }, [onMapClick]);
   
   const handleGetLocation = useCallback(() => {
     if (onMapClick) {
@@ -178,15 +186,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {/* Fixed: Removed center and zoom props */}
         <MapEffectsComposer 
-          userLocation={userLocation}
+          userLocation={safeUserLocation}
           activeView={activeView}
           searchRadius={searchRadius}
-          onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
+          onSiqsCalculated={handleSiqsCalculated}
         />
         
-        <MapEvents onMapClick={handleMapClick} />
+        <MapEvents onMapClick={stableOnMapClick} />
         
         {userLocation && (
           <UserLocationMarker 
@@ -206,7 +213,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             <LocationMarker
               key={locationId}
               location={location}
-              onClick={handleLocationClick}
+              onClick={stableOnLocationClick}
               isHovered={isHovered}
               onHover={onMarkerHover || (() => {})}
               locationId={locationId}
@@ -220,7 +227,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         })}
         
         <MapController 
-          userLocation={userLocation} 
+          userLocation={safeUserLocation} 
           searchRadius={searchRadius}
         />
         

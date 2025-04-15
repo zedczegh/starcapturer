@@ -19,19 +19,21 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
 }) => {
   // State to track if we have a valid map reference
   const [hasValidMap, setHasValidMap] = useState(false);
-  let map: any = null;
+  const [mapRef, setMapRef] = useState<any>(null);
   
   // Always call useMap, but handle the error if not in a MapContainer context
   try {
-    map = useMap();
-    // Set state indicating we have a valid map reference
+    const map = useMap();
+    // Store map reference and set valid state
     useEffect(() => {
+      setMapRef(map);
       setHasValidMap(true);
-    }, []);
+    }, [map]);
   } catch (error) {
     // If not in a MapContainer context, we'll just handle it gracefully
     useEffect(() => {
       console.log("CenteringPinpointButton not used within MapContainer context");
+      setMapRef(null);
       setHasValidMap(false);
     }, []);
   }
@@ -41,19 +43,19 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
     onGetLocation();
     
     // Only attempt to center the map if we have a valid map reference
-    if (hasValidMap && map && userLocation) {
+    if (hasValidMap && mapRef && userLocation) {
       // Add a short delay to let the location update before centering
       setTimeout(() => {
-        if (userLocation && map) {
+        if (userLocation && mapRef) {
           // Center map on user location after pinpoint button is clicked
-          map.setView([userLocation.latitude, userLocation.longitude], map.getZoom(), {
+          mapRef.setView([userLocation.latitude, userLocation.longitude], mapRef.getZoom(), {
             animate: true,
             duration: 1
           });
         }
       }, 300);
     }
-  }, [onGetLocation, userLocation, map, hasValidMap]);
+  }, [onGetLocation, userLocation, mapRef, hasValidMap]);
 
   return (
     <PinpointButton

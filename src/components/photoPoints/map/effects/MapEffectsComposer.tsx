@@ -23,20 +23,22 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   // Always call useMap
   const map = useMap();
   
+  // Ensure stable rendering of children to prevent hook inconsistencies
+  const shouldRenderSiqsEffects = Boolean(userLocation);
+  
   return (
     <>
       {/* Apply world bounds limit with more forgiving bounds */}
       <WorldBoundsController />
       
-      {/* Apply SIQS-specific effects if userLocation is available */}
-      {userLocation ? (
-        <SiqsEffectsController 
-          userLocation={userLocation}
-          activeView={activeView}
-          searchRadius={searchRadius}
-          onSiqsCalculated={onSiqsCalculated}
-        />
-      ) : null}
+      {/* Always render SiqsEffectsController but pass null props when needed */}
+      <SiqsEffectsController 
+        userLocation={userLocation || null}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        onSiqsCalculated={onSiqsCalculated}
+        disabled={!shouldRenderSiqsEffects}
+      />
     </>
   );
 };
