@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -7,6 +8,7 @@ import {
   mergeLocations 
 } from '@/utils/locationFiltering';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isValidAstronomyLocation } from '@/utils/locationValidator';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -50,9 +52,18 @@ export const useMapLocations = ({
     // Use a Map for more efficient lookups compared to array
     const newLocationsMap = new Map<string, SharedAstroSpot>();
     
-    // Add all current locations to the map
+    // Add all current locations to the map, filtering out water locations for calculated spots
     locations.forEach(loc => {
       if (loc.latitude && loc.longitude) {
+        // Only perform water check for calculated locations
+        const isCertified = loc.isDarkSkyReserve || loc.certification;
+        
+        // Skip water locations (only for calculated spots)
+        if (!isCertified && !isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+          console.log(`Skipping water location at ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`);
+          return;
+        }
+        
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         newLocationsMap.set(key, loc as SharedAstroSpot);
       }
@@ -73,7 +84,7 @@ export const useMapLocations = ({
             );
             
             // Filter out locations outside search radius or in water
-            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
+            if (distance <= searchRadius && isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
               newLocationsMap.set(key, loc as SharedAstroSpot);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {

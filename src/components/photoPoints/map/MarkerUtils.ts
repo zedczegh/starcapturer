@@ -3,11 +3,10 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import { getSafeScore as geoUtilsGetSafeScore } from '@/utils/geoUtils';
 import L from 'leaflet';
-import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 // Re-export the getSafeScore function from geoUtils for consistency
-export const getSafeScore = (siqs?: number | { score: number; isViable: boolean } | null): number => {
+export const getSafeScore = (siqs?: number | null): number => {
   return geoUtilsGetSafeScore(siqs);
 };
 
@@ -51,17 +50,15 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
  */
 export const isLikelyCoastalWater = (latitude: number, longitude: number): boolean => {
   // Simple implementation without require
-  const isLikely = longitude > -10 && longitude < 40 && 
-                  latitude > 30 && latitude < 60;
-  return false; // Simplified version to avoid require
+  return false; // Simplified version to avoid requiring external data
 };
 
 /**
  * Check if a location is valid for astronomy
  */
 export const isValidAstronomyLocation = (latitude: number, longitude: number, name?: string): boolean => {
-  // Simple implementation without require
-  return true; // Default to true to avoid require
+  // Simple implementation to avoid circular dependencies
+  return !isWaterLocation(latitude, longitude, false);
 };
 
 /**

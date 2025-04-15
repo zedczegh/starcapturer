@@ -1,6 +1,7 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
-import { isWaterLocation } from "@/utils/locationValidator";
+import { isValidAstronomyLocation } from "@/utils/locationValidator";
 
 /**
  * Efficiently filter locations by quality and distance
@@ -42,12 +43,16 @@ export function filterLocationsByQualityAndDistance(
     }
     
     // Filter out water locations for calculated spots
-    if (isWaterLocation(location.latitude, location.longitude)) {
+    if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
       return false;
     }
     
     // Filter by quality
-    if (typeof location.siqs === 'number' && location.siqs < qualityThreshold) {
+    const siqs = typeof location.siqs === 'number' ? location.siqs : 
+              (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) ? 
+              location.siqs.score : 0;
+    
+    if (siqs < qualityThreshold) {
       return false;
     }
     
@@ -94,8 +99,16 @@ export function sortLocationsByQualityAndDistance(
     }
     
     // Then sort by SIQS score
-    if ((a.siqs || 0) !== (b.siqs || 0)) {
-      return (b.siqs || 0) - (a.siqs || 0);
+    const siqsA = typeof a.siqs === 'number' ? a.siqs : 
+                (a.siqs && typeof a.siqs === 'object' && 'score' in a.siqs) ? 
+                a.siqs.score : 0;
+                
+    const siqsB = typeof b.siqs === 'number' ? b.siqs : 
+                (b.siqs && typeof b.siqs === 'object' && 'score' in b.siqs) ? 
+                b.siqs.score : 0;
+    
+    if (siqsA !== siqsB) {
+      return siqsB - siqsA;
     }
     
     // Then sort by distance

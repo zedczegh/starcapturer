@@ -1,5 +1,5 @@
-
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { isValidAstronomyLocation } from '@/utils/locationValidator';
 
 /**
  * Filters out invalid locations from an array of locations
@@ -16,9 +16,16 @@ export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroS
   console.log(`Filtering ${locations.length} locations for validity`);
   
   // Filter out invalid locations
-  return locations.filter(
-    loc => loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
-  );
+  return locations.filter(loc => {
+    // Skip if missing coordinates
+    if (!loc || typeof loc.latitude !== 'number' || typeof loc.longitude !== 'number') return false;
+    
+    // Always keep certified locations
+    if (loc.isDarkSkyReserve || loc.certification) return true;
+    
+    // Filter out water locations for regular spots
+    return isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name);
+  });
 };
 
 /**

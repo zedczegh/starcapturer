@@ -51,10 +51,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   // Determine which locations to display based on active view
   const locationsToShow = useMemo(() => {
     if (activeView === 'certified') {
-      return certifiedLocations as any[];
+      return certifiedLocations;
     } else {
       // For calculated view, include both certified and calculated locations
-      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)] as any[];
+      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)];
     }
   }, [activeView, certifiedLocations, calculatedLocations]);
   
@@ -218,7 +218,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         />
       )}
       
-      {/* Position the pinpoint button at bottom-right corner of the map */}
+      {/* Position the pinpoint button at the bottom-right corner of the map */}
       <CenteringPinpointButton
         onGetLocation={handleGetLocation}
         userLocation={userLocation}
