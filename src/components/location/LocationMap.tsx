@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -9,6 +10,7 @@ import {
   type LocationCacheService
 } from "./map/LocationNameService";
 import { Star, Info } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile"; 
 
 interface LocationMapProps {
   latitude: number;
@@ -32,6 +34,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   certification = ""
 }) => {
   const { language, t } = useLanguage();
+  const isMobile = useIsMobile();
   const [position, setPosition] = useState<[number, number]>([
     isFinite(latitude) ? latitude : 0, 
     isFinite(longitude) ? longitude : 0
@@ -64,7 +67,11 @@ const LocationMap: React.FC<LocationMapProps> = ({
   }, []);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
-    if (!editable || !onLocationUpdate) return;
+    // Always allow map clicks on mobile, regardless of editable state
+    if (!editable && !isMobile) return;
+    if (!onLocationUpdate) return;
+    
+    console.log("Map clicked at:", lat, lng);
     
     const validLat = Math.max(-90, Math.min(90, lat));
     const validLng = normalizeLongitude(lng);
@@ -99,7 +106,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
     } finally {
       setLocationLoading(false);
     }
-  }, [editable, onLocationUpdate, language, cacheService, t, updateRetries]);
+  }, [editable, onLocationUpdate, language, cacheService, t, updateRetries, isMobile]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -145,7 +152,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
         <MapDisplay
           position={position}
           locationName={validName}
-          editable={editable}
+          editable={editable || isMobile} // Enable editable for mobile
           onMapReady={handleMapReady}
           onMapClick={handleMapClick}
           showInfoPanel={showInfoPanel}
