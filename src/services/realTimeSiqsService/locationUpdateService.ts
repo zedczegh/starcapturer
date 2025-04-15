@@ -40,10 +40,29 @@ export async function updateLocationsWithRealTimeSiqs(
   const maxParallel = viewType === 'certified' ? 3 : 5;
   
   try {
-    // Filter out water locations for calculated spots
+    // Filter locations for update based on view type
+    // For calculated view, filter out certified locations and water locations
+    // For certified view, only update certified locations
     const locationsToUpdate = viewType === 'calculated'
-      ? updatedLocations.filter(loc => !isWaterLocation(loc.latitude, loc.longitude))
-      : updatedLocations;
+      ? updatedLocations.filter(loc => {
+          // In calculated view, don't update certified locations
+          if (loc.isDarkSkyReserve || loc.certification) {
+            return false;
+          }
+          // Also filter out water locations
+          return !isWaterLocation(loc.latitude, loc.longitude);
+        })
+      : updatedLocations.filter(loc => 
+          // In certified view, only update certified locations
+          loc.isDarkSkyReserve || loc.certification || 
+          // But if we explicitly pass certified as viewType for non-certified locations, update them
+          viewType === 'certified'
+        );
+    
+    // If no locations meet the criteria for update, return original list
+    if (locationsToUpdate.length === 0) {
+      return updatedLocations;
+    }
     
     // Batch process locations for better performance
     for (let i = 0; i < locationsToUpdate.length; i += maxParallel) {

@@ -22,18 +22,21 @@ export const usePhotoPointsMap = ({
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
-  // Use our new certified locations loader
+  // Only load certified locations when in certified view
+  const shouldLoadCertified = activeView === 'certified';
+  
+  // Use our certified locations loader with conditional loading
   const { 
     certifiedLocations: allCertifiedLocations, 
     isLoading: certifiedLocationsLoading,
     loadingProgress 
-  } = useCertifiedLocationsLoader();
+  } = useCertifiedLocationsLoader(shouldLoadCertified);
   
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   
-  // Store all certified locations for persistence
+  // Store all certified locations for persistence, but only when in certified view
   useEffect(() => {
-    if (allCertifiedLocations.length > 0) {
+    if (shouldLoadCertified && allCertifiedLocations.length > 0) {
       console.log(`Storing ${allCertifiedLocations.length} certified locations in persistent storage`);
       allCertifiedLocations.forEach(location => {
         if (location.isDarkSkyReserve || location.certification) {
@@ -42,7 +45,7 @@ export const usePhotoPointsMap = ({
       });
       setCertifiedLocationsLoaded(true);
     }
-  }, [allCertifiedLocations]);
+  }, [allCertifiedLocations, shouldLoadCertified]);
   
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
@@ -91,7 +94,7 @@ export const usePhotoPointsMap = ({
     mapCenter,
     initialZoom,
     certifiedLocationsLoaded,
-    certifiedLocationsLoading,
+    certifiedLocationsLoading: certifiedLocationsLoading && shouldLoadCertified,
     loadingProgress,
     allCertifiedLocationsCount: allCertifiedLocations.length
   };

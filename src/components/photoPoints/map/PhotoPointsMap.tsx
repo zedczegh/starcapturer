@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -121,7 +122,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         </div>
       )}
       
-      {certifiedLocationsLoading && !certifiedLocationsLoaded && (
+      {/* Only show certified locations loading message when in certified view */}
+      {activeView === 'certified' && certifiedLocationsLoading && !certifiedLocationsLoaded && (
         <div className="absolute top-4 left-0 right-0 mx-auto w-auto max-w-xs z-30 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md text-center text-sm text-muted-foreground">
           {t("Loading certified locations...", "正在加载认证地点...")}
         </div>

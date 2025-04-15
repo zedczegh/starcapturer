@@ -5,15 +5,21 @@ import { preloadCertifiedLocations, getAllCertifiedLocations } from '@/services/
 
 /**
  * Hook for efficiently loading certified locations with preloading capabilities
+ * @param shouldLoad Control whether to load certified locations or not
  */
-export function useCertifiedLocationsLoader() {
+export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
   const [certifiedLocations, setCertifiedLocations] = useState<SharedAstroSpot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   
-  // Load certified locations on mount with immediate cache check
+  // Load certified locations on mount with immediate cache check, but only if shouldLoad is true
   useEffect(() => {
+    if (!shouldLoad) {
+      setIsLoading(false);
+      return;
+    }
+    
     let mounted = true;
     setIsLoading(true);
     setIsError(false);
@@ -69,10 +75,12 @@ export function useCertifiedLocationsLoader() {
       mounted = false;
       clearInterval(progressInterval);
     };
-  }, []);
+  }, [shouldLoad]);
   
   // Refresh certified locations
   const refreshLocations = useCallback(async () => {
+    if (!shouldLoad) return;
+    
     setIsLoading(true);
     setLoadingProgress(10);
     
@@ -86,7 +94,7 @@ export function useCertifiedLocationsLoader() {
       setIsError(true);
       setIsLoading(false);
     }
-  }, []);
+  }, [shouldLoad]);
   
   return {
     certifiedLocations,
