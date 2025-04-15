@@ -34,7 +34,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const [mapContainerHeight, setMapContainerHeight] = useState('500px');
+  const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
   
   const { 
@@ -64,11 +64,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
-        setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(70vh - 180px)'
-          : 'calc(80vh - 160px)');
+        setMapContainerHeight('calc(70vh - 200px)');
       } else {
-        setMapContainerHeight('500px');
+        setMapContainerHeight('450px');
       }
     };
     
