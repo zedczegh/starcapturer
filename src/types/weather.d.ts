@@ -67,4 +67,3 @@ declare module "@/types/weather" {
     isDarkSkyReserve?: boolean;
   }
 }
-
