@@ -16,7 +16,7 @@ interface PinpointButtonProps {
 
 const PinpointButton: React.FC<PinpointButtonProps> = ({ 
   onGetLocation,
-  className = "",
+  className = "absolute top-4 right-16 z-[999]",
   shouldCenter = true
 }) => {
   const { t } = useLanguage();
