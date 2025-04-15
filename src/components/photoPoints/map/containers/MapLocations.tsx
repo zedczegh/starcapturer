@@ -38,13 +38,13 @@ const MapLocations: React.FC<MapLocationsProps> = ({
         const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
         const isHovered = hoveredLocationId === locationId;
         
-        // For calculated view, show both certified and calculated spots
-        // For certified view, only show certified spots
+        // For "certified" view, only show certified spots
+        // For "calculated" view, show all spots (both certified and calculated)
         if (activeView === 'certified' && !isCertified) {
           return null;
         }
         
-        // Only filter aggressively if there are lots of locations on mobile
+        // Only filter aggressively if there are lots of locations on mobile to improve performance
         if (isMobile && !isCertified && locations.length > 100 && Math.random() > 0.8) {
           return null;
         }

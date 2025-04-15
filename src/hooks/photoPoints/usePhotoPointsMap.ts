@@ -60,6 +60,7 @@ export const usePhotoPointsMap = ({
   const combinedLocations = useCallback(() => {
     // For certified view, only show certified locations
     if (activeView === 'certified') {
+      console.log(`Returning only certified locations: ${allCertifiedLocations.length}`);
       return allCertifiedLocations;
     }
     

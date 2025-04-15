@@ -49,19 +49,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   // Use appropriate location set based on active view
   // This ensures we're properly passing the locations to the map
   const locationsToShow = useMemo(() => {
-    // For certified view, only show certified locations
     if (activeView === 'certified') {
       return certifiedLocations;
     }
-    // For calculated view, show both certified and calculated locations
-    return locations; // This should include both certified and calculated
+    
+    // For calculated view, make sure we include both certified and calculated
+    return locations; // Should include both types
   }, [activeView, certifiedLocations, calculatedLocations, locations]);
   
-  // For debugging - log location counts
+  // Debug output for troubleshooting
   useEffect(() => {
     console.log(`PhotoPointsMap - Using ${locationsToShow.length} locations for map (${activeView} view)`);
-    console.log(`PhotoPointsMap - Certified: ${certifiedLocations.length}, Calculated: ${calculatedLocations.length - certifiedLocations.length}`);
-  }, [locationsToShow.length, certifiedLocations.length, calculatedLocations.length, activeView]);
+    console.log(`PhotoPointsMap - Certified: ${certifiedLocations.length}, All locations: ${locations.length}`);
+  }, [locationsToShow.length, certifiedLocations.length, locations.length, activeView]);
   
   const { 
     mapReady,
@@ -74,7 +74,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations: locationsToShow, // Use our optimized location selection
+    locations: locationsToShow,
     searchRadius,
     activeView
   });
@@ -99,6 +99,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     
     return [...certified, ...nonCertified];
   }, [validLocations, isMobile, activeView]);
+
+  // Add debug output for final locations
+  useEffect(() => {
+    console.log(`PhotoPointsMap - Final optimized locations count: ${optimizedLocations.length}`);
+  }, [optimizedLocations.length]);
 
   useEffect(() => {
     const adjustHeight = () => {
@@ -184,7 +189,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         searchRadius={searchRadius}
         activeView={activeView}
         onMapReady={handleMapReady}
-        onLocationClick={handleLocationClicked || handleLocationClick}
+        onLocationClick={onLocationClick || handleLocationClick}
         onMapClick={handleMapClick}
         zoom={initialZoom}
         hoveredLocationId={hoveredLocationId}
