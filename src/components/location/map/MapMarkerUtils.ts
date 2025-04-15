@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 
 /**
@@ -29,7 +28,7 @@ export const configureLeaflet = () => {
  * @returns L.DivIcon instance or null during SSR
  */
 export function createCustomMarker(
-  color: string = '#f43f5e', 
+  color: string = '#4ADE80', 
   shape: 'circle' | 'star' = 'circle',
   sizeMultiplier: number = 1.0
 ): L.DivIcon | null {
@@ -41,33 +40,30 @@ export function createCustomMarker(
     let html = '';
     
     if (shape === 'star') {
-      // Star-shaped marker for certified locations
+      // Certified locations - star shape
       html = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24" fill="${color}" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24" fill="${color}" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       `;
     } else {
-      // Circle-shaped marker for calculated locations
+      // Calculated locations - circle shape
       html = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" fill="${color}" stroke="#FFFFFF" stroke-width="1.5" />
+          <circle cx="12" cy="12" r="10" fill="${color}" stroke="#FFFFFF" stroke-width="1" />
         </svg>
       `;
     }
 
-    const icon = L.divIcon({
+    return L.divIcon({
       className: "custom-marker-icon",
       iconAnchor: [baseSize/2, baseSize/2],
       popupAnchor: [0, -baseSize/2],
       html: html,
       iconSize: [baseSize, baseSize]
     });
-
-    return icon;
   } catch (error) {
     console.error("Error creating custom marker:", error);
-    // Return default icon as fallback
     return new L.Icon.Default();
   }
 }
@@ -86,4 +82,3 @@ if (typeof window !== 'undefined') {
 export const formatCoordinates = (lat: number, lng: number): string => {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 };
-

@@ -1,4 +1,3 @@
-
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
@@ -46,24 +45,24 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (!location.isDarkSkyReserve && !location.certification) {
-    return '#FFD700'; // Default gold for non-certified
+    return '#4ADE80'; // Default green for non-certified
   }
   
   const certification = (location.certification || '').toLowerCase();
   
-  // Different colors for different certification types
+  // Match colors to our legend color scheme
   if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
     return '#9b87f5'; // Purple for reserves
   } else if (certification.includes('park')) {
-    return '#4ADE80'; // Green for parks
+    return '#F2FCE2'; // Soft Green for parks
   } else if (certification.includes('community')) {
-    return '#FFA500'; // Orange for communities
-  } else if (certification.includes('urban')) {
-    return '#0EA5E9'; // Blue for urban night skies
+    return '#FEC6A1'; // Soft Orange for communities
+  } else if (certification.includes('urban') || certification.includes('night sky place')) {
+    return '#1EAEDB'; // Bright Blue for urban night skies
   } else if (certification.includes('lodging')) {
-    return '#F43F5E'; // Red/Pink for lodging
+    return '#FFDEE2'; // Soft Pink for lodging
   } else {
-    return '#FFD700'; // Gold for generic certified locations
+    return '#9b87f5'; // Default to reserve color for unknown certifications
   }
 };
 

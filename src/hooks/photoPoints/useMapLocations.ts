@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
