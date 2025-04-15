@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
@@ -27,6 +27,9 @@ export function usePhotoPointsState() {
   const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
+  
+  // Prevent view change operations from stacking
+  const viewChangeInProgressRef = useRef(false);
   
   // Get user position
   useEffect(() => {
@@ -95,11 +98,36 @@ export function usePhotoPointsState() {
     setShowMap(prev => !prev);
   }, []);
   
-  // Handle view mode change
+  // Handle view mode change with safeguards
   const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
-    setActiveView(view);
-    clearLocationCache();
-  }, []);
+    // Prevent multiple simultaneous view changes
+    if (viewChangeInProgressRef.current) {
+      console.log("View change already in progress, skipping");
+      return;
+    }
+    
+    if (view === activeView) {
+      console.log("Already in this view, skipping change");
+      return;
+    }
+    
+    console.log(`Changing view from ${activeView} to ${view}`);
+    viewChangeInProgressRef.current = true;
+    
+    try {
+      // First clear location cache to prevent stale data
+      clearLocationCache();
+      
+      // Then update the view after a short delay
+      setTimeout(() => {
+        setActiveView(view);
+        viewChangeInProgressRef.current = false;
+      }, 50);
+    } catch (err) {
+      console.error("Error during view change:", err);
+      viewChangeInProgressRef.current = false;
+    }
+  }, [activeView]);
   
   // Handle location update from map click
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {

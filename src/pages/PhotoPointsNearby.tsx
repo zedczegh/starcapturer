@@ -64,27 +64,38 @@ const PhotoPointsNearby: React.FC = () => {
     setSearchRadius(currentSearchRadius);
   }, [currentSearchRadius, setSearchRadius]);
   
-  // Handle location click to navigate to details
+  // Handle location click to navigate to details with improved error handling
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    if (location && location.latitude && location.longitude) {
-      const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      navigate(`/location/${locationId}`, { 
-        state: {
-          id: locationId,
-          name: location.name,
-          chineseName: location.chineseName,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          bortleScale: location.bortleScale || 4,
-          siqs: location.siqs,
-          siqsResult: location.siqs ? { score: location.siqs } : undefined,
-          certification: location.certification,
-          isDarkSkyReserve: location.isDarkSkyReserve,
-          timestamp: new Date().toISOString(),
-          fromPhotoPoints: true
-        } 
-      });
+    if (!location) return;
+    
+    try {
+      // Create a robust location ID that won't cause navigation issues
+      const locationId = location.id || 
+        (location.latitude && location.longitude 
+          ? `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`
+          : `unnamed-location-${Date.now()}`);
+      
+      // Create a safe state object with all required properties
+      const safeLocationState = {
+        id: locationId,
+        name: location.name || 'Unnamed Location',
+        chineseName: location.chineseName || '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale || 4,
+        siqs: location.siqs || null,
+        siqsResult: location.siqs ? { score: location.siqs } : undefined,
+        certification: location.certification || '',
+        isDarkSkyReserve: !!location.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true
+      };
+      
+      // Navigate with the safe state object
+      navigate(`/location/${locationId}`, { state: safeLocationState });
       console.log("Opening location details", locationId);
+    } catch (error) {
+      console.error("Error navigating to location details:", error, location);
     }
   }, [navigate]);
   

@@ -1,5 +1,5 @@
 
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
@@ -50,6 +50,23 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   loadMoreClickCount,
   maxLoadMoreClicks
 }) => {
+  // Add safety check for location click handler
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    // Ensure we have the required fields for navigation
+    if (location && onLocationClick) {
+      const safeLocation = {
+        ...location,
+        // Ensure these fields exist to prevent navigation errors
+        id: location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`,
+        name: location.name || 'Unknown Location',
+        latitude: location.latitude,
+        longitude: location.longitude
+      };
+      
+      onLocationClick(safeLocation);
+    }
+  }, [onLocationClick]);
+  
   // Filter calculated locations by distance
   const filteredCalculatedLocations = calculatedLocations.filter(loc => {
     if (!effectiveLocation) return true;
@@ -73,7 +90,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             calculatedLocations={calculatedLocations}
             activeView={activeView}
             searchRadius={searchRadius}
-            onLocationClick={onLocationClick}
+            onLocationClick={handleLocationClick}
             onLocationUpdate={onLocationUpdate}
           />
         </div>

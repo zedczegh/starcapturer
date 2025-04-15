@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
@@ -27,10 +27,21 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   const map = useMap();
   
   // Set view when center changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !center) return;
     
-    map.setView(center, zoom || map.getZoom());
+    // Use a small delay to prevent race conditions with other map operations
+    const timeoutId = setTimeout(() => {
+      if (map && map.setView) {
+        try {
+          map.setView(center, zoom || map.getZoom());
+        } catch (error) {
+          console.error("Error setting map view:", error);
+        }
+      }
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
   }, [map, center, zoom]);
   
   return (
@@ -38,13 +49,15 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       {/* Apply world bounds limit */}
       <WorldBoundsController />
       
-      {/* Apply SIQS-specific effects */}
-      <SiqsEffectsController 
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={onSiqsCalculated}
-      />
+      {/* Apply SIQS-specific effects only when userLocation is available */}
+      {userLocation && (
+        <SiqsEffectsController 
+          userLocation={userLocation}
+          activeView={activeView}
+          searchRadius={searchRadius}
+          onSiqsCalculated={onSiqsCalculated}
+        />
+      )}
     </>
   );
 };

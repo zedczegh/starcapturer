@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Sparkles, MapPin } from 'lucide-react';
@@ -19,6 +19,23 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   loading = false
 }) => {
   const { t } = useLanguage();
+  const isTransitioning = useRef(false);
+  
+  // Prevent rapid consecutive view changes that might cause race conditions
+  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
+    // Skip if already in the requested view or transition is in progress
+    if (activeView === view || isTransitioning.current || loading) {
+      return;
+    }
+    
+    isTransitioning.current = true;
+    onViewChange(view);
+    
+    // Reset transition flag after a delay
+    setTimeout(() => {
+      isTransitioning.current = false;
+    }, 500);
+  }, [activeView, onViewChange, loading]);
   
   const buttonVariants = {
     active: { 
@@ -88,7 +105,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <Button
             variant={activeView === 'certified' ? "default" : "ghost"}
             size="sm"
-            onClick={() => onViewChange('certified')}
+            onClick={() => handleViewChange('certified')}
+            disabled={loading || activeView === 'certified'}
             className={`relative w-full py-1.5 justify-center ${
               activeView === 'certified'
                 ? 'bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-primary-foreground hover:from-amber-500/100 hover:to-amber-600/100'
@@ -128,7 +146,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <Button
             variant={activeView === 'calculated' ? "default" : "ghost"}
             size="sm"
-            onClick={() => onViewChange('calculated')}
+            onClick={() => handleViewChange('calculated')}
+            disabled={loading || activeView === 'calculated'}
             className={`relative w-full py-1.5 justify-center ${
               activeView === 'calculated'
                 ? 'bg-gradient-to-r from-primary/90 to-primary-dark/90 text-primary-foreground hover:from-primary hover:to-primary-dark'
