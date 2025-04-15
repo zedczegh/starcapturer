@@ -1,5 +1,7 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
+import { Marker } from 'react-leaflet';
+import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 
@@ -8,61 +10,71 @@ interface MapMarkersProps {
   locations: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
   hoveredLocationId?: string | null;
-  onLocationClick: (location: SharedAstroSpot) => void;
+  currentSiqs?: number | null;
+  onLocationClick?: (location: SharedAstroSpot) => void;
   onMarkerHover?: (id: string | null) => void;
   handleTouchStart?: (e: React.TouchEvent<Element>, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent<Element>) => void;
-  handleTouchMove?: (e: React.TouchEvent<Element>, touchStartPos: any) => any;
-  currentSiqs: number | null;
+  handleTouchMove?: (e: React.TouchEvent<Element>) => void;
 }
 
-/**
- * MapMarkers - Renders all markers on the map
- */
 const MapMarkers: React.FC<MapMarkersProps> = ({
   userLocation,
   locations,
   activeView,
   hoveredLocationId,
+  currentSiqs,
   onLocationClick,
   onMarkerHover,
   handleTouchStart,
   handleTouchEnd,
-  handleTouchMove,
-  currentSiqs
+  handleTouchMove
 }) => {
+  // Safe handlers that check if callbacks exist first
+  const handleHover = useCallback((id: string | null) => {
+    if (onMarkerHover) onMarkerHover(id);
+  }, [onMarkerHover]);
+
+  const handleTouch = useCallback((e: React.TouchEvent<Element>, id: string) => {
+    if (handleTouchStart) handleTouchStart(e, id);
+  }, [handleTouchStart]);
+
+  const handleEnd = useCallback((e: React.TouchEvent<Element>) => {
+    if (handleTouchEnd) handleTouchEnd(e);
+  }, [handleTouchEnd]);
+
+  const handleMove = useCallback((e: React.TouchEvent<Element>) => {
+    if (handleTouchMove) handleTouchMove(e);
+  }, [handleTouchMove]);
+
+  const handleClick = useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) onLocationClick(location);
+  }, [onLocationClick]);
+
   return (
     <>
+      {/* Render location markers */}
+      {locations.map((location) => (
+        <LocationMarker
+          key={location.id || `${location.latitude}-${location.longitude}`}
+          location={location}
+          activeView={activeView}
+          isHovered={hoveredLocationId === location.id}
+          onClick={handleClick}
+          onHover={handleHover}
+          onTouchStart={handleTouch}
+          onTouchEnd={handleEnd}
+          onTouchMove={handleMove}
+        />
+      ))}
+
+      {/* Render user location marker if available */}
       {userLocation && (
         <UserLocationMarker 
           position={[userLocation.latitude, userLocation.longitude]} 
-          currentSiqs={currentSiqs}
+          siqs={currentSiqs}
         />
       )}
-      
-      {locations.map(location => {
-        if (!location.latitude || !location.longitude) return null;
-        
-        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-        const isHovered = hoveredLocationId === locationId;
-        
-        return (
-          <LocationMarker
-            key={locationId}
-            location={location}
-            onClick={onLocationClick}
-            isHovered={isHovered}
-            onHover={onMarkerHover || (() => {})}
-            locationId={locationId}
-            isCertified={isCertified}
-            activeView={activeView}
-            handleTouchStart={handleTouchStart}
-            handleTouchEnd={handleTouchEnd}
-            handleTouchMove={handleTouchMove}
-          />
-        );
-      })}
     </>
   );
 };

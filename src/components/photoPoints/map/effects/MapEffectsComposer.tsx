@@ -9,17 +9,19 @@ interface MapEffectsComposerProps {
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
+  disableAutoCenter?: boolean;
 }
 
 /**
  * Composes multiple map effects into a single component
  * IMPORTANT: This component must never conditionally render components that use hooks
  */
-const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
+export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
   userLocation,
   activeView = 'certified',
   searchRadius = 100,
-  onSiqsCalculated
+  onSiqsCalculated,
+  disableAutoCenter = true // Default to disable auto-centering
 }) => {
   // Always call useMap hook first before any conditional logic
   const map = useMap();

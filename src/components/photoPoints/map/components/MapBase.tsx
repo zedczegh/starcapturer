@@ -43,11 +43,8 @@ const MapBase: React.FC<MapBaseProps> = ({
       className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
       whenReady={onMapReady}
       attributionControl={true}
-      // Disable auto zoom and movement behaviors to prevent flashing
-      zoomAnimation={false}
-      markerZoomAnimation={false}
-      // Don't fly to locations automatically
-      flyTo={false}
+      // We can't set these properties directly on MapContainer, so they need to be handled in controllers
+      // Instead of using these props directly
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

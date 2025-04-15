@@ -25,6 +25,16 @@ export const MapController: React.FC<MapControllerProps> = ({
   useEffect(() => {
     if (!map) return;
     
+    // Disable animations that cause flashing
+    if (map._zoomAnimated !== undefined) {
+      map._zoomAnimated = false;
+    }
+    
+    // Disable marker animations
+    if (map.options) {
+      map.options.markerZoomAnimation = false;
+    }
+    
     const handleMapInvalidation = () => {
       try {
         map.invalidateSize();
@@ -76,12 +86,6 @@ export const MapController: React.FC<MapControllerProps> = ({
         map._panes[key].style.willChange = 'transform';
         map._panes[key].style.backfaceVisibility = 'hidden';
       }
-    }
-    
-    // Disable animations that cause flashing
-    if (map.options) {
-      map.options.zoomAnimation = false;
-      map.options.markerZoomAnimation = false;
     }
     
     window.addEventListener('resize', handleMapInvalidation);

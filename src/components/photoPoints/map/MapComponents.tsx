@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { MapEffectsComposer as BaseMapEffectsComposer } from './effects/MapEffectsComposer';
+import MapEffectsComposer from './effects/MapEffectsComposer';
 
-interface MapEffectsComposerProps {
+interface MapEffectsComposerWrapperProps {
   userLocation: { latitude: number; longitude: number } | null;
   activeView: 'certified' | 'calculated';
   searchRadius: number;
@@ -13,7 +13,7 @@ interface MapEffectsComposerProps {
 /**
  * Wrapper for MapEffectsComposer with additional props
  */
-export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
+export const MapEffectsComposerWrapper: React.FC<MapEffectsComposerWrapperProps> = ({
   userLocation,
   activeView,
   searchRadius,
@@ -21,7 +21,7 @@ export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   disableAutoCenter = true // Default to disable auto-centering
 }) => {
   return (
-    <BaseMapEffectsComposer
+    <MapEffectsComposer
       userLocation={userLocation}
       activeView={activeView}
       searchRadius={searchRadius}

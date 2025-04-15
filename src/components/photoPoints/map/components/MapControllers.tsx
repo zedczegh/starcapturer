@@ -3,7 +3,7 @@ import React from 'react';
 import MapController from '../MapController';
 import MobileMapFixer from '../MobileMapFixer';
 import { MapEvents } from '../MapEffectsController';
-import { MapEffectsComposer } from '../MapComponents';
+import { MapEffectsComposerWrapper } from '../MapComponents';
 
 interface MapControllersProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -31,7 +31,7 @@ const MapControllers: React.FC<MapControllersProps> = ({
   
   return (
     <>
-      <MapEffectsComposer 
+      <MapEffectsComposerWrapper
         userLocation={safeUserLocation}
         activeView={activeView}
         searchRadius={searchRadius}
