@@ -217,7 +217,7 @@ const LocationMarker = memo(({
           <div className="mt-2 flex items-center justify-between">
             {location.siqs !== undefined && (
               <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={location.siqs} compact={true} />
+                <SiqsScoreBadge score={getSafeScore(location.siqs)} compact={true} />
               </div>
             )}
             
