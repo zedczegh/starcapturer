@@ -156,8 +156,6 @@ const LocationMarker = memo(({
       <Popup 
         closeOnClick={false}
         autoClose={true}
-        offset={[0, 10]}
-        position={[location.latitude, location.longitude]}
         className="map-popup-bottom"
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
@@ -237,7 +235,6 @@ const UserLocationMarker = memo(({
       <Popup
         closeOnClick={false}
         autoClose={true}
-        offset={[0, 10]}
         className="map-popup-bottom"
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
