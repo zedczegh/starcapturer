@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -140,7 +141,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             onRefresh={refreshSiqs}
             searchRadius={calculatedSearchRadius}
             canLoadMoreCalculated={canLoadMoreCalculated}
-            loadMoreCalculated={loadMoreCalculated}
+            onLoadMoreCalculated={loadMoreCalculated}
             loadMoreClickCount={loadMoreClickCount}
             maxLoadMoreClicks={maxLoadMoreClicks}
           />
