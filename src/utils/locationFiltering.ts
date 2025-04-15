@@ -24,7 +24,12 @@ export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroS
     if (loc.isDarkSkyReserve || loc.certification) return true;
     
     // Filter out water locations for regular spots
-    return isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name);
+    if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
+      console.log(`Filtered out water location: ${loc.name || `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`}`);
+      return false;
+    }
+    
+    return true;
   });
 };
 
@@ -102,10 +107,6 @@ export const getSiqsScore = (location: SharedAstroSpot): number | null => {
   
   if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
     return location.siqs.score;
-  }
-  
-  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
-    return location.siqsResult.score;
   }
   
   return null;

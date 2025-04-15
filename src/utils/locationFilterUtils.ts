@@ -44,13 +44,23 @@ export function filterLocationsByQualityAndDistance(
     
     // Filter out water locations for calculated spots
     if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+      console.log(`Filtered out water location: ${location.name || `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`}`);
       return false;
     }
     
-    // Filter by quality
-    const siqs = typeof location.siqs === 'number' ? location.siqs : 
-              (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) ? 
-              location.siqs.score : 0;
+    // Filter by quality - safely handle different SIQS formats
+    let siqs: number;
+    if (typeof location.siqs === 'number') {
+      siqs = location.siqs;
+    } else if (location.siqs && typeof location.siqs === 'object') {
+      if ('score' in location.siqs) {
+        siqs = location.siqs.score;
+      } else {
+        siqs = 0;
+      }
+    } else {
+      siqs = 0;
+    }
     
     if (siqs < qualityThreshold) {
       return false;
@@ -99,13 +109,26 @@ export function sortLocationsByQualityAndDistance(
     }
     
     // Then sort by SIQS score
-    const siqsA = typeof a.siqs === 'number' ? a.siqs : 
-                (a.siqs && typeof a.siqs === 'object' && 'score' in a.siqs) ? 
-                a.siqs.score : 0;
-                
-    const siqsB = typeof b.siqs === 'number' ? b.siqs : 
-                (b.siqs && typeof b.siqs === 'object' && 'score' in b.siqs) ? 
-                b.siqs.score : 0;
+    let siqsA: number;
+    let siqsB: number;
+    
+    // Safely get SIQS A
+    if (typeof a.siqs === 'number') {
+      siqsA = a.siqs;
+    } else if (a.siqs && typeof a.siqs === 'object' && 'score' in a.siqs) {
+      siqsA = a.siqs.score;
+    } else {
+      siqsA = 0;
+    }
+    
+    // Safely get SIQS B
+    if (typeof b.siqs === 'number') {
+      siqsB = b.siqs;
+    } else if (b.siqs && typeof b.siqs === 'object' && 'score' in b.siqs) {
+      siqsB = b.siqs.score;
+    } else {
+      siqsB = 0;
+    }
     
     if (siqsA !== siqsB) {
       return siqsB - siqsA;

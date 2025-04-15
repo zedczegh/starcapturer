@@ -3,12 +3,14 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findCalculatedLocations } from "@/services/locationSearchService";
+import { isValidAstronomyLocation } from "@/utils/locationValidator";
 
 export const useCalculatedLocationsFind = () => {
   const { t } = useLanguage();
 
   /**
    * Find calculated locations within a specified radius
+   * Enhanced with stronger water location filtering
    */
   const findCalculatedLocationsWithinRadius = useCallback(
     async (
@@ -32,6 +34,16 @@ export const useCalculatedLocationsFind = () => {
           limit
         );
         
+        // Apply additional land-only filtering
+        const landOnlyLocations = newLocations.filter(loc => 
+          // Skip locations with invalid coordinates
+          loc.latitude && loc.longitude && 
+          // Apply enhanced land verification
+          isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)
+        );
+        
+        console.log(`Filtered from ${newLocations.length} to ${landOnlyLocations.length} land-only locations`);
+        
         if (preservePrevious && previousLocations.length > 0) {
           console.log(`Preserving ${previousLocations.length} previous locations`);
           
@@ -41,7 +53,7 @@ export const useCalculatedLocationsFind = () => {
           );
           
           // Filter out locations we already have
-          const uniqueNewLocations = newLocations.filter(loc => {
+          const uniqueNewLocations = landOnlyLocations.filter(loc => {
             const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
             return !existingCoords.has(coordKey);
           });
@@ -49,7 +61,10 @@ export const useCalculatedLocationsFind = () => {
           // Filter out locations with SIQS below 5
           const qualityFilteredLocations = uniqueNewLocations.filter(loc => {
             // If siqs is null/undefined or >= 5, keep the location
-            return loc.siqs === undefined || loc.siqs === null || loc.siqs >= 5;
+            const siqs = typeof loc.siqs === 'number' ? loc.siqs : 
+                      (loc.siqs && typeof loc.siqs === 'object' && 'score' in loc.siqs) ? 
+                      loc.siqs.score : 0;
+            return siqs === undefined || siqs === null || siqs >= 5;
           });
           
           // Combine previous and new locations
@@ -58,9 +73,12 @@ export const useCalculatedLocationsFind = () => {
         }
         
         // Filter new locations by quality
-        const qualityFilteredLocations = newLocations.filter(loc => {
+        const qualityFilteredLocations = landOnlyLocations.filter(loc => {
           // If siqs is null/undefined or >= 5, keep the location
-          return loc.siqs === undefined || loc.siqs === null || loc.siqs >= 5;
+          const siqs = typeof loc.siqs === 'number' ? loc.siqs : 
+                    (loc.siqs && typeof loc.siqs === 'object' && 'score' in loc.siqs) ? 
+                    loc.siqs.score : 0;
+          return siqs === undefined || siqs === null || siqs >= 5;
         });
         
         return qualityFilteredLocations;
