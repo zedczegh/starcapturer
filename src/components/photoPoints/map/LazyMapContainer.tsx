@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import React, { useCallback, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
@@ -9,9 +10,9 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
 import { getLocationId } from './markers/MarkerUtils';
+import { MapResizeHandler, SiqsDetector, MapInitializer } from './MapHandlers';
 
 // Configure Leaflet before any map component renders
 configureLeaflet();
@@ -27,10 +28,6 @@ interface LazyMapContainerProps {
   onMapClick?: (lat: number, lng: number) => void;
   zoom?: number;
   hoveredLocationId?: string | null;
-  onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
@@ -55,32 +52,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  useEffect(() => {
-    if (userLocation && locations.length > 0) {
-      const userLat = userLocation.latitude;
-      const userLng = userLocation.longitude;
-      
-      const sameLocation = locations.find(loc => 
-        Math.abs(loc.latitude - userLat) < 0.0001 && 
-        Math.abs(loc.longitude - userLng) < 0.0001
-      );
-      
-      if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(sameLocation.siqs);
-      } else {
-        setCurrentSiqs(null);
-      }
-    }
-  }, [userLocation, locations]);
-  
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
       onMapReady();
-    }
-    
-    if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
     }
   }, [onMapReady]);
   
@@ -97,35 +72,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    const map = mapRef.current;
-    
-    const handleResize = () => {
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 100);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    setTimeout(() => {
-      if (map) map.invalidateSize();
-    }, 200);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [mapRef.current]);
-  
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
       <MapContainer
         center={center}
         zoom={zoom}
         style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
+        scrollWheelZoom={false}
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
@@ -161,6 +114,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         />
         
         <MapEvents onMapClick={handleMapClick} />
+        <MapInitializer onMapReady={handleMapReady} />
         
         {userLocation && (
           <UserLocationMarker 
@@ -193,6 +147,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         />
         
         {useMobileMapFixer && isMobile && <MobileMapFixer />}
+        
+        <SiqsDetector 
+          userLocation={userLocation} 
+          locations={locations} 
+          onSiqsDetected={setCurrentSiqs} 
+        />
+        
+        <MapResizeHandler mapRef={mapRef} />
       </MapContainer>
     </div>
   );

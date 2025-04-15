@@ -6,6 +6,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { getLocationMarker, getDisplayName, getMarkerSiqsClass } from './MarkerUtils';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { LeafletMouseEvent } from 'leaflet';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -32,9 +33,9 @@ const LocationMarker = memo(({
   const displayName = getDisplayName(location, language);
   const icon = getLocationMarker(location, isCertified, isMobile);
   
-  const handleMarkerClick = (e: L.LeafletMouseEvent) => {
+  const handleMarkerClick = (e: LeafletMouseEvent) => {
     // Prevent default zoom behavior
-    e.target._map.getZoom();
+    e.originalEvent.stopPropagation();
     onClick(location);
   };
   
