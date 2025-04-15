@@ -16,23 +16,20 @@ export const useMapInteractions = ({
   const [lastClickTime, setLastClickTime] = useState<number>(0);
   const [lastHoverId, setLastHoverId] = useState<string | null>(null);
   const [preventRecursion, setPreventRecursion] = useState(false);
+  const [touchStartTime, setTouchStartTime] = useState<number>(0);
   
-  // Handle marker hover with recursion prevention
+  // Handle marker hover with recursion prevention and touch optimization
   const handleMarkerHover = useCallback((id: string | null) => {
-    // Prevent recursion - if we're already processing a hover, don't trigger another
-    if (preventRecursion) {
-      return;
-    }
+    if (preventRecursion) return;
     
-    // Set recursion lock
     setPreventRecursion(true);
     
     try {
-      // Simple hover debounce to prevent flickering
       if (id !== lastHoverId) {
         setLastHoverId(id);
+        
+        // Add delay for clearing hover state
         if (id === null) {
-          // Add delay when clearing hover state
           setTimeout(() => {
             setHoveredLocationId(null);
           }, 50);
@@ -41,38 +38,42 @@ export const useMapInteractions = ({
         }
       }
       
-      // Only call external handler if provided AND not the same ID
-      // This prevents the infinite loop
       if (onMarkerHover && id !== hoveredLocationId) {
         onMarkerHover(id);
       }
     } finally {
-      // Clear recursion lock with slight delay
       setTimeout(() => {
         setPreventRecursion(false);
       }, 0);
     }
   }, [onMarkerHover, lastHoverId, hoveredLocationId, preventRecursion]);
   
-  // Handle location click
+  // Handle location click with touch optimization
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    // Simple debounce for clicks
     const now = Date.now();
-    if (now - lastClickTime < 300) {
+    const touchDuration = now - touchStartTime;
+    
+    // Prevent double clicks and long presses
+    if (now - lastClickTime < 300 || touchDuration > 500) {
       return;
     }
+    
     setLastClickTime(now);
     
     if (onLocationClick) {
       onLocationClick(location);
     }
-  }, [onLocationClick, lastClickTime]);
+  }, [onLocationClick, lastClickTime, touchStartTime]);
 
-  // Handle map interaction to hide popups while interacting
+  // Handle touch start
+  const handleTouchStart = useCallback(() => {
+    setTouchStartTime(Date.now());
+  }, []);
+
+  // Handle map drag
   const handleMapDragStart = useCallback(() => {
     setHideMarkerPopups(true);
     
-    // Prevent recursive calls on drag
     if (!preventRecursion) {
       setPreventRecursion(true);
       
@@ -91,13 +92,12 @@ export const useMapInteractions = ({
   }, [hoveredLocationId, onMarkerHover, preventRecursion]);
   
   const handleMapDragEnd = useCallback(() => {
-    // Small delay to prevent immediate popup reappearance
     setTimeout(() => {
       setHideMarkerPopups(false);
     }, 100);
   }, []);
   
-  // Clear hover when component unmounts or on certain conditions
+  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (onMarkerHover && !preventRecursion) {
@@ -112,7 +112,8 @@ export const useMapInteractions = ({
     handleMarkerHover,
     handleLocationClick,
     handleMapDragStart,
-    handleMapDragEnd
+    handleMapDragEnd,
+    handleTouchStart
   };
 };
 

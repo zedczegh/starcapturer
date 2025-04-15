@@ -1,4 +1,3 @@
-
 /* Base styles for map components */
 .leaflet-container {
   width: 100%;
@@ -153,6 +152,174 @@
   /* Fix Safari hover issue */
   .leaflet-marker-icon:hover {
     z-index: 9000 !important;
+  }
+}
+
+/* Additional Safari mouse handling fixes */
+html.safari {
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow,
+  .leaflet-image-layer,
+  .leaflet-pane > svg path {
+    pointer-events: auto !important;
+  }
+  
+  .leaflet-container {
+    touch-action: pan-x pan-y;
+    -webkit-touch-action: pan-x pan-y;
+  }
+}
+
+/* Base styles for map components */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.02);
+  touch-action: pan-x pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Improve touch target size on mobile */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+  }
+  
+  .leaflet-control-zoom {
+    margin-right: 15px !important;
+    margin-top: 15px !important;
+  }
+  
+  /* Reduce animation for better performance */
+  .leaflet-fade-anim .leaflet-tile {
+    will-change: opacity;
+  }
+  
+  .leaflet-zoom-anim .leaflet-zoom-animated {
+    will-change: transform;
+  }
+  
+  /* Improved tap handling */
+  .leaflet-marker-icon {
+    padding: 5px;
+    margin-left: -5px !important;
+    margin-top: -5px !important;
+  }
+}
+
+/* Hardware acceleration for smoother animations */
+.leaflet-marker-icon {
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  
+  /* Prevent hover issues on Safari */
+  pointer-events: auto !important;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Location marker styling */
+.location-marker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.location-marker-icon:active {
+  transform: scale(1.1);
+}
+
+/* Improved animations for better performance */
+.location-radius-circle {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Styling for dark sky markers */
+.dark-sky-marker {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+/* Optimized tile loading for mobile */
+.mobile-optimized .leaflet-tile-loaded {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* Enhanced popup styles for better readability */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 10px;
+}
+
+.leaflet-popup-tip {
+  width: 14px;
+  height: 14px;
+}
+
+/* Improved attribution control positioning on small screens */
+@media (max-width: 480px) {
+  .leaflet-control-attribution {
+    max-width: 70%;
+    white-space: normal;
+    font-size: 9px;
+    line-height: 1.2;
+    padding: 3px 6px;
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* Safari-specific optimizations */
+@supports (-webkit-touch-callout: none) {
+  .leaflet-container {
+    /* Ensure proper touch handling on iOS Safari */
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Enable hardware acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000;
+    -webkit-perspective: 1000;
+  }
+  
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow,
+  .leaflet-image-layer,
+  .leaflet-pane > svg path {
+    pointer-events: auto !important;
+  }
+  
+  /* Fix Safari touch event handling */
+  .leaflet-pane {
+    transition: transform 0.3s;
+    will-change: transform;
+  }
+  
+  .leaflet-marker-pane {
+    pointer-events: none;
+  }
+  
+  .leaflet-marker-icon {
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
