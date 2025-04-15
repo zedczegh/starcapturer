@@ -1,46 +1,146 @@
 
-/* Base map container styles */
-.map-container {
+/* Base styles for map components */
+.leaflet-container {
   width: 100%;
   height: 100%;
-  z-index: 1;
+  z-index: 0;
 }
 
-/* Mobile optimized map */
-.mobile-optimized {
-  /* Disable unnecessary animations */
-  pointer-events: auto;
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Improve touch target size on mobile */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+  }
+  
+  .leaflet-control-zoom {
+    margin-right: 15px !important;
+    margin-top: 15px !important;
+  }
+  
+  /* Reduce animation for better performance */
+  .leaflet-fade-anim .leaflet-tile {
+    will-change: opacity;
+  }
+  
+  .leaflet-zoom-anim .leaflet-zoom-animated {
+    will-change: transform;
+  }
+  
+  /* Improved tap handling */
+  .leaflet-marker-icon {
+    padding: 5px;
+    margin-left: -5px !important;
+    margin-top: -5px !important;
+  }
 }
 
-/* Remove transition effects for better mobile performance */
-.mobile-optimized .leaflet-fade-anim .leaflet-tile,
-.mobile-optimized .leaflet-zoom-anim .leaflet-zoom-animated {
-  transition: none !important;
-}
-
-/* Speed up loading tile effect on mobile */
-.mobile-optimized .leaflet-tile-loaded {
-  transition: opacity 0.1s !important;
-}
-
-/* Optimize marker positioning */
+/* Hardware acceleration for smoother animations */
 .leaflet-marker-icon {
-  transform-origin: bottom center !important;
-  will-change: transform;
+  transform: translate3d(0,0,0);
   backface-visibility: hidden;
 }
 
-/* Optimize controls for mobile touch */
-.leaflet-touch .leaflet-control-zoom a {
-  width: 36px !important;
-  height: 36px !important;
-  line-height: 36px !important;
-  font-size: 18px !important;
+/* Location marker styling */
+.location-marker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
 }
 
-/* Fix iOS Safari issues with fixed positioning */
-@supports (-webkit-touch-callout: none) {
-  .map-container {
-    transform: translateZ(0);
+.location-marker-icon:active {
+  transform: scale(1.1);
+}
+
+/* Improved animations for better performance */
+.location-radius-circle {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Styling for dark sky markers */
+.dark-sky-marker {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+/* Optimized tile loading for mobile */
+.mobile-optimized .leaflet-tile-loaded {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* Enhanced popup styles for better readability */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 10px;
+}
+
+.leaflet-popup-tip {
+  width: 14px;
+  height: 14px;
+}
+
+/* Improved attribution control positioning on small screens */
+@media (max-width: 480px) {
+  .leaflet-control-attribution {
+    max-width: 70%;
+    white-space: normal;
+    font-size: 9px;
+    line-height: 1.2;
+    padding: 3px 6px;
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* Tile loading optimization */
+.leaflet-tile {
+  visibility: hidden;
+}
+
+.leaflet-tile-loaded {
+  visibility: visible;
+  /* Disable fade-in animation for performance */
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* Reduce DOM repaints when loading tiles */
+.leaflet-tile-container {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Improve performance by reducing the number of layers */
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
+/* Optimize panning performance */
+.leaflet-container {
+  transform-origin: 0 0;
+}
+
+/* Optimize for mobile devices */
+@media (max-width: 768px) {
+  .leaflet-container {
+    /* Mobile-specific optimizations */
+    touch-action: manipulation;
+  }
+  
+  /* Disable complex shadows on mobile */
+  .leaflet-popup-tip-container,
+  .leaflet-popup-tip {
+    box-shadow: none !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
   }
 }

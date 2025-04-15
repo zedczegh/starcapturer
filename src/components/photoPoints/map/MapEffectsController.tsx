@@ -1,71 +1,103 @@
 
-import React, { useEffect } from "react";
-import { useMap } from "react-leaflet";
-import L from "leaflet";
+import React, { useEffect, useRef } from 'react';
+import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-/**
- * Component to manage map bounds - simplified for better mobile performance
- */
-export function WorldBoundsController() {
+interface MapEffectsControllerProps {
+  onMapClick: (lat: number, lng: number) => void;
+}
+
+// More forgiving world bounds controller with no auto-zoom
+export const WorldBoundsController: React.FC = () => {
   const map = useMap();
+  const initialized = useRef(false);
   
   useEffect(() => {
-    if (!map) return;
+    if (!map || initialized.current) return;
+    initialized.current = true;
     
-    // Set max bounds with padding to prevent users from panning too far
-    const southWest = L.latLng(-85, -180);
-    const northEast = L.latLng(85, 180);
-    const bounds = L.latLngBounds(southWest, northEast);
+    // Set more forgiving max bounds
+    const worldBounds = new L.LatLngBounds(
+      new L.LatLng(-90, -200), // Significantly extended bounds
+      new L.LatLng(90, 200)    // Significantly extended bounds
+    );
     
-    // Set bounds with some padding
-    map.setMaxBounds(bounds);
+    map.setMaxBounds(worldBounds);
     
-    // Set minimum zoom level to prevent zooming out too far
-    map.setMinZoom(2);
+    // Gentler handling of edge cases
+    const handleDrag = () => {
+      const center = map.getCenter();
+      let lat = center.lat;
+      let lng = center.lng;
+      
+      // More forgiving latitude bounds
+      if (lat > 89) lat = 89;
+      if (lat < -89) lat = -89;
+      
+      // Smoother longitude wrapping
+      if (lng < -180) lng += 360;
+      if (lng > 180) lng -= 360;
+      
+      // Only pan if really needed - prevent unnecessary rendering
+      if (lat !== center.lat || lng !== center.lng) {
+        map.panTo(new L.LatLng(lat, lng), { animate: false });
+      }
+    };
     
-    // Disable animations for better mobile performance
-    map.options.zoomAnimation = false;
+    map.on('drag', handleDrag);
     
-    // Improve scroll sensitivity
-    if (map.scrollWheelZoom) {
-      // @ts-ignore - Internal Leaflet property
-      map.scrollWheelZoom.options.wheelDebounceTime = 100;
+    // Disable ALL automatic zoom animations
+    if (map.options) {
+      map.options.zoomAnimation = false;
+      map.options.markerZoomAnimation = false;
+    }
+    
+    // Ensure touch handling is optimized
+    if (map.dragging && map.dragging.enable) {
+      map.dragging.enable();
+    }
+    
+    if (map.touchZoom && map.touchZoom.enable) {
+      map.touchZoom.enable();
     }
     
     return () => {
-      try {
-        map.setMaxBounds(undefined);
-      } catch (e) {
-        // Ignore errors when cleaning up
-      }
+      map.off('drag', handleDrag);
     };
   }, [map]);
   
   return null;
-}
+};
 
-/**
- * Component to handle map click events - simplified for better performance
- */
-export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) => {
   const map = useMap();
-  
+  const clickHandlerRef = useRef<((e: L.LeafletMouseEvent) => void) | null>(null);
+
+  // Set up map click event handler with proper cleanup
   useEffect(() => {
     if (!map) return;
     
-    const handleMapClick = (e: any) => {
+    // Remove any existing handler to prevent duplicates
+    if (clickHandlerRef.current) {
+      map.off('click', clickHandlerRef.current);
+    }
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
     };
     
+    // Store reference to handler for cleanup
+    clickHandlerRef.current = handleMapClick;
     map.on('click', handleMapClick);
-    
+
     return () => {
-      map.off('click', handleMapClick);
+      if (clickHandlerRef.current) {
+        map.off('click', clickHandlerRef.current);
+      }
     };
   }, [map, onMapClick]);
-  
-  return null;
-}
 
-// Export L for TypeScript
-export { L };
+  return null;
+};
+
+export default MapEvents;

@@ -7,13 +7,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface MapControllerProps { 
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
-  doubleClickZoom?: boolean; // Add prop to handle double click zoom
 }
 
 export const MapController: React.FC<MapControllerProps> = ({ 
   userLocation,
-  searchRadius,
-  doubleClickZoom = true // Default to true
+  searchRadius
 }) => {
   const map = useMap();
   const firstRenderRef = useRef(true);
@@ -52,22 +50,17 @@ export const MapController: React.FC<MapControllerProps> = ({
       
       if (map.options) {
         map.options.touchZoom = 'center';
+        map.options.doubleClickZoom = 'center';
         map.options.bounceAtZoomLimits = false;
       }
     } else {
       map.scrollWheelZoom.enable();
       map.dragging.enable();
       map.touchZoom.enable();
+      map.doubleClickZoom.enable();
       map.boxZoom.enable();
       map.keyboard.enable();
       if (map.tap) map.tap.enable();
-    }
-    
-    // Handle double click zoom here instead of in MapContainer props
-    if (doubleClickZoom) {
-      map.doubleClickZoom.enable();
-    } else {
-      map.doubleClickZoom.disable();
     }
     
     for (const key in map._panes) {
@@ -88,7 +81,7 @@ export const MapController: React.FC<MapControllerProps> = ({
     return () => {
       window.removeEventListener('resize', handleMapInvalidation);
     };
-  }, [map, userLocation, isMobile, doubleClickZoom]); // Add doubleClickZoom to dependencies
+  }, [map, userLocation, isMobile]);
 
   return null;
 };
