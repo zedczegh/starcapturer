@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -108,7 +107,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   if (showMap) {
     return (
       <Suspense fallback={<PageLoader />}>
-        <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
+        <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
             locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
