@@ -56,7 +56,6 @@ declare module "@/types/weather" {
       score: number;
       isViable: boolean;
     };
-    siqsResult?: SIQSData;  // Added this property to fix the type error
     distance?: number;
     isViable?: boolean;
     siqsFactors?: Array<{

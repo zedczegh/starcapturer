@@ -11,9 +11,10 @@ import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
+import PinpointButton from './PinpointButton';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
 import L from 'leaflet';
-import CenteringPinpointButton from './CenteringPinpointButton';
 
 configureLeaflet();
 
@@ -148,6 +149,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
     return isMobile ? zoom - 1 : zoom;
   };
+  
+  // Handle pinpoint button click to center map on user location
+  const handlePinpointClick = useCallback(() => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom(), {
+        animate: true,
+        duration: 0.5
+      });
+    }
+  }, [userLocation]);
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
@@ -232,7 +243,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         />
       </MapContainer>
 
-      <div className="absolute z-[999] right-4 bottom-4 flex flex-col gap-2">
+      {/* Positioned map controls - Top right for pinpoint button, bottom right for legend */}
+      <div className="absolute z-[999] top-4 right-4">
+        <PinpointButton 
+          onGetLocation={handlePinpointClick}
+          className=""
+        />
+      </div>
+
+      <div className="absolute z-[999] right-4 bottom-4">
         {!isMobile && (
           <MapLegend 
             activeView={activeView} 
@@ -241,17 +260,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
       </div>
-      
-      {/* Relocate CenteringPinpointButton to top-right corner */}
-      <CenteringPinpointButton
-        onGetLocation={() => {
-          if (userLocation && mapRef.current) {
-            mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom());
-          }
-        }}
-        userLocation={userLocation}
-        className="absolute top-4 right-4 z-[999]"
-      />
     </div>
   );
 };

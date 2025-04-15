@@ -190,7 +190,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         />
       )}
       
-      {/* Pinpoint button is included inside LazyMapContainer */}
+      {!legendOpen && (
+        <CenteringPinpointButton 
+          onGetLocation={handleGetLocation}
+          userLocation={userLocation}
+          className={`absolute ${isMobile ? 'bottom-4 right-4' : 'top-4 right-4'}`}
+        />
+      )}
     </div>
   );
 };
