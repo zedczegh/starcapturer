@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { useMapLocations, useMapUtils } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
@@ -51,6 +51,8 @@ export const usePhotoPointsMap = ({
   
   // Combine locations - always include all certified locations regardless of view
   const combinedLocations = useCallback(() => {
+    console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations.length}`);
+    
     // Always include certified locations
     if (allCertifiedLocations.length > 0) {
       // If in certified view, only show certified locations
@@ -101,6 +103,8 @@ export const usePhotoPointsMap = ({
     mapReady
   });
 
+  console.log(`Processed locations: ${processedLocations.length}`);
+
   // Calculate map center coordinates
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
@@ -109,6 +113,7 @@ export const usePhotoPointsMap = ({
       : [39.9042, 116.4074]; // Default center (Beijing)
 
   const handleMapReady = useCallback(() => {
+    console.log("Map ready signal received");
     setMapReady(true);
   }, []);
 

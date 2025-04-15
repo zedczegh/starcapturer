@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { useNavigate } from 'react-router-dom';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
@@ -40,4 +40,38 @@ export const useMapUtils = () => {
   };
 };
 
-export { useMapLocations } from './useMapLocations';
+export const useMapLocations = ({
+  userLocation,
+  locations,
+  searchRadius,
+  activeView,
+  mapReady
+}: {
+  userLocation: { latitude: number; longitude: number } | null;
+  locations: SharedAstroSpot[];
+  searchRadius: number;
+  activeView: 'certified' | 'calculated';
+  mapReady: boolean;
+}) => {
+  // Ensure locations is always an array even if it's undefined or null
+  const safeLocations = Array.isArray(locations) ? locations : [];
+  
+  // Log counts of locations by type for debugging
+  const certifiedCount = safeLocations.filter(loc => 
+    Boolean(loc?.isDarkSkyReserve || loc?.certification)
+  ).length;
+  
+  const calculatedCount = safeLocations.length - certifiedCount;
+  
+  console.log(`Location counts - certified: ${certifiedCount}, calculated: ${calculatedCount}, total: ${safeLocations.length}`);
+  
+  // Apply basic filtering to remove invalid locations
+  const validLocations = safeLocations.filter(loc => 
+    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+  );
+  
+  return {
+    // Return all valid locations without further filtering
+    processedLocations: validLocations
+  };
+};

@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 
 /**
  * Filters out invalid locations from an array of locations

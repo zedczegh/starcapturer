@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
@@ -182,8 +182,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         handleTouchEnd={handleTouchEnd}
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
-        useMobileMapFixer={false} // Disable mobile fixer which causes flashing
-        showRadiusCircles={activeView === 'calculated' && !isMobile} // Disable radius circles on mobile
+        useMobileMapFixer={false}
+        showRadiusCircles={activeView === 'calculated' && !isMobile}
       />
       
       {!isMobile && (

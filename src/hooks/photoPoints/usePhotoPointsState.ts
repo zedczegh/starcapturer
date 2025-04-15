@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useLocationState } from '@/hooks/location/useLocationState';
+import { useGeolocation } from '@/hooks/location/useGeolocation';
 
 export const usePhotoPointsState = () => {
   const { t } = useLanguage();
@@ -18,11 +18,19 @@ export const usePhotoPointsState = () => {
   // For initializing states
   const [initialLoad, setInitialLoad] = useState(true);
   
-  // Use shared location state hook
-  const { 
-    locationLoading, effectiveLocation, 
-    handleLocationUpdate, handleResetLocation 
-  } = useLocationState();
+  // For location tracking
+  const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const { currentPosition, loading: locationLoading, getPosition } = useGeolocation();
+  
+  // Update effective location when current position changes
+  useEffect(() => {
+    if (currentPosition) {
+      setEffectiveLocation({
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude
+      });
+    }
+  }, [currentPosition]);
 
   // Default calculated search radius set to 500km
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState(500);
@@ -35,11 +43,29 @@ export const usePhotoPointsState = () => {
     setCalculatedSearchRadius(value);
   }, []);
   
+  // Update location without auto-refresh
+  const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
+    if (!isFinite(latitude) || !isFinite(longitude)) {
+      toast.error(t("Invalid location coordinates", "无效的位置坐标"));
+      return;
+    }
+    
+    setEffectiveLocation({
+      latitude,
+      longitude
+    });
+    
+    console.log(`Location updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  }, [t]);
+  
+  // Reset location to user's current position
+  const handleResetLocation = useCallback(() => {
+    getPosition();
+  }, [getPosition]);
+  
   // Toggle between certified and calculated views
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
     setActiveView(view);
-    
-    // No need to auto-refresh when user changes views
   }, []);
   
   // Toggle between map and list views
@@ -65,7 +91,7 @@ export const usePhotoPointsState = () => {
     currentSearchRadius,
     handleRadiusChange,
     handleViewChange,
-    handleLocationUpdate, // This function doesn't auto-refresh now
+    handleLocationUpdate,
     handleResetLocation,
     toggleMapView
   };

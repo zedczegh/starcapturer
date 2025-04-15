@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/types/weather";
 import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
 
 /**
@@ -16,6 +16,19 @@ export function prepareLocationForNavigation(location: SharedAstroSpot) {
   // Generate a consistent ID for the location
   const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
   
+  // Handle siqs data safely
+  const siqsValue = typeof location.siqs === 'number' 
+    ? location.siqs 
+    : typeof location.siqs === 'object' && location.siqs !== null 
+      ? location.siqs.score 
+      : undefined;
+      
+  const isViableValue = typeof location.siqs === 'object' && location.siqs !== null 
+    ? location.siqs.isViable 
+    : typeof siqsValue === 'number' 
+      ? siqsValue >= 2 
+      : undefined;
+  
   // Create a robust location data object with all necessary fields
   const locationData = {
     id: locationId,
@@ -24,15 +37,15 @@ export function prepareLocationForNavigation(location: SharedAstroSpot) {
     latitude: location.latitude,
     longitude: location.longitude,
     bortleScale: location.bortleScale || 4,
-    siqs: location.siqs,
+    siqs: siqsValue,
     timestamp: new Date().toISOString(),
     fromPhotoPoints: true,
     isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
     certification: location.certification || '',
-    // Important: Create a stable siqsResult structure if we have a siqs score
-    siqsResult: location.siqsResult || (location.siqs ? { 
-      score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
-      isViable: typeof location.siqs === 'number' ? location.siqs >= 2 : location.siqs.isViable,
+    // Important: Create a stable siqsResult structure if we have a siqs score or an existing siqsResult
+    siqsResult: location.siqsResult || (siqsValue !== undefined ? {
+      score: siqsValue,
+      isViable: isViableValue || false,
       factors: []
     } : undefined)
   };

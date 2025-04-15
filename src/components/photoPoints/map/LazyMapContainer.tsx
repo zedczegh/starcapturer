@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
@@ -94,15 +94,20 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       
       const sameLocation = locations.find(loc => 
         Math.abs(loc.latitude - userLat) < 0.0001 && 
-        Math.abs(loc.longitude - userLng) < 0.0001 && 
-        loc.siqs !== undefined
+        Math.abs(loc.longitude - userLng) < 0.0001
       );
       
-      if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(typeof sameLocation.siqs === 'number' ? sameLocation.siqs : sameLocation.siqs.score);
+      if (sameLocation) {
+        if (typeof sameLocation.siqs === 'number') {
+          setCurrentSiqs(sameLocation.siqs);
+        } else if (sameLocation.siqs && typeof sameLocation.siqs === 'object') {
+          setCurrentSiqs(sameLocation.siqs.score);
+        } else if (sameLocation.siqsResult) {
+          setCurrentSiqs(sameLocation.siqsResult.score);
+        }
       }
     }
-  }, [userLocation?.latitude, userLocation?.longitude, locations.length]); 
+  }, [userLocation?.latitude, userLocation?.longitude, locations]); 
   
   const handleMapReady = useCallback(() => {
     if (isMountedRef.current) {
@@ -163,6 +168,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         whenReady={handleMapReady}
         attributionControl={!isMobile}
         worldCopyJump={true}
+        doubleClickZoom={!isMobile}
       >
         <TileLayer
           attribution={tileOptions.attribution}
@@ -205,10 +211,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
           const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
-          
-          if (isMobile && !isCertified && locations.length > 30 && Math.random() > 0.5) {
-            return null;
-          }
           
           return (
             <LocationMarker
