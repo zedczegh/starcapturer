@@ -20,9 +20,8 @@ export function usePhotoPointsState() {
     timeout: 10000 // Timeout after 10 seconds
   });
   
-  // Use safer approach for state management with refs to track view change
-  const [activeView, setActiveViewState] = useState<PhotoPointsViewMode>('certified');
-  const activeViewRef = useRef<PhotoPointsViewMode>(activeView);
+  // State for view mode
+  const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
   
   const [initialLoad, setInitialLoad] = useState(true);
   const [showMap, setShowMap] = useState(true);
@@ -31,16 +30,9 @@ export function usePhotoPointsState() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
   
-  // Prevent view change operations from stacking
-  const viewChangeInProgressRef = useRef(false);
-  const lastViewChangeTimestampRef = useRef(0);
-  const viewChangeTimeoutRef = useRef<number | null>(null);
-  
-  // Safe setter for activeView that updates both state and ref
-  const setActiveView = useCallback((view: PhotoPointsViewMode) => {
-    setActiveViewState(view);
-    activeViewRef.current = view;
-  }, []);
+  // Track view change status to prevent race conditions
+  const isViewChangeInProgress = useRef(false);
+  const viewChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Get user position
   useEffect(() => {
@@ -101,7 +93,6 @@ export function usePhotoPointsState() {
     return () => {
       if (viewChangeTimeoutRef.current) {
         clearTimeout(viewChangeTimeoutRef.current);
-        viewChangeTimeoutRef.current = null;
       }
     };
   }, []);
@@ -119,65 +110,49 @@ export function usePhotoPointsState() {
     setShowMap(prev => !prev);
   }, []);
   
-  // Completely redesigned view change handler with better error handling
+  // Safer view change handler with debounce protection
   const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
-    // Skip if trying to change to current view
-    if (view === activeViewRef.current) {
-      console.log(`Already in ${view} view, no change needed`);
+    // Skip if trying to set the same view
+    if (view === activeView) {
+      console.log(`Already in ${view} view`);
       return;
     }
     
     // Skip if a view change is already in progress
-    if (viewChangeInProgressRef.current) {
-      console.log("View change already in progress, skipping");
+    if (isViewChangeInProgress.current) {
+      console.log("View change already in progress, ignoring new request");
       return;
     }
     
-    console.log(`Starting view change from ${activeViewRef.current} to ${view}`);
+    console.log(`View change requested: ${activeView} -> ${view}`);
+    isViewChangeInProgress.current = true;
     
-    // Mark transition as in progress
-    viewChangeInProgressRef.current = true;
-    lastViewChangeTimestampRef.current = Date.now();
-    
-    // Clear any existing view change timeout
-    if (viewChangeTimeoutRef.current !== null) {
+    // Clear any existing timeout
+    if (viewChangeTimeoutRef.current) {
       clearTimeout(viewChangeTimeoutRef.current);
-      viewChangeTimeoutRef.current = null;
     }
     
-    try {
-      // Clear location cache to prevent stale data
-      clearLocationCache();
-      
-      // Update the view with a safer approach
-      // First update the ref to prevent race conditions
-      activeViewRef.current = view;
-      
-      // Then schedule the state update with a short delay
-      viewChangeTimeoutRef.current = window.setTimeout(() => {
-        try {
-          console.log(`Executing view change to ${view}`);
-          setActiveViewState(view);
-          
-          // Reset in-progress flag after another delay
-          setTimeout(() => {
-            viewChangeInProgressRef.current = false;
-            console.log(`View change to ${view} completed`);
-          }, 500);
-        } catch (err) {
-          console.error("Error during view state update:", err);
-          viewChangeInProgressRef.current = false;
-        }
-      }, 50);
-    } catch (err) {
-      console.error("Error during view change:", err);
-      viewChangeInProgressRef.current = false;
-      
-      // Try to recover from errors
-      activeViewRef.current = view;
-      setTimeout(() => setActiveViewState(view), 100);
-    }
-  }, []);
+    // Update state with delay to avoid race conditions
+    viewChangeTimeoutRef.current = setTimeout(() => {
+      try {
+        // Clear location cache
+        clearLocationCache();
+        
+        // Update view state
+        setActiveView(view);
+        console.log(`View changed to: ${view}`);
+        
+        // Reset the in-progress flag after a short delay 
+        // to prevent rapid consecutive changes
+        setTimeout(() => {
+          isViewChangeInProgress.current = false;
+        }, 500);
+      } catch (error) {
+        console.error("Error during view change:", error);
+        isViewChangeInProgress.current = false;
+      }
+    }, 50);
+  }, [activeView]);
   
   // Handle location update from map click
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
@@ -218,7 +193,7 @@ export function usePhotoPointsState() {
   }, [coords, getPosition]);
 
   // Calculate current search radius based on view mode
-  const currentSearchRadius = activeViewRef.current === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
+  const currentSearchRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
 
   return {
     activeView,
