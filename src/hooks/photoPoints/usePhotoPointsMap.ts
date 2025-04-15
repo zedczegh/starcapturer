@@ -4,7 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations } from './useMapLocations';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
-import { useMapUtils } from './useMapUtils'; // Fixed import
+import { useMapUtils } from './useMapUtils';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -56,41 +56,42 @@ export const usePhotoPointsMap = ({
     console.log(`usePhotoPointsMap - Certified locations: ${allCertifiedLocations.length}`);
   }, [locations.length, activeView, allCertifiedLocations.length]);
   
-  // Combine locations - always include all certified locations regardless of view
+  // Combine locations
   const combinedLocations = useCallback(() => {
-    // Always include certified locations
+    // For certified view, only show certified locations
+    if (activeView === 'certified') {
+      return allCertifiedLocations;
+    }
+    
+    // For calculated view, show both types but prevent duplicates
+    const allLocations = [...locations];
+    
+    // If we have certified locations that aren't in the main locations array, add them
     if (allCertifiedLocations.length > 0) {
-      // If in certified view, only show certified locations
-      if (activeView === 'certified') {
-        return allCertifiedLocations;
-      } 
-      
-      // If in calculated view, combine all locations but prioritize certified ones
       const locationMap = new Map<string, SharedAstroSpot>();
       
-      // First add all certified locations
-      allCertifiedLocations.forEach(loc => {
+      // First add all provided locations
+      allLocations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           locationMap.set(key, loc);
         }
       });
       
-      // Then add calculated locations without overriding certified ones
-      locations.forEach(loc => {
+      // Then add certified locations that aren't already included
+      allCertifiedLocations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           if (!locationMap.has(key)) {
             locationMap.set(key, loc);
+            allLocations.push(loc);
           }
         }
       });
-      
-      return Array.from(locationMap.values());
     }
     
-    // Fallback to provided locations if certified locations aren't loaded yet
-    return locations;
+    console.log(`combinedLocations - Returning ${allLocations.length} locations for ${activeView} view`);
+    return allLocations;
   }, [locations, allCertifiedLocations, activeView]);
   
   // Use the location processing hook

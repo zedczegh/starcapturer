@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -55,8 +54,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       return certifiedLocations;
     }
     // For calculated view, show both certified and calculated locations
-    return activeView === 'calculated' ? [...certifiedLocations, ...calculatedLocations] : locations;
+    return locations; // This should include both certified and calculated
   }, [activeView, certifiedLocations, calculatedLocations, locations]);
+  
+  // For debugging - log location counts
+  useEffect(() => {
+    console.log(`PhotoPointsMap - Using ${locationsToShow.length} locations for map (${activeView} view)`);
+    console.log(`PhotoPointsMap - Certified: ${certifiedLocations.length}, Calculated: ${calculatedLocations.length - certifiedLocations.length}`);
+  }, [locationsToShow.length, certifiedLocations.length, calculatedLocations.length, activeView]);
   
   const { 
     mapReady,
@@ -94,7 +99,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     
     return [...certified, ...nonCertified];
   }, [validLocations, isMobile, activeView]);
-  
+
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -161,12 +166,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     setLegendOpen(isOpen);
   }, []);
   
-  // Debug log to see what locations are being provided
-  useEffect(() => {
-    console.log(`PhotoPointsMap - Showing ${optimizedLocations.length} locations (${activeView} view)`);
-    console.log(`Certified: ${certifiedLocations.length}, Calculated: ${calculatedLocations.length}`);
-  }, [optimizedLocations.length, certifiedLocations.length, calculatedLocations.length, activeView]);
-
   return (
     <div 
       style={{ height: mapContainerHeight }} 
@@ -185,7 +184,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         searchRadius={searchRadius}
         activeView={activeView}
         onMapReady={handleMapReady}
-        onLocationClick={handleLocationClicked}
+        onLocationClick={handleLocationClicked || handleLocationClick}
         onMapClick={handleMapClick}
         zoom={initialZoom}
         hoveredLocationId={hoveredLocationId}
