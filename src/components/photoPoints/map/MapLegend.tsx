@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ChevronLeft, Info, Star, Circle } from 'lucide-react';
@@ -23,17 +22,14 @@ const MapLegend: React.FC<MapLegendProps> = ({
   const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(true);
   
-  // Determine which legends to display based on props and activeView
   const displayStarLegend = showStarLegend || activeView === 'certified';
   const displayCircleLegend = showCircleLegend || activeView === 'calculated';
   
-  // Function to prevent event propagation
   const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
   };
 
-  // Notify parent component when collapse state changes
   useEffect(() => {
     if (onToggle) {
       onToggle(!isCollapsed);
@@ -43,7 +39,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
   return (
     <div className={`z-[999] ${className}`} onClick={stopPropagation} onTouchStart={stopPropagation}>
       <div className="relative">
-        {/* The collapsible panel */}
         <AnimatePresence>
           {!isCollapsed && (
             <motion.div
@@ -55,7 +50,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
                          shadow-lg overflow-y-auto max-h-[80vh] w-[260px]`}
               onClick={stopPropagation}
             >
-              {/* Legend Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
                   <Star className="h-4 w-4 mr-1.5 text-primary" />
@@ -73,9 +67,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
                 </Button>
               </div>
               
-              {/* Legend Content */}
               <div className="space-y-3">
-                {/* Star Legend */}
                 {displayStarLegend && (
                   <div className="space-y-2 bg-muted/20 p-2.5 rounded-md border border-primary/10">
                     <h4 className="text-xs font-medium text-primary/90 flex items-center">
@@ -105,7 +97,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
                   </div>
                 )}
 
-                {/* Circle Legend */}
                 {displayCircleLegend && (
                   <div className="space-y-2 bg-muted/20 p-2.5 rounded-md border border-primary/10">
                     <h4 className="text-xs font-medium text-primary/90 flex items-center">
@@ -135,7 +126,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
                   </div>
                 )}
                 
-                {/* Legend Footer */}
                 <div className="mt-2 text-xs text-muted-foreground bg-background/70 p-2 rounded-md border border-primary/10 shadow-sm">
                   <p>
                     {t(
@@ -149,7 +139,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
           )}
         </AnimatePresence>
         
-        {/* Enhanced trigger button with improved hover animation */}
         <motion.button
           initial={{ scale: 0.95, opacity: 0.8 }}
           animate={{ 
@@ -173,7 +162,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
             stopPropagation(e);
             setIsCollapsed(!isCollapsed);
           }}
-          className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
+          className={`absolute top-4 right-16 z-[999] flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
                     rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all ${isCollapsed ? '' : 'hidden'}`}
           style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
         >
@@ -181,7 +170,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
             <AlertCircle className="h-5 w-5 text-white/90" strokeWidth={2.2} />
           </div>
           
-          {/* Add pulsing effect to button when collapsed */}
           <motion.div 
             className="absolute inset-0 rounded-full"
             animate={{ 
@@ -238,12 +226,9 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
   );
 };
 
-// Helper function to convert hex color to RGB for animations
 function hexToRgb(hex: string): string {
-  // Remove # if present
   hex = hex.replace('#', '');
   
-  // Parse the hex values
   const r = parseInt(hex.substring(0, 2), 16) || 0;
   const g = parseInt(hex.substring(2, 4), 16) || 0;
   const b = parseInt(hex.substring(4, 6), 16) || 0;
