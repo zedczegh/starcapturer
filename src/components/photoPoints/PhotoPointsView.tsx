@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
+
+import React, { lazy, Suspense, useCallback, useState, useEffect, memo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
@@ -29,16 +30,8 @@ interface PhotoPointsViewProps {
   maxLoadMoreClicks: number;
 }
 
-const MapView: React.FC<{
-  effectiveLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
-  certifiedLocations: SharedAstroSpot[];
-  calculatedLocations: SharedAstroSpot[];
-  activeView: PhotoPointsViewMode;
-  searchRadius: number;
-  onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (latitude: number, longitude: number) => void;
-}> = ({
+// Memoized map view component to prevent unnecessary re-renders
+const MapView = memo(({
   effectiveLocation,
   locations,
   certifiedLocations,
@@ -47,9 +40,21 @@ const MapView: React.FC<{
   searchRadius,
   onLocationClick,
   onLocationUpdate
+}: {
+  effectiveLocation: { latitude: number; longitude: number } | null;
+  locations: SharedAstroSpot[];
+  certifiedLocations: SharedAstroSpot[];
+  calculatedLocations: SharedAstroSpot[];
+  activeView: PhotoPointsViewMode;
+  searchRadius: number;
+  onLocationClick: (location: SharedAstroSpot) => void;
+  onLocationUpdate: (latitude: number, longitude: number) => void;
 }) => {
+  // Consistent use of hooks for all render paths
+  const [mapKey] = useState(`map-${activeView}-${Date.now()}`);
+  
   return (
-    <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
+    <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg" key={mapKey}>
       <PhotoPointsMap 
         userLocation={effectiveLocation}
         locations={locations}
@@ -62,17 +67,22 @@ const MapView: React.FC<{
       />
     </div>
   );
-};
+});
 
-const CertifiedView: React.FC<{
-  certifiedLocations: SharedAstroSpot[];
-  loading: boolean;
-  initialLoad: boolean;
-}> = ({ 
+MapView.displayName = 'MapView';
+
+// Memoized certified view component
+const CertifiedView = memo(({ 
   certifiedLocations,
   loading,
   initialLoad
+}: { 
+  certifiedLocations: SharedAstroSpot[];
+  loading: boolean;
+  initialLoad: boolean;
 }) => {
+  console.log("Rendering CertifiedView with locations:", certifiedLocations.length);
+  
   return (
     <DarkSkyLocations
       locations={certifiedLocations}
@@ -80,22 +90,12 @@ const CertifiedView: React.FC<{
       initialLoad={initialLoad}
     />
   );
-};
+});
 
-const CalculatedView: React.FC<{
-  calculatedLocations: SharedAstroSpot[];
-  effectiveLocation: { latitude: number; longitude: number } | null;
-  calculatedSearchRadius: number;
-  loading: boolean;
-  initialLoad: boolean;
-  hasMore: boolean;
-  onLoadMore: () => void;
-  onRefresh: () => void;
-  canLoadMoreCalculated: boolean;
-  loadMoreCalculated: () => void;
-  loadMoreClickCount: number;
-  maxLoadMoreClicks: number;
-}> = ({
+CertifiedView.displayName = 'CertifiedView';
+
+// Memoized calculated view component
+const CalculatedView = memo(({
   calculatedLocations,
   effectiveLocation,
   calculatedSearchRadius,
@@ -108,7 +108,22 @@ const CalculatedView: React.FC<{
   loadMoreCalculated,
   loadMoreClickCount,
   maxLoadMoreClicks
+}: {
+  calculatedLocations: SharedAstroSpot[];
+  effectiveLocation: { latitude: number; longitude: number } | null;
+  calculatedSearchRadius: number;
+  loading: boolean;
+  initialLoad: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  onRefresh: () => void;
+  canLoadMoreCalculated: boolean;
+  loadMoreCalculated: () => void;
+  loadMoreClickCount: number;
+  maxLoadMoreClicks: number;
 }) => {
+  console.log("Rendering CalculatedView with locations:", calculatedLocations.length);
+  
   const filteredLocations = React.useMemo(() => {
     if (!effectiveLocation) return calculatedLocations;
     
@@ -141,8 +156,11 @@ const CalculatedView: React.FC<{
       maxLoadMoreClicks={maxLoadMoreClicks}
     />
   );
-};
+});
 
+CalculatedView.displayName = 'CalculatedView';
+
+// Main component with consistent hooks usage
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   showMap,
   activeView,
@@ -163,23 +181,30 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   loadMoreClickCount,
   maxLoadMoreClicks
 }) => {
-  const [lastActiveView, setLastActiveView] = useState<PhotoPointsViewMode>(activeView);
+  // Use stable state object to prevent inconsistent hook calls
+  const [viewState] = useState({
+    activatedViews: { certified: false, calculated: false }
+  });
+  
   const [showFallbackLoader, setShowFallbackLoader] = useState(false);
   
+  // Mark the active view as activated
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setLastActiveView(activeView);
+    if (activeView === 'certified') {
+      viewState.activatedViews.certified = true;
+    } else if (activeView === 'calculated') {
+      viewState.activatedViews.calculated = true;
+    }
+  }, [activeView, viewState]);
+  
+  // Show loader briefly during view transitions
+  useEffect(() => {
+    setShowFallbackLoader(true);
+    const timer = setTimeout(() => {
       setShowFallbackLoader(false);
     }, 300);
-    
-    return () => clearTimeout(timeoutId);
+    return () => clearTimeout(timer);
   }, [activeView]);
-  
-  useEffect(() => {
-    if (lastActiveView !== activeView) {
-      setShowFallbackLoader(true);
-    }
-  }, [lastActiveView, activeView]);
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && onLocationClick) {
@@ -195,6 +220,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     }
   }, [onLocationClick]);
   
+  console.log("PhotoPointsView rendering with activeView:", activeView);
+  
+  // Always include a loading state for consistent hook usage
   if ((loading && initialLoad) || showFallbackLoader) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -203,6 +231,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     );
   }
   
+  // Map view with consistent prop passing
   if (showMap) {
     const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
     
@@ -222,6 +251,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     );
   }
   
+  // Always return the same component structure but conditionally render content
   return (
     <Suspense fallback={<PageLoader />}>
       <div className="min-h-[300px]">

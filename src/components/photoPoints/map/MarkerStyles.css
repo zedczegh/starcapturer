@@ -98,11 +98,22 @@
   background-clip: padding-box;
 }
 
-/* Location radius circle styling */
+/* Location radius circle styling - improved to be concentric */
 .leaflet-circle-pane path {
   stroke-dasharray: 5, 5;
   animation: pulse 3s infinite ease-in-out;
   transform-origin: center center !important;
+  z-index: 300 !important;
+}
+
+/* Ensure radius circles stay under markers but above tiles */
+.leaflet-circle-pane {
+  z-index: 300 !important;
+}
+
+/* Ensure marker pane stays above circles */
+.leaflet-marker-pane {
+  z-index: 600 !important;
 }
 
 @keyframes pulse {
@@ -197,3 +208,4 @@
   color: transparent;
   text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
 }
+
