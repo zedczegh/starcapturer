@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
 import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
-import { findNearestTown } from '@/utils/nearestTownCalculator';
+import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { formatDistance } from '@/utils/location/formatDistance';
 
 interface MapMarkerPopupProps {
@@ -44,7 +44,13 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
-        {location.siqs > 0 && (
+        {/* Consistent SIQS badge for all location types */}
+        {location.siqs !== undefined && (
+          <SiqsScoreBadge score={location.siqs || 0} compact={true} />
+        )}
+        
+        {/* Fallback if SiqsScoreBadge doesn't render */}
+        {location.siqs > 0 && !location.siqs && (
           <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full border border-yellow-500/40">
             <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
             <span className="text-xs font-medium">{formatSIQSScore(location.siqs)}</span>

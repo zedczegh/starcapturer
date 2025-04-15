@@ -30,6 +30,8 @@ const LocationView: React.FC<LocationViewProps> = ({
   
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
+    // Reset to page 1 when locations data changes
+    setCurrentPage(1);
   }, [locations]);
   
   if (loading && initialLoad) {
@@ -88,7 +90,14 @@ const LocationView: React.FC<LocationViewProps> = ({
   const totalPages = Math.ceil(locations.length / locationsPerPage);
   const indexOfLastLocation = currentPage * locationsPerPage;
   const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
+  
+  // Get current page locations
   const currentLocations = locations.slice(indexOfFirstLocation, indexOfLastLocation);
+  
+  const handlePageChange = (pageNumber: number) => {
+    window.scrollTo(0, 0);
+    setCurrentPage(pageNumber);
+  };
   
   return (
     <div className="space-y-6">
@@ -105,7 +114,7 @@ const LocationView: React.FC<LocationViewProps> = ({
             {currentPage > 1 && (
               <PaginationItem>
                 <PaginationPrevious 
-                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  onClick={() => handlePageChange(currentPage - 1)}
                   aria-label={t("Previous page", "上一页")}
                 />
               </PaginationItem>
@@ -115,7 +124,7 @@ const LocationView: React.FC<LocationViewProps> = ({
               <PaginationItem key={page}>
                 <PaginationLink
                   isActive={page === currentPage}
-                  onClick={() => setCurrentPage(page)}
+                  onClick={() => handlePageChange(page)}
                   aria-label={t(`Page ${page}`, `第${page}页`)}
                 >
                   {page}
@@ -126,7 +135,7 @@ const LocationView: React.FC<LocationViewProps> = ({
             {currentPage < totalPages && (
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  onClick={() => handlePageChange(currentPage + 1)}
                   aria-label={t("Next page", "下一页")}
                 />
               </PaginationItem>
