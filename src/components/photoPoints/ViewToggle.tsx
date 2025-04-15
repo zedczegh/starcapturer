@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Sparkles, MapPin } from 'lucide-react';
+import { BadgeCheck, MapPin } from 'lucide-react';
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
@@ -23,25 +23,22 @@ const CertifiedButton: React.FC<{
   return (
     <Button
       variant={isActive ? "default" : "ghost"}
-      size="sm"
+      size="lg"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full ${
+      className={`relative w-full min-w-[160px] group ${
         isActive
-          ? 'bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-primary-foreground hover:from-amber-500 hover:to-amber-600'
-          : 'text-muted-foreground hover:text-foreground'
+          ? 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700'
+          : 'hover:bg-amber-500/10'
       }`}
     >
       {isActive && (
-        <div
-          className="absolute inset-0 rounded-md pointer-events-none"
-          style={{ 
-            boxShadow: '0 0 15px rgba(251, 191, 36, 0.6), inset 0 0 8px rgba(251, 191, 36, 0.4)'
-          }}
-        />
+        <div className="absolute inset-0 rounded-md opacity-20 bg-gradient-to-r from-yellow-200 to-amber-300 animate-pulse" />
       )}
-      <Sparkles className="h-4 w-4 mr-2" />
-      <span>{t("Certified Dark Skies", "认证暗夜区")}</span>
+      <BadgeCheck className={`h-5 w-5 mr-2 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} />
+      <span className={`font-medium ${isActive ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`}>
+        {t("Certified Dark Skies", "认证暗夜区")}
+      </span>
     </Button>
   );
 };
@@ -56,25 +53,22 @@ const CalculatedButton: React.FC<{
   return (
     <Button
       variant={isActive ? "default" : "ghost"}
-      size="sm"
+      size="lg"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full ${
+      className={`relative w-full min-w-[160px] group ${
         isActive
-          ? 'bg-gradient-to-r from-primary-500/90 to-primary-600/90 text-primary-foreground hover:from-primary-500 hover:to-primary-600'
-          : 'text-muted-foreground hover:text-foreground'
+          ? 'bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700'
+          : 'hover:bg-purple-500/10'
       }`}
     >
       {isActive && (
-        <div
-          className="absolute inset-0 rounded-md pointer-events-none"
-          style={{ 
-            boxShadow: '0 0 15px rgba(139, 92, 246, 0.6), inset 0 0 8px rgba(139, 92, 246, 0.4)'
-          }}
-        />
+        <div className="absolute inset-0 rounded-md opacity-20 bg-gradient-to-r from-violet-200 to-purple-300 animate-pulse" />
       )}
-      <MapPin className="h-4 w-4 mr-2" />
-      <span>{t("Calculated Spots", "计算位置")}</span>
+      <MapPin className={`h-5 w-5 mr-2 ${isActive ? 'text-purple-100' : 'text-purple-500'}`} />
+      <span className={`font-medium ${isActive ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`}>
+        {t("Calculated Spots", "计算位置")}
+      </span>
     </Button>
   );
 };
@@ -84,7 +78,6 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   onViewChange,
   loading = false
 }) => {
-  // Simple handler functions for view changes
   const handleCertifiedClick = () => {
     if (activeView !== 'certified' && !loading) {
       console.log("ViewToggle: Switching to certified view");
@@ -100,25 +93,19 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   };
   
   return (
-    <div className="flex justify-center mb-6">
-      <div className="flex bg-muted/30 p-2 rounded-lg shadow-sm border border-border/50 w-full max-w-sm">
-        {/* Certified Button */}
-        <div className="flex-1 mx-2">
-          <CertifiedButton 
-            isActive={activeView === 'certified'}
-            disabled={loading || activeView === 'certified'}
-            onClick={handleCertifiedClick}
-          />
-        </div>
+    <div className="flex justify-center mb-6 px-4">
+      <div className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 shadow-sm w-full max-w-xl">
+        <CertifiedButton 
+          isActive={activeView === 'certified'}
+          disabled={loading || activeView === 'certified'}
+          onClick={handleCertifiedClick}
+        />
         
-        {/* Calculated Button */}
-        <div className="flex-1 mx-2">
-          <CalculatedButton
-            isActive={activeView === 'calculated'}
-            disabled={loading || activeView === 'calculated'}
-            onClick={handleCalculatedClick}
-          />
-        </div>
+        <CalculatedButton
+          isActive={activeView === 'calculated'}
+          disabled={loading || activeView === 'calculated'}
+          onClick={handleCalculatedClick}
+        />
       </div>
     </div>
   );
