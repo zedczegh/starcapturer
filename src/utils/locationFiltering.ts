@@ -1,70 +1,52 @@
 
-/**
- * Location filtering utilities
- * IMPORTANT: This file contains critical filtering logic for map locations.
- * Any changes to these functions should be carefully tested to avoid breaking the app.
- */
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isWaterLocation } from "@/utils/locationValidator";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Filter out invalid locations and water spots
- * @param locations Array of locations to filter
- * @returns Filtered locations array
+ * Filter out invalid locations (those without latitude/longitude)
  */
 export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-  return locations.filter(location => 
-    location && 
-    typeof location.latitude === 'number' && 
-    typeof location.longitude === 'number' &&
-    // IMPORTANT: Only apply water location filtering to non-certified locations
-    (location.isDarkSkyReserve || 
-     location.certification || 
-     !isWaterLocation(location.latitude, location.longitude, false))
+  return locations.filter(loc => 
+    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
   );
 };
 
 /**
- * Extract certified and calculated locations
- * @param locations Array of locations to separate
- * @returns Object with certified and calculated location arrays
+ * Separate locations into certified and calculated types
  */
 export const separateLocationTypes = (locations: SharedAstroSpot[]) => {
-  const certifiedLocations = locations.filter(location => 
-    location.isDarkSkyReserve === true || 
-    (location.certification && location.certification !== '')
+  console.log(`Processing ${locations.length} locations for certified/calculated separation`);
+  
+  const certifiedLocations = locations.filter(loc => 
+    loc.isDarkSkyReserve || loc.certification
   );
   
-  const calculatedLocations = locations.filter(location => 
-    !(location.isDarkSkyReserve === true || 
-    (location.certification && location.certification !== ''))
+  const calculatedLocations = locations.filter(loc => 
+    !loc.isDarkSkyReserve && !loc.certification
   );
-
+  
+  console.log(`Found ${certifiedLocations.length} certified locations (not filtered by distance)`);
+  console.log(`Found ${certifiedLocations.length} certified and ${calculatedLocations.length} calculated locations`);
+  
   return { certifiedLocations, calculatedLocations };
 };
 
 /**
- * Merge locations according to active view
- * @param certifiedLocations Array of certified locations
- * @param calculatedLocations Array of calculated locations
- * @param activeView Current active view mode
- * @returns Merged array of locations based on view
+ * Merge certified and calculated locations with proper priority
  */
 export const mergeLocations = (
   certifiedLocations: SharedAstroSpot[], 
   calculatedLocations: SharedAstroSpot[],
   activeView: 'certified' | 'calculated'
-) => {
-  // For certified view, ONLY include certified locations
+): SharedAstroSpot[] => {
+  // For certified view, only return certified locations
   if (activeView === 'certified') {
     return certifiedLocations;
   }
   
-  // For calculated view, include both types but prioritize certified locations
+  // For calculated view, include both but prevent duplicates
   const locationMap = new Map<string, SharedAstroSpot>();
   
-  // Always include all certified locations regardless of active view
-  // IMPORTANT: No filter applied to certified locations
+  // First add all certified locations (they take priority)
   certifiedLocations.forEach(loc => {
     if (loc.latitude && loc.longitude) {
       const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -72,46 +54,15 @@ export const mergeLocations = (
     }
   });
   
-  // Add calculated locations with water filtering
+  // Then add calculated locations without overriding certified ones
   calculatedLocations.forEach(loc => {
-    // Skip water locations for calculated spots only
-    if (loc.latitude && loc.longitude && !isWaterLocation(loc.latitude, loc.longitude, false)) {
+    if (loc.latitude && loc.longitude) {
       const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-      const existing = locationMap.get(key);
-      if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {
+      if (!locationMap.has(key)) {
         locationMap.set(key, loc);
       }
     }
   });
   
   return Array.from(locationMap.values());
-};
-
-/**
- * Check if a location is certified
- * @param location Location to check
- * @returns boolean indicating if location is certified
- */
-export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return location.isDarkSkyReserve === true || 
-    (location.certification && location.certification !== '');
-};
-
-/**
- * Check if a location should be shown based on active view
- * @param location Location to check
- * @param activeView Current active view mode
- * @returns boolean indicating if location should be shown
- */
-export const shouldShowLocation = (
-  location: SharedAstroSpot, 
-  activeView: 'certified' | 'calculated'
-): boolean => {
-  // In certified view, only show certified locations
-  if (activeView === 'certified') {
-    return isCertifiedLocation(location);
-  }
-  
-  // In calculated view, show all locations
-  return true;
 };

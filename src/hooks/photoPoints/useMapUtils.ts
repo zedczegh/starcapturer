@@ -30,5 +30,5 @@ export const useMapUtils = () => {
   };
 };
 
-// Export the useMapLocations hook for other components
+// Make sure MapLocations is properly exported
 export { useMapLocations } from './useMapLocations';

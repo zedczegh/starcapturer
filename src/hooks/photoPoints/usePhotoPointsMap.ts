@@ -1,9 +1,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useMapLocations } from './useMapUtils';
+import { useMapLocations } from './useMapLocations';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
+import { useMapUtils } from './useMapUtils'; // Fixed import
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
