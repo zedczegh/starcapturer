@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -19,6 +18,7 @@ interface UseMapLocationsProps {
 /**
  * Hook to handle location filtering and sorting for map display
  * Optimized for mobile performance by removing unnecessary calculations
+ * Added persistence for calculated locations when changing views
  */
 export const useMapLocations = ({
   userLocation,
@@ -40,13 +40,40 @@ export const useMapLocations = ({
         activeView === previousActiveViewRef.current) return;
     
     processingRef.current = true;
-    previousLocationsRef.current = locations;
+    
+    // Always preserve calculated locations, even when switching views
+    let allLocations = [...locations];
+    
+    // When switching from calculated to certified, keep calculated locations
+    // in memory but don't display them
+    if (activeView !== previousActiveViewRef.current) {
+      previousLocationsRef.current = allLocations;
+    } 
+    // Otherwise, merge with previously seen locations
+    else {
+      // Extract IDs of all current locations
+      const locationIds = new Set(allLocations.map(loc => 
+        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
+      ));
+      
+      // Keep locations from previous set that aren't duplicates
+      const previousUniqueLocations = previousLocationsRef.current.filter(loc => {
+        if (!loc.latitude || !loc.longitude) return false;
+        const locId = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        return !locationIds.has(locId);
+      });
+      
+      // Merge and update the full cache
+      allLocations = [...allLocations, ...previousUniqueLocations];
+      previousLocationsRef.current = allLocations;
+    }
+    
     previousActiveViewRef.current = activeView;
     
     // Use a timeout to batch updates and prevent UI flashing
     const timeoutId = setTimeout(() => {
       try {
-        const validLocations = filterValidLocations(locations);
+        const validLocations = filterValidLocations(allLocations);
         const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
         
         // For certified view, only include certified locations
@@ -59,7 +86,7 @@ export const useMapLocations = ({
           // For calculated view, merge locations but limit quantity on mobile
           locationsToShow = mergeLocations(
             certifiedLocations, 
-            calculatedLocations.slice(0, 50), // Limit quantity for better performance
+            calculatedLocations, // Keep all calculated locations
             activeView
           );
         }

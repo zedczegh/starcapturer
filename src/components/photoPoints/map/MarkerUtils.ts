@@ -79,18 +79,18 @@ export const getLocationMarker = (
     const styleOptimizations = 'will-change: transform; transform: translateZ(0); backface-visibility: hidden;';
     
     if (isCertified) {
-      // Color map according to certification type
-      let color = '#4ADE80'; // Default green
+      // Color map according to certification type - Updated colors to match legend
+      let color = '#10b981'; // Default green for Dark Sky Parks
       if (location.isDarkSkyReserve) {
-        color = '#9b87f5'; // Purple for Dark Sky Reserves
+        color = '#8b5cf6'; // Purple for Dark Sky Reserves
       } else if (location.certification) {
         const cert = location.certification.toLowerCase();
         if (cert.includes('park')) {
-          color = '#4ADE80'; // Green for Dark Sky Parks
+          color = '#10b981'; // Green for Dark Sky Parks
         } else if (cert.includes('community')) {
-          color = '#FFD700'; // Gold for Dark Sky Communities
+          color = '#f59e0b'; // Gold for Dark Sky Communities
         } else if (cert.includes('urban')) {
-          color = '#1EAEDB'; // Blue for Urban Night Sky Places
+          color = '#3b82f6'; // Blue for Urban Night Sky Places
         }
       }
       
@@ -110,7 +110,8 @@ export const getLocationMarker = (
       `;
     } else {
       // Calculated locations use SIQS-based colors
-      const score = geoUtilsGetSafeScore(location.siqs);
+      const score = location.siqs !== null && location.siqs !== undefined ? 
+        geoUtilsGetSafeScore(location.siqs) : 0;
       const color = score ? getProgressColor(score) : '#4ADE80';
       
       html = `
@@ -146,10 +147,18 @@ export const getLocationMarker = (
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve) {
-    return '#60a5fa'; // blue-400
-  } else {
-    return '#34d399'; // emerald-400
+    return '#8b5cf6'; // Updated to purple for Dark Sky Reserves
+  } else if (location.certification) {
+    const cert = location.certification.toLowerCase();
+    if (cert.includes('park')) {
+      return '#10b981'; // Green for Dark Sky Parks
+    } else if (cert.includes('community')) {
+      return '#f59e0b'; // Gold for Dark Sky Communities
+    } else if (cert.includes('urban')) {
+      return '#3b82f6'; // Blue for Urban Night Sky Places
+    }
   }
+  return '#10b981'; // Default green
 };
 
 /**

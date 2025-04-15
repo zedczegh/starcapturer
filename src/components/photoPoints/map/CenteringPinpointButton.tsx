@@ -12,7 +12,7 @@ interface CenteringPinpointButtonProps {
 const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({ 
   onGetLocation, 
   userLocation,
-  className = "absolute bottom-4 right-6 z-[999]"  // Adjusted from right-4 to right-6 for better alignment
+  className = "absolute bottom-4 right-8 z-[999]"  // Moved from right-6 to right-8 for better alignment with legend
 }) => {
   const { t } = useLanguage();
   
@@ -27,4 +27,3 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
 };
 
 export default CenteringPinpointButton;
-

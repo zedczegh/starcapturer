@@ -1,11 +1,10 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
@@ -64,6 +63,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
+  const previousLocations = useRef<SharedAstroSpot[]>([]);
   
   console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
   
@@ -90,17 +90,43 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
+  // Store previous locations when we receive new ones
+  useEffect(() => {
+    if (locations && locations.length > 0) {
+      // Keep a combination of new locations and previous ones that aren't in the new set
+      const locationIds = new Set(locations.map(loc => 
+        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
+      ));
+      
+      const previousToKeep = previousLocations.current.filter(loc => {
+        const locId = `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
+        return !locationIds.has(locId);
+      });
+      
+      // Only add previous locations if we're in calculated view
+      const combinedLocations = activeView === 'calculated' 
+        ? [...locations, ...previousToKeep] 
+        : locations;
+      
+      previousLocations.current = combinedLocations;
+    }
+  }, [locations, activeView]);
+  
   // Use the utility function for filtering locations
   const filteredLocations = useCallback(() => {
-    if (!locations || locations.length === 0) return [];
+    if (!previousLocations.current || previousLocations.current.length === 0) {
+      return locations || [];
+    }
     
-    const filtered = filterLocations(locations, userLocation, searchRadius, activeView);
+    // Use previous locations which include both new and persisted locations
+    const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
     return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
   }, [locations, userLocation, searchRadius, activeView, isMobile]);
 
-  const getCurrentSiqs = (location: SharedAstroSpot): number | null => {
+  const getCurrentSiqs = useCallback((location: SharedAstroSpot): number | null => {
+    if (!location || !location.siqs) return null;
     return getSafeScore(location.siqs);
-  };
+  }, []);
 
   useEffect(() => {
     if (userLocation && locations.length > 0 && isMountedRef.current) {
@@ -116,7 +142,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         setCurrentSiqs(getCurrentSiqs(sameLocation));
       }
     }
-  }, [userLocation?.latitude, userLocation?.longitude, locations]); 
+  }, [userLocation?.latitude, userLocation?.longitude, locations, getCurrentSiqs]); 
   
   const handleMapReady = useCallback(() => {
     if (isMountedRef.current) {
