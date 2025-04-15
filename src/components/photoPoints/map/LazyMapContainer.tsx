@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -6,14 +5,17 @@ import './MarkerStyles.css';
 import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
+import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
-import PinpointButton from './PinpointButton';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
+import L from 'leaflet';
+import CenteringPinpointButton from './CenteringPinpointButton';
+import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
+import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 configureLeaflet();
 
@@ -60,8 +62,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
+  const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  // Ensure stable references to prevent unnecessary re-renders
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
+  
+  const tileOptions = isMobile ? 
+    getTileLayerOptions(true) : 
+    getTileLayerOptions(Boolean(isMobile));
+  
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -71,19 +80,56 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const stableOnMapClick = useCallback((lat: number, lng: number) => {
     if (onMapClick) {
       onMapClick(lat, lng);
-      console.log("Map clicked, updating location to:", lat, lng);
     }
   }, [onMapClick]);
   
-  const handleSiqsCalculated = useCallback((siqs: number) => {
-    setCurrentSiqs(siqs);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
   
-  // Ensure userLocation is always passed as a stable reference
-  const safeUserLocation = userLocation || null;
-  
+  // Store previous locations when we receive new ones
   useEffect(() => {
-    if (userLocation && locations.length > 0) {
+    if (locations && locations.length > 0) {
+      // Keep a combination of new locations and previous ones that aren't in the new set
+      const locationIds = new Set(locations.map(loc => 
+        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
+      ));
+      
+      const previousToKeep = previousLocations.current.filter(loc => {
+        const locId = `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
+        return !locationIds.has(locId);
+      });
+      
+      // Only add previous locations if we're in calculated view
+      const combinedLocations = activeView === 'calculated' 
+        ? [...locations, ...previousToKeep] 
+        : locations;
+      
+      previousLocations.current = combinedLocations;
+    }
+  }, [locations, activeView]);
+  
+  // Use the utility function for filtering locations
+  const filteredLocations = useCallback(() => {
+    if (!previousLocations.current || previousLocations.current.length === 0) {
+      return locations || [];
+    }
+    
+    // Use previous locations which include both new and persisted locations
+    const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
+    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
+  }, [locations, userLocation, searchRadius, activeView, isMobile]);
+
+  const getCurrentSiqs = useCallback((location: SharedAstroSpot): number | null => {
+    if (!location || !location.siqs) return null;
+    return getSafeScore(location.siqs);
+  }, []);
+
+  useEffect(() => {
+    if (userLocation && locations.length > 0 && isMountedRef.current) {
       const userLat = userLocation.latitude;
       const userLng = userLocation.longitude;
       
@@ -92,18 +138,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         Math.abs(loc.longitude - userLng) < 0.0001
       );
       
-      if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(sameLocation.siqs);
-      } else {
-        setCurrentSiqs(null);
+      if (sameLocation) {
+        setCurrentSiqs(getCurrentSiqs(sameLocation));
       }
     }
-  }, [userLocation, locations]);
+  }, [userLocation?.latitude, userLocation?.longitude, locations, getCurrentSiqs]); 
   
   const handleMapReady = useCallback(() => {
-    setMapReady(true);
-    if (onMapReady) {
-      onMapReady();
+    if (isMountedRef.current) {
+      setMapReady(true);
+      if (onMapReady) {
+        onMapReady();
+      }
     }
   }, [onMapReady]);
   
@@ -112,27 +158,42 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     
     const map = mapRef.current;
     
+    let resizeTimeout: number | null = null;
     const handleResize = () => {
-      if (map) map.invalidateSize();
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = window.setTimeout(() => {
+        if (map) map.invalidateSize();
+        resizeTimeout = null;
+      }, 300);
     };
     
     window.addEventListener('resize', handleResize);
     
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (map) map.invalidateSize();
-    }, 200);
+    }, 300);
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
+      clearTimeout(timeoutId);
     };
-  }, [mapRef.current]);
+  }, []);
 
   const getDefaultZoom = () => {
+    // Provide a much more zoomed-out view to see the whole landscape
     if (activeView === 'calculated') {
-      return 7;
+      return isMobile ? 3 : 4;
     }
-    return zoom;
+    return isMobile ? zoom - 1 : zoom;
   };
+
+  // Get filtered locations and optimize for mobile if needed
+  const displayLocations = filteredLocations();
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
@@ -140,18 +201,20 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         center={center}
         zoom={getDefaultZoom()}
         style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
+        scrollWheelZoom={!isMobile}
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
-        attributionControl={true}
+        attributionControl={!isMobile}
+        worldCopyJump={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={tileOptions.attribution}
+          url={tileOptions.url}
+          maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
         />
         
-        {showRadiusCircles && userLocation && (
+        {showRadiusCircles && userLocation && !isMobile && (
           <Circle
             center={[userLocation.latitude, userLocation.longitude]}
             pathOptions={{
@@ -166,10 +229,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         )}
         
         <MapEffectsComposer 
-          userLocation={safeUserLocation}
+          userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}
-          onSiqsCalculated={handleSiqsCalculated}
         />
         
         <MapEvents onMapClick={stableOnMapClick} />
@@ -181,11 +243,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {locations.map(location => {
-          if (!location.latitude || !location.longitude) return null;
+        {displayLocations.map(location => {
+          if (!location || !location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+          const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
           
           return (
@@ -206,11 +268,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         })}
         
         <MapController 
-          userLocation={safeUserLocation} 
+          userLocation={userLocation} 
           searchRadius={searchRadius}
         />
-        
-        {useMobileMapFixer && isMobile && <MobileMapFixer />}
       </MapContainer>
     </div>
   );

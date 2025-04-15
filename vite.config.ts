@@ -19,4 +19,19 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@/components/ui'],
+        }
+      }
+    },
+    assetsDir: 'assets',
+    copyPublicDir: true, // Ensures public directory is copied to dist
+  },
+  optimizeDeps: {
+    exclude: ['lovable-tagger']
+  }
 }));

@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import EmptyLocationDisplay from '../EmptyLocationDisplay';
 import LocationsList from '../LocationsList';
 import { Loader2 } from 'lucide-react';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface LocationViewProps {
   locations: SharedAstroSpot[];
@@ -26,40 +25,15 @@ const LocationView: React.FC<LocationViewProps> = ({
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const locationsPerPage = 10;
   
-  // Log received locations for debugging
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
+    // Reset to page 1 when locations data changes
+    setCurrentPage(1);
   }, [locations]);
   
-  // Update locations with real-time SIQS on initial load
-  useEffect(() => {
-    if (locations.length > 0) {
-      const updateWithSiqs = async () => {
-        try {
-          // Apply real-time SIQS to all locations including certified ones
-          const updated = await updateLocationsWithRealTimeSiqs(
-            locations,
-            null, // No user location needed for certified locations
-            100000, // Large radius to include all locations
-            'certified' // Treat all as certified to ensure they get updated
-          );
-          setEnhancedLocations(updated);
-        } catch (err) {
-          console.error("Error updating location view with real-time SIQS:", err);
-          // Fallback to original locations
-          setEnhancedLocations(locations);
-        }
-      };
-      
-      updateWithSiqs();
-    } else {
-      setEnhancedLocations([]);
-    }
-  }, [locations]);
-  
-  // If loading or initial load, show loading indicator
   if (loading && initialLoad) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -71,7 +45,6 @@ const LocationView: React.FC<LocationViewProps> = ({
     );
   }
   
-  // If no locations available, show empty state
   if (locations.length === 0) {
     return (
       <EmptyLocationDisplay 
@@ -85,10 +58,8 @@ const LocationView: React.FC<LocationViewProps> = ({
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    // Generate a consistent ID that won't change between sessions
     const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
-    // Create a complete state object with all necessary data
     const locationState = {
       id: locationId,
       name: point.name || 'Unnamed Location',
@@ -104,7 +75,6 @@ const LocationView: React.FC<LocationViewProps> = ({
       fromPhotoPoints: true
     };
     
-    // First store the data in localStorage to ensure it persists
     try {
       localStorage.setItem(`location_${locationId}`, JSON.stringify(locationState));
       console.log(`Stored location ${locationId} in localStorage before navigation`);
@@ -112,22 +82,68 @@ const LocationView: React.FC<LocationViewProps> = ({
       console.error("Failed to store location in localStorage:", error);
     }
     
-    // Then navigate with the state object
     console.log(`Navigating to location ${locationId}`);
     navigate(`/location/${locationId}`, { state: locationState });
   };
   
-  // Display the locations - use enhanced locations if available
-  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
+  // Calculate pagination values
+  const totalPages = Math.ceil(locations.length / locationsPerPage);
+  const indexOfLastLocation = currentPage * locationsPerPage;
+  const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
   
-  // Display the locations
+  // Get current page locations
+  const currentLocations = locations.slice(indexOfFirstLocation, indexOfLastLocation);
+  
+  const handlePageChange = (pageNumber: number) => {
+    window.scrollTo(0, 0);
+    setCurrentPage(pageNumber);
+  };
+  
   return (
-    <LocationsList 
-      locations={locationsToDisplay}
-      loading={loading}
-      initialLoad={initialLoad}
-      onViewDetails={handleViewLocation}
-    />
+    <div className="space-y-6">
+      <LocationsList 
+        locations={currentLocations}
+        loading={loading}
+        initialLoad={initialLoad}
+        onViewDetails={handleViewLocation}
+      />
+      
+      {totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            {currentPage > 1 && (
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  aria-label={t("Previous page", "上一页")}
+                />
+              </PaginationItem>
+            )}
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <PaginationItem key={page}>
+                <PaginationLink
+                  isActive={page === currentPage}
+                  onClick={() => handlePageChange(page)}
+                  aria-label={t(`Page ${page}`, `第${page}页`)}
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
+            {currentPage < totalPages && (
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  aria-label={t("Next page", "下一页")}
+                />
+              </PaginationItem>
+            )}
+          </PaginationContent>
+        </Pagination>
+      )}
+    </div>
   );
 };
 

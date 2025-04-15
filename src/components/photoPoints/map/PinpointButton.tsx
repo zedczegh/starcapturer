@@ -5,9 +5,6 @@ import { MapPin } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
-// Remove useMap import since we're not using it directly here
-// This prevents potential errors when used outside MapContainer context
-
 interface PinpointButtonProps {
   onGetLocation: () => void;
   className?: string;
@@ -16,7 +13,7 @@ interface PinpointButtonProps {
 
 const PinpointButton: React.FC<PinpointButtonProps> = ({ 
   onGetLocation,
-  className = "absolute top-4 right-16 z-[999]",
+  className = "absolute top-4 right-16 z-[999]", // Positioned at top-right corner to align with legend
   shouldCenter = true
 }) => {
   const { t } = useLanguage();

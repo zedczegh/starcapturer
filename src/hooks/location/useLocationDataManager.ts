@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationUpdate } from "@/hooks/useLocationUpdate";
 import { useLocationInit } from "./useLocationInit";
@@ -19,6 +19,7 @@ export const useLocationDataManager = ({
 }: UseLocationDataManagerProps) => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'info' | 'success' | 'error' | null>('info');
+  const updatingRef = useRef(false);
   
   const { t } = useLanguage();
   
@@ -30,13 +31,33 @@ export const useLocationDataManager = ({
   
   const { loading, handleLocationUpdate } = useLocationUpdate(locationData, setLocationData);
 
-  // Wrapped setLocationData to ensure persistence
+  // Wrapped setLocationData to ensure persistence and prevent race conditions
   const updateLocationData = useCallback((newData: any) => {
-    setLocationData(newData);
+    if (updatingRef.current || !newData) return;
     
-    // Also save to localStorage for persistence
-    if (id && newData) {
-      saveLocationDetails(id, newData);
+    try {
+      updatingRef.current = true;
+      
+      // Ensure we have valid data with required fields
+      const safeData = {
+        ...newData,
+        id: newData.id || id,
+        timestamp: newData.timestamp || new Date().toISOString()
+      };
+      
+      setLocationData(safeData);
+      
+      // Also save to localStorage for persistence
+      if (id && safeData) {
+        saveLocationDetails(id, safeData);
+      }
+      
+      setTimeout(() => {
+        updatingRef.current = false;
+      }, 100);
+    } catch (error) {
+      console.error("Error updating location data:", error);
+      updatingRef.current = false;
     }
   }, [id, setLocationData]);
 

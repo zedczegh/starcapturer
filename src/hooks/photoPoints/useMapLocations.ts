@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
 import { 
   filterValidLocations, 
   separateLocationTypes, 
   mergeLocations 
 } from '@/utils/locationFiltering';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -17,7 +17,8 @@ interface UseMapLocationsProps {
 }
 
 /**
- * Hook to handle location filtering, sorting and enhancement for map display
+ * Hook to handle location filtering and sorting for map display
+ * Optimized for mobile performance with better caching and improved location persistence
  */
 export const useMapLocations = ({
   userLocation,
@@ -26,125 +27,111 @@ export const useMapLocations = ({
   activeView,
   mapReady
 }: UseMapLocationsProps) => {
-  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
-
-  // Update locations with real-time SIQS
-  const updateWithRealTimeSiqs = useCallback(async () => {
-    if (!mapReady || !locations.length) return;
+  const previousLocationsRef = useRef<Map<string, SharedAstroSpot>>(new Map());
+  const previousActiveViewRef = useRef<string>(activeView);
+  const processingRef = useRef<boolean>(false);
+  const locationCacheRef = useRef<Map<string, SharedAstroSpot>>(new Map());
+  
+  // Process locations with throttling to prevent UI flashing
+  useEffect(() => {
+    // Skip if already processing
+    if (processingRef.current) return;
     
-    try {
-      const validLocations = filterValidLocations(locations);
-      const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-      
-      // For certified view, always include all certified locations regardless of distance
-      const locationsToUpdate = activeView === 'certified' 
-        ? certifiedLocations 
-        : [...certifiedLocations, ...calculatedLocations.filter(loc => {
-            // Skip water locations for calculated spots
-            if (!loc.isDarkSkyReserve && !loc.certification && (!loc.latitude || !loc.longitude)) {
-              return false;
-            }
-            
-            // Filter by distance for calculated view
-            if (userLocation && loc.latitude && loc.longitude) {
-              const distance = calculateDistance(
-                userLocation.latitude,
-                userLocation.longitude,
-                loc.latitude,
-                loc.longitude
-              );
-              return distance <= searchRadius * 1.1;
-            }
-            
-            return true;
-          })];
-      
-      console.log(`Updating ${locationsToUpdate.length} locations with real-time SIQS data`);
-      
-      const updated = await updateLocationsWithRealTimeSiqs(
-        locationsToUpdate, 
-        userLocation, 
-        searchRadius,
-        activeView
-      );
-      
-      if (updated && updated.length > 0) {
-        setEnhancedLocations(prevLocations => {
-          const combinedLocations = [...prevLocations];
-          
-          updated.forEach(newLoc => {
-            if (!newLoc.latitude || !newLoc.longitude) return;
-            
-            const key = `${newLoc.latitude.toFixed(6)}-${newLoc.longitude.toFixed(6)}`;
-            const exists = combinedLocations.some(
-              existingLoc => existingLoc.latitude && existingLoc.longitude && 
-              `${existingLoc.latitude.toFixed(6)}-${existingLoc.longitude.toFixed(6)}` === key
+    // Create a unique signature for this location set
+    const locationSignature = locations.length + '-' + (userLocation ? 
+      `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}` : 
+      'null-location');
+    
+    const viewChanged = activeView !== previousActiveViewRef.current;
+    
+    processingRef.current = true;
+    
+    // Use a Map for more efficient lookups compared to array
+    const newLocationsMap = new Map<string, SharedAstroSpot>();
+    
+    // Add all current locations to the map
+    locations.forEach(loc => {
+      if (loc.latitude && loc.longitude) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        newLocationsMap.set(key, loc as SharedAstroSpot);
+      }
+    });
+    
+    // Preserve existing locations that aren't in the new batch
+    previousLocationsRef.current.forEach((loc, key) => {
+      if (!newLocationsMap.has(key)) {
+        // Apply location filtering based on view mode
+        if (activeView === 'calculated') {
+          // Keep locations within search radius
+          if (userLocation && !loc.isDarkSkyReserve && !loc.certification) {
+            const distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              loc.latitude,
+              loc.longitude
             );
             
-            if (!exists) {
-              combinedLocations.push(newLoc);
-            } else {
-              const index = combinedLocations.findIndex(
-                existingLoc => existingLoc.latitude && existingLoc.longitude &&
-                `${existingLoc.latitude.toFixed(6)}-${existingLoc.longitude.toFixed(6)}` === key
-              );
-              if (index !== -1) {
-                combinedLocations[index] = newLoc;
-              }
+            // Filter out locations outside search radius or in water
+            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
+              newLocationsMap.set(key, loc as SharedAstroSpot);
             }
-          });
-          
-          return combinedLocations;
-        });
+          } else if (loc.isDarkSkyReserve || loc.certification) {
+            // Keep certified locations
+            newLocationsMap.set(key, loc as SharedAstroSpot);
+          }
+        } else if (activeView === 'certified' && (loc.isDarkSkyReserve || loc.certification)) {
+          // For certified view, only keep certified locations
+          newLocationsMap.set(key, loc as SharedAstroSpot);
+        }
       }
-    } catch (error) {
-      console.error('Error updating locations with real-time SIQS:', error);
-    }
+    });
     
-    // Return false to avoid TypeScript Promise<boolean> error
-    return false;
-  }, [locations, userLocation, mapReady, searchRadius, activeView]);
-
-  // Process locations
-  useEffect(() => {
-    const validLocations = filterValidLocations(locations);
-    const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+    // Convert Map back to array
+    const allLocations = Array.from(newLocationsMap.values()) as SharedAstroSpot[];
     
-    console.log(`Processing ${certifiedLocations.length} certified locations for display`);
+    // Update previous locations for future use
+    previousLocationsRef.current = newLocationsMap;
+    previousActiveViewRef.current = activeView;
     
-    // For certified view, always include all certified locations
-    // For calculated view, include all locations but apply filtering
-    let locationsToShow;
-    
-    if (activeView === 'certified') {
-      locationsToShow = enhancedLocations.length > 0 
-        ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-        : certifiedLocations;
-    } else {
-      // For calculated view, use enhanced locations if available
-      locationsToShow = enhancedLocations.length > 0 
-        ? enhancedLocations
-        : mergeLocations(certifiedLocations, calculatedLocations, activeView);
-    }
-    
-    // Log certification types to help with debugging
-    if (activeView === 'certified') {
-      console.log("Certification types in display:", locationsToShow.map(l => l.certification));
-    }
-    
-    setProcessedLocations(locationsToShow);
-    
-  }, [locations, activeView, enhancedLocations]);
-
-  // Update locations with real-time SIQS
-  useEffect(() => {
+    // Use a shorter timeout to improve loading speed
     const timeoutId = setTimeout(() => {
-      updateWithRealTimeSiqs();
-    }, 300);
+      try {
+        // Filter valid locations
+        const validLocations = filterValidLocations(allLocations);
+        
+        // Separate locations by type
+        const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+        console.log(`Location counts - certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}, total: ${validLocations.length}`);
+        
+        // Determine which locations to show based on view
+        let locationsToShow: SharedAstroSpot[];
+        
+        if (activeView === 'certified') {
+          // In certified view, only show certified locations
+          locationsToShow = certifiedLocations as SharedAstroSpot[];
+        } else {
+          // For calculated view, show calculated locations
+          locationsToShow = calculatedLocations as SharedAstroSpot[];
+          
+          // In calculated view, certified locations are handled separately in the UI
+          // Only include certified locations if explicitly requested
+          if (viewChanged || userLocation) {
+            // Merge calculated and certified for calculated view
+            locationsToShow = [...calculatedLocations] as SharedAstroSpot[];
+          }
+        }
+        
+        setProcessedLocations(locationsToShow);
+      } catch (error) {
+        console.error('Error processing map locations:', error);
+      } finally {
+        processingRef.current = false;
+      }
+    }, 30); // Even faster timeout for better responsiveness
     
     return () => clearTimeout(timeoutId);
-  }, [updateWithRealTimeSiqs]);
+  }, [locations, activeView, searchRadius, userLocation]);
 
   return {
     processedLocations

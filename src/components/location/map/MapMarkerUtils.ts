@@ -17,17 +17,11 @@ export const configureLeaflet = () => {
   // Configure performance optimizations when running on mobile
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   if (isMobile) {
-    // Disable animations for better performance on mobile
-    L.DomUtil.TRANSITION = L.DomUtil.TRANSITION ? L.DomUtil.TRANSITION : '';
-    L.DomUtil.TRANSFORM = L.DomUtil.TRANSFORM ? L.DomUtil.TRANSFORM : '';
-    
-    // Set max bounds to prevent excessive panning
-    L.Map.prototype.options.maxBounds = [[-90, -180], [90, 180]];
-    L.Map.prototype.options.maxBoundsViscosity = 1.0;
-    
-    // Optimize mobile rendering
-    L.Map.prototype.options.preferCanvas = true;
-    L.Map.prototype.options.renderer = L.canvas();
+    // Mobile-specific optimizations
+    if (L.TileLayer.prototype) {
+      // These are set via TileLayer options, not prototype properties
+      // We'll handle this in getTileLayerOptions instead
+    }
   }
 };
 
@@ -100,6 +94,43 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Get type-safe TileLayer options compatible with react-leaflet
+ */
+export const getTileLayerOptions = (isMobile: boolean = false): {url: string, attribution: string, tileSize: number, maxZoom: number} => {
+  // Use a faster tile server with better worldwide distribution
+  const fastTileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  
+  return { 
+    url: fastTileUrl, 
+    attribution,
+    tileSize: 256,
+    maxZoom: 19
+  };
+};
+
+/**
+ * Get MapContainer options that are compatible with the current version
+ */
+export const getMapContainerOptions = (isMobile: boolean = false): Partial<L.MapOptions> => {
+  const options: Partial<L.MapOptions> = {
+    scrollWheelZoom: true,
+    attributionControl: true,
+    worldCopyJump: true
+  };
+  
+  if (isMobile) {
+    // Mobile-optimized options that are compatible with the component
+    options.tap = true;
+    options.touchZoom = 'center';
+    options.zoomAnimation = false;
+    options.markerZoomAnimation = false;
+  }
+  
+  return options;
+};
+
+/**
  * Format geo coordinates to a readable string
  * @param lat - Latitude
  * @param lng - Longitude
@@ -107,4 +138,16 @@ if (typeof window !== 'undefined') {
  */
 export const formatCoordinates = (lat: number, lng: number): string => {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+};
+
+/**
+ * Get a faster tile URL by using a CDN and adjusting attribution
+ * @returns Optimized tile URL and attribution
+ */
+export const getFastTileLayer = (): {url: string, attribution: string} => {
+  // Use a faster tile server with better worldwide distribution
+  const fastTileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  
+  return { url: fastTileUrl, attribution };
 };

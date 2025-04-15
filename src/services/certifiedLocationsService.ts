@@ -354,14 +354,14 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
   
   // List of known East Asian dark sky locations to ensure they're included
   const eastAsianLocations = [
-    // Shenzhen Xichong Dark Sky Community - Fixed coordinates
+    // Shenzhen Xichong Dark Sky Community - Fixed coordinates and consistency
     {
       id: 'shenzhen-xichong',
       name: 'Shenzhen Xichong Dark Sky Community',
       chineseName: '深圳西冲暗夜社区',
       latitude: 22.5808,
       longitude: 114.5034,
-      isDarkSkyReserve: true,
+      isDarkSkyReserve: false,
       certification: 'Dark Sky Community - International Dark Sky Association',
       timestamp: new Date().toISOString(),
       bortleScale: 3
@@ -457,11 +457,22 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     }
   ];
   
-  // Add missing East Asian locations
+  // Add missing East Asian locations - making sure we don't have duplicates with inconsistent data
   eastAsianLocations.forEach(loc => {
     const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
     if (!locationMap.has(key)) {
       locationMap.set(key, loc as SharedAstroSpot);
+    } else {
+      // Update the existing entry to ensure consistency
+      const existing = locationMap.get(key)!;
+      // Ensure consistent isDarkSkyReserve and certification values to prevent rendering issues
+      if (existing.id === loc.id) {
+        locationMap.set(key, {
+          ...existing,
+          isDarkSkyReserve: loc.isDarkSkyReserve,
+          certification: loc.certification
+        });
+      }
     }
   });
   

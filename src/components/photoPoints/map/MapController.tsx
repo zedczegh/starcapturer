@@ -1,87 +1,42 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
-import { useIsMobile } from '@/hooks/use-mobile';
 
-interface MapControllerProps { 
+interface MapControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
 }
 
-export const MapController: React.FC<MapControllerProps> = ({ 
-  userLocation,
-  searchRadius
-}) => {
+const MapController: React.FC<MapControllerProps> = ({ userLocation, searchRadius }) => {
   const map = useMap();
-  const firstRenderRef = useRef(true);
-  const isMobile = useIsMobile();
   
+  // Center the map ONLY on initial mount, not when location changes
   useEffect(() => {
-    if (!map) return;
-    
-    const handleMapInvalidation = () => {
-      try {
-        map.invalidateSize();
-      } catch (error) {
-        console.error("Error invalidating map size:", error);
-      }
-    };
-    
-    setTimeout(handleMapInvalidation, 300);
-    
-    if (isMobile) {
-      map.dragging.enable();
-      map.touchZoom.enable();
+    if (map) {
+      // Initial setup only, do not add userLocation as dependency
+      const zoomLevel = getZoomLevel();
+      console.log(`Setting initial map view with zoom level: ${zoomLevel}`);
       
-      if (map.dragging._draggable) {
-        map.dragging._draggable._inertia = true;
-        map.dragging._draggable.options.inertia = {
-          deceleration: 2500,
-          maxSpeed: 1800,
-          timeThreshold: 80,
-          linearity: 0.25
-        };
-      }
-      
-      map.touchZoom.disable();
-      map.touchZoom.enable();
-      map.boxZoom.disable();
-      
-      if (map.options) {
-        map.options.touchZoom = 'center';
-        map.options.doubleClickZoom = 'center';
-        map.options.bounceAtZoomLimits = false;
-      }
-    } else {
-      map.scrollWheelZoom.enable();
-      map.dragging.enable();
-      map.touchZoom.enable();
-      map.doubleClickZoom.enable();
-      map.boxZoom.enable();
-      map.keyboard.enable();
-      if (map.tap) map.tap.enable();
-    }
-    
-    for (const key in map._panes) {
-      if (map._panes[key] && map._panes[key].style) {
-        map._panes[key].style.willChange = 'transform';
-        map._panes[key].style.backfaceVisibility = 'hidden';
+      // Only set the initial view - don't recenter when location changes
+      if (userLocation) {
+        // Set initial view without animation for smoother startup
+        map.setView([userLocation.latitude, userLocation.longitude], zoomLevel, {
+          animate: false,
+        });
       }
     }
-    
-    window.addEventListener('resize', handleMapInvalidation);
-    
-    // Only center map on first render with user location
-    if (userLocation && firstRenderRef.current) {
-      map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
-      firstRenderRef.current = false;
-    }
-    
-    return () => {
-      window.removeEventListener('resize', handleMapInvalidation);
-    };
-  }, [map, userLocation, isMobile]);
+  }, [map]); // Only depend on map, not userLocation
+  
+  // Calculate zoom level based on search radius
+  const getZoomLevel = () => {
+    // Very zoomed out view for larger context
+    if (searchRadius >= 500) return 3;
+    if (searchRadius <= 10) return 12;
+    if (searchRadius <= 50) return 10;
+    if (searchRadius <= 100) return 9;
+    if (searchRadius <= 300) return 7;
+    return 4; // Default to more zoomed out view
+  };
 
   return null;
 };

@@ -16,6 +16,7 @@ const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   
+  // Get state from custom hook
   const {
     activeView,
     showMap,
@@ -31,6 +32,7 @@ const PhotoPointsNearby: React.FC = () => {
     toggleMapView
   } = usePhotoPointsState();
 
+  // Fetch locations data
   const {
     searchRadius,
     setSearchRadius,
@@ -49,6 +51,7 @@ const PhotoPointsNearby: React.FC = () => {
     currentSearchRadius
   );
 
+  // Process locations
   const {
     certifiedLocations,
     calculatedLocations,
@@ -56,25 +59,30 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedCount
   } = useCertifiedLocations(locations);
 
+  // Update search radius when view changes
   React.useEffect(() => {
     setSearchRadius(currentSearchRadius);
   }, [currentSearchRadius, setSearchRadius]);
   
+  // Handle location click to navigate to details with improved error handling
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
     
     try {
+      // Use the navigation helper to prepare location data
       const navigationData = prepareLocationForNavigation(location);
+      
       if (navigationData) {
         navigate(`/location/${navigationData.locationId}`, { 
           state: navigationData.locationState 
         });
+        console.log("Opening location details", navigationData.locationId);
       }
     } catch (error) {
-      console.error("Error navigating to location details:", error);
+      console.error("Error navigating to location details:", error, location);
     }
   }, [navigate]);
-
+  
   return (
     <PhotoPointsLayout>
       <PhotoPointsHeader 
@@ -120,7 +128,7 @@ const PhotoPointsNearby: React.FC = () => {
         effectiveLocation={effectiveLocation}
         certifiedLocations={certifiedLocations}
         calculatedLocations={calculatedLocations}
-        searchRadius={searchRadius}
+        searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
         loading={loading && !locationLoading}
         hasMore={hasMore}

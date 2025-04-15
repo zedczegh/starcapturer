@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useCallback, useState, useEffect, memo } from 'react';
+
+import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
@@ -30,7 +31,7 @@ interface PhotoPointsViewProps {
   maxLoadMoreClicks: number;
 }
 
-const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
+const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   const {
     showMap,
     activeView,
@@ -77,7 +78,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && onLocationClick) {
-      onLocationClick(location);
+      const safeLocation = {
+        ...location,
+        id: location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`,
+        name: location.name || 'Unknown Location',
+        latitude: location.latitude,
+        longitude: location.longitude
+      };
+      
+      onLocationClick(safeLocation);
     }
   }, [onLocationClick]);
   
@@ -90,16 +99,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
-  // Console output for debugging
+  // Debugging outputs
   useEffect(() => {
-    console.log(`PhotoPointsView - Certified locations count: ${certifiedLocations?.length || 0}`);
-    console.log(`PhotoPointsView - Active view: ${activeView}`);
-    
-    if (certifiedLocations?.length > 0) {
-      // Log a sample of certified locations for debugging
-      console.log(`Sample certified location: ${JSON.stringify(certifiedLocations[0])}`);
-    }
-  }, [certifiedLocations, activeView]);
+    console.log(`PhotoPointsView rendering`);
+    console.log(`- Active view: ${activeView}`);
+    console.log(`- Certified locations: ${certifiedLocations?.length || 0}`);
+    console.log(`- Calculated locations: ${calculatedLocations?.length || 0}`);
+    console.log(`- Show map: ${showMap}`);
+    console.log(`- Search radius: ${searchRadius}`);
+  }, [activeView, certifiedLocations, calculatedLocations, showMap, searchRadius]);
   
   // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
@@ -118,8 +126,10 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
           <PhotoPointsMap 
             userLocation={effectiveLocation}
             locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            certifiedLocations={certifiedLocations}
+            calculatedLocations={calculatedLocations}
             activeView={activeView}
-            searchRadius={searchRadius}
+            searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
             onLocationClick={handleLocationClick}
             onLocationUpdate={onLocationUpdate}
           />
@@ -158,6 +168,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
       </div>
     </Suspense>
   );
-});
+};
 
 export default PhotoPointsView;
