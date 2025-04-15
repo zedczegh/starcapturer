@@ -51,20 +51,8 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   
   const certification = (location.certification || '').toLowerCase();
   
-  // Check for different certification types with comprehensive checks
-  if (certification.includes('lodging')) {
-    return '#1e3a8a'; // Navy blue for lodgings
-  } else if (certification.includes('reserve') || certification.includes('sanctuary') || Boolean(location.isDarkSkyReserve)) {
-    return '#9b87f5'; // Purple for reserves
-  } else if (certification.includes('park')) {
-    return '#4ADE80'; // Green for parks
-  } else if (certification.includes('community')) {
-    return '#FFA500'; // Orange for communities
-  } else if (certification.includes('urban')) {
-    return '#0EA5E9'; // Blue for urban night skies
-  } else {
-    return '#FFD700'; // Gold for generic certified locations
-  }
+  // Use a consistent primary color for all certified locations for better UI
+  return '#9b87f5'; // Primary purple for all certified locations
 };
 
 /**

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -97,10 +98,12 @@ const LocationMarker = memo(({
   const siqsClass = getSiqsClass(location.siqs);
   
   const shouldRender = useMemo(() => {
-    if (activeView === 'certified' && !isCertified) {
-      return false;
+    // Always show certified locations in certified view
+    if (activeView === 'certified') {
+      return isCertified;
     }
     
+    // For calculated view, show all locations but filter water spots
     if (!isCertified) {
       if (isWaterSpot(location)) {
         return false;
@@ -202,6 +205,13 @@ const LocationMarker = memo(({
     }
   }, [location, navigate]);
   
+  // For debugging
+  useEffect(() => {
+    if (isCertified) {
+      console.log(`Rendering certified location: ${location.name}, certification: ${location.certification}, shouldRender: ${shouldRender}`);
+    }
+  }, [location, isCertified, shouldRender]);
+  
   if (!shouldRender) {
     return null;
   }
@@ -239,13 +249,13 @@ const LocationMarker = memo(({
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
             {isCertified && (
-              <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
+              <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
             )}
             <span className="text-gray-100">{displayName || t("Unnamed Location", "未命名位置")}</span>
           </div>
           
           {isCertified && location.certification && (
-            <div className="mt-1 text-xs font-medium text-amber-400 flex items-center">
+            <div className="mt-1 text-xs font-medium text-primary flex items-center">
               <Award className="h-3 w-3 mr-1" />
               {location.certification}
             </div>
@@ -282,6 +292,7 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
+// UserLocationMarker component stays the same
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 

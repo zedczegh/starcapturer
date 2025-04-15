@@ -28,11 +28,6 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
         return true;
       }
       
-      // Special check for lodging type
-      if (location.type === 'lodging') {
-        return true;
-      }
-      
       // Check for certifications based on official Dark Sky names or properties
       if (location.certification && location.certification !== '') {
         const cert = location.certification.toLowerCase();

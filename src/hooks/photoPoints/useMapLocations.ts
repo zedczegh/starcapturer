@@ -38,12 +38,12 @@ export const useMapLocations = ({
       const validLocations = filterValidLocations(locations);
       const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
       
-      // Only update locations relevant to current view
+      // For certified view, always include all certified locations regardless of distance
       const locationsToUpdate = activeView === 'certified' 
         ? certifiedLocations 
         : [...certifiedLocations, ...calculatedLocations.filter(loc => {
             // Skip water locations for calculated spots
-            if (!loc.isDarkSkyReserve && !loc.certification && !loc.latitude || !loc.longitude) {
+            if (!loc.isDarkSkyReserve && !loc.certification && (!loc.latitude || !loc.longitude)) {
               return false;
             }
             
@@ -60,6 +60,8 @@ export const useMapLocations = ({
             
             return true;
           })];
+      
+      console.log(`Updating ${locationsToUpdate.length} locations with real-time SIQS data`);
       
       const updated = await updateLocationsWithRealTimeSiqs(
         locationsToUpdate, 
@@ -109,15 +111,28 @@ export const useMapLocations = ({
   useEffect(() => {
     const validLocations = filterValidLocations(locations);
     const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
-    const mergedLocations = mergeLocations(certifiedLocations, calculatedLocations, activeView);
     
-    // Use enhanced locations if available, otherwise use merged locations
-    const locationsToShow = enhancedLocations.length > 0 ? 
-      // Apply active view filtering to enhanced locations
-      activeView === 'certified' 
+    console.log(`Processing ${certifiedLocations.length} certified locations for display`);
+    
+    // For certified view, always include all certified locations
+    // For calculated view, include all locations but apply filtering
+    let locationsToShow;
+    
+    if (activeView === 'certified') {
+      locationsToShow = enhancedLocations.length > 0 
         ? enhancedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-        : enhancedLocations
-      : mergedLocations;
+        : certifiedLocations;
+    } else {
+      // For calculated view, use enhanced locations if available
+      locationsToShow = enhancedLocations.length > 0 
+        ? enhancedLocations
+        : mergeLocations(certifiedLocations, calculatedLocations, activeView);
+    }
+    
+    // Log certification types to help with debugging
+    if (activeView === 'certified') {
+      console.log("Certification types in display:", locationsToShow.map(l => l.certification));
+    }
     
     setProcessedLocations(locationsToShow);
     

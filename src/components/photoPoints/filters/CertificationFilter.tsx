@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Globe, Trees, Building2, X, Hotel } from 'lucide-react';
+import { Globe, Trees, Building2, MapPin, Hotel } from 'lucide-react';
 
 export type CertificationType = 'reserve' | 'park' | 'community' | 'urban' | 'lodging' | 'all';
 
@@ -26,38 +26,38 @@ const CertificationFilter: React.FC<CertificationFilterProps> = ({
     {
       id: 'all',
       label: t('All Types', '全部类型'),
-      icon: X,
-      color: 'text-gray-400 border-gray-400/30 bg-gray-400/10 hover:bg-gray-400/20'
+      icon: MapPin,
+      color: 'text-muted-foreground border-border bg-background/50 hover:bg-background/80'
     },
     {
       id: 'reserve',
       label: t('Dark Sky Reserve', '暗夜保护区'),
       icon: Globe,
-      color: 'text-blue-400 border-blue-400/30 bg-blue-400/10 hover:bg-blue-400/20'
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
     },
     {
       id: 'park',
       label: t('Dark Sky Park', '暗夜公园'),
       icon: Trees,
-      color: 'text-green-400 border-green-400/30 bg-green-400/10 hover:bg-green-400/20'
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
     },
     {
       id: 'community',
       label: t('Dark Sky Community', '暗夜社区'),
       icon: Building2,
-      color: 'text-amber-400 border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/20'
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
     },
     {
       id: 'urban',
       label: t('Urban Night Sky', '城市夜空'),
       icon: Building2,
-      color: 'text-purple-400 border-purple-400/30 bg-purple-400/10 hover:bg-purple-400/20'
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
     },
     {
       id: 'lodging',
       label: t('Dark Sky Lodging', '暗夜住宿'),
       icon: Hotel,
-      color: 'text-blue-900 border-blue-900/30 bg-blue-900/10 hover:bg-blue-900/20'
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
     }
   ];
 
