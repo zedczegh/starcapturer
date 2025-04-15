@@ -33,7 +33,7 @@ export function prepareLocationForNavigation(location: SharedAstroSpot) {
     siqsResult: location.siqs ? { 
       score: location.siqs,
       isViable: location.siqs >= 2,
-      factors: location.siqsFactors || []
+      factors: location.siqsResult?.factors || []
     } : undefined
   };
   

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -173,6 +174,36 @@ const LocationMarker = memo(({
       state: navigationData 
     });
   }, [location, navigate]);
+  
+  const handleClick = useCallback(() => {
+    onClick(location);
+  }, [location, onClick]);
+  
+  const handleMouseOver = useCallback(() => {
+    onHover(locationId);
+  }, [locationId, onHover]);
+  
+  const handleMouseOut = useCallback(() => {
+    onHover(null);
+  }, [onHover]);
+  
+  const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
+    if (handleTouchStart) {
+      handleTouchStart(e, locationId);
+    }
+  }, [handleTouchStart, locationId]);
+  
+  const handleMarkerTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (handleTouchEnd) {
+      handleTouchEnd(e, locationId);
+    }
+  }, [handleTouchEnd, locationId]);
+  
+  const handleMarkerTouchMove = useCallback((e: React.TouchEvent) => {
+    if (handleTouchMove) {
+      handleTouchMove(e);
+    }
+  }, [handleTouchMove]);
   
   if (!shouldRender) {
     return null;
