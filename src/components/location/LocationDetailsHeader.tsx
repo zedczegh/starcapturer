@@ -1,6 +1,5 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { Sparkles, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocationDetailsService } from "./header/LocationDetailsService";
