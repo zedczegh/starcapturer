@@ -13,6 +13,8 @@ import { MapEvents } from './MapEffectsController';
 import { MapEffectsComposer } from './MapComponents';
 import L from 'leaflet';
 import CenteringPinpointButton from './CenteringPinpointButton';
+import { calculateDistance } from '@/utils/geoUtils';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 configureLeaflet();
 
@@ -122,14 +124,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       );
       
       if (sameLocation) {
-        // Handle both number and object siqs types
-        if (typeof sameLocation.siqs === 'number') {
-          setCurrentSiqs(sameLocation.siqs);
-        } else if (sameLocation.siqs && typeof sameLocation.siqs === 'object' && 'score' in sameLocation.siqs) {
-          setCurrentSiqs(sameLocation.siqs.score);
-        } else if (sameLocation.siqsResult) {
-          setCurrentSiqs(sameLocation.siqsResult.score);
-        }
+        setCurrentSiqs(getCurrentSiqs(sameLocation));
       }
     }
   }, [userLocation?.latitude, userLocation?.longitude, locations]); 
