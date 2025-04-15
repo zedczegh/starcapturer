@@ -16,6 +16,7 @@ import {
   isWaterSpot, 
   isValidAstronomyLocation 
 } from './MarkerUtils';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -122,8 +123,8 @@ const LocationMarker = memo(({
       fromPhotoPoints: true,
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
-      siqsResult: (location.siqs) ? { 
-        score: siqsScore,
+      siqsResult: location.siqs ? { 
+        score: typeof location.siqs === 'object' ? location.siqs.score : location.siqs,
         isViable: typeof location.siqs === 'object' ? location.siqs.isViable : siqsScore >= 2
       } : undefined
     };
@@ -254,9 +255,8 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Import createCustomMarker from MapMarkerUtils
-  const { createCustomMarker } = require('@/components/location/map/MapMarkerUtils');
-  const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
+  // Directly import createCustomMarker to avoid require
+  const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
