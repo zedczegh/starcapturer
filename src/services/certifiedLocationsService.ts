@@ -3,14 +3,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 // Cache for certified locations to avoid repeated API calls
 let cachedCertifiedLocations: SharedAstroSpot[] | null = null;
 let lastCacheUpdate = 0;
-const CACHE_TTL = 60 * 60 * 1000; // 60 minutes
-
-// Check if we have locations already loaded in memory
-const hasCachedLocations = (): boolean => {
-  return cachedCertifiedLocations !== null && 
-         cachedCertifiedLocations.length > 0 && 
-         (Date.now() - lastCacheUpdate < CACHE_TTL);
-};
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Pre-load all certified dark sky locations globally
@@ -18,20 +11,13 @@ const hasCachedLocations = (): boolean => {
  */
 export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
   try {
-    // First check memory cache to avoid localStorage access
-    if (hasCachedLocations()) {
-      console.log(`Using ${cachedCertifiedLocations!.length} cached certified locations from memory`);
-      return cachedCertifiedLocations!;
-    }
-    
-    // Check local storage cache next for persistent storage
+    // Check local storage cache first for instant rendering
     const storedLocations = localStorage.getItem('cachedCertifiedLocations');
     if (storedLocations) {
       try {
         const parsed = JSON.parse(storedLocations);
         if (Array.isArray(parsed) && parsed.length > 0) {
           cachedCertifiedLocations = parsed;
-          lastCacheUpdate = Date.now();
           console.log(`Using ${parsed.length} cached certified locations from storage`);
           
           // Return immediately while still refreshing in background
@@ -54,9 +40,10 @@ export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
  * Get all certified locations, using cache if available
  */
 export async function getAllCertifiedLocations(): Promise<SharedAstroSpot[]> {
-  // If we have fresh cached data in memory, use it
-  if (hasCachedLocations()) {
-    return cachedCertifiedLocations!;
+  // If we have fresh cached data, use it
+  if (cachedCertifiedLocations && 
+      (Date.now() - lastCacheUpdate < CACHE_TTL)) {
+    return cachedCertifiedLocations;
   }
   
   // Otherwise refresh the cache
