@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -52,10 +51,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   // Determine which locations to display based on active view
   const locationsToShow = useMemo(() => {
     if (activeView === 'certified') {
-      return certifiedLocations;
+      return certifiedLocations as any[];
     } else {
       // For calculated view, include both certified and calculated locations
-      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)] as SharedAstroSpot[];
+      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)] as any[];
     }
   }, [activeView, certifiedLocations, calculatedLocations]);
   
@@ -219,11 +218,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         />
       )}
       
-      {/* Position the pinpoint button at top-right corner of the map */}
+      {/* Position the pinpoint button at bottom-right corner of the map */}
       <CenteringPinpointButton
         onGetLocation={handleGetLocation}
         userLocation={userLocation}
-        className="absolute top-4 right-16 z-[999]"
+        className="absolute bottom-4 right-4 z-[999]"
       />
     </div>
   );

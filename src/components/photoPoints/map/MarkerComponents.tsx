@@ -16,6 +16,7 @@ import {
   isWaterSpot, 
   isValidAstronomyLocation
 } from './MarkerUtils';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -55,7 +56,7 @@ const LocationMarker = memo(({
     
   // Fix TS error by safely handling null siqsScore
   const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
-    (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
+    (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
   
   const siqsClass = getSiqsClass(siqsScore);
   
@@ -119,7 +120,7 @@ const LocationMarker = memo(({
     
     // Handle the siqs value safely
     const siqsScore = location.siqs !== undefined && location.siqs !== null ?
-      (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
+      (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
     
     const navigationData = {
       id: locationId,
@@ -134,8 +135,8 @@ const LocationMarker = memo(({
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
       siqsResult: location.siqs ? { 
-        score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
-        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : (siqsScore !== null && siqsScore >= 2)
+        score: typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0,
+        isViable: typeof location.siqs === 'object' ? (location.siqs as any)?.isViable : (siqsScore !== null && siqsScore >= 2)
       } : undefined
     };
     
@@ -227,7 +228,7 @@ const LocationMarker = memo(({
           <div className="mt-2 flex items-center justify-between">
             {location.siqs !== undefined && location.siqs !== null && (
               <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : location.siqs.score} compact={true} />
+                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0} compact={true} />
               </div>
             )}
             
@@ -265,7 +266,7 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Directly import createCustomMarker to avoid require
+  // Import and use createCustomMarker function
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   
   return (

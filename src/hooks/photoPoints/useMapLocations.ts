@@ -54,7 +54,7 @@ export const useMapLocations = ({
     locations.forEach(loc => {
       if (loc.latitude && loc.longitude) {
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        newLocationsMap.set(key, loc);
+        newLocationsMap.set(key, loc as SharedAstroSpot);
       }
     });
     
@@ -74,21 +74,21 @@ export const useMapLocations = ({
             
             // Filter out locations outside search radius or in water
             if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
-              newLocationsMap.set(key, loc);
+              newLocationsMap.set(key, loc as SharedAstroSpot);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {
             // Keep certified locations
-            newLocationsMap.set(key, loc);
+            newLocationsMap.set(key, loc as SharedAstroSpot);
           }
         } else if (activeView === 'certified' && (loc.isDarkSkyReserve || loc.certification)) {
           // For certified view, only keep certified locations
-          newLocationsMap.set(key, loc);
+          newLocationsMap.set(key, loc as SharedAstroSpot);
         }
       }
     });
     
     // Convert Map back to array
-    const allLocations = Array.from(newLocationsMap.values());
+    const allLocations = Array.from(newLocationsMap.values()) as SharedAstroSpot[];
     
     // Update previous locations for future use
     previousLocationsRef.current = newLocationsMap;
@@ -109,16 +109,16 @@ export const useMapLocations = ({
         
         if (activeView === 'certified') {
           // In certified view, only show certified locations
-          locationsToShow = certifiedLocations;
+          locationsToShow = certifiedLocations as SharedAstroSpot[];
         } else {
           // For calculated view, show calculated locations
-          locationsToShow = calculatedLocations;
+          locationsToShow = calculatedLocations as SharedAstroSpot[];
           
           // In calculated view, certified locations are handled separately in the UI
           // Only include certified locations if explicitly requested
           if (viewChanged || userLocation) {
             // Merge calculated and certified for calculated view
-            locationsToShow = [...calculatedLocations];
+            locationsToShow = [...calculatedLocations] as SharedAstroSpot[];
           }
         }
         
