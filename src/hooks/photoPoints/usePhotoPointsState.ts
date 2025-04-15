@@ -9,6 +9,7 @@ const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated lo
 const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
 
 export function usePhotoPointsState() {
+  // Get geolocation data
   const { 
     loading: locationLoading, 
     coords, 
@@ -20,9 +21,8 @@ export function usePhotoPointsState() {
     timeout: 10000 // Timeout after 10 seconds
   });
   
-  // State for view mode
+  // Core state
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
-  
   const [initialLoad, setInitialLoad] = useState(true);
   const [showMap, setShowMap] = useState(true);
   const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
@@ -30,11 +30,11 @@ export function usePhotoPointsState() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
   
-  // Track view change status to prevent race conditions
+  // Refs for handling view changes
   const isViewChangeInProgress = useRef(false);
   const viewChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Get user position
+  // Try to get position on mount
   useEffect(() => {
     if (!coords && locationLoadAttempts < 3) {
       console.log("Getting user position, attempt:", locationLoadAttempts + 1);
@@ -47,7 +47,7 @@ export function usePhotoPointsState() {
     }
   }, [getPosition, coords, locationLoadAttempts]);
   
-  // Update user location from coords
+  // Update user location when coordinates are available
   useEffect(() => {
     if (coords && !manualLocationOverride) {
       const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
@@ -62,7 +62,7 @@ export function usePhotoPointsState() {
     }
   }, [coords, manualLocationOverride]);
   
-  // Fallback to saved location
+  // Fallback to saved location if needed
   useEffect(() => {
     if ((locationError || locationLoadAttempts >= 3) && !userLocation && !manualLocationOverride) {
       try {
@@ -80,7 +80,7 @@ export function usePhotoPointsState() {
     }
   }, [locationError, userLocation, locationLoadAttempts, manualLocationOverride]);
 
-  // Complete initial load after a short delay
+  // Complete initial load after a delay
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoad(false);
@@ -88,7 +88,7 @@ export function usePhotoPointsState() {
     return () => clearTimeout(timer);
   }, []);
   
-  // Clean up view change timeout on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (viewChangeTimeoutRef.current) {
@@ -97,30 +97,22 @@ export function usePhotoPointsState() {
     };
   }, []);
 
-  // Effective location (manual override or user location)
+  // Compute derived state
   const effectiveLocation = manualLocationOverride || userLocation;
+  const currentSearchRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
 
-  // Handle radius change
+  // Handler functions
   const handleRadiusChange = useCallback((value: number) => {
     setCalculatedSearchRadius(value);
   }, []);
   
-  // Handle map/list view toggle
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
   }, []);
   
-  // Safer view change handler with debounce protection
   const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
-    // Skip if trying to set the same view
-    if (view === activeView) {
-      console.log(`Already in ${view} view`);
-      return;
-    }
-    
-    // Skip if a view change is already in progress
-    if (isViewChangeInProgress.current) {
-      console.log("View change already in progress, ignoring new request");
+    // Skip if same view or change in progress
+    if (view === activeView || isViewChangeInProgress.current) {
       return;
     }
     
@@ -132,18 +124,14 @@ export function usePhotoPointsState() {
       clearTimeout(viewChangeTimeoutRef.current);
     }
     
-    // Update state with delay to avoid race conditions
+    // Update state with delay to prevent race conditions
     viewChangeTimeoutRef.current = setTimeout(() => {
       try {
-        // Clear location cache
         clearLocationCache();
-        
-        // Update view state
         setActiveView(view);
         console.log(`View changed to: ${view}`);
         
-        // Reset the in-progress flag after a short delay 
-        // to prevent rapid consecutive changes
+        // Reset the flag after a short delay
         setTimeout(() => {
           isViewChangeInProgress.current = false;
         }, 500);
@@ -154,7 +142,6 @@ export function usePhotoPointsState() {
     }, 50);
   }, [activeView]);
   
-  // Handle location update from map click
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     const newLocation = { latitude, longitude };
     
@@ -163,20 +150,13 @@ export function usePhotoPointsState() {
     
     try {
       localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      clearLocationCache();
       console.log("Updated user location from map click:", newLocation);
     } catch (err) {
-      console.error("Error saving location to localStorage:", err);
-    }
-    
-    try {
-      clearLocationCache();
-      console.log("Cleared location cache after location change");
-    } catch (err) {
-      console.error("Error clearing location cache:", err);
+      console.error("Error handling location update:", err);
     }
   }, []);
 
-  // Reset to user's actual location
   const handleResetLocation = useCallback(() => {
     setManualLocationOverride(null);
     if (coords) {
@@ -191,9 +171,6 @@ export function usePhotoPointsState() {
       getPosition();
     }
   }, [coords, getPosition]);
-
-  // Calculate current search radius based on view mode
-  const currentSearchRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
 
   return {
     activeView,

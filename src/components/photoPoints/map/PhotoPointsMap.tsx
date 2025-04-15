@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -20,21 +21,24 @@ interface PhotoPointsMapProps {
   onLocationUpdate?: (latitude: number, longitude: number) => void;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
-  userLocation,
-  locations,
-  certifiedLocations,
-  calculatedLocations,
-  activeView,
-  searchRadius,
-  onLocationClick,
-  onLocationUpdate
-}) => {
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
+  const { 
+    userLocation,
+    locations,
+    certifiedLocations,
+    calculatedLocations,
+    activeView,
+    searchRadius,
+    onLocationClick,
+    onLocationUpdate
+  } = props;
+  
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
   
+  // Use marker hook for tracking hover states
   const { 
     hoveredLocationId, 
     handleHover,
@@ -43,6 +47,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleTouchMove
   } = useMapMarkers();
   
+  // Use map hook for core functionality
   const { 
     mapReady,
     handleMapReady,
@@ -59,6 +64,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     activeView
   });
   
+  // Adjust height based on device
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -75,6 +81,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
+  // Handler functions
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -110,6 +117,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     setLegendOpen(isOpen);
   }, []);
   
+  // Render map container
   return (
     <div 
       style={{ height: mapContainerHeight }} 

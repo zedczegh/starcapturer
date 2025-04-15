@@ -5,6 +5,7 @@ import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
 import { calculateDistance } from '@/utils/geoUtils';
 
+// Lazy load components to improve performance
 const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
 const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
 const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
@@ -30,26 +31,28 @@ interface PhotoPointsViewProps {
   maxLoadMoreClicks: number;
 }
 
-const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
-  showMap,
-  activeView,
-  initialLoad,
-  effectiveLocation,
-  certifiedLocations,
-  calculatedLocations,
-  searchRadius,
-  calculatedSearchRadius,
-  loading,
-  hasMore,
-  loadMore,
-  refreshSiqs,
-  onLocationClick,
-  onLocationUpdate,
-  canLoadMoreCalculated,
-  loadMoreCalculated,
-  loadMoreClickCount,
-  maxLoadMoreClicks
-}) => {
+const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
+  const {
+    showMap,
+    activeView,
+    initialLoad,
+    effectiveLocation,
+    certifiedLocations,
+    calculatedLocations,
+    searchRadius,
+    calculatedSearchRadius,
+    loading,
+    hasMore,
+    loadMore,
+    refreshSiqs,
+    onLocationClick,
+    onLocationUpdate,
+    canLoadMoreCalculated,
+    loadMoreCalculated,
+    loadMoreClickCount,
+    maxLoadMoreClicks
+  } = props;
+  
   const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
   
   const filteredCalculatedLocations = React.useMemo(() => {
@@ -83,6 +86,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     }
   }, [onLocationClick]);
   
+  // Effect to handle loader visibility
   useEffect(() => {
     setLoaderVisible(initialLoad || loading);
     const timer = setTimeout(() => {
@@ -91,8 +95,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
-  console.log("PhotoPointsView rendering with activeView:", activeView);
-  
+  // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -101,15 +104,14 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     );
   }
   
+  // For map view
   if (showMap) {
-    const locationsToShow = activeView === 'certified' ? certifiedLocations : calculatedLocations;
-    
     return (
       <Suspense fallback={<PageLoader />}>
         <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
-            locations={locationsToShow}
+            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
@@ -122,6 +124,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     );
   }
   
+  // For list view
   return (
     <Suspense fallback={<PageLoader />}>
       <div className="min-h-[300px]">
