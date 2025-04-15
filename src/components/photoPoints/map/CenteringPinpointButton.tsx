@@ -15,7 +15,7 @@ interface CenteringPinpointButtonProps {
 const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
   onGetLocation,
   userLocation,
-  className
+  className = "absolute top-4 right-4 z-[999]" // Default position at top-right
 }) => {
   // State to track if we have a valid map reference
   const [hasValidMap, setHasValidMap] = useState(false);

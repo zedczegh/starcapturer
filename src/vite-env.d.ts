@@ -18,6 +18,7 @@ declare module 'react-leaflet' {
     children?: React.ReactNode;
     minZoom?: number;
     worldCopyJump?: boolean;
+    // Note: doubleClickZoom is not included here as we now handle it in MapController
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {

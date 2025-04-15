@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations, useMapUtils } from './useMapUtils';
@@ -21,7 +22,7 @@ export const usePhotoPointsMap = ({
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
   // IMPORTANT: Always load certified locations regardless of view
-  const shouldLoadCertified = true; // Changed from conditional to always true
+  const shouldLoadCertified = true; // Always load certified locations
   
   // Use our certified locations loader with always-on loading
   const { 
@@ -54,6 +55,7 @@ export const usePhotoPointsMap = ({
     if (allCertifiedLocations.length > 0) {
       // If in certified view, only show certified locations
       if (activeView === 'certified') {
+        console.log(`Returning ${allCertifiedLocations.length} certified locations for map display`);
         return allCertifiedLocations;
       } 
       
@@ -69,19 +71,24 @@ export const usePhotoPointsMap = ({
       });
       
       // Then add calculated locations without overriding certified ones
-      locations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          if (!locationMap.has(key)) {
-            locationMap.set(key, loc);
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            if (!locationMap.has(key)) {
+              locationMap.set(key, loc);
+            }
           }
-        }
-      });
+        });
+      }
       
-      return Array.from(locationMap.values());
+      const result = Array.from(locationMap.values());
+      console.log(`Combined ${allCertifiedLocations.length} certified and ${locations.length || 0} calculated locations for map display. Total: ${result.length}`);
+      return result;
     }
     
     // Fallback to provided locations if certified locations aren't loaded yet
+    console.log(`Using ${locations.length || 0} fallback locations for map display`);
     return locations;
   }, [locations, allCertifiedLocations, activeView]);
   
@@ -106,7 +113,9 @@ export const usePhotoPointsMap = ({
   }, []);
 
   const initialZoom = getZoomLevel(searchRadius);
-
+  
+  console.log(`usePhotoPointsMap: processedLocations=${processedLocations.length}, activeView=${activeView}, searchRadius=${searchRadius}`);
+  
   return {
     mapReady,
     handleMapReady,
