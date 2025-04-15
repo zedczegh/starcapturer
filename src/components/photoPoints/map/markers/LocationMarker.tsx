@@ -32,7 +32,9 @@ const LocationMarker = memo(({
   const displayName = getDisplayName(location, language);
   const icon = getLocationMarker(location, isCertified, isMobile);
   
-  const handleMarkerClick = () => {
+  const handleMarkerClick = (e: L.LeafletMouseEvent) => {
+    // Prevent default zoom behavior
+    e.target._map.getZoom();
     onClick(location);
   };
   

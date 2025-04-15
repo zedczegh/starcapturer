@@ -15,14 +15,24 @@ export const MapController: React.FC<MapControllerProps> = ({
   const map = useMap();
   const isMobile = useIsMobile();
   
-  // Initialize map settings based on device type
   useEffect(() => {
     if (!map) return;
     
-    // Apply device-specific settings
-    configureMapForDevice(map, isMobile);
+    // Apply device-specific settings without zoom behaviors
+    map.dragging.enable();
     
-    // Fix for "_leaflet_pos" error - ensure map is properly sized
+    if (isMobile) {
+      map.touchZoom.disable();
+      map.doubleClickZoom.disable();
+      if (map.tap) map.tap.enable();
+    } else {
+      map.scrollWheelZoom.disable();
+      map.doubleClickZoom.disable();
+      map.keyboard.enable();
+      if (map.tap) map.tap.enable();
+    }
+    
+    // Handle invalidation for size issues
     const handleMapInvalidation = () => {
       try {
         map.invalidateSize();
@@ -31,10 +41,7 @@ export const MapController: React.FC<MapControllerProps> = ({
       }
     };
     
-    // Wait for the DOM to be fully rendered
     setTimeout(handleMapInvalidation, 300);
-    
-    // Listen for resize events
     window.addEventListener('resize', handleMapInvalidation);
     
     return () => {
@@ -44,33 +51,5 @@ export const MapController: React.FC<MapControllerProps> = ({
 
   return null;
 };
-
-/**
- * Configure map settings based on device type
- */
-function configureMapForDevice(map: any, isMobile: boolean) {
-  // Base settings for all devices
-  map.dragging.enable();
-  
-  if (isMobile) {
-    // Mobile-specific settings
-    map.touchZoom.enable();
-    map.boxZoom.disable();
-    
-    if (map.options) {
-      map.options.touchZoom = 'center';
-      map.options.doubleClickZoom = 'center';
-      map.options.bounceAtZoomLimits = false;
-    }
-  } else {
-    // Desktop-specific settings
-    map.scrollWheelZoom.enable();
-    map.touchZoom.enable();
-    map.doubleClickZoom.enable();
-    map.boxZoom.enable();
-    map.keyboard.enable();
-    if (map.tap) map.tap.enable();
-  }
-}
 
 export default MapController;
