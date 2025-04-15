@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -158,12 +159,13 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     onMapReady();
   }, [onMapReady]);
 
-  // Handle map click events
+  // Handle map click events - ALWAYS enabled on mobile
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (editable) {
+    // Always allow map clicks, regardless of editable state on mobile
+    if (isMobile || editable) {
       onMapClick(lat, lng);
     }
-  }, [editable, onMapClick]);
+  }, [editable, onMapClick, isMobile]);
 
   // Get custom marker icon - red for editable, blue for non-editable
   const markerIcon = React.useMemo(() => {
@@ -224,8 +226,8 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         </Popup>
       </Marker>
       
-      {/* Always add MapEvents for mobile, regardless of editable state */}
-      {(editable || isMobile) && <MapEvents onMapClick={handleMapClick} />}
+      {/* Always add MapEvents for map clicks - ESPECIALLY on mobile */}
+      <MapEvents onMapClick={handleMapClick} />
     </MapContainer>
   );
 };

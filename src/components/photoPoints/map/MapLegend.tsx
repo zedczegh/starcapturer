@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ChevronLeft, Info, Star, Circle } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Info, Star, Circle, Hotel } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 
@@ -101,6 +101,11 @@ const MapLegend: React.FC<MapLegendProps> = ({
                       color="#0EA5E9" 
                       label={t("Urban Night Sky", "城市夜空地点")} 
                       type="star"
+                    />
+                    <LegendItem 
+                      color="#1e3a8a" 
+                      label={t("Dark Sky Lodging", "暗夜住宿")} 
+                      type="hotel"
                     />
                   </div>
                 )}
@@ -203,7 +208,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
 interface LegendItemProps {
   color: string;
   label: string;
-  type: 'star' | 'circle';
+  type: 'star' | 'circle' | 'hotel';
 }
 
 const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
@@ -227,6 +232,8 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
       >
         {type === 'star' ? (
           <Star className="h-3 w-3" style={{ color, fill: color }} />
+        ) : type === 'hotel' ? (
+          <Hotel className="h-3 w-3" style={{ color, fill: color }} />
         ) : (
           <Circle className="h-3 w-3" style={{ color, fill: `${color}30` }} />
         )}

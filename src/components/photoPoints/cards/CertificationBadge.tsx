@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Trees, Building2, ShieldCheck } from 'lucide-react';
+import { Globe, Trees, Building2, ShieldCheck, Hotel } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/contexts/LanguageContext';
 
@@ -15,11 +15,13 @@ interface CertificationInfo {
 interface CertificationBadgeProps {
   certification?: string;
   isDarkSkyReserve?: boolean;
+  type?: string;
 }
 
 const CertificationBadge: React.FC<CertificationBadgeProps> = ({
   certification,
-  isDarkSkyReserve
+  isDarkSkyReserve,
+  type
 }) => {
   const { language } = useLanguage();
   
@@ -28,7 +30,7 @@ const CertificationBadge: React.FC<CertificationBadgeProps> = ({
     return null;
   }
   
-  const certInfo = getCertificationInfo({ certification, isDarkSkyReserve });
+  const certInfo = getCertificationInfo({ certification, isDarkSkyReserve, type });
   
   if (!certInfo) return null;
   
@@ -43,9 +45,10 @@ const CertificationBadge: React.FC<CertificationBadgeProps> = ({
 };
 
 // Helper function to get certification info
-function getCertificationInfo({ certification, isDarkSkyReserve }: { 
+function getCertificationInfo({ certification, isDarkSkyReserve, type }: { 
   certification?: string; 
   isDarkSkyReserve?: boolean;
+  type?: string;
 }): CertificationInfo | null {
   if (!certification && !isDarkSkyReserve) {
     return null;
@@ -53,7 +56,13 @@ function getCertificationInfo({ certification, isDarkSkyReserve }: {
   
   const cert = (certification || '').toLowerCase();
   
-  if (cert.includes('sanctuary') || cert.includes('reserve') || isDarkSkyReserve) {
+  if (cert.includes('lodging') || type === 'lodging') {
+    return {
+      icon: Hotel,
+      text: 'Dark Sky Lodging',
+      color: 'text-blue-900 border-blue-900/30 bg-blue-900/10'
+    };
+  } else if (cert.includes('sanctuary') || cert.includes('reserve') || isDarkSkyReserve) {
     return {
       icon: Globe,
       text: 'Dark Sky Reserve',
@@ -98,6 +107,7 @@ function getLocalizedCertText(certInfo: CertificationInfo, language: Language): 
     if (certText === 'Dark Sky Community') return '暗夜社区';
     if (certText === 'Urban Night Sky') return '城市夜空';
     if (certText === 'Certified Location') return '认证地点';
+    if (certText === 'Dark Sky Lodging') return '暗夜住宿';
   }
   
   return certText;
