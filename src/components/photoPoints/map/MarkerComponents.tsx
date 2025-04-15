@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -89,19 +90,33 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const isMobile = useIsMobile();
   
-  if (activeView === 'certified' && !isCertified) {
-    return null;
-  }
+  // IMPORTANT: Always initialize these hooks first regardless of conditions
+  const displayName = language === 'zh' && location.chineseName 
+    ? location.chineseName 
+    : location.name;
+    
+  const siqsClass = getSiqsClass(location.siqs);
   
-  if (!isCertified) {
-    if (isWaterSpot(location)) {
-      return null;
+  // Determine if this marker should be visible
+  const shouldRender = useMemo(() => {
+    // If it's certified view but not a certified location
+    if (activeView === 'certified' && !isCertified) {
+      return false;
     }
     
-    if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-      return null;
+    // For non-certified locations, do additional checks
+    if (!isCertified) {
+      if (isWaterSpot(location)) {
+        return false;
+      }
+      
+      if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+        return false;
+      }
     }
-  }
+    
+    return true;
+  }, [activeView, isCertified, location]);
   
   const icon = useMemo(() => {
     return getLocationMarker(location, isCertified, isHovered, isMobile);
@@ -181,13 +196,7 @@ const LocationMarker = memo(({
     };
   }, [isHovered, isMobile]);
   
-  const displayName = language === 'zh' && location.chineseName 
-    ? location.chineseName 
-    : location.name;
-  
-  const siqsClass = getSiqsClass(location.siqs);
-  
-  const goToLocationDetails = () => {
+  const goToLocationDetails = useCallback(() => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
     navigate(`/location/${locationId}`, {
@@ -206,7 +215,12 @@ const LocationMarker = memo(({
         fromPhotoPoints: true
       }
     });
-  };
+  }, [location, navigate]);
+  
+  // If this marker shouldn't be rendered, return null
+  if (!shouldRender) {
+    return null;
+  }
   
   return (
     <Marker
