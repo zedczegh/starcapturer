@@ -30,11 +30,11 @@ export function prepareLocationForNavigation(location: SharedAstroSpot) {
     isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
     certification: location.certification || '',
     // Important: Create a stable siqsResult structure if we have a siqs score
-    siqsResult: location.siqs ? { 
-      score: location.siqs,
-      isViable: location.siqs >= 2,
-      factors: location.siqsResult?.factors || []
-    } : undefined
+    siqsResult: location.siqsResult || (location.siqs ? { 
+      score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
+      isViable: typeof location.siqs === 'number' ? location.siqs >= 2 : location.siqs.isViable,
+      factors: []
+    } : undefined)
   };
   
   // Save location data to localStorage for better state persistence
