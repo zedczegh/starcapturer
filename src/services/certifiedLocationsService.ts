@@ -3,7 +3,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 // Cache for certified locations to avoid repeated API calls
 let cachedCertifiedLocations: SharedAstroSpot[] | null = null;
 let lastCacheUpdate = 0;
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Pre-load all certified dark sky locations globally
@@ -21,7 +21,7 @@ export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
           console.log(`Using ${parsed.length} cached certified locations from storage`);
           
           // Return immediately while still refreshing in background
-          setTimeout(() => refreshCertifiedLocationsCache(), 1000);
+          setTimeout(() => refreshCertifiedLocationsCache(), 2000);
           return parsed;
         }
       } catch (error) {
@@ -476,47 +476,72 @@ async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
     // Import dynamically to avoid circular dependencies
     const { findCertifiedLocations } = await import('./locationSearchService');
     
-    // Use a default location just as a center point, since we'll get ALL global locations
-    const defaultLocation = { latitude: 39.9042, longitude: 116.4074 };
+    console.log("Starting global certified locations fetch");
     
-    // Get all certified locations globally
-    const certifiedResults = await findCertifiedLocations(
-      defaultLocation.latitude,
-      defaultLocation.longitude,
-      100000, // Global radius to get ALL locations
-      1000    // Increased limit to ensure we get ALL certified locations
+    // Use multiple locations around the world to ensure complete coverage
+    const globalLocations = [
+      { latitude: 39.9042, longitude: 116.4074 }, // Beijing
+      { latitude: 51.5074, longitude: -0.1278 },  // London
+      { latitude: 40.7128, longitude: -74.0060 }, // New York
+      { latitude: -33.8688, longitude: 151.2093 }, // Sydney
+      { latitude: -1.2921, longitude: 36.8219 }   // Nairobi
+    ];
+    
+    // Fetch certified locations from all global centers
+    const fetchPromises = globalLocations.map(location => 
+      findCertifiedLocations(
+        location.latitude,
+        location.longitude,
+        20000, // 20000 km - effectively global
+        500    // Increased limit to ensure we get ALL certified locations
+      )
     );
     
-    if (certifiedResults.length > 0) {
-      console.log(`Fetched ${certifiedResults.length} certified dark sky locations globally`);
-      
-      // Add the East Asian certified locations if they might be missing
-      const withEastAsian = addEastAsianLocations(certifiedResults);
-      
-      // Add Dark Sky Communities
-      const withCommunities = addDarkSkyCommunities(withEastAsian);
-      
-      // Add Urban Night Sky locations
-      const withUrban = addUrbanNightSkyLocations(withCommunities);
-      
-      // Add Dark Sky Lodging
-      const withLodging = addDarkSkyLodgingLocations(withUrban);
-      
-      // Update cache and timestamp
-      cachedCertifiedLocations = withLodging;
-      lastCacheUpdate = Date.now();
-      
-      // Save to localStorage for future quick loads
-      try {
-        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(withLodging));
-      } catch (error) {
-        console.error("Error saving certified locations to cache:", error);
-      }
-      
-      return withLodging;
+    // Wait for all fetches to complete
+    const results = await Promise.all(fetchPromises);
+    
+    // Combine all results and remove duplicates
+    const locationMap = new Map<string, SharedAstroSpot>();
+    
+    // Process each result batch
+    results.forEach(batch => {
+      batch.forEach(location => {
+        if (location.latitude && location.longitude) {
+          const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+          locationMap.set(key, location);
+        }
+      });
+    });
+    
+    // Get unique locations
+    let certifiedResults = Array.from(locationMap.values());
+    console.log(`Fetched ${certifiedResults.length} certified dark sky locations globally`);
+    
+    // Add the East Asian certified locations if they might be missing
+    const withEastAsian = addEastAsianLocations(certifiedResults);
+    
+    // Add Dark Sky Communities
+    const withCommunities = addDarkSkyCommunities(withEastAsian);
+    
+    // Add Urban Night Sky locations
+    const withUrban = addUrbanNightSkyLocations(withCommunities);
+    
+    // Add Dark Sky Lodging
+    const withLodging = addDarkSkyLodgingLocations(withUrban);
+    
+    // Update cache and timestamp
+    cachedCertifiedLocations = withLodging;
+    lastCacheUpdate = Date.now();
+    
+    // Save to localStorage for future quick loads
+    try {
+      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(withLodging));
+    } catch (error) {
+      console.error("Error saving certified locations to cache:", error);
     }
     
-    return certifiedResults;
+    console.log(`Total certified locations after augmentation: ${withLodging.length}`);
+    return withLodging;
   } catch (error) {
     console.error("Error refreshing certified locations cache:", error);
     // Return cached data if available, otherwise empty array

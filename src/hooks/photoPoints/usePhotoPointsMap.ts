@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useMapLocations } from './useMapLocations';
+import { useMapLocations } from './useMapUtils';
 import { useMapUtils } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
@@ -22,10 +22,10 @@ export const usePhotoPointsMap = ({
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
-  // Only load certified locations when in certified view
-  const shouldLoadCertified = activeView === 'certified';
+  // IMPORTANT: Always load certified locations regardless of view
+  const shouldLoadCertified = true; // Changed from conditional to always true
   
-  // Use our certified locations loader with conditional loading
+  // Use our certified locations loader with always-on loading
   const { 
     certifiedLocations: allCertifiedLocations, 
     isLoading: certifiedLocationsLoading,
@@ -34,9 +34,9 @@ export const usePhotoPointsMap = ({
   
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   
-  // Store all certified locations for persistence, but only when in certified view
+  // Store all certified locations for persistence
   useEffect(() => {
-    if (shouldLoadCertified && allCertifiedLocations.length > 0) {
+    if (allCertifiedLocations.length > 0) {
       console.log(`Storing ${allCertifiedLocations.length} certified locations in persistent storage`);
       allCertifiedLocations.forEach(location => {
         if (location.isDarkSkyReserve || location.certification) {
@@ -45,21 +45,45 @@ export const usePhotoPointsMap = ({
       });
       setCertifiedLocationsLoaded(true);
     }
-  }, [allCertifiedLocations, shouldLoadCertified]);
+  }, [allCertifiedLocations]);
   
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Combine locations - for certified view, always include all certified locations regardless of radius
+  // Combine locations - always include all certified locations regardless of view
   const combinedLocations = useCallback(() => {
-    if (activeView === 'certified') {
-      // For certified view, always use all certified locations regardless of distance
-      if (allCertifiedLocations.length > 0) {
+    // Always include certified locations
+    if (allCertifiedLocations.length > 0) {
+      // If in certified view, only show certified locations
+      if (activeView === 'certified') {
         return allCertifiedLocations;
-      }
+      } 
+      
+      // If in calculated view, combine all locations but prioritize certified ones
+      const locationMap = new Map<string, SharedAstroSpot>();
+      
+      // First add all certified locations
+      allCertifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      // Then add calculated locations without overriding certified ones
+      locations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          if (!locationMap.has(key)) {
+            locationMap.set(key, loc);
+          }
+        }
+      });
+      
+      return Array.from(locationMap.values());
     }
     
-    // For calculated view or if no certified locations are loaded yet
+    // Fallback to provided locations if certified locations aren't loaded yet
     return locations;
   }, [locations, allCertifiedLocations, activeView]);
   
@@ -94,7 +118,7 @@ export const usePhotoPointsMap = ({
     mapCenter,
     initialZoom,
     certifiedLocationsLoaded,
-    certifiedLocationsLoading: certifiedLocationsLoading && shouldLoadCertified,
+    certifiedLocationsLoading: certifiedLocationsLoading,
     loadingProgress,
     allCertifiedLocationsCount: allCertifiedLocations.length
   };

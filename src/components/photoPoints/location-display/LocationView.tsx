@@ -28,6 +28,11 @@ const LocationView: React.FC<LocationViewProps> = ({
   const navigate = useNavigate();
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
+  // Log received locations for debugging
+  useEffect(() => {
+    console.log(`LocationView received ${locations.length} locations`);
+  }, [locations]);
+  
   // Update locations with real-time SIQS on initial load
   useEffect(() => {
     if (locations.length > 0) {

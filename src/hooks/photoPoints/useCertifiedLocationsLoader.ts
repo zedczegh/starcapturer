@@ -9,11 +9,11 @@ import { preloadCertifiedLocations, getAllCertifiedLocations } from '@/services/
  */
 export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
   const [certifiedLocations, setCertifiedLocations] = useState<SharedAstroSpot[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   
-  // Load certified locations on mount with immediate cache check, but only if shouldLoad is true
+  // Load certified locations on mount with immediate cache check
   useEffect(() => {
     if (!shouldLoad) {
       setIsLoading(false);
@@ -24,10 +24,24 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
     setIsLoading(true);
     setIsError(false);
     
+    // Try to use cached locations first for immediate display
+    try {
+      const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
+      if (cachedLocations.length > 0 && mounted) {
+        console.log(`Using ${cachedLocations.length} cached certified locations for immediate display`);
+        setCertifiedLocations(cachedLocations);
+        setLoadingProgress(50); // Show 50% progress since we're still refreshing from API
+      }
+    } catch (e) {
+      console.error("Error parsing cached locations:", e);
+    }
+    
     const loadLocations = async () => {
       try {
-        // Start with a 10% progress indicator
-        setLoadingProgress(10);
+        // Start with a 10% progress indicator if we didn't load from cache
+        if (loadingProgress === 0) {
+          setLoadingProgress(10);
+        }
         
         // Preload certified locations
         const locations = await preloadCertifiedLocations();
@@ -65,7 +79,7 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
           clearInterval(progressInterval);
           return prev;
         }
-        return prev + 10;
+        return Math.min(90, prev + 10);
       });
     }, 300);
     

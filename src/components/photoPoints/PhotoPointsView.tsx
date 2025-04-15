@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -54,11 +55,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   
   const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
   
+  // For calculated view - filter by distance
   const filteredCalculatedLocations = React.useMemo(() => {
     if (!effectiveLocation) return calculatedLocations;
     
     return calculatedLocations.filter(loc => {
       if (!loc.latitude || !loc.longitude) return false;
+      
+      // Skip distance filtering for certified locations
+      if (loc.isDarkSkyReserve || loc.certification) return true;
       
       const distance = loc.distance || calculateDistance(
         effectiveLocation.latitude,
@@ -93,6 +98,17 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     }, 300);
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
+  
+  // Console output for debugging
+  useEffect(() => {
+    console.log(`PhotoPointsView - Certified locations count: ${certifiedLocations?.length || 0}`);
+    console.log(`PhotoPointsView - Active view: ${activeView}`);
+    
+    if (certifiedLocations?.length > 0) {
+      // Log a sample of certified locations for debugging
+      console.log(`Sample certified location: ${JSON.stringify(certifiedLocations[0])}`);
+    }
+  }, [certifiedLocations, activeView]);
   
   // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
