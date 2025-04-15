@@ -83,9 +83,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     setCurrentSiqs(siqs);
   }, []);
   
-  // Ensure userLocation is always passed as a stable reference
-  const safeUserLocation = userLocation || null;
+  // Use a ref to track if the component is mounted
+  const isMountedRef = useRef(true);
   
+  // Set up mount/unmount tracking
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
+  // Effect to check for user location SIQS - use dependencies array to prevent infinite loop
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -97,17 +106,23 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       );
       
       if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(sameLocation.siqs);
+        if (isMountedRef.current) {
+          setCurrentSiqs(sameLocation.siqs);
+        }
       } else {
-        setCurrentSiqs(null);
+        if (isMountedRef.current) {
+          setCurrentSiqs(null);
+        }
       }
     }
-  }, [userLocation, locations]);
+  }, [userLocation, locations]); // Only depend on userLocation and locations
   
   const handleMapReady = useCallback(() => {
-    setMapReady(true);
-    if (onMapReady) {
-      onMapReady();
+    if (isMountedRef.current) {
+      setMapReady(true);
+      if (onMapReady) {
+        onMapReady();
+      }
     }
   }, [onMapReady]);
   
@@ -122,12 +137,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     
     window.addEventListener('resize', handleResize);
     
-    setTimeout(() => {
+    // Use a timeout to ensure the map has properly mounted
+    const timeoutId = setTimeout(() => {
       if (map) map.invalidateSize();
     }, 200);
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      clearTimeout(timeoutId);
     };
   }, [mapRef.current]);
 
@@ -172,7 +189,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         )}
         
         <MapEffectsComposer 
-          userLocation={safeUserLocation}
+          userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}
           onSiqsCalculated={handleSiqsCalculated}
@@ -212,7 +229,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         })}
         
         <MapController 
-          userLocation={safeUserLocation} 
+          userLocation={userLocation} 
           searchRadius={searchRadius}
         />
         
