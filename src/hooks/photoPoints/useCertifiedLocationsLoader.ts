@@ -5,15 +5,23 @@ import { preloadCertifiedLocations, getAllCertifiedLocations } from '@/services/
 
 /**
  * Hook for efficiently loading certified locations with preloading capabilities
+ * Implements strong caching to prevent reloading when switching views
  */
 export function useCertifiedLocationsLoader() {
   const [certifiedLocations, setCertifiedLocations] = useState<SharedAstroSpot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
   
   // Load certified locations on mount with immediate cache check
   useEffect(() => {
+    // If we've already loaded locations in this session, don't reload
+    if (hasLoaded && certifiedLocations.length > 0) {
+      console.log("Using already loaded certified locations from memory:", certifiedLocations.length);
+      return;
+    }
+    
     let mounted = true;
     setIsLoading(true);
     setIsError(false);
@@ -23,7 +31,7 @@ export function useCertifiedLocationsLoader() {
         // Start with a 10% progress indicator
         setLoadingProgress(10);
         
-        // Preload certified locations
+        // Preload certified locations - this checks localStorage cache first
         const locations = await preloadCertifiedLocations();
         
         // If component is still mounted, update state
@@ -31,6 +39,7 @@ export function useCertifiedLocationsLoader() {
           setCertifiedLocations(locations);
           setLoadingProgress(100);
           setIsLoading(false);
+          setHasLoaded(true);
         }
       } catch (error) {
         console.error("Error loading certified locations:", error);
@@ -44,6 +53,7 @@ export function useCertifiedLocationsLoader() {
             const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
             if (cachedLocations.length > 0) {
               setCertifiedLocations(cachedLocations);
+              setHasLoaded(true);
             }
           } catch (e) {
             console.error("Error parsing cached locations:", e);
@@ -69,7 +79,7 @@ export function useCertifiedLocationsLoader() {
       mounted = false;
       clearInterval(progressInterval);
     };
-  }, []);
+  }, [certifiedLocations.length, hasLoaded]);
   
   // Refresh certified locations
   const refreshLocations = useCallback(async () => {

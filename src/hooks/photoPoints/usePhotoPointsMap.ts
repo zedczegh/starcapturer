@@ -22,7 +22,7 @@ export const usePhotoPointsMap = ({
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
-  // Use our new certified locations loader
+  // Use our certified locations loader - this loads once and caches
   const { 
     certifiedLocations: allCertifiedLocations, 
     isLoading: certifiedLocationsLoading,
@@ -31,7 +31,7 @@ export const usePhotoPointsMap = ({
   
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   
-  // Store all certified locations for persistence
+  // Store all certified locations for persistence to prevent reloading
   useEffect(() => {
     if (allCertifiedLocations.length > 0) {
       console.log(`Storing ${allCertifiedLocations.length} certified locations in persistent storage`);
@@ -69,7 +69,7 @@ export const usePhotoPointsMap = ({
     mapReady
   });
 
-  // Calculate map center coordinates
+  // Calculate map center coordinates - no auto-zoom changes
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
     : processedLocations.length > 0
@@ -80,7 +80,8 @@ export const usePhotoPointsMap = ({
     setMapReady(true);
   }, []);
 
-  const initialZoom = getZoomLevel(searchRadius);
+  // Fixed initial zoom that doesn't change with radius
+  const initialZoom = activeView === 'calculated' ? 7 : 5;
 
   return {
     mapReady,

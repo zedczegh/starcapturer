@@ -1,5 +1,5 @@
 
-import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useCallback, useState, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
@@ -32,12 +32,22 @@ interface PhotoPointsViewProps {
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
+  // Store a reference to the certified locations to avoid reloading
+  const certifiedLocationsRef = useRef<SharedAstroSpot[]>([]);
+  
+  // On first load of certified locations, store them in the ref
+  useEffect(() => {
+    if (props.certifiedLocations.length > 0 && certifiedLocationsRef.current.length === 0) {
+      certifiedLocationsRef.current = props.certifiedLocations;
+      console.log("Stored certified locations in memory reference:", props.certifiedLocations.length);
+    }
+  }, [props.certifiedLocations]);
+
   const {
     showMap,
     activeView,
     initialLoad,
     effectiveLocation,
-    certifiedLocations,
     calculatedLocations,
     searchRadius,
     calculatedSearchRadius,
@@ -53,8 +63,13 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     maxLoadMoreClicks
   } = props;
   
+  // Use either the incoming certified locations or our stored reference
+  const certifiedLocations = props.certifiedLocations.length > 0 ? 
+    props.certifiedLocations : certifiedLocationsRef.current;
+  
   const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
   
+  // Filter calculated locations by radius
   const filteredCalculatedLocations = React.useMemo(() => {
     if (!effectiveLocation) return calculatedLocations;
     
@@ -124,7 +139,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     );
   }
   
-  // For list view
+  // For list view - use the same certified locations reference
   return (
     <Suspense fallback={<PageLoader />}>
       <div className="min-h-[300px]">

@@ -48,7 +48,7 @@ export const MapController: React.FC<MapControllerProps> = ({
 /**
  * Configure map settings based on device type
  */
-function configureMapForDevice(map: L.Map, isMobile: boolean) {
+function configureMapForDevice(map: any, isMobile: boolean) {
   // Base settings for all devices
   map.dragging.enable();
   

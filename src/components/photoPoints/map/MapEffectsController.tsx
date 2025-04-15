@@ -1,94 +1,60 @@
 
-import React, { useEffect, useRef } from 'react';
-import { useMap } from 'react-leaflet';
-import L from 'leaflet';
+import React, { useEffect } from 'react';
+import { useMapEvents } from 'react-leaflet';
 
-interface MapEffectsControllerProps {
-  onMapClick: (lat: number, lng: number) => void;
+interface MapEventsProps {
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
-// Prevent infinite scrolling beyond world bounds
-export const WorldBoundsController: React.FC = () => {
-  const map = useMap();
-  const initialized = useRef(false);
-  
-  useEffect(() => {
-    if (!map || initialized.current) return;
-    initialized.current = true;
-    
-    // Set max bounds to prevent scrolling beyond the world
-    const worldBounds = new L.LatLngBounds(
-      new L.LatLng(-85.06, -180), // Southwest corner
-      new L.LatLng(85.06, 180)    // Northeast corner
-    );
-    
-    map.setMaxBounds(worldBounds);
-    
-    const handleDrag = () => {
-      map.panInsideBounds(worldBounds, { animate: false });
-    };
-    
-    map.on('drag', handleDrag);
-    
-    // Ensure better touch handling for mobile Safari
-    if (map.dragging && map.dragging.enable) {
-      map.dragging.enable();
-    }
-    
-    if (map.touchZoom && map.touchZoom.enable) {
-      map.touchZoom.enable();
-    }
-    
-    // Set lower inertia for smoother mobile dragging
-    if (map.dragging && map.dragging._draggable) {
-      try {
-        // Safely set inertia properties
-        const draggable = map.dragging._draggable;
-        if (draggable._inertia) {
-          draggable._inertia.threshold = 20; // Lower value helps with Safari
-          draggable._inertia.deceleration = 3000; // Higher value reduces drift
-        }
-      } catch (error) {
-        console.error("Error optimizing map dragging:", error);
+// Component to handle map events
+export const MapEvents: React.FC<MapEventsProps> = ({ onMapClick }) => {
+  const map = useMapEvents({
+    click: (e) => {
+      if (onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
       }
     }
-    
-    return () => {
-      map.off('drag', handleDrag);
-    };
-  }, [map]);
+  });
   
   return null;
 };
 
-export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) => {
-  const map = useMap();
-  const clickHandlerRef = useRef<((e: L.LeafletMouseEvent) => void) | null>(null);
+interface MapEffectsComposerProps {
+  center: [number, number];
+  zoom: number;
+  userLocation: { latitude: number; longitude: number } | null;
+  activeView: 'certified' | 'calculated';
+  searchRadius: number;
+  onSiqsCalculated?: (siqs: number) => void;
+}
 
-  // Set up map click event handler with proper cleanup
+// Component to compose various map effects
+export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
+  center,
+  zoom,
+  userLocation,
+  activeView,
+  searchRadius,
+  onSiqsCalculated
+}) => {
+  // Initialize with proper center and zoom
+  const map = useMapEvents({});
+  
+  // Make sure map is centered on initial load
   useEffect(() => {
-    if (!map) return;
-    
-    // Remove any existing handler to prevent duplicates
-    if (clickHandlerRef.current) {
-      map.off('click', clickHandlerRef.current);
+    if (map) {
+      map.setView(center, zoom);
     }
-
-    const handleMapClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-    
-    // Store reference to handler for cleanup
-    clickHandlerRef.current = handleMapClick;
-    map.on('click', handleMapClick);
-
-    return () => {
-      if (clickHandlerRef.current) {
-        map.off('click', clickHandlerRef.current);
-      }
-    };
-  }, [map, onMapClick]);
-
+  }, [map, center, zoom]);
+  
+  // Update SIQS at user location if needed
+  useEffect(() => {
+    if (userLocation && onSiqsCalculated) {
+      // This would normally call a service to calculate SIQS
+      // For now we'll skip the implementation as it's not part of the requested changes
+    }
+  }, [userLocation, onSiqsCalculated]);
+  
   return null;
 };
 
