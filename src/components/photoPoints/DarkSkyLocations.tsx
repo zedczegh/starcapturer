@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -33,19 +34,21 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
     }
   }, [locations]);
   
-  // Filter locations based on selected certification type - without any limits
+  // Filter locations based on certification type only - no distance limits applied
   const filteredLocations = useMemo(() => {
     if (selectedCertificationType === 'all') {
       return locations;
     }
     
     return locations.filter(location => {
+      // Skip locations without any certification
       if (!location.certification && !location.isDarkSkyReserve) {
         return false;
       }
       
       const certification = (location.certification || '').toLowerCase();
       
+      // Check certification type
       switch (selectedCertificationType) {
         case 'reserve':
           return certification.includes('reserve') || 

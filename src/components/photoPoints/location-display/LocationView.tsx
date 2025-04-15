@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -31,17 +32,23 @@ const LocationView: React.FC<LocationViewProps> = ({
     console.log(`LocationView received ${locations.length} locations`);
   }, [locations]);
   
+  // Process ALL locations regardless of distance - ensure no filtering based on user location
   useEffect(() => {
     if (locations.length > 0) {
       const updateWithSiqs = async () => {
         try {
+          // Set a very large radius (100,000 km) to include all locations globally
+          // Pass null for userLocation to avoid any distance filtering
           const updated = await updateLocationsWithRealTimeSiqs(
             locations,
             null,
             100000,
-            'certified'
+            'certified' // Always treat as certified to ensure they all get processed
           );
           setEnhancedLocations(updated);
+          
+          // Log count to verify all locations are included
+          console.log(`Enhanced ${updated.length} locations with real-time SIQS data`);
         } catch (err) {
           console.error("Error updating location view with real-time SIQS:", err);
           setEnhancedLocations(locations);

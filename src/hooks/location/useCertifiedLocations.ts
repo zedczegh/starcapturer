@@ -21,7 +21,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
     
     console.log(`Processing ${locations.length} locations for certified/calculated separation`);
     
-    // Identify certified locations with improved criteria
+    // Identify certified locations with improved criteria - without any distance filtering
     const certified = locations.filter(location => {
       // Check for explicit Dark Sky Reserve flag
       if (location.isDarkSkyReserve === true) {
@@ -63,6 +63,8 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
       return false;
     });
     
+    console.log(`Found ${certified.length} certified locations (not filtered by distance)`);
+    
     // All locations that are not certified are calculated
     const calculated = locations.filter(location => 
       !certified.some(cert => 
@@ -73,11 +75,31 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
     
     console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations`);
     
-    // Sort both arrays by distance (if available)
-    const sortedCertified = [...certified].sort((a, b) => 
-      (a.distance || Infinity) - (b.distance || Infinity)
-    );
+    // Sort certified locations by name for better discoverability
+    const sortedCertified = [...certified].sort((a, b) => {
+      // First prioritize by certification type
+      const getTypeOrder = (loc: SharedAstroSpot) => {
+        const cert = (loc.certification || '').toLowerCase();
+        if (loc.isDarkSkyReserve || cert.includes('reserve')) return 1;
+        if (cert.includes('park')) return 2;
+        if (cert.includes('community')) return 3;
+        if (cert.includes('urban')) return 4;
+        if (cert.includes('lodging')) return 5;
+        return 6;
+      };
+      
+      const typeOrderA = getTypeOrder(a);
+      const typeOrderB = getTypeOrder(b);
+      
+      if (typeOrderA !== typeOrderB) {
+        return typeOrderA - typeOrderB;
+      }
+      
+      // Then sort by name
+      return (a.name || '').localeCompare(b.name || '');
+    });
     
+    // Sort calculated locations by distance if available
     const sortedCalculated = [...calculated].sort((a, b) => 
       (a.distance || Infinity) - (b.distance || Infinity)
     );
