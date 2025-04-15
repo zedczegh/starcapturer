@@ -9,12 +9,13 @@ import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
-import { formatDistance, getSafeScore } from '@/utils/geoUtils';
+import { formatDistance } from '@/utils/geoUtils';
 import { 
   getSiqsClass, 
   getLocationMarker, 
   isWaterSpot, 
-  isValidAstronomyLocation 
+  isValidAstronomyLocation,
+  getSafeScore
 } from './MarkerUtils';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 
@@ -54,17 +55,25 @@ const LocationMarker = memo(({
       : location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
-  const siqsClass = getSiqsClass(location.siqs);
+  // Fix TS error by safely handling null siqsScore
+  const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
+    getSafeScore(location.siqs) : null;
+  const siqsClass = getSiqsClass(siqsScore);
   
+  // Don't show certified locations in calculated view unless they are actively displayed
   const shouldRender = useMemo(() => {
-    if (isCertified) {
-      return true;
-    }
-    
+    // In certified view, only show certified locations
     if (activeView === 'certified') {
-      return false;
+      return isCertified;
     }
     
+    // In calculated view...
+    // Always show certified locations if the location is certified
+    if (isCertified) {
+      return true; 
+    }
+    
+    // For non-certified locations, filter out water
     if (isWaterSpot(location)) {
       return false;
     }
@@ -109,7 +118,9 @@ const LocationMarker = memo(({
   const goToLocationDetails = useCallback(() => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    const siqsScore = getSafeScore(location.siqs);
+    // Handle the siqs value safely
+    const siqsScore = location.siqs !== undefined && location.siqs !== null ?
+      getSafeScore(location.siqs) : null;
     
     const navigationData = {
       id: locationId,
@@ -125,7 +136,7 @@ const LocationMarker = memo(({
       certification: location.certification || '',
       siqsResult: location.siqs ? { 
         score: typeof location.siqs === 'object' ? location.siqs.score : location.siqs,
-        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : siqsScore >= 2
+        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : (siqsScore !== null && siqsScore >= 2)
       } : undefined
     };
     
@@ -215,7 +226,7 @@ const LocationMarker = memo(({
           )}
           
           <div className="mt-2 flex items-center justify-between">
-            {location.siqs !== undefined && (
+            {location.siqs !== undefined && location.siqs !== null && (
               <div className="flex items-center gap-1.5">
                 <SiqsScoreBadge score={getSafeScore(location.siqs)} compact={true} />
               </div>

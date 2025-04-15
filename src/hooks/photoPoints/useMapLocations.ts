@@ -31,64 +31,98 @@ export const useMapLocations = ({
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   const previousActiveViewRef = useRef<string>(activeView);
   const processingRef = useRef<boolean>(false);
+  const locationCacheRef = useRef<Map<string, SharedAstroSpot>>(new Map());
   
   // Process locations with throttling to prevent UI flashing
   useEffect(() => {
-    // Skip if already processing or no change in locations
+    // Skip if already processing
     if (processingRef.current) return;
-    if (locations === previousLocationsRef.current && 
-        activeView === previousActiveViewRef.current) return;
+    
+    // Performance optimization - cache location signatures to avoid reprocessing
+    const locationSignature = locations.length + '-' + (userLocation ? 
+      `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}` : 
+      'null-location');
+    
+    const viewChanged = activeView !== previousActiveViewRef.current;
     
     processingRef.current = true;
     
     // Always preserve calculated locations, even when switching views
     let allLocations = [...locations];
     
-    // When switching from calculated to certified, keep calculated locations
-    // in memory but don't display them
-    if (activeView !== previousActiveViewRef.current) {
-      previousLocationsRef.current = allLocations;
-    } 
-    // Otherwise, merge with previously seen locations
-    else {
-      // Extract IDs of all current locations
-      const locationIds = new Set(allLocations.map(loc => 
-        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
-      ));
+    // When location changes, keep existing locations that are still valid
+    if (userLocation && previousLocationsRef.current.length > 0) {
+      console.log("Preserving valid locations while updating...");
       
-      // Keep locations from previous set that aren't duplicates
-      const previousUniqueLocations = previousLocationsRef.current.filter(loc => {
-        if (!loc.latitude || !loc.longitude) return false;
-        const locId = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        return !locationIds.has(locId);
+      // Create lookup map for new locations
+      const newLocationMap = new Map<string, boolean>();
+      locations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          newLocationMap.set(key, true);
+        }
       });
       
-      // Merge and update the full cache
-      allLocations = [...allLocations, ...previousUniqueLocations];
-      previousLocationsRef.current = allLocations;
+      // Keep locations from previous set that aren't duplicates
+      const previousToKeep = previousLocationsRef.current.filter(loc => {
+        if (!loc.latitude || !loc.longitude) return false;
+        
+        const locKey = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        
+        // Don't keep if already in new locations
+        if (newLocationMap.has(locKey)) return false;
+        
+        // For calculated view, filter by distance
+        if (activeView === 'calculated' && userLocation && !loc.isDarkSkyReserve && !loc.certification) {
+          const distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            loc.latitude,
+            loc.longitude
+          );
+          
+          // Only keep locations within search radius
+          return distance <= searchRadius;
+        }
+        
+        // Keep all certified locations regardless
+        return loc.isDarkSkyReserve || loc.certification;
+      });
+      
+      // Merge and update the full set
+      allLocations = [...allLocations, ...previousToKeep];
+      console.log(`Preserved ${previousToKeep.length} locations from previous view`);
     }
     
+    // Update the previous view and locations
     previousActiveViewRef.current = activeView;
+    previousLocationsRef.current = allLocations;
     
-    // Use a timeout to batch updates and prevent UI flashing
+    // Use a shorter timeout to improve loading speed
     const timeoutId = setTimeout(() => {
       try {
+        // Optimize by doing less processing for larger location sets
         const validLocations = filterValidLocations(allLocations);
-        const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
         
-        // For certified view, only include certified locations
-        // For calculated view, include all locations with filtering
+        // Separate locations by type
+        const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+        console.log(`Location counts - certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}, total: ${validLocations.length}`);
+        
+        // In certified view, only show certified locations
+        // In calculated view, show either certified OR calculated locations based on activeView
         let locationsToShow;
         
         if (activeView === 'certified') {
           locationsToShow = certifiedLocations;
         } else {
-          // For calculated view, merge locations but limit quantity on mobile
-          locationsToShow = mergeLocations(
-            certifiedLocations, 
-            calculatedLocations, // Keep all calculated locations
-            activeView
-          );
+          // For calculated view, show all locations optimized for device
+          locationsToShow = calculatedLocations;
+          
+          // Also include certified locations, but only if explicitly requested
+          if (!viewChanged || userLocation) {
+            // Merge with certified, limited for performance
+            locationsToShow = [...certifiedLocations, ...calculatedLocations];
+          }
         }
         
         setProcessedLocations(locationsToShow);
@@ -97,10 +131,10 @@ export const useMapLocations = ({
       } finally {
         processingRef.current = false;
       }
-    }, 150); // Delay updates to reduce flashing
+    }, 50); // Faster timeout for better responsiveness
     
     return () => clearTimeout(timeoutId);
-  }, [locations, activeView, searchRadius]);
+  }, [locations, activeView, searchRadius, userLocation]);
 
   return {
     processedLocations

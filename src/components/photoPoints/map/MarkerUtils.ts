@@ -6,6 +6,9 @@ import L from 'leaflet';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 
+// Re-export the getSafeScore function from geoUtils for consistency
+export const getSafeScore = geoUtilsGetSafeScore;
+
 /**
  * Check if a location is a water-based spot
  */
@@ -110,8 +113,8 @@ export const getLocationMarker = (
       `;
     } else {
       // Calculated locations use SIQS-based colors
-      const score = location.siqs !== null && location.siqs !== undefined ? 
-        geoUtilsGetSafeScore(location.siqs) : 0;
+      const score = location.siqs !== undefined && location.siqs !== null ? 
+        getSafeScore(location.siqs) : 0;
       const color = score ? getProgressColor(score) : '#4ADE80';
       
       html = `
@@ -164,16 +167,11 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
 /**
  * Get CSS class based on SIQS score
  */
-export const getSiqsClass = (siqs?: number | { score: number; isViable: boolean }): string => {
-  const score = geoUtilsGetSafeScore(siqs);
-  
-  if (!score) return '';
-  if (score > 8) return 'siqs-excellent';
-  if (score > 6) return 'siqs-good';
-  if (score > 4) return 'siqs-fair';
-  if (score > 2) return 'siqs-poor';
+export const getSiqsClass = (siqs?: number | null): string => {
+  if (!siqs) return '';
+  if (siqs > 8) return 'siqs-excellent';
+  if (siqs > 6) return 'siqs-good';
+  if (siqs > 4) return 'siqs-fair';
+  if (siqs > 2) return 'siqs-poor';
   return 'siqs-very-poor';
 };
-
-// Re-export the getSafeScore function from geoUtils for consistency
-export const getSafeScore = geoUtilsGetSafeScore;
