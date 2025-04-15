@@ -5,6 +5,8 @@ import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
 
 interface MapEffectsComposerProps {
+  center?: [number, number];
+  zoom?: number;
   userLocation?: { latitude: number; longitude: number } | null;
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
@@ -19,11 +21,11 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
 }) => {
   const map = useMap();
   
-  // No auto-zoom or auto-center functionality
+  // All auto-zoom and auto-center functionality removed
   
   return (
     <>
-      {/* Apply world bounds limit with more forgiving bounds */}
+      {/* Apply world bounds limit */}
       <WorldBoundsController />
       
       {/* Apply SIQS-specific effects only when userLocation is available */}

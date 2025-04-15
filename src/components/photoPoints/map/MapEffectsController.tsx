@@ -7,7 +7,7 @@ interface MapEffectsControllerProps {
   onMapClick: (lat: number, lng: number) => void;
 }
 
-// More forgiving world bounds controller with no auto-zoom
+// Prevent infinite scrolling beyond world bounds
 export const WorldBoundsController: React.FC = () => {
   const map = useMap();
   const initialized = useRef(false);
@@ -16,49 +16,41 @@ export const WorldBoundsController: React.FC = () => {
     if (!map || initialized.current) return;
     initialized.current = true;
     
-    // Set more forgiving max bounds
+    // Set max bounds to prevent scrolling beyond the world
     const worldBounds = new L.LatLngBounds(
-      new L.LatLng(-90, -200), // Significantly extended bounds
-      new L.LatLng(90, 200)    // Significantly extended bounds
+      new L.LatLng(-85.06, -180), // Southwest corner
+      new L.LatLng(85.06, 180)    // Northeast corner
     );
     
     map.setMaxBounds(worldBounds);
     
-    // Gentler handling of edge cases
     const handleDrag = () => {
-      const center = map.getCenter();
-      let lat = center.lat;
-      let lng = center.lng;
-      
-      // More forgiving latitude bounds
-      if (lat > 89) lat = 89;
-      if (lat < -89) lat = -89;
-      
-      // Smoother longitude wrapping
-      if (lng < -180) lng += 360;
-      if (lng > 180) lng -= 360;
-      
-      // Only pan if really needed - prevent unnecessary rendering
-      if (lat !== center.lat || lng !== center.lng) {
-        map.panTo(new L.LatLng(lat, lng), { animate: false });
-      }
+      map.panInsideBounds(worldBounds, { animate: false });
     };
     
     map.on('drag', handleDrag);
     
-    // Disable ALL automatic zoom animations
-    if (map.options) {
-      map.options.zoomAnimation = false;
-      map.options.markerZoomAnimation = false;
-    }
-    
-    // Ensure touch handling is optimized
+    // Ensure better touch handling for mobile Safari
     if (map.dragging && map.dragging.enable) {
       map.dragging.enable();
     }
     
     if (map.touchZoom && map.touchZoom.enable) {
       map.touchZoom.enable();
+    }
+    
+    // Set lower inertia for smoother mobile dragging
+    if (map.dragging && map.dragging._draggable) {
+      try {
+        // Safely set inertia properties
+        const draggable = map.dragging._draggable;
+        if (draggable._inertia) {
+          draggable._inertia.threshold = 20; // Lower value helps with Safari
+          draggable._inertia.deceleration = 3000; // Higher value reduces drift
+        }
+      } catch (error) {
+        console.error("Error optimizing map dragging:", error);
+      }
     }
     
     return () => {

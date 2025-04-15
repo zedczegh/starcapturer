@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -7,7 +8,7 @@ import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
 import MapLegend from './MapLegend';
-import CenteringPinpointButton from './CenteringPinpointButton';
+import PinpointButton from './PinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -37,6 +38,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   const [mapContainerHeight, setMapContainerHeight] = useState('500px');
   const [legendOpen, setLegendOpen] = useState(false);
   
+  // Use marker hook for tracking hover states
   const { 
     hoveredLocationId, 
     handleHover,
@@ -45,6 +47,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
+  // Use map hook for core functionality
   const { 
     mapReady,
     handleMapReady,
@@ -61,6 +64,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     activeView
   });
   
+  // Adjust height based on device
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -77,6 +81,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
+  // Handler functions
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -112,6 +117,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     setLegendOpen(isOpen);
   }, []);
   
+  // Render map container
   return (
     <div 
       style={{ height: mapContainerHeight }} 
@@ -158,9 +164,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       />
       
       {!legendOpen && (
-        <CenteringPinpointButton 
-          onGetLocation={handleGetLocation}
-          userLocation={userLocation}
+        <PinpointButton 
+          onGetLocation={handleGetLocation} 
           className="absolute top-4 right-4"
         />
       )}
