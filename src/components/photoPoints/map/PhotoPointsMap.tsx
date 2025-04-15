@@ -51,7 +51,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [locationStats, setLocationStats] = useState<{certified: number, calculated: number}>({ certified: 0, calculated: 0 });
   const viewTransitionInProgress = useRef(false);
   const safeNavigationRef = useRef(false);
+  const markerInteractionsRef = useRef(false);
   
+  // Fix: Using our updated useMapInteractions hook with safety mechanisms
   const {
     hoveredLocationId,
     handleMarkerHover,
@@ -80,10 +82,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         }
       }
     },
+    // Fix: Safe marker hover handling to prevent recursion
     onMarkerHover: (id) => {
-      // Only handle hover when not in transition
-      if (!viewTransitionInProgress.current) {
-        handleMarkerHover(id);
+      // Safety for onMarkerHover to prevent recursion
+      if (!viewTransitionInProgress.current && !markerInteractionsRef.current) {
+        markerInteractionsRef.current = true;
+        
+        // Only update if different
+        if (id !== hoveredLocationId) {
+          handleMarkerHover(id);
+        }
+        
+        // Release lock with tiny delay
+        setTimeout(() => {
+          markerInteractionsRef.current = false;
+        }, 0);
       }
     }
   });

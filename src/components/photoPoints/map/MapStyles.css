@@ -6,6 +6,9 @@
   z-index: 0;
   /* Fixes Safari transparency issues */
   background: rgba(0, 0, 0, 0.02);
+  
+  /* Prevent infinite recursion in some Safari versions */
+  touch-action: pan-x pan-y;
 }
 
 /* Mobile optimizations */
@@ -43,6 +46,11 @@
 .leaflet-marker-icon {
   transform: translate3d(0,0,0);
   backface-visibility: hidden;
+  
+  /* Prevent hover issues on Safari */
+  pointer-events: auto !important;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 /* Location marker styling */
@@ -129,5 +137,36 @@
   .leaflet-marker-icon {
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Fix for recursive hover events in Safari */
+  .leaflet-marker-pane {
+    pointer-events: auto;
+  }
+  
+  .leaflet-interactive {
+    cursor: pointer;
+    pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+    pointer-events: auto;
+  }
+  
+  /* Fix Safari hover issue */
+  .leaflet-marker-icon:hover {
+    z-index: 9000 !important;
+  }
+}
+
+/* Additional Safari mouse handling fixes */
+html.safari {
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow,
+  .leaflet-image-layer,
+  .leaflet-pane > svg path {
+    pointer-events: auto !important;
+  }
+  
+  .leaflet-container {
+    touch-action: pan-x pan-y;
+    -webkit-touch-action: pan-x pan-y;
   }
 }

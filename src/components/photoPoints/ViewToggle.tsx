@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
@@ -23,19 +23,49 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   loading = false
 }) => {
   const { t } = useLanguage();
+  const [isChangingView, setIsChangingView] = useState(false);
+  const lastClickTimeRef = useRef<number>(0);
   
   // Create more defensive click handlers to prevent race conditions
   const handleCertifiedClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (activeView !== 'certified' && !loading) {
+    
+    // Implement debounce and safety check
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 300) {
+      return; // Debounce rapid clicks
+    }
+    lastClickTimeRef.current = now;
+    
+    if (activeView !== 'certified' && !loading && !isChangingView) {
+      setIsChangingView(true);
       onViewChange('certified');
+      
+      // Reset changing state after transition completes
+      setTimeout(() => {
+        setIsChangingView(false);
+      }, 500);
     }
   };
   
   const handleCalculatedClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (activeView !== 'calculated' && !loading) {
+    
+    // Implement debounce and safety check
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 300) {
+      return; // Debounce rapid clicks
+    }
+    lastClickTimeRef.current = now;
+    
+    if (activeView !== 'calculated' && !loading && !isChangingView) {
+      setIsChangingView(true);
       onViewChange('calculated');
+      
+      // Reset changing state after transition completes
+      setTimeout(() => {
+        setIsChangingView(false);
+      }, 500);
     }
   };
 
@@ -44,9 +74,10 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
       <div className="bg-cosmic-800/40 border border-cosmic-700/30 rounded-lg p-1 flex shadow-sm">
         <button
           onClick={handleCertifiedClick}
-          disabled={loading}
+          disabled={loading || isChangingView}
+          aria-disabled={loading || isChangingView}
           className={cn(
-            "flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors",
+            "flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors relative",
             activeView === 'certified'
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-cosmic-100 hover:bg-cosmic-700/40"
@@ -64,9 +95,10 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
         
         <button
           onClick={handleCalculatedClick}
-          disabled={loading}
+          disabled={loading || isChangingView}
+          aria-disabled={loading || isChangingView}
           className={cn(
-            "flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors",
+            "flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors relative",
             activeView === 'calculated'
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-cosmic-100 hover:bg-cosmic-700/40"
