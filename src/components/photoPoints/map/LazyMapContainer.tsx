@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -62,10 +63,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   
+  // Get the optimized tile layer options - always use mobile optimized settings on mobile
   const tileOptions = isMobile ? 
     getTileLayerOptions(true) : 
     getTileLayerOptions(Boolean(isMobile));
   
+  // Ensure stable references to prevent unnecessary re-renders
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -78,6 +81,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
+  // Use a ref to track if the component is mounted
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -85,11 +89,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
+  // Effect to check for user location SIQS - simplified to reduce rerenders
   useEffect(() => {
     if (userLocation && locations.length > 0 && isMountedRef.current) {
       const userLat = userLocation.latitude;
       const userLng = userLocation.longitude;
       
+      // Look for a matching location with SIQS data
       const sameLocation = locations.find(loc => 
         Math.abs(loc.latitude - userLat) < 0.0001 && 
         Math.abs(loc.longitude - userLng) < 0.0001 && 
@@ -111,11 +117,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapReady]);
   
+  // More efficient map resize handling
   useEffect(() => {
     if (!mapRef.current) return;
     
     const map = mapRef.current;
     
+    // Simplified resize handler with throttling
     let resizeTimeout: number | null = null;
     const handleResize = () => {
       if (resizeTimeout) {
@@ -129,6 +137,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     
     window.addEventListener('resize', handleResize);
     
+    // Use a timeout to ensure the map has properly mounted
     const timeoutId = setTimeout(() => {
       if (map) map.invalidateSize();
     }, 300);
@@ -143,6 +152,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, []);
 
   const getDefaultZoom = () => {
+    // Simplified zoom settings for better performance
     if (activeView === 'calculated') {
       return isMobile ? 6 : 7;
     }
@@ -156,6 +166,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         zoom={getDefaultZoom()}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={!isMobile}
+        // Remove doubleClickZoom prop from MapContainer as it's not in the type definition
+        // Instead, we'll handle this in the MapController component
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
@@ -182,6 +194,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
+        {/* Simplified effects composer */}
         <MapEffectsComposer 
           userLocation={userLocation}
           activeView={activeView}
@@ -204,6 +217,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
           
+          // Skip showing non-certified locations on mobile if we have many locations
           if (isMobile && !isCertified && locations.length > 30 && Math.random() > 0.5) {
             return null;
           }
@@ -228,26 +242,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         <MapController 
           userLocation={userLocation} 
           searchRadius={searchRadius}
-          doubleClickZoom={!isMobile}
+          doubleClickZoom={!isMobile} // Move doubleClickZoom control to MapController
         />
       </MapContainer>
-
-      <div className="absolute z-[999] right-4 bottom-4 flex flex-col gap-2">
-        {!isMobile && (
-          <MapLegend 
-            activeView={activeView} 
-            showStarLegend={activeView === 'certified'}
-            showCircleLegend={activeView === 'calculated'}
-          />
-        )}
-        <PinpointButton 
-          onGetLocation={() => {
-            if (userLocation && mapRef.current) {
-              mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom());
-            }
-          }}
-        />
-      </div>
     </div>
   );
 };
