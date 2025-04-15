@@ -1,7 +1,6 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
@@ -49,16 +48,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
-  // Determine which locations to display based on active view
-  const locationsToShow = useMemo(() => {
-    if (activeView === 'certified') {
-      return certifiedLocations;
-    } else {
-      // For calculated view, include both certified and calculated locations
-      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)] as SharedAstroSpot[];
-    }
-  }, [activeView, certifiedLocations, calculatedLocations]);
-  
   // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
     mapReady,
@@ -71,7 +60,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations: locationsToShow,
+    locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
     searchRadius,
     activeView
   });
@@ -215,7 +204,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           showStarLegend={activeView === 'certified'}
           showCircleLegend={activeView === 'calculated'}
           onToggle={handleLegendToggle}
-          className="absolute top-4 right-4 z-[999]"
+          className="absolute bottom-4 right-4"
         />
       )}
       
@@ -223,7 +212,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       <CenteringPinpointButton
         onGetLocation={handleGetLocation}
         userLocation={userLocation}
-        className="absolute top-4 right-16 z-[999]"
+        className="absolute top-4 right-4 z-[999]"
       />
     </div>
   );

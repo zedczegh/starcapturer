@@ -1,15 +1,10 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getProgressColor } from '@/components/siqs/utils/progressColor';
-import { getSafeScore as geoUtilsGetSafeScore } from '@/utils/geoUtils';
 import L from 'leaflet';
+import { SharedAstroSpot } from '@/types/weather';
+import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
-
-// Re-export the getSafeScore function from geoUtils for consistency
-export const getSafeScore = (siqs?: number | { score: number; isViable: boolean } | null): number => {
-  return geoUtilsGetSafeScore(siqs);
-};
+import { getSafeScore as getScoreSafe } from '@/utils/geoUtils';
 
 /**
  * Check if a location is a water-based spot
@@ -72,78 +67,17 @@ export const getLocationMarker = (
   isCertified: boolean, 
   isHovered: boolean, 
   isMobile: boolean
-): L.DivIcon | null => {
-  if (typeof window === 'undefined') return null;
+): L.DivIcon => {
+  const sizeMultiplier = isMobile ? 1.2 : 1.0;
   
-  try {
-    const sizeMultiplier = isMobile ? 1.2 : 1.0;
-    const baseSize = 24 * sizeMultiplier;
-    let html = '';
-    
-    // Apply hardware acceleration and optimize rendering
-    const styleOptimizations = 'will-change: transform; transform: translateZ(0); backface-visibility: hidden;';
-    
-    if (isCertified) {
-      // Color map according to certification type - Updated colors to match legend
-      let color = '#10b981'; // Default green for Dark Sky Parks
-      if (location.isDarkSkyReserve) {
-        color = '#8b5cf6'; // Purple for Dark Sky Reserves
-      } else if (location.certification) {
-        const cert = location.certification.toLowerCase();
-        if (cert.includes('park')) {
-          color = '#10b981'; // Green for Dark Sky Parks
-        } else if (cert.includes('community')) {
-          color = '#f59e0b'; // Gold for Dark Sky Communities
-        } else if (cert.includes('urban')) {
-          color = '#3b82f6'; // Blue for Urban Night Sky Places
-        }
-      }
-      
-      html = `
-        <svg xmlns="http://www.w3.org/2000/svg" 
-             width="${baseSize}" height="${baseSize}" 
-             viewBox="0 0 24 24" 
-             style="${styleOptimizations}"
-        >
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" 
-                   fill="${color}" 
-                   stroke="#FFFFFF" 
-                   stroke-width="1" 
-                   stroke-linejoin="round"
-          />
-        </svg>
-      `;
-    } else {
-      // Calculated locations use SIQS-based colors
-      const score = location.siqs !== undefined && location.siqs !== null ? 
-        getSafeScore(location.siqs) : 0;
-      const color = score ? getProgressColor(score) : '#4ADE80';
-      
-      html = `
-        <svg xmlns="http://www.w3.org/2000/svg" 
-             width="${baseSize}" height="${baseSize}" 
-             viewBox="0 0 24 24"
-             style="${styleOptimizations}"
-        >
-          <circle cx="12" cy="12" r="10" 
-                  fill="${color}" 
-                  stroke="#FFFFFF" 
-                  stroke-width="1"
-          />
-        </svg>
-      `;
-    }
-
-    return L.divIcon({
-      className: "custom-marker-icon",
-      iconAnchor: [baseSize/2, baseSize/2],
-      popupAnchor: [0, -baseSize/2],
-      html: html,
-      iconSize: [baseSize, baseSize]
-    });
-  } catch (error) {
-    console.error("Error creating custom marker:", error);
-    return null;
+  if (isCertified) {
+    const certColor = getCertificationColor(location);
+    return createCustomMarker(certColor, 'star', sizeMultiplier);
+  } else {
+    const defaultColor = '#4ADE80';
+    const score = getSafeScore(location.siqs);
+    const color = score ? getProgressColor(score) : defaultColor;
+    return createCustomMarker(color, 'circle', sizeMultiplier);
   }
 };
 
@@ -152,28 +86,29 @@ export const getLocationMarker = (
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve) {
-    return '#8b5cf6'; // Updated to purple for Dark Sky Reserves
-  } else if (location.certification) {
-    const cert = location.certification.toLowerCase();
-    if (cert.includes('park')) {
-      return '#10b981'; // Green for Dark Sky Parks
-    } else if (cert.includes('community')) {
-      return '#f59e0b'; // Gold for Dark Sky Communities
-    } else if (cert.includes('urban')) {
-      return '#3b82f6'; // Blue for Urban Night Sky Places
-    }
+    return '#60a5fa'; // blue-400
+  } else {
+    return '#34d399'; // emerald-400
   }
-  return '#10b981'; // Default green
 };
 
 /**
  * Get CSS class based on SIQS score
  */
-export const getSiqsClass = (siqs?: number | null): string => {
-  if (!siqs) return '';
-  if (siqs > 8) return 'siqs-excellent';
-  if (siqs > 6) return 'siqs-good';
-  if (siqs > 4) return 'siqs-fair';
-  if (siqs > 2) return 'siqs-poor';
+export const getSiqsClass = (siqs?: number | { score: number; isViable: boolean }): string => {
+  const score = getSafeScore(siqs);
+  
+  if (!score) return '';
+  if (score > 8) return 'siqs-excellent';
+  if (score > 6) return 'siqs-good';
+  if (score > 4) return 'siqs-fair';
+  if (score > 2) return 'siqs-poor';
   return 'siqs-very-poor';
+};
+
+/**
+ * Get safe SIQS score regardless of format
+ */
+export const getSafeScore = (siqs?: number | { score: number; isViable: boolean }): number => {
+  return getScoreSafe(siqs);
 };

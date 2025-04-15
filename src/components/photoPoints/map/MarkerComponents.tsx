@@ -3,19 +3,20 @@ import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
-import { formatDistance } from '@/utils/geoUtils';
+import { formatDistance, getSafeScore } from '@/utils/geoUtils';
 import { 
   getSiqsClass, 
   getLocationMarker, 
   isWaterSpot, 
-  isValidAstronomyLocation
+  isValidAstronomyLocation 
 } from './MarkerUtils';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -53,26 +54,17 @@ const LocationMarker = memo(({
       : location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
-  // Fix TS error by safely handling null siqsScore
-  const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
-    (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
+  const siqsClass = getSiqsClass(location.siqs);
   
-  const siqsClass = getSiqsClass(siqsScore);
-  
-  // Don't show certified locations in calculated view unless they are actively displayed
   const shouldRender = useMemo(() => {
-    // In certified view, only show certified locations
-    if (activeView === 'certified') {
-      return isCertified;
-    }
-    
-    // In calculated view...
-    // Always show certified locations if the location is certified
     if (isCertified) {
-      return true; 
+      return true;
     }
     
-    // For non-certified locations, filter out water
+    if (activeView === 'certified') {
+      return false;
+    }
+    
     if (isWaterSpot(location)) {
       return false;
     }
@@ -117,9 +109,7 @@ const LocationMarker = memo(({
   const goToLocationDetails = useCallback(() => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    // Handle the siqs value safely
-    const siqsScore = location.siqs !== undefined && location.siqs !== null ?
-      (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
+    const siqsScore = getSafeScore(location.siqs);
     
     const navigationData = {
       id: locationId,
@@ -134,8 +124,8 @@ const LocationMarker = memo(({
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
       siqsResult: location.siqs ? { 
-        score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
-        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : (siqsScore !== null && siqsScore >= 2)
+        score: typeof location.siqs === 'object' ? location.siqs.score : location.siqs,
+        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : siqsScore >= 2
       } : undefined
     };
     
@@ -225,9 +215,9 @@ const LocationMarker = memo(({
           )}
           
           <div className="mt-2 flex items-center justify-between">
-            {location.siqs !== undefined && location.siqs !== null && (
+            {location.siqs !== undefined && (
               <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : location.siqs.score} compact={true} />
+                <SiqsScoreBadge score={getSafeScore(location.siqs)} compact={true} />
               </div>
             )}
             

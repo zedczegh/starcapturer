@@ -13,7 +13,7 @@ interface PinpointButtonProps {
 
 const PinpointButton: React.FC<PinpointButtonProps> = ({ 
   onGetLocation,
-  className = "absolute top-4 right-16 z-[999]", // Positioned at top-right corner to align with legend
+  className = "absolute top-4 right-4 z-[999]", // Changed default position to top-4 right-4
   shouldCenter = true
 }) => {
   const { t } = useLanguage();
