@@ -1,5 +1,4 @@
-
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { calculateDistance } from '@/utils/geoUtils';
 import { generateRandomPoint } from '@/services/locationFilters';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
@@ -68,31 +67,15 @@ export class CalculatedLocationsService {
         name: 'Calculated Location',
         latitude: randomPoint.latitude,
         longitude: randomPoint.longitude,
-        siqs: Math.floor(Math.random() * 101), // SIQS ranges from 0 to 100
+        bortleScale: 4,
+        siqs: Math.floor(Math.random() * 101),
+        timestamp: new Date().toISOString(),
         distance: randomPoint.distance,
         isDarkSkyReserve: false,
         certification: null,
         description: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId: null,
-        views: 0,
-        isPublic: true,
-        address: null,
-        plusCode: null,
-        waterProximity: null,
-        horizonQuality: null,
-        lightPollution: null,
-        seeingConditions: null,
-        nearestCity: null,
-        waterBodies: [],
-        elevation: null,
-        nearestCities: [],
-        waterbodyProximities: [],
-        horizonQualities: [],
-        lightPollutions: [],
-        seeingConditionQualities: [],
-        isFeatured: false
+        chineseName: `计算位置 ${randomPoint.latitude.toFixed(6)}-${randomPoint.longitude.toFixed(6)}`,
+        isViable: true
       });
     }
     
