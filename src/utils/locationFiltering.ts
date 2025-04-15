@@ -17,7 +17,7 @@ export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroS
     location && 
     typeof location.latitude === 'number' && 
     typeof location.longitude === 'number' &&
-    // Filter out water locations for calculated spots, never filter certified
+    // IMPORTANT: Only apply water location filtering to non-certified locations
     (location.isDarkSkyReserve || 
      location.certification || 
      !isWaterLocation(location.latitude, location.longitude, false))
@@ -64,6 +64,7 @@ export const mergeLocations = (
   const locationMap = new Map<string, SharedAstroSpot>();
   
   // Always include all certified locations regardless of active view
+  // IMPORTANT: No filter applied to certified locations
   certifiedLocations.forEach(loc => {
     if (loc.latitude && loc.longitude) {
       const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -71,10 +72,10 @@ export const mergeLocations = (
     }
   });
   
-  // Add calculated locations
+  // Add calculated locations with water filtering
   calculatedLocations.forEach(loc => {
-    // Skip water locations for calculated spots
-    if (loc.latitude && loc.longitude && !isWaterLocation(loc.latitude, loc.longitude)) {
+    // Skip water locations for calculated spots only
+    if (loc.latitude && loc.longitude && !isWaterLocation(loc.latitude, loc.longitude, false)) {
       const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
       const existing = locationMap.get(key);
       if (!existing || (loc.siqs && (!existing.siqs || loc.siqs > existing.siqs))) {

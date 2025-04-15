@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -18,10 +17,12 @@ import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
 // Helper function to determine if a location is a water spot
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
+  // IMPORTANT: Never filter out certified locations regardless of water detection
   if (location.isDarkSkyReserve || location.certification) {
     return false;
   }
   
+  // Only apply water detection to non-certified locations
   if (isWaterLocation(location.latitude, location.longitude, false)) {
     return true;
   }
@@ -100,7 +101,7 @@ const LocationMarker = memo(({
   const siqsClass = getSiqsClass(location.siqs);
   
   const shouldRender = useMemo(() => {
-    // Always show certified locations in all views
+    // IMPORTANT: Always show certified locations in all views
     if (isCertified) {
       return true;
     }
@@ -110,7 +111,7 @@ const LocationMarker = memo(({
       return false;
     }
     
-    // For calculated view, filter water spots
+    // For calculated view, filter water spots (but never filter certified locations)
     if (isWaterSpot(location)) {
       return false;
     }

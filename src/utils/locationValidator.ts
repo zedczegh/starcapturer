@@ -1,4 +1,3 @@
-
 /**
  * Location validation utilities
  * IMPORTANT: These functions validate location data to prevent rendering errors.
@@ -15,10 +14,11 @@ export const isWaterLocation = (
   longitude: number,
   isCertified: boolean = false
 ): boolean => {
-  // If it's a certified location, never consider it a water location
+  // CRITICAL: If it's a certified location, NEVER consider it a water location
+  // This ensures certified locations are always displayed regardless of location
   if (isCertified) return false;
   
-  // Enhanced water detection algorithm
+  // Enhanced water detection algorithm - only applied to non-certified locations
   
   // Major oceans
   // Pacific Ocean
@@ -217,8 +217,8 @@ export const isValidAstronomyLocation = (
     return false;
   }
   
-  // Check if it's a water location
-  if (isWaterLocation(latitude, longitude)) {
+  // Check if it's a water location - passing false to ensure certified locations aren't filtered
+  if (isWaterLocation(latitude, longitude, false)) {
     return false;
   }
   

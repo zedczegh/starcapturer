@@ -51,9 +51,15 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
  * @returns Filtered array of locations
  */
 export function filterLocations(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  return locations.filter(point => 
-    isValidAstronomyLocation(point.latitude, point.longitude, point.name)
-  );
+  return locations.filter(point => {
+    // IMPORTANT: Never filter out certified locations
+    if (point.isDarkSkyReserve || point.certification) {
+      return true;
+    }
+    
+    // Only apply astronomy location validation to non-certified locations
+    return isValidAstronomyLocation(point.latitude, point.longitude, point.name);
+  });
 }
 
 /**
