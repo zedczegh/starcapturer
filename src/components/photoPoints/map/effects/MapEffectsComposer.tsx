@@ -58,9 +58,14 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       map.on('moveend', handleMoveEnd);
       
       // Force a resize to ensure correct rendering after a short delay
+      // Only call invalidateSize if the map is properly initialized
       const timeoutId = setTimeout(() => {
-        if (map && map._container) {
-          map.invalidateSize();
+        try {
+          if (map && map._container && map._loaded) {
+            map.invalidateSize();
+          }
+        } catch (e) {
+          console.log("Non-critical map resize error:", e);
         }
       }, 300);
       

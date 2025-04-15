@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -148,6 +149,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
     return isMobile ? zoom - 1 : zoom;
   };
+  
+  // Handle pinpoint button click to center map on user location
+  const handlePinpointClick = useCallback(() => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom(), {
+        animate: true,
+        duration: 0.5
+      });
+    }
+  }, [userLocation]);
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
@@ -232,7 +243,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         />
       </MapContainer>
 
-      <div className="absolute z-[999] right-4 bottom-4 flex flex-col gap-2">
+      {/* Positioned map controls - Top right for pinpoint button, bottom right for legend */}
+      <div className="absolute z-[999] top-4 right-4">
+        <PinpointButton 
+          onGetLocation={handlePinpointClick}
+          className=""
+        />
+      </div>
+
+      <div className="absolute z-[999] right-4 bottom-4">
         {!isMobile && (
           <MapLegend 
             activeView={activeView} 
@@ -240,13 +259,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             showCircleLegend={activeView === 'calculated'}
           />
         )}
-        <PinpointButton 
-          onGetLocation={() => {
-            if (userLocation && mapRef.current) {
-              mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom());
-            }
-          }}
-        />
       </div>
     </div>
   );
