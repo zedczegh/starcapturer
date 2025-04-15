@@ -1,12 +1,13 @@
 
 import { useEffect, useRef } from 'react';
+import { Marker } from 'leaflet';
 
 type EventMap = {
   [key: string]: (e: any) => void;
 };
 
 interface MarkerEventHandlerProps {
-  marker: L.Marker | null;
+  marker: Marker | null;
   eventMap: EventMap;
 }
 

@@ -43,7 +43,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
   return (
     <div className={`z-[999] ${className}`} onClick={stopPropagation} onTouchStart={stopPropagation}>
       <div className="relative">
-        {/* The collapsible panel */}
+        {/* The collapsible panel - reduced to 75% size */}
         <AnimatePresence>
           {!isCollapsed && (
             <motion.div
@@ -51,35 +51,35 @@ const MapLegend: React.FC<MapLegendProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -50 }}
               transition={{ duration: 0.3 }}
-              className={`p-3.5 rounded-lg backdrop-blur-md bg-background/80 border border-primary/30 
-                         shadow-lg overflow-y-auto max-h-[80vh] w-[260px]`}
+              className={`p-3 rounded-lg backdrop-blur-md bg-background/80 border border-primary/30 
+                         shadow-lg overflow-y-auto max-h-[60vh] w-[195px]`}
               onClick={stopPropagation}
             >
               {/* Legend Header */}
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
-                  <Star className="h-4 w-4 mr-1.5 text-primary" />
-                  <span className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
+                  <Star className="h-3.5 w-3.5 mr-1 text-primary" />
+                  <span className="text-xs font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
                     {t("Map Indicators Guide", "地图标记指南")}
                   </span>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 p-0"
                   onClick={() => setIsCollapsed(true)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
               </div>
               
               {/* Legend Content */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* Star Legend */}
                 {displayStarLegend && (
-                  <div className="space-y-2 bg-muted/20 p-2.5 rounded-md border border-primary/10">
-                    <h4 className="text-xs font-medium text-primary/90 flex items-center">
-                      <Star className="h-3 w-3 mr-1.5 fill-primary/20" />
+                  <div className="space-y-1.5 bg-muted/20 p-2 rounded-md border border-primary/10">
+                    <h4 className="text-[10px] font-medium text-primary/90 flex items-center">
+                      <Star className="h-2.5 w-2.5 mr-1 fill-primary/20" />
                       {t("Certified Dark Sky Locations", "认证暗夜地点")}
                     </h4>
                     <LegendItem 
@@ -107,9 +107,9 @@ const MapLegend: React.FC<MapLegendProps> = ({
 
                 {/* Circle Legend */}
                 {displayCircleLegend && (
-                  <div className="space-y-2 bg-muted/20 p-2.5 rounded-md border border-primary/10">
-                    <h4 className="text-xs font-medium text-primary/90 flex items-center">
-                      <Info className="h-3 w-3 mr-1.5 text-primary/80" />
+                  <div className="space-y-1.5 bg-muted/20 p-2 rounded-md border border-primary/10">
+                    <h4 className="text-[10px] font-medium text-primary/90 flex items-center">
+                      <Info className="h-2.5 w-2.5 mr-1 text-primary/80" />
                       {t("Calculated Locations (SIQS Score)", "计算地点（SIQS评分）")}
                     </h4>
                     <LegendItem 
@@ -136,7 +136,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
                 )}
                 
                 {/* Legend Footer */}
-                <div className="mt-2 text-xs text-muted-foreground bg-background/70 p-2 rounded-md border border-primary/10 shadow-sm">
+                <div className="mt-1.5 text-[10px] text-muted-foreground bg-background/70 p-1.5 rounded-md border border-primary/10 shadow-sm">
                   <p>
                     {t(
                       "Tap any marker for details or click anywhere to select that location.",
@@ -209,12 +209,12 @@ interface LegendItemProps {
 const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
   return (
     <motion.div 
-      className="flex items-center py-1"
+      className="flex items-center py-0.5"
       whileHover={{ x: 3 }}
       transition={{ type: 'spring', stiffness: 300 }}
     >
       <motion.div 
-        className="bg-muted/30 p-1 rounded-full mr-2 border"
+        className="bg-muted/30 p-0.5 rounded-full mr-1.5 border"
         style={{ borderColor: `${color}33` }}
         animate={{ 
           boxShadow: [
@@ -226,12 +226,12 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
         transition={{ duration: 3, repeat: Infinity }}
       >
         {type === 'star' ? (
-          <Star className="h-3.5 w-3.5" style={{ color, fill: color }} />
+          <Star className="h-3 w-3" style={{ color, fill: color }} />
         ) : (
-          <Circle className="h-3.5 w-3.5" style={{ color, fill: `${color}30` }} />
+          <Circle className="h-3 w-3" style={{ color, fill: `${color}30` }} />
         )}
       </motion.div>
-      <span className="text-xs">
+      <span className="text-[10px]">
         {label}
       </span>
     </motion.div>

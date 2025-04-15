@@ -49,13 +49,16 @@ export async function updateLocationsWithRealTimeSiqs(
     for (let i = 0; i < locationsToUpdate.length; i += maxParallel) {
       const batch = locationsToUpdate.slice(i, i + maxParallel);
       
-      const batchResults = await batchCalculateSiqs(
-        batch.map(location => ({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          bortleScale: location.bortleScale || 4
-        }))
-      );
+      const batchData = batch.map(location => ({
+        id: location.id || '',
+        name: location.name || '',
+        timestamp: location.timestamp || '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale || 4
+      }));
+      
+      const batchResults = await batchCalculateSiqs(batchData);
       
       // Update locations with SIQS results
       for (let j = 0; j < batch.length; j++) {
