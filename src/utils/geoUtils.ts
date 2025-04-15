@@ -17,6 +17,9 @@ export const degToRad = (degrees: number): number => {
   return degrees * (Math.PI / 180);
 };
 
+// Alias for degToRad for backward compatibility
+export const deg2rad = degToRad;
+
 /**
  * Format distance in kilometers
  * @param distance Distance in kilometers
@@ -92,4 +95,3 @@ export const isWaterLocation = (lat: number, lon: number, checkCoastal: boolean 
     return false;
   }
 };
-

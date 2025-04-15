@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -13,7 +14,8 @@ import { MapEvents } from './MapEffectsController';
 import { MapEffectsComposer } from './MapComponents';
 import L from 'leaflet';
 import CenteringPinpointButton from './CenteringPinpointButton';
-import { calculateDistance } from '@/utils/geoUtils';
+import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
+import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 configureLeaflet();
@@ -88,29 +90,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
-  const filterLocationsByRadius = useCallback((loc: SharedAstroSpot) => {
-    if (!userLocation) return true;
-    if (loc.isDarkSkyReserve || loc.certification) return true;
+  // Use the utility function for filtering locations
+  const filteredLocations = useCallback(() => {
+    if (!locations || locations.length === 0) return [];
     
-    const distance = loc.distance || calculateDistance(
-      userLocation.latitude,
-      userLocation.longitude,
-      loc.latitude,
-      loc.longitude
-    );
-    
-    return distance <= searchRadius;
-  }, [userLocation, searchRadius]);
+    const filtered = filterLocations(locations, userLocation, searchRadius, activeView);
+    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
+  }, [locations, userLocation, searchRadius, activeView, isMobile]);
 
   const getCurrentSiqs = (location: SharedAstroSpot): number | null => {
-    if (typeof location.siqs === 'number') {
-      return location.siqs;
-    } else if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
-      return location.siqs.score;
-    } else if (location.siqsResult) {
-      return location.siqsResult.score;
-    }
-    return null;
+    return getSafeScore(location.siqs);
   };
 
   useEffect(() => {
@@ -177,6 +166,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     return isMobile ? zoom - 1 : zoom;
   };
 
+  // Get filtered locations and optimize for mobile if needed
+  const displayLocations = filteredLocations();
+
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
       <MapContainer
@@ -225,17 +217,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {Array.isArray(locations) && locations.filter(filterLocationsByRadius).map(location => {
+        {displayLocations.map(location => {
           if (!location || !location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
           const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
-          
-          // Skip non-certified locations that are in the sea
-          if (!isCertified && isWaterLocation(location.latitude, location.longitude)) {
-            return null;
-          }
           
           return (
             <LocationMarker

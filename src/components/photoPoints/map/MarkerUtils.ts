@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/types/weather';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { getSafeScore as getScoreSafe } from '@/utils/geoUtils';
 
 /**
  * Check if a location is a water-based spot
@@ -80,7 +81,8 @@ export const getLocationMarker = (
     return createCustomMarker(certColor, 'star', sizeMultiplier);
   } else {
     const defaultColor = '#4ADE80';
-    const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
+    const score = getSafeScore(location.siqs);
+    const color = score ? getProgressColor(score) : defaultColor;
     return createCustomMarker(color, 'circle', sizeMultiplier);
   }
 };
@@ -114,7 +116,5 @@ export const getSiqsClass = (siqs?: number | { score: number; isViable: boolean 
  * Get safe SIQS score regardless of format
  */
 export const getSafeScore = (siqs?: number | { score: number; isViable: boolean }): number => {
-  if (siqs === undefined) return 0;
-  if (typeof siqs === 'number') return siqs;
-  return siqs.score;
+  return getScoreSafe(siqs);
 };

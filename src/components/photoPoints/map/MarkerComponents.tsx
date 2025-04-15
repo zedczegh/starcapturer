@@ -3,13 +3,13 @@ import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
-import { formatDistance } from '@/utils/geoUtils';
+import { formatDistance, getSafeScore } from '@/utils/geoUtils';
 import { 
   getSiqsClass, 
   getLocationMarker, 
@@ -108,6 +108,8 @@ const LocationMarker = memo(({
   const goToLocationDetails = useCallback(() => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
+    const siqsScore = getSafeScore(location.siqs);
+    
     const navigationData = {
       id: locationId,
       name: location.name || 'Unnamed Location',
@@ -121,8 +123,8 @@ const LocationMarker = memo(({
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
       siqsResult: (location.siqs) ? { 
-        score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
-        isViable: typeof location.siqs === 'number' ? location.siqs >= 2 : location.siqs.isViable
+        score: siqsScore,
+        isViable: typeof location.siqs === 'object' ? location.siqs.isViable : siqsScore >= 2
       } : undefined
     };
     
@@ -252,6 +254,8 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
+  // Import createCustomMarker from MapMarkerUtils
+  const { createCustomMarker } = require('@/components/location/map/MapMarkerUtils');
   const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
   
   return (
