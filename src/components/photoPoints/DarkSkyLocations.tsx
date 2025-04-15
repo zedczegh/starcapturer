@@ -40,7 +40,8 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
         case 'urban':
           return certification.includes('urban');
         case 'lodging':
-          return certification.includes('lodging');
+          return certification.includes('lodging') || 
+                 (location.type === 'lodging');
         default:
           return true;
       }

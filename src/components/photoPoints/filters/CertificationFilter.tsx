@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Globe, Trees, Building2, Hotel, X } from 'lucide-react';
+import { Globe, Trees, Building2, X, Hotel } from 'lucide-react';
 
 export type CertificationType = 'reserve' | 'park' | 'community' | 'urban' | 'lodging' | 'all';
 

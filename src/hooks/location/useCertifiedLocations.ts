@@ -28,6 +28,11 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
         return true;
       }
       
+      // Special check for lodging type
+      if (location.type === 'lodging') {
+        return true;
+      }
+      
       // Check for certifications based on official Dark Sky names or properties
       if (location.certification && location.certification !== '') {
         const cert = location.certification.toLowerCase();
@@ -37,8 +42,10 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
           cert.includes('dark sky reserve') || 
           cert.includes('dark sky park') ||
           cert.includes('dark sky community') ||
-          cert.includes('urban night sky place') ||
+          cert.includes('urban night sky') ||
+          cert.includes('dark sky lodging') ||
           cert.includes('dark sky association') ||
+          cert.includes('lodging') ||
           cert.includes('ida')
         );
       }
@@ -52,6 +59,8 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
            name.includes('sanctuary') || 
            name.includes('park') ||
            name.includes('community') ||
+           name.includes('lodging') ||
+           name.includes('urban night') ||
            name.includes('certified'))
         );
       }

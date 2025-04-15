@@ -19,8 +19,7 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
   date,
   latitude,
   longitude,
-  locationName,
-  showParentheses = false // Default to false to avoid showing parentheses
+  locationName
 }) => {
   const { language, t } = useLanguage();
   
@@ -49,7 +48,6 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
           <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
           <span className="break-all">
             {latitude?.toFixed(4)}, {longitude?.toFixed(4)}
-            {showParentheses && formattedDistance && ` (${formattedDistance})`}
           </span>
         </div>
       )}

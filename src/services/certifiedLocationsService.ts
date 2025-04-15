@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
 // Cache for certified locations to avoid repeated API calls
@@ -49,185 +48,6 @@ export async function getAllCertifiedLocations(): Promise<SharedAstroSpot[]> {
   
   // Otherwise refresh the cache
   return preloadCertifiedLocations();
-}
-
-/**
- * Refresh the certified locations cache from API
- */
-async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
-  try {
-    // Import dynamically to avoid circular dependencies
-    const { findCertifiedLocations } = await import('./locationSearchService');
-    
-    // Use a default location just as a center point, since we'll get ALL global locations
-    const defaultLocation = { latitude: 39.9042, longitude: 116.4074 };
-    
-    // Get all certified locations globally
-    const certifiedResults = await findCertifiedLocations(
-      defaultLocation.latitude,
-      defaultLocation.longitude,
-      100000, // Global radius to get ALL locations
-      1000    // Increased limit to ensure we get ALL certified locations
-    );
-    
-    if (certifiedResults.length > 0) {
-      console.log(`Fetched ${certifiedResults.length} certified dark sky locations globally`);
-      
-      // Add the East Asian certified locations if they might be missing
-      const combinedResults = addEastAsianLocations(certifiedResults);
-      
-      // Add Dark Sky Lodging
-      const withLodging = addDarkSkyLodgingLocations(combinedResults);
-      
-      // Update cache and timestamp
-      cachedCertifiedLocations = withLodging;
-      lastCacheUpdate = Date.now();
-      
-      // Save to localStorage for future quick loads
-      try {
-        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(withLodging));
-      } catch (error) {
-        console.error("Error saving certified locations to cache:", error);
-      }
-      
-      return withLodging;
-    }
-    
-    return certifiedResults;
-  } catch (error) {
-    console.error("Error refreshing certified locations cache:", error);
-    // Return cached data if available, otherwise empty array
-    return cachedCertifiedLocations || [];
-  }
-}
-
-/**
- * Add East Asian dark sky locations that might be missing from the API
- */
-function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
-  // Create a map of existing locations by coordinates
-  const locationMap = new Map<string, SharedAstroSpot>();
-  
-  existingLocations.forEach(loc => {
-    if (!loc.latitude || !loc.longitude) return;
-    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
-    locationMap.set(key, loc);
-  });
-  
-  // List of known East Asian dark sky locations to ensure they're included
-  const eastAsianLocations = [
-    // Shenzhen Xichong Dark Sky Community - Fixed coordinates
-    {
-      id: 'shenzhen-xichong',
-      name: 'Shenzhen Xichong Dark Sky Community',
-      chineseName: '深圳西冲暗夜社区',
-      latitude: 22.5808,
-      longitude: 114.5034,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Community - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 3
-    },
-    // Yeongyang Firefly Dark Sky Park
-    {
-      id: 'yeongyang-firefly',
-      name: 'Yeongyang Firefly Eco Park Dark Sky Park',
-      latitude: 36.6552,
-      longitude: 129.1122,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 3
-    },
-    // Jindo Dark Sky Park
-    {
-      id: 'jindo-dark-sky',
-      name: 'Jindo Dark Sky Park',
-      latitude: 34.4763,
-      longitude: 126.2631,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 3
-    },
-    // Yaeyama Islands Dark Sky Reserve - Fixed coordinates
-    {
-      id: 'yaeyama-dark-sky',
-      name: 'Yaeyama Islands International Dark Sky Reserve',
-      latitude: 24.4667,
-      longitude: 124.2167,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Reserve - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 2
-    },
-    // Iriomote-Ishigaki Dark Sky Reserve - Fixed coordinates  
-    {
-      id: 'iriomote-ishigaki',
-      name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
-      latitude: 24.3423,
-      longitude: 124.1546,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Reserve - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 2
-    },
-    // Himawari Farm Dark Sky Park
-    {
-      id: 'himawari-farm',
-      name: 'Himawari Farm Dark Sky Park',
-      latitude: 42.9824,
-      longitude: 140.9946,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 3
-    },
-    // Add any missing Dark Sky Communities in Asia
-    {
-      id: 'yangmingshan-dark-sky',
-      name: 'Yangmingshan National Park Dark Sky Park',
-      chineseName: '阳明山国家公园暗夜公园',
-      latitude: 25.1637,
-      longitude: 121.5619,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 3
-    },
-    {
-      id: 'alishan-dark-sky',
-      name: 'Alishan Dark Sky Park',
-      chineseName: '阿里山暗夜公园',
-      latitude: 23.5105,
-      longitude: 120.8053,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 2
-    },
-    {
-      id: 'hehuanshan-dark-sky',
-      name: 'Hehuanshan Dark Sky Park',
-      chineseName: '合欢山暗夜公园',
-      latitude: 24.1384,
-      longitude: 121.2822,
-      isDarkSkyReserve: true,
-      certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString(),
-      bortleScale: 2
-    }
-  ];
-  
-  // Add missing East Asian locations
-  eastAsianLocations.forEach(loc => {
-    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
-    if (!locationMap.has(key)) {
-      locationMap.set(key, loc as SharedAstroSpot);
-    }
-  });
-  
-  return Array.from(locationMap.values());
 }
 
 /**
@@ -372,6 +192,336 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
   });
   
   return Array.from(locationMap.values());
+}
+
+/**
+ * Add Urban Night Sky Places
+ */
+function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  const locationMap = new Map<string, SharedAstroSpot>();
+  
+  existingLocations.forEach(loc => {
+    if (!loc.latitude || !loc.longitude) return;
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    locationMap.set(key, loc);
+  });
+  
+  // Urban Night Sky Places from IDA
+  const urbanLocations = [
+    {
+      id: 'flagstaff-urban',
+      name: 'Flagstaff Urban Night Sky Place',
+      latitude: 35.1983,
+      longitude: -111.6513,
+      isDarkSkyReserve: false,
+      certification: 'Urban Night Sky Place - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4
+    },
+    {
+      id: 'montreal-urban',
+      name: 'Mont-Mégantic Urban Night Sky Reserve',
+      latitude: 45.4555,
+      longitude: -71.1522,
+      isDarkSkyReserve: false,
+      certification: 'Urban Night Sky Place - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4
+    },
+    {
+      id: 'tucson-urban',
+      name: 'Tucson Urban Night Sky District',
+      latitude: 32.2226,
+      longitude: -110.9747,
+      isDarkSkyReserve: false,
+      certification: 'Urban Night Sky Place - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 5
+    },
+    {
+      id: 'sedona-urban',
+      name: 'Sedona Urban Night Sky Community',
+      latitude: 34.8697,
+      longitude: -111.7610,
+      isDarkSkyReserve: false, 
+      certification: 'Urban Night Sky Place - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4
+    }
+  ];
+  
+  // Add urban locations
+  urbanLocations.forEach(location => {
+    const key = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    if (!locationMap.has(key)) {
+      locationMap.set(key, location as SharedAstroSpot);
+    }
+  });
+  
+  return Array.from(locationMap.values());
+}
+
+/**
+ * Add Dark Sky Communities
+ */
+function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  const locationMap = new Map<string, SharedAstroSpot>();
+  
+  existingLocations.forEach(loc => {
+    if (!loc.latitude || !loc.longitude) return;
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    locationMap.set(key, loc);
+  });
+  
+  // Dark Sky Communities from IDA
+  const communityLocations = [
+    {
+      id: 'westcliffe-community',
+      name: 'Westcliffe & Silver Cliff Dark Sky Community',
+      latitude: 38.1315,
+      longitude: -105.4640,
+      isDarkSkyReserve: false,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    {
+      id: 'fountain-hills-community',
+      name: 'Fountain Hills Dark Sky Community',
+      latitude: 33.6045,
+      longitude: -111.7250,
+      isDarkSkyReserve: false,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4
+    },
+    {
+      id: 'borrego-springs-community',
+      name: 'Borrego Springs Dark Sky Community',
+      latitude: 33.2550,
+      longitude: -116.3763,
+      isDarkSkyReserve: false,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    {
+      id: 'dripping-springs-community',
+      name: 'Dripping Springs Dark Sky Community',
+      latitude: 30.1902,
+      longitude: -98.0867,
+      isDarkSkyReserve: false,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4
+    },
+    {
+      id: 'xichong-shenzhen-community',
+      name: 'Shenzhen Xichong Dark Sky Community',
+      chineseName: '深圳西冲暗夜社区',
+      latitude: 22.5808,
+      longitude: 114.5034,
+      isDarkSkyReserve: false,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    }
+  ];
+  
+  // Add community locations
+  communityLocations.forEach(location => {
+    const key = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    if (!locationMap.has(key)) {
+      locationMap.set(key, location as SharedAstroSpot);
+    }
+  });
+  
+  return Array.from(locationMap.values());
+}
+
+/**
+ * Add East Asian dark sky locations that might be missing from the API
+ */
+function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  // Create a map of existing locations by coordinates
+  const locationMap = new Map<string, SharedAstroSpot>();
+  
+  existingLocations.forEach(loc => {
+    if (!loc.latitude || !loc.longitude) return;
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    locationMap.set(key, loc);
+  });
+  
+  // List of known East Asian dark sky locations to ensure they're included
+  const eastAsianLocations = [
+    // Shenzhen Xichong Dark Sky Community - Fixed coordinates
+    {
+      id: 'shenzhen-xichong',
+      name: 'Shenzhen Xichong Dark Sky Community',
+      chineseName: '深圳西冲暗夜社区',
+      latitude: 22.5808,
+      longitude: 114.5034,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    // Yeongyang Firefly Dark Sky Park
+    {
+      id: 'yeongyang-firefly',
+      name: 'Yeongyang Firefly Eco Park Dark Sky Park',
+      latitude: 36.6552,
+      longitude: 129.1122,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    // Jindo Dark Sky Park
+    {
+      id: 'jindo-dark-sky',
+      name: 'Jindo Dark Sky Park',
+      latitude: 34.4763,
+      longitude: 126.2631,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    // Yaeyama Islands Dark Sky Reserve - Fixed coordinates
+    {
+      id: 'yaeyama-dark-sky',
+      name: 'Yaeyama Islands International Dark Sky Reserve',
+      latitude: 24.4667,
+      longitude: 124.2167,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Reserve - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 2
+    },
+    // Iriomote-Ishigaki Dark Sky Reserve - Fixed coordinates  
+    {
+      id: 'iriomote-ishigaki',
+      name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
+      latitude: 24.3423,
+      longitude: 124.1546,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Reserve - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 2
+    },
+    // Himawari Farm Dark Sky Park
+    {
+      id: 'himawari-farm',
+      name: 'Himawari Farm Dark Sky Park',
+      latitude: 42.9824,
+      longitude: 140.9946,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    // Add any missing Dark Sky Communities in Asia
+    {
+      id: 'yangmingshan-dark-sky',
+      name: 'Yangmingshan National Park Dark Sky Park',
+      chineseName: '阳明山国家公园暗夜公园',
+      latitude: 25.1637,
+      longitude: 121.5619,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
+    },
+    {
+      id: 'alishan-dark-sky',
+      name: 'Alishan Dark Sky Park',
+      chineseName: '阿里山暗夜公园',
+      latitude: 23.5105,
+      longitude: 120.8053,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 2
+    },
+    {
+      id: 'hehuanshan-dark-sky',
+      name: 'Hehuanshan Dark Sky Park',
+      chineseName: '合欢山暗夜公园',
+      latitude: 24.1384,
+      longitude: 121.2822,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString(),
+      bortleScale: 2
+    }
+  ];
+  
+  // Add missing East Asian locations
+  eastAsianLocations.forEach(loc => {
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    if (!locationMap.has(key)) {
+      locationMap.set(key, loc as SharedAstroSpot);
+    }
+  });
+  
+  return Array.from(locationMap.values());
+}
+
+/**
+ * Refresh the certified locations cache from API
+ */
+async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
+  try {
+    // Import dynamically to avoid circular dependencies
+    const { findCertifiedLocations } = await import('./locationSearchService');
+    
+    // Use a default location just as a center point, since we'll get ALL global locations
+    const defaultLocation = { latitude: 39.9042, longitude: 116.4074 };
+    
+    // Get all certified locations globally
+    const certifiedResults = await findCertifiedLocations(
+      defaultLocation.latitude,
+      defaultLocation.longitude,
+      100000, // Global radius to get ALL locations
+      1000    // Increased limit to ensure we get ALL certified locations
+    );
+    
+    if (certifiedResults.length > 0) {
+      console.log(`Fetched ${certifiedResults.length} certified dark sky locations globally`);
+      
+      // Add the East Asian certified locations if they might be missing
+      const withEastAsian = addEastAsianLocations(certifiedResults);
+      
+      // Add Dark Sky Communities
+      const withCommunities = addDarkSkyCommunities(withEastAsian);
+      
+      // Add Urban Night Sky locations
+      const withUrban = addUrbanNightSkyLocations(withCommunities);
+      
+      // Add Dark Sky Lodging
+      const withLodging = addDarkSkyLodgingLocations(withUrban);
+      
+      // Update cache and timestamp
+      cachedCertifiedLocations = withLodging;
+      lastCacheUpdate = Date.now();
+      
+      // Save to localStorage for future quick loads
+      try {
+        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(withLodging));
+      } catch (error) {
+        console.error("Error saving certified locations to cache:", error);
+      }
+      
+      return withLodging;
+    }
+    
+    return certifiedResults;
+  } catch (error) {
+    console.error("Error refreshing certified locations cache:", error);
+    // Return cached data if available, otherwise empty array
+    return cachedCertifiedLocations || [];
+  }
 }
 
 /**
