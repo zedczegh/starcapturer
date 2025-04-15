@@ -1,154 +1,198 @@
-
-/* Base marker styling for all custom markers */
-.custom-marker {
-  transition: transform 0.15s ease, filter 0.2s ease;
+/* Enhanced marker styles with better mobile visibility */
+.leaflet-marker-icon {
+  transition: transform 0.15s ease-out, filter 0.15s ease-out;
+  will-change: transform;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
 }
 
-/* Special styling for hovered markers */
-.custom-marker.hovered {
+/* Hover and active state with enhanced mobile touch area */
+.leaflet-marker-icon:hover,
+.leaflet-marker-icon.hovered {
+  transform: scale(1.15) translateY(-2px);
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
   z-index: 1000 !important;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
-  transform: scale(1.3);
 }
 
-/* Specific styling for marker types */
-.star-marker svg {
-  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.8));
-  transition: filter 0.3s ease;
+/* Better popup styles for mobile */
+.leaflet-popup {
+  margin-bottom: 20px; /* Additional space for popup on mobile */
 }
 
-.star-marker.hovered svg {
-  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.9));
-}
-
-/* Specific styling for user location marker */
-.user-location-marker svg {
-  filter: drop-shadow(0 0 3px rgba(225, 29, 72, 0.7));
-}
-
-.user-location-marker.hovered svg,
-.pulsing-marker svg {
-  filter: drop-shadow(0 0 8px rgba(225, 29, 72, 0.8));
-}
-
-/* Circle marker enhancement */
-.circle-marker svg {
-  filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.6));
-  transition: all 0.2s ease;
-}
-
-.circle-marker.hovered svg {
-  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.8));
-}
-
-/* Pulse animations for markers */
-@keyframes pulse {
-  0% {
-    opacity: 0.8;
-    transform: scale(0.6);
-  }
-  50% {
-    opacity: 0.4;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.5);
-  }
-}
-
-@keyframes inner-pulse {
-  0% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-}
-
-.pulse-circle {
-  animation: pulse 2s infinite;
-  transform-origin: center;
-  transform-box: fill-box;
-}
-
-.pulse-inner-circle {
-  animation: inner-pulse 1.5s infinite;
-  transform-origin: center;
-  transform-box: fill-box;
-}
-
-/* Enhanced popup styling */
 .leaflet-popup-content-wrapper {
+  background-color: rgba(20, 24, 39, 0.95);
   border-radius: 8px;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-  padding: 0;
-}
-
-.leaflet-popup-content {
-  margin: 0;
-  width: auto !important;
-  overflow: hidden;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .leaflet-popup-tip {
-  background-color: #1a222e;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6);
-}
-
-.leaflet-popup-custom-compact {
-  color: #fff;
-}
-
-.marker-popup-gradient {
-  background: linear-gradient(to bottom, #1a222e, #111827);
-  color: #e5e7eb;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) inset;
-}
-
-/* Quality-based styling */
-.siqs-excellent {
-  background: linear-gradient(to bottom, #166534, #1a222e);
-}
-
-.siqs-good {
-  background: linear-gradient(to bottom, #854d0e, #1a222e);
-}
-
-.siqs-poor {
-  background: linear-gradient(to bottom, #7f1d1d, #1a222e);
-}
-
-/* Make popups more easily clickable - reduce flickering */
-.leaflet-popup {
-  pointer-events: auto !important;
-  z-index: 1000 !important;
+  background-color: rgba(20, 24, 39, 0.95);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .leaflet-popup-content {
-  pointer-events: auto !important;
+  margin: 8px 10px;
+  line-height: 1.4;
+  color: #fff;
+  min-width: 120px;
 }
 
-/* Fix popup flickering */
-.leaflet-fade-anim .leaflet-popup {
-  opacity: 1 !important;
-  transition: none;
+/* Improved mobile-specific popup styles */
+@media (max-width: 768px) {
+  .leaflet-popup {
+    margin-bottom: 30px; /* More space on mobile */
+  }
+  
+  .leaflet-popup-content {
+    margin: 6px 8px;
+    font-size: 0.9em;
+  }
+  
+  /* Larger touch areas for controls on mobile */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+  }
+  
+  /* Make markers appear above other elements on mobile */
+  .leaflet-marker-pane {
+    z-index: 650 !important;
+  }
 }
 
-/* Fix tooltip display for certified locations */
-.leaflet-marker-icon {
-  z-index: 800;
+/* Custom marker popup gradient backgrounds */
+.marker-popup-gradient {
+  background: linear-gradient(to bottom, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.95) 100%);
 }
 
-.leaflet-marker-icon.certified-marker {
-  z-index: 900;
+/* SIQS quality classes for styling */
+.siqs-excellent {
+  border-left: 3px solid #4ade80;
 }
 
-.leaflet-marker-icon:hover {
-  z-index: 1000 !important;
+.siqs-good {
+  border-left: 3px solid #facc15;
+}
+
+.siqs-poor {
+  border-left: 3px solid #f87171;
+}
+
+/* Prevent map panning issues by fixing certain elements */
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-pane {
+  transform-origin: 0 0;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Fix for mobile touch dragging issues */
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
+}
+
+/* Location radius circle styling */
+.location-radius-circle {
+  stroke-dasharray: 5, 5;
+  animation: pulse 3s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+/* Mobile-optimized tile loading */
+.mobile-optimized .leaflet-tile-loaded {
+  transition: opacity 0.1s !important;
+}
+
+:root {
+  --primary-rgb: 139, 92, 246; /* Default purple - will use your app's primary color */
+}
+
+/* Enhance our collapsed legend tab with better visibility */
+.legend-tab {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  height: 80px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  box-shadow: -3px 0 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.legend-tab:hover {
+  width: 32px;
+}
+
+/* Add styles to make the content scroll nicely */
+.legend-content {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+}
+
+.legend-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.legend-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.legend-content::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+}
+
+/* Add a fancy hover effect for legend items */
+.legend-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.legend-item:hover {
+  transform: translateX(3px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Add pulse animation for the legend tab */
+@keyframes pulse-border {
+  0% { border-color: rgba(139, 92, 246, 0.2); }
+  50% { border-color: rgba(139, 92, 246, 0.6); }
+  100% { border-color: rgba(139, 92, 246, 0.2); }
+}
+
+.pulse-border {
+  animation: pulse-border 3s infinite;
+}
+
+/* Add a subtle background pattern */
+.legend-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.1) 2px, transparent 0);
+  background-size: 25px 25px;
+}
+
+/* Enhance legend title with gradient text */
+.legend-title {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(124, 58, 237, 1));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
 }

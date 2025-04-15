@@ -9,7 +9,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 // Import all the necessary components
 import AboutHeader from "@/components/about/AboutHeader";
-import AboutContent from "@/components/about/AboutContent";
+import AboutTeam from "@/components/about/AboutTeam";
+import SiqsSection from "@/components/about/SiqsSection";
+import AboutIntro from "@/components/about/AboutIntro";
+import LocationDiscoverySection from "@/components/about/LocationDiscoverySection";
+import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
+import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
 import AboutFooter from "@/components/about/AboutFooter";
 
 const About = () => {
@@ -98,11 +103,16 @@ const About = () => {
         {/* Main Page Header */}
         <AboutHeader />
         
-        {/* Main Content Area - using the new AboutContent component */}
-        <AboutContent />
-        
-        {/* Footer Area */}
-        <AboutFooter />
+        <div className="space-y-6">
+          {/* Main sections in a more organized order */}
+          <AboutIntro />
+          <AboutTeam />
+          <SiqsSection />
+          <PhotoPointsFeature />
+          <LocationDiscoverySection />
+          <DarkSkyKnowledge />
+          <AboutFooter />
+        </div>
       </div>
     </div>
   );

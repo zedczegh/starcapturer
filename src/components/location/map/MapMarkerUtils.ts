@@ -1,76 +1,96 @@
 
+/**
+ * Utility functions for creating map markers and icons
+ * These functions help with marker creation and customization
+ */
 import L from 'leaflet';
 
 /**
- * Configure Leaflet with proper icon paths
- * This is necessary because Leaflet's default icon paths are different in a bundled environment
+ * Configure Leaflet to fix common issues with icon paths
  */
-export function configureLeaflet() {
-  // Delete default icon settings to avoid path issues
+export const configureLeaflet = () => {
+  // Fix icon path issues in bundled environments
   delete L.Icon.Default.prototype._getIconUrl;
   
-  // Configure with CDN paths for markers
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
   });
-}
+  
+  // Configure performance optimizations when running on mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    // Disable animations for better performance on mobile
+    L.DomUtil.TRANSITION = L.DomUtil.TRANSITION ? L.DomUtil.TRANSITION : '';
+    L.DomUtil.TRANSFORM = L.DomUtil.TRANSFORM ? L.DomUtil.TRANSFORM : '';
+  }
+};
 
 /**
- * Create a custom marker icon with specified color and shape
- * @param color - CSS color string
- * @param shape - Shape of the marker: 'circle', 'star', or 'user'
- * @returns Leaflet DivIcon
+ * Create an SVG marker icon for the map
+ * @param color - Color of the marker
+ * @param shape - Shape of the marker (circle or star)
+ * @param sizeMultiplier - Multiplier for marker size (useful for mobile)
+ * @returns Leaflet DivIcon with the SVG marker
  */
-export function createCustomMarker(color: string, shape: 'circle' | 'star' | 'user' = 'circle'): L.DivIcon {
-  // SVG code for different shapes
-  let svgPath = '';
-  let viewBox = '0 0 24 24';
-  let className = 'custom-marker';
+export const createCustomMarker = (
+  color: string = '#3b82f6', 
+  shape: 'circle' | 'star' | undefined = undefined,
+  sizeMultiplier: number = 1.0
+): L.DivIcon => {
+  // Base size for markers, can be scaled for mobile devices
+  const baseSize = sizeMultiplier * 24;
+  const baseStrokeWidth = sizeMultiplier * 1.5;
   
-  switch (shape) {
-    case 'star':
-      // Star shape for certified locations - brighter gold color
-      svgPath = `<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="${color}" stroke="white" stroke-width="1.5"/>`;
-      className += ' star-marker';
-      break;
-    
-    case 'user':
-      // User location marker - updated to use bright red color with enhanced visibility
-      svgPath = `
-        <circle cx="12" cy="12" r="7" fill="${color}" stroke="white" stroke-width="2" opacity="0.95" />
-        <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="1" opacity="0.5" class="pulse-circle" />
-        <circle cx="12" cy="12" r="3" fill="white" stroke="none" opacity="0.85" />
-      `;
-      className += ' user-location-marker';
-      break;
-    
-    case 'circle':
-    default:
-      // Circle for calculated locations with enhanced inner pulse effect
-      svgPath = `
-        <circle cx="12" cy="12" r="8" fill="${color}" stroke="white" stroke-width="1.5" />
-        <circle cx="12" cy="12" r="6" fill="${color}" stroke="none" class="pulse-inner-circle" opacity="0.6" />
-      `;
-      className += ' circle-marker';
-      break;
+  // Generate SVG based on shape
+  let svgContent = '';
+  
+  if (shape === 'star') {
+    // Star shape for certified locations
+    svgContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" 
+        width="${baseSize}" height="${baseSize}" 
+        viewBox="0 0 24 24" 
+        fill="${color}" stroke="#FFFFFF" 
+        stroke-width="${baseStrokeWidth}" 
+        stroke-linecap="round" 
+        stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    `;
+  } else {
+    // Circle shape for calculated locations
+    svgContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" 
+        width="${baseSize}" height="${baseSize}" 
+        viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" 
+            fill="${color}" 
+            stroke="#FFFFFF" 
+            stroke-width="${baseStrokeWidth}" />
+      </svg>
+    `;
   }
   
-  // Create a div icon with SVG content
+  // Calculate icon size with shadow/margin consideration
+  const iconSize = baseSize + (sizeMultiplier * 8);
+  
   return L.divIcon({
-    className: className,
-    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="24" height="24">${svgPath}</svg>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
+    html: svgContent,
+    className: 'custom-map-marker',
+    iconSize: [iconSize, iconSize],
+    iconAnchor: [iconSize/2, iconSize/2],
+    popupAnchor: [0, -(iconSize/2)]
   });
-}
+};
 
 /**
- * Create a custom pulsing marker icon for user location
- * Uses red color to make it more visible
+ * Format geo coordinates to a readable string
+ * @param lat - Latitude
+ * @param lng - Longitude
+ * @returns Formatted coordinates string
  */
-export function createPulsingUserMarker(): L.DivIcon {
-  return createCustomMarker('#e11d48', 'user');
-}
+export const formatCoordinates = (lat: number, lng: number): string => {
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+};
