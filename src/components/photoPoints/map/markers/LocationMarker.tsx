@@ -87,9 +87,11 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
-      onClick={handleClick}
-      onMouseover={handleMouseOver}
-      onMouseout={handleMouseOut}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
     >
       <Popup closeOnClick={false} autoClose={false}>
         <MarkerPopupContent
