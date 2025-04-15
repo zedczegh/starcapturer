@@ -14,9 +14,6 @@ import { MapEvents } from './MapEffectsController';
 import { MapEffectsComposer } from './MapComponents';
 import L from 'leaflet';
 import CenteringPinpointButton from './CenteringPinpointButton';
-import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
-import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 configureLeaflet();
 
@@ -90,18 +87,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
-  // Use the utility function for filtering locations
-  const filteredLocations = useCallback(() => {
-    if (!locations || locations.length === 0) return [];
-    
-    const filtered = filterLocations(locations, userLocation, searchRadius, activeView);
-    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
-  }, [locations, userLocation, searchRadius, activeView, isMobile]);
-
-  const getCurrentSiqs = (location: SharedAstroSpot): number | null => {
-    return getSafeScore(location.siqs);
-  };
-
   useEffect(() => {
     if (userLocation && locations.length > 0 && isMountedRef.current) {
       const userLat = userLocation.latitude;
@@ -113,7 +98,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       );
       
       if (sameLocation) {
-        setCurrentSiqs(getCurrentSiqs(sameLocation));
+        if (typeof sameLocation.siqs === 'number') {
+          setCurrentSiqs(sameLocation.siqs);
+        } else if (sameLocation.siqs && typeof sameLocation.siqs === 'object') {
+          setCurrentSiqs(sameLocation.siqs.score);
+        } else if (sameLocation.siqsResult) {
+          setCurrentSiqs(sameLocation.siqsResult.score);
+        }
       }
     }
   }, [userLocation?.latitude, userLocation?.longitude, locations]); 
@@ -159,15 +150,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, []);
 
   const getDefaultZoom = () => {
-    // Provide a much more zoomed-out view to see the whole landscape
     if (activeView === 'calculated') {
-      return isMobile ? 3 : 4;
+      return isMobile ? 6 : 7;
     }
     return isMobile ? zoom - 1 : zoom;
   };
-
-  // Get filtered locations and optimize for mobile if needed
-  const displayLocations = filteredLocations();
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
@@ -217,7 +204,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {displayLocations.map(location => {
+        {Array.isArray(locations) && locations.map(location => {
           if (!location || !location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);

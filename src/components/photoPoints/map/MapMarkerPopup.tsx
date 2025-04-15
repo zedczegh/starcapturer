@@ -4,9 +4,10 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
-import { formatSIQSScore, formatDistance } from '@/utils/geoUtils';
+import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { formatDistance } from '@/utils/location/formatDistance';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -94,7 +95,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
         <div className="flex items-center mb-2">
           <Navigation className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {formatDistance(location.distance)}
+            {formatDistance(location.distance, language)}
           </span>
         </div>
       )}

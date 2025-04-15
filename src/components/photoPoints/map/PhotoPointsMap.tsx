@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/types/weather';
@@ -71,20 +72,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   const optimizedLocations = useMemo(() => {
     // If no valid locations available, return empty array
     if (!validLocations || validLocations.length === 0) {
-      console.log("No valid locations to display");
       return [];
     }
 
-    if (!isMobile) {
-      console.log(`Displaying all ${validLocations.length} locations (desktop)`);
-      return validLocations;
-    }
+    if (!isMobile) return validLocations;
     
     // For mobile, limit the number of displayed locations
-    if (validLocations.length <= 30) {
-      console.log(`Displaying all ${validLocations.length} locations (mobile, under limit)`);
-      return validLocations;
-    }
+    if (validLocations.length <= 30) return validLocations;
     
     // Always keep certified locations
     const certified = validLocations.filter(loc => 
@@ -97,7 +91,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
       .slice(0, 50); // Hard limit for performance
     
-    console.log(`Optimized for mobile: ${certified.length} certified + ${nonCertified.length} calculated locations`);
     return [...certified, ...nonCertified];
   }, [validLocations, isMobile, activeView]);
   
