@@ -3,6 +3,14 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isValidAstronomyLocation } from "@/utils/locationValidator";
 
+// Define a proper type for SIQS format
+interface SiqsObject {
+  score: number;
+  isViable?: boolean;
+}
+
+type Siqs = number | SiqsObject;
+
 /**
  * Efficiently filter locations by quality and distance
  * @param locations The locations to filter
@@ -53,11 +61,7 @@ export function filterLocationsByQualityAndDistance(
     if (typeof location.siqs === 'number') {
       siqs = location.siqs;
     } else if (location.siqs && typeof location.siqs === 'object') {
-      if ('score' in location.siqs) {
-        siqs = location.siqs.score;
-      } else {
-        siqs = 0;
-      }
+      siqs = (location.siqs as SiqsObject).score;
     } else {
       siqs = 0;
     }
@@ -115,8 +119,8 @@ export function sortLocationsByQualityAndDistance(
     // Safely get SIQS A
     if (typeof a.siqs === 'number') {
       siqsA = a.siqs;
-    } else if (a.siqs && typeof a.siqs === 'object' && 'score' in a.siqs) {
-      siqsA = a.siqs.score;
+    } else if (a.siqs && typeof a.siqs === 'object') {
+      siqsA = (a.siqs as SiqsObject).score;
     } else {
       siqsA = 0;
     }
@@ -124,8 +128,8 @@ export function sortLocationsByQualityAndDistance(
     // Safely get SIQS B
     if (typeof b.siqs === 'number') {
       siqsB = b.siqs;
-    } else if (b.siqs && typeof b.siqs === 'object' && 'score' in b.siqs) {
-      siqsB = b.siqs.score;
+    } else if (b.siqs && typeof b.siqs === 'object') {
+      siqsB = (b.siqs as SiqsObject).score;
     } else {
       siqsB = 0;
     }

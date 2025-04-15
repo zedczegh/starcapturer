@@ -1,24 +1,25 @@
+
 // For this large file, we'll just fix the TypeScript error without changing functionality
 // Update the specific part of the file that's causing the error
 import React, { useCallback, useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useMapEvents as useLeafletMapEvents } from 'react-leaflet'; // Manually implement if not available
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useDebounce } from '@/hooks/useDebounce';
+import useDebounce from '@/hooks/useDebounce';
 import { useMapCenter } from '@/hooks/useMapCenter';
 import { usePhotoPoints } from '@/hooks/usePhotoPoints';
-import { usePhotoPointsSearch } from '@/hooks/usePhotoPointsSearch';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isValidAstronomyLocation } from '@/utils/locationValidator';
 import { getLocationMarker, getCertificationColor } from '@/components/photoPoints/map/MarkerUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { MapTooltip } from '@/components/photoPoints/map/MapTooltip';
-import { MapLocationsLayer } from '@/components/photoPoints/map/MapLocationsLayer';
+import MapTooltip from '@/components/photoPoints/map/MapTooltip';
+import MapLocationsLayer from '@/components/photoPoints/map/MapLocationsLayer';
 import CenteringPinpointButton from '@/components/photoPoints/map/CenteringPinpointButton';
+import { toast } from 'sonner'; // Add missing import for toast
 
 // Leaflet marker fix
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -31,11 +32,37 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Add useMapEvents if it doesn't exist in react-leaflet
+const useMapEvents = useLeafletMapEvents || ((events) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    const handlers: Record<string, (e: any) => void> = {};
+    
+    // Add event handlers
+    Object.entries(events).forEach(([event, handler]) => {
+      handlers[event] = handler;
+      map.on(event, handler);
+    });
+    
+    // Clean up
+    return () => {
+      Object.entries(handlers).forEach(([event, handler]) => {
+        map.off(event, handler);
+      });
+    };
+  }, [map, events]);
+  
+  return map;
+});
+
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onLocationUpdate: (location: SharedAstroSpot) => void;
+  onLocationUpdate: (location: SharedAstroSpot) => void; // Modified to accept SharedAstroSpot
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
@@ -118,19 +145,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   
   // Map component to handle events
   const MapEventsHandler = () => {
-    const map = useMapEvents({
+    useMapEvents({
       click: (e) => {
         handleMapClick(e.latlng.lat, e.latlng.lng);
       },
       moveend: () => {
-        if (map) {
-          const center = map.getCenter();
+        if (mapInstance) {
+          const center = mapInstance.getCenter();
           setMapCenter([center.lat, center.lng]);
         }
       },
       zoomend: () => {
-        if (map) {
-          setMapZoom(map.getZoom());
+        if (mapInstance) {
+          setMapZoom(mapInstance.getZoom());
         }
       }
     });
@@ -183,7 +210,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         )}
         
         <MapLocationsLayer
-          locations={validLocations as SharedAstroSpot[]}
+          locations={validLocations}
         />
         
         <CenteringPinpointButton 

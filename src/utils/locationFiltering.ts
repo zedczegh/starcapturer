@@ -1,5 +1,14 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isValidAstronomyLocation } from '@/utils/locationValidator';
+
+// Define a proper type for SIQS format
+interface SiqsObject {
+  score: number;
+  isViable?: boolean;
+}
+
+type Siqs = number | SiqsObject;
 
 /**
  * Filters out invalid locations from an array of locations
@@ -105,8 +114,8 @@ export const getSiqsScore = (location: SharedAstroSpot): number | null => {
     return location.siqs;
   }
   
-  if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
-    return location.siqs.score;
+  if (location.siqs && typeof location.siqs === 'object') {
+    return (location.siqs as SiqsObject).score;
   }
   
   return null;

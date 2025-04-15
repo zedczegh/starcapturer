@@ -5,6 +5,13 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findCalculatedLocations } from "@/services/locationSearchService";
 import { isValidAstronomyLocation } from "@/utils/locationValidator";
 
+interface SiqsObject {
+  score: number;
+  isViable?: boolean;
+}
+
+type Siqs = number | SiqsObject;
+
 export const useCalculatedLocationsFind = () => {
   const { t } = useLanguage();
 
@@ -61,10 +68,16 @@ export const useCalculatedLocationsFind = () => {
           // Filter out locations with SIQS below 5
           const qualityFilteredLocations = uniqueNewLocations.filter(loc => {
             // If siqs is null/undefined or >= 5, keep the location
-            const siqs = typeof loc.siqs === 'number' ? loc.siqs : 
-                      (loc.siqs && typeof loc.siqs === 'object' && 'score' in loc.siqs) ? 
-                      loc.siqs.score : 0;
-            return siqs === undefined || siqs === null || siqs >= 5;
+            let siqsScore = 0;
+            
+            // Safely handle different SIQS formats
+            if (typeof loc.siqs === 'number') {
+              siqsScore = loc.siqs;
+            } else if (loc.siqs && typeof loc.siqs === 'object') {
+              siqsScore = (loc.siqs as SiqsObject).score;
+            }
+            
+            return siqsScore === undefined || siqsScore === null || siqsScore >= 5;
           });
           
           // Combine previous and new locations
@@ -75,10 +88,16 @@ export const useCalculatedLocationsFind = () => {
         // Filter new locations by quality
         const qualityFilteredLocations = landOnlyLocations.filter(loc => {
           // If siqs is null/undefined or >= 5, keep the location
-          const siqs = typeof loc.siqs === 'number' ? loc.siqs : 
-                    (loc.siqs && typeof loc.siqs === 'object' && 'score' in loc.siqs) ? 
-                    loc.siqs.score : 0;
-          return siqs === undefined || siqs === null || siqs >= 5;
+          let siqsScore = 0;
+          
+          // Safely handle different SIQS formats
+          if (typeof loc.siqs === 'number') {
+            siqsScore = loc.siqs;
+          } else if (loc.siqs && typeof loc.siqs === 'object') {
+            siqsScore = (loc.siqs as SiqsObject).score;
+          }
+          
+          return siqsScore === undefined || siqsScore === null || siqsScore >= 5;
         });
         
         return qualityFilteredLocations;

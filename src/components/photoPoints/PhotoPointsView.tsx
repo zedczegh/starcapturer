@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -24,7 +23,7 @@ interface PhotoPointsViewProps {
   loadMore: () => void;
   refreshSiqs: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (latitude: number, longitude: number) => void;
+  onLocationUpdate: (location: SharedAstroSpot) => void; // Modified to accept SharedAstroSpot instead of lat/lng
   canLoadMoreCalculated: boolean;
   loadMoreCalculated: () => void;
   loadMoreClickCount: number;
@@ -125,12 +124,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
         <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
-            certifiedLocations={certifiedLocations}
-            calculatedLocations={calculatedLocations}
-            activeView={activeView}
             searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
-            onLocationClick={handleLocationClick}
+            activeView={activeView}
             onLocationUpdate={onLocationUpdate}
           />
         </div>
