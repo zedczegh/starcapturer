@@ -1,7 +1,8 @@
+
 import L from 'leaflet';
 
 /**
- * Configure Leaflet to fix common issues with icon paths
+ * Configure Leaflet to fix common issues with icon paths and mobile performance
  */
 export const configureLeaflet = () => {
   // Fix icon path issues in bundled environments
@@ -19,38 +20,63 @@ export const configureLeaflet = () => {
     // Disable animations for better performance on mobile
     L.DomUtil.TRANSITION = L.DomUtil.TRANSITION ? L.DomUtil.TRANSITION : '';
     L.DomUtil.TRANSFORM = L.DomUtil.TRANSFORM ? L.DomUtil.TRANSFORM : '';
+    
+    // Set max bounds to prevent excessive panning
+    L.Map.prototype.options.maxBounds = [[-90, -180], [90, 180]];
+    L.Map.prototype.options.maxBoundsViscosity = 1.0;
+    
+    // Optimize mobile rendering
+    L.Map.prototype.options.preferCanvas = true;
+    L.Map.prototype.options.renderer = L.canvas();
   }
 };
 
 /**
- * Create a custom marker icon for the map
- * @param color - Color of the marker
- * @returns L.DivIcon instance or null during SSR
+ * Create a custom marker icon for the map with improved mobile performance
  */
 export function createCustomMarker(
-  color: string = '#4ADE80', 
+  color: string = '#4ADE80',
   shape: 'circle' | 'star' = 'circle',
   sizeMultiplier: number = 1.0
 ): L.DivIcon | null {
-  // Return null during SSR to prevent errors
   if (typeof window === 'undefined') return null;
   
   try {
     const baseSize = 24 * sizeMultiplier;
     let html = '';
     
+    // Apply hardware acceleration and optimize rendering
+    const styleOptimizations = 'will-change: transform; transform: translateZ(0); backface-visibility: hidden;';
+    
     if (shape === 'star') {
-      // Certified locations - star shape
+      // Star shape with optimized rendering
       html = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24" fill="${color}" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        <svg xmlns="http://www.w3.org/2000/svg" 
+             width="${baseSize}" height="${baseSize}" 
+             viewBox="0 0 24 24" 
+             style="${styleOptimizations}"
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" 
+                   fill="${color}" 
+                   stroke="#FFFFFF" 
+                   stroke-width="1" 
+                   stroke-linejoin="round"
+          />
         </svg>
       `;
     } else {
-      // Calculated locations - circle shape
+      // Circle shape with optimized rendering
       html = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${baseSize}" height="${baseSize}" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" fill="${color}" stroke="#FFFFFF" stroke-width="1" />
+        <svg xmlns="http://www.w3.org/2000/svg" 
+             width="${baseSize}" height="${baseSize}" 
+             viewBox="0 0 24 24"
+             style="${styleOptimizations}"
+        >
+          <circle cx="12" cy="12" r="10" 
+                  fill="${color}" 
+                  stroke="#FFFFFF" 
+                  stroke-width="1"
+          />
         </svg>
       `;
     }
@@ -68,7 +94,7 @@ export function createCustomMarker(
   }
 }
 
-// Call configure function immediately but only on client
+// Configure Leaflet immediately on client-side
 if (typeof window !== 'undefined') {
   configureLeaflet();
 }

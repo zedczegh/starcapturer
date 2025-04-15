@@ -1,4 +1,3 @@
-
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
@@ -41,28 +40,28 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
 /**
  * Get certification type based color for markers
  * @param location Location to get color for
- * @returns Hex color string
+ * @returns RGBA color string with transparency
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (!location.isDarkSkyReserve && !location.certification) {
-    return '#4ADE80'; // Default green for non-certified
+    return 'rgba(74, 222, 128, 0.85)'; // Default green with transparency
   }
   
   const certification = (location.certification || '').toLowerCase();
   
-  // Match colors to our legend color scheme
+  // Match colors to our legend color scheme with added transparency
   if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
-    return '#9b87f5'; // Purple for reserves
+    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves
   } else if (certification.includes('park')) {
-    return '#4ADE80'; // Green for Dark Sky Park (slightly modified from original)
+    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park
   } else if (certification.includes('community')) {
-    return '#FFD700'; // Gold for Dark Sky Community
+    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community
   } else if (certification.includes('urban') || certification.includes('night sky place')) {
-    return '#1EAEDB'; // Blue for Urban Night Sky
+    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky
   } else if (certification.includes('lodging')) {
-    return '#333333'; // Dark Gray for Dark Sky Lodging
+    return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
   } else {
-    return '#9b87f5'; // Default to reserve color for unknown certifications
+    return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
   }
 };
 
