@@ -26,6 +26,9 @@ const MapLocations: React.FC<MapLocationsProps> = ({
   isMobile,
   activeView
 }) => {
+  // Added debug log to track locations
+  console.log(`MapLocations rendering ${locations.length} locations for ${activeView} view`);
+  
   return (
     <>
       {locations.map(location => {
@@ -35,7 +38,9 @@ const MapLocations: React.FC<MapLocationsProps> = ({
         const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
         const isHovered = hoveredLocationId === locationId;
         
-        if (isMobile && !isCertified && locations.length > 30 && Math.random() > 0.5) {
+        // Limit non-certified locations on mobile only if there are many locations
+        // Modified to be less aggressive with filtering to ensure calculated spots appear
+        if (isMobile && !isCertified && locations.length > 50 && Math.random() > 0.7) {
           return null;
         }
         

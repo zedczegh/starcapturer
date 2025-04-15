@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -46,6 +47,17 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
+  // Use appropriate location set based on active view
+  // This ensures we're properly passing the locations to the map
+  const locationsToShow = useMemo(() => {
+    // For certified view, only show certified locations
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    }
+    // For calculated view, show both certified and calculated locations
+    return activeView === 'calculated' ? [...certifiedLocations, ...calculatedLocations] : locations;
+  }, [activeView, certifiedLocations, calculatedLocations, locations]);
+  
   const { 
     mapReady,
     handleMapReady,
@@ -57,7 +69,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations,
+    locations: locationsToShow, // Use our optimized location selection
     searchRadius,
     activeView
   });
@@ -149,6 +161,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     setLegendOpen(isOpen);
   }, []);
   
+  // Debug log to see what locations are being provided
+  useEffect(() => {
+    console.log(`PhotoPointsMap - Showing ${optimizedLocations.length} locations (${activeView} view)`);
+    console.log(`Certified: ${certifiedLocations.length}, Calculated: ${calculatedLocations.length}`);
+  }, [optimizedLocations.length, certifiedLocations.length, calculatedLocations.length, activeView]);
+
   return (
     <div 
       style={{ height: mapContainerHeight }} 

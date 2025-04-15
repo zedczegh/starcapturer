@@ -1,6 +1,7 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useMapLocations, useMapUtils } from './useMapUtils';
+import { useMapLocations } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
 
@@ -21,7 +22,7 @@ export const usePhotoPointsMap = ({
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
   // IMPORTANT: Always load certified locations regardless of view
-  const shouldLoadCertified = true; // Changed from conditional to always true
+  const shouldLoadCertified = true; // Always load certified locations
   
   // Use our certified locations loader with always-on loading
   const { 
@@ -47,6 +48,12 @@ export const usePhotoPointsMap = ({
   
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
+  
+  // Debug logs to help track the issue
+  useEffect(() => {
+    console.log(`usePhotoPointsMap - Locations count: ${locations.length}, Active view: ${activeView}`);
+    console.log(`usePhotoPointsMap - Certified locations: ${allCertifiedLocations.length}`);
+  }, [locations.length, activeView, allCertifiedLocations.length]);
   
   // Combine locations - always include all certified locations regardless of view
   const combinedLocations = useCallback(() => {

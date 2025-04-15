@@ -1,4 +1,8 @@
 
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateDistance } from '@/utils/geoUtils';
+import { v4 as generateId } from 'uuid';
+
 // Extract for this portion to fix the errors
 function createDarkSkyLocationEntry(entry: any, userLatitude: number, userLongitude: number): SharedAstroSpot {
   const lat = entry.coordinates[0]; 
@@ -25,3 +29,6 @@ function createDarkSkyLocationEntry(entry: any, userLatitude: number, userLongit
     timestamp: new Date().toISOString()
   };
 }
+
+// Add an export to make this function available to other modules
+export { createDarkSkyLocationEntry };
