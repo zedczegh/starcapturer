@@ -12,7 +12,7 @@ import { prefetchPopularLocations } from "./lib/queryPrefetcher";
 import PageLoader from "./components/loaders/PageLoader";
 
 // Lazily load pages with improved chunking for faster initial load
-const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
+const IndexPage = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
 const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
 const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
 const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */ "./pages/ShareLocation"));
@@ -72,7 +72,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={
                   <PageTransition>
-                    <Index />
+                    <IndexPage />
                   </PageTransition>
                 } />
                 <Route path="/location/:id" element={
