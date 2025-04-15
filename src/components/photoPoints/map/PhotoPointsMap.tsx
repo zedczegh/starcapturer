@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import useMapMarkers from '@/hooks/map/useMapMarkers';
+import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
@@ -15,7 +15,6 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
-  preventAutoZoom?: boolean;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
@@ -24,8 +23,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate,
-  preventAutoZoom = true // Default to preventing auto-zoom
+  onLocationUpdate
 }) => {
   const { 
     hoveredLocationId, 
@@ -44,29 +42,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleLocationClick,
     validLocations,
     mapCenter,
-    initialZoom,
-    certifiedLocationsLoaded,
-    allCertifiedLocationsCount,
-    refreshCertifiedLocations
+    initialZoom
   } = usePhotoPointsMap({
     userLocation,
     locations,
     searchRadius,
-    activeView,
-    preventAutoZoom: true // Always prevent auto-zoom
+    activeView
   });
-
-  // Debug log to track certified locations count
-  useEffect(() => {
-    if (activeView === 'certified') {
-      console.log(`PhotoPointsMap: certified locations count: ${allCertifiedLocationsCount}`);
-      if (allCertifiedLocationsCount === 0 && !certifiedLocationsLoaded) {
-        // Force refresh certified locations if none are loaded
-        console.log('Forcing refresh of certified locations from map component');
-        refreshCertifiedLocations();
-      }
-    }
-  }, [activeView, allCertifiedLocationsCount, certifiedLocationsLoaded, refreshCertifiedLocations]);
 
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -93,11 +75,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       onLocationUpdate(userLocation.latitude, userLocation.longitude);
     }
   }, [onLocationUpdate, userLocation]);
-  
-  // Debug log for valid locations that will be displayed on map
-  useEffect(() => {
-    console.log(`PhotoPointsMap: Active view: ${activeView}, valid locations count: ${validLocations.length}`);
-  }, [activeView, validLocations.length]);
 
   return (
     <div className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2" style={{ height: isMobile ? 'calc(70vh - 200px)' : '450px' }}>
@@ -119,7 +96,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={true}
         showRadiusCircles={activeView === 'calculated'}
-        preventAutoZoom={true} // Always prevent auto-zoom
       />
       
       <MapLegend 
@@ -135,7 +111,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           userLocation={userLocation}
           className="absolute top-4 right-4"
           onGetLocation={handleGetLocation}
-          disableAutoCenter={true} // Disable auto-center behavior
         />
       )}
     </div>

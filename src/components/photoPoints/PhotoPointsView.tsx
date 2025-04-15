@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useCallback, useState, useEffect, memo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -91,6 +90,17 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
+  // Console output for debugging
+  useEffect(() => {
+    console.log(`PhotoPointsView - Certified locations count: ${certifiedLocations?.length || 0}`);
+    console.log(`PhotoPointsView - Active view: ${activeView}`);
+    
+    if (certifiedLocations?.length > 0) {
+      // Log a sample of certified locations for debugging
+      console.log(`Sample certified location: ${JSON.stringify(certifiedLocations[0])}`);
+    }
+  }, [certifiedLocations, activeView]);
+  
   // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
     return (
@@ -112,7 +122,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = React.memo((props) => {
             searchRadius={searchRadius}
             onLocationClick={handleLocationClick}
             onLocationUpdate={onLocationUpdate}
-            preventAutoZoom={true} // Prevent auto-zoom on radius changes
           />
         </div>
       </Suspense>

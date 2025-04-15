@@ -1,34 +1,44 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MapContainer, TileLayer, Circle } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import './MarkerStyles.css';
+import './MapStyles.css';
+import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import MapBase from './components/MapBase';
-import MapMarkers from './components/MapMarkers';
-import MapControllers from './components/MapControllers';
+import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
+import MapController from './MapController';
+import MapLegend from './MapLegend';
+import MobileMapFixer from './MobileMapFixer';
+import { MapEvents } from './MapEffectsController';
+import PinpointButton from './PinpointButton';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { MapEffectsComposer } from './MapComponents';
+
+configureLeaflet();
 
 interface LazyMapContainerProps {
   center: [number, number];
-  zoom: number;
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady: () => void;
-  onLocationClick: (location: SharedAstroSpot) => void;
+  onMapReady?: () => void;
+  onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  zoom?: number;
   hoveredLocationId?: string | null;
   onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent<Element>, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent<Element>) => void;
-  handleTouchMove?: (e: React.TouchEvent<Element>) => void;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
-  preventAutoZoom?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
-  zoom,
   userLocation,
   locations,
   searchRadius,
@@ -36,20 +46,22 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onMapReady,
   onLocationClick,
   onMapClick,
+  zoom = 10,
   hoveredLocationId,
   onMarkerHover,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  isMobile = false,
-  useMobileMapFixer = true,
-  showRadiusCircles = false,
-  preventAutoZoom = true
+  isMobile,
+  useMobileMapFixer = false,
+  showRadiusCircles = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
+  const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
+  // Ensure stable references to prevent unnecessary re-renders
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -67,7 +79,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     setCurrentSiqs(siqs);
   }, []);
   
-  // Update SIQS when user location matches a location with SIQS
+  // Ensure userLocation is always passed as a stable reference
+  const safeUserLocation = userLocation || null;
+  
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -86,47 +100,118 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation, locations]);
   
-  const handleMapReadyInternal = useCallback(() => {
+  const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
       onMapReady();
     }
   }, [onMapReady]);
+  
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current;
+    
+    const handleResize = () => {
+      if (map) map.invalidateSize();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 200);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [mapRef.current]);
+
+  const getDefaultZoom = () => {
+    if (activeView === 'calculated') {
+      return 7;
+    }
+    return zoom;
+  };
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
-      <MapBase
+      <MapContainer
         center={center}
-        zoom={zoom}
-        userLocation={userLocation}
-        searchRadius={searchRadius}
-        showRadiusCircles={showRadiusCircles}
-        isMobile={isMobile}
-        onMapReady={handleMapReadyInternal}
+        zoom={getDefaultZoom()}
+        style={{ height: "100%", width: "100%" }}
+        scrollWheelZoom={true}
+        ref={mapRef}
+        className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
+        whenReady={handleMapReady}
+        attributionControl={true}
       >
-        <MapControllers 
-          userLocation={userLocation}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        
+        {showRadiusCircles && userLocation && (
+          <Circle
+            center={[userLocation.latitude, userLocation.longitude]}
+            pathOptions={{
+              color: 'rgb(99, 102, 241)',
+              fillColor: 'rgb(99, 102, 241)',
+              fillOpacity: 0.05,
+              weight: 1,
+              dashArray: '5, 5',
+            }}
+            radius={searchRadius * 1000}
+          />
+        )}
+        
+        <MapEffectsComposer 
+          userLocation={safeUserLocation}
           activeView={activeView}
           searchRadius={searchRadius}
-          useMobileMapFixer={useMobileMapFixer}
-          isMobile={isMobile}
-          onMapClick={stableOnMapClick}
           onSiqsCalculated={handleSiqsCalculated}
         />
         
-        <MapMarkers
-          userLocation={userLocation}
-          locations={locations}
-          activeView={activeView}
-          hoveredLocationId={hoveredLocationId}
-          onLocationClick={stableOnLocationClick}
-          onMarkerHover={onMarkerHover}
-          handleTouchStart={handleTouchStart}
-          handleTouchEnd={handleTouchEnd}
-          handleTouchMove={handleTouchMove}
-          currentSiqs={currentSiqs}
+        <MapEvents onMapClick={stableOnMapClick} />
+        
+        {userLocation && (
+          <UserLocationMarker 
+            position={[userLocation.latitude, userLocation.longitude]} 
+            currentSiqs={currentSiqs}
+          />
+        )}
+        
+        {locations.map(location => {
+          if (!location.latitude || !location.longitude) return null;
+          
+          const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+          const isHovered = hoveredLocationId === locationId;
+          
+          return (
+            <LocationMarker
+              key={locationId}
+              location={location}
+              onClick={stableOnLocationClick}
+              isHovered={isHovered}
+              onHover={onMarkerHover || (() => {})}
+              locationId={locationId}
+              isCertified={isCertified}
+              activeView={activeView}
+              handleTouchStart={handleTouchStart}
+              handleTouchEnd={handleTouchEnd}
+              handleTouchMove={handleTouchMove}
+            />
+          );
+        })}
+        
+        <MapController 
+          userLocation={safeUserLocation} 
+          searchRadius={searchRadius}
         />
-      </MapBase>
+        
+        {useMobileMapFixer && isMobile && <MobileMapFixer />}
+      </MapContainer>
     </div>
   );
 };

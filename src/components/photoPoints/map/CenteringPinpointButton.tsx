@@ -7,7 +7,6 @@ interface CenteringPinpointButtonProps {
   onGetLocation: () => void;
   userLocation: { latitude: number; longitude: number } | null;
   className?: string;
-  disableAutoCenter?: boolean;
 }
 
 /**
@@ -16,8 +15,7 @@ interface CenteringPinpointButtonProps {
 const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
   onGetLocation,
   userLocation,
-  className,
-  disableAutoCenter = false
+  className
 }) => {
   // State to track if we have a valid map reference
   const [hasValidMap, setHasValidMap] = useState(false);
@@ -44,8 +42,8 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
     // Always trigger the location update
     onGetLocation();
     
-    // Only attempt to center the map if explicitly enabled
-    if (!disableAutoCenter && hasValidMap && mapRef && userLocation) {
+    // Only attempt to center the map if we have a valid map reference
+    if (hasValidMap && mapRef && userLocation) {
       // Add a short delay to let the location update before centering
       setTimeout(() => {
         if (userLocation && mapRef) {
@@ -57,7 +55,7 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
         }
       }, 300);
     }
-  }, [onGetLocation, userLocation, mapRef, hasValidMap, disableAutoCenter]);
+  }, [onGetLocation, userLocation, mapRef, hasValidMap]);
 
   return (
     <PinpointButton

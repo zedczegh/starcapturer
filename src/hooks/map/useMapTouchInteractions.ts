@@ -1,11 +1,5 @@
-
 import { useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-interface TouchPosition {
-  x: number;
-  y: number;
-}
 
 export const useMapTouchInteractions = (handleHover: (id: string | null) => void) => {
   const isMobile = useIsMobile();
@@ -13,7 +7,7 @@ export const useMapTouchInteractions = (handleHover: (id: string | null) => void
   /**
    * Handle touch start event for better touch interaction
    */
-  const handleTouchStart = useCallback((e: React.TouchEvent<Element>, id: string) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
     if (!isMobile) return;
     
     // Prevent default to avoid double-firing issues on some mobile browsers
@@ -26,7 +20,7 @@ export const useMapTouchInteractions = (handleHover: (id: string | null) => void
   /**
    * Handle touch end event for better touch interaction
    */
-  const handleTouchEnd = useCallback((e: React.TouchEvent<Element>) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
     if (!isMobile) return;
     
     // Prevent default behaviors
@@ -40,10 +34,9 @@ export const useMapTouchInteractions = (handleHover: (id: string | null) => void
   
   /**
    * Handle touch move to detect dragging vs tapping
-   * Returns updated position if needed
    */
-  const handleTouchMove = useCallback((e: React.TouchEvent<Element>, touchStartPos: TouchPosition | null): TouchPosition | null => {
-    if (!isMobile || !touchStartPos) return touchStartPos;
+  const handleTouchMove = useCallback((e: React.TouchEvent, touchStartPos: {x: number, y: number} | null) => {
+    if (!isMobile || !touchStartPos) return null;
     
     if (e.touches && e.touches[0]) {
       const moveX = Math.abs(e.touches[0].clientX - touchStartPos.x);

@@ -9,7 +9,6 @@ interface MapEffectsComposerProps {
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
   onSiqsCalculated?: (siqs: number) => void;
-  disableAutoCenter?: boolean;
 }
 
 /**
@@ -20,8 +19,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   userLocation,
   activeView = 'certified',
   searchRadius = 100,
-  onSiqsCalculated,
-  disableAutoCenter = true // Default to disable auto-centering
+  onSiqsCalculated
 }) => {
   // Always call useMap hook first before any conditional logic
   const map = useMap();

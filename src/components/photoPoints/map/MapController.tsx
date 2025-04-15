@@ -7,33 +7,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface MapControllerProps { 
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
-  disableAutoZoom?: boolean;
-  disableAutoCenter?: boolean;
 }
 
 export const MapController: React.FC<MapControllerProps> = ({ 
   userLocation,
-  searchRadius,
-  disableAutoZoom = true,  // Default to disabled auto-zoom
-  disableAutoCenter = true // Default to disabled auto-center
+  searchRadius
 }) => {
   const map = useMap();
   const firstRenderRef = useRef(true);
   const isMobile = useIsMobile();
-  const initialViewSetRef = useRef(false);
   
   useEffect(() => {
     if (!map) return;
-    
-    // Disable animations that cause flashing
-    if (map._zoomAnimated !== undefined) {
-      map._zoomAnimated = false;
-    }
-    
-    // Disable marker animations
-    if (map.options) {
-      map.options.markerZoomAnimation = false;
-    }
     
     const handleMapInvalidation = () => {
       try {
@@ -43,10 +28,8 @@ export const MapController: React.FC<MapControllerProps> = ({
       }
     };
     
-    // Run once on initial load to ensure proper sizing
     setTimeout(handleMapInvalidation, 300);
     
-    // Apply mobile optimizations
     if (isMobile) {
       map.dragging.enable();
       map.touchZoom.enable();
@@ -80,7 +63,6 @@ export const MapController: React.FC<MapControllerProps> = ({
       if (map.tap) map.tap.enable();
     }
     
-    // Optimize panes for better performance
     for (const key in map._panes) {
       if (map._panes[key] && map._panes[key].style) {
         map._panes[key].style.willChange = 'transform';
@@ -90,17 +72,16 @@ export const MapController: React.FC<MapControllerProps> = ({
     
     window.addEventListener('resize', handleMapInvalidation);
     
-    // Only set initial view once and only if not disabled
-    if (userLocation && firstRenderRef.current && !initialViewSetRef.current && !disableAutoCenter) {
+    // Only center map on first render with user location
+    if (userLocation && firstRenderRef.current) {
       map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
       firstRenderRef.current = false;
-      initialViewSetRef.current = true;
     }
     
     return () => {
       window.removeEventListener('resize', handleMapInvalidation);
     };
-  }, [map, userLocation, isMobile, disableAutoZoom, disableAutoCenter]);
+  }, [map, userLocation, isMobile]);
 
   return null;
 };

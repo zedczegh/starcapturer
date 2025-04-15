@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { preloadCertifiedLocations, getAllCertifiedLocations, forceCertifiedLocationsRefresh } from '@/services/certifiedLocationsService';
+import { preloadCertifiedLocations, getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 /**
  * Hook for efficiently loading certified locations with preloading capabilities
@@ -51,12 +51,6 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
           setCertifiedLocations(locations);
           setLoadingProgress(100);
           setIsLoading(false);
-          
-          // Debug log to check data
-          console.log(`Loaded ${locations.length} certified locations from API/cache`);
-          if (locations.length > 0) {
-            console.log('Sample certified location:', locations[0]);
-          }
         }
       } catch (error) {
         console.error("Error loading certified locations:", error);
@@ -105,12 +99,10 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
     setLoadingProgress(10);
     
     try {
-      // Use forceCertifiedLocationsRefresh to clear cache and get fresh data
-      const freshLocations = await forceCertifiedLocationsRefresh();
+      const freshLocations = await getAllCertifiedLocations();
       setCertifiedLocations(freshLocations);
       setLoadingProgress(100);
       setIsLoading(false);
-      console.log(`Refreshed ${freshLocations.length} certified locations`);
     } catch (error) {
       console.error("Error refreshing certified locations:", error);
       setIsError(true);

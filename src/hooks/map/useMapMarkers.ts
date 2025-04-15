@@ -1,11 +1,7 @@
+
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMapTouchInteractions } from './useMapTouchInteractions';
-
-interface TouchPosition {
-  x: number;
-  y: number;
-}
 
 /**
  * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
@@ -19,7 +15,7 @@ export const useMapMarkers = () => {
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHoverId = useRef<string | null>(null);
   const hoverTimestamp = useRef<number>(0);
-  const touchStartPos = useRef<TouchPosition | null>(null);
+  const touchStartPos = useRef<{x: number, y: number} | null>(null);
   
   // Check if on mobile device
   const isMobile = useIsMobile();
@@ -82,13 +78,11 @@ export const useMapMarkers = () => {
     }
   }, [isMobile]);
 
-  /**
-   * Handle touch start event for better touch interaction
-   */
-  const handleTouchStart = useCallback((e: React.TouchEvent<Element>, id: string) => {
-    if (!isMobile) return;
-    
-    // Store touch position to determine if it's a tap or drag later
+  // Get touch interaction handlers
+  const { handleTouchStart: baseHandleTouchStart, handleTouchEnd, handleTouchMove: baseHandleTouchMove } = useMapTouchInteractions(handleHover);
+  
+  // Wrap touch start to capture position
+  const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
     if (e.touches && e.touches[0]) {
       touchStartPos.current = {
         x: e.touches[0].clientX,
@@ -96,49 +90,13 @@ export const useMapMarkers = () => {
       };
     }
     
-    // Prevent default to avoid double-firing issues on some mobile browsers
-    e.stopPropagation();
-    
-    // Immediately show hover state on touch start
-    handleHover(id);
-  }, [isMobile, handleHover]);
+    baseHandleTouchStart(e, id);
+  }, [baseHandleTouchStart]);
   
-  /**
-   * Handle touch end event for better touch interaction
-   */
-  const handleTouchEnd = useCallback((e: React.TouchEvent<Element>) => {
-    if (!isMobile) return;
-    
-    // Prevent default behaviors
-    e.stopPropagation();
-    
-    // Keep hover state visible significantly longer on mobile
-    // This gives users enough time to read and interact with the popup
-    setTimeout(() => {
-      handleHover(null);
-    }, 5000); // Increased from 2500ms to 5000ms (5 seconds) for better interaction time
-    
-    touchStartPos.current = null;
-  }, [isMobile, handleHover]);
-  
-  /**
-   * Handle touch move to detect dragging vs tapping
-   */
-  const handleTouchMove = useCallback((e: React.TouchEvent<Element>) => {
-    if (!isMobile || !touchStartPos.current) return;
-    
-    if (e.touches && e.touches[0]) {
-      const moveX = Math.abs(e.touches[0].clientX - touchStartPos.current.x);
-      const moveY = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
-      
-      // If moved more than threshold, consider it a drag and clear hover
-      // Increased threshold for better touch control
-      if (moveX > 20 || moveY > 20) {
-        handleHover(null);
-        touchStartPos.current = null;
-      }
-    }
-  }, [isMobile, handleHover]);
+  // Wrap touch move to use captured position
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    touchStartPos.current = baseHandleTouchMove(e, touchStartPos.current);
+  }, [baseHandleTouchMove]);
   
   return {
     hoveredLocationId,
