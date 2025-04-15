@@ -2,7 +2,6 @@
 import React from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
-import SiqsEffectsController from './SiqsEffectsController';
 
 interface MapEffectsComposerProps {
   userLocation?: { latitude: number; longitude: number } | null;
@@ -12,8 +11,7 @@ interface MapEffectsComposerProps {
 }
 
 /**
- * Composes multiple map effects into a single component
- * IMPORTANT: This component must never conditionally render components that use hooks
+ * Simplified map effects composer with reduced visual effects for better mobile performance
  */
 const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
   userLocation,
@@ -26,20 +24,8 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   
   return (
     <>
-      {/* Apply world bounds limit */}
+      {/* Apply world bounds limit only - removed other effects */}
       <WorldBoundsController />
-      
-      {/* 
-        Always render SiqsEffectsController, but pass disabled prop 
-        when necessary to prevent internal calculations
-      */}
-      <SiqsEffectsController 
-        userLocation={userLocation || null}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        onSiqsCalculated={onSiqsCalculated}
-        disabled={!userLocation}
-      />
     </>
   );
 };

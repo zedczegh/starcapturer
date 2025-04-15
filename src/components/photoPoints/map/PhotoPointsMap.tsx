@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
@@ -37,6 +36,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   
   const { 
     hoveredLocationId, 
@@ -62,6 +62,27 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     activeView
   });
   
+  // Filter out some locations on mobile for better performance
+  const optimizedLocations = useMemo(() => {
+    if (!isMobile) return validLocations;
+    
+    // For mobile, limit the number of displayed locations
+    if (validLocations.length <= 30) return validLocations;
+    
+    // Always keep certified locations
+    const certified = validLocations.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    );
+    
+    // For non-certified locations, if we have too many, sample them
+    const nonCertified = validLocations
+      .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
+      .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
+      .slice(0, 50); // Hard limit for performance
+    
+    return [...certified, ...nonCertified];
+  }, [validLocations, isMobile, activeView]);
+  
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -76,12 +97,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
+  // Debounced map click handler to prevent rapid location changes
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
+    if (onLocationUpdate && !isUpdatingLocation) {
+      setIsUpdatingLocation(true);
       console.log("Setting new location from map click:", lat, lng);
+      
+      // Call the location update and reset the updating state after a delay
+      onLocationUpdate(lat, lng);
+      
+      // Prevent multiple updates in quick succession
+      setTimeout(() => {
+        setIsUpdatingLocation(false);
+      }, 1000);
     }
-  }, [onLocationUpdate]);
+  }, [onLocationUpdate, isUpdatingLocation]);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -92,20 +122,28 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   }, [onLocationClick, handleLocationClick]);
   
   const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation) {
+    if (onLocationUpdate && navigator.geolocation && !isUpdatingLocation) {
+      setIsUpdatingLocation(true);
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           onLocationUpdate(latitude, longitude);
           console.log("Got user position:", latitude, longitude);
+          
+          // Reset updating state after delay
+          setTimeout(() => {
+            setIsUpdatingLocation(false);
+          }, 1000);
         },
         (error) => {
           console.error("Error getting location:", error.message);
+          setIsUpdatingLocation(false);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
-  }, [onLocationUpdate]);
+  }, [onLocationUpdate, isUpdatingLocation]);
   
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
@@ -122,17 +160,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         </div>
       )}
       
-      {/* Only show certified locations loading message when in certified view */}
-      {activeView === 'certified' && certifiedLocationsLoading && !certifiedLocationsLoaded && (
-        <div className="absolute top-4 left-0 right-0 mx-auto w-auto max-w-xs z-30 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md text-center text-sm text-muted-foreground">
-          {t("Loading certified locations...", "正在加载认证地点...")}
-        </div>
-      )}
-      
       <LazyMapContainer
         center={mapCenter}
         userLocation={userLocation}
-        locations={validLocations}
+        locations={optimizedLocations}
         searchRadius={searchRadius}
         activeView={activeView}
         onMapReady={handleMapReady}
@@ -145,23 +176,25 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         handleTouchEnd={handleTouchEnd}
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
-        useMobileMapFixer={true}
-        showRadiusCircles={activeView === 'calculated'}
+        useMobileMapFixer={false} // Disable mobile fixer which causes flashing
+        showRadiusCircles={activeView === 'calculated' && !isMobile} // Disable radius circles on mobile
       />
       
-      <MapLegend 
-        activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
-        onToggle={handleLegendToggle}
-        className="absolute bottom-4 right-4"
-      />
+      {!isMobile && (
+        <MapLegend 
+          activeView={activeView} 
+          showStarLegend={activeView === 'certified'}
+          showCircleLegend={activeView === 'calculated'}
+          onToggle={handleLegendToggle}
+          className="absolute bottom-4 right-4"
+        />
+      )}
       
       {!legendOpen && (
         <CenteringPinpointButton 
           onGetLocation={handleGetLocation}
           userLocation={userLocation}
-          className="absolute top-4 right-4"
+          className={`absolute ${isMobile ? 'bottom-4 right-4' : 'top-4 right-4'}`}
         />
       )}
     </div>
