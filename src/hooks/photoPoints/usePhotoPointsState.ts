@@ -4,7 +4,7 @@ import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 // Default radius constants
-const DEFAULT_CALCULATED_RADIUS = 500; // Changed from 100 to 500km 
+const DEFAULT_CALCULATED_RADIUS = 500; // 500km for calculated spots
 const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
 
 export function usePhotoPointsState() {

@@ -1,4 +1,3 @@
-
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -416,17 +415,16 @@ function combineWithIDACertifiedLocations(
         );
         
         if (distance <= radius) {
-          // Create a new location entry
+          // Create a new location entry with valid properties
           additionalLocations.push({
             id: `ida-${idaLoc.name.replace(/\s+/g, '-').toLowerCase()}`,
             name: idaLoc.name,
             latitude: idaLoc.lat,
             longitude: idaLoc.lng,
-            bortleScale: idaLoc.bortleScale || 2, // Use provided Bortle scale or default to 2
-            siqs: 10 - (idaLoc.bortleScale || 2), // Convert Bortle to approximate SIQS
+            bortleScale: idaLoc.bortleScale || 2,
+            siqs: 10 - (idaLoc.bortleScale || 2),
             isDarkSkyReserve: idaLoc.type === "Dark Sky Reserve" || idaLoc.type === "Dark Sky Sanctuary",
             certification: `International ${idaLoc.type}`,
-            description: `An International Dark Sky Association certified ${idaLoc.type}.`,
             distance: distance,
             timestamp: new Date().toISOString()
           });
