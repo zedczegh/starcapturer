@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,9 +10,10 @@ import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
+import PinpointButton from './PinpointButton';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
 import L from 'leaflet';
-import CenteringPinpointButton from './CenteringPinpointButton';
 
 configureLeaflet();
 
@@ -240,18 +240,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             showCircleLegend={activeView === 'calculated'}
           />
         )}
+        <PinpointButton 
+          onGetLocation={() => {
+            if (userLocation && mapRef.current) {
+              mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom());
+            }
+          }}
+        />
       </div>
-      
-      {/* Relocate CenteringPinpointButton to top-right corner */}
-      <CenteringPinpointButton
-        onGetLocation={() => {
-          if (userLocation && mapRef.current) {
-            mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom());
-          }
-        }}
-        userLocation={userLocation}
-        className="absolute top-4 right-4 z-[999]"
-      />
     </div>
   );
 };
