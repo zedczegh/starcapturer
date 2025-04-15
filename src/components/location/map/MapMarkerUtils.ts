@@ -36,7 +36,7 @@ export const configureLeaflet = () => {
  */
 export const createCustomMarker = (
   color: string = '#3b82f6', 
-  shape: 'circle' | 'star' | undefined = undefined,
+  shape: 'circle' | 'star' = 'circle',
   sizeMultiplier: number = 1.0
 ): L.DivIcon => {
   // Base size for markers, can be scaled for mobile devices

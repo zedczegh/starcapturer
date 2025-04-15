@@ -45,7 +45,7 @@ const CertificationBadge: React.FC<CertificationBadgeProps> = ({
 };
 
 // Helper function to get certification info
-function getCertificationInfo({ certification, isDarkSkyReserve, type }: { 
+export function getCertificationInfo({ certification, isDarkSkyReserve, type }: { 
   certification?: string; 
   isDarkSkyReserve?: boolean;
   type?: string;
@@ -96,7 +96,7 @@ function getCertificationInfo({ certification, isDarkSkyReserve, type }: {
 }
 
 // Helper function to get localized certification text
-function getLocalizedCertText(certInfo: CertificationInfo, language: Language): string {
+export function getLocalizedCertText(certInfo: CertificationInfo, language: Language): string {
   if (!certInfo) return '';
   
   const certText = certInfo.text;

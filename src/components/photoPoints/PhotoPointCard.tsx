@@ -6,7 +6,7 @@ import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSIQSScore } from "@/utils/geoUtils";
-import { getCertificationInfo, getLocalizedCertText } from "./utils/certificationUtils";
+import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -50,10 +50,10 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
     if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+      return t(`${Math.round(distance * 1000)} m`, `${Math.round(distance * 1000)} 米`);
     if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
+      return t(`${Math.round(distance)} km`, `${Math.round(distance)} 公里`);
+    return t(`${Math.round(distance / 100) * 100} km`, `${Math.round(distance / 100) * 100} 公里`);
   };
 
   const getLocationId = () => {
