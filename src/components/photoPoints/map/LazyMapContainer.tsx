@@ -69,6 +69,20 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     if (onMapClick) onMapClick(lat, lng);
   }, [onMapClick]);
 
+  // MapEffects component to handle map effects
+  const MapEffects = () => {
+    useMapEffects(searchRadius, userLocation);
+    return null;
+  };
+
+  // MapEventHandler component to handle map events
+  const MapEventHandler = () => {
+    if (onMapClick) {
+      useMapEvents(handleMapClickEvent);
+    }
+    return null;
+  };
+
   return (
     <MapContainer
       center={center}
@@ -84,7 +98,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {useMapEffects(searchRadius, userLocation)}
+      <MapEffects />
       
       {showRadiusCircles && userLocation && (
         <Circle
@@ -137,11 +151,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         />
       )}
       
-      {onMapClick && (
-        <div onClick={() => {}} style={{ display: 'none' }}>
-          {useMapEvents(handleMapClickEvent)}
-        </div>
-      )}
+      <MapEventHandler />
       
       <MapController 
         userLocation={userLocation} 

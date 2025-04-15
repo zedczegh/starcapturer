@@ -74,7 +74,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
       return createCustomMarker(certColor, 'star', sizeMultiplier);
     } else {
       const defaultColor = '#4ADE80';
-      const color = location.siqs ? (typeof location.siqs === 'number' ? String(location.siqs) : location.siqs) : defaultColor;
+      const color = location.siqs ? String(location.siqs) : defaultColor;
       return createCustomMarker(color, 'circle', sizeMultiplier);
     }
   }, [location, isCertified, isMobile]);
@@ -87,11 +87,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
+      onClick={handleClick}
+      onMouseover={handleMouseOver}
+      onMouseout={handleMouseOut}
     >
       <Popup closeOnClick={false} autoClose={false}>
         <MarkerPopupContent
