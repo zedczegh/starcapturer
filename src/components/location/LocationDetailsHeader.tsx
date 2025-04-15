@@ -5,6 +5,7 @@ import { Sparkles, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocationDetailsService } from "./header/LocationDetailsService";
 import NavigationButtons from "./navigation/NavigationButtons";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LocationDetailsHeaderProps {
   name?: string;
