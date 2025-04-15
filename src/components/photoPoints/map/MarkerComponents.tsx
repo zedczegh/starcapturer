@@ -1,22 +1,69 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import { formatDistance } from '@/utils/geoUtils';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
-import { formatDistance } from '@/utils/geoUtils';
-import { 
-  getSiqsClass, 
-  getLocationMarker, 
-  isWaterSpot, 
-  isValidAstronomyLocation
-} from './MarkerUtils';
-import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
+import { prepareLocationForNavigation } from '@/utils/locationNavigation';
+
+// Helper function to determine if a location is a water spot
+const isWaterSpot = (location: SharedAstroSpot): boolean => {
+  // IMPORTANT: Never filter out certified locations regardless of water detection
+  if (location.isDarkSkyReserve || location.certification) {
+    return false;
+  }
+  
+  // Only apply water detection to non-certified locations
+  if (isWaterLocation(location.latitude, location.longitude, false)) {
+    return true;
+  }
+  
+  if (isLikelyCoastalWater(location.latitude, location.longitude)) {
+    return true;
+  }
+  
+  if (location.name) {
+    const lowerName = location.name.toLowerCase();
+    const waterKeywords = [
+      'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
+      'channel', 'sound', 'harbor', 'harbour', 'port', 
+      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
+      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
+    ];
+    
+    for (const keyword of waterKeywords) {
+      if (lowerName.includes(keyword)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+};
+
+// Get marker for location
+const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean) => {
+  const sizeMultiplier = isMobile ? 1.2 : 1.0;
+  
+  if (isCertified) {
+    // Use the marker utils function to get the correct certification color
+    const certColor = getCertificationColor(location);
+    return createCustomMarker(certColor, 'star', sizeMultiplier);
+  } else {
+    const defaultColor = '#4ADE80'; // Bright green fallback
+    const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
+    return createCustomMarker(color, 'circle', sizeMultiplier);
+  }
+};
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -48,32 +95,31 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const isMobile = useIsMobile();
   
-  const displayName = useMemo(() => {
-    return language === 'zh' && location.chineseName 
-      ? location.chineseName 
-      : location.name || t("Unnamed Location", "未命名位置");
-  }, [language, location.chineseName, location.name, t]);
+  const displayName = language === 'zh' && location.chineseName 
+    ? location.chineseName 
+    : location.name;
     
-  // Fix TS error by safely handling null siqsScore
-  const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
-    (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
+  const siqsClass = getSiqsClass(location.siqs);
   
-  const siqsClass = getSiqsClass(siqsScore);
+  // Add debug logging for community markers
+  useEffect(() => {
+    if (isCertified && location.certification && location.certification.toLowerCase().includes('community')) {
+      console.log("Rendering community:", location.name, "with certification:", location.certification, "color:", getCertificationColor(location));
+    }
+  }, [location, isCertified]);
   
-  // Don't show certified locations in calculated view unless they are actively displayed
   const shouldRender = useMemo(() => {
-    // In certified view, only show certified locations
-    if (activeView === 'certified') {
-      return isCertified;
-    }
-    
-    // In calculated view...
-    // Always show certified locations if the location is certified
+    // IMPORTANT: Always show certified locations in all views
     if (isCertified) {
-      return true; 
+      return true;
     }
     
-    // For non-certified locations, filter out water
+    // For certified view, ONLY show certified locations
+    if (activeView === 'certified') {
+      return false;
+    }
+    
+    // For calculated view, filter water spots (but never filter certified locations)
     if (isWaterSpot(location)) {
       return false;
     }
@@ -88,6 +134,61 @@ const LocationMarker = memo(({
   const icon = useMemo(() => {
     return getLocationMarker(location, isCertified, isHovered, isMobile);
   }, [location, isCertified, isHovered, isMobile]);
+  
+  // For debugging
+  useEffect(() => {
+    if (isCertified) {
+      console.log(`Rendering certified location: ${location.name}, certification: ${location.certification}, isDarkSkyReserve: ${location.isDarkSkyReserve}, shouldRender: ${shouldRender}`);
+    }
+  }, [location, isCertified, shouldRender]);
+  
+  const handleClick = useCallback(() => {
+    onClick(location);
+  }, [location, onClick]);
+  
+  const handleMouseOver = useCallback(() => {
+    onHover(locationId);
+    
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.add('hovered');
+    }
+  }, [locationId, onHover]);
+  
+  const handleMouseOut = useCallback(() => {
+    onHover(null);
+    
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.remove('hovered');
+    }
+  }, [onHover]);
+  
+  const handleMarkerTouchStart = useCallback((e: TouchEvent) => {
+    if (handleTouchStart) {
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchStart(syntheticEvent, locationId);
+    }
+    
+    const marker = markerRef.current;
+    if (marker && marker.getElement()) {
+      marker.getElement()?.classList.add('hovered');
+    }
+  }, [locationId, handleTouchStart]);
+  
+  const handleMarkerTouchEnd = useCallback((e: TouchEvent) => {
+    if (handleTouchEnd) {
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchEnd(syntheticEvent, locationId);
+    }
+  }, [locationId, handleTouchEnd]);
+  
+  const handleMarkerTouchMove = useCallback((e: TouchEvent) => {
+    if (handleTouchMove) {
+      const syntheticEvent = e as unknown as React.TouchEvent;
+      handleTouchMove(syntheticEvent);
+    }
+  }, [handleTouchMove]);
   
   useEffect(() => {
     const marker = markerRef.current;
@@ -116,65 +217,14 @@ const LocationMarker = memo(({
   }, [isHovered, isMobile]);
   
   const goToLocationDetails = useCallback(() => {
-    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    const navigationData = prepareLocationForNavigation(location);
     
-    // Handle the siqs value safely
-    const siqsScore = location.siqs !== undefined && location.siqs !== null ?
-      (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
-    
-    const navigationData = {
-      id: locationId,
-      name: location.name || 'Unnamed Location',
-      chineseName: location.chineseName || '',
-      latitude: location.latitude,
-      longitude: location.longitude,
-      bortleScale: location.bortleScale || 4,
-      siqs: location.siqs,
-      timestamp: new Date().toISOString(),
-      fromPhotoPoints: true,
-      isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
-      certification: location.certification || '',
-      siqsResult: location.siqs ? { 
-        score: typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0,
-        isViable: typeof location.siqs === 'object' ? (location.siqs as any)?.isViable : (siqsScore !== null && siqsScore >= 2)
-      } : undefined
-    };
-    
-    navigate(`/location/${locationId}`, { 
-      state: navigationData 
-    });
+    if (navigationData) {
+      navigate(`/location/${navigationData.locationId}`, { 
+        state: navigationData.locationState 
+      });
+    }
   }, [location, navigate]);
-  
-  const handleClick = useCallback(() => {
-    onClick(location);
-  }, [location, onClick]);
-  
-  const handleMouseOver = useCallback(() => {
-    onHover(locationId);
-  }, [locationId, onHover]);
-  
-  const handleMouseOut = useCallback(() => {
-    onHover(null);
-  }, [onHover]);
-  
-  // Touch event handlers
-  const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
-    if (handleTouchStart) {
-      handleTouchStart(e, locationId);
-    }
-  }, [handleTouchStart, locationId]);
-  
-  const handleMarkerTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (handleTouchEnd) {
-      handleTouchEnd(e, locationId);
-    }
-  }, [handleTouchEnd, locationId]);
-  
-  const handleMarkerTouchMove = useCallback((e: React.TouchEvent) => {
-    if (handleTouchMove) {
-      handleTouchMove(e);
-    }
-  }, [handleTouchMove]);
   
   if (!shouldRender) {
     return null;
@@ -226,9 +276,9 @@ const LocationMarker = memo(({
           )}
           
           <div className="mt-2 flex items-center justify-between">
-            {location.siqs !== undefined && location.siqs !== null && (
+            {location.siqs !== undefined && (
               <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0} compact={true} />
+                <SiqsScoreBadge score={location.siqs} compact={true} />
               </div>
             )}
             
@@ -266,8 +316,7 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Import and use createCustomMarker function
-  const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
+  const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
   
   return (
     <Marker position={position} icon={userMarkerIcon}>

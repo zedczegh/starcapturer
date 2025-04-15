@@ -4,9 +4,10 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
-import { formatSIQSScore, formatDistance } from '@/utils/geoUtils';
+import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
-import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { formatDistance } from '@/utils/location/formatDistance';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -43,13 +44,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
-        {/* Consistent SIQS badge for all location types */}
-        {location.siqs !== undefined && (
-          <SiqsScoreBadge score={location.siqs || 0} compact={true} />
-        )}
-        
-        {/* Fallback if SiqsScoreBadge doesn't render */}
-        {location.siqs > 0 && !location.siqs && (
+        {location.siqs > 0 && (
           <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full border border-yellow-500/40">
             <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
             <span className="text-xs font-medium">{formatSIQSScore(location.siqs)}</span>
@@ -94,7 +89,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
         <div className="flex items-center mb-2">
           <Navigation className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {formatDistance(location.distance)}
+            {formatDistance(location.distance, language)}
           </span>
         </div>
       )}

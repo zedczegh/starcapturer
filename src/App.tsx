@@ -2,7 +2,7 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster"; // Using the regular Toaster
+import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense, useMemo } from "react";
 
@@ -12,7 +12,7 @@ import { prefetchPopularLocations } from "./lib/queryPrefetcher";
 import PageLoader from "./components/loaders/PageLoader";
 
 // Lazily load pages with improved chunking for faster initial load
-const IndexPage = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
+const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
 const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
 const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
 const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */ "./pages/ShareLocation"));
@@ -72,7 +72,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={
                   <PageTransition>
-                    <IndexPage />
+                    <Index />
                   </PageTransition>
                 } />
                 <Route path="/location/:id" element={

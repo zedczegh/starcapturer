@@ -1,15 +1,6 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
-import { isValidAstronomyLocation } from "@/utils/locationValidator";
-
-// Define a proper type for SIQS format
-interface SiqsObject {
-  score: number;
-  isViable?: boolean;
-}
-
-type Siqs = number | SiqsObject;
+import { isWaterLocation } from "@/utils/locationValidator";
 
 /**
  * Efficiently filter locations by quality and distance
@@ -51,22 +42,12 @@ export function filterLocationsByQualityAndDistance(
     }
     
     // Filter out water locations for calculated spots
-    if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
-      console.log(`Filtered out water location: ${location.name || `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`}`);
+    if (isWaterLocation(location.latitude, location.longitude)) {
       return false;
     }
     
-    // Filter by quality - safely handle different SIQS formats
-    let siqs: number;
-    if (typeof location.siqs === 'number') {
-      siqs = location.siqs;
-    } else if (location.siqs && typeof location.siqs === 'object') {
-      siqs = (location.siqs as SiqsObject).score;
-    } else {
-      siqs = 0;
-    }
-    
-    if (siqs < qualityThreshold) {
+    // Filter by quality
+    if (typeof location.siqs === 'number' && location.siqs < qualityThreshold) {
       return false;
     }
     
@@ -113,29 +94,8 @@ export function sortLocationsByQualityAndDistance(
     }
     
     // Then sort by SIQS score
-    let siqsA: number;
-    let siqsB: number;
-    
-    // Safely get SIQS A
-    if (typeof a.siqs === 'number') {
-      siqsA = a.siqs;
-    } else if (a.siqs && typeof a.siqs === 'object') {
-      siqsA = (a.siqs as SiqsObject).score;
-    } else {
-      siqsA = 0;
-    }
-    
-    // Safely get SIQS B
-    if (typeof b.siqs === 'number') {
-      siqsB = b.siqs;
-    } else if (b.siqs && typeof b.siqs === 'object') {
-      siqsB = (b.siqs as SiqsObject).score;
-    } else {
-      siqsB = 0;
-    }
-    
-    if (siqsA !== siqsB) {
-      return siqsB - siqsA;
+    if ((a.siqs || 0) !== (b.siqs || 0)) {
+      return (b.siqs || 0) - (a.siqs || 0);
     }
     
     // Then sort by distance

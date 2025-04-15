@@ -10,7 +10,7 @@ import Footer from "@/components/index/Footer";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
 
-const IndexPage = () => {
+const Index = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -113,5 +113,4 @@ const IndexPage = () => {
   );
 };
 
-// Export the component as default
-export default IndexPage;
+export default Index;

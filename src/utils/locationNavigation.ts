@@ -1,94 +1,47 @@
 
-import { SharedAstroSpot } from "@/types/weather";
-import { saveLocationFromPhotoPoints } from "@/utils/locationStorage";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Prepare location data for navigation to ensure consistent state objects
- * @param location Location data to prepare
- * @returns Consistent location ID and state object for navigation
+ * Prepares a location object for navigation to details page
+ * Ensures all required data is present and properly formatted
+ * 
+ * @param location The location object to prepare
+ * @returns A sanitized location object ready for navigation
  */
 export function prepareLocationForNavigation(location: SharedAstroSpot) {
-  if (!location || !location.latitude || !location.longitude) {
-    console.error("Cannot navigate with invalid location data", location);
-    return null;
-  }
+  if (!location) return null;
   
-  // Generate a consistent ID for the location
-  const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-  
-  // Handle siqs data safely
-  const siqsValue = typeof location.siqs === 'number' 
-    ? location.siqs 
-    : typeof location.siqs === 'object' && location.siqs !== null 
-      ? location.siqs.score 
-      : undefined;
+  // Create a unique, stable location ID
+  const locationId = location.id || 
+    (location.latitude && location.longitude 
+      ? `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`
+      : `loc-${Date.now()}`);
       
-  const isViableValue = typeof location.siqs === 'object' && location.siqs !== null 
-    ? location.siqs.isViable 
-    : typeof siqsValue === 'number' 
-      ? siqsValue >= 2 
-      : undefined;
-  
-  // Create a robust location data object with all necessary fields
-  const locationData = {
+  // Create a complete state object with all required properties
+  const safeLocationState = {
     id: locationId,
     name: location.name || 'Unnamed Location',
     chineseName: location.chineseName || '',
     latitude: location.latitude,
     longitude: location.longitude,
     bortleScale: location.bortleScale || 4,
-    siqs: siqsValue,
-    timestamp: new Date().toISOString(),
-    fromPhotoPoints: true,
-    isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
+    siqs: location.siqs || null,
+    siqsResult: location.siqs ? { score: location.siqs } : undefined,
     certification: location.certification || '',
-    // Important: Create a stable siqsResult structure if we have a siqs score or an existing siqsResult
-    siqsResult: location.siqsResult || (siqsValue !== undefined ? {
-      score: siqsValue,
-      isViable: isViableValue || false,
-      factors: []
-    } : undefined)
+    isDarkSkyReserve: !!location.isDarkSkyReserve,
+    timestamp: new Date().toISOString(),
+    fromPhotoPoints: true
   };
   
-  // Save location data to localStorage for better state persistence
-  saveLocationFromPhotoPoints(locationData);
+  // Store in localStorage as backup in case state is lost during navigation
+  try {
+    localStorage.setItem(`location_${locationId}`, JSON.stringify(safeLocationState));
+  } catch (error) {
+    console.error("Error saving location to localStorage:", error);
+  }
   
   return {
     locationId,
-    locationState: locationData
+    locationState: safeLocationState
   };
-}
-
-/**
- * Extract valid SIQS data from potentially inconsistent sources
- * @param siqsData Raw SIQS data that might be inconsistent
- * @returns Normalized SIQS data structure
- */
-export function normalizeSiqsData(siqsData: any) {
-  if (!siqsData) return null;
-  
-  // Handle case where siqsData is just a number
-  if (typeof siqsData === 'number') {
-    return {
-      score: siqsData,
-      isViable: siqsData >= 2,
-      factors: []
-    };
-  }
-  
-  // Handle case where siqsData is an object with a score property
-  if (typeof siqsData === 'object' && siqsData.score !== undefined) {
-    return {
-      score: siqsData.score,
-      isViable: siqsData.isViable !== undefined ? siqsData.isViable : (siqsData.score >= 2),
-      factors: Array.isArray(siqsData.factors) ? siqsData.factors : []
-    };
-  }
-  
-  // Handle case where siqsData has a siqsResult property
-  if (typeof siqsData === 'object' && siqsData.siqsResult) {
-    return normalizeSiqsData(siqsData.siqsResult);
-  }
-  
-  return null;
 }

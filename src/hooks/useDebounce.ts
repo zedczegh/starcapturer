@@ -9,7 +9,7 @@ import useEnhancedDebounce from './useEnhancedDebounce';
  * @param delay The delay in milliseconds
  * @returns The debounced value
  */
-export function useDebounce<T>(value: T, delay: number = 500): T {
+function useDebounce<T>(value: T, delay: number = 500): T {
   return useEnhancedDebounce(value, delay, {
     shortDelay: 10,
     mediumDelay: 20,

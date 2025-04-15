@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -23,7 +24,7 @@ interface PhotoPointsViewProps {
   loadMore: () => void;
   refreshSiqs: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (location: SharedAstroSpot) => void; // Modified to accept SharedAstroSpot instead of lat/lng
+  onLocationUpdate: (latitude: number, longitude: number) => void;
   canLoadMoreCalculated: boolean;
   loadMoreCalculated: () => void;
   loadMoreClickCount: number;
@@ -98,15 +99,16 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
-  // Debugging outputs
+  // Console output for debugging
   useEffect(() => {
-    console.log(`PhotoPointsView rendering`);
-    console.log(`- Active view: ${activeView}`);
-    console.log(`- Certified locations: ${certifiedLocations?.length || 0}`);
-    console.log(`- Calculated locations: ${calculatedLocations?.length || 0}`);
-    console.log(`- Show map: ${showMap}`);
-    console.log(`- Search radius: ${searchRadius}`);
-  }, [activeView, certifiedLocations, calculatedLocations, showMap, searchRadius]);
+    console.log(`PhotoPointsView - Certified locations count: ${certifiedLocations?.length || 0}`);
+    console.log(`PhotoPointsView - Active view: ${activeView}`);
+    
+    if (certifiedLocations?.length > 0) {
+      // Log a sample of certified locations for debugging
+      console.log(`Sample certified location: ${JSON.stringify(certifiedLocations[0])}`);
+    }
+  }, [certifiedLocations, activeView]);
   
   // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
@@ -124,8 +126,12 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
         <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
-            searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
+            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            certifiedLocations={certifiedLocations}
+            calculatedLocations={calculatedLocations}
             activeView={activeView}
+            searchRadius={searchRadius}
+            onLocationClick={handleLocationClick}
             onLocationUpdate={onLocationUpdate}
           />
         </div>

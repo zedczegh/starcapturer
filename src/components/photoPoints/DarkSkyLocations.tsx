@@ -1,10 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import LocationView from './location-display/LocationView';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
-import { useCertifiedLocationsFilter } from '@/hooks/photoPoints/useCertifiedLocationsFilter';
 
 interface DarkSkyLocationsProps {
   locations: SharedAstroSpot[];
@@ -20,8 +19,54 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedCertificationType, setSelectedCertificationType] = useState<CertificationType>('all');
   
-  // Use custom hook for filtering certified locations
-  const { filteredLocations } = useCertifiedLocationsFilter(locations, selectedCertificationType);
+  // Debug logging for certified locations
+  useEffect(() => {
+    console.log(`DarkSkyLocations received ${locations.length} certified locations`);
+    
+    if (locations.length > 0) {
+      // Log the first few locations for debugging
+      const sampleLocations = locations.slice(0, Math.min(3, locations.length));
+      console.log("Sample certified locations:", sampleLocations.map(loc => ({
+        name: loc.name,
+        cert: loc.certification,
+        isDarkSky: loc.isDarkSkyReserve
+      })));
+    }
+  }, [locations]);
+  
+  // Filter locations based on selected certification type
+  const filteredLocations = useMemo(() => {
+    if (selectedCertificationType === 'all') {
+      return locations;
+    }
+    
+    return locations.filter(location => {
+      // Never filter out locations that have a certification or are dark sky reserves
+      if (!location.certification && !location.isDarkSkyReserve) {
+        return false;
+      }
+      
+      const certification = (location.certification || '').toLowerCase();
+      
+      switch (selectedCertificationType) {
+        case 'reserve':
+          return certification.includes('reserve') || 
+                 certification.includes('sanctuary') ||
+                 Boolean(location.isDarkSkyReserve);
+        case 'park':
+          return certification.includes('park');
+        case 'community':
+          return certification.includes('community');
+        case 'urban':
+          return certification.includes('urban') || 
+                 certification.includes('night sky place');
+        case 'lodging':
+          return certification.includes('lodging');
+        default:
+          return true;
+      }
+    });
+  }, [locations, selectedCertificationType]);
   
   return (
     <div>

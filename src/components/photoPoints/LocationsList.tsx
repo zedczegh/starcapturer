@@ -21,23 +21,22 @@ const LocationsList: React.FC<LocationsListProps> = ({
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Update locations with real-time SIQS - no distance filtering
+  // Update certified locations with real-time SIQS
   useEffect(() => {
     if (locations.length > 0) {
       const updateWithSiqs = async () => {
         try {
-          // Always process ALL locations without distance filtering
-          // This is critical for displaying certified locations
+          // Apply real-time SIQS to all locations including certified ones
           const updated = await updateLocationsWithRealTimeSiqs(
             locations,
-            null, 
-            100000,
+            null, // We don't need user location for certified locations
+            100000, // Large radius to include all certified locations
             'certified'
           );
-          console.log(`LocationsList: Enhanced ${updated.length} locations with SIQS data`);
           setEnhancedLocations(updated);
         } catch (err) {
           console.error("Error updating locations with real-time SIQS:", err);
+          // Fallback to original locations
           setEnhancedLocations(locations);
         }
       };
@@ -64,7 +63,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
             <PhotoPointCard
               point={location}
               onViewDetails={onViewDetails}
-              userLocation={null} // Explicitly null to avoid distance filtering
+              userLocation={null} // This doesn't use current location for distance
             />
           </motion.div>
         ))}
