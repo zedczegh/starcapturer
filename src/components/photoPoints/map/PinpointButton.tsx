@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { useMap } from 'react-leaflet';
+
+// Remove useMap import since we're not using it directly here
+// This prevents potential errors when used outside MapContainer context
 
 interface PinpointButtonProps {
   onGetLocation: () => void;
@@ -19,7 +21,6 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
 }) => {
   const { t } = useLanguage();
   const [isClicking, setIsClicking] = useState(false);
-  const map = useMap();
   
   // Function to prevent event propagation
   const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {

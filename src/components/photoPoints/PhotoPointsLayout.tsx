@@ -38,8 +38,8 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
           
           <motion.div 
             className="mt-12 text-center space-y-6 bg-cosmic-900/60 backdrop-blur-sm p-6 rounded-xl border border-cosmic-700/30 relative overflow-hidden"
-            initial="hidden"
-            animate="visible"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             variants={{
               hidden: { opacity: 0 },
               visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.3 } }
@@ -101,9 +101,6 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
               
               <div 
                 className="text-xs text-cosmic-400 mt-6 pt-4 border-t border-cosmic-700/20"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
               >
                 {t("Bortle Now © 2025 — Making astronomical observation accessible for everyone", "Bortle Now © 2025 — 让天文观测人人可及")}
               </div>
@@ -116,4 +113,3 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
 };
 
 export default PhotoPointsLayout;
-
