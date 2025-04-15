@@ -5,6 +5,7 @@ import L from 'leaflet';
 
 interface MapEffectsControllerProps {
   onMapClick: (lat: number, lng: number) => void;
+  disableAutoZoom?: boolean;
 }
 
 // More forgiving world bounds controller with no auto-zoom
@@ -69,13 +70,19 @@ export const WorldBoundsController: React.FC = () => {
   return null;
 };
 
-export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) => {
+export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick, disableAutoZoom = true }) => {
   const map = useMap();
   const clickHandlerRef = useRef<((e: L.LeafletMouseEvent) => void) | null>(null);
 
   // Set up map click event handler with proper cleanup
   useEffect(() => {
     if (!map) return;
+    
+    // Disable animations to prevent flashing
+    if (disableAutoZoom && map.options) {
+      map.options.zoomAnimation = false;
+      map.options.markerZoomAnimation = false;
+    }
     
     // Remove any existing handler to prevent duplicates
     if (clickHandlerRef.current) {
@@ -95,7 +102,7 @@ export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) =
         map.off('click', clickHandlerRef.current);
       }
     };
-  }, [map, onMapClick]);
+  }, [map, onMapClick, disableAutoZoom]);
 
   return null;
 };

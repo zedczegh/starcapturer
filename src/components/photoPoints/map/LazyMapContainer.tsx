@@ -1,21 +1,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Circle } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import './MarkerStyles.css';
-import './MapStyles.css';
-import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
-import MapController from './MapController';
-import MapLegend from './MapLegend';
-import MobileMapFixer from './MobileMapFixer';
-import { MapEvents } from './MapEffectsController';
-import PinpointButton from './PinpointButton';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
-import { MapEffectsComposer } from './MapComponents';
-
-configureLeaflet();
+import MapBase from './components/MapBase';
+import MapMarkers from './components/MapMarkers';
+import MapControllers from './components/MapControllers';
 
 interface LazyMapContainerProps {
   center: [number, number];
@@ -60,9 +48,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
-  const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const initialPositionSet = useRef<boolean>(false);
   
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -81,8 +67,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     setCurrentSiqs(siqs);
   }, []);
   
-  const safeUserLocation = userLocation || null;
-  
+  // Update SIQS when user location matches a location with SIQS
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -101,131 +86,47 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation, locations]);
   
-  const handleMapReady = useCallback(() => {
+  const handleMapReadyInternal = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
       onMapReady();
     }
-    
-    // Set initial position only once on map load
-    if (mapRef.current && !initialPositionSet.current) {
-      mapRef.current.setView(center, zoom);
-      initialPositionSet.current = true;
-    }
-  }, [onMapReady, center, zoom]);
-  
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    const map = mapRef.current;
-    
-    const handleResize = () => {
-      if (map) map.invalidateSize();
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    setTimeout(() => {
-      if (map) map.invalidateSize();
-    }, 200);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [mapRef.current]);
-
-  // Completely remove auto-zoom behavior when preventAutoZoom is true
-  useEffect(() => {
-    if (!preventAutoZoom && mapRef.current && initialPositionSet.current) {
-      mapRef.current.setView(center, zoom);
-    }
-  }, [center, zoom, preventAutoZoom]);
-
-  const getDefaultZoom = () => {
-    if (activeView === 'calculated') {
-      return 7;
-    }
-    return zoom;
-  };
+  }, [onMapReady]);
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
-      <MapContainer
+      <MapBase
         center={center}
-        zoom={getDefaultZoom()}
-        style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
-        ref={mapRef}
-        className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
-        whenReady={handleMapReady}
-        attributionControl={true}
+        zoom={zoom}
+        userLocation={userLocation}
+        searchRadius={searchRadius}
+        showRadiusCircles={showRadiusCircles}
+        isMobile={isMobile}
+        onMapReady={handleMapReadyInternal}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        {showRadiusCircles && userLocation && (
-          <Circle
-            center={[userLocation.latitude, userLocation.longitude]}
-            pathOptions={{
-              color: 'rgb(99, 102, 241)',
-              fillColor: 'rgb(99, 102, 241)',
-              fillOpacity: 0.05,
-              weight: 1,
-              dashArray: '5, 5',
-            }}
-            radius={searchRadius * 1000}
-          />
-        )}
-        
-        <MapEffectsComposer 
-          userLocation={safeUserLocation}
+        <MapControllers 
+          userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}
+          useMobileMapFixer={useMobileMapFixer}
+          isMobile={isMobile}
+          onMapClick={stableOnMapClick}
           onSiqsCalculated={handleSiqsCalculated}
         />
         
-        <MapEvents onMapClick={stableOnMapClick} />
-        
-        {userLocation && (
-          <UserLocationMarker 
-            position={[userLocation.latitude, userLocation.longitude]} 
-            currentSiqs={currentSiqs}
-          />
-        )}
-        
-        {locations.map(location => {
-          if (!location.latitude || !location.longitude) return null;
-          
-          const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-          const isHovered = hoveredLocationId === locationId;
-          
-          return (
-            <LocationMarker
-              key={locationId}
-              location={location}
-              onClick={stableOnLocationClick}
-              isHovered={isHovered}
-              onHover={onMarkerHover || (() => {})}
-              locationId={locationId}
-              isCertified={isCertified}
-              activeView={activeView}
-              handleTouchStart={handleTouchStart}
-              handleTouchEnd={handleTouchEnd}
-              handleTouchMove={handleTouchMove}
-            />
-          );
-        })}
-        
-        <MapController 
-          userLocation={safeUserLocation} 
-          searchRadius={searchRadius}
+        <MapMarkers
+          userLocation={userLocation}
+          locations={locations}
+          activeView={activeView}
+          hoveredLocationId={hoveredLocationId}
+          onLocationClick={stableOnLocationClick}
+          onMarkerHover={onMarkerHover}
+          handleTouchStart={handleTouchStart}
+          handleTouchEnd={handleTouchEnd}
+          handleTouchMove={handleTouchMove}
+          currentSiqs={currentSiqs}
         />
-        
-        {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      </MapContainer>
+      </MapBase>
     </div>
   );
 };

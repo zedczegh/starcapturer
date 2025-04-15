@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations, useMapUtils } from './useMapUtils';
@@ -18,7 +19,7 @@ export const usePhotoPointsMap = ({
   locations,
   searchRadius,
   activeView,
-  preventAutoZoom = true,
+  preventAutoZoom = true, // Default to preventing auto-zoom
   mapReady: externalMapReady = false
 }: UsePhotoPointsMapProps) => {
   const [mapReady, setMapReady] = useState(externalMapReady);
@@ -101,9 +102,9 @@ export const usePhotoPointsMap = ({
     mapReady
   });
 
-  // Calculate map center coordinates but only on initial load
+  // Calculate map center coordinates - store initial value only
   const mapCenter = useCallback((): [number, number] => {
-    // Only set the initial center once and keep it throughout component lifecycle
+    // Only set the initial center once on first load
     if (!initialCenterRef.current && isFirstLoadRef.current && userLocation) {
       initialCenterRef.current = [userLocation.latitude, userLocation.longitude];
       isFirstLoadRef.current = false;

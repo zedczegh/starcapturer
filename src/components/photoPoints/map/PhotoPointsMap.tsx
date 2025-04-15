@@ -50,7 +50,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     locations,
     searchRadius,
     activeView,
-    preventAutoZoom // Pass the flag to usePhotoPointsMap
+    preventAutoZoom: true // Always prevent auto-zoom
   });
 
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
@@ -99,7 +99,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={true}
         showRadiusCircles={activeView === 'calculated'}
-        preventAutoZoom={preventAutoZoom} 
+        preventAutoZoom={true} // Always prevent auto-zoom
       />
       
       <MapLegend 
@@ -115,6 +115,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           userLocation={userLocation}
           className="absolute top-4 right-4"
           onGetLocation={handleGetLocation}
+          disableAutoCenter={true} // Disable auto-center behavior
         />
       )}
     </div>
