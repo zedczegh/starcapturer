@@ -29,14 +29,23 @@ export const usePhotoPointsMap = ({
   const isFirstLoadRef = useRef<boolean>(true);
   
   // IMPORTANT: Always load certified locations regardless of view
-  const shouldLoadCertified = true; // Always true
+  const shouldLoadCertified = true; // Always true, never conditional
   
   // Use our certified locations loader with always-on loading
   const { 
     certifiedLocations: allCertifiedLocations, 
     isLoading: certifiedLocationsLoading,
-    loadingProgress 
+    loadingProgress,
+    refreshLocations: refreshCertifiedLocations
   } = useCertifiedLocationsLoader(shouldLoadCertified);
+  
+  // Force refresh certified locations initially to ensure they're loaded
+  useEffect(() => {
+    if (shouldLoadCertified && !certifiedLocationsLoading && allCertifiedLocations.length === 0) {
+      console.log('No certified locations loaded, forcing refresh');
+      refreshCertifiedLocations();
+    }
+  }, [shouldLoadCertified, certifiedLocationsLoading, allCertifiedLocations.length, refreshCertifiedLocations]);
   
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   
@@ -50,6 +59,14 @@ export const usePhotoPointsMap = ({
         }
       });
       setCertifiedLocationsLoaded(true);
+    }
+  }, [allCertifiedLocations]);
+  
+  // Debug log to check certified locations
+  useEffect(() => {
+    console.log(`Certified locations loaded: ${allCertifiedLocations.length} locations`);
+    if (allCertifiedLocations.length > 0) {
+      console.log('First certified location sample:', allCertifiedLocations[0]);
     }
   }, [allCertifiedLocations]);
   
@@ -145,7 +162,8 @@ export const usePhotoPointsMap = ({
     certifiedLocationsLoaded,
     certifiedLocationsLoading,
     loadingProgress,
-    allCertifiedLocationsCount: allCertifiedLocations.length
+    allCertifiedLocationsCount: allCertifiedLocations.length,
+    refreshCertifiedLocations
   };
 };
 

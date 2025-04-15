@@ -42,7 +42,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
       {/* Render location markers */}
       {locations.map((location) => {
         const locationId = location.id || `${location.latitude}-${location.longitude}`;
-        const isCertified = !!location.isCertified;
+        // Check for certification properties to determine if location is certified
+        const isCertified = !!location.isDarkSkyReserve || !!location.certification;
         
         return (
           <LocationMarker
