@@ -8,6 +8,10 @@
  * @returns Distance in kilometers
  */
 export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  if (!isFinite(lat1) || !isFinite(lon1) || !isFinite(lat2) || !isFinite(lon2)) {
+    return 0; // Return zero for invalid inputs
+  }
+
   const R = 6371; // Radius of the earth in km
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
@@ -34,6 +38,8 @@ export const deg2rad = (deg: number): number => {
  * @returns Formatted distance string
  */
 export const formatDistance = (distance: number): string => {
+  if (!isFinite(distance)) return "N/A";
+  
   if (distance < 1) {
     return `${Math.round(distance * 1000)} m`;
   }

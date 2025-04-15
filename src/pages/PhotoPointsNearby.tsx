@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,6 +10,7 @@ import PhotoPointsView from '@/components/photoPoints/PhotoPointsView';
 import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
+import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -69,31 +69,15 @@ const PhotoPointsNearby: React.FC = () => {
     if (!location) return;
     
     try {
-      // Create a robust location ID that won't cause navigation issues
-      const locationId = location.id || 
-        (location.latitude && location.longitude 
-          ? `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`
-          : `unnamed-location-${Date.now()}`);
+      // Use the navigation helper to prepare location data
+      const navigationData = prepareLocationForNavigation(location);
       
-      // Create a safe state object with all required properties
-      const safeLocationState = {
-        id: locationId,
-        name: location.name || 'Unnamed Location',
-        chineseName: location.chineseName || '',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        bortleScale: location.bortleScale || 4,
-        siqs: location.siqs || null,
-        siqsResult: location.siqs ? { score: location.siqs } : undefined,
-        certification: location.certification || '',
-        isDarkSkyReserve: !!location.isDarkSkyReserve,
-        timestamp: new Date().toISOString(),
-        fromPhotoPoints: true
-      };
-      
-      // Navigate with the safe state object
-      navigate(`/location/${locationId}`, { state: safeLocationState });
-      console.log("Opening location details", locationId);
+      if (navigationData) {
+        navigate(`/location/${navigationData.locationId}`, { 
+          state: navigationData.locationState 
+        });
+        console.log("Opening location details", navigationData.locationId);
+      }
     } catch (error) {
       console.error("Error navigating to location details:", error, location);
     }

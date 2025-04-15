@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
 // Cache for certified locations to avoid repeated API calls
@@ -112,15 +113,17 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
   
   // List of known East Asian dark sky locations to ensure they're included
   const eastAsianLocations = [
-    // Shenzhen Xichong Dark Sky Community
+    // Shenzhen Xichong Dark Sky Community - Fixed coordinates
     {
       id: 'shenzhen-xichong',
       name: 'Shenzhen Xichong Dark Sky Community',
+      chineseName: '深圳西冲暗夜社区',
       latitude: 22.5808,
       longitude: 114.5034,
       isDarkSkyReserve: true,
       certification: 'Dark Sky Community - International Dark Sky Association',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
     },
     // Yeongyang Firefly Dark Sky Park
     {
@@ -130,7 +133,8 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       longitude: 129.1122,
       isDarkSkyReserve: true,
       certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
     },
     // Jindo Dark Sky Park
     {
@@ -140,9 +144,10 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       longitude: 126.2631,
       isDarkSkyReserve: true,
       certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
     },
-    // Yaeyama Islands Dark Sky Reserve
+    // Yaeyama Islands Dark Sky Reserve - Fixed coordinates
     {
       id: 'yaeyama-dark-sky',
       name: 'Yaeyama Islands International Dark Sky Reserve',
@@ -150,9 +155,10 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       longitude: 124.2167,
       isDarkSkyReserve: true,
       certification: 'Dark Sky Reserve - International Dark Sky Association',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      bortleScale: 2
     },
-    // Iriomote-Ishigaki Dark Sky Reserve
+    // Iriomote-Ishigaki Dark Sky Reserve - Fixed coordinates  
     {
       id: 'iriomote-ishigaki',
       name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
@@ -160,7 +166,8 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       longitude: 124.1546,
       isDarkSkyReserve: true,
       certification: 'Dark Sky Reserve - International Dark Sky Association',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      bortleScale: 2
     },
     // Himawari Farm Dark Sky Park
     {
@@ -170,7 +177,8 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       longitude: 140.9946,
       isDarkSkyReserve: true,
       certification: 'Dark Sky Park - International Dark Sky Association',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      bortleScale: 3
     }
   ];
   

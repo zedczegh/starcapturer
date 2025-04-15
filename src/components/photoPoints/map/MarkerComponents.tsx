@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -14,6 +13,7 @@ import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from 
 import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
 import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
+import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
   if (location.isDarkSkyReserve || location.certification) {
@@ -90,21 +90,17 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const isMobile = useIsMobile();
   
-  // IMPORTANT: Always initialize these hooks first regardless of conditions
   const displayName = language === 'zh' && location.chineseName 
     ? location.chineseName 
     : location.name;
     
   const siqsClass = getSiqsClass(location.siqs);
   
-  // Determine if this marker should be visible
   const shouldRender = useMemo(() => {
-    // If it's certified view but not a certified location
     if (activeView === 'certified' && !isCertified) {
       return false;
     }
     
-    // For non-certified locations, do additional checks
     if (!isCertified) {
       if (isWaterSpot(location)) {
         return false;
@@ -197,28 +193,22 @@ const LocationMarker = memo(({
   }, [isHovered, isMobile]);
   
   const goToLocationDetails = useCallback(() => {
-    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    const navigationData = prepareLocationForNavigation(location);
     
-    navigate(`/location/${locationId}`, {
-      state: {
-        id: locationId,
-        name: location.name,
-        chineseName: location.chineseName,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        bortleScale: location.bortleScale || 4,
-        siqs: location.siqs,
-        siqsResult: location.siqs ? { score: location.siqs } : undefined,
-        certification: location.certification,
-        isDarkSkyReserve: location.isDarkSkyReserve,
-        timestamp: new Date().toISOString(),
-        fromPhotoPoints: true
-      }
-    });
+    if (navigationData) {
+      navigate(`/location/${navigationData.locationId}`, { 
+        state: navigationData.locationState 
+      });
+    }
   }, [location, navigate]);
   
-  // If this marker shouldn't be rendered, return null
   if (!shouldRender) {
+    return null;
+  }
+  
+  if (!location.latitude || !location.longitude || 
+      !isFinite(location.latitude) || !isFinite(location.longitude)) {
+    console.error("Invalid location coordinates:", location);
     return null;
   }
   
@@ -251,7 +241,7 @@ const LocationMarker = memo(({
             {isCertified && (
               <Star className="h-3.5 w-3.5 mr-1 text-yellow-400 fill-yellow-400" />
             )}
-            <span className="text-gray-100">{displayName}</span>
+            <span className="text-gray-100">{displayName || t("Unnamed Location", "未命名位置")}</span>
           </div>
           
           {isCertified && location.certification && (
@@ -268,7 +258,7 @@ const LocationMarker = memo(({
               </div>
             )}
             
-            {location.distance && (
+            {typeof location.distance === 'number' && isFinite(location.distance) && (
               <span className="text-xs text-gray-300 flex items-center justify-end">
                 {formatDistance(location.distance)}
               </span>

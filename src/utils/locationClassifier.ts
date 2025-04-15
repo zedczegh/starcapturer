@@ -1,4 +1,3 @@
-
 /**
  * Advanced location classification utilities
  * Used to detect specific terrain types and protected areas
@@ -10,6 +9,7 @@ interface SimpleBoundary {
   type: 'nationalPark' | 'darkSkyReserve' | 'protectedArea';
   coordinates: Array<[number, number]>;
   radius: number; // Radius in kilometers
+  chineseName?: string; // Added Chinese name support
 }
 
 // Simplified database of national parks and dark sky reserves
@@ -62,21 +62,44 @@ const protectedAreaDatabase: SimpleBoundary[] = [
   // China specific locations
   {
     name: "Shennongjia National Park",
+    chineseName: "神农架国家公园",
     type: "nationalPark",
     coordinates: [[31.47, 110.30]],
     radius: 45
   },
   {
     name: "Pudacuo National Park",
+    chineseName: "普达措国家公园",
     type: "nationalPark",
     coordinates: [[27.91, 100.11]],
     radius: 40
   },
   {
     name: "Zhangjiajie National Forest Park",
+    chineseName: "张家界国家森林公园",
     type: "nationalPark",
     coordinates: [[29.32, 110.42]],
     radius: 35
+  },
+  // Added Asian Dark Sky locations
+  {
+    name: "Shenzhen Xichong Dark Sky Community",
+    chineseName: "深圳西冲暗夜社区",
+    type: "darkSkyReserve",
+    coordinates: [[22.5808, 114.5034]],
+    radius: 15
+  },
+  {
+    name: "Yaeyama Islands Dark Sky Reserve",
+    type: "darkSkyReserve",
+    coordinates: [[24.4667, 124.2167]],
+    radius: 30
+  },
+  {
+    name: "Iriomote-Ishigaki National Park",
+    type: "darkSkyReserve",
+    coordinates: [[24.3423, 124.1546]],
+    radius: 25
   }
 ];
 
@@ -116,11 +139,12 @@ export function isDarkSkyReserve(latitude: number, longitude: number): boolean {
  * @param longitude Location longitude
  * @returns Object with area information or null if not in protected area
  */
-export function getProtectedAreaInfo(latitude: number, longitude: number): {name: string, type: string} | null {
+export function getProtectedAreaInfo(latitude: number, longitude: number): {name: string, chineseName?: string, type: string} | null {
   for (const area of protectedAreaDatabase) {
     if (isWithinRadius(latitude, longitude, area.coordinates[0][0], area.coordinates[0][1], area.radius)) {
       return {
         name: area.name,
+        chineseName: area.chineseName,
         type: area.type
       };
     }
@@ -176,10 +200,24 @@ export function estimateTerrainType(
       // Himalayas
       (latitude >= 27 && latitude <= 35 && longitude >= 70 && longitude <= 95) ||
       // Andes
-      (latitude >= -55 && latitude <= 12 && longitude >= -80 && longitude <= -65)
+      (latitude >= -55 && latitude <= 12 && longitude >= -80 && longitude <= -65) ||
+      // Chinese mountain ranges - Added
+      (latitude >= 25 && latitude <= 40 && longitude >= 100 && longitude <= 120)
     )
   ) {
     return 'mountain';
+  }
+  
+  // Check East Asian coastal areas - Added
+  if (
+    // East China coast
+    (latitude >= 20 && latitude <= 40 && longitude >= 110 && longitude <= 122) ||
+    // Japan coast
+    (latitude >= 30 && latitude <= 45 && longitude >= 130 && longitude <= 145) ||
+    // Korean peninsula
+    (latitude >= 33 && latitude <= 38 && longitude >= 125 && longitude <= 130)
+  ) {
+    return 'coastal';
   }
   
   // Check deserts
