@@ -9,20 +9,35 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
 import { initializePreloadServices } from './services/preloadServices';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Initialize preloading services as early as possible
 initializePreloadServices();
 
+// Create a query client with optimized settings for better performance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      cacheTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1, // Only retry once
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+    },
+  },
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HelmetProvider>
-      <ThemeProvider>
-        <LanguageProvider>
-          <App />
-          <Toaster />
-          <SonnerToaster position="top-center" closeButton richColors />
-        </LanguageProvider>
-      </ThemeProvider>
-    </HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <App />
+            <Toaster />
+            <SonnerToaster position="top-center" closeButton richColors />
+          </LanguageProvider>
+        </ThemeProvider>
+      </HelmetProvider>
+    </QueryClientProvider>
   </React.StrictMode>,
 );
