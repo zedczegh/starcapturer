@@ -10,23 +10,32 @@ interface MapControllerProps {
 const MapController: React.FC<MapControllerProps> = ({ userLocation, searchRadius }) => {
   const map = useMap();
   
-  // Center the map on user location only when component mounts or when explicitly requested
+  // Center the map ONLY on initial mount, not when location changes
   useEffect(() => {
-    if (userLocation && map) {
-      // Only center on initial mount, no dependency on userLocation to prevent re-centering
-      map.setView([userLocation.latitude, userLocation.longitude], getZoomLevel());
+    if (map) {
+      // Initial setup only, do not add userLocation as dependency
+      const zoomLevel = getZoomLevel();
+      console.log(`Setting initial map view with zoom level: ${zoomLevel}`);
+      
+      // Only set the initial view - don't recenter when location changes
+      if (userLocation) {
+        // Set initial view without animation for smoother startup
+        map.setView([userLocation.latitude, userLocation.longitude], zoomLevel, {
+          animate: false,
+        });
+      }
     }
-  }, [map]); // Only depend on map, not userLocation to prevent re-centering
+  }, [map]); // Only depend on map, not userLocation
   
   // Calculate zoom level based on search radius
   const getZoomLevel = () => {
-    // Set very zoomed out default view (almost world-view)
+    // Very zoomed out view for larger context
     if (searchRadius >= 500) return 3;
     if (searchRadius <= 10) return 12;
     if (searchRadius <= 50) return 10;
     if (searchRadius <= 100) return 9;
-    if (searchRadius <= 300) return 8;
-    return 5; // Default to more zoomed out view
+    if (searchRadius <= 300) return 7;
+    return 4; // Default to more zoomed out view
   };
 
   return null;

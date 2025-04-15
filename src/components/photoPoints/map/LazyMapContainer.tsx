@@ -170,7 +170,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         whenReady={handleMapReady}
         attributionControl={!isMobile}
         worldCopyJump={true}
-        // Remove doubleClickZoom prop as it's not supported
       >
         <TileLayer
           attribution={tileOptions.attribution}
