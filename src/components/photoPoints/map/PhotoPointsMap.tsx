@@ -68,6 +68,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     setLegendOpen(isOpen);
   }, []);
 
+  // Add a handler for getting the user's location
+  const handleGetLocation = useCallback(() => {
+    if (onLocationUpdate && userLocation) {
+      // This will trigger the parent component to refresh the user location
+      onLocationUpdate(userLocation.latitude, userLocation.longitude);
+    }
+  }, [onLocationUpdate, userLocation]);
+
   return (
     <div className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2" style={{ height: isMobile ? 'calc(70vh - 200px)' : '450px' }}>
       <LazyMapContainer
@@ -102,6 +110,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         <CenteringPinpointButton 
           userLocation={userLocation}
           className="absolute top-4 right-4"
+          onGetLocation={handleGetLocation}
         />
       )}
     </div>
