@@ -1,96 +1,42 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useMap } from 'react-leaflet';
-import { WorldBoundsController } from '../MapEffectsController';
 
 interface MapEffectsComposerProps {
-  userLocation?: { latitude: number; longitude: number } | null;
-  activeView?: 'certified' | 'calculated';
-  searchRadius?: number;
-  onSiqsCalculated?: (siqs: number) => void;
+  effects?: ('leaflet-fullscreen' | 'zoom-controls' | 'scale')[];
 }
 
-/**
- * Simplified map effects composer with reduced visual effects for better mobile performance
- */
-const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
-  userLocation,
-  activeView = 'certified',
-  searchRadius = 100,
-  onSiqsCalculated
-}) => {
-  // Always call useMap hook first before any conditional logic
+const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ effects = [] }) => {
   const map = useMap();
   
-  // Optimize map performance for mobile devices
-  useEffect(() => {
-    if (!map) return;
-    
-    // Add better error handling
-    try {
-      // Disable unnecessary features for mobile performance
-      map.options.fadeAnimation = false;
-      map.options.zoomAnimation = false;
-      map.options.markerZoomAnimation = false;
-      
-      // Reduce tile fade in duration
-      if (map._container) {
-        const mapContainer = map._container;
-        mapContainer.classList.add('optimize-performance');
+  React.useEffect(() => {
+    // Apply various map effects based on props
+    if (effects.includes('zoom-controls')) {
+      // Add zoom controls if not already added
+      if (!map.zoomControl) {
+        map.addControl(L.control.zoom({ position: 'bottomright' }));
       }
-      
-      // Apply lower detail while moving (better performance)
-      const handleMoveStart = () => {
-        if (map._container) {
-          map._container.classList.add('moving');
-        }
-      };
-      
-      const handleMoveEnd = () => {
-        if (map._container) {
-          setTimeout(() => {
-            map._container.classList.remove('moving');
-          }, 100);
-        }
-      };
-      
-      map.on('movestart', handleMoveStart);
-      map.on('moveend', handleMoveEnd);
-      
-      // Force a resize to ensure correct rendering after a short delay
-      const timeoutId = setTimeout(() => {
-        if (map && map._container) {
-          map.invalidateSize();
-        }
-      }, 300);
-      
-      return () => {
-        try {
-          map.off('movestart', handleMoveStart);
-          map.off('moveend', handleMoveEnd);
-          
-          if (map._container) {
-            map._container.classList.remove('optimize-performance');
-            map._container.classList.remove('moving');
-          }
-          
-          clearTimeout(timeoutId);
-        } catch (e) {
-          // Ignore cleanup errors
-          console.log("Map cleanup error (non-critical):", e);
-        }
-      };
-    } catch (error) {
-      console.error("Error applying map optimizations:", error);
     }
-  }, [map]);
+    
+    if (effects.includes('scale')) {
+      // Add scale control if needed
+      L.control.scale({ position: 'bottomleft' }).addTo(map);
+    }
+    
+    return () => {
+      // Clean up effects if needed
+      if (effects.includes('scale')) {
+        // Remove scale control if it exists
+        map.eachLayer((layer) => {
+          if (layer instanceof L.Control.Scale) {
+            map.removeControl(layer);
+          }
+        });
+      }
+    };
+  }, [map, effects]);
   
-  return (
-    <>
-      {/* Apply world bounds limit only - removed other effects */}
-      <WorldBoundsController />
-    </>
-  );
+  return null; // This component doesn't render anything visible
 };
 
 export default MapEffectsComposer;

@@ -1,4 +1,3 @@
-
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -19,7 +18,7 @@ export interface SharedAstroSpot {
   latitude: number;
   longitude: number;
   bortleScale: number;
-  siqs?: number;
+  siqs?: number | { score: number; isViable: boolean };
   isViable?: boolean;
   distance?: number;
   description?: string;
@@ -30,6 +29,15 @@ export interface SharedAstroSpot {
   photographer?: string;
   cloudCover?: number;
   visibility?: number;
+  siqsResult?: {
+    score: number;
+    isViable: boolean;
+    factors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+  };
 }
 
 /**

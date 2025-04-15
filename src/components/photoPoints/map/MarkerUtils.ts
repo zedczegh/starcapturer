@@ -1,179 +1,201 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getProgressColor } from '@/components/siqs/utils/progressColor';
-import { getSafeScore as geoUtilsGetSafeScore } from '@/utils/geoUtils';
 import L from 'leaflet';
-import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { isWaterLocation } from "@/utils/locationValidator";
+import { getProgressColor } from "@/components/siqs/utils/progressColor";
 
-// Re-export the getSafeScore function from geoUtils for consistency
-export const getSafeScore = (siqs?: number | { score: number; isViable: boolean } | null): number => {
-  return geoUtilsGetSafeScore(siqs);
+/**
+ * Get SIQS quality class for styling
+ * @param siqs SIQS score
+ * @returns CSS class name based on SIQS quality
+ */
+export const getSiqsClass = (siqs?: number): string => {
+  if (!siqs) return '';
+  if (siqs >= 7.5) return 'siqs-excellent';
+  if (siqs >= 5.5) return 'siqs-good';
+  return 'siqs-poor';
 };
 
 /**
- * Check if a location is a water-based spot
+ * Determines if a location is a water spot (for filtering)
+ * @param location Location to check
+ * @returns boolean indicating if location is a water spot
  */
 export const isWaterSpot = (location: SharedAstroSpot): boolean => {
+  // Never filter out certified locations
   if (location.isDarkSkyReserve || location.certification) {
     return false;
   }
   
-  if (isWaterLocation(location.latitude, location.longitude, false)) {
-    return true;
-  }
-  
-  if (isLikelyCoastalWater(location.latitude, location.longitude)) {
-    return true;
-  }
-  
-  if (location.name) {
-    const lowerName = location.name.toLowerCase();
-    const waterKeywords = [
-      'ocean', 'sea', 'bay', 'gulf', 'lake', 'strait', 
-      'channel', 'sound', 'harbor', 'harbour', 'port', 
-      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
-    ];
-    
-    for (const keyword of waterKeywords) {
-      if (lowerName.includes(keyword)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
+  // Use enhanced water detection
+  return isWaterLocation(
+    location.latitude, 
+    location.longitude, 
+    Boolean(location.isDarkSkyReserve || location.certification)
+  );
 };
 
 /**
- * Check if a location is likely coastal water
- */
-export const isLikelyCoastalWater = (latitude: number, longitude: number): boolean => {
-  // Simple implementation without require
-  const isLikely = longitude > -10 && longitude < 40 && 
-                  latitude > 30 && latitude < 60;
-  return false; // Simplified version to avoid require
-};
-
-/**
- * Check if a location is valid for astronomy
- */
-export const isValidAstronomyLocation = (latitude: number, longitude: number, name?: string): boolean => {
-  // Simple implementation without require
-  return true; // Default to true to avoid require
-};
-
-/**
- * Get appropriate marker for location
- */
-export const getLocationMarker = (
-  location: SharedAstroSpot, 
-  isCertified: boolean, 
-  isHovered: boolean, 
-  isMobile: boolean
-): L.DivIcon | null => {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    const sizeMultiplier = isMobile ? 1.2 : 1.0;
-    const baseSize = 24 * sizeMultiplier;
-    let html = '';
-    
-    // Apply hardware acceleration and optimize rendering
-    const styleOptimizations = 'will-change: transform; transform: translateZ(0); backface-visibility: hidden;';
-    
-    if (isCertified) {
-      // Color map according to certification type - Updated colors to match legend
-      let color = '#10b981'; // Default green for Dark Sky Parks
-      if (location.isDarkSkyReserve) {
-        color = '#8b5cf6'; // Purple for Dark Sky Reserves
-      } else if (location.certification) {
-        const cert = location.certification.toLowerCase();
-        if (cert.includes('park')) {
-          color = '#10b981'; // Green for Dark Sky Parks
-        } else if (cert.includes('community')) {
-          color = '#f59e0b'; // Gold for Dark Sky Communities
-        } else if (cert.includes('urban')) {
-          color = '#3b82f6'; // Blue for Urban Night Sky Places
-        }
-      }
-      
-      html = `
-        <svg xmlns="http://www.w3.org/2000/svg" 
-             width="${baseSize}" height="${baseSize}" 
-             viewBox="0 0 24 24" 
-             style="${styleOptimizations}"
-        >
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" 
-                   fill="${color}" 
-                   stroke="#FFFFFF" 
-                   stroke-width="1" 
-                   stroke-linejoin="round"
-          />
-        </svg>
-      `;
-    } else {
-      // Calculated locations use SIQS-based colors
-      const score = location.siqs !== undefined && location.siqs !== null ? 
-        getSafeScore(location.siqs) : 0;
-      const color = score ? getProgressColor(score) : '#4ADE80';
-      
-      html = `
-        <svg xmlns="http://www.w3.org/2000/svg" 
-             width="${baseSize}" height="${baseSize}" 
-             viewBox="0 0 24 24"
-             style="${styleOptimizations}"
-        >
-          <circle cx="12" cy="12" r="10" 
-                  fill="${color}" 
-                  stroke="#FFFFFF" 
-                  stroke-width="1"
-          />
-        </svg>
-      `;
-    }
-
-    return L.divIcon({
-      className: "custom-marker-icon",
-      iconAnchor: [baseSize/2, baseSize/2],
-      popupAnchor: [0, -baseSize/2],
-      html: html,
-      iconSize: [baseSize, baseSize]
-    });
-  } catch (error) {
-    console.error("Error creating custom marker:", error);
-    return null;
-  }
-};
-
-/**
- * Get certification color for marker
+ * Get certification type based color for markers
+ * @param location Location to get color for
+ * @returns RGBA color string with transparency
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
-  if (location.isDarkSkyReserve) {
-    return '#8b5cf6'; // Updated to purple for Dark Sky Reserves
-  } else if (location.certification) {
-    const cert = location.certification.toLowerCase();
-    if (cert.includes('park')) {
-      return '#10b981'; // Green for Dark Sky Parks
-    } else if (cert.includes('community')) {
-      return '#f59e0b'; // Gold for Dark Sky Communities
-    } else if (cert.includes('urban')) {
-      return '#3b82f6'; // Blue for Urban Night Sky Places
-    }
+  if (!location.isDarkSkyReserve && !location.certification) {
+    return 'rgba(74, 222, 128, 0.85)'; // Default green with transparency
   }
-  return '#10b981'; // Default green
+  
+  const certification = (location.certification || '').toLowerCase();
+  
+  // IMPORTANT: Ensure communities use gold/yellow color
+  if (certification.includes('community')) {
+    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
+  } else if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
+    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves #9b87f5
+  } else if (certification.includes('park')) {
+    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park #4ADE80
+  } else if (certification.includes('urban') || certification.includes('night sky place')) {
+    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky #1EAEDB
+  } else if (certification.includes('lodging')) {
+    return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
+  } else {
+    return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
+  }
 };
 
 /**
- * Get CSS class based on SIQS score
+ * Determine if a location should be shown based on the active view
+ * @param location Location to check
+ * @param isCertified Whether location is certified
+ * @param activeView Current active view
+ * @returns boolean indicating if location should be shown
  */
-export const getSiqsClass = (siqs?: number | null): string => {
-  if (!siqs) return '';
-  if (siqs > 8) return 'siqs-excellent';
-  if (siqs > 6) return 'siqs-good';
-  if (siqs > 4) return 'siqs-fair';
-  if (siqs > 2) return 'siqs-poor';
-  return 'siqs-very-poor';
+export const shouldShowLocationMarker = (
+  location: SharedAstroSpot, 
+  isCertified: boolean,
+  activeView: 'certified' | 'calculated'
+): boolean => {
+  // IMPORTANT: Skip rendering calculated locations in certified view
+  if (activeView === 'certified' && !isCertified) {
+    return false;
+  }
+  
+  // Skip water locations for calculated spots (never skip certified)
+  if (!isCertified && isWaterSpot(location)) {
+    return false;
+  }
+  
+  return true;
+};
+
+/**
+ * Get marker color based on location type and SIQS score
+ * @param location Location to get color for
+ * @returns Hex color string
+ */
+export const getLocationColor = (location: SharedAstroSpot): string => {
+  if (location.isDarkSkyReserve || location.certification) {
+    return getCertificationColor(location);
+  } else {
+    const defaultColor = '#4ADE80'; // Bright green fallback
+    
+    // Handle both number and object SIQS format
+    let siqsValue = 0;
+    if (typeof location.siqs === 'number') {
+      siqsValue = location.siqs;
+    } else if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
+      siqsValue = location.siqs.score;
+    } else if (location.siqsResult && typeof location.siqsResult.score === 'number') {
+      siqsValue = location.siqsResult.score;
+    }
+    
+    return siqsValue ? getProgressColor(siqsValue) : defaultColor;
+  }
+};
+
+/**
+ * Creates a custom marker for the map based on location properties
+ * @param location The location data
+ * @param isCertified Whether the location is certified
+ * @param isHovered Whether the marker is currently hovered
+ * @param isMobile Whether we're on a mobile device
+ * @returns Leaflet icon for the marker
+ */
+export const getLocationMarker = (
+  location: SharedAstroSpot,
+  isCertified: boolean,
+  isHovered: boolean,
+  isMobile: boolean
+): L.DivIcon => {
+  // Get the marker color based on location properties
+  const color = getLocationColor(location);
+  
+  // Determine size based on device and hover state
+  const size = isMobile ? 
+    (isHovered ? 22 : 16) : // Mobile sizes
+    (isHovered ? 28 : 24);  // Desktop sizes
+  
+  // Create a marker with a custom HTML representation
+  return L.divIcon({
+    className: 'custom-div-icon',
+    html: `
+      <div 
+        style="
+          background-color: ${color}; 
+          width: ${size}px; 
+          height: ${size}px; 
+          border-radius: 50%;
+          border: 2px solid white;
+          box-shadow: 0 0 4px rgba(0,0,0,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        ${isCertified ? 
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+           </svg>` : 
+          ''}
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2]
+  });
+};
+
+/**
+ * Check if a location is valid for astronomy viewing
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param name Optional location name for additional validation
+ * @returns Boolean indicating if location is valid
+ */
+export const isValidAstronomyLocation = (
+  latitude: number,
+  longitude: number,
+  name?: string
+): boolean => {
+  // Skip validation for locations without coordinates
+  if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
+    return false;
+  }
+  
+  // Filter out obvious water names
+  if (name) {
+    const lowerName = name.toLowerCase();
+    if (
+      lowerName.includes('sea') || 
+      lowerName.includes('ocean') || 
+      lowerName.includes('bay') ||
+      lowerName.includes('lake') ||
+      lowerName.includes('lagoon') ||
+      lowerName.includes('gulf') ||
+      lowerName.includes('strait')
+    ) {
+      return false;
+    }
+  }
+  
+  return true;
 };
