@@ -55,6 +55,7 @@ const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHo
   const sizeMultiplier = isMobile ? 1.2 : 1.0;
   
   if (isCertified) {
+    // Use the marker utils function to get the correct certification color
     const certColor = getCertificationColor(location);
     return createCustomMarker(certColor, 'star', sizeMultiplier);
   } else {
@@ -99,6 +100,13 @@ const LocationMarker = memo(({
     : location.name;
     
   const siqsClass = getSiqsClass(location.siqs);
+  
+  // Add debug logging for community markers
+  useEffect(() => {
+    if (isCertified && location.certification && location.certification.toLowerCase().includes('community')) {
+      console.log("Rendering community:", location.name, "with certification:", location.certification, "color:", getCertificationColor(location));
+    }
+  }, [location, isCertified]);
   
   const shouldRender = useMemo(() => {
     // IMPORTANT: Always show certified locations in all views
@@ -298,7 +306,6 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// UserLocationMarker component stays the same
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
