@@ -1,3 +1,4 @@
+
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
@@ -51,13 +52,13 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   
   // Match colors to our legend color scheme with added transparency
   if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
-    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves
+    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves #9b87f5
   } else if (certification.includes('park')) {
-    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park
+    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park #4ADE80
   } else if (certification.includes('community')) {
-    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community
+    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
   } else if (certification.includes('urban') || certification.includes('night sky place')) {
-    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky
+    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky #1EAEDB
   } else if (certification.includes('lodging')) {
     return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
   } else {
