@@ -1,5 +1,11 @@
+
 import { useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+interface TouchPosition {
+  x: number;
+  y: number;
+}
 
 export const useMapTouchInteractions = (handleHover: (id: string | null) => void) => {
   const isMobile = useIsMobile();
@@ -34,16 +40,24 @@ export const useMapTouchInteractions = (handleHover: (id: string | null) => void
   
   /**
    * Handle touch move to detect dragging vs tapping
+   * Returns updated position if needed
    */
-  const handleTouchMove = useCallback((e: React.TouchEvent<Element>) => {
-    if (!isMobile) return;
+  const handleTouchMove = useCallback((e: React.TouchEvent<Element>, touchStartPos: TouchPosition | null): TouchPosition | null => {
+    if (!isMobile || !touchStartPos) return touchStartPos;
     
     if (e.touches && e.touches[0]) {
-      // Here we'd need to compare with touchStartPos, but we're keeping it simpler
-      // by just returning, since parent components manage the touchStartPos state
-      return;
+      const moveX = Math.abs(e.touches[0].clientX - touchStartPos.x);
+      const moveY = Math.abs(e.touches[0].clientY - touchStartPos.y);
+      
+      // If moved more than threshold, consider it a drag and clear hover
+      if (moveX > 20 || moveY > 20) {
+        handleHover(null);
+        return null;
+      }
     }
-  }, [isMobile]);
+    
+    return touchStartPos;
+  }, [isMobile, handleHover]);
   
   return {
     handleTouchStart,

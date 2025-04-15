@@ -62,6 +62,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const initialPositionSet = useRef<boolean>(false);
   
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -105,7 +106,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     if (onMapReady) {
       onMapReady();
     }
-  }, [onMapReady]);
+    
+    // Set initial position only once on map load
+    if (mapRef.current && !initialPositionSet.current) {
+      mapRef.current.setView(center, zoom);
+      initialPositionSet.current = true;
+    }
+  }, [onMapReady, center, zoom]);
   
   useEffect(() => {
     if (!mapRef.current) return;
@@ -127,11 +134,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, [mapRef.current]);
 
+  // Completely remove auto-zoom behavior when preventAutoZoom is true
   useEffect(() => {
-    if (!preventAutoZoom || !mapRef.current) {
-      if (mapRef.current) {
-        mapRef.current.setView(center, zoom);
-      }
+    if (!preventAutoZoom && mapRef.current && initialPositionSet.current) {
+      mapRef.current.setView(center, zoom);
     }
   }, [center, zoom, preventAutoZoom]);
 

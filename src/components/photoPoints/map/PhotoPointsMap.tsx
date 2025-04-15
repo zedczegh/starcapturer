@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
+import useMapMarkers from '@/hooks/map/useMapMarkers';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';

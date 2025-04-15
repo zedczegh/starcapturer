@@ -3,6 +3,11 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMapTouchInteractions } from './useMapTouchInteractions';
 
+interface TouchPosition {
+  x: number;
+  y: number;
+}
+
 /**
  * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
  */
@@ -15,7 +20,7 @@ export const useMapMarkers = () => {
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHoverId = useRef<string | null>(null);
   const hoverTimestamp = useRef<number>(0);
-  const touchStartPos = useRef<{x: number, y: number} | null>(null);
+  const touchStartPos = useRef<TouchPosition | null>(null);
   
   // Check if on mobile device
   const isMobile = useIsMobile();
@@ -82,7 +87,7 @@ export const useMapMarkers = () => {
   const { handleTouchStart: baseHandleTouchStart, handleTouchEnd, handleTouchMove: baseHandleTouchMove } = useMapTouchInteractions(handleHover);
   
   // Wrap touch start to capture position
-  const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent<Element>, id: string) => {
     if (e.touches && e.touches[0]) {
       touchStartPos.current = {
         x: e.touches[0].clientX,
@@ -94,7 +99,7 @@ export const useMapMarkers = () => {
   }, [baseHandleTouchStart]);
   
   // Wrap touch move to use captured position
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent<Element>) => {
     touchStartPos.current = baseHandleTouchMove(e, touchStartPos.current);
   }, [baseHandleTouchMove]);
   
