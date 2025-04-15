@@ -1,6 +1,7 @@
 
 import React, { useEffect } from "react";
 import { useMap } from "react-leaflet";
+import L from "leaflet";
 
 /**
  * Component to manage map bounds - simplified for better mobile performance
@@ -66,5 +67,5 @@ export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: numbe
   return null;
 }
 
-// Export the necessary symbol for TypeScript
-export const L = window.L;
+// Export L for TypeScript
+export { L };

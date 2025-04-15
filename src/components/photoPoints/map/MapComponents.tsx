@@ -1,6 +1,5 @@
 
-import MapEffectsComposer from './effects/MapEffectsComposer';
+import React from 'react';
 
-export {
-  MapEffectsComposer
-};
+// Re-export the MapEffectsComposer component
+export { default as MapEffectsComposer } from './effects/MapEffectsComposer';
