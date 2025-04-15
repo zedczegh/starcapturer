@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface UseMapInteractionsProps {
@@ -15,14 +15,18 @@ export const useMapInteractions = ({
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
   const [lastHoverId, setLastHoverId] = useState<string | null>(null);
-  const [preventRecursion, setPreventRecursion] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState<number>(0);
+  
+  // Use a ref for recursion prevention instead of state to avoid re-renders
+  const preventRecursionRef = useRef(false);
   
   // Handle marker hover with recursion prevention and touch optimization
   const handleMarkerHover = useCallback((id: string | null) => {
-    if (preventRecursion) return;
+    // Prevent recursion using ref
+    if (preventRecursionRef.current) return;
     
-    setPreventRecursion(true);
+    // Set flag to prevent recursive calls
+    preventRecursionRef.current = true;
     
     try {
       if (id !== lastHoverId) {
@@ -42,11 +46,12 @@ export const useMapInteractions = ({
         onMarkerHover(id);
       }
     } finally {
+      // Clear the recursion flag after a short delay
       setTimeout(() => {
-        setPreventRecursion(false);
+        preventRecursionRef.current = false;
       }, 0);
     }
-  }, [onMarkerHover, lastHoverId, hoveredLocationId, preventRecursion]);
+  }, [onMarkerHover, lastHoverId, hoveredLocationId]);
   
   // Handle location click with touch optimization
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
@@ -74,8 +79,8 @@ export const useMapInteractions = ({
   const handleMapDragStart = useCallback(() => {
     setHideMarkerPopups(true);
     
-    if (!preventRecursion) {
-      setPreventRecursion(true);
+    if (!preventRecursionRef.current) {
+      preventRecursionRef.current = true;
       
       if (hoveredLocationId !== null) {
         setHoveredLocationId(null);
@@ -86,10 +91,10 @@ export const useMapInteractions = ({
       }
       
       setTimeout(() => {
-        setPreventRecursion(false);
+        preventRecursionRef.current = false;
       }, 50);
     }
-  }, [hoveredLocationId, onMarkerHover, preventRecursion]);
+  }, [hoveredLocationId, onMarkerHover]);
   
   const handleMapDragEnd = useCallback(() => {
     setTimeout(() => {
@@ -100,11 +105,11 @@ export const useMapInteractions = ({
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      if (onMarkerHover && !preventRecursion) {
+      if (onMarkerHover && !preventRecursionRef.current) {
         onMarkerHover(null);
       }
     };
-  }, [onMarkerHover, preventRecursion]);
+  }, [onMarkerHover]);
 
   return {
     hoveredLocationId,

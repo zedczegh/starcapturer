@@ -25,7 +25,11 @@ export const MapController: React.FC<MapControllerProps> = ({
       // Force enable dragging and touch handlers
       map.dragging.enable();
       map.touchZoom.enable();
-      map.dragging._draggable?._onUp = map.dragging._draggable?._onUp || (() => {});
+      
+      // Fix for Safari - Use proper conditional instead of optional chaining in assignment
+      if (map.dragging._draggable && !map.dragging._draggable._onUp) {
+        map.dragging._draggable._onUp = () => {};
+      }
       
       // Lower inertia for smoother dragging on mobile
       if (map.dragging._draggable) {
