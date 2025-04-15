@@ -73,7 +73,6 @@ export class CalculatedLocationsService {
         isDarkSkyReserve: false,
         certification: null,
         description: null,
-        types: [],
         createdAt: new Date(),
         updatedAt: new Date(),
         userId: null,
