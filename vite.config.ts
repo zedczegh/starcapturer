@@ -27,7 +27,9 @@ export default defineConfig(({ mode }) => ({
           ui: ['@/components/ui'],
         }
       }
-    }
+    },
+    assetsDir: 'assets',
+    copyPublicDir: true, // Ensures public directory is copied to dist
   },
   optimizeDeps: {
     exclude: ['lovable-tagger']
