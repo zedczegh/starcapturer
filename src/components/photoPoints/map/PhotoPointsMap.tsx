@@ -49,6 +49,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   const [combinedCalculatedLocations, setCombinedCalculatedLocations] = useState<SharedAstroSpot[]>([]);
   const [loadingPhase, setLoadingPhase] = useState<'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location'>('initial');
   const [locationStats, setLocationStats] = useState<{certified: number, calculated: number}>({ certified: 0, calculated: 0 });
+  const viewTransitionInProgress = useRef(false);
+  const safeNavigationRef = useRef(false);
   
   const {
     hoveredLocationId,
@@ -57,8 +59,33 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     handleMapDragStart,
     handleMapDragEnd
   } = useMapInteractions({
-    onLocationClick,
-    onMarkerHover: (id) => console.log("Marker hover:", id)
+    onLocationClick: (location) => {
+      // Add safety check to prevent navigation issues
+      if (!safeNavigationRef.current && onLocationClick) {
+        safeNavigationRef.current = true;
+        
+        // Ensure location has all required fields
+        if (location && location.latitude && location.longitude) {
+          // Use setTimeout to avoid race conditions in navigation
+          setTimeout(() => {
+            onLocationClick(location);
+            // Reset after navigation
+            setTimeout(() => {
+              safeNavigationRef.current = false;
+            }, 500);
+          }, 10);
+        } else {
+          safeNavigationRef.current = false;
+          console.error("Invalid location data for navigation", location);
+        }
+      }
+    },
+    onMarkerHover: (id) => {
+      // Only handle hover when not in transition
+      if (!viewTransitionInProgress.current) {
+        handleMarkerHover(id);
+      }
+    }
   });
 
   // Process calculated locations when they change
@@ -100,16 +127,30 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   
   const activeLocations = activeView === 'certified' ? certifiedLocations : combinedCalculatedLocations.length > 0 ? combinedCalculatedLocations : calculatedLocations;
   
-  // Handle view change (certified vs calculated)
+  // Handle view change (certified vs calculated) with improved safety
   useEffect(() => {
     if (previousViewRef.current !== activeView) {
+      // Set transition flag to prevent interactions during view change
+      viewTransitionInProgress.current = true;
+      
+      // First update the previous ref to avoid infinite loop
       previousViewRef.current = activeView;
+      
+      // Use unique key with timestamp to force component remount
       setKey(`map-view-${activeView}-${Date.now()}`);
       console.log(`View changed to ${activeView}, forcing map component remount`);
       
       setLoadingPhase(activeView === 'certified' ? 'fetching' : 'processing');
+      
+      // Clear any pending hovered markers
+      handleMarkerHover(null);
+      
+      // Allow interactions after transition completes
+      setTimeout(() => {
+        viewTransitionInProgress.current = false;
+      }, 1000);
     }
-  }, [activeView]);
+  }, [activeView, handleMarkerHover]);
   
   // Handle search radius change
   useEffect(() => {
@@ -165,8 +206,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   useEffect(() => {
     if (certifiedLocationsLoaded && allCertifiedLocationsCount > 0 && activeView === 'certified') {
       console.log(`All ${allCertifiedLocationsCount} certified dark sky locations loaded globally`);
+      
+      // Update stats for certified locations
+      setLocationStats(prev => ({ ...prev, certified: allCertifiedLocationsCount }));
     }
-  }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView, t]);
+  }, [certifiedLocationsLoaded, allCertifiedLocationsCount, activeView]);
 
   // Reset selected location if user location changes significantly
   useEffect(() => {
@@ -182,19 +226,26 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   }, [userLocation, selectedMapLocation]);
 
   const handleMapClick = (lat: number, lng: number) => {
-    setSelectedMapLocation({ latitude: lat, longitude: lng });
-      
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
+    // Only handle clicks when not in transition
+    if (!viewTransitionInProgress.current) {
+      setSelectedMapLocation({ latitude: lat, longitude: lng });
+        
+      if (onLocationUpdate) {
+        onLocationUpdate(lat, lng);
+      }
     }
   };
 
   // Show loading indicator while certified locations are loading
   const showLoadingIndicator = activeView === 'certified' && certifiedLocationsLoading && !mapLoadedOnce;
+  
+  // Safari-specific optimizations
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const mapContainerClass = isSafari ? className + " safari-map-container" : className;
 
   return (
     <div className="space-y-3">
-      <div className={className + " relative"}>
+      <div className={mapContainerClass + " relative"}>
         {showLoadingIndicator && (
           <LoadingIndicator 
             progress={loadingProgress}
@@ -205,7 +256,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           />
         )}
         
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
+            <LoadingIndicator 
+              progress={30} 
+              message={t("Loading map...", "加载地图...")}
+            />
+          </div>
+        }>
           <LazyPhotoPointsMapContainer
             key={key}
             center={mapCenter}
@@ -220,6 +278,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
               mapInitializedRef.current = true;
               setMapLoadedOnce(true);
               setLoadingPhase('ready');
+              
+              // Reset transition flag to ensure interactions are enabled
+              viewTransitionInProgress.current = false;
             }}
             onLocationClick={onMarkerClick}
             onMapClick={handleMapClick}

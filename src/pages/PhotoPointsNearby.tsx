@@ -64,27 +64,41 @@ const PhotoPointsNearby: React.FC = () => {
     setSearchRadius(currentSearchRadius);
   }, [currentSearchRadius, setSearchRadius]);
   
-  // Handle location click to navigate to details
+  // Handle location click to navigate to details with improved Safari compatibility
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && location.latitude && location.longitude) {
-      const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      navigate(`/location/${locationId}`, { 
-        state: {
-          id: locationId,
-          name: location.name,
-          chineseName: location.chineseName,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          bortleScale: location.bortleScale || 4,
-          siqs: location.siqs,
-          siqsResult: location.siqs ? { score: location.siqs } : undefined,
-          certification: location.certification,
-          isDarkSkyReserve: location.isDarkSkyReserve,
-          timestamp: new Date().toISOString(),
-          fromPhotoPoints: true
-        } 
-      });
-      console.log("Opening location details", locationId);
+      // Use more reliable ID generation
+      let locationId = location.id;
+      
+      // If no ID exists, create one with good precision but avoid floating point issues
+      if (!locationId) {
+        locationId = `loc-${Math.round(location.latitude * 1000000) / 1000000}-${Math.round(location.longitude * 1000000) / 1000000}`;
+      }
+      
+      // Prepare navigation state with all necessary data
+      const navigationState = {
+        id: locationId,
+        name: location.name || '',
+        chineseName: location.chineseName || '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale || 4,
+        siqs: location.siqs || null,
+        siqsResult: location.siqs ? { score: location.siqs } : null,
+        certification: location.certification || '',
+        isDarkSkyReserve: !!location.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true
+      };
+      
+      // Use setTimeout to prevent Safari navigation issues
+      setTimeout(() => {
+        // Navigate with the complete state object
+        navigate(`/location/${encodeURIComponent(locationId)}`, { state: navigationState });
+        console.log("Opening location details", locationId, navigationState);
+      }, 0);
+    } else {
+      console.error("Invalid location data for navigation:", location);
     }
   }, [navigate]);
   
@@ -103,6 +117,8 @@ const PhotoPointsNearby: React.FC = () => {
         activeView={activeView}
         onViewChange={handleViewChange}
         loading={loading && !locationLoading}
+        certifiedCount={certifiedCount}
+        calculatedCount={calculatedCount}
       />
       
       {activeView === 'calculated' && (
