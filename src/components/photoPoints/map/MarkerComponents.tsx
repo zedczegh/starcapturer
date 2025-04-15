@@ -1,3 +1,4 @@
+
 import React, { useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -22,7 +23,7 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   
   // Multi-layered water detection
   // 1. Main water detection
-  if (isValidAstronomyLocation(location.latitude, location.longitude, false)) {
+  if (isValidAstronomyLocation(location.latitude, location.longitude, "false")) {
     return true;
   }
   
@@ -52,7 +53,7 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
 };
 
 // Create different marker styles for certified vs calculated locations
-const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean) => {
+const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isMobile: boolean) => {
   // Enhanced appearance for mobile
   const sizeMultiplier = isMobile ? 1.2 : 1.0; // 20% larger on mobile
   
@@ -101,7 +102,7 @@ const LocationMarker = memo(({
   
   // Create marker icon
   const icon = useMemo(() => {
-    return getLocationMarker(location, isCertified, false, isMobile);
+    return getLocationMarker(location, isCertified, isMobile);
   }, [location, isCertified, isMobile]);
   
   // Handle click event with popup auto-close
@@ -155,7 +156,6 @@ const LocationMarker = memo(({
       <Popup 
         closeOnClick={false}
         autoClose={true}
-        autoPan={false}
         offset={[0, 10]}
         position={[location.latitude, location.longitude]}
         className="map-popup-bottom"
@@ -237,9 +237,7 @@ const UserLocationMarker = memo(({
       <Popup
         closeOnClick={false}
         autoClose={true}
-        autoPan={false}
         offset={[0, 10]}
-        position={position}
         className="map-popup-bottom"
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">

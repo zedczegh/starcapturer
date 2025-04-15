@@ -220,21 +220,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
           const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-          const isHovered = hoveredLocationId === locationId;
           
           return (
             <LocationMarker
               key={locationId}
               location={location}
               onClick={handleLocationClick}
-              isHovered={isHovered}
-              onHover={onMarkerHover || (() => {})}
-              locationId={locationId}
               isCertified={isCertified}
               activeView={activeView}
-              handleTouchStart={handleTouchStart}
-              handleTouchEnd={handleTouchEnd}
-              handleTouchMove={handleTouchMove}
             />
           );
         })}
