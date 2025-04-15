@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -8,7 +7,7 @@ import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
 import MapLegend from './MapLegend';
-import PinpointButton from './PinpointButton';
+import CenteringPinpointButton from './CenteringPinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -35,10 +34,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const [mapContainerHeight, setMapContainerHeight] = useState('500px');
+  const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
   
-  // Use marker hook for tracking hover states
   const { 
     hoveredLocationId, 
     handleHover,
@@ -47,7 +45,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
-  // Use map hook for core functionality
   const { 
     mapReady,
     handleMapReady,
@@ -64,15 +61,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     activeView
   });
   
-  // Adjust height based on device
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
-        setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(70vh - 180px)'
-          : 'calc(80vh - 160px)');
+        setMapContainerHeight('calc(70vh - 200px)');
       } else {
-        setMapContainerHeight('500px');
+        setMapContainerHeight('450px');
       }
     };
     
@@ -81,7 +75,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handler functions
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -117,7 +110,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     setLegendOpen(isOpen);
   }, []);
   
-  // Render map container
   return (
     <div 
       style={{ height: mapContainerHeight }} 
@@ -164,8 +156,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       />
       
       {!legendOpen && (
-        <PinpointButton 
-          onGetLocation={handleGetLocation} 
+        <CenteringPinpointButton 
+          onGetLocation={handleGetLocation}
+          userLocation={userLocation}
           className="absolute top-4 right-4"
         />
       )}

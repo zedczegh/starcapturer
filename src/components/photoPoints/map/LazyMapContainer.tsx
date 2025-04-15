@@ -15,9 +15,9 @@ import PinpointButton from './PinpointButton';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
 
-// Configure Leaflet before any map component renders
 configureLeaflet();
 
+// Interface definition stays the same
 interface LazyMapContainerProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
@@ -62,7 +62,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // Effect to find SIQS value of user's current location
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -81,27 +80,19 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation, locations]);
   
-  // Handler for when the map is ready
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
       onMapReady();
     }
-    
-    // Set global map reference for debugging
-    if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
-    }
   }, [onMapReady]);
   
-  // Location click handler
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
     }
   }, [onLocationClick]);
   
-  // Map click handler
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onMapClick) {
       onMapClick(lat, lng);
@@ -109,22 +100,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Get user's geolocation
   const handleGetLocation = useCallback(() => {
     if (onMapClick) {
       getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           onMapClick(latitude, longitude);
-          
-          if (mapRef.current) {
-            const leafletMap = mapRef.current;
-            leafletMap.setView([latitude, longitude], 12, {
-              animate: true,
-              duration: 1
-            });
-          }
-          
           console.log("Got user position:", latitude, longitude);
         },
         (error) => {
@@ -139,23 +120,17 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Effect to ensure map is properly sized and invalidate size on container resize
   useEffect(() => {
     if (!mapRef.current) return;
     
     const map = mapRef.current;
     
-    // Handle window resize events to properly resize the map
     const handleResize = () => {
-      // Add a small delay to ensure the DOM has updated
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 100);
+      if (map) map.invalidateSize();
     };
     
     window.addEventListener('resize', handleResize);
     
-    // Initial invalidateSize to prevent _leaflet_pos errors
     setTimeout(() => {
       if (map) map.invalidateSize();
     }, 200);
@@ -164,19 +139,25 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       window.removeEventListener('resize', handleResize);
     };
   }, [mapRef.current]);
-  
+
+  const getDefaultZoom = () => {
+    if (activeView === 'calculated') {
+      return 7;
+    }
+    return zoom;
+  };
+
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
       <MapContainer
         center={center}
-        zoom={zoom}
+        zoom={getDefaultZoom()}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
         attributionControl={true}
-        key={`map-${center[0]}-${center[1]}-${searchRadius}`}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -197,9 +178,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
+        {/* Fixed: Removed center and zoom props */}
         <MapEffectsComposer 
-          center={center}
-          zoom={zoom}
           userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -15,25 +14,19 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MarkerEventHandler from './MarkerEventHandler';
 import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
 
-// Enhanced filtering for water locations
 const isWaterSpot = (location: SharedAstroSpot): boolean => {
-  // Never filter out certified locations
   if (location.isDarkSkyReserve || location.certification) {
     return false;
   }
   
-  // Multi-layered water detection
-  // 1. Main water detection
   if (isWaterLocation(location.latitude, location.longitude, false)) {
     return true;
   }
   
-  // 2. Coastal water detection
   if (isLikelyCoastalWater(location.latitude, location.longitude)) {
     return true;
   }
   
-  // 3. Name-based detection
   if (location.name) {
     const lowerName = location.name.toLowerCase();
     const waterKeywords = [
@@ -53,18 +46,14 @@ const isWaterSpot = (location: SharedAstroSpot): boolean => {
   return false;
 };
 
-// Create different marker styles for certified vs calculated locations
 const getLocationMarker = (location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean) => {
-  // Enhanced appearance for mobile
-  const sizeMultiplier = isMobile ? 1.2 : 1.0; // 20% larger on mobile
+  const sizeMultiplier = isMobile ? 1.2 : 1.0;
   
   if (isCertified) {
-    // For certified locations, use a color based on certification type
     const certColor = getCertificationColor(location);
     return createCustomMarker(certColor, 'star', sizeMultiplier);
   } else {
-    // For calculated locations, use a brighter color based on SIQS with circle shape
-    const defaultColor = '#4ADE80'; // Bright green fallback
+    const defaultColor = '#4ADE80';
     const color = location.siqs ? getProgressColor(location.siqs) : defaultColor;
     return createCustomMarker(color, 'circle', sizeMultiplier);
   }
@@ -100,39 +89,31 @@ const LocationMarker = memo(({
   const markerRef = useRef<L.Marker | null>(null);
   const isMobile = useIsMobile();
   
-  // Skip rendering calculated locations in certified view
   if (activeView === 'certified' && !isCertified) {
     return null;
   }
   
-  // Enhanced water location filtering with multiple checks
   if (!isCertified) {
-    // Apply strict water detection to calculated spots
     if (isWaterSpot(location)) {
       return null;
     }
     
-    // Extra safety check using our general validator
     if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
       return null;
     }
   }
   
-  // Create the correct marker icon based on location type, hover state, and device type
   const icon = useMemo(() => {
     return getLocationMarker(location, isCertified, isHovered, isMobile);
   }, [location, isCertified, isHovered, isMobile]);
   
-  // Handle click event
   const handleClick = useCallback(() => {
     onClick(location);
   }, [location, onClick]);
   
-  // Handle hover events with improved hover handling
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
     
-    // Add hovered class to marker for style enhancement
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
@@ -142,22 +123,18 @@ const LocationMarker = memo(({
   const handleMouseOut = useCallback(() => {
     onHover(null);
     
-    // Remove hovered class
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.remove('hovered');
     }
   }, [onHover]);
   
-  // Handle custom touch events for better mobile experience
   const handleMarkerTouchStart = useCallback((e: TouchEvent) => {
     if (handleTouchStart) {
-      // Convert TouchEvent to React.TouchEvent
       const syntheticEvent = e as unknown as React.TouchEvent;
       handleTouchStart(syntheticEvent, locationId);
     }
     
-    // Add hovered class to marker for style enhancement
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
@@ -166,7 +143,6 @@ const LocationMarker = memo(({
   
   const handleMarkerTouchEnd = useCallback((e: TouchEvent) => {
     if (handleTouchEnd) {
-      // Convert TouchEvent to React.TouchEvent
       const syntheticEvent = e as unknown as React.TouchEvent;
       handleTouchEnd(syntheticEvent, locationId);
     }
@@ -174,13 +150,11 @@ const LocationMarker = memo(({
   
   const handleMarkerTouchMove = useCallback((e: TouchEvent) => {
     if (handleTouchMove) {
-      // Convert TouchEvent to React.TouchEvent
       const syntheticEvent = e as unknown as React.TouchEvent;
       handleTouchMove(syntheticEvent);
     }
   }, [handleTouchMove]);
   
-  // Effect to manage popup state based on hover with longer visibility
   useEffect(() => {
     const marker = markerRef.current;
     if (!marker) return;
@@ -191,33 +165,28 @@ const LocationMarker = memo(({
       marker.openPopup();
       marker.getElement()?.classList.add('hovered');
       
-      // If a close timer was running, clear it
       if (closeTimer) {
         clearTimeout(closeTimer);
         closeTimer = null;
       }
     } else {
-      // Add a delay before closing the popup to give users time to interact
       closeTimer = window.setTimeout(() => {
         marker.closePopup();
         marker.getElement()?.classList.remove('hovered');
-      }, isMobile ? 4000 : 2000); // 4s on mobile, 2s on desktop
+      }, isMobile ? 4000 : 2000);
     }
     
     return () => {
       if (closeTimer) clearTimeout(closeTimer);
     };
   }, [isHovered, isMobile]);
-
-  // Format location name based on language
+  
   const displayName = language === 'zh' && location.chineseName 
     ? location.chineseName 
     : location.name;
   
-  // Get SIQS class for styling
   const siqsClass = getSiqsClass(location.siqs);
   
-  // Function to navigate to location details
   const goToLocationDetails = () => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
@@ -260,6 +229,8 @@ const LocationMarker = memo(({
       <Popup 
         closeOnClick={false}
         autoClose={false}
+        offset={[0, 10]}
+        direction="bottom"
       >
         <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium text-sm mb-1.5 flex items-center">
@@ -269,7 +240,6 @@ const LocationMarker = memo(({
             <span className="text-gray-100">{displayName}</span>
           </div>
           
-          {/* Show certification badge for certified locations */}
           {isCertified && location.certification && (
             <div className="mt-1 text-xs font-medium text-amber-400 flex items-center">
               <Award className="h-3 w-3 mr-1" />
@@ -277,7 +247,6 @@ const LocationMarker = memo(({
             </div>
           )}
           
-          {/* SIQS Score and Distance */}
           <div className="mt-2 flex items-center justify-between">
             {location.siqs !== undefined && (
               <div className="flex items-center gap-1.5">
@@ -292,7 +261,6 @@ const LocationMarker = memo(({
             )}
           </div>
           
-          {/* Link to details page - larger touch target on mobile */}
           <div className="mt-2 text-center">
             <button 
               onClick={goToLocationDetails}
@@ -310,7 +278,6 @@ const LocationMarker = memo(({
 
 LocationMarker.displayName = 'LocationMarker';
 
-// User location marker component
 const UserLocationMarker = memo(({ 
   position, 
   currentSiqs 
@@ -321,12 +288,14 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Changed to red color for user location and larger on mobile
   const userMarkerIcon = createCustomMarker('#e11d48', undefined, isMobile ? 1.2 : 1.0);
   
   return (
     <Marker position={position} icon={userMarkerIcon}>
-      <Popup>
+      <Popup
+        offset={[0, 10]}
+        direction="bottom"
+      >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
           <div className="text-xs mt-1">
