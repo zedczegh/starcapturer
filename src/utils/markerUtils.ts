@@ -51,8 +51,8 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   
   const certification = (location.certification || '').toLowerCase();
   
-  // Check for lodging type first
-  if (certification.includes('lodging') || location.type === 'lodging') {
+  // Check for lodging type first - without relying on the non-existent 'type' property
+  if (certification.includes('lodging')) {
     return '#1e3a8a'; // Navy blue for lodgings
   }
   
