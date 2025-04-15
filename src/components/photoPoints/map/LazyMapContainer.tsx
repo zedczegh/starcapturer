@@ -222,10 +222,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         )}
         
         <MapEffectsComposer 
-          effects={['zoom-controls', 'scale']}
           userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}
+          effects={['zoom-controls']}
         />
         
         <MapEvents onMapClick={stableOnMapClick} />

@@ -4,7 +4,7 @@ import { useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 
 interface MapEffectsComposerProps {
-  effects?: ('leaflet-fullscreen' | 'zoom-controls' | 'scale')[];
+  effects?: ('leaflet-fullscreen' | 'zoom-controls')[];  // Removed 'scale' from this array
   userLocation?: { latitude: number; longitude: number } | null;
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
@@ -27,10 +27,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       }
     }
     
-    if (effects.includes('scale')) {
-      // Add scale control if needed
-      L.control.scale({ position: 'bottomleft' }).addTo(map);
-    }
+    // Removed scale control - we no longer add it
     
     // If we have user location and view mode, we could add additional effects here
     if (userLocation && activeView) {
@@ -38,15 +35,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
     }
     
     return () => {
-      // Clean up effects if needed
-      if (effects.includes('scale')) {
-        // Remove scale control if it exists
-        map.eachLayer((layer) => {
-          if (layer instanceof L.Control.Scale) {
-            map.removeControl(layer);
-          }
-        });
-      }
+      // Clean up effects if needed (no need to clean up scale control anymore)
     };
   }, [map, effects, userLocation, activeView, searchRadius]);
   
