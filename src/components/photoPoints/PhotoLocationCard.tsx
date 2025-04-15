@@ -68,22 +68,38 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   }
   
   const handleViewDetails = () => {
+    // Generate a consistent ID for the location
+    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    
+    // Create a robust location data object with all necessary fields
     const locationData = {
-      id: location.id || `calc-loc-${Date.now()}`,
-      name: location.name,
-      chineseName: location.chineseName,
+      id: locationId,
+      name: location.name || 'Unnamed Location',
+      chineseName: location.chineseName || '',
       latitude: location.latitude,
       longitude: location.longitude,
-      bortleScale: location.bortleScale,
+      bortleScale: location.bortleScale || 4,
+      siqs: realTimeSiqs !== null ? realTimeSiqs : location.siqs,
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
-      isDarkSkyReserve: location.isDarkSkyReserve,
-      certification: location.certification
+      isDarkSkyReserve: !!location.isDarkSkyReserve,
+      certification: location.certification || '',
+      // Include all potential fields that might be needed
+      siqsResult: (realTimeSiqs !== null || location.siqs) ? { 
+        score: realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0) 
+      } : undefined
     };
     
+    // Save location data to localStorage for better state persistence
     saveLocationFromPhotoPoints(locationData);
     
-    navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
+    // Use the consistent ID in the URL
+    console.log(`Navigating to location details: ${locationId}`, locationData);
+    
+    // Navigate with the complete state object
+    navigate(`/location/${locationId}`, { 
+      state: locationData 
+    });
   };
   
   const cardVariants = {

@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { calculateMoonPhase } from "@/utils/siqsValidation";
 import { NavigateFunction } from "react-router-dom";
 import { initializeLocationData } from "./locationInitializer";
 
@@ -29,6 +28,9 @@ export const useLocationInit = (
       setIsLoading(false);
       return;
     }
+
+    // Log navigation state for debugging
+    console.log("LocationInit: Initializing with state:", initialState);
 
     initializeLocationData({
       id,

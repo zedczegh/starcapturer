@@ -19,6 +19,11 @@ export function useLocationDetailsService({
     language
   });
 
+  // Log location data for debugging mobile issues
+  if (latitude && longitude) {
+    console.log(`Location details service: ${latitude}, ${longitude}, enhanced name: ${enhancedName}`);
+  }
+
   return {
     enhancedName,
     locationDetails

@@ -56,9 +56,6 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
       
       // Indicate that a refresh is needed
       setNeedsRefresh(true);
-      
-      // Log instead of toast
-      console.log("Refreshing location data");
     } else {
       console.warn(`No existing location data found for ID: ${id}`);
     }

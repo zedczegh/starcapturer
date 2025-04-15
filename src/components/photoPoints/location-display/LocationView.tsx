@@ -80,16 +80,36 @@ const LocationView: React.FC<LocationViewProps> = ({
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    // Generate a consistent ID that won't change between sessions
+    const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
-    // Navigate to location details page
-    navigate(`/location/${locationId}`, {
-      state: {
-        ...point,
-        id: locationId,
-        timestamp: new Date().toISOString()
-      }
-    });
+    // Create a complete state object with all necessary data
+    const locationState = {
+      id: locationId,
+      name: point.name || 'Unnamed Location',
+      chineseName: point.chineseName || '',
+      latitude: point.latitude,
+      longitude: point.longitude,
+      bortleScale: point.bortleScale || 4,
+      siqs: point.siqs,
+      siqsResult: point.siqs ? { score: point.siqs } : undefined,
+      certification: point.certification || '',
+      isDarkSkyReserve: !!point.isDarkSkyReserve,
+      timestamp: new Date().toISOString(),
+      fromPhotoPoints: true
+    };
+    
+    // First store the data in localStorage to ensure it persists
+    try {
+      localStorage.setItem(`location_${locationId}`, JSON.stringify(locationState));
+      console.log(`Stored location ${locationId} in localStorage before navigation`);
+    } catch (error) {
+      console.error("Failed to store location in localStorage:", error);
+    }
+    
+    // Then navigate with the state object
+    console.log(`Navigating to location ${locationId}`);
+    navigate(`/location/${locationId}`, { state: locationState });
   };
   
   // Display the locations - use enhanced locations if available

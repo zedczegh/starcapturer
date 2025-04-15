@@ -108,6 +108,11 @@ class EnhancedCache {
       console.log(`Cache cleanup: removed ${expiredCount} expired items`);
     }
   }
+  
+  // Add entries method for iteration
+  entries(): IterableIterator<[string, CacheItem<any>]> {
+    return this.strongCache.entries();
+  }
 }
 
 // Create singleton instance
@@ -163,10 +168,3 @@ export function clearCacheForUrls(urlPatterns: string[]): void {
 export function clearAllCache(): void {
   globalCache.clear();
 }
-
-// Add entries method to make it iterable
-Object.defineProperty(EnhancedCache.prototype, 'entries', {
-  value: function() {
-    return this.strongCache.entries();
-  }
-});
