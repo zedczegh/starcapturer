@@ -1,4 +1,3 @@
-
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
@@ -6,16 +5,19 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/locationValidator";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Get SIQS quality class for styling
  * @param siqs SIQS score
  * @returns CSS class name based on SIQS quality
  */
-export const getSiqsClass = (siqs?: number): string => {
-  if (!siqs) return '';
-  if (siqs >= 7.5) return 'siqs-excellent';
-  if (siqs >= 5.5) return 'siqs-good';
+export const getSiqsClass = (siqs?: number | { score: number; isViable: boolean }): string => {
+  if (siqs === undefined) return '';
+  
+  const score = getSiqsScore(siqs);
+  if (score >= 7.5) return 'siqs-excellent';
+  if (score >= 5.5) return 'siqs-good';
   return 'siqs-poor';
 };
 
@@ -101,6 +103,6 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
     return getCertificationColor(location);
   } else {
     const defaultColor = '#4ADE80'; // Bright green fallback
-    return location.siqs ? getProgressColor(location.siqs) : defaultColor;
+    return location.siqs ? getProgressColor(getSiqsScore(location.siqs)) : defaultColor;
   }
 };

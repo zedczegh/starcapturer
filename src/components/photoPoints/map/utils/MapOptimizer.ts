@@ -1,6 +1,6 @@
-
 import L, { Icon, Marker } from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getSiqsScore, formatSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Manager for optimizing map marker rendering
@@ -87,7 +87,7 @@ export class MapOptimizer {
     });
     
     // Sort calculated by SIQS score (highest first)
-    calculated.sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+    calculated.sort((a, b) => (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0));
     
     // Apply distance filter to calculated spots only
     const filteredCalculated: SharedAstroSpot[] = [];
@@ -276,7 +276,7 @@ export class MapOptimizer {
     const marker = L.marker([location.latitude, location.longitude], { icon });
     
     // Add tooltip
-    marker.bindTooltip(`${location.name || 'Unknown Location'} (SIQS: ${siqs.toFixed(1)})`);
+    marker.bindTooltip(`${location.name || 'Unknown Location'} (SIQS: ${formatSiqsScore(siqs)})`);
     
     return marker;
   }
@@ -284,20 +284,23 @@ export class MapOptimizer {
   /**
    * Get appropriate icon based on location type
    */
-  private getMarkerIcon(isCertified: boolean, siqs: number, isSelected: boolean): Icon {
+  private getMarkerIcon(isCertified: boolean, siqs: number | { score: number; isViable: boolean }, isSelected: boolean): Icon {
     // Default icon properties
     let iconUrl = '/markers/marker-default.svg';
     let iconSize: [number, number] = [30, 30];
+    
+    // Get numeric siqs score
+    const siqsScore = getSiqsScore(siqs);
     
     // Select icon based on location type and SIQS
     if (isCertified) {
       iconUrl = '/markers/marker-certified.svg';
       iconSize = [36, 36];
-    } else if (siqs >= 8) {
+    } else if (siqsScore >= 8) {
       iconUrl = '/markers/marker-excellent.svg';
-    } else if (siqs >= 6) {
+    } else if (siqsScore >= 6) {
       iconUrl = '/markers/marker-good.svg';
-    } else if (siqs >= 4) {
+    } else if (siqsScore >= 4) {
       iconUrl = '/markers/marker-average.svg';
     } else {
       iconUrl = '/markers/marker-poor.svg';

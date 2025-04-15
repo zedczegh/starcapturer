@@ -90,10 +90,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
-  // Store previous locations when we receive new ones
   useEffect(() => {
     if (locations && locations.length > 0) {
-      // Keep a combination of new locations and previous ones that aren't in the new set
       const locationIds = new Set(locations.map(loc => 
         `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
       ));
@@ -103,7 +101,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         return !locationIds.has(locId);
       });
       
-      // Only add previous locations if we're in calculated view
       const combinedLocations = activeView === 'calculated' 
         ? [...locations, ...previousToKeep] 
         : locations;
@@ -112,13 +109,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [locations, activeView]);
   
-  // Use the utility function for filtering locations
   const filteredLocations = useCallback(() => {
     if (!previousLocations.current || previousLocations.current.length === 0) {
       return locations || [];
     }
     
-    // Use previous locations which include both new and persisted locations
     const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
     return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
   }, [locations, userLocation, searchRadius, activeView, isMobile]);
@@ -185,14 +180,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, []);
 
   const getDefaultZoom = () => {
-    // Provide a much more zoomed-out view to see the whole landscape
     if (activeView === 'calculated') {
       return isMobile ? 3 : 4;
     }
     return isMobile ? zoom - 1 : zoom;
   };
 
-  // Get filtered locations and optimize for mobile if needed
   const displayLocations = filteredLocations();
 
   return (
@@ -229,6 +222,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         )}
         
         <MapEffectsComposer 
+          effects={['zoom-controls', 'scale']}
           userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +13,7 @@ import VisibilityObserver from './cards/VisibilityObserver';
 import RealTimeSiqsFetcher from './cards/RealTimeSiqsFetcher';
 import LocationHeader from './cards/LocationHeader';
 import { useDisplayName } from './cards/DisplayNameResolver';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -44,14 +44,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
-  // Use the extracted display name logic
   const { displayName, showOriginalName } = useDisplayName({
     location,
     language,
     locationCounter
   });
   
-  // Handle SIQS calculation results
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
     setLoadingSiqs(loading);
@@ -61,17 +59,15 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
   
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs);
   
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
   const handleViewDetails = () => {
-    // Generate a consistent ID for the location
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    // Create a robust location data object with all necessary fields
     const locationData = {
       id: locationId,
       name: location.name || 'Unnamed Location',
@@ -79,24 +75,20 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       latitude: location.latitude,
       longitude: location.longitude,
       bortleScale: location.bortleScale || 4,
-      siqs: realTimeSiqs !== null ? realTimeSiqs : location.siqs,
+      siqs: realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs),
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: !!location.isDarkSkyReserve,
       certification: location.certification || '',
-      // Include all potential fields that might be needed
       siqsResult: (realTimeSiqs !== null || location.siqs) ? { 
-        score: realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0) 
+        score: realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs) 
       } : undefined
     };
     
-    // Save location data to localStorage for better state persistence
     saveLocationFromPhotoPoints(locationData);
     
-    // Use the consistent ID in the URL
     console.log(`Navigating to location details: ${locationId}`, locationData);
     
-    // Navigate with the complete state object
     navigate(`/location/${locationId}`, { 
       state: locationData 
     });

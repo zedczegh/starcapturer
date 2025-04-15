@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatSIQSScore } from "@/utils/geoUtils";
+import { formatSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
@@ -32,14 +31,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  // Use the shared display name resolver
   const { displayName, showOriginalName } = useDisplayName({
     location: point,
     language,
     locationCounter: null
   });
   
-  // Get detailed location information
   const nearestTownInfo = useMemo(() => 
     point.latitude && point.longitude ? 
       findNearestTown(point.latitude, point.longitude, language) : 
@@ -100,7 +97,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
+          <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
         </div>
       </div>
       
@@ -113,7 +110,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {/* Show original location name if we're using nearest town as main title and they differ */}
       {showOriginalName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
@@ -123,7 +119,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {/* Display detailed location information from nearestTownInfo */}
       {nearestTownInfo && nearestTownInfo.detailedName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
@@ -133,7 +128,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {/* Display coordinates */}
       {point.latitude && point.longitude && (
         <div className="mt-1.5 mb-2 flex items-center">
           <Navigation className="h-3.5 w-3.5 text-muted-foreground mr-1" />

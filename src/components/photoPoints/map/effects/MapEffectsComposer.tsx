@@ -1,12 +1,21 @@
 
 import React from 'react';
 import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 
 interface MapEffectsComposerProps {
   effects?: ('leaflet-fullscreen' | 'zoom-controls' | 'scale')[];
+  userLocation?: { latitude: number; longitude: number } | null;
+  activeView?: 'certified' | 'calculated';
+  searchRadius?: number;
 }
 
-const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ effects = [] }) => {
+const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
+  effects = [],
+  userLocation,
+  activeView,
+  searchRadius
+}) => {
   const map = useMap();
   
   React.useEffect(() => {
@@ -23,6 +32,11 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ effects = [] })
       L.control.scale({ position: 'bottomleft' }).addTo(map);
     }
     
+    // If we have user location and view mode, we could add additional effects here
+    if (userLocation && activeView) {
+      console.log(`Map effects applied for ${activeView} view with radius ${searchRadius}km`);
+    }
+    
     return () => {
       // Clean up effects if needed
       if (effects.includes('scale')) {
@@ -34,7 +48,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ effects = [] })
         });
       }
     };
-  }, [map, effects]);
+  }, [map, effects, userLocation, activeView, searchRadius]);
   
   return null; // This component doesn't render anything visible
 };

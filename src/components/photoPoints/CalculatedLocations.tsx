@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -10,6 +9,7 @@ import { useExpandSearchRadius } from '@/hooks/photoPoints/useExpandSearchRadius
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -46,7 +46,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   useExpandSearchRadius({ onRefresh });
   
   // Filter out locations with SIQS score of 0
-  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
   
   // Sort locations by distance (closest first)
   const sortedLocations = [...validLocations].sort((a, b) => 
