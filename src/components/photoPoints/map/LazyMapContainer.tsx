@@ -98,9 +98,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       );
       
       if (sameLocation) {
+        // Handle both number and object siqs types
         if (typeof sameLocation.siqs === 'number') {
           setCurrentSiqs(sameLocation.siqs);
-        } else if (sameLocation.siqs && typeof sameLocation.siqs === 'object') {
+        } else if (sameLocation.siqs && typeof sameLocation.siqs === 'object' && 'score' in sameLocation.siqs) {
           setCurrentSiqs(sameLocation.siqs.score);
         } else if (sameLocation.siqsResult) {
           setCurrentSiqs(sameLocation.siqsResult.score);
@@ -168,6 +169,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         whenReady={handleMapReady}
         attributionControl={!isMobile}
         worldCopyJump={true}
+        doubleClickZoom={true}
       >
         <TileLayer
           attribution={tileOptions.attribution}

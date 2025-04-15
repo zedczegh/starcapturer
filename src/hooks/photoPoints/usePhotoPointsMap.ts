@@ -72,7 +72,7 @@ export const usePhotoPointsMap = ({
         }
       });
       
-      // Then add calculated locations without overriding certified ones
+      // Then add regular locations without overriding certified ones
       if (Array.isArray(locations)) {
         locations.forEach(loc => {
           if (loc.latitude && loc.longitude) {
@@ -93,6 +93,8 @@ export const usePhotoPointsMap = ({
     console.log(`Using ${locations?.length || 0} fallback locations for map display`);
     return Array.isArray(locations) ? locations : [];
   }, [locations, allCertifiedLocations, activeView]);
+  
+  console.log("Combined locations length:", combinedLocations().length);
   
   // Use the location processing hook
   const { processedLocations } = useMapLocations({

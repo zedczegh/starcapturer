@@ -10,12 +10,13 @@ interface MapControllerProps {
 const MapController: React.FC<MapControllerProps> = ({ userLocation, searchRadius }) => {
   const map = useMap();
   
-  // Center the map on user location if available
+  // Center the map on user location only when component mounts
   useEffect(() => {
     if (userLocation && map) {
+      // Only center on initial mount, no dependency on userLocation
       map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
     }
-  }, [userLocation, map]);
+  }, [map]); // Only depend on map, not userLocation to prevent re-centering
   
   // Update zoom level based on search radius
   useEffect(() => {

@@ -20,7 +20,7 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
     <div className={className}>
       <PinpointButton 
         onGetLocation={onGetLocation}
-        shouldCenter={true} 
+        shouldCenter={false} // Prevent auto-centering
       />
     </div>
   );
