@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -28,9 +29,9 @@ interface LazyMapContainerProps {
   onMapClick?: (lat: number, lng: number) => void;
   hoveredLocationId?: string | null;
   onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (id: string) => void;
-  handleTouchEnd?: () => void;
-  handleTouchMove?: (event: TouchEvent) => void;
+  handleTouchStart?: (e: React.TouchEvent<Element>, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent<Element>) => void;
+  handleTouchMove?: (e: React.TouchEvent<Element>) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;

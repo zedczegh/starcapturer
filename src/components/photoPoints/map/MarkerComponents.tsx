@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -73,9 +74,9 @@ interface LocationMarkerProps {
   locationId: string;
   isCertified: boolean;
   activeView: 'certified' | 'calculated';
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
+  handleTouchStart?: (e: React.TouchEvent<Element>, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent<Element>) => void;
+  handleTouchMove?: (e: React.TouchEvent<Element>) => void;
 }
 
 const LocationMarker = memo(({ 
@@ -166,7 +167,7 @@ const LocationMarker = memo(({
   
   const handleMarkerTouchStart = useCallback((e: TouchEvent) => {
     if (handleTouchStart) {
-      const syntheticEvent = e as unknown as React.TouchEvent;
+      const syntheticEvent = e as unknown as React.TouchEvent<Element>;
       handleTouchStart(syntheticEvent, locationId);
     }
     
@@ -178,14 +179,14 @@ const LocationMarker = memo(({
   
   const handleMarkerTouchEnd = useCallback((e: TouchEvent) => {
     if (handleTouchEnd) {
-      const syntheticEvent = e as unknown as React.TouchEvent;
-      handleTouchEnd(syntheticEvent, locationId);
+      const syntheticEvent = e as unknown as React.TouchEvent<Element>;
+      handleTouchEnd(syntheticEvent);
     }
-  }, [locationId, handleTouchEnd]);
+  }, [handleTouchEnd]);
   
   const handleMarkerTouchMove = useCallback((e: TouchEvent) => {
     if (handleTouchMove) {
-      const syntheticEvent = e as unknown as React.TouchEvent;
+      const syntheticEvent = e as unknown as React.TouchEvent<Element>;
       handleTouchMove(syntheticEvent);
     }
   }, [handleTouchMove]);

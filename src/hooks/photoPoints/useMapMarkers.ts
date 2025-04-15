@@ -83,7 +83,7 @@ export const useMapMarkers = () => {
   /**
    * Handle touch start event for better touch interaction
    */
-  const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent<Element>, id: string) => {
     if (!isMobile) return;
     
     // Store touch position to determine if it's a tap or drag later
@@ -104,7 +104,7 @@ export const useMapMarkers = () => {
   /**
    * Handle touch end event for better touch interaction
    */
-  const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent<Element>) => {
     if (!isMobile) return;
     
     // Prevent default behaviors
@@ -122,7 +122,7 @@ export const useMapMarkers = () => {
   /**
    * Handle touch move to detect dragging vs tapping
    */
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent<Element>) => {
     if (!isMobile || !touchStartPos.current) return;
     
     if (e.touches && e.touches[0]) {
