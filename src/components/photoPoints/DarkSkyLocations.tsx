@@ -24,17 +24,38 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
     console.log(`DarkSkyLocations received ${locations.length} certified locations`);
     
     if (locations.length > 0) {
-      // Log the first few locations for debugging
-      const sampleLocations = locations.slice(0, Math.min(3, locations.length));
-      console.log("Sample certified locations:", sampleLocations.map(loc => ({
-        name: loc.name,
-        cert: loc.certification,
-        isDarkSky: loc.isDarkSkyReserve
-      })));
+      // Count by certification type for debugging
+      const certTypes = {
+        reserve: 0,
+        park: 0,
+        community: 0,
+        urban: 0,
+        lodging: 0,
+        other: 0
+      };
+      
+      locations.forEach(loc => {
+        const cert = (loc.certification || '').toLowerCase();
+        if (cert.includes('reserve') || Boolean(loc.isDarkSkyReserve)) {
+          certTypes.reserve++;
+        } else if (cert.includes('park')) {
+          certTypes.park++;
+        } else if (cert.includes('community')) {
+          certTypes.community++;
+        } else if (cert.includes('urban') || cert.includes('night sky place')) {
+          certTypes.urban++;
+        } else if (cert.includes('lodging')) {
+          certTypes.lodging++;
+        } else {
+          certTypes.other++;
+        }
+      });
+      
+      console.log("Certification type counts:", certTypes);
     }
   }, [locations]);
   
-  // Filter locations based on certification type only - no distance limits applied
+  // Filter locations based on certification type ONLY - no distance limits applied
   const filteredLocations = useMemo(() => {
     if (selectedCertificationType === 'all') {
       return locations;
@@ -48,7 +69,7 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
       
       const certification = (location.certification || '').toLowerCase();
       
-      // Check certification type
+      // Check certification type with expanded matching
       switch (selectedCertificationType) {
         case 'reserve':
           return certification.includes('reserve') || 
@@ -68,6 +89,11 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
       }
     });
   }, [locations, selectedCertificationType]);
+  
+  // Log filtered results for debugging
+  useEffect(() => {
+    console.log(`Filtered to ${filteredLocations.length} ${selectedCertificationType} locations`);
+  }, [filteredLocations, selectedCertificationType]);
   
   return (
     <div>

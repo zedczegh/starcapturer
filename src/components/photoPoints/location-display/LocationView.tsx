@@ -1,13 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import EmptyLocationDisplay from '../EmptyLocationDisplay';
 import LocationsList from '../LocationsList';
 import { Loader2 } from 'lucide-react';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
 
 interface LocationViewProps {
   locations: SharedAstroSpot[];
@@ -26,39 +24,9 @@ const LocationView: React.FC<LocationViewProps> = ({
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
-  }, [locations]);
-  
-  // Process ALL locations regardless of distance - ensure no filtering based on user location
-  useEffect(() => {
-    if (locations.length > 0) {
-      const updateWithSiqs = async () => {
-        try {
-          // Set a very large radius (100,000 km) to include all locations globally
-          // Pass null for userLocation to avoid any distance filtering
-          const updated = await updateLocationsWithRealTimeSiqs(
-            locations,
-            null,
-            100000,
-            'certified' // Always treat as certified to ensure they all get processed
-          );
-          setEnhancedLocations(updated);
-          
-          // Log count to verify all locations are included
-          console.log(`Enhanced ${updated.length} locations with real-time SIQS data`);
-        } catch (err) {
-          console.error("Error updating location view with real-time SIQS:", err);
-          setEnhancedLocations(locations);
-        }
-      };
-      
-      updateWithSiqs();
-    } else {
-      setEnhancedLocations([]);
-    }
   }, [locations]);
   
   if (loading && initialLoad) {
@@ -113,11 +81,9 @@ const LocationView: React.FC<LocationViewProps> = ({
     navigate(`/location/${locationId}`, { state: locationState });
   };
   
-  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
-  
   return (
     <LocationsList 
-      locations={locationsToDisplay}
+      locations={locations}
       loading={loading}
       initialLoad={initialLoad}
       onViewDetails={handleViewLocation}

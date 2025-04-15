@@ -6,7 +6,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * Hook to separate certified and calculated recommendation locations
  * Uses memoization for better performance
  */
-export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius?: number) {
+export function useCertifiedLocations(locations: SharedAstroSpot[]) {
   const [processedLocations, setProcessedLocations] = useState<{
     certified: SharedAstroSpot[],
     calculated: SharedAstroSpot[]
@@ -99,9 +99,9 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
       return (a.name || '').localeCompare(b.name || '');
     });
     
-    // Sort calculated locations by distance if available
+    // Sort calculated locations by SIQS quality if available
     const sortedCalculated = [...calculated].sort((a, b) => 
-      (a.distance || Infinity) - (b.distance || Infinity)
+      (b.siqs || 0) - (a.siqs || 0)
     );
     
     setProcessedLocations({

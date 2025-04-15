@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/utils/geoUtils';
+import { isCertifiedLocation } from '@/utils/locationFiltering';
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -18,14 +19,13 @@ export const usePhotoPointsSearch = ({
   userLocation,
   currentSiqs,
   searchRadius = 100,
-  maxInitialResults = 5
+  maxInitialResults = 50 // Increased from 5 to 50 to show more locations initially
 }: UsePhotoPointsSearchProps) => {
   const { t } = useLanguage();
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('certified');
 
-  // Set up recommended locations - pass the searchRadius from props
   // Always use a large radius for certified locations to get all of them globally
   const effectiveRadius = activeView === 'certified' ? 100000 : searchRadius;
   
@@ -43,7 +43,7 @@ export const usePhotoPointsSearch = ({
       if (!initialLoadComplete && cachedData) {
         const parsed = JSON.parse(cachedData);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // For certified locations, don't filter by radius
+          // For certified locations, don't filter at all
           const filteredLocations = activeView === 'certified'
             ? parsed.filter(loc => loc.isDarkSkyReserve || loc.certification)
             : userLocation 
@@ -64,7 +64,12 @@ export const usePhotoPointsSearch = ({
                 })
               : parsed;
             
-          setDisplayedLocations(filteredLocations.slice(0, maxInitialResults));
+          // Don't limit certified locations
+          const locationsToDisplay = activeView === 'certified' 
+            ? filteredLocations 
+            : filteredLocations.slice(0, maxInitialResults);
+            
+          setDisplayedLocations(locationsToDisplay);
           console.log(`Using cached locations initially: ${filteredLocations.length} locations`);
         }
       }
@@ -78,11 +83,11 @@ export const usePhotoPointsSearch = ({
     if (locations.length > 0) {
       // Separate certified and calculated locations
       const certifiedLocs = locations.filter(
-        loc => loc.isDarkSkyReserve || loc.certification
+        loc => isCertifiedLocation(loc)
       );
       
       const calculatedLocs = locations.filter(
-        loc => !(loc.isDarkSkyReserve || loc.certification)
+        loc => !isCertifiedLocation(loc)
       );
       
       console.log(`Found ${certifiedLocs.length} certified and ${calculatedLocs.length} calculated locations`);
@@ -124,7 +129,12 @@ export const usePhotoPointsSearch = ({
         return (a.distance || Infinity) - (b.distance || Infinity);
       });
       
-      setDisplayedLocations(sortedLocations.slice(0, maxInitialResults));
+      // Don't apply limits to certified locations view
+      const locationsToDisplay = activeView === 'certified' 
+        ? sortedLocations 
+        : sortedLocations.slice(0, maxInitialResults);
+        
+      setDisplayedLocations(locationsToDisplay);
       setInitialLoadComplete(true);
       
       // Save to localStorage for faster future loads

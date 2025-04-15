@@ -21,12 +21,13 @@ const LocationsList: React.FC<LocationsListProps> = ({
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Update locations with real-time SIQS - no distance filtering
+  // Update locations with real-time SIQS - IMPORTANT: no distance filtering
   useEffect(() => {
     if (locations.length > 0) {
       const updateWithSiqs = async () => {
         try {
-          // Always use a large radius and null location to ensure all locations are processed
+          // Always use a very large radius (100,000 km) and null location to ensure ALL locations are processed
+          // This effectively means "show everything globally"
           const updated = await updateLocationsWithRealTimeSiqs(
             locations,
             null, 
