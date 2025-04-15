@@ -13,9 +13,6 @@ interface MapEffectsComposerProps {
   onSiqsCalculated?: (siqs: number) => void;
 }
 
-/**
- * A component that composes various map effects
- */
 const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
   center,
   zoom,
@@ -34,7 +31,10 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
     const timeoutId = setTimeout(() => {
       if (map && map.setView) {
         try {
-          map.setView(center, zoom || map.getZoom());
+          map.setView(center, zoom || map.getZoom(), {
+            animate: true,
+            duration: 0.5 // Faster animation
+          });
         } catch (error) {
           console.error("Error setting map view:", error);
         }

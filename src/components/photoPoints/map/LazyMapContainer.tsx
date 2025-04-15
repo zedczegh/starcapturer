@@ -157,6 +157,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             dashArray: '5, 5',
           }}
           radius={searchRadius * 1000}
+          className="location-radius-circle"
         />
       )}
       
