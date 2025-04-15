@@ -40,14 +40,11 @@ const LocationMarker = memo(({
     <Marker
       position={position}
       icon={icon}
-      eventHandlers={{
-        click: handleMarkerClick
-      }}
+      onClick={handleMarkerClick}
     >
       <Popup 
         closeOnClick={false}
         autoClose={true}
-        className="map-popup-bottom"
       >
         <div className={`p-2 leaflet-popup-custom marker-popup-gradient ${siqsClass}`}>
           <div className="font-medium">{displayName}</div>

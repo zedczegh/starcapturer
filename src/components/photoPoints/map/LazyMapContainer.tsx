@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -56,7 +55,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // Find SIQS value of user's current location
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const userLat = userLocation.latitude;
@@ -75,27 +73,23 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation, locations]);
   
-  // Handler for map ready event
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) {
       onMapReady();
     }
     
-    // Set global map reference for debugging
     if (mapRef.current) {
       (window as any).leafletMap = mapRef.current;
     }
   }, [onMapReady]);
   
-  // Location click handler
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
     }
   }, [onLocationClick]);
   
-  // Map click handler
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onMapClick) {
       onMapClick(lat, lng);
@@ -103,7 +97,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Ensure map is properly sized on resize
   useEffect(() => {
     if (!mapRef.current) return;
     
@@ -117,7 +110,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     
     window.addEventListener('resize', handleResize);
     
-    // Initial invalidateSize
     setTimeout(() => {
       if (map) map.invalidateSize();
     }, 200);
