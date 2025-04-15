@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,6 +17,7 @@ import { MapEffectsComposer } from './MapComponents';
 
 configureLeaflet();
 
+// Interface definition stays the same
 interface LazyMapContainerProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
@@ -176,9 +178,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
+        {/* Fixed: Removed center and zoom props */}
         <MapEffectsComposer 
-          center={center}
-          zoom={undefined}
           userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}

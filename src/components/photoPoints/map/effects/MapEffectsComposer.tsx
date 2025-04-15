@@ -40,4 +40,3 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
 };
 
 export default MapEffectsComposer;
-

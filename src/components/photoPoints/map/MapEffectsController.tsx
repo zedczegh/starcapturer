@@ -18,8 +18,8 @@ export const WorldBoundsController: React.FC = () => {
     
     // Set more forgiving max bounds
     const worldBounds = new L.LatLngBounds(
-      new L.LatLng(-90, -200), // Slightly extended bounds
-      new L.LatLng(90, 200)    // Slightly extended bounds
+      new L.LatLng(-90, -200), // Significantly extended bounds
+      new L.LatLng(90, 200)    // Significantly extended bounds
     );
     
     map.setMaxBounds(worldBounds);
@@ -38,7 +38,7 @@ export const WorldBoundsController: React.FC = () => {
       if (lng < -180) lng += 360;
       if (lng > 180) lng -= 360;
       
-      // Only pan if really needed
+      // Only pan if really needed - prevent unnecessary rendering
       if (lat !== center.lat || lng !== center.lng) {
         map.panTo(new L.LatLng(lat, lng), { animate: false });
       }
@@ -46,7 +46,7 @@ export const WorldBoundsController: React.FC = () => {
     
     map.on('drag', handleDrag);
     
-    // Disable automatic zoom animations
+    // Disable ALL automatic zoom animations
     if (map.options) {
       map.options.zoomAnimation = false;
       map.options.markerZoomAnimation = false;
@@ -101,4 +101,3 @@ export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) =
 };
 
 export default MapEvents;
-
