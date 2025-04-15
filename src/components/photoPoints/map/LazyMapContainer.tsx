@@ -10,14 +10,13 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
-import { MapEvents, WorldBoundsController } from './MapEffectsController';
+import { MapEvents } from './MapEffectsController';
 import PinpointButton from './PinpointButton';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
 
 configureLeaflet();
 
-// Interface definition stays the same
 interface LazyMapContainerProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
@@ -107,26 +106,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       onMapReady();
     }
   }, [onMapReady]);
-  
-  const handleGetLocation = useCallback(() => {
-    if (onMapClick) {
-      getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onMapClick(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-    }
-  }, [onMapClick]);
   
   useEffect(() => {
     if (!mapRef.current) return;

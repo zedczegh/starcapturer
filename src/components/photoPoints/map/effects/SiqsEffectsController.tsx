@@ -7,7 +7,7 @@ interface SiqsEffectsControllerProps {
   activeView: 'certified' | 'calculated';
   searchRadius: number;
   onSiqsCalculated?: (siqs: number) => void;
-  disabled?: boolean; // New prop to disable effects
+  disabled?: boolean;
 }
 
 const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({

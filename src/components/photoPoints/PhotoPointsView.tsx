@@ -124,18 +124,20 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     );
   }
   
-  // For list view
+  // For list view - use key prop to force re-rendering on view change
   return (
     <Suspense fallback={<PageLoader />}>
       <div className="min-h-[300px]">
         {activeView === 'certified' ? (
           <DarkSkyLocations
+            key="certified-view"
             locations={certifiedLocations}
             loading={loading}
             initialLoad={initialLoad}
           />
         ) : (
           <CalculatedLocations
+            key="calculated-view"
             locations={filteredCalculatedLocations}
             loading={loading}
             initialLoad={initialLoad}
