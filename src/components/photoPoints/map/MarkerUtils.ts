@@ -7,7 +7,9 @@ import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 // Re-export the getSafeScore function from geoUtils for consistency
-export const getSafeScore = geoUtilsGetSafeScore;
+export const getSafeScore = (siqs?: number | { score: number; isViable: boolean } | null): number => {
+  return geoUtilsGetSafeScore(siqs);
+};
 
 /**
  * Check if a location is a water-based spot

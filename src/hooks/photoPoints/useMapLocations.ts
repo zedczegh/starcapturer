@@ -6,6 +6,7 @@ import {
   separateLocationTypes, 
   mergeLocations 
 } from '@/utils/locationFiltering';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -17,8 +18,7 @@ interface UseMapLocationsProps {
 
 /**
  * Hook to handle location filtering and sorting for map display
- * Optimized for mobile performance by removing unnecessary calculations
- * Added persistence for calculated locations when changing views
+ * Optimized for mobile performance with better caching and improved location persistence
  */
 export const useMapLocations = ({
   userLocation,
@@ -28,7 +28,7 @@ export const useMapLocations = ({
   mapReady
 }: UseMapLocationsProps) => {
   const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
-  const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
+  const previousLocationsRef = useRef<Map<string, SharedAstroSpot>>(new Map());
   const previousActiveViewRef = useRef<string>(activeView);
   const processingRef = useRef<boolean>(false);
   const locationCacheRef = useRef<Map<string, SharedAstroSpot>>(new Map());
@@ -38,7 +38,7 @@ export const useMapLocations = ({
     // Skip if already processing
     if (processingRef.current) return;
     
-    // Performance optimization - cache location signatures to avoid reprocessing
+    // Create a unique signature for this location set
     const locationSignature = locations.length + '-' + (userLocation ? 
       `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}` : 
       'null-location');
@@ -47,81 +47,78 @@ export const useMapLocations = ({
     
     processingRef.current = true;
     
-    // Always preserve calculated locations, even when switching views
-    let allLocations = [...locations];
+    // Use a Map for more efficient lookups compared to array
+    const newLocationsMap = new Map<string, SharedAstroSpot>();
     
-    // When location changes, keep existing locations that are still valid
-    if (userLocation && previousLocationsRef.current.length > 0) {
-      console.log("Preserving valid locations while updating...");
-      
-      // Create lookup map for new locations
-      const newLocationMap = new Map<string, boolean>();
-      locations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          newLocationMap.set(key, true);
-        }
-      });
-      
-      // Keep locations from previous set that aren't duplicates
-      const previousToKeep = previousLocationsRef.current.filter(loc => {
-        if (!loc.latitude || !loc.longitude) return false;
-        
-        const locKey = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        
-        // Don't keep if already in new locations
-        if (newLocationMap.has(locKey)) return false;
-        
-        // For calculated view, filter by distance
-        if (activeView === 'calculated' && userLocation && !loc.isDarkSkyReserve && !loc.certification) {
-          const distance = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            loc.latitude,
-            loc.longitude
-          );
-          
-          // Only keep locations within search radius
-          return distance <= searchRadius;
-        }
-        
-        // Keep all certified locations regardless
-        return loc.isDarkSkyReserve || loc.certification;
-      });
-      
-      // Merge and update the full set
-      allLocations = [...allLocations, ...previousToKeep];
-      console.log(`Preserved ${previousToKeep.length} locations from previous view`);
-    }
+    // Add all current locations to the map
+    locations.forEach(loc => {
+      if (loc.latitude && loc.longitude) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        newLocationsMap.set(key, loc);
+      }
+    });
     
-    // Update the previous view and locations
+    // Preserve existing locations that aren't in the new batch
+    previousLocationsRef.current.forEach((loc, key) => {
+      if (!newLocationsMap.has(key)) {
+        // Apply location filtering based on view mode
+        if (activeView === 'calculated') {
+          // Keep locations within search radius
+          if (userLocation && !loc.isDarkSkyReserve && !loc.certification) {
+            const distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              loc.latitude,
+              loc.longitude
+            );
+            
+            // Filter out locations outside search radius or in water
+            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
+              newLocationsMap.set(key, loc);
+            }
+          } else if (loc.isDarkSkyReserve || loc.certification) {
+            // Keep certified locations
+            newLocationsMap.set(key, loc);
+          }
+        } else if (activeView === 'certified' && (loc.isDarkSkyReserve || loc.certification)) {
+          // For certified view, only keep certified locations
+          newLocationsMap.set(key, loc);
+        }
+      }
+    });
+    
+    // Convert Map back to array
+    const allLocations = Array.from(newLocationsMap.values());
+    
+    // Update previous locations for future use
+    previousLocationsRef.current = newLocationsMap;
     previousActiveViewRef.current = activeView;
-    previousLocationsRef.current = allLocations;
     
     // Use a shorter timeout to improve loading speed
     const timeoutId = setTimeout(() => {
       try {
-        // Optimize by doing less processing for larger location sets
+        // Filter valid locations
         const validLocations = filterValidLocations(allLocations);
         
         // Separate locations by type
         const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
         console.log(`Location counts - certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}, total: ${validLocations.length}`);
         
-        // In certified view, only show certified locations
-        // In calculated view, show either certified OR calculated locations based on activeView
-        let locationsToShow;
+        // Determine which locations to show based on view
+        let locationsToShow: SharedAstroSpot[];
         
         if (activeView === 'certified') {
+          // In certified view, only show certified locations
           locationsToShow = certifiedLocations;
         } else {
-          // For calculated view, show all locations optimized for device
+          // For calculated view, show calculated locations
           locationsToShow = calculatedLocations;
           
-          // Also include certified locations, but only if explicitly requested
-          if (!viewChanged || userLocation) {
-            // Merge with certified, limited for performance
-            locationsToShow = [...certifiedLocations, ...calculatedLocations];
+          // In calculated view, certified locations are handled separately in the UI
+          // Only include certified locations if explicitly requested
+          if (viewChanged || userLocation) {
+            // Merge calculated and certified for calculated view
+            locationsToShow = [...calculatedLocations];
           }
         }
         
@@ -131,7 +128,7 @@ export const useMapLocations = ({
       } finally {
         processingRef.current = false;
       }
-    }, 50); // Faster timeout for better responsiveness
+    }, 30); // Even faster timeout for better responsiveness
     
     return () => clearTimeout(timeoutId);
   }, [locations, activeView, searchRadius, userLocation]);

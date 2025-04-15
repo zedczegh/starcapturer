@@ -55,7 +55,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       return certifiedLocations;
     } else {
       // For calculated view, include both certified and calculated locations
-      return [...certifiedLocations, ...calculatedLocations] as SharedAstroSpot[];
+      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)] as SharedAstroSpot[];
     }
   }, [activeView, certifiedLocations, calculatedLocations]);
   
@@ -215,7 +215,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           showStarLegend={activeView === 'certified'}
           showCircleLegend={activeView === 'calculated'}
           onToggle={handleLegendToggle}
-          className="absolute bottom-4 right-4"
+          className="absolute top-4 right-4 z-[999]"
         />
       )}
       
@@ -223,10 +223,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       <CenteringPinpointButton
         onGetLocation={handleGetLocation}
         userLocation={userLocation}
-        className="absolute top-4 right-12 z-[999]"
+        className="absolute top-4 right-16 z-[999]"
       />
     </div>
   );
-};
+});
 
 export default PhotoPointsMap;

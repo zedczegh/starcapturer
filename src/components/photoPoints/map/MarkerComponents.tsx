@@ -14,10 +14,8 @@ import {
   getSiqsClass, 
   getLocationMarker, 
   isWaterSpot, 
-  isValidAstronomyLocation,
-  getSafeScore
+  isValidAstronomyLocation
 } from './MarkerUtils';
-import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -57,7 +55,8 @@ const LocationMarker = memo(({
     
   // Fix TS error by safely handling null siqsScore
   const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
-    getSafeScore(location.siqs) : null;
+    (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
+  
   const siqsClass = getSiqsClass(siqsScore);
   
   // Don't show certified locations in calculated view unless they are actively displayed
@@ -120,7 +119,7 @@ const LocationMarker = memo(({
     
     // Handle the siqs value safely
     const siqsScore = location.siqs !== undefined && location.siqs !== null ?
-      getSafeScore(location.siqs) : null;
+      (typeof location.siqs === 'number' ? location.siqs : location.siqs.score) : null;
     
     const navigationData = {
       id: locationId,
@@ -135,7 +134,7 @@ const LocationMarker = memo(({
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
       siqsResult: location.siqs ? { 
-        score: typeof location.siqs === 'object' ? location.siqs.score : location.siqs,
+        score: typeof location.siqs === 'number' ? location.siqs : location.siqs.score,
         isViable: typeof location.siqs === 'object' ? location.siqs.isViable : (siqsScore !== null && siqsScore >= 2)
       } : undefined
     };
@@ -228,7 +227,7 @@ const LocationMarker = memo(({
           <div className="mt-2 flex items-center justify-between">
             {location.siqs !== undefined && location.siqs !== null && (
               <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={getSafeScore(location.siqs)} compact={true} />
+                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : location.siqs.score} compact={true} />
               </div>
             )}
             
