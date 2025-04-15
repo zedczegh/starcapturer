@@ -12,7 +12,6 @@ interface ViewToggleProps {
   loading?: boolean;
 }
 
-// Redesigned toggle buttons with consistent hook usage
 const ViewToggle: React.FC<ViewToggleProps> = ({
   activeView,
   onViewChange,
@@ -20,7 +19,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Handle view changes
+  // Consistent function to handle view changes
   const handleViewChange = (view: PhotoPointsViewMode) => {
     if (view !== activeView && !loading) {
       console.log(`ViewToggle: Switching to ${view} view`);
