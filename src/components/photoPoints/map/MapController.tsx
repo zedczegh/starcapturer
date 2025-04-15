@@ -9,6 +9,10 @@ interface MapControllerProps {
   searchRadius: number;
 }
 
+/**
+ * Component to handle map setup and controls
+ * Enhanced for mobile touch interactions
+ */
 export const MapController: React.FC<MapControllerProps> = ({ 
   userLocation, 
   searchRadius
@@ -22,27 +26,22 @@ export const MapController: React.FC<MapControllerProps> = ({
     
     // Mobile-specific optimizations
     if (isMobile) {
-      // Force enable dragging and touch handlers
+      // Improve touch handling on mobile devices
       map.dragging.enable();
       map.touchZoom.enable();
-      
-      // Fix for Safari - Use proper conditional instead of optional chaining in assignment
-      if (map.dragging._draggable && !map.dragging._draggable._onUp) {
-        map.dragging._draggable._onUp = () => {};
-      }
       
       // Lower inertia for smoother dragging on mobile
       if (map.dragging._draggable) {
         map.dragging._draggable._inertia = true;
         map.dragging._draggable.options.inertia = {
-          deceleration: 3000,
-          maxSpeed: 1500,
-          timeThreshold: 100,
-          linearity: 0.25
+          deceleration: 3000, // Higher value = faster stop (default: 3000)
+          maxSpeed: 1500,     // Lower for smoother movement (default: 1500)
+          timeThreshold: 100, // Lower for more responsive dragging (default: 200)
+          linearity: 0.25     // Higher = more linear deceleration (default: 0.2)
         };
       }
       
-      // Fix pinch-zoom issues
+      // Fix pinch-zoom issues by ensuring proper event handling
       map.touchZoom.disable();
       map.touchZoom.enable();
       
@@ -60,23 +59,8 @@ export const MapController: React.FC<MapControllerProps> = ({
           mapPane.style.touchAction = "none";
         }
       }
-      
-      // Add Safari specific touch handlers
-      const container = map.getContainer();
-      container.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          e.preventDefault();
-          map.dragging.enable();
-        }
-      }, { passive: false });
-      
-      container.addEventListener('touchend', () => {
-        setTimeout(() => {
-          map.dragging.enable();
-        }, 100);
-      });
     } else {
-      // Desktop settings
+      // Desktop settings - enable all controls
       map.scrollWheelZoom.enable();
       map.dragging.enable();
       map.touchZoom.enable();
@@ -86,6 +70,12 @@ export const MapController: React.FC<MapControllerProps> = ({
       if (map.tap) map.tap.enable();
     }
     
+    // Improve performance by reducing re-renders
+    map._onResize = L.Util.throttle(map._onResize, 200, map);
+    
+    // Store map reference for debugging
+    (window as any).leafletMap = map;
+    
     // Center map on user location once on first render
     if (userLocation && firstRenderRef.current) {
       map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
@@ -93,9 +83,8 @@ export const MapController: React.FC<MapControllerProps> = ({
     }
     
     return () => {
-      const container = map.getContainer();
-      container.removeEventListener('touchstart', () => {});
-      container.removeEventListener('touchend', () => {});
+      // Clean up global reference
+      delete (window as any).leafletMap;
     };
   }, [map, userLocation, isMobile]);
 

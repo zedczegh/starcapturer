@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';  
@@ -38,12 +37,6 @@ function chunkArray<T>(array: T[], chunkSize: number): T[][] {
   }
   return chunks;
 }
-
-// Detect Safari browser
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-const SAFARI_CHUNK_SIZE = isMobile ? 15 : 30; // Smaller chunks for Safari mobile
-const DEFAULT_CHUNK_SIZE = isMobile ? 30 : 50;
 
 const MarkerGroup = React.memo(({ 
   locations, 
@@ -90,11 +83,13 @@ const MarkerGroup = React.memo(({
       
       // Aggressive water location filtering for calculated locations
       if (isWaterLocation(location.latitude, location.longitude, false)) {
+        console.log(`Filtered water location: ${location.name || 'unnamed'} at ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
         return false;
       }
       
       // Additional validation
       if (!isValidAstronomyLocation(location.latitude, location.longitude, location.name)) {
+        console.log(`Filtered invalid astronomy location: ${location.name || 'unnamed'}`);
         return false;
       }
       
@@ -105,9 +100,9 @@ const MarkerGroup = React.memo(({
   return (
     <>
       {filteredLocations.map((location) => {
-        // Generate a unique ID for this location that's safe from floating point issues
+        // Generate a unique ID for this location
         const locationId = location.id || 
-          `location-${Math.round(location.latitude * 1000000) / 1000000}-${Math.round(location.longitude * 1000000) / 1000000}`;
+          `location-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
         
         // Individual location certification status
         const locationIsCertified = location.isDarkSkyReserve === true || 
@@ -173,7 +168,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
   const [mapRendered, setMapRendered] = useState(false);
   const [markerChunks, setMarkerChunks] = useState<SharedAstroSpot[][]>([]);
   const mapRef = useRef<L.Map | null>(null);
-  const readyTimeoutRef = useRef<number | null>(null);
   
   // Make sure center coordinates are valid
   const validCenter = useMemo(() => {
@@ -226,6 +220,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       if (!isCertified) {
         // Apply strict water filtering
         if (isWaterLocation(location.latitude, location.longitude, false)) {
+          console.log(`Pre-filtered water location: ${location.name || 'unnamed'}`);
           return false;
         }
         
@@ -239,59 +234,31 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     });
   }, [locations]);
   
-  // Chunk locations for better rendering performance with Safari-specific optimization
+  // Chunk locations for better rendering performance
   useEffect(() => {
     if (validLocations.length > 0 && mapRendered) {
-      // Get optimal chunk size based on browser and location count
-      const chunkSize = isSafari ? SAFARI_CHUNK_SIZE : DEFAULT_CHUNK_SIZE;
+      // Get optimal chunk size based on location count
+      const chunkSize = validLocations.length > 100 ? 30 : 50;
       setMarkerChunks(chunkArray(validLocations, chunkSize));
     }
   }, [validLocations, mapRendered]);
   
-  // Store map reference when ready with Safari-specific handling
+  // Store map reference when ready
   const storeMapRef = useCallback((map: L.Map) => {
     mapRef.current = map;
     // Explicitly enable dragging
     map.dragging.enable();
     console.log("Map container ready, dragging enabled:", map.dragging.enabled());
-    
-    // For Safari, we need additional setup and verification
-    if (isSafari) {
-      console.log("Safari detected, applying specific map optimizations");
-      
-      // Apply Safari-specific class
-      map.getContainer().classList.add('safari-map-container');
-      
-      // Apply mobile optimizations if needed
-      if (isMobile) {
-        map.getContainer().classList.add('mobile-optimized');
-      }
-    }
-    
     setMapRendered(true);
+    onMapReady();
     
-    // Use a timeout to ensure map is really ready, especially on Safari
-    if (readyTimeoutRef.current) {
-      clearTimeout(readyTimeoutRef.current);
-    }
-    
-    readyTimeoutRef.current = window.setTimeout(() => {
-      // Fix for Leaflet error by invalidating size
+    // Fix for Leaflet error by invalidating size
+    setTimeout(() => {
       if (map) {
         map.invalidateSize();
       }
-      onMapReady();
-    }, isSafari ? 300 : 100);
+    }, 100);
   }, [onMapReady]);
-  
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (readyTimeoutRef.current) {
-        clearTimeout(readyTimeoutRef.current);
-      }
-    };
-  }, []);
   
   // Handle map click that closes popups
   const handleMapClick = useCallback((lat: number, lng: number) => {
@@ -342,7 +309,7 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
     <MapContainer
       center={validCenter}
       zoom={zoom}
-      className={`h-full w-full ${isSafari ? 'safari-optimized' : ''}`}
+      className="h-full w-full"
       whenReady={({ target }) => {
         // Store map reference globally for external access
         (window as any).leafletMap = target;
@@ -350,7 +317,6 @@ const PhotoPointsMapContainer: React.FC<PhotoPointsMapContainerProps> = ({
       }}
       scrollWheelZoom={true}
       minZoom={2}
-      attributionControl={!isMobile} // Hide attribution on mobile to save space
     >
       {/* Add a MapCenterHandler to properly handle center changes */}
       <MapCenterHandler center={validCenter} />

@@ -16,17 +16,13 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
   const location = useLocation();
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const refreshHandledRef = useRef(false);
-  const processingRef = useRef(false);
   
   // Process navigation from PhotoPoints
   useEffect(() => {
-    // Skip if no locationId, already processed, or currently processing
-    if (!locationId || refreshHandledRef.current || processingRef.current) {
+    // Skip if no locationId or already processed
+    if (!locationId || refreshHandledRef.current) {
       return;
     }
-    
-    // Prevent reentrant calls (especially important on Safari)
-    processingRef.current = true;
     
     // Check if we're coming from PhotoPoints page
     const fromPhotoPoints = location.state?.fromPhotoPoints === true;
@@ -39,11 +35,7 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
         processPhotoPointsNavigation(locationId);
       } catch (error) {
         console.error("Error processing PhotoPoints navigation:", error);
-      } finally {
-        processingRef.current = false;
       }
-    } else {
-      processingRef.current = false;
     }
   }, [location.state, locationId]);
   
@@ -69,18 +61,6 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
       console.log("Refreshing location data");
     } else {
       console.warn(`No existing location data found for ID: ${id}`);
-      
-      // Even if we don't have existing data, try to use location.state
-      if (location.state) {
-        const stateData = {
-          ...location.state,
-          fromPhotoPoints: true
-        };
-        
-        // Save what we have from state
-        saveLocationFromPhotoPoints(stateData);
-        setNeedsRefresh(true);
-      }
     }
   };
   
