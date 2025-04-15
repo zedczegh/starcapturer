@@ -1,7 +1,7 @@
+
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
- * Any changes should be carefully tested to avoid breaking the map functionality.
  */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/locationValidator";
@@ -54,13 +54,13 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
     return '#9b87f5'; // Purple for reserves
   } else if (certification.includes('park')) {
-    return '#F2FCE2'; // Soft Green for parks
+    return '#4ADE80'; // Green for Dark Sky Park (slightly modified from original)
   } else if (certification.includes('community')) {
-    return '#FEC6A1'; // Soft Orange for communities
+    return '#FFD700'; // Gold for Dark Sky Community
   } else if (certification.includes('urban') || certification.includes('night sky place')) {
-    return '#1EAEDB'; // Bright Blue for urban night skies
+    return '#1EAEDB'; // Blue for Urban Night Sky
   } else if (certification.includes('lodging')) {
-    return '#FFDEE2'; // Soft Pink for lodging
+    return '#333333'; // Dark Gray for Dark Sky Lodging
   } else {
     return '#9b87f5'; // Default to reserve color for unknown certifications
   }
