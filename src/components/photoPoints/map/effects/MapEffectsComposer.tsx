@@ -16,7 +16,7 @@ interface MapEffectsComposerProps {
  * Composes multiple map effects into a single component
  * IMPORTANT: This component must never conditionally render components that use hooks
  */
-export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
+const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
   userLocation,
   activeView = 'certified',
   searchRadius = 100,

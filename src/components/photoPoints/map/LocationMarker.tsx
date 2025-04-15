@@ -20,8 +20,8 @@ interface LocationMarkerProps {
   onClick: (location: SharedAstroSpot) => void;
   isHovered: boolean;
   onHover: (id: string | null) => void;
-  locationId: string;
-  isCertified: boolean;
+  locationId?: string;
+  isCertified?: boolean;
   activeView: 'certified' | 'calculated';
   handleTouchStart?: (e: React.TouchEvent<Element>, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent<Element>) => void;
@@ -34,7 +34,7 @@ const LocationMarker = memo(({
   isHovered,
   onHover,
   locationId,
-  isCertified,
+  isCertified = false,
   activeView,
   handleTouchStart,
   handleTouchEnd,
@@ -44,6 +44,9 @@ const LocationMarker = memo(({
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
   const isMobile = useIsMobile();
+  
+  // Get location ID from the location or use the provided one
+  const id = locationId || location.id || `${location.latitude}-${location.longitude}`;
   
   const displayName = language === 'zh' && location.chineseName 
     ? location.chineseName 
@@ -78,13 +81,13 @@ const LocationMarker = memo(({
   }, [location, onClick]);
   
   const handleMouseOver = useCallback(() => {
-    onHover(locationId);
+    onHover(id);
     
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
     }
-  }, [locationId, onHover]);
+  }, [id, onHover]);
   
   const handleMouseOut = useCallback(() => {
     onHover(null);
@@ -98,14 +101,14 @@ const LocationMarker = memo(({
   const handleMarkerTouchStart = useCallback((e: TouchEvent) => {
     if (handleTouchStart) {
       const syntheticEvent = e as unknown as React.TouchEvent<Element>;
-      handleTouchStart(syntheticEvent, locationId);
+      handleTouchStart(syntheticEvent, id);
     }
     
     const marker = markerRef.current;
     if (marker && marker.getElement()) {
       marker.getElement()?.classList.add('hovered');
     }
-  }, [locationId, handleTouchStart]);
+  }, [id, handleTouchStart]);
   
   const handleMarkerTouchEnd = useCallback((e: TouchEvent) => {
     if (handleTouchEnd) {

@@ -1,7 +1,5 @@
 
 import React, { useCallback } from 'react';
-import { Marker } from 'react-leaflet';
-import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 
@@ -35,18 +33,6 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     if (onMarkerHover) onMarkerHover(id);
   }, [onMarkerHover]);
 
-  const handleTouch = useCallback((e: React.TouchEvent<Element>, id: string) => {
-    if (handleTouchStart) handleTouchStart(e, id);
-  }, [handleTouchStart]);
-
-  const handleEnd = useCallback((e: React.TouchEvent<Element>) => {
-    if (handleTouchEnd) handleTouchEnd(e);
-  }, [handleTouchEnd]);
-
-  const handleMove = useCallback((e: React.TouchEvent<Element>) => {
-    if (handleTouchMove) handleTouchMove(e);
-  }, [handleTouchMove]);
-
   const handleClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) onLocationClick(location);
   }, [onLocationClick]);
@@ -54,25 +40,32 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   return (
     <>
       {/* Render location markers */}
-      {locations.map((location) => (
-        <LocationMarker
-          key={location.id || `${location.latitude}-${location.longitude}`}
-          location={location}
-          activeView={activeView}
-          isHovered={hoveredLocationId === location.id}
-          onClick={handleClick}
-          onHover={handleHover}
-          onTouchStart={handleTouch}
-          onTouchEnd={handleEnd}
-          onTouchMove={handleMove}
-        />
-      ))}
+      {locations.map((location) => {
+        const locationId = location.id || `${location.latitude}-${location.longitude}`;
+        const isCertified = !!location.isCertified;
+        
+        return (
+          <LocationMarker
+            key={locationId}
+            location={location}
+            activeView={activeView}
+            isHovered={hoveredLocationId === locationId}
+            onClick={handleClick}
+            onHover={handleHover}
+            locationId={locationId}
+            isCertified={isCertified}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
+          />
+        );
+      })}
 
       {/* Render user location marker if available */}
       {userLocation && (
         <UserLocationMarker 
           position={[userLocation.latitude, userLocation.longitude]} 
-          siqs={currentSiqs}
+          currentSiqs={currentSiqs}
         />
       )}
     </>
