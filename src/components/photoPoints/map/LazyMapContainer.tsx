@@ -62,8 +62,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
-  
   const tileOptions = isMobile ? 
     getTileLayerOptions(true) : 
     getTileLayerOptions(Boolean(isMobile));
@@ -99,7 +97,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       );
       
       if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(typeof sameLocation.siqs === 'number' ? sameLocation.siqs : sameLocation.siqs.score);
+        setCurrentSiqs(sameLocation.siqs);
       }
     }
   }, [userLocation?.latitude, userLocation?.longitude, locations.length]); 
@@ -199,11 +197,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {Array.isArray(locations) && locations.map(location => {
-          if (!location || !location.latitude || !location.longitude) return null;
+        {locations.map(location => {
+          if (!location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-          const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
+          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
           
           if (isMobile && !isCertified && locations.length > 30 && Math.random() > 0.5) {
@@ -233,6 +231,27 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           doubleClickZoom={!isMobile}
         />
       </MapContainer>
+
+      <div className="absolute z-[999] right-4 bottom-4 flex flex-col gap-2">
+        {!isMobile && (
+          <MapLegend 
+            activeView={activeView} 
+            showStarLegend={activeView === 'certified'}
+            showCircleLegend={activeView === 'calculated'}
+          />
+        )}
+      </div>
+      
+      {/* Relocate CenteringPinpointButton to top-right corner */}
+      <CenteringPinpointButton
+        onGetLocation={() => {
+          if (userLocation && mapRef.current) {
+            mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom());
+          }
+        }}
+        userLocation={userLocation}
+        className="absolute top-4 right-4 z-[999]"
+      />
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -47,9 +46,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations.length}, certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}`);
-  
-  // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
     mapReady,
     handleMapReady,
@@ -61,12 +57,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
+    locations,
     searchRadius,
     activeView
   });
-  
-  console.log(`PhotoPointsMap: validLocations=${validLocations.length}, mapReady=${mapReady}`);
   
   // Filter out some locations on mobile for better performance
   const optimizedLocations = useMemo(() => {
@@ -196,12 +190,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         />
       )}
       
-      {/* Position the pinpoint button at top-right corner of the map */}
-      <CenteringPinpointButton
-        onGetLocation={handleGetLocation}
-        userLocation={userLocation}
-        className="absolute top-4 right-4 z-[999]"
-      />
+      {/* Pinpoint button is included inside LazyMapContainer */}
     </div>
   );
 };
