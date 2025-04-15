@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations, useMapUtils } from './useMapUtils';
@@ -9,16 +10,22 @@ interface UsePhotoPointsMapProps {
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
+  preventAutoZoom?: boolean;
+  mapReady?: boolean;
 }
 
 export const usePhotoPointsMap = ({
   userLocation,
   locations,
   searchRadius,
-  activeView
+  activeView,
+  preventAutoZoom = true,
+  mapReady: externalMapReady = false
 }: UsePhotoPointsMapProps) => {
-  const [mapReady, setMapReady] = useState(false);
+  const [mapReady, setMapReady] = useState(externalMapReady);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
+  const initialCenterRef = useRef<[number, number] | null>(null);
+  const initialZoomRef = useRef<number | null>(null);
   
   // IMPORTANT: Always load certified locations regardless of view
   const shouldLoadCertified = true; // Changed from conditional to always true
@@ -94,18 +101,37 @@ export const usePhotoPointsMap = ({
     mapReady
   });
 
-  // Calculate map center coordinates
-  const mapCenter: [number, number] = userLocation 
-    ? [userLocation.latitude, userLocation.longitude]
-    : processedLocations.length > 0
-      ? [processedLocations[0].latitude, processedLocations[0].longitude]
-      : [39.9042, 116.4074]; // Default center (Beijing)
+  // Calculate map center coordinates but only once on initial load
+  // or when forced (not on radius changes)
+  const mapCenter = useCallback((): [number, number] => {
+    if (initialCenterRef.current && preventAutoZoom) {
+      return initialCenterRef.current;
+    }
+    
+    const newCenter: [number, number] = userLocation 
+      ? [userLocation.latitude, userLocation.longitude]
+      : processedLocations.length > 0
+        ? [processedLocations[0].latitude, processedLocations[0].longitude]
+        : [39.9042, 116.4074]; // Default center (Beijing)
+    
+    initialCenterRef.current = newCenter;
+    return newCenter;
+  }, [userLocation, processedLocations, preventAutoZoom]);
 
   const handleMapReady = useCallback(() => {
     setMapReady(true);
   }, []);
 
-  const initialZoom = getZoomLevel(searchRadius);
+  // Get initial zoom but don't change it on searchRadius updates if preventAutoZoom is true
+  const getInitialZoom = useCallback(() => {
+    if (initialZoomRef.current !== null && preventAutoZoom) {
+      return initialZoomRef.current;
+    }
+    
+    const zoom = getZoomLevel(searchRadius);
+    initialZoomRef.current = zoom;
+    return zoom;
+  }, [getZoomLevel, searchRadius, preventAutoZoom]);
 
   return {
     mapReady,
@@ -113,10 +139,10 @@ export const usePhotoPointsMap = ({
     selectedLocation,
     handleLocationClick,
     validLocations: processedLocations,
-    mapCenter,
-    initialZoom,
+    mapCenter: mapCenter(),
+    initialZoom: getInitialZoom(),
     certifiedLocationsLoaded,
-    certifiedLocationsLoading: certifiedLocationsLoading,
+    certifiedLocationsLoading,
     loadingProgress,
     allCertifiedLocationsCount: allCertifiedLocations.length
   };

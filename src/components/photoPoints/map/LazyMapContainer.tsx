@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -19,26 +18,28 @@ configureLeaflet();
 
 interface LazyMapContainerProps {
   center: [number, number];
+  zoom: number;
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady?: () => void;
-  onLocationClick?: (location: SharedAstroSpot) => void;
+  onMapReady: () => void;
+  onLocationClick: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
-  zoom?: number;
   hoveredLocationId?: string | null;
   onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
+  handleTouchStart?: (id: string) => void;
+  handleTouchEnd?: () => void;
+  handleTouchMove?: (event: TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  preventAutoZoom?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
+  zoom,
   userLocation,
   locations,
   searchRadius,
@@ -46,22 +47,21 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onMapReady,
   onLocationClick,
   onMapClick,
-  zoom = 10,
   hoveredLocationId,
   onMarkerHover,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  isMobile,
-  useMobileMapFixer = false,
-  showRadiusCircles = false
+  isMobile = false,
+  useMobileMapFixer = true,
+  showRadiusCircles = false,
+  preventAutoZoom = true
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // Ensure stable references to prevent unnecessary re-renders
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
       onLocationClick(location);
@@ -79,7 +79,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     setCurrentSiqs(siqs);
   }, []);
   
-  // Ensure userLocation is always passed as a stable reference
   const safeUserLocation = userLocation || null;
   
   useEffect(() => {
@@ -126,6 +125,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       window.removeEventListener('resize', handleResize);
     };
   }, [mapRef.current]);
+
+  useEffect(() => {
+    if (!preventAutoZoom || !mapRef.current) {
+      if (mapRef.current) {
+        mapRef.current.setView(center, zoom);
+      }
+    }
+  }, [center, zoom, preventAutoZoom]);
 
   const getDefaultZoom = () => {
     if (activeView === 'calculated') {

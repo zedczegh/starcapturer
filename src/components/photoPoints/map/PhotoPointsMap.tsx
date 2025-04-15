@@ -15,6 +15,7 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
+  preventAutoZoom?: boolean;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
@@ -23,7 +24,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate
+  onLocationUpdate,
+  preventAutoZoom = true // Default to preventing auto-zoom
 }) => {
   const { 
     hoveredLocationId, 
@@ -47,7 +49,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     userLocation,
     locations,
     searchRadius,
-    activeView
+    activeView,
+    preventAutoZoom // Pass the flag to usePhotoPointsMap
   });
 
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
@@ -96,6 +99,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={true}
         showRadiusCircles={activeView === 'calculated'}
+        preventAutoZoom={preventAutoZoom} 
       />
       
       <MapLegend 
