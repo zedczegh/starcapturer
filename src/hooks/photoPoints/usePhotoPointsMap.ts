@@ -1,10 +1,8 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useMapLocations } from './useMapLocations';
+import { useMapLocations, useMapUtils } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
-import { useMapUtils } from './useMapUtils';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -23,7 +21,7 @@ export const usePhotoPointsMap = ({
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
   // IMPORTANT: Always load certified locations regardless of view
-  const shouldLoadCertified = true; // Always load certified locations
+  const shouldLoadCertified = true; // Changed from conditional to always true
   
   // Use our certified locations loader with always-on loading
   const { 
@@ -50,49 +48,41 @@ export const usePhotoPointsMap = ({
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Debug logs to help track the issue
-  useEffect(() => {
-    console.log(`usePhotoPointsMap - Locations count: ${locations.length}, Active view: ${activeView}`);
-    console.log(`usePhotoPointsMap - Certified locations: ${allCertifiedLocations.length}`);
-  }, [locations.length, activeView, allCertifiedLocations.length]);
-  
-  // Combine locations
+  // Combine locations - always include all certified locations regardless of view
   const combinedLocations = useCallback(() => {
-    // For certified view, only show certified locations
-    if (activeView === 'certified') {
-      console.log(`Returning only certified locations: ${allCertifiedLocations.length}`);
-      return allCertifiedLocations;
-    }
-    
-    // For calculated view, show both types but prevent duplicates
-    const allLocations = [...locations];
-    
-    // If we have certified locations that aren't in the main locations array, add them
+    // Always include certified locations
     if (allCertifiedLocations.length > 0) {
+      // If in certified view, only show certified locations
+      if (activeView === 'certified') {
+        return allCertifiedLocations;
+      } 
+      
+      // If in calculated view, combine all locations but prioritize certified ones
       const locationMap = new Map<string, SharedAstroSpot>();
       
-      // First add all provided locations
-      allLocations.forEach(loc => {
+      // First add all certified locations
+      allCertifiedLocations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           locationMap.set(key, loc);
         }
       });
       
-      // Then add certified locations that aren't already included
-      allCertifiedLocations.forEach(loc => {
+      // Then add calculated locations without overriding certified ones
+      locations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
           const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
           if (!locationMap.has(key)) {
             locationMap.set(key, loc);
-            allLocations.push(loc);
           }
         }
       });
+      
+      return Array.from(locationMap.values());
     }
     
-    console.log(`combinedLocations - Returning ${allLocations.length} locations for ${activeView} view`);
-    return allLocations;
+    // Fallback to provided locations if certified locations aren't loaded yet
+    return locations;
   }, [locations, allCertifiedLocations, activeView]);
   
   // Use the location processing hook

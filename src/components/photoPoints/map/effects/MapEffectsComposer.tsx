@@ -24,7 +24,7 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   
   // Optimize map performance for mobile devices
   useEffect(() => {
-    if (!map || !map._loaded) return;
+    if (!map) return;
     
     // Add better error handling
     try {

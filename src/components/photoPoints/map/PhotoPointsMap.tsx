@@ -46,23 +46,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
-  // Use appropriate location set based on active view
-  // This ensures we're properly passing the locations to the map
-  const locationsToShow = useMemo(() => {
-    if (activeView === 'certified') {
-      return certifiedLocations;
-    }
-    
-    // For calculated view, make sure we include both certified and calculated
-    return locations; // Should include both types
-  }, [activeView, certifiedLocations, calculatedLocations, locations]);
-  
-  // Debug output for troubleshooting
-  useEffect(() => {
-    console.log(`PhotoPointsMap - Using ${locationsToShow.length} locations for map (${activeView} view)`);
-    console.log(`PhotoPointsMap - Certified: ${certifiedLocations.length}, All locations: ${locations.length}`);
-  }, [locationsToShow.length, certifiedLocations.length, locations.length, activeView]);
-  
   const { 
     mapReady,
     handleMapReady,
@@ -74,7 +57,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations: locationsToShow,
+    locations,
     searchRadius,
     activeView
   });
@@ -99,12 +82,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     
     return [...certified, ...nonCertified];
   }, [validLocations, isMobile, activeView]);
-
-  // Add debug output for final locations
-  useEffect(() => {
-    console.log(`PhotoPointsMap - Final optimized locations count: ${optimizedLocations.length}`);
-  }, [optimizedLocations.length]);
-
+  
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
@@ -189,7 +167,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         searchRadius={searchRadius}
         activeView={activeView}
         onMapReady={handleMapReady}
-        onLocationClick={onLocationClick || handleLocationClick}
+        onLocationClick={handleLocationClicked}
         onMapClick={handleMapClick}
         zoom={initialZoom}
         hoveredLocationId={hoveredLocationId}

@@ -1,5 +1,4 @@
 
-// Only update the constants at the top of the file
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
@@ -16,12 +15,12 @@ interface Location {
 
 const MAX_LOAD_MORE_CLICKS = 2;
 
-const DEFAULT_CALCULATED_RADIUS = 500; // Changed from 100 to 500
+const DEFAULT_CALCULATED_RADIUS = 100;
 const DEFAULT_CERTIFIED_RADIUS = 10000;
 
 export const useRecommendedLocations = (
   userLocation: Location | null,
-  initialRadius: number = DEFAULT_CALCULATED_RADIUS // Default is now 500km
+  initialRadius: number = DEFAULT_CALCULATED_RADIUS
 ) => {
   const { t } = useLanguage();
   const [searchRadius, setSearchRadius] = useState<number>(initialRadius);

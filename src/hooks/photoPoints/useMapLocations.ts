@@ -65,7 +65,6 @@ export const useMapLocations = ({
         }
         
         setProcessedLocations(locationsToShow);
-        console.log(`useMapLocations - Processed ${locationsToShow.length} locations for ${activeView} view`);
       } catch (error) {
         console.error('Error processing map locations:', error);
       } finally {
@@ -80,5 +79,3 @@ export const useMapLocations = ({
     processedLocations
   };
 };
-
-export default useMapLocations;

@@ -1,20 +1,20 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
-import { UserLocationMarker } from './MarkerComponents';
+import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
+import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
+import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
 import PinpointButton from './PinpointButton';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
-import MapTileLayer from './containers/MapTileLayer';
-import MapSearchRadius from './containers/MapSearchRadius';
-import MapLocations from './containers/MapLocations';
+import L from 'leaflet';
 
 configureLeaflet();
 
@@ -53,7 +53,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  isMobile = false,
+  isMobile,
   useMobileMapFixer = false,
   showRadiusCircles = false
 }) => {
@@ -62,6 +62,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
+  
+  const tileOptions = isMobile ? 
+    getTileLayerOptions(true) : 
+    getTileLayerOptions(Boolean(isMobile));
   
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -82,7 +86,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
-  // Update current SIQS when user location changes
   useEffect(() => {
     if (userLocation && locations.length > 0 && isMountedRef.current) {
       const userLat = userLocation.latitude;
@@ -100,7 +103,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation?.latitude, userLocation?.longitude, locations.length]); 
   
-  // Handle map ready event
   const handleMapReady = useCallback(() => {
     if (isMountedRef.current) {
       setMapReady(true);
@@ -110,7 +112,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapReady]);
   
-  // Handle map resize
   useEffect(() => {
     if (!mapRef.current) return;
     
@@ -122,7 +123,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         window.clearTimeout(resizeTimeout);
       }
       resizeTimeout = window.setTimeout(() => {
-        if (map && map._loaded) map.invalidateSize();
+        if (map) map.invalidateSize();
         resizeTimeout = null;
       }, 300);
     };
@@ -130,7 +131,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     window.addEventListener('resize', handleResize);
     
     const timeoutId = setTimeout(() => {
-      if (map && map._loaded) map.invalidateSize();
+      if (map) map.invalidateSize();
     }, 300);
     
     return () => {
@@ -149,7 +150,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     return isMobile ? zoom - 1 : zoom;
   };
   
-  // Handle pinpoint button click
+  // Handle pinpoint button click to center map on user location
   const handlePinpointClick = useCallback(() => {
     if (userLocation && mapRef.current) {
       mapRef.current.setView([userLocation.latitude, userLocation.longitude], mapRef.current.getZoom(), {
@@ -172,13 +173,25 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         attributionControl={!isMobile}
         worldCopyJump={true}
       >
-        <MapTileLayer isMobile={isMobile} />
-        
-        <MapSearchRadius 
-          userLocation={userLocation} 
-          searchRadius={searchRadius}
-          showRadius={showRadiusCircles}
+        <TileLayer
+          attribution={tileOptions.attribution}
+          url={tileOptions.url}
+          maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
         />
+        
+        {showRadiusCircles && userLocation && !isMobile && (
+          <Circle
+            center={[userLocation.latitude, userLocation.longitude]}
+            pathOptions={{
+              color: 'rgb(99, 102, 241)',
+              fillColor: 'rgb(99, 102, 241)',
+              fillOpacity: 0.05,
+              weight: 1,
+              dashArray: '5, 5',
+            }}
+            radius={searchRadius * 1000}
+          />
+        )}
         
         <MapEffectsComposer 
           userLocation={userLocation}
@@ -195,17 +208,33 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        <MapLocations
-          locations={locations}
-          onLocationClick={stableOnLocationClick}
-          hoveredLocationId={hoveredLocationId || null}
-          onMarkerHover={onMarkerHover || (() => {})}
-          handleTouchStart={handleTouchStart}
-          handleTouchEnd={handleTouchEnd}
-          handleTouchMove={handleTouchMove}
-          isMobile={!!isMobile}
-          activeView={activeView}
-        />
+        {locations.map(location => {
+          if (!location.latitude || !location.longitude) return null;
+          
+          const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+          const isHovered = hoveredLocationId === locationId;
+          
+          if (isMobile && !isCertified && locations.length > 30 && Math.random() > 0.5) {
+            return null;
+          }
+          
+          return (
+            <LocationMarker
+              key={locationId}
+              location={location}
+              onClick={stableOnLocationClick}
+              isHovered={isHovered}
+              onHover={onMarkerHover || (() => {})}
+              locationId={locationId}
+              isCertified={isCertified}
+              activeView={activeView}
+              handleTouchStart={handleTouchStart}
+              handleTouchEnd={handleTouchEnd}
+              handleTouchMove={handleTouchMove}
+            />
+          );
+        })}
         
         <MapController 
           userLocation={userLocation} 
@@ -214,7 +243,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         />
       </MapContainer>
 
-      {/* Map controls positioning */}
+      {/* Positioned map controls - Top right for pinpoint button, bottom right for legend */}
       <div className="absolute z-[999] top-4 right-4">
         <PinpointButton 
           onGetLocation={handlePinpointClick}

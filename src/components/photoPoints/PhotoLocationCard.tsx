@@ -80,7 +80,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       longitude: location.longitude,
       bortleScale: location.bortleScale || 4,
       siqs: realTimeSiqs !== null ? realTimeSiqs : location.siqs,
-      timestamp: location.timestamp || new Date().toISOString(),
+      timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: !!location.isDarkSkyReserve,
       certification: location.certification || '',
@@ -150,7 +150,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         
         <LocationMetadata 
           distance={location.distance} 
-          date={location.timestamp}
+          date={location.date}
           latitude={location.latitude}
           longitude={location.longitude}
           locationName={displayName}
