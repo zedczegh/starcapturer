@@ -31,6 +31,10 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  onMarkerHover?: (id: string | null) => void;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -43,9 +47,14 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onLocationClick,
   onMapClick,
   zoom = 10,
+  hoveredLocationId,
   isMobile,
   useMobileMapFixer = false,
-  showRadiusCircles = false
+  showRadiusCircles = false,
+  onMarkerHover,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -137,6 +146,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
               locationId={locationId}
               isCertified={isCertified}
               activeView={activeView}
+              onHover={onMarkerHover}
+              handleTouchStart={handleTouchStart}
+              handleTouchEnd={handleTouchEnd}
+              handleTouchMove={handleTouchMove}
             />
           );
         })}
