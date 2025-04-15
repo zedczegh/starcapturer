@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info } from "lucide-react";
@@ -23,13 +22,56 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   const [validatedSiqs, setValidatedSiqs] = useState(siqsResult);
   const { toast } = useToast();
   
-  // Always define these values regardless of validatedSiqs state
-  const siqsScore = useMemo(() => {
-    if (!validatedSiqs || typeof validatedSiqs.score !== 'number') {
-      return 0;
+  useEffect(() => {
+    const isValid = validateSIQSData(siqsResult);
+    
+    if (isValid) {
+      setValidatedSiqs(siqsResult);
+    } else if (siqsResult && typeof siqsResult.score === 'number') {
+      console.warn("SIQS data structure is invalid, creating basic object");
+      setValidatedSiqs({
+        score: siqsResult.score,
+        isViable: siqsResult.score >= 2,
+        factors: siqsResult.factors || []
+      });
+    } else {
+      console.error("Invalid SIQS data provided:", siqsResult);
+      if (!validatedSiqs) {
+        setValidatedSiqs(null);
+      }
+      
+      toast({
+        title: t("SIQS Data Issue", "SIQS数据问题"),
+        description: t(
+          "There was an issue with the SIQS data. Some information may not be accurate.",
+          "SIQS数据出现问题，部分信息可能不准确。"
+        ),
+        variant: "destructive",
+        duration: 3000,
+      });
     }
-    return Math.round(validatedSiqs.score * 10) / 10;
-  }, [validatedSiqs]);
+  }, [siqsResult, t, toast, validatedSiqs]);
+  
+  if (!validatedSiqs) {
+    return (
+      <Card className="glassmorphism-strong">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            {t("No SIQS Data Available", "无天文观测质量评分数据")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的天文观测质量评分。")}
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const siqsScore = useMemo(() => {
+    return typeof validatedSiqs.score === 'number' ? 
+      Math.round(validatedSiqs.score * 10) / 10 : 0;
+  }, [validatedSiqs.score]);
     
   const scoreColorClass = getProgressColorClass(siqsScore);
   
@@ -42,11 +84,8 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     );
   }, [siqsScore, t]);
   
-  // Always define translatedFactors with a safe default
   const translatedFactors = useMemo(() => {
-    if (!validatedSiqs || !validatedSiqs.factors || !Array.isArray(validatedSiqs.factors)) {
-      return [];
-    }
+    if (!validatedSiqs.factors || !Array.isArray(validatedSiqs.factors)) return [];
     
     const factors = [...validatedSiqs.factors];
     const hasClearSkyFactor = factors.some(factor => 
@@ -105,51 +144,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
          factor.name) : 
         factor.name
     }));
-  }, [validatedSiqs, weatherData, language]);
-  
-  useEffect(() => {
-    const isValid = validateSIQSData(siqsResult);
-    
-    if (isValid) {
-      setValidatedSiqs(siqsResult);
-    } else if (siqsResult && typeof siqsResult.score === 'number') {
-      console.warn("SIQS data structure is invalid, creating basic object");
-      setValidatedSiqs({
-        score: siqsResult.score,
-        isViable: siqsResult.score >= 2,
-        factors: siqsResult.factors || []
-      });
-    } else {
-      console.error("Invalid SIQS data provided:", siqsResult);
-      setValidatedSiqs(null);
-      
-      toast({
-        title: t("SIQS Data Issue", "SIQS数据问题"),
-        description: t(
-          "There was an issue with the SIQS data. Some information may not be accurate.",
-          "SIQS数据出现问题，部分信息可能不准确。"
-        ),
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  }, [siqsResult, t, toast]);
-  
-  if (!validatedSiqs) {
-    return (
-      <Card className="glassmorphism-strong">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="w-4 h-4" />
-            {t("No SIQS Data Available", "无天文观测质量评分数据")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的天文观测质量评分。")}
-        </CardContent>
-      </Card>
-    );
-  }
+  }, [validatedSiqs.factors, weatherData, language]);
   
   return (
     <Card className="glassmorphism-strong">

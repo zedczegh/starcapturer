@@ -40,49 +40,42 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
       }
       
       // Apply lower detail while moving (better performance)
-      const handleMoveStart = () => {
+      map.on('movestart', () => {
         if (map._container) {
           map._container.classList.add('moving');
         }
-      };
+      });
       
-      const handleMoveEnd = () => {
+      map.on('moveend', () => {
         if (map._container) {
           setTimeout(() => {
             map._container.classList.remove('moving');
           }, 100);
         }
-      };
+      });
       
-      map.on('movestart', handleMoveStart);
-      map.on('moveend', handleMoveEnd);
-      
-      // Force a resize to ensure correct rendering after a short delay
-      const timeoutId = setTimeout(() => {
-        if (map && map._container) {
-          map.invalidateSize();
-        }
-      }, 300);
-      
-      return () => {
-        try {
-          map.off('movestart', handleMoveStart);
-          map.off('moveend', handleMoveEnd);
-          
-          if (map._container) {
-            map._container.classList.remove('optimize-performance');
-            map._container.classList.remove('moving');
-          }
-          
-          clearTimeout(timeoutId);
-        } catch (e) {
-          // Ignore cleanup errors
-          console.log("Map cleanup error (non-critical):", e);
-        }
-      };
+      // Force a resize to ensure correct rendering
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
     } catch (error) {
       console.error("Error applying map optimizations:", error);
     }
+    
+    return () => {
+      try {
+        if (map._container) {
+          map._container.classList.remove('optimize-performance');
+          map._container.classList.remove('moving');
+        }
+        
+        // Clean up event listeners
+        map.off('movestart');
+        map.off('moveend');
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    };
   }, [map]);
   
   return (
