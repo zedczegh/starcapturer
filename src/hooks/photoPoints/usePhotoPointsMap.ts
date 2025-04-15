@@ -49,30 +49,24 @@ export const usePhotoPointsMap = ({
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Combine locations - always include all certified locations regardless of view
+  // Combine locations - always include all relevant locations
   const combinedLocations = useCallback(() => {
     console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations?.length || 0}`);
     
-    // Always include certified locations
-    if (allCertifiedLocations.length > 0) {
-      // If in certified view, only show certified locations
-      if (activeView === 'certified') {
-        console.log(`Returning ${allCertifiedLocations.length} certified locations for map display`);
-        return allCertifiedLocations;
-      } 
-      
-      // If in calculated view, combine all locations but prioritize certified ones
-      const locationMap = new Map<string, SharedAstroSpot>();
-      
-      // First add all certified locations
-      allCertifiedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-      
-      // Then add regular locations without overriding certified ones
+    // Create a Map to store unique locations
+    const locationMap = new Map<string, SharedAstroSpot>();
+    
+    // First, add all certified locations
+    allCertifiedLocations.forEach(loc => {
+      if (loc.latitude && loc.longitude) {
+        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+        locationMap.set(key, loc);
+      }
+    });
+    
+    // For calculated view, also add non-certified locations
+    if (activeView === 'calculated') {
+      // Add regular locations without overriding certified ones
       if (Array.isArray(locations)) {
         locations.forEach(loc => {
           if (loc.latitude && loc.longitude) {
@@ -83,15 +77,11 @@ export const usePhotoPointsMap = ({
           }
         });
       }
-      
-      const result = Array.from(locationMap.values());
-      console.log(`Combined ${allCertifiedLocations.length} certified and ${locations?.length || 0} calculated locations for map display. Total: ${result.length}`);
-      return result;
     }
     
-    // Fallback to provided locations if certified locations aren't loaded yet
-    console.log(`Using ${locations?.length || 0} fallback locations for map display`);
-    return Array.isArray(locations) ? locations : [];
+    const result = Array.from(locationMap.values());
+    console.log(`Combined ${allCertifiedLocations.length} certified and ${locations?.length || 0} calculated locations for map display. Total: ${result.length}`);
+    return result;
   }, [locations, allCertifiedLocations, activeView]);
   
   console.log("Combined locations length:", combinedLocations().length);
@@ -107,19 +97,18 @@ export const usePhotoPointsMap = ({
 
   console.log(`Processed locations: ${processedLocations.length}`);
 
-  // Calculate map center coordinates
+  // Calculate map center coordinates - default to China if no location
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
-    : processedLocations.length > 0
-      ? [processedLocations[0].latitude, processedLocations[0].longitude]
-      : [39.9042, 116.4074]; // Default center (Beijing)
+    : [35.8617, 104.1954]; // Default center (Center of China)
 
   const handleMapReady = useCallback(() => {
     console.log("Map ready signal received");
     setMapReady(true);
   }, []);
 
-  const initialZoom = getZoomLevel(searchRadius);
+  // Always use a more zoomed-out initial view
+  const initialZoom = 4; // Zoomed out to see large regions
   
   console.log(`usePhotoPointsMap: processedLocations=${processedLocations.length}, activeView=${activeView}, searchRadius=${searchRadius}`);
   

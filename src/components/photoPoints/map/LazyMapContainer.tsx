@@ -151,8 +151,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, []);
 
   const getDefaultZoom = () => {
+    // Provide a much more zoomed-out view to see the whole landscape
     if (activeView === 'calculated') {
-      return isMobile ? 6 : 7;
+      return isMobile ? 3 : 4;
     }
     return isMobile ? zoom - 1 : zoom;
   };
@@ -169,7 +170,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         whenReady={handleMapReady}
         attributionControl={!isMobile}
         worldCopyJump={true}
-        doubleClickZoom={true}
+        // Remove doubleClickZoom prop as it's not supported
       >
         <TileLayer
           attribution={tileOptions.attribution}
