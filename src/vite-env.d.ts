@@ -65,7 +65,6 @@ declare global {
   interface Window {
     L: typeof import('leaflet');
     map?: L.Map; // Add map to window interface for direct access
-    leafletMap?: L.Map; // Additionally track the leaflet map instance
   }
 }
 

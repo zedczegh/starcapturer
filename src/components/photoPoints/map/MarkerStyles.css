@@ -2,54 +2,43 @@
 /* Base marker styling for all custom markers */
 .custom-marker {
   transition: transform 0.15s ease, filter 0.2s ease;
-  -webkit-transition: transform 0.15s ease, -webkit-filter 0.2s ease; /* Safari optimization */
 }
 
 /* Special styling for hovered markers */
 .custom-marker.hovered {
   z-index: 1000 !important;
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
-  -webkit-filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6)); /* Safari optimization */
   transform: scale(1.3);
-  -webkit-transform: scale(1.3); /* Safari optimization */
 }
 
 /* Specific styling for marker types */
 .star-marker svg {
   filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.8));
-  -webkit-filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.8)); /* Safari optimization */
   transition: filter 0.3s ease;
-  -webkit-transition: -webkit-filter 0.3s ease; /* Safari optimization */
 }
 
 .star-marker.hovered svg {
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.9));
-  -webkit-filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.9)); /* Safari optimization */
 }
 
 /* Specific styling for user location marker */
 .user-location-marker svg {
   filter: drop-shadow(0 0 3px rgba(225, 29, 72, 0.7));
-  -webkit-filter: drop-shadow(0 0 3px rgba(225, 29, 72, 0.7)); /* Safari optimization */
 }
 
 .user-location-marker.hovered svg,
 .pulsing-marker svg {
   filter: drop-shadow(0 0 8px rgba(225, 29, 72, 0.8));
-  -webkit-filter: drop-shadow(0 0 8px rgba(225, 29, 72, 0.8)); /* Safari optimization */
 }
 
 /* Circle marker enhancement */
 .circle-marker svg {
   filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.6));
-  -webkit-filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.6)); /* Safari optimization */
   transition: all 0.2s ease;
-  -webkit-transition: all 0.2s ease; /* Safari optimization */
 }
 
 .circle-marker.hovered svg {
   filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.8));
-  -webkit-filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.8)); /* Safari optimization */
 }
 
 /* Pulse animations for markers */
@@ -67,20 +56,6 @@
   }
 }
 
-@-webkit-keyframes pulse {
-  0% {
-    opacity: 0.8;
-    -webkit-transform: scale(0.6);
-  }
-  50% {
-    opacity: 0.4;
-  }
-  100% {
-    opacity: 0;
-    -webkit-transform: scale(1.5);
-  }
-}
-
 @keyframes inner-pulse {
   0% {
     opacity: 0.3;
@@ -95,33 +70,15 @@
   }
 }
 
-@-webkit-keyframes inner-pulse {
-  0% {
-    opacity: 0.3;
-    -webkit-transform: scale(0.8);
-  }
-  50% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0.3;
-    -webkit-transform: scale(0.8);
-  }
-}
-
 .pulse-circle {
   animation: pulse 2s infinite;
-  -webkit-animation: pulse 2s infinite; /* Safari optimization */
   transform-origin: center;
-  -webkit-transform-origin: center; /* Safari optimization */
   transform-box: fill-box;
 }
 
 .pulse-inner-circle {
   animation: inner-pulse 1.5s infinite;
-  -webkit-animation: inner-pulse 1.5s infinite; /* Safari optimization */
   transform-origin: center;
-  -webkit-transform-origin: center; /* Safari optimization */
   transform-box: fill-box;
 }
 
@@ -181,7 +138,6 @@
 .leaflet-fade-anim .leaflet-popup {
   opacity: 1 !important;
   transition: none;
-  -webkit-transition: none; /* Safari optimization */
 }
 
 /* Fix tooltip display for certified locations */
@@ -195,25 +151,4 @@
 
 .leaflet-marker-icon:hover {
   z-index: 1000 !important;
-}
-
-/* Safari-specific touch handling improvements */
-@supports (-webkit-touch-callout: none) {
-  .leaflet-container {
-    /* Fix for Safari scrolling issues */
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .leaflet-marker-icon, 
-  .leaflet-marker-shadow {
-    /* Improve touch target size in Safari */
-    padding: 8px;
-    margin-left: -8px !important;
-    margin-top: -8px !important;
-  }
-  
-  /* Fix for popup positioning in Safari */
-  .leaflet-popup {
-    margin-bottom: 20px !important;
-  }
 }

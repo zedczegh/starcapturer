@@ -11,7 +11,7 @@ interface MapControllerProps {
 
 /**
  * Component to handle map setup and controls
- * Enhanced for mobile touch interactions and Safari compatibility
+ * Enhanced for mobile touch interactions
  */
 export const MapController: React.FC<MapControllerProps> = ({ 
   userLocation, 
@@ -20,7 +20,6 @@ export const MapController: React.FC<MapControllerProps> = ({
   const map = useMap();
   const firstRenderRef = useRef(true);
   const isMobile = useIsMobile();
-  const isSafari = useRef(/^((?!chrome|android).)*safari/i.test(navigator.userAgent));
   
   useEffect(() => {
     if (!map) return;
@@ -60,37 +59,6 @@ export const MapController: React.FC<MapControllerProps> = ({
           mapPane.style.touchAction = "none";
         }
       }
-      
-      // Safari-specific optimizations
-      if (isSafari.current) {
-        // Add Safari-specific optimizations for mobile
-        try {
-          // Improve touch detection
-          map.options.tap = true;
-          
-          // Fix Safari-specific drag issues
-          if (map.dragging._draggable) {
-            map.dragging._draggable._touchstart = function(e) {
-              if (!e.touches || e.touches.length !== 1) { return; }
-              const touch = e.touches[0];
-              this._startPoint = new L.Point(touch.clientX, touch.clientY);
-              this._startPos = this._newPos = L.DomUtil.getPosition(this._element);
-              this.fire('down', e);
-            };
-          }
-          
-          // Force hardware acceleration for map panes in Safari
-          const mapPane = map.getPane('mapPane');
-          if (mapPane) {
-            mapPane.style.transform = 'translate3d(0,0,0)';
-            mapPane.style.webkitTransform = 'translate3d(0,0,0)';
-            mapPane.style.backfaceVisibility = 'hidden';
-            mapPane.style.webkitBackfaceVisibility = 'hidden';
-          }
-        } catch (error) {
-          console.warn("Safari-specific optimizations failed:", error);
-        }
-      }
     } else {
       // Desktop settings - enable all controls
       map.scrollWheelZoom.enable();
@@ -113,15 +81,6 @@ export const MapController: React.FC<MapControllerProps> = ({
       map.setView([userLocation.latitude, userLocation.longitude], map.getZoom());
       firstRenderRef.current = false;
     }
-    
-    // Make sure map renders correctly after component mount in Safari
-    setTimeout(() => {
-      try {
-        map.invalidateSize();
-      } catch (error) {
-        console.warn("Map invalidateSize failed:", error);
-      }
-    }, 100);
     
     return () => {
       // Clean up global reference

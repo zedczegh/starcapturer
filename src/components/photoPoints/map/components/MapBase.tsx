@@ -3,7 +3,6 @@ import React from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapCenterHandler } from './MapCenterHandler';
-import * as L from 'leaflet';
 
 interface MapBaseProps {
   center: [number, number];
