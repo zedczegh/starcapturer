@@ -1,11 +1,10 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
 // Default radius constants
-const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
+const DEFAULT_CALCULATED_RADIUS = 500; // Changed from 100 to 500km 
 const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
 
 export function usePhotoPointsState() {
