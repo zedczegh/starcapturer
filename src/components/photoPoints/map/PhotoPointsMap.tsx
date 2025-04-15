@@ -47,7 +47,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations.length}, certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}`);
+  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
   // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
@@ -66,10 +66,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     activeView
   });
   
-  console.log(`PhotoPointsMap: validLocations=${validLocations.length}, mapReady=${mapReady}`);
+  console.log(`PhotoPointsMap: validLocations=${validLocations?.length || 0}, mapReady=${mapReady}`);
   
   // Filter out some locations on mobile for better performance
   const optimizedLocations = useMemo(() => {
+    // If no valid locations available, return empty array
+    if (!validLocations || validLocations.length === 0) {
+      return [];
+    }
+
     if (!isMobile) return validLocations;
     
     // For mobile, limit the number of displayed locations

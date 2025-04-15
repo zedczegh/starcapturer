@@ -51,7 +51,7 @@ export const usePhotoPointsMap = ({
   
   // Combine locations - always include all certified locations regardless of view
   const combinedLocations = useCallback(() => {
-    console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations.length}`);
+    console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations?.length || 0}`);
     
     // Always include certified locations
     if (allCertifiedLocations.length > 0) {
@@ -85,13 +85,13 @@ export const usePhotoPointsMap = ({
       }
       
       const result = Array.from(locationMap.values());
-      console.log(`Combined ${allCertifiedLocations.length} certified and ${locations.length || 0} calculated locations for map display. Total: ${result.length}`);
+      console.log(`Combined ${allCertifiedLocations.length} certified and ${locations?.length || 0} calculated locations for map display. Total: ${result.length}`);
       return result;
     }
     
     // Fallback to provided locations if certified locations aren't loaded yet
-    console.log(`Using ${locations.length || 0} fallback locations for map display`);
-    return locations;
+    console.log(`Using ${locations?.length || 0} fallback locations for map display`);
+    return Array.isArray(locations) ? locations : [];
   }, [locations, allCertifiedLocations, activeView]);
   
   // Use the location processing hook

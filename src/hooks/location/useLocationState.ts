@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from './useGeolocation';
@@ -12,20 +12,20 @@ export const useLocationState = () => {
   
   // Use geolocation hook for getting user position
   const { 
-    currentPosition, 
+    coords: currentPosition, 
     loading: locationLoading, 
     getPosition
   } = useGeolocation();
   
   // When geolocation updates, sync with effective location
-  useState(() => {
+  useEffect(() => {
     if (currentPosition) {
       setEffectiveLocation({
         latitude: currentPosition.latitude,
         longitude: currentPosition.longitude
       });
     }
-  });
+  }, [currentPosition]);
   
   // Handle location update from map or other sources
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {

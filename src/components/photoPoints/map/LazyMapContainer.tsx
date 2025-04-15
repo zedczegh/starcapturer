@@ -168,7 +168,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         whenReady={handleMapReady}
         attributionControl={!isMobile}
         worldCopyJump={true}
-        doubleClickZoom={!isMobile}
       >
         <TileLayer
           attribution={tileOptions.attribution}
@@ -232,7 +231,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         <MapController 
           userLocation={userLocation} 
           searchRadius={searchRadius}
-          doubleClickZoom={!isMobile}
         />
       </MapContainer>
     </div>

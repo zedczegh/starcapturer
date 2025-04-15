@@ -7,6 +7,13 @@ import { SharedAstroSpot } from '@/types/weather';
  * @returns An array of valid locations
  */
 export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+  // Make sure locations is an array
+  if (!Array.isArray(locations)) {
+    console.warn('filterValidLocations received non-array input:', locations);
+    return [];
+  }
+  
+  // Filter out invalid locations
   return locations.filter(
     loc => loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
   );
@@ -20,6 +27,12 @@ export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroS
 export const separateLocationTypes = (
   locations: SharedAstroSpot[]
 ): { certifiedLocations: SharedAstroSpot[]; calculatedLocations: SharedAstroSpot[] } => {
+  // Make sure locations is an array
+  if (!Array.isArray(locations)) {
+    console.warn('separateLocationTypes received non-array input:', locations);
+    return { certifiedLocations: [], calculatedLocations: [] };
+  }
+
   const certifiedLocations: SharedAstroSpot[] = [];
   const calculatedLocations: SharedAstroSpot[] = [];
 
@@ -60,5 +73,5 @@ export const mergeLocations = (
  * @returns True if the location is certified, false otherwise
  */
 export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return Boolean(location.isDarkSkyReserve || location.certification);
+  return Boolean(location?.isDarkSkyReserve || location?.certification);
 };

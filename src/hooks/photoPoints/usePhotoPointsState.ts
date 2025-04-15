@@ -20,7 +20,7 @@ export const usePhotoPointsState = () => {
   
   // For location tracking
   const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const { currentPosition, loading: locationLoading, getPosition } = useGeolocation();
+  const { coords: currentPosition, loading: locationLoading, getPosition } = useGeolocation();
   
   // Update effective location when current position changes
   useEffect(() => {
