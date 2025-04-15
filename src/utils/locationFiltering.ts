@@ -11,6 +11,14 @@ export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroS
 };
 
 /**
+ * Check if a location is certified (Dark Sky Reserve or has certification)
+ */
+export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
+  if (!location) return false;
+  return Boolean(location.isDarkSkyReserve || location.certification);
+};
+
+/**
  * Separate locations into certified and calculated types
  */
 export const separateLocationTypes = (locations: SharedAstroSpot[]) => {
