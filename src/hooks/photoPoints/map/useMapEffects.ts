@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -51,8 +51,6 @@ export const useMapEffects = (searchRadius: number, userLocation: { latitude: nu
       map.off('drag', handleDrag);
     };
   }, [map]);
-
-  return null;
 };
 
 export default useMapEffects;

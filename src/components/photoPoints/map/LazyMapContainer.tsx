@@ -5,8 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { LocationMarker } from './markers/LocationMarker';
-import { UserLocationMarker } from './markers/UserLocationMarker';
+import LocationMarker from './markers/LocationMarker';
+import UserLocationMarker from './markers/UserLocationMarker';
 import useMapEffects from '@/hooks/photoPoints/map/useMapEffects';
 import useMapEvents from '@/hooks/photoPoints/map/useMapEvents';
 import MapController from './MapController';
@@ -33,6 +33,9 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -49,7 +52,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onMarkerHover,
   isMobile = false,
   useMobileMapFixer = false,
-  showRadiusCircles = false
+  showRadiusCircles = false,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }) => {
   const handleMapReady = useCallback(() => {
     if (onMapReady) onMapReady();
@@ -58,6 +64,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) onLocationClick(location);
   }, [onLocationClick]);
+  
+  const handleMapClickEvent = useCallback((lat: number, lng: number) => {
+    if (onMapClick) onMapClick(lat, lng);
+  }, [onMapClick]);
 
   return (
     <MapContainer
@@ -114,6 +124,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             locationId={locationId}
             isCertified={isCertified}
             activeView={activeView}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
           />
         );
       })}
@@ -122,6 +135,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         <UserLocationMarker 
           position={[userLocation.latitude, userLocation.longitude]} 
         />
+      )}
+      
+      {onMapClick && (
+        <div onClick={() => {}} style={{ display: 'none' }}>
+          {useMapEvents(handleMapClickEvent)}
+        </div>
       )}
       
       <MapController 

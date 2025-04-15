@@ -9,9 +9,13 @@ export const useMapEvents = (onMapClick: (lat: number, lng: number) => void) => 
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
     onMapClick(e.latlng.lat, e.latlng.lng);
   }, [onMapClick]);
-
-  return {
-    handleMapClick
+  
+  // Attach map click event listener
+  map.on('click', handleMapClick);
+  
+  // Clean up event listener to prevent memory leaks
+  return () => {
+    map.off('click', handleMapClick);
   };
 };
 

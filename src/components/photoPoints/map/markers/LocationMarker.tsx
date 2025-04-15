@@ -1,15 +1,11 @@
 
 import React, { useCallback } from 'react';
 import { Marker, Popup } from 'react-leaflet';
-import { Star, Award, ExternalLink } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatDistance } from '@/utils/geoUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSiqsClass, getCertificationColor } from '@/utils/markerUtils';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import MarkerPopupContent from './MarkerPopupContent';
 
 interface LocationMarkerProps {
@@ -20,6 +16,9 @@ interface LocationMarkerProps {
   locationId: string;
   isCertified: boolean;
   activeView: 'certified' | 'calculated';
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 const LocationMarker: React.FC<LocationMarkerProps> = ({
@@ -29,11 +28,13 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   onHover,
   locationId,
   isCertified,
-  activeView
+  activeView,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }) => {
   const { language } = useLanguage();
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
 
   const handleClick = useCallback(() => {
     onClick(location);
@@ -46,6 +47,24 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   const handleMouseOut = useCallback(() => {
     onHover(null);
   }, [onHover]);
+  
+  const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
+    if (handleTouchStart) {
+      handleTouchStart(e, locationId);
+    }
+  }, [handleTouchStart, locationId]);
+  
+  const handleMarkerTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (handleTouchEnd) {
+      handleTouchEnd(e, locationId);
+    }
+  }, [handleTouchEnd, locationId]);
+  
+  const handleMarkerTouchMove = useCallback((e: React.TouchEvent) => {
+    if (handleTouchMove) {
+      handleTouchMove(e);
+    }
+  }, [handleTouchMove]);
 
   // Create marker icon based on location type
   const icon = React.useMemo(() => {
@@ -55,7 +74,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
       return createCustomMarker(certColor, 'star', sizeMultiplier);
     } else {
       const defaultColor = '#4ADE80';
-      const color = location.siqs ? location.siqs : defaultColor;
+      const color = location.siqs ? (typeof location.siqs === 'number' ? String(location.siqs) : location.siqs) : defaultColor;
       return createCustomMarker(color, 'circle', sizeMultiplier);
     }
   }, [location, isCertified, isMobile]);
@@ -69,9 +88,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
       position={[location.latitude, location.longitude]}
       icon={icon}
       eventHandlers={{
+        click: handleClick,
         mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-        click: handleClick
+        mouseout: handleMouseOut
       }}
     >
       <Popup closeOnClick={false} autoClose={false}>
