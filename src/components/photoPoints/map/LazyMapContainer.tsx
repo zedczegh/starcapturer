@@ -6,7 +6,7 @@ import './MarkerStyles.css';
 import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet, getFastTileLayer } from '@/components/location/map/MapMarkerUtils';
+import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
@@ -14,6 +14,7 @@ import { MapEvents } from './MapEffectsController';
 import PinpointButton from './PinpointButton';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 import { MapEffectsComposer } from './MapComponents';
+import L from 'leaflet';
 
 configureLeaflet();
 
@@ -61,8 +62,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // Get the optimized tile layer
-  const { url: tileUrl, attribution } = getFastTileLayer();
+  // Get the optimized tile layer options
+  const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
   // Ensure stable references to prevent unnecessary re-renders
   const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
@@ -148,18 +149,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
         attributionControl={true}
-        preferCanvas={true}
-        renderer={L.canvas()}
         worldCopyJump={true}
-        bounceAtZoomLimits={!isMobile}
       >
         <TileLayer
-          attribution={attribution}
-          url={tileUrl}
-          updateWhenZooming={false}
-          updateWhenIdle={true}
-          maxZoom={19}
-          keepBuffer={isMobile ? 1 : 2}
+          attribution={tileOptions.attribution}
+          url={tileOptions.url}
+          maxZoom={tileOptions.maxZoom}
         />
         
         {showRadiusCircles && userLocation && (

@@ -1,10 +1,9 @@
-
 import React, { useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { createCustomMarker, getFastTileLayer } from './MapMarkerUtils';
+import { createCustomMarker, getFastTileLayer, getTileLayerOptions } from './MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Fix Leaflet icon issue
@@ -156,6 +155,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   
   // Get optimized tile layer
   const { url: tileUrl, attribution } = getFastTileLayer();
+  const tileOptions = getTileLayerOptions(isMobile);
   
   // Call the onMapReady callback when the component mounts
   useEffect(() => {
@@ -185,7 +185,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     // Mobile-specific options
     tap: isMobile,
     touchZoom: isMobile ? 'center' : true,
-    bounceAtZoomLimits: !isMobile, // Disable bounce on mobile
     // Reduce map animation to improve performance on mobile
     zoomAnimation: !isMobile,
     fadeAnimation: !isMobile,
@@ -197,9 +196,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     wheelDebounceTime: isMobile ? 40 : 80,
     zoomSnap: isMobile ? 0.5 : 1,
     // Performance improvements
-    preferCanvas: true,
-    renderer: L.canvas(),
-    // Reduce unnecessary tile loading
     worldCopyJump: true,
   };
   
@@ -210,13 +206,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       whenReady={() => onMapReady()}
     >
       <TileLayer
-        attribution={attribution}
-        url={tileUrl}
-        updateWhenZooming={false}
-        updateWhenIdle={true}
-        tileSize={256}
-        maxZoom={19}
-        keepBuffer={isMobile ? 1 : 2}
+        attribution={tileOptions.attribution}
+        url={tileOptions.url}
+        maxZoom={tileOptions.maxZoom}
       />
       <Marker position={position} icon={markerIcon}>
         <Popup>

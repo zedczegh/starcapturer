@@ -17,6 +17,7 @@ declare module 'react-leaflet' {
     className?: string;
     children?: React.ReactNode;
     minZoom?: number;
+    worldCopyJump?: boolean;
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
@@ -26,6 +27,7 @@ declare module 'react-leaflet' {
     opacity?: number;
     zIndex?: number;
     children?: React.ReactNode;
+    maxZoom?: number;
   }
 
   export interface MarkerProps extends L.MarkerOptions {
