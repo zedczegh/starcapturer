@@ -108,12 +108,11 @@ async function updateLocationWithSiqs(
       timestamp: Date.now()
     });
     
-    // Include siqsFactors if available, as it's now part of the SharedAstroSpot type
     return {
       ...location,
       siqs: result.siqs,
       isViable: result.isViable,
-      siqsFactors: result.factors
+      // Remove siqsFactors property as it's not in the SharedAstroSpot type
     };
   } catch (error) {
     console.error(`Error calculating SIQS for location:`, error);
@@ -139,3 +138,4 @@ export function clearLocationCache(): void {
   clearSiqsCache();
   console.log("Location cache cleared via clearLocationCache alias");
 }
+
