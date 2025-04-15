@@ -1,6 +1,8 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/locationValidator";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Efficiently filter locations by quality and distance
@@ -47,7 +49,7 @@ export function filterLocationsByQualityAndDistance(
     }
     
     // Filter by quality
-    if (typeof location.siqs === 'number' && location.siqs < qualityThreshold) {
+    if (location.siqs !== undefined && getSiqsScore(location.siqs) < qualityThreshold) {
       return false;
     }
     
@@ -95,7 +97,7 @@ export function sortLocationsByQualityAndDistance(
     
     // Then sort by SIQS score
     if ((a.siqs || 0) !== (b.siqs || 0)) {
-      return (b.siqs || 0) - (a.siqs || 0);
+      return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
     }
     
     // Then sort by distance

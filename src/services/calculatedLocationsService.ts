@@ -1,9 +1,9 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { estimateTerrainType } from '@/utils/locationClassifier';
 import { updateLocationsWithRealTimeSiqs } from './realTimeSiqsService/locationUpdateService';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 // Enhanced cache for calculated locations with improved structure
 const calculatedLocationsCache = new Map<string, {

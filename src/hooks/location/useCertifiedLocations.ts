@@ -1,6 +1,7 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Hook to separate certified and calculated recommendation locations
@@ -101,7 +102,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
     
     // Sort calculated locations by SIQS quality if available
     const sortedCalculated = [...calculated].sort((a, b) => 
-      (b.siqs || 0) - (a.siqs || 0)
+      (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0)
     );
     
     setProcessedLocations({

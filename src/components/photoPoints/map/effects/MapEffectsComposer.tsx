@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
+import * as L from 'leaflet';
 
 interface MapEffectsComposerProps {
   effects?: ('leaflet-fullscreen' | 'zoom-controls' | 'scale')[];

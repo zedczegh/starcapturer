@@ -2,6 +2,7 @@
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/lib/api/coordinates';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Sort locations by quality and distance
@@ -25,7 +26,7 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
     if (aIsCertified && bIsCertified) {
       // If both are certified, sort by SIQS score first
       if (a.siqs !== b.siqs) {
-        return (b.siqs || 0) - (a.siqs || 0);
+        return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
       }
       // Then by distance
       return (a.distance || Infinity) - (b.distance || Infinity);
@@ -34,14 +35,14 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
     if (!aIsCertified && !bIsCertified) {
       // For calculated locations, sort by SIQS score first
       if (a.siqs !== b.siqs) {
-        return (b.siqs || 0) - (a.siqs || 0);
+        return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
       }
       // Then by distance
       return (a.distance || Infinity) - (b.distance || Infinity);
     }
     
     // Default case: sort by SIQS score
-    return (b.siqs || 0) - (a.siqs || 0);
+    return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
   });
 }
 
