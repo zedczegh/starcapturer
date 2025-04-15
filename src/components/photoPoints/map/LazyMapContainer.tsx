@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -157,7 +158,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             dashArray: '5, 5',
           }}
           radius={searchRadius * 1000}
-          className="location-radius-circle"
         />
       )}
       

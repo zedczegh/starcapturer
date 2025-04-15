@@ -1,3 +1,4 @@
+
 /* Enhanced marker styles with better mobile visibility */
 .leaflet-marker-icon {
   transition: filter 0.15s ease-out;
@@ -98,7 +99,7 @@
 }
 
 /* Location radius circle styling */
-.location-radius-circle {
+.leaflet-circle-pane path {
   stroke-dasharray: 5, 5;
   animation: pulse 3s infinite ease-in-out;
   transform-origin: center center !important;

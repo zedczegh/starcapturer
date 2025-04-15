@@ -30,6 +30,8 @@ export function usePhotoPointsState() {
   
   // Prevent view change operations from stacking
   const viewChangeInProgressRef = useRef(false);
+  const lastViewChangeTimestampRef = useRef(0);
+  const viewChangeTimeoutRef = useRef<number | null>(null);
   
   // Get user position
   useEffect(() => {
@@ -84,6 +86,15 @@ export function usePhotoPointsState() {
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
+  
+  // Clean up view change timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (viewChangeTimeoutRef.current) {
+        clearTimeout(viewChangeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Effective location (manual override or user location)
   const effectiveLocation = manualLocationOverride || userLocation;
@@ -98,7 +109,7 @@ export function usePhotoPointsState() {
     setShowMap(prev => !prev);
   }, []);
   
-  // Handle view mode change with safeguards
+  // Handle view mode change with better safeguards
   const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
     // Prevent multiple simultaneous view changes
     if (viewChangeInProgressRef.current) {
@@ -111,20 +122,46 @@ export function usePhotoPointsState() {
       return;
     }
     
-    console.log(`Changing view from ${activeView} to ${view}`);
+    const now = Date.now();
+    const timeSinceLastChange = now - lastViewChangeTimestampRef.current;
+    if (timeSinceLastChange < 2000) { // 2 seconds debounce
+      console.log(`Last view change was ${timeSinceLastChange}ms ago, debouncing`);
+      return;
+    }
+    
+    // Update timestamp and set in-progress flag
+    lastViewChangeTimestampRef.current = now;
     viewChangeInProgressRef.current = true;
+    
+    console.log(`Preparing view change from ${activeView} to ${view}`);
     
     try {
       // First clear location cache to prevent stale data
       clearLocationCache();
       
+      // Clean up any pending timeouts
+      if (viewChangeTimeoutRef.current) {
+        clearTimeout(viewChangeTimeoutRef.current);
+      }
+      
       // Then update the view after a short delay
-      setTimeout(() => {
-        setActiveView(view);
-        viewChangeInProgressRef.current = false;
-      }, 50);
+      viewChangeTimeoutRef.current = window.setTimeout(() => {
+        try {
+          console.log(`Executing view change to ${view}`);
+          setActiveView(view);
+          
+          // Reset the in-progress flag after a delay to allow state to settle
+          setTimeout(() => {
+            viewChangeInProgressRef.current = false;
+            console.log(`View change to ${view} completed`);
+          }, 1000);
+        } catch (err) {
+          console.error("Error during view change execution:", err);
+          viewChangeInProgressRef.current = false;
+        }
+      }, 200);
     } catch (err) {
-      console.error("Error during view change:", err);
+      console.error("Error during view change preparation:", err);
       viewChangeInProgressRef.current = false;
     }
   }, [activeView]);
