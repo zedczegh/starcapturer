@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import { WorldBoundsController } from '../MapEffectsController';
 import SiqsEffectsController from './SiqsEffectsController';
@@ -14,6 +14,8 @@ interface MapEffectsComposerProps {
 }
 
 const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
+  center,
+  zoom,
   userLocation,
   activeView = 'certified',
   searchRadius = 100,
@@ -21,7 +23,26 @@ const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
 }) => {
   const map = useMap();
   
-  // All auto-zoom and auto-center functionality removed
+  // Set view when center changes
+  useEffect(() => {
+    if (!map || !center) return;
+    
+    // Use a small delay to prevent race conditions with other map operations
+    const timeoutId = setTimeout(() => {
+      if (map && map.setView) {
+        try {
+          map.setView(center, zoom || map.getZoom(), {
+            animate: true,
+            duration: 0.5 // Faster animation
+          });
+        } catch (error) {
+          console.error("Error setting map view:", error);
+        }
+      }
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
+  }, [map, center, zoom]);
   
   return (
     <>
