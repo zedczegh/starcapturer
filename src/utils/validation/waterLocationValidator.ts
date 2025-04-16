@@ -19,9 +19,9 @@ export const isWaterLocation = (
       return false;
     }
     
-    // Use enhanced water detection
+    // Use enhanced water detection with a higher threshold to avoid false positives
     const result = detectWaterLocation(latitude, longitude);
-    return result.isWater && result.confidence > 0.7;
+    return result.isWater && result.confidence > 0.85; // Increased threshold to avoid false positives
   } catch (error) {
     console.error("Error in water location check:", error);
     return false; // Default to non-water on error to avoid filtering too many locations

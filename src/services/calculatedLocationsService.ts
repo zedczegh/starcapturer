@@ -89,22 +89,24 @@ export class CalculatedLocationsService {
       // Skip water detection for certified locations
       const isCertified = Boolean(spot.isDarkSkyReserve || spot.certification);
       
-      if (!isCertified && isWaterLocation(spot.latitude, spot.longitude)) {
+      // Use a more permissive water check to avoid filtering too many locations
+      if (!isCertified && 
+          isWaterLocation(spot.latitude, spot.longitude) && 
+          !isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
         return false;
       }
 
-      if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
-        return false;
-      }
-
-      if (spot.siqs === undefined || getSiqsScore(spot.siqs) < this.qualityThreshold) {
+      // Only filter by SIQS if it's defined and above threshold
+      if (spot.siqs !== undefined && 
+          spot.siqs !== null && 
+          getSiqsScore(spot.siqs) < this.qualityThreshold) {
         return false;
       }
 
       return true;
     } catch (error) {
       console.error("Error validating spot:", error);
-      return false;
+      return true; // Be permissive on error
     }
   }
 

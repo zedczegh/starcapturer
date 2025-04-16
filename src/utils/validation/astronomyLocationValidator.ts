@@ -15,28 +15,20 @@ export const isValidAstronomyLocation = (
     return false;
   }
   
-  // Use a lower confidence threshold for astronomy locations to avoid false positives
+  // Use a high confidence threshold for water detection to avoid incorrectly filtering locations
   if (isWaterLocation(latitude, longitude, false)) {
     return false;
   }
   
-  // Check for water-related terms in the location name
-  if (locationName) {
+  // Only filter by name if the name is provided and substantial
+  if (locationName && locationName.length > 3) {
     const lowerName = locationName.toLowerCase();
     const commonWaterTerms = ['ocean', 'sea', 'bay', 'gulf', 'lake'];
     
+    // Check only for definite water terms in name
     for (const term of commonWaterTerms) {
-      if (lowerName.includes(term)) return false;
-    }
-    
-    const otherWaterTerms = [
-      'strait', 'channel', 'sound', 'harbor', 'harbour', 'port', 
-      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
-    ];
-    
-    for (const term of otherWaterTerms) {
-      if (lowerName.includes(term)) return false;
+      // Match only when it's definitely the main feature (with word boundaries)
+      if (new RegExp(`\\b${term}\\b`, 'i').test(lowerName)) return false;
     }
   }
   
