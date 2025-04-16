@@ -9,15 +9,18 @@ export const isValidAstronomyLocation = (
   longitude: number,
   locationName?: string
 ): boolean => {
+  // Check for valid coordinate ranges
   if (!isFinite(latitude) || !isFinite(longitude) ||
       Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
     return false;
   }
   
+  // Use a lower confidence threshold for astronomy locations to avoid false positives
   if (isWaterLocation(latitude, longitude, false)) {
     return false;
   }
   
+  // Check for water-related terms in the location name
   if (locationName) {
     const lowerName = locationName.toLowerCase();
     const commonWaterTerms = ['ocean', 'sea', 'bay', 'gulf', 'lake'];

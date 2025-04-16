@@ -1,12 +1,11 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
-import { isWaterLocation } from '@/utils/locationValidator';
-import { toast } from '@/components/ui/use-toast'; // Fix import path
+import { isWaterLocation } from '@/utils/validation/waterLocationValidator';
+import { toast } from '@/components/ui/use-toast';
 
 interface Location {
   latitude: number;
@@ -75,11 +74,21 @@ export const useRecommendedLocations = (
         searchRadius
       );
       
-      const filteredCalculatedResults = calculatedResults.filter(loc => 
-        !isWaterLocation(loc.latitude, loc.longitude)
-      );
+      const filteredCalculatedResults = calculatedResults.filter(loc => {
+        try {
+          if (!loc || !loc.latitude || !loc.longitude) return false;
+          
+          // Skip water filtering for certified locations
+          if (loc.isDarkSkyReserve || loc.certification) return true;
+          
+          return !isWaterLocation(loc.latitude, loc.longitude);
+        } catch (error) {
+          console.error("Error filtering calculated location:", error);
+          return false;
+        }
+      });
       
-      const combinedResults = [...certifiedResults, ...filteredCalculatedResults];
+      const combinedResults = [...certifiedResults, ...filteredCalculatedResults].filter(Boolean);
       
       if (combinedResults.length === 0) {
         console.log("No locations found within the search radius");

@@ -1,7 +1,7 @@
 
 import { SharedAstroSpot } from '@/types/weather';
 import { generateRandomPoint } from '@/services/locationFilters';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/validation';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
@@ -32,9 +32,14 @@ export class CalculatedLocationsService {
    * Main method to generate and filter astro spots
    */
   public async generateAndFilterAstroSpots(): Promise<SharedAstroSpot[]> {
-    const generatedPoints = this.generateRandomPoints();
-    const filteredPoints = this.filterAstroSpots(generatedPoints);
-    return this.sortAstroSpots(filteredPoints);
+    try {
+      const generatedPoints = this.generateRandomPoints();
+      const filteredPoints = this.filterAstroSpots(generatedPoints);
+      return this.sortAstroSpots(filteredPoints);
+    } catch (error) {
+      console.error("Error generating astro spots:", error);
+      return [];
+    }
   }
 
   /**
@@ -76,29 +81,38 @@ export class CalculatedLocationsService {
    * Validates a single astro spot against filtering criteria
    */
   private isValidAstroSpot(spot: SharedAstroSpot): boolean {
-    if (!spot.latitude || !spot.longitude) {
+    try {
+      if (!spot.latitude || !spot.longitude) {
+        return false;
+      }
+
+      // Skip water detection for certified locations
+      const isCertified = Boolean(spot.isDarkSkyReserve || spot.certification);
+      
+      if (!isCertified && isWaterLocation(spot.latitude, spot.longitude)) {
+        return false;
+      }
+
+      if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
+        return false;
+      }
+
+      if (spot.siqs === undefined || getSiqsScore(spot.siqs) < this.qualityThreshold) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error validating spot:", error);
       return false;
     }
-
-    if (isWaterLocation(spot.latitude, spot.longitude)) {
-      return false;
-    }
-
-    if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
-      return false;
-    }
-
-    if (spot.siqs === undefined || getSiqsScore(spot.siqs) < this.qualityThreshold) {
-      return false;
-    }
-
-    return true;
   }
 
   /**
    * Filters an array of astro spots based on criteria
    */
   private filterAstroSpots(astroSpots: SharedAstroSpot[]): SharedAstroSpot[] {
+    if (!Array.isArray(astroSpots)) return [];
     return astroSpots.filter(spot => this.isValidAstroSpot(spot));
   }
 
@@ -106,6 +120,7 @@ export class CalculatedLocationsService {
    * Sorts astro spots by quality and distance
    */
   private sortAstroSpots(astroSpots: SharedAstroSpot[]): SharedAstroSpot[] {
+    if (!Array.isArray(astroSpots)) return [];
     return [...astroSpots].sort((a, b) => {
       // Sort by SIQS score first (highest first)
       const siqsA = getSiqsScore(a.siqs) || 0;

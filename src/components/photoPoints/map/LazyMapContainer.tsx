@@ -15,7 +15,7 @@ import L from 'leaflet';
 import CenteringPinpointButton from './CenteringPinpointButton';
 import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/validation/waterLocationValidator';
 
 configureLeaflet();
 

@@ -1,5 +1,4 @@
 
-import { isWaterLocation as checkWaterLocation } from "@/utils/locationWaterCheck";
 import { detectWaterLocation, verifyLandLocation } from '../waterDetection/enhancedWaterDetector';
 
 /**
@@ -10,10 +9,23 @@ export const isWaterLocation = (
   longitude: number,
   isCertified: boolean = false
 ): boolean => {
+  // Skip water detection for certified locations
   if (isCertified) return false;
   
-  const result = detectWaterLocation(latitude, longitude);
-  return result.isWater && result.confidence > 0.9;
+  try {
+    // First check if coordinates are valid
+    if (!isFinite(latitude) || !isFinite(longitude) ||
+        Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+      return false;
+    }
+    
+    // Use enhanced water detection
+    const result = detectWaterLocation(latitude, longitude);
+    return result.isWater && result.confidence > 0.7;
+  } catch (error) {
+    console.error("Error in water location check:", error);
+    return false; // Default to non-water on error to avoid filtering too many locations
+  }
 };
 
 /**
