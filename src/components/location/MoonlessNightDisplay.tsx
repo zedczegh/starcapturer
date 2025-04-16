@@ -21,28 +21,44 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   const moonPhase = calculateMoonPhase();
   const { isGoodForAstronomy } = getMoonInfo();
 
-  const calculateNightDuration = () => {
+  const calculateMoonlessNightDuration = () => {
+    // Enhanced calculation taking into account moon phase
+    const phase = calculateMoonPhase();
     const now = new Date();
-    const startTime = new Date(now);
+    
+    // Base night duration (6 PM to 7 AM)
+    let startTime = new Date(now);
     startTime.setHours(18, 0, 0, 0);
     
-    const endTime = new Date(now);
+    let endTime = new Date(now);
     endTime.setHours(7, 0, 0, 0);
     if (endTime <= startTime) {
       endTime.setDate(endTime.getDate() + 1);
     }
     
-    // Calculate duration in hours
-    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    // Calculate effective moonless duration based on moon phase
+    let effectiveDuration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    
+    // Adjust duration based on moon phase
+    if (phase < 0.1 || phase > 0.9) {
+      // Near new moon - full duration
+      effectiveDuration = effectiveDuration;
+    } else if (phase > 0.4 && phase < 0.6) {
+      // Near full moon - minimal duration
+      effectiveDuration *= 0.2;
+    } else {
+      // Partial moon - reduced duration
+      effectiveDuration *= (1 - (Math.min(Math.abs(0.5 - phase), 0.4) * 2));
+    }
     
     return {
-      duration,
+      duration: Math.round(effectiveDuration * 10) / 10, // Round to 1 decimal
       startTime: startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       endTime: endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
   };
 
-  const nightInfo = calculateNightDuration();
+  const nightInfo = calculateMoonlessNightDuration();
 
   return (
     <Card className="p-4 bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
@@ -54,7 +70,7 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
             </div>
             <div>
               <h3 className="text-sm font-medium">
-                {t('Night Duration', '夜晚持续时间')}
+                {t('Moonless Night Duration', '无月夜晚时长')}
               </h3>
             </div>
           </div>
@@ -64,7 +80,7 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
         <div className="mt-1">
           <div className="flex items-center justify-between">
             <span className="text-2xl font-semibold">
-              {Math.round(nightInfo.duration)}
+              {nightInfo.duration}
             </span>
             <span className="text-sm text-muted-foreground">{t('hours', '小时')}</span>
           </div>
@@ -79,8 +95,8 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
               <TooltipContent>
                 <p className="text-xs">
                   {t(
-                    'Night observation period',
-                    '夜间观测时段'
+                    'Effective moonless observation period',
+                    '有效无月观测时段'
                   )}
                 </p>
               </TooltipContent>
@@ -89,7 +105,7 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
 
           <div className={`mt-1 text-xs ${isGoodForAstronomy ? 'text-green-400' : 'text-yellow-400'}`}>
             {isGoodForAstronomy 
-              ? t('Good moon phase for astronomy', '适合天文观测的月相')
+              ? t('Optimal moon phase for astronomy', '最佳天文观测月相')
               : t('Wait for darker moon phase', '等待更暗的月相')}
           </div>
         </div>

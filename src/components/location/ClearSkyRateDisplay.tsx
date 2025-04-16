@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Moon, Info, Calendar, RefreshCw } from 'lucide-react';
+import { Star, StarHalf, StarOff, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useWeatherDataIntegration } from '@/hooks/useWeatherDataIntegration';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,7 +9,6 @@ import {
   TooltipProvider,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
 
 interface ClearSkyRateDisplayProps {
   latitude: number;
@@ -101,6 +100,12 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     return 'text-red-400';
   };
 
+  const getStarIcon = (rate: number) => {
+    if (rate >= 75) return <Star className="text-yellow-400" />;
+    if (rate >= 45) return <StarHalf className="text-yellow-400" />;
+    return <StarOff className="text-gray-400" />;
+  };
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     refresh();
@@ -126,7 +131,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-cosmic-800/50 p-2 rounded-full">
-              <Moon className="w-5 h-5 text-primary" />
+              <Star className="w-5 h-5 text-yellow-400" />
             </div>
             <div>
               <h3 className="text-sm font-medium">
@@ -236,7 +241,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                 <span className={`font-medium text-sm ${getRateColor(annualRate)}`}>
                   {annualRate}%
                 </span>
-                <Star className={`w-4 h-4 ${getRateColor(annualRate)}`} />
+                {getStarIcon(annualRate)}
               </div>
             </div>
             
