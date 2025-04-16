@@ -6,9 +6,7 @@ import LocationUpdater from "@/components/location/LocationUpdater";
 import { determineWeatherCondition } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ClearSkyRateDisplay from "./ClearSkyRateDisplay";
-
-// Lazy load the forecast tabs to improve initial load time
-const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
+import MoonlessNightDisplay from "./MoonlessNightDisplay";
 
 interface LocationContentGridProps {
   locationData: any;
@@ -39,7 +37,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
 }) => {
   const { language } = useLanguage();
   
-  // Memoize the weather data to prevent unnecessary re-calculations
   const weatherData = useMemo(() => ({
     temperature: locationData?.weatherData?.temperature || 0,
     humidity: locationData?.weatherData?.humidity || 0,
@@ -52,12 +49,10 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     aqi: locationData?.weatherData?.aqi
   }), [locationData?.weatherData]);
 
-  // Format the moon phase as a human-readable string
   const moonPhaseString = useMemo(() => {
     return normalizeMoonPhase(locationData.moonPhase || 0);
   }, [locationData.moonPhase]);
 
-  // Format the seeing conditions as a human-readable string
   const seeingConditionsString = useMemo(() => {
     const value = locationData.seeingConditions;
     if (typeof value !== 'number') return "Average";
@@ -69,7 +64,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return "Very Poor";
   }, [locationData.seeingConditions]);
 
-  // Get the Bortle scale, pass null for unknown values
   const bortleScale = useMemo(() => {
     const value = locationData.bortleScale;
     if (value === undefined || value === null || value < 1 || value > 9) {
@@ -78,7 +72,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return value;
   }, [locationData.bortleScale]);
 
-  // Loading indicator text based on language
   const loadingText = useMemo(() => {
     return language === 'en' ? "Loading..." : "加载中...";
   }, [language]);
@@ -98,6 +91,10 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           <ClearSkyRateDisplay 
             latitude={locationData.latitude} 
             longitude={locationData.longitude} 
+          />
+          <MoonlessNightDisplay
+            latitude={locationData.latitude}
+            longitude={locationData.longitude}
           />
         </div>
         

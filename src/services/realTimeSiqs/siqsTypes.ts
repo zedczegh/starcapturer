@@ -47,3 +47,12 @@ export interface SiqsResult {
     }
   }
 }
+
+// Add new interface for moonless night calculations
+export interface MoonlessNightInfo {
+  duration: number;  // Duration in hours
+  startTime: string;
+  endTime: string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+}
