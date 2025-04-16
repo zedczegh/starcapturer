@@ -115,7 +115,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'hotel-rangá',
       name: 'Hotel Rangá',
-      chineseName: '朗加酒店暗夜天空点',
+      chineseName: '朗加��店暗夜天空点',
       latitude: 63.8366,
       longitude: -20.3561,
       isDarkSkyReserve: false,
@@ -184,7 +184,6 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
       bortleScale: 1,
       type: 'lodging'
     },
-    // Adding more comprehensive Dark Sky Lodging locations
     {
       id: 'baines-camp',
       name: 'Sanctuary Baines Camp',
@@ -211,7 +210,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     },
     {
       id: 'ali-starlightcamp',
-      name: 'Ali & Reza's StarLightCamp',
+      name: 'Ali & Reza\'s StarLightCamp',
       chineseName: '阿里和雷扎的星光营地',
       latitude: 34.9482,
       longitude: 53.5510,
@@ -375,7 +374,6 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 3
     },
-    // Adding more IDA Dark Sky Communities
     {
       id: 'torrance-barrens-community',
       name: 'Torrance Barrens Dark Sky Preserve',
@@ -437,7 +435,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
   
   // List of known East Asian dark sky locations to ensure they're included
   const eastAsianLocations = [
-    // Shenzhen Xichong Dark Sky Community - Fixed coordinates and consistency
     {
       id: 'shenzhen-xichong',
       name: 'Shenzhen Xichong Dark Sky Community',
@@ -449,7 +446,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 3
     },
-    // Yeongyang Firefly Dark Sky Park
     {
       id: 'yeongyang-firefly',
       name: 'Yeongyang Firefly Eco Park Dark Sky Park',
@@ -461,7 +457,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 3
     },
-    // Jindo Dark Sky Park
     {
       id: 'jindo-dark-sky',
       name: 'Jindo Dark Sky Park',
@@ -473,7 +468,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 3
     },
-    // Yaeyama Islands Dark Sky Reserve - Fixed coordinates
     {
       id: 'yaeyama-dark-sky',
       name: 'Yaeyama Islands International Dark Sky Reserve',
@@ -485,7 +479,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 2
     },
-    // Iriomote-Ishigaki Dark Sky Reserve - Fixed coordinates  
     {
       id: 'iriomote-ishigaki',
       name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
@@ -497,7 +490,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 2
     },
-    // Himawari Farm Dark Sky Park
     {
       id: 'himawari-farm',
       name: 'Himawari Farm Dark Sky Park',
@@ -509,7 +501,6 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
       timestamp: new Date().toISOString(),
       bortleScale: 3
     },
-    // Add any missing Dark Sky Communities in Asia
     {
       id: 'yangmingshan-dark-sky',
       name: 'Yangmingshan National Park Dark Sky Park',
@@ -551,9 +542,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     if (!locationMap.has(key)) {
       locationMap.set(key, loc as SharedAstroSpot);
     } else {
-      // Update the existing entry to ensure consistency
       const existing = locationMap.get(key)!;
-      // Ensure consistent isDarkSkyReserve and certification values to prevent rendering issues
       if (existing.id === loc.id) {
         locationMap.set(key, {
           ...existing,
@@ -585,7 +574,6 @@ function addAllIDACertifiedLocations(existingLocations: SharedAstroSpot[]): Shar
   // This includes Dark Sky Reserves, Parks, Communities, Sanctuaries and more
   // Based on official list from darksky.org
   const allIDALocations: SharedAstroSpot[] = [
-    // Dark Sky Reserves (complete list)
     {
       id: 'aoraki-mackenzie-reserve',
       name: 'Aoraki Mackenzie International Dark Sky Reserve',
@@ -763,7 +751,6 @@ function addAllIDACertifiedLocations(existingLocations: SharedAstroSpot[]): Shar
       bortleScale: 2
     },
     
-    // Dark Sky Sanctuaries (complete list)
     {
       id: 'aotea-sanctuary',
       name: 'Aotea / Great Barrier Island International Dark Sky Sanctuary',
@@ -853,7 +840,6 @@ function addAllIDACertifiedLocations(existingLocations: SharedAstroSpot[]): Shar
       bortleScale: 2
     },
     
-    // Dark Sky Parks (partial list - adding top ones)
     {
       id: 'anza-borrego-park',
       name: 'Anza-Borrego Desert State Park',
@@ -1085,8 +1071,6 @@ function addAllIDACertifiedLocations(existingLocations: SharedAstroSpot[]): Shar
       timestamp: new Date().toISOString(),
       bortleScale: 2
     }
-    // Many more Dark Sky Parks exist - the full list has over 100 locations
-    // The above includes the most famous ones
   ];
   
   // Add all IDA locations
