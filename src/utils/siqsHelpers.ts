@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for safely working with SIQS values that might be numbers or objects
  */
@@ -10,7 +9,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * @param siqs SIQS value which could be a number or object
  * @returns number value of SIQS or 0 if undefined
  */
-export function getSiqsScore(siqs?: number | { score: number; isViable: boolean }): number {
+export function getSiqsScore(siqs?: number | { score: number; isViable: boolean } | any): number {
   if (siqs === undefined || siqs === null) {
     return 0;
   }
@@ -19,7 +18,19 @@ export function getSiqsScore(siqs?: number | { score: number; isViable: boolean 
     return siqs;
   }
   
-  return siqs.score;
+  if (typeof siqs === 'object' && siqs !== null) {
+    // Handle object format with score property
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return siqs.score;
+    }
+    
+    // Handle possible siqsResult nested format
+    if ('siqsResult' in siqs && siqs.siqsResult && typeof siqs.siqsResult.score === 'number') {
+      return siqs.siqsResult.score;
+    }
+  }
+  
+  return 0;
 }
 
 /**

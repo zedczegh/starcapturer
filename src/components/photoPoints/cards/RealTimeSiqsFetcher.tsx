@@ -30,8 +30,11 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
+        console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         const fetchSiqs = async () => {
           setLoading(true);
+          onSiqsCalculated(null, true); // Signal loading state to parent
+          
           try {
             // Ensure we're using a valid Bortle scale for calculation
             // Dark sky certified locations typically have better Bortle scores
@@ -44,7 +47,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               effectiveBortleScale
             );
             
-            if (result.siqs > 0) {
+            if (result && result.siqs > 0) {
+              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
               onSiqsCalculated(result.siqs, false);
             } else {
               onSiqsCalculated(0, false);

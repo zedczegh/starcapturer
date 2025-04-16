@@ -17,6 +17,7 @@ import {
 } from './MarkerUtils';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import RealTimeSiqsFetcher from '../cards/RealTimeSiqsFetcher';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -60,9 +61,10 @@ const LocationMarker = memo(({
     
   const siqsScore = useMemo(() => {
     if (realTimeSiqs !== null) return realTimeSiqs;
-    return location.siqs !== undefined && location.siqs !== null ? 
-      (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
-  }, [location.siqs, realTimeSiqs]);
+    
+    const score = getSiqsScore(location);
+    return score > 0 ? score : null;
+  }, [location, realTimeSiqs]);
   
   const siqsClass = getSiqsClass(siqsScore);
 
@@ -131,13 +133,13 @@ const LocationMarker = memo(({
       latitude: location.latitude,
       longitude: location.longitude,
       bortleScale: location.bortleScale || 4,
-      siqs: location.siqs,
+      siqs: siqsScore || (location.siqs !== undefined ? getSiqsScore(location) : undefined),
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
-      siqsResult: location.siqs ? { 
-        score: typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0,
+      siqsResult: (siqsScore !== null || location.siqs) ? { 
+        score: siqsScore !== null ? siqsScore : getSiqsScore(location),
         isViable: typeof location.siqs === 'object' ? (location.siqs as any)?.isViable : (siqsScore !== null && siqsScore >= 2)
       } : undefined
     };
@@ -245,10 +247,10 @@ const LocationMarker = memo(({
             )}
             
             <div className="mt-2 flex items-center justify-between">
-              {siqsScore !== null && (
+              {(siqsScore !== null || location.siqs !== undefined) && (
                 <div className="flex items-center gap-1.5">
                   <SiqsScoreBadge 
-                    score={siqsScore} 
+                    score={siqsScore !== null ? siqsScore : location.siqs} 
                     compact={true} 
                     loading={siqsLoading && isHovered}
                   />

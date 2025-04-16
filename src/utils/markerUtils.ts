@@ -1,3 +1,4 @@
+
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
@@ -12,10 +13,13 @@ import { getSiqsScore } from "@/utils/siqsHelpers";
  * @param siqs SIQS score
  * @returns CSS class name based on SIQS quality
  */
-export const getSiqsClass = (siqs?: number | { score: number; isViable: boolean }): string => {
-  if (siqs === undefined) return '';
+export const getSiqsClass = (siqs?: number | null | { score: number; isViable: boolean }): string => {
+  if (siqs === undefined || siqs === null) return '';
   
-  const score = getSiqsScore(siqs);
+  // Use our enhanced getSiqsScore utility if the input is not already a number
+  const score = typeof siqs === 'number' ? siqs : getSiqsScore(siqs);
+  
+  if (score === 0) return '';
   if (score >= 7.5) return 'siqs-excellent';
   if (score >= 5.5) return 'siqs-good';
   return 'siqs-poor';

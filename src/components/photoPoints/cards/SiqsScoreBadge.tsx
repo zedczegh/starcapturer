@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { Star } from 'lucide-react';
-import { formatSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface SiqsScoreBadgeProps {
-  score: number | string | { score: number; isViable: boolean };
+  score: number | string | { score: number; isViable: boolean } | any;
   loading?: boolean;
   compact?: boolean;
 }
@@ -14,27 +14,18 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   loading = false,
   compact = false 
 }) => {
-  // Convert score to string format if it's a number or object
-  let displayScore: string;
+  // Convert score to number using our helper function
+  const numericScore = typeof score === 'string' ? parseFloat(score) : getSiqsScore(score);
   
-  if (typeof score === 'string') {
-    displayScore = score;
-  } else if (typeof score === 'number') {
-    displayScore = score.toFixed(1);
-  } else if (score && typeof score === 'object' && 'score' in score) {
-    displayScore = score.score.toFixed(1);
-  } else {
-    displayScore = '0.0';
-  }
+  // Format score for display with one decimal place
+  const displayScore = numericScore.toFixed(1);
   
   // Get appropriate color based on score value
   const getColor = () => {
-    const numScore = parseFloat(displayScore);
-    
-    if (numScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
-    if (numScore >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
-    if (numScore >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-    if (numScore >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+    if (numericScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
+    if (numericScore >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
+    if (numericScore >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+    if (numericScore >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
     return 'bg-red-500/20 text-red-300 border-red-500/40';
   };
 

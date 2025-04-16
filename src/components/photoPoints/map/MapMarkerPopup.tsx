@@ -7,7 +7,7 @@ import { Star, MapPin, Navigation } from 'lucide-react';
 import { formatDistance } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { formatSiqsScore, isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -42,14 +42,18 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
+  // Extract SIQS score from any format
+  const hasSiqs = location.siqs !== undefined || (location.siqsResult && location.siqsResult.score !== undefined);
+  const siqsScore = getSiqsScore(location);
+  
   return (
     <div className="p-3 min-w-[200px] max-w-[280px]">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
         {/* Always show SIQS badge if available */}
-        {location.siqs !== undefined && (
-          <SiqsScoreBadge score={formatSiqsScore(location.siqs)} compact={true} />
+        {hasSiqs && siqsScore > 0 && (
+          <SiqsScoreBadge score={siqsScore} compact={true} />
         )}
       </div>
       
