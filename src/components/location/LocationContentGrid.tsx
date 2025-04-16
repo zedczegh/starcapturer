@@ -1,4 +1,3 @@
-
 import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
@@ -6,6 +5,7 @@ import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import { determineWeatherCondition } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import ClearSkyRateDisplay from "./ClearSkyRateDisplay";
 
 // Lazy load the forecast tabs to improve initial load time
 const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
@@ -93,6 +93,13 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           seeingConditions={seeingConditionsString}
           forecastData={forecastData}
         />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ClearSkyRateDisplay 
+            latitude={locationData.latitude} 
+            longitude={locationData.longitude} 
+          />
+        </div>
         
         <SIQSSummary
           siqsResult={locationData.siqsResult || null}
