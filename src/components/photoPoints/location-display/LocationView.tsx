@@ -110,7 +110,7 @@ const LocationView: React.FC<LocationViewProps> = ({
     }
     
     // Always include first and last pages
-    const pages = [1];
+    const pages: Array<number | 'ellipsis'> = [1];
     
     // Logic for showing pages around current page with ellipsis
     if (currentPage <= 3) {
