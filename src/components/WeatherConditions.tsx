@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
+import { getSeeingConditionInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
-import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
+import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
+import { getMoonInfo } from "@/services/realTimeSiqs/moonPhaseCalculator";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -117,21 +118,20 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   }, [weatherData, forecastData, toast, t]);
   
+  // Get consistent moon phase information using our advanced algorithm
+  const { name: calculatedMoonPhaseName } = getMoonInfo();
+  
   const translatedData = useMemo(() => {
-    const normalizedMoonPhase = normalizeMoonPhase(moonPhase);
-    
     return {
       seeingConditions: language === 'zh' 
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
-      moonPhase: language === 'zh'
-        ? getMoonPhaseInChinese(normalizedMoonPhase)
-        : normalizedMoonPhase,
+      moonPhase: calculatedMoonPhaseName, // Use the consistent moon phase name
       weatherCondition: language === 'zh' && stableWeatherData.condition
         ? getWeatherConditionInChinese(stableWeatherData.condition)
         : stableWeatherData.condition
     };
-  }, [language, seeingConditions, moonPhase, stableWeatherData.condition]);
+  }, [language, seeingConditions, calculatedMoonPhaseName, stableWeatherData.condition]);
 
   // Animation variants
   const containerVariants = {

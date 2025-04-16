@@ -9,6 +9,7 @@ import {
   DynamicLightbulbIcon,
   DynamicCloudCoverIcon
 } from "./DynamicIcons";
+import { getMoonInfo } from "@/services/realTimeSiqs/moonPhaseCalculator";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -31,6 +32,9 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
 }) => {
   const { t, language } = useLanguage();
   
+  // Use our advanced moon phase algorithm to get consistent moon phase information
+  const { name: calculatedMoonPhase } = getMoonInfo();
+  
   // Determine which cloud cover to display - prefer nighttime average if available
   const displayCloudCover = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined 
     ? nighttimeCloudData.average 
@@ -39,8 +43,8 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
   // Create nighttime cloud cover tooltip if data is available
   const cloudCoverTooltip = nighttimeCloudData 
     ? (language === 'en'
-      ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}% (Evening: ${nighttimeCloudData.evening.toFixed(1)}%, Morning: ${nighttimeCloudData.morning.toFixed(1)}%)`
-      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}% (晚上: ${nighttimeCloudData.evening.toFixed(1)}%, 早晨: ${nighttimeCloudData.morning.toFixed(1)}%)`)
+      ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}%`
+      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}%`)
     : undefined;
   
   // AQI display with conditional rendering and enhanced sizing
@@ -71,6 +75,17 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
     ? (language === 'en' ? "Bortle scale could not be determined for this location" : "无法确定此位置的光污染等级") 
     : undefined;
   
+  // Translate moon phase from English to Chinese if needed
+  const displayMoonPhase = language === 'zh' 
+    ? (calculatedMoonPhase === 'New Moon' ? '新月' : 
+       calculatedMoonPhase === 'Full Moon' ? '满月' : 
+       calculatedMoonPhase === 'First Quarter' ? '上弦月' : 
+       calculatedMoonPhase === 'Last Quarter' ? '下弦月' : 
+       calculatedMoonPhase === 'Waxing Crescent' ? '蛾眉月' : 
+       calculatedMoonPhase === 'Waning Crescent' ? '残月' : 
+       calculatedMoonPhase === 'Waxing Gibbous' ? '盈凸月' : '亏凸月')
+    : calculatedMoonPhase;
+  
   return (
     <div className="space-y-7">
       <ConditionItem
@@ -82,9 +97,9 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       />
       
       <ConditionItem
-        icon={<DynamicMoonIcon phase={moonPhase} />}
+        icon={<DynamicMoonIcon phase={calculatedMoonPhase} />}
         label={language === 'en' ? "Moon Phase" : "月相"}
-        value={<span className="text-lg font-medium">{moonPhase}</span>}
+        value={<span className="text-lg font-medium">{displayMoonPhase}</span>}
       />
       
       {aqi !== undefined && (

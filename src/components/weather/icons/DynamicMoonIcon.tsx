@@ -31,21 +31,21 @@ const DynamicMoonIcon: React.FC<DynamicMoonIconProps> = ({ phase, className }) =
     }
     
     // Waxing (growing) phases
-    if (phaseLower.includes("waxing") || phaseLower.includes("上弦") || phaseLower.includes("眉月")) {
+    if (phaseLower.includes("waxing") || phaseLower.includes("上弦") || phaseLower.includes("眉月") || phaseLower.includes("盈凸")) {
       if (phaseLower.includes("crescent") || phaseLower.includes("眉月")) {
         return 25; // Waxing crescent
       }
-      if (phaseLower.includes("gibbous") || phaseLower.includes("凸月")) {
+      if (phaseLower.includes("gibbous") || phaseLower.includes("凸月") || phaseLower.includes("盈凸")) {
         return 75; // Waxing gibbous
       }
     }
     
     // Waning (shrinking) phases
-    if (phaseLower.includes("waning") || phaseLower.includes("下弦") || phaseLower.includes("残月")) {
+    if (phaseLower.includes("waning") || phaseLower.includes("下弦") || phaseLower.includes("残月") || phaseLower.includes("亏凸")) {
       if (phaseLower.includes("crescent") || phaseLower.includes("残月")) {
         return 15; // Waning crescent
       }
-      if (phaseLower.includes("gibbous") || phaseLower.includes("凸月")) {
+      if (phaseLower.includes("gibbous") || phaseLower.includes("凸月") || phaseLower.includes("亏凸")) {
         return 65; // Waning gibbous
       }
     }
