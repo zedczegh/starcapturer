@@ -57,6 +57,219 @@ const chinaRegionalData = {
   }
 };
 
+// Enhanced global regional data for more accurate clear sky estimates
+const globalRegionalData = {
+  // North America
+  northAmerica: {
+    // Pacific Northwest (rainy)
+    pacificNorthwest: {
+      baseRate: 40,
+      wetSeasonAdjustment: -15,
+      drySeasonAdjustment: 10,
+      variance: 5
+    },
+    // Southwest US (arid)
+    southwestUS: {
+      baseRate: 78,
+      wetSeasonAdjustment: -8,
+      drySeasonAdjustment: 5,
+      variance: 4
+    },
+    // Midwest US (variable)
+    midwestUS: {
+      baseRate: 52,
+      wetSeasonAdjustment: -12,
+      drySeasonAdjustment: 8,
+      variance: 7
+    },
+    // Northeast US (varied seasons)
+    northeastUS: {
+      baseRate: 48,
+      wetSeasonAdjustment: -10,
+      drySeasonAdjustment: 8,
+      variance: 6
+    },
+    // Southeast US (humid)
+    southeastUS: {
+      baseRate: 45,
+      wetSeasonAdjustment: -18,
+      drySeasonAdjustment: 5,
+      variance: 6
+    }
+  },
+  
+  // Europe
+  europe: {
+    // Mediterranean (dry summers)
+    mediterranean: {
+      baseRate: 62,
+      wetSeasonAdjustment: -12,
+      drySeasonAdjustment: 15,
+      variance: 5
+    },
+    // Northern Europe (cloudy)
+    northernEurope: {
+      baseRate: 38,
+      wetSeasonAdjustment: -8,
+      drySeasonAdjustment: 10,
+      variance: 6
+    },
+    // Central Europe (variable)
+    centralEurope: {
+      baseRate: 45,
+      wetSeasonAdjustment: -10,
+      drySeasonAdjustment: 8,
+      variance: 5
+    },
+    // Eastern Europe (continental climate)
+    easternEurope: {
+      baseRate: 50,
+      wetSeasonAdjustment: -8,
+      drySeasonAdjustment: 12,
+      variance: 6
+    }
+  },
+  
+  // Asia (non-China)
+  asia: {
+    // Japan (rainy season)
+    japan: {
+      baseRate: 42,
+      wetSeasonAdjustment: -20,
+      drySeasonAdjustment: 10,
+      variance: 5
+    },
+    // Korea (seasonal)
+    korea: {
+      baseRate: 45,
+      wetSeasonAdjustment: -15,
+      drySeasonAdjustment: 12,
+      variance: 5
+    },
+    // Southeast Asia (tropical)
+    southeastAsia: {
+      baseRate: 32, // Very cloudy/rainy
+      wetSeasonAdjustment: -25,
+      drySeasonAdjustment: 20,
+      variance: 8
+    },
+    // Indian Subcontinent (monsoon)
+    indianSubcontinent: {
+      baseRate: 40,
+      wetSeasonAdjustment: -30, // Extreme monsoon
+      drySeasonAdjustment: 25,
+      variance: 10
+    },
+    // Central Asia (arid)
+    centralAsia: {
+      baseRate: 70,
+      wetSeasonAdjustment: -10,
+      drySeasonAdjustment: 8,
+      variance: 6
+    },
+    // Middle East (desert)
+    middleEast: {
+      baseRate: 82,
+      wetSeasonAdjustment: -5,
+      drySeasonAdjustment: 3,
+      variance: 4
+    }
+  },
+  
+  // Oceania
+  oceania: {
+    // Australia (mostly arid)
+    australia: {
+      baseRate: 68,
+      wetSeasonAdjustment: -15,
+      drySeasonAdjustment: 7,
+      variance: 8
+    },
+    // New Zealand (varied weather)
+    newZealand: {
+      baseRate: 48,
+      wetSeasonAdjustment: -12,
+      drySeasonAdjustment: 10,
+      variance: 7
+    },
+    // Pacific Islands (tropical)
+    pacificIslands: {
+      baseRate: 35,
+      wetSeasonAdjustment: -20,
+      drySeasonAdjustment: 10,
+      variance: 8
+    }
+  },
+  
+  // Africa
+  africa: {
+    // North Africa (desert)
+    northAfrica: {
+      baseRate: 85,
+      wetSeasonAdjustment: -8,
+      drySeasonAdjustment: 3,
+      variance: 5
+    },
+    // Sub-Saharan (varied)
+    subSaharan: {
+      baseRate: 58,
+      wetSeasonAdjustment: -25,
+      drySeasonAdjustment: 15,
+      variance: 10
+    },
+    // Southern Africa (seasonal)
+    southernAfrica: {
+      baseRate: 65,
+      wetSeasonAdjustment: -15,
+      drySeasonAdjustment: 10,
+      variance: 8
+    }
+  },
+  
+  // South America
+  southAmerica: {
+    // Amazon Basin (rainforest)
+    amazonBasin: {
+      baseRate: 25,
+      wetSeasonAdjustment: -20,
+      drySeasonAdjustment: 15,
+      variance: 10
+    },
+    // Andean Region (high elevation)
+    andeanRegion: {
+      baseRate: 68,
+      wetSeasonAdjustment: -15,
+      drySeasonAdjustment: 10,
+      variance: 8
+    },
+    // Southern Cone (temperate)
+    southernCone: {
+      baseRate: 58,
+      wetSeasonAdjustment: -12,
+      drySeasonAdjustment: 8,
+      variance: 7
+    }
+  },
+  
+  // Polar Regions
+  polarRegions: {
+    // Arctic
+    arctic: {
+      baseRate: 35,
+      wetSeasonAdjustment: -5,
+      drySeasonAdjustment: 15,
+      variance: 10
+    },
+    // Antarctic
+    antarctic: {
+      baseRate: 45,
+      wetSeasonAdjustment: -5,
+      drySeasonAdjustment: 15,
+      variance: 10
+    }
+  }
+};
+
 /**
  * Determine which Chinese region a location belongs to
  */
@@ -83,6 +296,148 @@ function getChineseRegion(latitude: number, longitude: number): keyof typeof chi
   }
   // Central: Default for other areas
   return 'central';
+}
+
+/**
+ * Determine which global region a location belongs to for non-China locations
+ */
+function getGlobalRegion(latitude: number, longitude: number) {
+  const absLat = Math.abs(latitude);
+  
+  // North America
+  if (longitude >= -170 && longitude <= -50 && latitude >= 15 && latitude <= 90) {
+    // Pacific Northwest (Washington, Oregon, BC)
+    if (latitude >= 42 && latitude <= 60 && longitude >= -130 && longitude <= -115) {
+      return { region: 'northAmerica', subRegion: 'pacificNorthwest' };
+    }
+    // Southwest US (Arizona, New Mexico, Nevada, Utah)
+    else if (latitude >= 30 && latitude <= 42 && longitude >= -120 && longitude <= -100) {
+      return { region: 'northAmerica', subRegion: 'southwestUS' };
+    }
+    // Northeast US
+    else if (latitude >= 37 && latitude <= 50 && longitude >= -85 && longitude <= -65) {
+      return { region: 'northAmerica', subRegion: 'northeastUS' };
+    }
+    // Southeast US
+    else if (latitude >= 25 && latitude <= 37 && longitude >= -95 && longitude <= -75) {
+      return { region: 'northAmerica', subRegion: 'southeastUS' };
+    }
+    // Default to Midwest for other North American locations
+    return { region: 'northAmerica', subRegion: 'midwestUS' };
+  }
+  
+  // Europe
+  else if (longitude >= -15 && longitude <= 40 && latitude >= 35 && latitude <= 75) {
+    // Mediterranean (Spain, Italy, Greece, etc.)
+    if (latitude >= 35 && latitude <= 45 && longitude >= -10 && longitude <= 30) {
+      return { region: 'europe', subRegion: 'mediterranean' };
+    }
+    // Northern Europe (UK, Scandinavia)
+    else if (latitude >= 50 && longitude >= -15 && longitude <= 40) {
+      return { region: 'europe', subRegion: 'northernEurope' };
+    }
+    // Eastern Europe
+    else if (latitude >= 45 && latitude <= 60 && longitude >= 20 && longitude <= 40) {
+      return { region: 'europe', subRegion: 'easternEurope' };
+    }
+    // Default to Central Europe
+    return { region: 'europe', subRegion: 'centralEurope' };
+  }
+  
+  // Asia (excluding China)
+  else if (longitude >= 40 && longitude <= 150 && latitude >= -10 && latitude <= 60) {
+    // Japan
+    if (latitude >= 30 && latitude <= 46 && longitude >= 128 && longitude <= 146) {
+      return { region: 'asia', subRegion: 'japan' };
+    }
+    // Korea
+    else if (latitude >= 33 && latitude <= 43 && longitude >= 124 && longitude <= 131) {
+      return { region: 'asia', subRegion: 'korea' };
+    }
+    // Southeast Asia
+    else if (latitude >= -10 && latitude <= 23 && longitude >= 95 && longitude <= 140) {
+      return { region: 'asia', subRegion: 'southeastAsia' };
+    }
+    // Indian Subcontinent
+    else if (latitude >= 5 && latitude <= 35 && longitude >= 65 && longitude <= 95) {
+      return { region: 'asia', subRegion: 'indianSubcontinent' };
+    }
+    // Middle East
+    else if (latitude >= 15 && latitude <= 40 && longitude >= 40 && longitude <= 65) {
+      return { region: 'asia', subRegion: 'middleEast' };
+    }
+    // Default to Central Asia
+    return { region: 'asia', subRegion: 'centralAsia' };
+  }
+  
+  // Oceania
+  else if (longitude >= 110 && longitude <= -170 && latitude >= -50 && latitude <= 0) {
+    // New Zealand
+    if (latitude >= -48 && latitude <= -34 && longitude >= 165 && longitude <= 180) {
+      return { region: 'oceania', subRegion: 'newZealand' };
+    }
+    // Pacific Islands
+    else if (latitude >= -25 && latitude <= 25 && longitude >= 150 && longitude <= -150) {
+      return { region: 'oceania', subRegion: 'pacificIslands' };
+    }
+    // Default to Australia
+    return { region: 'oceania', subRegion: 'australia' };
+  }
+  
+  // Africa
+  else if (longitude >= -20 && longitude <= 60 && latitude >= -40 && latitude <= 35) {
+    // North Africa (Sahara region)
+    if (latitude >= 15 && latitude <= 35) {
+      return { region: 'africa', subRegion: 'northAfrica' };
+    }
+    // Southern Africa
+    else if (latitude <= -15) {
+      return { region: 'africa', subRegion: 'southernAfrica' };
+    }
+    // Default to Sub-Saharan
+    return { region: 'africa', subRegion: 'subSaharan' };
+  }
+  
+  // South America
+  else if (longitude >= -85 && longitude <= -30 && latitude >= -60 && latitude <= 15) {
+    // Amazon Basin
+    if (latitude >= -10 && latitude <= 5 && longitude >= -75 && longitude <= -45) {
+      return { region: 'southAmerica', subRegion: 'amazonBasin' };
+    }
+    // Andean Region (mountain ranges)
+    else if (longitude >= -85 && longitude <= -65) {
+      return { region: 'southAmerica', subRegion: 'andeanRegion' };
+    }
+    // Default to Southern Cone
+    return { region: 'southAmerica', subRegion: 'southernCone' };
+  }
+  
+  // Polar Regions
+  else if (absLat >= 66) {
+    if (latitude > 0) {
+      return { region: 'polarRegions', subRegion: 'arctic' };
+    } else {
+      return { region: 'polarRegions', subRegion: 'antarctic' };
+    }
+  }
+  
+  // Default fallback based on latitude bands
+  // Desert/dry regions (20-40° latitude)
+  if (absLat >= 20 && absLat <= 40) {
+    return { region: 'global', subRegion: 'dryMidLatitude' };
+  }
+  // Equatorial regions (0-20°)
+  else if (absLat < 20) {
+    return { region: 'global', subRegion: 'equatorial' };
+  }
+  // Mid-latitudes (40-60°)
+  else if (absLat < 60) {
+    return { region: 'global', subRegion: 'midLatitude' };
+  }
+  // Polar regions (60-90°)
+  else {
+    return { region: 'global', subRegion: 'polarLatitude' };
+  }
 }
 
 /**
@@ -164,6 +519,120 @@ function generateChinaMonthlyRates(
 }
 
 /**
+ * Generate monthly clear sky rates for global locations based on region
+ */
+function generateGlobalMonthlyRates(
+  regionInfo: { region: string; subRegion: string; },
+  baseRate: number,
+  latitude: number
+): Record<string, number> {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyRates: Record<string, number> = {};
+  
+  // If we have specific regional data
+  if (regionInfo.region !== 'global' && 
+      globalRegionalData[regionInfo.region as keyof typeof globalRegionalData] && 
+      globalRegionalData[regionInfo.region as keyof typeof globalRegionalData][regionInfo.subRegion]) {
+    
+    const regionData = globalRegionalData[regionInfo.region as keyof typeof globalRegionalData][regionInfo.subRegion];
+    
+    // Northern and Southern hemisphere have opposite seasons
+    const isNorthern = latitude >= 0;
+    
+    months.forEach((month, index) => {
+      let seasonalAdjustment = 0;
+      
+      if (isNorthern) {
+        // Northern hemisphere: winter = Dec-Feb, summer = Jun-Aug
+        if (index <= 1 || index === 11) {
+          // Winter
+          seasonalAdjustment = regionData.drySeasonAdjustment;
+        } else if (index >= 5 && index <= 7) {
+          // Summer
+          seasonalAdjustment = regionData.wetSeasonAdjustment;
+        }
+      } else {
+        // Southern hemisphere: summer = Dec-Feb, winter = Jun-Aug
+        if (index <= 1 || index === 11) {
+          // Summer
+          seasonalAdjustment = regionData.wetSeasonAdjustment;
+        } else if (index >= 5 && index <= 7) {
+          // Winter
+          seasonalAdjustment = regionData.drySeasonAdjustment;
+        }
+      }
+      
+      // Special cases for specific regions
+      if (regionInfo.region === 'asia' && regionInfo.subRegion === 'indianSubcontinent') {
+        // Monsoon season in India (Jun-Sep)
+        if (index >= 5 && index <= 8) {
+          seasonalAdjustment = regionData.wetSeasonAdjustment;
+        } else if (index >= 10 || index <= 1) {
+          seasonalAdjustment = regionData.drySeasonAdjustment;
+        }
+      } else if (regionInfo.region === 'africa' && regionInfo.subRegion === 'northAfrica') {
+        // North Africa is very dry year-round
+        seasonalAdjustment = Math.abs(seasonalAdjustment) * 0.5 * (regionData.drySeasonAdjustment > 0 ? 1 : -1);
+      } else if (regionInfo.region === 'southAmerica' && regionInfo.subRegion === 'amazonBasin') {
+        // Amazon has a complex wet/dry season pattern
+        if (index >= 11 || index <= 4) {
+          seasonalAdjustment = regionData.wetSeasonAdjustment;
+        } else {
+          seasonalAdjustment = regionData.drySeasonAdjustment;
+        }
+      }
+      
+      // Add some realistic variation between months
+      const monthVariation = Math.sin(index * 0.5 + latitude * 0.1) * regionData.variance;
+      
+      // Calculate monthly rate with constraints
+      let monthRate = baseRate + seasonalAdjustment + monthVariation;
+      monthRate = Math.max(15, Math.min(95, monthRate));
+      
+      monthlyRates[month] = Math.round(monthRate);
+    });
+    
+  } else {
+    // Generic global pattern based on latitude
+    const isNorthern = latitude >= 0;
+    const variance = 6;
+    
+    months.forEach((month, index) => {
+      let seasonalAdjustment = 0;
+      
+      if (isNorthern) {
+        // Northern hemisphere patterns
+        if (index <= 1 || index === 11) {
+          // Winter months often have clearer nights in mid-latitudes
+          seasonalAdjustment = Math.abs(latitude) > 20 && Math.abs(latitude) < 60 ? 8 : -5;
+        } else if (index >= 5 && index <= 7) {
+          // Summer months - tropical regions get cloudy, mid-latitudes variable
+          seasonalAdjustment = Math.abs(latitude) < 20 ? -10 : (Math.abs(latitude) > 60 ? 10 : 0);
+        }
+      } else {
+        // Southern hemisphere (reverse seasons)
+        if (index <= 1 || index === 11) {
+          seasonalAdjustment = Math.abs(latitude) > 20 && Math.abs(latitude) < 60 ? -5 : 8;
+        } else if (index >= 5 && index <= 7) {
+          seasonalAdjustment = Math.abs(latitude) < 20 ? -10 : (Math.abs(latitude) > 60 ? -5 : 10);
+        }
+      }
+      
+      // Add some realistic variation between months
+      const monthVariation = Math.sin(index * 0.5 + latitude * 0.1) * variance;
+      
+      // Calculate monthly rate with constraints
+      let monthRate = baseRate + seasonalAdjustment + monthVariation;
+      monthRate = Math.max(15, Math.min(95, monthRate));
+      
+      monthlyRates[month] = Math.round(monthRate);
+    });
+  }
+  
+  return monthlyRates;
+}
+
+/**
  * Fetch annual clear sky rate data for a specific location
  * This uses historical weather data patterns to estimate clear sky rates
  * 
@@ -227,59 +696,75 @@ export async function fetchClearSkyRate(
       const region = getChineseRegion(latitude, longitude);
       monthlyRates = generateChinaMonthlyRates(region, baseRate);
     } else {
-      // Non-China locations - use original algorithm
-      // Use absolute latitude to factor in hemisphere position (0-90)
-      const absLatitude = Math.abs(latitude);
+      // Enhanced algorithm for non-China locations
+      // Get the region info based on coordinates
+      const regionInfo = getGlobalRegion(latitude, longitude);
       
-      // Base rate starts with a general pattern - mid-latitudes (20-40°) tend to be drier
-      // Desert/dry regions have highest clear sky rates (20-40° latitude)
-      if (absLatitude >= 20 && absLatitude <= 40) {
-        baseRate = 75; // Desert/dry regions baseline
+      // Set base rate according to region if available
+      if (regionInfo.region !== 'global' &&
+          globalRegionalData[regionInfo.region as keyof typeof globalRegionalData] &&
+          globalRegionalData[regionInfo.region as keyof typeof globalRegionalData][regionInfo.subRegion]) {
+        
+        const regionData = globalRegionalData[regionInfo.region as keyof typeof globalRegionalData][regionInfo.subRegion];
+        baseRate = regionData.baseRate;
+        
+        // Set more specific data source
+        dataSource = `${regionInfo.region} - ${regionInfo.subRegion} Climate Data`;
+      } else {
+        // Fallback to latitude-based algorithm if no specific regional data
+        // Use absolute latitude to factor in hemisphere position (0-90)
+        const absLatitude = Math.abs(latitude);
+        
+        // Base rate starts with a general pattern - mid-latitudes (20-40°) tend to be drier
+        // Desert/dry regions have highest clear sky rates (20-40° latitude)
+        if (absLatitude >= 20 && absLatitude <= 40) {
+          baseRate = 75; // Desert/dry regions baseline
+        }
+        // Equatorial regions (0-20°) - moderately clear but with more precipitation
+        else if (absLatitude < 20) {
+          baseRate = 65; // Tropical/equatorial baseline
+        }
+        // Mid-latitudes (40-60°) - more variable weather
+        else if (absLatitude < 60) {
+          baseRate = 55; // Mid-latitude baseline
+        }
+        // Polar regions (60-90°) - often cloudy with seasonal extremes
+        else {
+          baseRate = 45; // Polar regions baseline
+        }
+        
+        // Apply longitudinal adjustments for known dry/wet regions
+        // Central Asia, Middle East, Western Australia, Southwest US
+        const isDryRegion = (
+          // Central Asia / Middle East
+          (longitude >= 40 && longitude <= 85 && absLatitude >= 20 && absLatitude <= 45) ||
+          // Australian Outback
+          (longitude >= 115 && longitude <= 140 && latitude <= -20 && latitude >= -35) ||
+          // Southwest US
+          (longitude >= -120 && longitude <= -100 && latitude >= 30 && latitude <= 40)
+        );
+        
+        // Wet regions: Southeast Asia, Amazon Basin, Central Africa
+        const isWetRegion = (
+          // Southeast Asia
+          (longitude >= 95 && longitude <= 140 && absLatitude <= 20) ||
+          // Amazon Basin
+          (longitude >= -75 && longitude <= -45 && latitude <= 5 && latitude >= -20) ||
+          // Central Africa
+          (longitude >= 10 && longitude <= 35 && latitude <= 10 && latitude >= -10)
+        );
+        
+        // Apply regional adjustments
+        if (isDryRegion) {
+          baseRate += 15;
+        } else if (isWetRegion) {
+          baseRate -= 20;
+        }
+        
+        // Random variation for realism (+/-5%)
+        const variation = ((Math.sin(latitude * 10) + Math.cos(longitude * 10)) * 5);
+        baseRate += variation;
       }
-      // Equatorial regions (0-20°) - moderately clear but with more precipitation
-      else if (absLatitude < 20) {
-        baseRate = 65; // Tropical/equatorial baseline
-      }
-      // Mid-latitudes (40-60°) - more variable weather
-      else if (absLatitude < 60) {
-        baseRate = 55; // Mid-latitude baseline
-      }
-      // Polar regions (60-90°) - often cloudy with seasonal extremes
-      else {
-        baseRate = 45; // Polar regions baseline
-      }
-      
-      // Apply longitudinal adjustments for known dry/wet regions
-      // Central Asia, Middle East, Western Australia, Southwest US
-      const isDryRegion = (
-        // Central Asia / Middle East
-        (longitude >= 40 && longitude <= 85 && absLatitude >= 20 && absLatitude <= 45) ||
-        // Australian Outback
-        (longitude >= 115 && longitude <= 140 && latitude <= -20 && latitude >= -35) ||
-        // Southwest US
-        (longitude >= -120 && longitude <= -100 && latitude >= 30 && latitude <= 40)
-      );
-      
-      // Wet regions: Southeast Asia, Amazon Basin, Central Africa
-      const isWetRegion = (
-        // Southeast Asia
-        (longitude >= 95 && longitude <= 140 && absLatitude <= 20) ||
-        // Amazon Basin
-        (longitude >= -75 && longitude <= -45 && latitude <= 5 && latitude >= -20) ||
-        // Central Africa
-        (longitude >= 10 && longitude <= 35 && latitude <= 10 && latitude >= -10)
-      );
-      
-      // Apply regional adjustments
-      if (isDryRegion) {
-        baseRate += 15;
-      } else if (isWetRegion) {
-        baseRate -= 20;
-      }
-      
-      // Random variation for realism (+/-5%)
-      const variation = ((Math.sin(latitude * 10) + Math.cos(longitude * 10)) * 5);
-      baseRate += variation;
       
       // Cap to realistic range (25-90%)
       baseRate = Math.max(25, Math.min(90, baseRate));
@@ -287,41 +772,8 @@ export async function fetchClearSkyRate(
       // Round to integer
       baseRate = Math.round(baseRate);
       
-      // Add monthly breakdown for more detailed data
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
-      // Northern hemisphere seasonal pattern (reversed for Southern hemisphere)
-      const isNorthern = latitude >= 0;
-      
-      months.forEach((month, index) => {
-        // Create seasonal patterns - winter months clearer in dry regions, summer months clearer in humid regions
-        let seasonalAdjustment = 0;
-        
-        if (isNorthern) {
-          // Northern hemisphere: winter = clearer in dry areas, cloudier in wet areas
-          if (index < 2 || index > 9) { // Winter months (Dec-Feb)
-            seasonalAdjustment = isDryRegion ? 10 : -10;
-          } else if (index > 4 && index < 9) { // Summer months (Jun-Aug)
-            seasonalAdjustment = isDryRegion ? -5 : 5;
-          }
-        } else {
-          // Southern hemisphere: opposite seasons
-          if (index < 2 || index > 9) { // Summer in south
-            seasonalAdjustment = isDryRegion ? -5 : 5;
-          } else if (index > 4 && index < 9) { // Winter in south
-            seasonalAdjustment = isDryRegion ? 10 : -10;
-          }
-        }
-        
-        // Add some realistic variation between months
-        const monthVariation = Math.sin(index * 0.5 + latitude * 0.2) * 5;
-        
-        // Calculate monthly rate with constraints
-        let monthRate = baseRate + seasonalAdjustment + monthVariation;
-        monthRate = Math.max(15, Math.min(95, monthRate)); // Keep within reasonable bounds
-        
-        monthlyRates[month] = Math.round(monthRate);
-      });
+      // Generate monthly rates based on region
+      monthlyRates = generateGlobalMonthlyRates(regionInfo, baseRate, latitude);
     }
     
     // Create result object
