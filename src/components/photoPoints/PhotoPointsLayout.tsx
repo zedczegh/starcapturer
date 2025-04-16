@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { Home, MapPin, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
 import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 import NavBar from '@/components/NavBar';
-import { useBackground } from "@/contexts/BackgroundContext";
 
 interface PhotoPointsLayoutProps {
   children: ReactNode;
@@ -20,13 +19,12 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
 }) => {
   const { t } = useLanguage();
   const { handleSIQSClick } = useSiqsNavigation();
-  const { currentBackground } = useBackground();
   
   // Default page title
   const title = pageTitle || t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
   
   return (
-    <div className="min-h-screen bg-cosmic-950 bg-cover bg-fixed bg-center bg-no-repeat" style={{ backgroundImage: `url(${currentBackground})` }}>
+    <div className="min-h-screen bg-cosmic-950">
       <Helmet>
         <title>{title}</title>
       </Helmet>
