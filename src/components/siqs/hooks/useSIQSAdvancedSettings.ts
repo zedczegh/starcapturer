@@ -7,7 +7,7 @@ interface LocationData {
   bortleScale?: number;
 }
 
-// Change from default export to named export
+// Export as a named export (which was actually already done, but let's make sure)
 export function useSIQSAdvancedSettings(latitude: number, longitude: number) {
   const [seeingConditions, setSeeingConditions] = useState<number>(2.5);
   const [bortleScale, setBortleScale] = useState<number>(4);

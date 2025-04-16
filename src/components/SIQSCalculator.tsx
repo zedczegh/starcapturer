@@ -3,7 +3,7 @@ import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useSiqsCalculatorState } from "./siqs/hooks/useSiqsCalculatorState";
-import { useSIQSAdvancedSettings } from "./siqs/hooks/useSIQSAdvancedSettings"; // Fixed import
+import { useSIQSAdvancedSettings } from "./siqs/hooks/useSIQSAdvancedSettings";
 import LocationSelector from "./siqs/LocationSelector";
 import SIQSScore from "./siqs/SIQSScore";
 import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
@@ -36,20 +36,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     isMounted,
     siqsScore,
     calculateSIQSForLocation,
-    setStatusMessage,
-    latitude, // Added latitude
-    longitude // Added longitude
+    setStatusMessage
   } = useSiqsCalculatorState({
     noAutoLocationRequest,
     onSiqsCalculated
   });
-  
-  // Parse latitude and longitude for SIQS settings
-  const parsedLatitude = parseFloat(latitude || "0") || 0;
-  const parsedLongitude = parseFloat(longitude || "0") || 0;
-  
-  // Get advanced settings
-  const { seeingConditions } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
   
   // Location handling
   const {
@@ -67,8 +58,15 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation,
     setStatusMessage,
     language,
-    seeingConditions
+    seeingConditions: 2.5 // Default value before we get actual seeing conditions
   });
+  
+  // Parse latitude and longitude for SIQS settings
+  const parsedLatitude = parseFloat(latitude || "0") || 0;
+  const parsedLongitude = parseFloat(longitude || "0") || 0;
+  
+  // Get advanced settings
+  const { seeingConditions } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
   
   // Animation variants
   const animationVariants = {

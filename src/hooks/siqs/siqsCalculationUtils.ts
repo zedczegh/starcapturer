@@ -14,14 +14,14 @@ export function normalizeScore(score: number): number {
 
 /**
  * Calculate SIQS score with weather data
- * This function accepts forecast data as the fifth parameter
+ * This function accepts forecast data as an optional parameter
  */
 export async function calculateSIQSWithWeatherData(
   weatherData: any,
   bortleScale: number,
   seeingConditions: number,
   moonPhase: number,
-  forecastData?: any // Made optional to fix parameter count issue
+  forecastData?: any // Optional parameter
 ): Promise<any> {
   // Validate inputs
   if (!weatherData) {
