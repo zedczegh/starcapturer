@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -85,8 +84,7 @@ export async function calculateRealTimeSiqs(
       weatherDataWithClearSky,
       finalBortleScale,
       3, // Default seeing conditions
-      getMoonPhaseEstimate(), // Get estimated moon phase
-      forecastData
+      getMoonPhaseEstimate() // Get estimated moon phase
     );
     
     // Apply intelligent adjustments based on multiple factors

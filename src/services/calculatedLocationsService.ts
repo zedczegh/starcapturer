@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from '@/types/weather';
 import { generateRandomPoint } from '@/services/locationFilters';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
@@ -48,7 +47,7 @@ export class CalculatedLocationsService {
       // Generate points with adaptive algorithms if enabled
       const generatedPoints = this.adaptiveGeneration 
         ? await this.generateAdaptivePoints()
-        : this.generateRandomPoints();
+        : await this.generateRandomPoints();
       
       console.log(`Generated ${generatedPoints.length} initial locations`);
       
@@ -101,7 +100,7 @@ export class CalculatedLocationsService {
         randomPoint.latitude,
         randomPoint.longitude,
         bortleScale
-      ).catch(() => ({ siqs: siqs, isViable: true }));
+      ).catch(() => ({ siqs: siqs / 10, isViable: true }));
       
       if (siqsResult && typeof siqsResult.siqs === 'number') {
         siqs = siqsResult.siqs * 10; // Convert 0-10 scale to 0-100
@@ -133,7 +132,7 @@ export class CalculatedLocationsService {
    */
   private async generateAdaptivePoints(): Promise<SharedAstroSpot[]> {
     // Start with a base set of points
-    const basePoints = this.generateRandomPoints();
+    const basePoints = await this.generateRandomPoints();
     
     if (!this.densityBasedSampling) {
       return basePoints;
@@ -143,9 +142,8 @@ export class CalculatedLocationsService {
     const sampledPoints = this.adaptivePointDistribution(basePoints);
     
     // Convert to SharedAstroSpot objects
-    const astroSpots = await Promise.all(
-      sampledPoints.map(point => this.createAstroSpot(point))
-    );
+    const spotPromises = sampledPoints.map(point => this.createAstroSpot(point));
+    const astroSpots = await Promise.all(spotPromises);
     
     return astroSpots;
   }
@@ -153,9 +151,10 @@ export class CalculatedLocationsService {
   /**
    * Generate random points within the specified radius
    */
-  private generateRandomPoints(): SharedAstroSpot[] {
+  private async generateRandomPoints(): Promise<SharedAstroSpot[]> {
     const generatedPoints: SharedAstroSpot[] = [];
     const attempts = this.numberOfPoints * 2; // Generate more points to compensate for filtering
+    const pointPromises = [];
     
     for (let i = 0; i < attempts; i++) {
       try {
@@ -167,15 +166,20 @@ export class CalculatedLocationsService {
         
         // Quick validity check
         if (randomPoint.latitude && randomPoint.longitude) {
-          const spot = this.createAstroSpot(randomPoint);
-          generatedPoints.push(spot);
+          pointPromises.push(this.createAstroSpot(randomPoint));
         }
       } catch (error) {
         console.warn("Error generating random point:", error);
       }
     }
     
-    return generatedPoints;
+    try {
+      const resolvedPoints = await Promise.all(pointPromises);
+      return resolvedPoints;
+    } catch (error) {
+      console.error("Failed to create some astro spots:", error);
+      return generatedPoints;
+    }
   }
   
   /**
@@ -275,9 +279,12 @@ export class CalculatedLocationsService {
           if (clearSkyData && clearSkyData.annualRate) {
             // Apply clear sky bonus to SIQS
             const clearSkyBonus = clearSkyData.annualRate / 100 * 10;
+            const currentSiqs = typeof spot.siqs === 'number' ? spot.siqs : 
+                               (spot.siqs && typeof spot.siqs === 'object' ? spot.siqs.score * 10 : 50);
+            
             return {
               ...spot,
-              siqs: Math.min(100, (spot.siqs || 50) + clearSkyBonus),
+              siqs: Math.min(100, currentSiqs + clearSkyBonus),
               clearSkyRate: clearSkyData.annualRate
             };
           }
