@@ -207,17 +207,21 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
               <div className="mt-2 border-t border-cosmic-700/50 pt-2">
                 <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
-                  {Object.entries(seasonalTrends).map(([season, data]) => (
-                    <div key={season} className="flex items-center justify-between">
-                      <span>{t(season.charAt(0).toUpperCase() + season.slice(1), 
-                            season === 'spring' ? '春季' : 
-                            season === 'summer' ? '夏季' : 
-                            season === 'fall' ? '秋季' : '冬季')}:</span>
-                      <span className={getRateColor(Number((data as any).clearSkyRate))}>
-                        {(data as any).clearSkyRate}%
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(seasonalTrends).map(([season, data]) => {
+                    // Fix the TypeScript error by properly typing the data
+                    const seasonData = data as { clearSkyRate: number; averageTemperature: number };
+                    return (
+                      <div key={season} className="flex items-center justify-between">
+                        <span>{t(season.charAt(0).toUpperCase() + season.slice(1), 
+                              season === 'spring' ? '春季' : 
+                              season === 'summer' ? '夏季' : 
+                              season === 'fall' ? '秋季' : '冬季')}:</span>
+                        <span className={getRateColor(seasonData.clearSkyRate)}>
+                          {seasonData.clearSkyRate}%
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

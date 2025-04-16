@@ -119,6 +119,36 @@ export function applyIntelligentAdjustments(
     }
   }
   
+  // Enhanced seasonal adjustments based on location and time of year
+  const now = new Date();
+  const lat = weatherData.latitude || 0;
+  const month = now.getMonth();
+  
+  const seasonalFactor = applySeasonalAdjustments(score, lat, month);
+  if (seasonalFactor !== score) {
+    console.log(`Applied seasonal adjustment factor: ${(seasonalFactor/score).toFixed(2)}`);
+    score = seasonalFactor;
+  }
+  
+  // Diurnal temperature variation factor (new)
+  if (weatherData._forecast && Array.isArray(weatherData._forecast.hourly?.temperature_2m)) {
+    try {
+      const diurnalTempFactor = calculateDiurnalVariationFactor(weatherData._forecast);
+      if (diurnalTempFactor !== 1.0) {
+        score *= diurnalTempFactor;
+        console.log(`Applied diurnal temperature variation factor: ${diurnalTempFactor.toFixed(2)}`);
+      }
+    } catch (e) {
+      console.log("Could not calculate diurnal temperature variation");
+    }
+  }
+  
+  // Adjust for certified dark sky locations
+  if (clearSkyData && clearSkyData.isDarkSkyReserve) {
+    score *= 1.1; // 10% bonus for officially certified dark sky locations
+    console.log("Applied certified dark sky location bonus: 10%");
+  }
+  
   return score;
 }
 
@@ -129,10 +159,89 @@ function forecastDataAvailable(weatherData: any): boolean {
 
 // Calculate temperature stability factor
 function calculateTemperatureStabilityFactor(weatherData: any): number {
-  // This is a placeholder implementation
-  // In a real system, this would analyze temperature gradient over time
-  // to detect thermal stability for better seeing conditions
-  return 1.0;
+  // This implementation analyzes forecast temperature data to calculate stability
+  
+  if (!weatherData._forecast || !weatherData._forecast.hourly?.temperature_2m) {
+    return 1.0;
+  }
+  
+  const temps = weatherData._forecast.hourly.temperature_2m;
+  const times = weatherData._forecast.hourly.time;
+  
+  // Get only nighttime temperatures
+  const nightTemps: number[] = [];
+  for (let i = 0; i < temps.length && i < times.length; i++) {
+    const hour = new Date(times[i]).getHours();
+    if (hour >= 18 || hour <= 6) {
+      nightTemps.push(temps[i]);
+    }
+  }
+  
+  if (nightTemps.length < 3) return 1.0;
+  
+  // Calculate the standard deviation of temperatures
+  const avgTemp = nightTemps.reduce((sum, t) => sum + t, 0) / nightTemps.length;
+  const squaredDiffs = nightTemps.map(t => Math.pow(t - avgTemp, 2));
+  const variance = squaredDiffs.reduce((sum, d) => sum + d, 0) / nightTemps.length;
+  const stdDev = Math.sqrt(variance);
+  
+  // Convert std dev to a factor (lower variation = better seeing)
+  // 0°C variation is perfect (factor 1.1)
+  // 10°C variation is poor (factor 0.9)
+  const stabilityFactor = 1.1 - (Math.min(stdDev, 10) / 50);
+  
+  return stabilityFactor;
+}
+
+/**
+ * Calculate adjustment factor based on diurnal temperature variation
+ * Higher diurnal variation causes more atmospheric turbulence
+ */
+function calculateDiurnalVariationFactor(forecast: any): number {
+  if (!forecast || !forecast.hourly?.temperature_2m || !forecast.hourly?.time) {
+    return 1.0;
+  }
+  
+  const temps = forecast.hourly.temperature_2m;
+  const times = forecast.hourly.time;
+  
+  // Group temperatures by day
+  const dailyTemps: Record<string, number[]> = {};
+  
+  for (let i = 0; i < temps.length && i < times.length; i++) {
+    const date = new Date(times[i]).toISOString().split('T')[0];
+    if (!dailyTemps[date]) {
+      dailyTemps[date] = [];
+    }
+    dailyTemps[date].push(temps[i]);
+  }
+  
+  // Calculate average diurnal variation
+  let totalVariation = 0;
+  let dayCount = 0;
+  
+  Object.values(dailyTemps).forEach(dayTemps => {
+    if (dayTemps.length > 6) { // Ensure we have enough data points
+      const minTemp = Math.min(...dayTemps);
+      const maxTemp = Math.max(...dayTemps);
+      totalVariation += (maxTemp - minTemp);
+      dayCount++;
+    }
+  });
+  
+  if (dayCount === 0) return 1.0;
+  
+  const avgVariation = totalVariation / dayCount;
+  
+  // Formula: High variation is bad for atmospheric stability
+  // 5°C variation is good (1.05 factor)
+  // 20°C variation is poor (0.9 factor)
+  let factor = 1.05 - (avgVariation - 5) * 0.01;
+  
+  // Cap the factor
+  factor = Math.max(0.9, Math.min(1.05, factor));
+  
+  return factor;
 }
 
 /**
@@ -175,5 +284,42 @@ export function applySeasonalAdjustments(
     seasonalFactor = isSummer ? 1.1 : (isWinter ? 0.9 : 1.0);
   }
   
+  // Extra desert region adjustments
+  if (isDesertRegion(latitude)) {
+    // Desert regions often have exceptionally clear skies regardless of season
+    seasonalFactor += 0.05;
+  }
+  
+  // Tropical region adjustments - seasons defined by wet/dry rather than summer/winter
+  if (Math.abs(latitude) < 23.5) {
+    // Override previous seasonal adjustments with wet/dry season logic
+    const isDrySeason = isDrySeasonForTropics(latitude, month);
+    seasonalFactor = isDrySeason ? 1.1 : 0.9;
+  }
+  
   return baseScore * seasonalFactor;
+}
+
+/**
+ * Detect if location is in a major desert region 
+ * Basic approximation based on latitude bands
+ */
+function isDesertRegion(latitude: number): boolean {
+  // Major desert bands approximately between 15-35° N and S
+  const absLat = Math.abs(latitude);
+  return (absLat >= 15 && absLat <= 35);
+}
+
+/**
+ * Determine if it's the dry season in tropical regions
+ * This is a simplified model - in reality would need longitude too
+ */
+function isDrySeasonForTropics(latitude: number, month: number): boolean {
+  if (latitude >= 0) {
+    // Northern Hemisphere tropics dry season: November to April
+    return month >= 10 || month <= 3;
+  } else {
+    // Southern Hemisphere tropics dry season: May to October
+    return month >= 4 && month <= 9;
+  }
 }

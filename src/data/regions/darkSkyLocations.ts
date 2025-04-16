@@ -288,5 +288,150 @@ export const darkSkyLocations: (LocationEntry & {
       fall: { clearSkyRate: 80, averageTemperature: 20 },
       winter: { clearSkyRate: 85, averageTemperature: 12 }
     }
+  },
+  // Adding more locations
+  {
+    name: "Exmoor Dark Sky Reserve",
+    chineseName: "埃克斯穆尔暗夜天空保护区",
+    coordinates: [51.0935, -3.6559],
+    bortleScale: 2.5,
+    radius: 30,
+    type: 'dark-site',
+    clearSkyRate: 52,
+    clearestMonths: ['Mar', 'Apr', 'May', 'Sep'],
+    annualPrecipitationDays: 170,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 58, averageTemperature: 9 },
+      summer: { clearSkyRate: 50, averageTemperature: 16 },
+      fall: { clearSkyRate: 55, averageTemperature: 11 },
+      winter: { clearSkyRate: 45, averageTemperature: 4 }
+    }
+  },
+  {
+    name: "Bodmin Moor Dark Sky Landscape",
+    chineseName: "博德明沼泽暗夜天空景观",
+    coordinates: [50.5196, -4.5945],
+    bortleScale: 2.8,
+    radius: 25,
+    type: 'dark-site',
+    clearSkyRate: 54,
+    clearestMonths: ['Apr', 'May', 'Jun'],
+    annualPrecipitationDays: 160,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 60, averageTemperature: 10 },
+      summer: { clearSkyRate: 55, averageTemperature: 16 },
+      fall: { clearSkyRate: 50, averageTemperature: 12 },
+      winter: { clearSkyRate: 48, averageTemperature: 5 }
+    }
+  },
+  {
+    name: "Mont-Mégantic International Dark Sky Reserve",
+    chineseName: "蒙-梅甘蒂克国际暗夜天空保护区",
+    coordinates: [45.4556, -71.1528],
+    bortleScale: 1.8,
+    radius: 35,
+    type: 'dark-site',
+    clearSkyRate: 58,
+    clearestMonths: ['Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 145,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 52, averageTemperature: 5 },
+      summer: { clearSkyRate: 65, averageTemperature: 20 },
+      fall: { clearSkyRate: 60, averageTemperature: 10 },
+      winter: { clearSkyRate: 45, averageTemperature: -10 }
+    }
+  },
+  {
+    name: "Pic du Midi International Dark Sky Reserve",
+    chineseName: "米迪峰国际暗夜天空保护区",
+    coordinates: [42.9361, 0.1417],
+    bortleScale: 1.5,
+    radius: 30,
+    type: 'dark-site',
+    clearSkyRate: 68,
+    clearestMonths: ['Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 120,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 60, averageTemperature: 8 },
+      summer: { clearSkyRate: 75, averageTemperature: 18 },
+      fall: { clearSkyRate: 65, averageTemperature: 10 },
+      winter: { clearSkyRate: 55, averageTemperature: -2 }
+    }
+  },
+  {
+    name: "Snowdonia Dark Sky Reserve",
+    chineseName: "斯诺多尼亚暗夜天空保护区",
+    coordinates: [52.9007, -3.8586],
+    bortleScale: 2.2,
+    radius: 30,
+    type: 'dark-site',
+    clearSkyRate: 48,
+    clearestMonths: ['Mar', 'Apr', 'May', 'Sep'],
+    annualPrecipitationDays: 180,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 52, averageTemperature: 8 },
+      summer: { clearSkyRate: 45, averageTemperature: 16 },
+      fall: { clearSkyRate: 50, averageTemperature: 10 },
+      winter: { clearSkyRate: 40, averageTemperature: 3 }
+    }
+  },
+  {
+    name: "Sark Dark Sky Island",
+    chineseName: "萨克暗夜天空岛",
+    coordinates: [49.4328, -2.3600],
+    bortleScale: 2.0,
+    radius: 15,
+    type: 'dark-site',
+    clearSkyRate: 55,
+    clearestMonths: ['May', 'Jun', 'Jul'],
+    annualPrecipitationDays: 140,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 58, averageTemperature: 10 },
+      summer: { clearSkyRate: 60, averageTemperature: 17 },
+      fall: { clearSkyRate: 55, averageTemperature: 13 },
+      winter: { clearSkyRate: 48, averageTemperature: 6 }
+    }
+  },
+  {
+    name: "Jasper Dark Sky Preserve",
+    chineseName: "贾斯珀暗夜天空保护区",
+    coordinates: [52.8730, -117.9535],
+    bortleScale: 1.5,
+    radius: 40,
+    type: 'dark-site',
+    clearSkyRate: 70,
+    clearestMonths: ['Sep', 'Oct', 'Mar', 'Apr'],
+    annualPrecipitationDays: 110,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 65, averageTemperature: 5 },
+      summer: { clearSkyRate: 60, averageTemperature: 18 },
+      fall: { clearSkyRate: 75, averageTemperature: 8 },
+      winter: { clearSkyRate: 68, averageTemperature: -10 }
+    }
+  },
+  {
+    name: "Rainbow Bridge National Monument Dark Sky Sanctuary",
+    chineseName: "彩虹桥国家纪念碑暗夜天空保护区",
+    coordinates: [37.0778, -110.9639],
+    bortleScale: 1.2,
+    radius: 25,
+    type: 'dark-site',
+    clearSkyRate: 82,
+    clearestMonths: ['May', 'Jun', 'Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 60,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 78, averageTemperature: 15 },
+      summer: { clearSkyRate: 85, averageTemperature: 28 },
+      fall: { clearSkyRate: 80, averageTemperature: 18 },
+      winter: { clearSkyRate: 75, averageTemperature: 5 }
+    }
   }
 ];
