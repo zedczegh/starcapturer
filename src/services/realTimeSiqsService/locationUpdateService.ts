@@ -1,92 +1,140 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
+import { calculateRealTimeSiqs } from "../realTimeSiqsService";
+import { updateCertifiedLocationsWithSiqs } from "./certifiedLocationService";
 
-// In-memory cache for location data
-const locationCache: Map<string, { data: SharedAstroSpot, timestamp: number }> = new Map();
+// Cache for SIQS data to reduce API calls
+const siqsCache = new Map<string, {
+  siqs: number;
+  timestamp: number;
+  isViable: boolean;
+}>();
+
+// Cache duration - 30 minutes
+const CACHE_DURATION = 30 * 60 * 1000; 
 
 /**
- * Clears the location cache
- */
-export function clearLocationCache(): void {
-  locationCache.clear();
-  console.log("Location cache cleared");
-}
-
-/**
- * Updates a batch of locations with their real-time SIQS scores
- * Efficiently processes locations in parallel with rate limiting
+ * Update locations with real-time SIQS data
+ * @param locations Array of locations to update
+ * @param userLocation User's current location
+ * @param searchRadius Search radius in km
+ * @param mode Processing mode: 'all', 'certified', or 'calculated'
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[],
   userLocation: { latitude: number; longitude: number } | null,
-  searchRadius: number,
-  viewMode: 'certified' | 'calculated'
+  searchRadius: number = 100,
+  mode: 'all' | 'certified' | 'calculated' = 'all'
 ): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) {
-    return [];
+  if (!locations || locations.length === 0) return [];
+  
+  console.log(`Updating ${locations.length} locations with real-time SIQS (mode: ${mode})`);
+  
+  // For certified mode, use specialized handler with better caching
+  if (mode === 'certified') {
+    return updateCertifiedLocationsWithSiqs(locations);
   }
+
+  // Clone the locations to avoid mutating the original
+  const updatedLocations = [...locations];
   
-  // Prepare locations to be processed
-  const locationsToProcess = locations.slice(0, 50); // Limit to prevent overloading
-  
-  // Process in batches of 5 to avoid rate limiting
+  // Batch process locations for better performance
   const batchSize = 5;
-  const updatedLocations: SharedAstroSpot[] = [];
   
-  for (let i = 0; i < locationsToProcess.length; i += batchSize) {
-    const batch = locationsToProcess.slice(i, i + batchSize);
-    
-    // Process batch in parallel
-    const batchResults = await Promise.allSettled(
-      batch.map(async (location) => {
-        if (!location.latitude || !location.longitude) return location;
-        
-        try {
-          // Use existing bortleScale if available
-          const bortleValue = location.bortleScale || 
-                             (location.isDarkSkyReserve ? 1 : 
-                              location.certification ? 2 : 5);
-          
-          // Calculate real-time SIQS
-          const siqs = await calculateRealTimeSiqs(
-            location.latitude,
-            location.longitude,
-            bortleValue
-          );
-          
-          // Update the location with the new SIQS value
-          return {
-            ...location,
-            realtimeSiqs: siqs.siqs,
-            lastSiqsUpdate: new Date().toISOString()
-          };
-        } catch (error) {
-          console.error(`Error updating location ${location.name}:`, error);
-          return location;
-        }
-      })
-    );
-    
-    // Extract results
-    batchResults.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        updatedLocations.push(result.value);
-      } else {
-        updatedLocations.push(batch[index]);
+  for (let i = 0; i < updatedLocations.length; i += batchSize) {
+    const batch = updatedLocations.slice(i, i + batchSize);
+    const promises = batch.map(async (location) => {
+      if (!location.latitude || !location.longitude) return location;
+      
+      // Special handling for certified locations
+      if (location.isDarkSkyReserve || location.certification) {
+        const withSiqs = await updateLocationWithSiqs(location, true); 
+        return withSiqs;
       }
+      
+      // Regular location handling
+      return await updateLocationWithSiqs(location, false);
     });
     
-    // Small delay between batches to prevent overloading
-    if (i + batchSize < locationsToProcess.length) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-  }
-  
-  // For any locations we didn't process, add them back unchanged
-  if (locations.length > locationsToProcess.length) {
-    updatedLocations.push(...locations.slice(50));
+    // Wait for the batch to complete
+    const results = await Promise.allSettled(promises);
+    
+    // Update locations
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        updatedLocations[i + index] = result.value;
+      }
+    });
   }
   
   return updatedLocations;
+}
+
+/**
+ * Update a single location with SIQS data
+ * @param location Location to update
+ * @param isCertified Whether location is certified
+ */
+async function updateLocationWithSiqs(
+  location: SharedAstroSpot, 
+  isCertified: boolean
+): Promise<SharedAstroSpot> {
+  if (!location.latitude || !location.longitude) return location;
+
+  const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+  
+  // Check cache first
+  const cachedData = siqsCache.get(cacheKey);
+  if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+    return {
+      ...location,
+      siqs: cachedData.siqs,
+      isViable: cachedData.isViable
+    };
+  }
+  
+  try {
+    // Calculate real-time SIQS
+    const result = await calculateRealTimeSiqs(
+      location.latitude,
+      location.longitude,
+      location.bortleScale || (isCertified ? 3 : 4) // Default to better Bortle scale for certified
+    );
+    
+    // Cache the result
+    siqsCache.set(cacheKey, {
+      siqs: result.siqs,
+      isViable: result.isViable,
+      timestamp: Date.now()
+    });
+    
+    // Return updated location without siqsFactors property
+    return {
+      ...location,
+      siqs: result.siqs,
+      isViable: result.isViable
+    };
+  } catch (error) {
+    console.error(`Error calculating SIQS for location:`, error);
+    // Return original location if calculation fails
+    return location;
+  }
+}
+
+/**
+ * Clear the SIQS cache
+ */
+export function clearSiqsCache(): void {
+  const size = siqsCache.size;
+  siqsCache.clear();
+  console.log(`SIQS cache cleared (${size} entries removed)`);
+}
+
+/**
+ * Clear the location cache
+ * This is an alias for clearSiqsCache for backward compatibility
+ */
+export function clearLocationCache(): void {
+  clearSiqsCache();
+  console.log("Location cache cleared via clearLocationCache alias");
 }

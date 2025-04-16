@@ -1,8 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, MapPin, Stars } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface MapDataLoaderProps {
   loading: boolean;
@@ -87,32 +88,7 @@ const MapDataLoader: React.FC<MapDataLoaderProps> = ({
           className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-background/80 backdrop-blur-sm 
                      px-4 py-2 rounded-full shadow-md border border-border flex items-center gap-2"
         >
-          {loading && (
-            <div className="relative">
-              {activeView === 'certified' ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                >
-                  <Stars className="h-4 w-4 text-primary" />
-                </motion.div>
-              ) : (
-                <motion.div
-                  animate={{ 
-                    y: [0, -3, 0],
-                    scale: [1, 1.05, 1] 
-                  }}
-                  transition={{ 
-                    duration: 1.5, 
-                    repeat: Infinity,
-                    ease: "easeInOut" 
-                  }}
-                >
-                  <MapPin className="h-4 w-4 text-primary" />
-                </motion.div>
-              )}
-            </div>
-          )}
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           <span className="text-sm font-medium">{getLoadingMessage()}</span>
         </motion.div>
       )}
