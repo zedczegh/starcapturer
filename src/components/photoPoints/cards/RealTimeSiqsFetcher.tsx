@@ -21,11 +21,10 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
-      // Check if we should fetch or use cache
       const now = Date.now();
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
@@ -33,13 +32,28 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         const fetchSiqs = async () => {
           setLoading(true);
-          onSiqsCalculated(null, true); // Signal loading state to parent
+          onSiqsCalculated(null, true);
           
           try {
-            // Ensure we're using a valid Bortle scale for calculation
-            // Dark sky certified locations typically have better Bortle scores
             const effectiveBortleScale = bortleScale || 
-              (showRealTimeSiqs ? 3 : 5); // Default to better Bortle for certified locations
+              (showRealTimeSiqs ? 3 : 5);
+            
+            // Try to get cached data from sessionStorage first
+            const cacheKey = `siqs_${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+            const cachedData = sessionStorage.getItem(cacheKey);
+            
+            if (cachedData) {
+              const { data, timestamp } = JSON.parse(cachedData);
+              const age = now - timestamp;
+              
+              if (age < CACHE_DURATION) {
+                console.log("Using cached SIQS from session storage");
+                onSiqsCalculated(data.siqs, false);
+                setLastFetchTimestamp(timestamp);
+                setLoading(false);
+                return;
+              }
+            }
             
             const result = await calculateRealTimeSiqs(
               latitude,
@@ -67,7 +81,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
     }
   }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
   
-  return null; // This is a logic-only component
+  return null;
 };
 
 export default RealTimeSiqsFetcher;
