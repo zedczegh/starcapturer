@@ -1,4 +1,3 @@
-
 import { LocationEntry } from "../locationDatabase";
 
 /**
@@ -82,6 +81,13 @@ export const darkSkyLocations: (LocationEntry & { chineseName?: string })[] = [
     bortleScale: 2.0, 
     radius: 25, 
     type: 'dark-site' 
+  },
+  { 
+    name: "Shenzhen Xichong Dark Sky Community", 
+    chineseName: "深圳西涌暗夜社区", // Updated from 西冲 to 西涌
+    coordinates: [22.5808, 114.5034], 
+    bortleScale: 5, // Assuming an urban Bortle scale
+    radius: 10, 
+    type: 'urban' 
   }
 ];
-

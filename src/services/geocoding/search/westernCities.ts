@@ -210,7 +210,7 @@ export function getWesternCitiesDatabase(): Record<string, Location & { chineseN
     },
     "shenzhen": {
       name: "Shenzhen Xichong Dark Sky Community, China",
-      chineseName: "深圳西冲暗夜社区，中国",
+      chineseName: "深圳西涌暗夜社区，中国",
       latitude: 22.5808,
       longitude: 114.5034,
       placeDetails: "Dark Sky Community - International Dark Sky Association"
