@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -8,8 +7,8 @@ import {
   getCachedSiqs,
   setSiqsCache
 } from "./siqsCache";
+import { detectWaterLocation } from '@/utils/waterDetection/enhancedWaterDetector';
 
-// Extended WeatherData interface with clearSkyRate
 interface WeatherDataWithClearSky extends Record<string, any> {
   cloudCover: number;
   temperature?: number;
@@ -34,7 +33,12 @@ export async function calculateRealTimeSiqs(
     return { siqs: 0, isViable: false };
   }
   
-  // Check cache first with shorter duration for more frequent updates
+  const waterDetection = detectWaterLocation(latitude, longitude);
+  if (waterDetection.isWater && waterDetection.confidence > 0.9) {
+    console.log(`Location at ${latitude}, ${longitude} detected as water (${waterDetection.source}) with ${waterDetection.confidence} confidence`);
+    return { siqs: 0, isViable: false };
+  }
+  
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData) {
@@ -46,7 +50,6 @@ export async function calculateRealTimeSiqs(
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
-    // Parallel data fetching with all available data sources
     const [weatherData, forecastData, clearSkyData, extraData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
       fetchForecastData({ latitude, longitude, days: 2 }),
@@ -61,42 +64,36 @@ export async function calculateRealTimeSiqs(
       return { siqs: 0, isViable: false };
     }
     
-    // Enhanced Bortle scale handling
     let finalBortleScale = bortleScale;
     if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
       const [pollutionData] = extraData;
       finalBortleScale = pollutionData?.bortleScale || 5;
     }
     
-    // Prepare comprehensive weather data
     const weatherDataWithClearSky = { 
       ...weatherData,
       clearSkyRate: clearSkyData?.annualRate
     };
     
-    // Calculate SIQS with nighttime optimization
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherDataWithClearSky,
       finalBortleScale,
-      3, // Default seeing conditions
-      0.5, // Default moon phase
+      3,
+      0.5,
       forecastData
     );
     
-    // Apply stability adjustments
     let adjustedScore = siqsResult.score;
     
-    // Adjust for clear sky rate if available
-    if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
-      const clearSkyFactor = Math.min(1.2, (clearSkyData.annualRate / 100) + 0.2);
-      adjustedScore *= clearSkyFactor;
+    if (waterDetection.confidence > 0.5 && waterDetection.confidence <= 0.9) {
+      const waterProximityFactor = 1 - (waterDetection.confidence - 0.5);
+      adjustedScore *= waterProximityFactor;
+      console.log(`Adjusted SIQS for water proximity: ${adjustedScore.toFixed(2)} (factor: ${waterProximityFactor.toFixed(2)})`);
     }
     
-    // Cap the score at realistic values
-    adjustedScore = Math.min(9.5, adjustedScore); // Never allow perfect 10
-    adjustedScore = Math.max(0, adjustedScore); // Never allow negative
+    adjustedScore = Math.min(9.5, adjustedScore);
+    adjustedScore = Math.max(0, adjustedScore);
     
-    // Round to 1 decimal for consistency
     const finalScore = Math.round(adjustedScore * 10) / 10;
     
     const result = {
@@ -105,7 +102,6 @@ export async function calculateRealTimeSiqs(
       factors: siqsResult.factors
     };
     
-    // Store in cache with metadata
     setSiqsCache(latitude, longitude, {
       ...result,
       metadata: {

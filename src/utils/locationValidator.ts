@@ -1,4 +1,3 @@
-
 /**
  * Location validation utilities
  * IMPORTANT: These functions validate location data to prevent rendering errors.
@@ -6,6 +5,7 @@
  */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation as checkWaterLocation } from "@/utils/locationWaterCheck";
+import { detectWaterLocation, verifyLandLocation } from './waterDetection/enhancedWaterDetector';
 
 /**
  * Check if coordinates represent a water location
@@ -21,8 +21,9 @@ export const isWaterLocation = (
   // This ensures certified locations are always displayed regardless of location
   if (isCertified) return false;
   
-  // Use the common water location check utility
-  return checkWaterLocation(latitude, longitude, false);
+  // Use enhanced water detection
+  const result = detectWaterLocation(latitude, longitude);
+  return result.isWater && result.confidence > 0.9;
 };
 
 /**
