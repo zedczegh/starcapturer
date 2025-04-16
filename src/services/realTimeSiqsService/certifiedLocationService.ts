@@ -1,126 +1,61 @@
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateRealTimeSiqs } from "../realTimeSiqsService";
 
-// Cache for certified location SIQS data with longer expiry
-const certifiedLocationCache = new Map<string, {
-  siqs: number;
-  timestamp: number;
-  isViable: boolean;
-}>();
+import { clearSiqsCache } from '../realTimeSiqs/siqsCache';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 
-// Longer cache duration for certified locations since they change less often
-const CERTIFIED_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes in milliseconds
+// Cache for certified location data
+const certifiedLocationSiqsCache = new Map<string, number>();
 
 /**
- * Update certified locations with real-time SIQS data
- * Uses dedicated caching for certified locations
+ * Update a collection of certified locations with real-time SIQS data
  */
 export async function updateCertifiedLocationsWithSiqs(
-  locations: SharedAstroSpot[],
-  maxParallel: number = 2
+  locations: SharedAstroSpot[]
 ): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) return [];
-  
-  console.log(`Updating ${locations.length} certified locations with real-time SIQS`);
-  
-  // Filter only certified locations - safely handle potentially undefined type property
-  const certifiedLocations = locations.filter(loc => 
-    loc.isDarkSkyReserve || 
-    (loc.certification && loc.certification !== '') || 
-    (loc.type === 'lodging') || 
-    (loc.type === 'dark-site')
-  );
-  
-  // Keep non-certified locations untouched - safely handle potentially undefined type property
-  const nonCertifiedLocations = locations.filter(loc => 
-    !(loc.isDarkSkyReserve || 
-      (loc.certification && loc.certification !== '') || 
-      (loc.type === 'lodging') || 
-      (loc.type === 'dark-site'))
-  );
-  
-  if (certifiedLocations.length === 0) {
-    return locations;
+  if (!locations || locations.length === 0) {
+    return [];
   }
   
-  // Clone the locations to avoid mutating the original
-  const updatedCertifiedLocations = [...certifiedLocations];
+  const updatedLocations = [...locations];
   
-  // Batch process locations for better performance
-  const batchSize = Math.min(maxParallel, 2); // Lower parallelism for certified locations
-  
-  for (let i = 0; i < updatedCertifiedLocations.length; i += batchSize) {
-    const batch = updatedCertifiedLocations.slice(i, i + batchSize);
-    const promises = batch.map(async (location) => {
-      if (!location.latitude || !location.longitude) return location;
-      
-      const cacheKey = `cert-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-      
-      // Check cache first with longer expiry for certified locations
-      const cachedData = certifiedLocationCache.get(cacheKey);
-      if (cachedData && (Date.now() - cachedData.timestamp) < CERTIFIED_CACHE_DURATION) {
-        console.log(`Using cached SIQS for certified location ${location.name || 'unnamed'}: ${cachedData.siqs}`);
-        return {
-          ...location,
-          siqs: cachedData.siqs,
-          isViable: cachedData.isViable
-        };
-      }
-      
-      try {
-        // Use better Bortle scale values for certified locations
-        // Most dark sky sites have better Bortle scale
-        const effectiveBortleScale = location.bortleScale || 
-          (location.type === 'lodging' ? 3 : 
-            location.isDarkSkyReserve ? 2 : 3);
-        
-        // Calculate real-time SIQS with priority for certified locations
-        const result = await calculateRealTimeSiqs(
-          location.latitude,
-          location.longitude,
-          effectiveBortleScale
-        );
-        
-        // Cache the result with longer expiry
-        certifiedLocationCache.set(cacheKey, {
-          siqs: result.siqs,
-          isViable: result.isViable,
-          timestamp: Date.now()
-        });
-        
-        return {
-          ...location,
-          siqs: result.siqs,
-          isViable: result.isViable,
-          siqsFactors: result.factors
-        };
-      } catch (error) {
-        console.error(`Error calculating SIQS for certified location:`, error);
-        // Return original location if calculation fails
-        return location;
-      }
-    });
+  // Process certified locations with priority
+  for (const location of updatedLocations) {
+    if (!location.latitude || !location.longitude || !location.certification) continue;
     
-    // Wait for the batch to complete
-    const results = await Promise.allSettled(promises);
+    // Use cached value if available
+    const cacheKey = `cert-${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    if (certifiedLocationSiqsCache.has(cacheKey)) {
+      location.siqs = certifiedLocationSiqsCache.get(cacheKey);
+      continue;
+    }
     
-    // Update locations
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        updatedCertifiedLocations[i + index] = result.value;
-      }
-    });
+    try {
+      // For certified locations, we can use their known Bortle scale
+      const bortleScale = location.bortleScale || 3; // Most certified locations have good skies
+      
+      const result = await calculateRealTimeSiqs(
+        location.latitude,
+        location.longitude,
+        bortleScale
+      );
+      
+      location.siqs = result.siqs;
+      location.isViable = result.isViable;
+      
+      // Cache the result
+      certifiedLocationSiqsCache.set(cacheKey, result.siqs);
+    } catch (error) {
+      console.error(`Failed to update SIQS for certified location ${location.name}:`, error);
+    }
   }
   
-  // Combine updated certified locations with untouched non-certified locations
-  return [...updatedCertifiedLocations, ...nonCertifiedLocations];
+  return updatedLocations;
 }
 
 /**
  * Clear the certified location cache
  */
 export function clearCertifiedLocationCache(): void {
-  const size = certifiedLocationCache.size;
-  certifiedLocationCache.clear();
-  console.log(`Certified location cache cleared (${size} entries removed)`);
+  certifiedLocationSiqsCache.clear();
+  console.log("Certified location cache cleared");
 }

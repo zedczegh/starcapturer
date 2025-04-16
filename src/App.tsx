@@ -43,6 +43,7 @@ function App() {
                   <Route path="/about" element={<About />} />
                   <Route path="/location/:id" element={<LocationDetails />} />
                   <Route path="/links" element={<UsefulLinks />} />
+                  <Route path="/useful-links" element={<UsefulLinks />} />
                   <Route path="/share" element={<ShareLocation />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

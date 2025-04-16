@@ -2,7 +2,7 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
+import { clearLocationCache } from '@/services/realTimeSiqsService';
 import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
 
