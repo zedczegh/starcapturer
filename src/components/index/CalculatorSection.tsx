@@ -1,8 +1,8 @@
-
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
+import { COSMIC_NEBULA_BG } from "@/assets/index";
 
 // Create a global object to store the current SIQS value
 export const currentSiqsStore = {
@@ -96,12 +96,18 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   return (
     <section 
       id="calculator" 
-      className="py-12 px-4 md:px-8 min-h-[calc(100vh-5rem)] flex flex-col justify-center bg-gradient-to-b from-cosmic-900/80 to-cosmic-950/80 relative overflow-hidden"
+      className="py-12 px-4 md:px-8 min-h-[calc(100vh-5rem)] flex flex-col justify-center relative overflow-hidden"
     >
-      {/* Enhanced background with better opacity */}
-      <div className="absolute inset-0 bg-star-field opacity-50 pointer-events-none"></div>
-      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-cosmic-900/90 to-transparent pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-cosmic-950/90 to-transparent pointer-events-none"></div>
+      {/* New background image with cosmic nebula */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 pointer-events-none"
+        style={{ backgroundImage: `url(${COSMIC_NEBULA_BG})` }}
+      />
+      
+      {/* Gradient overlays for better text contrast */}
+      <div className="absolute inset-0 bg-cosmic-950/60 pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-cosmic-950/90 to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-cosmic-950/90 to-transparent pointer-events-none" />
       
       {/* Animated glow effects with improved visibility */}
       <motion.div 
