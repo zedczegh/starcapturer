@@ -26,10 +26,13 @@ const LocationView: React.FC<LocationViewProps> = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const locationsPerPage = 20; // Increased from 10 to 20 to show more locations per page
+  const [totalLocations, setTotalLocations] = useState(0);
+  const locationsPerPage = 50; // Increased from 20 to 50 to show more locations per page
   
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
+    // Store the total count of locations
+    setTotalLocations(locations.length);
     // Reset to page 1 when locations data changes
     setCurrentPage(1);
   }, [locations]);
@@ -99,10 +102,44 @@ const LocationView: React.FC<LocationViewProps> = ({
     setCurrentPage(pageNumber);
   };
   
+  // Function to generate page numbers with proper ellipsis
+  const generatePaginationItems = () => {
+    // For small number of pages, show all
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    
+    // Always include first and last pages
+    const pages = [1];
+    
+    // Logic for showing pages around current page with ellipsis
+    if (currentPage <= 3) {
+      // Near start: show 1, 2, 3, 4, 5, ..., totalPages
+      pages.push(2, 3, 4, 5, 'ellipsis', totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      // Near end: show 1, ..., totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages
+      pages.push('ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      // Middle: show 1, ..., currentPage-1, currentPage, currentPage+1, ..., totalPages
+      pages.push('ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages);
+    }
+    
+    return pages;
+  };
+  
   return (
     <div className="space-y-6">
-      <div className="text-sm text-muted-foreground mb-4">
-        {t("Showing {{start}}-{{end}} of {{total}} locations", "显示 {{start}}-{{end}}，共 {{total}} 个位置").replace('{{start}}', String(indexOfFirstLocation + 1)).replace('{{end}}', String(Math.min(indexOfLastLocation, locations.length))).replace('{{total}}', String(locations.length))}
+      <div className="text-sm text-muted-foreground mb-4 flex flex-wrap justify-between items-center">
+        <span>
+          {t("Showing {{start}}-{{end}} of {{total}} locations", "显示 {{start}}-{{end}}，共 {{total}} 个位置")
+            .replace('{{start}}', String(indexOfFirstLocation + 1))
+            .replace('{{end}}', String(Math.min(indexOfLastLocation, locations.length)))
+            .replace('{{total}}', String(totalLocations))}
+        </span>
+        <span className="text-xs mt-1 italic">
+          {t("Total certified locations: {{count}}", "认证地点总数: {{count}}")
+            .replace('{{count}}', String(totalLocations))}
+        </span>
       </div>
       
       <LocationsList 
@@ -124,50 +161,27 @@ const LocationView: React.FC<LocationViewProps> = ({
               </PaginationItem>
             )}
             
-            {/* Limit pagination links to avoid cluttering the UI */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                // Show first page, last page, current page, and pages immediately before and after current page
-                return page === 1 || 
-                       page === totalPages || 
-                       page === currentPage || 
-                       page === currentPage - 1 || 
-                       page === currentPage + 1 ||
-                       (page === currentPage - 2 && currentPage > 3) || 
-                       (page === currentPage + 2 && currentPage < totalPages - 2);
-              })
-              .map((page, index, array) => {
-                // Add ellipsis if there are gaps in the sequence
-                if (index > 0 && page > array[index - 1] + 1) {
-                  return (
-                    <React.Fragment key={`ellipsis-${page}`}>
-                      <PaginationItem>
-                        <span className="px-2">...</span>
-                      </PaginationItem>
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          isActive={page === currentPage}
-                          onClick={() => handlePageChange(page)}
-                          aria-label={t(`Page ${page}`, `第${page}页`)}
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    </React.Fragment>
-                  );
-                }
+            {generatePaginationItems().map((page, index) => {
+              if (page === 'ellipsis') {
                 return (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={page === currentPage}
-                      onClick={() => handlePageChange(page)}
-                      aria-label={t(`Page ${page}`, `第${page}页`)}
-                    >
-                      {page}
-                    </PaginationLink>
+                  <PaginationItem key={`ellipsis-${index}`}>
+                    <span className="px-2">...</span>
                   </PaginationItem>
                 );
-              })}
+              }
+              
+              return (
+                <PaginationItem key={`page-${page}`}>
+                  <PaginationLink
+                    isActive={page === currentPage}
+                    onClick={() => handlePageChange(page as number)}
+                    aria-label={t(`Page ${page}`, `第${page}页`)}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
             
             {currentPage < totalPages && (
               <PaginationItem>

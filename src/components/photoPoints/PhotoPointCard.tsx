@@ -87,6 +87,10 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
+  // Determine the name to display based on language preference
+  const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
+  const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
+  
   return (
     <div 
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
@@ -94,7 +98,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     >
       <div className="flex items-center justify-between mb-1.5">
         <h4 className="font-medium text-sm line-clamp-1">
-          {displayName || (language === 'zh' && point.chineseName ? point.chineseName : point.name)}
+          {displayName || primaryName}
         </h4>
         
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
@@ -112,16 +116,18 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {showOriginalName && (
+      {/* Show secondary name if available */}
+      {secondaryName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">
-            {language === 'zh' ? (point.name || '') : (point.chineseName || point.name || '')}
+            {secondaryName}
           </span>
         </div>
       )}
       
-      {nearestTownInfo && nearestTownInfo.detailedName && (
+      {/* Only show nearest town if we don't have both names */}
+      {!secondaryName && nearestTownInfo && nearestTownInfo.detailedName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">
