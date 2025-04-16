@@ -7,7 +7,8 @@ interface LocationData {
   bortleScale?: number;
 }
 
-export default function useSIQSAdvancedSettings(latitude: number, longitude: number) {
+// Change from default export to named export
+export function useSIQSAdvancedSettings(latitude: number, longitude: number) {
   const [seeingConditions, setSeeingConditions] = useState<number>(2.5);
   const [bortleScale, setBortleScale] = useState<number>(4);
   const { getCachedData, setCachedData } = useLocationDataCache();

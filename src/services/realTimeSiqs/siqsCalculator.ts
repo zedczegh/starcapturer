@@ -84,7 +84,7 @@ export async function calculateRealTimeSiqs(
       finalBortleScale,
       3, // Default seeing conditions
       getMoonPhaseEstimate(),
-      forecastData // Pass forecast data as fifth argument
+      forecastData // Pass forecast data
     );
     
     // Apply intelligent adjustments based on multiple factors

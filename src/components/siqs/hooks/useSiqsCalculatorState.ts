@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -22,6 +21,8 @@ export function useSiqsCalculatorState({
   const [isMounted, setIsMounted] = useState(false);
   const [localBortleScale, setLocalBortleScale] = useState<number | null>(null);
   const [shouldAutoRequest, setShouldAutoRequest] = useState(!noAutoLocationRequest);
+  const [latitude, setLatitude] = useState<string>("");
+  const [longitude, setLongitude] = useState<string>("");
   
   const { setCachedData, getCachedData } = useLocationDataCache();
   
@@ -48,8 +49,12 @@ export function useSiqsCalculatorState({
     setStatusMessage,
     setShowAdvancedSettings: () => {},
     getCachedData,
-    setCachedData
-  }), [language, noAutoLocationRequest, shouldAutoRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData]);
+    setCachedData,
+    latitude,
+    longitude,
+    setLatitude,
+    setLongitude
+  }), [language, noAutoLocationRequest, shouldAutoRequest, localBortleScale, setStatusMessage, getCachedData, setCachedData, latitude, longitude]);
 
   const {
     setCachedData: setSiqsCachedData, 
@@ -86,6 +91,10 @@ export function useSiqsCalculatorState({
     isMounted,
     siqsScore,
     calculateSIQSForLocation,
-    language
+    language,
+    latitude,
+    setLatitude,
+    longitude,
+    setLongitude
   };
 }
