@@ -1,4 +1,3 @@
-
 /**
  * SIQS Anomaly Detection
  * 
@@ -118,7 +117,8 @@ function ensureTemporalConsistency(
  */
 export function assessDataReliability(
   weatherData: WeatherDataWithClearSky | null,
-  forecastData: any | null
+  forecastData: any | null,
+  options?: { includeNighttime?: boolean }
 ): { 
   reliable: boolean;
   confidenceScore: number;
@@ -156,4 +156,3 @@ export function assessDataReliability(
     issues
   };
 }
-
