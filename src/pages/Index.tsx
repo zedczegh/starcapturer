@@ -9,6 +9,7 @@ import PhotoPointsSection from "@/components/index/PhotoPointsSection";
 import Footer from "@/components/index/Footer";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
+import { COSMIC_NEBULA_BG } from "@/assets/index";
 
 const IndexPage = () => {
   const queryClient = useQueryClient();
@@ -103,12 +104,18 @@ const IndexPage = () => {
   }, [queryClient]);
 
   return (
-    <div className="min-h-screen bg-cosmic-950">
-      <HeroSection />
-      <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
-      <ScienceSection />
-      <PhotoPointsSection />
-      <Footer />
+    <div 
+      className="min-h-screen bg-cosmic-950 bg-cover bg-center" 
+      style={{ backgroundImage: `url(${COSMIC_NEBULA_BG})`, backgroundAttachment: 'fixed', backgroundSize: 'cover' }}
+    >
+      <div className="absolute inset-0 bg-cosmic-950/70"></div>
+      <div className="relative z-10">
+        <HeroSection />
+        <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
+        <ScienceSection />
+        <PhotoPointsSection />
+        <Footer />
+      </div>
     </div>
   );
 };
