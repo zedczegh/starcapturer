@@ -453,6 +453,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'yeongyang-firefly',
       name: 'Yeongyang Firefly Eco Park Dark Sky Park',
+      chineseName: '英阳萤火虫生态公园暗夜天空公园',
       latitude: 36.6552,
       longitude: 129.1122,
       isDarkSkyReserve: true,
@@ -464,6 +465,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'jindo-dark-sky',
       name: 'Jindo Dark Sky Park',
+      chineseName: '珍岛暗夜天空公园',
       latitude: 34.4763,
       longitude: 126.2631,
       isDarkSkyReserve: true,
@@ -475,6 +477,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'yaeyama-dark-sky',
       name: 'Yaeyama Islands International Dark Sky Reserve',
+      chineseName: '八重山群岛国际暗夜天空保护区',
       latitude: 24.4667,
       longitude: 124.2167,
       isDarkSkyReserve: true,
@@ -486,6 +489,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'iriomote-ishigaki',
       name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
+      chineseName: '西表石垣国家公园暗夜天空保护区',
       latitude: 24.3423,
       longitude: 124.1546,
       isDarkSkyReserve: true,
@@ -497,6 +501,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'himawari-farm',
       name: 'Himawari Farm Dark Sky Park',
+      chineseName: '向日葵农场暗夜天空公园',
       latitude: 42.9824,
       longitude: 140.9946,
       isDarkSkyReserve: true,
