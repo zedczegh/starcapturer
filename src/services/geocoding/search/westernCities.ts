@@ -46,7 +46,7 @@ export function getWesternCitiesDatabase(): Record<string, Location & { chineseN
     },
     "gabriela mistral": {
       name: "Gabriela Mistral Dark Sky Sanctuary, Chile",
-      chineseName: "加布里埃拉·米斯特拉尔暗夜天空保护区��智利",
+      chineseName: "加布里埃拉·米斯特拉尔暗夜天空保护区，智利",
       latitude: -30.2451,
       longitude: -70.7342,
       placeDetails: "Dark Sky Sanctuary - International Dark Sky Association"
@@ -96,14 +96,14 @@ export function getWesternCitiesDatabase(): Record<string, Location & { chineseN
     },
     "cherry springs": {
       name: "Cherry Springs State Park Dark Sky Park, USA",
-      chineseName: "樱桃山国家公园暗夜天空公园，美国",
+      chineseName: "樱桃泉州立公园暗夜天空公园，美国",
       latitude: 41.6626,
       longitude: -77.8236,
       placeDetails: "Dark Sky Park - International Dark Sky Association"
     },
     "westhavelland": {
       name: "Westhavelland Dark Sky Reserve, Germany",
-      chineseName: "西哈瓦尔兰暗夜天空保护区，德国",
+      chineseName: "西哈维兰暗夜天空保护区，德国",
       latitude: 52.6667,
       longitude: 12.4833,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
@@ -111,35 +111,35 @@ export function getWesternCitiesDatabase(): Record<string, Location & { chineseN
     // Additional Dark Sky locations
     "alpes azur mercantour": {
       name: "Alpes Azur Mercantour Dark Sky Reserve, France",
-      chineseName: "阿尔卑斯山阿马尔特库斯暗夜天空保护区，法国",
+      chineseName: "阿尔卑斯蓝天默尔康图暗夜天空保护区，法国",
       latitude: 44.1800, 
       longitude: 7.0500,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
     "central idaho": {
       name: "Central Idaho Dark Sky Reserve, USA", 
-      chineseName: "中央爱达荷暗夜天空保护区，美国",
+      chineseName: "爱达荷中部暗夜天空保护区，美国",
       latitude: 44.2210, 
       longitude: -114.9318,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
     "namibrand": {
       name: "NamibRand Dark Sky Reserve, Namibia", 
-      chineseName: "纳米比亚纳比布拉德暗夜天空保护区，纳米比亚",
+      chineseName: "纳米布兰德暗夜天空保护区，纳米比亚",
       latitude: -24.9400, 
       longitude: 16.0600,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
     "cranborne chase": {
       name: "Cranborne Chase Dark Sky Reserve, England", 
-      chineseName: "克兰伯恩 Chase暗夜天空保护区，英格兰",
+      chineseName: "克兰伯恩追逐暗夜天空保护区，英格兰",
       latitude: 51.0290, 
       longitude: -2.1370,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
     "snowdonia": {
       name: "Snowdonia Dark Sky Reserve, Wales", 
-      chineseName: "雪登尼亚暗夜天空保护区，威尔士",
+      chineseName: "斯诺多尼亚暗夜天空保护区，威尔士",
       latitude: 52.9493, 
       longitude: -3.8872,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
@@ -153,28 +153,28 @@ export function getWesternCitiesDatabase(): Record<string, Location & { chineseN
     },
     "galloway": {
       name: "Galloway Dark Sky Park, Scotland", 
-      chineseName: "戈拉韦暗夜天空公园，苏格兰",
+      chineseName: "加洛韦暗夜天空公园，苏格兰",
       latitude: 55.1054, 
       longitude: -4.4899,
       placeDetails: "Dark Sky Park - International Dark Sky Association"
     },
     "great barrier island": {
       name: "Great Barrier Island Dark Sky Sanctuary, New Zealand", 
-      chineseName: "大堡礁岛暗夜天空保护区，新西兰",
+      chineseName: "大障碍岛暗夜天空保护区，新西兰",
       latitude: -36.2058, 
       longitude: 175.4831,
       placeDetails: "Dark Sky Sanctuary - International Dark Sky Association"
     },
     "wairarapa": {
       name: "Wairarapa Dark Sky Reserve, New Zealand", 
-      chineseName: "瓦伊拉帕暗夜天空保护区，新西兰",
+      chineseName: "怀拉拉帕暗夜天空保护区，新西兰",
       latitude: -41.3446, 
       longitude: 175.5440,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"
     },
     "river murray": {
       name: "River Murray Dark Sky Reserve, Australia", 
-      chineseName: "里夫曼河暗夜天空保护区，澳大利亚",
+      chineseName: "默里河暗夜天空保护区，澳大利亚",
       latitude: -34.4048, 
       longitude: 139.2851,
       placeDetails: "Dark Sky Reserve - International Dark Sky Association"

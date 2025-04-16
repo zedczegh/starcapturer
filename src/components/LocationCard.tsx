@@ -155,7 +155,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
                 <div className="flex items-center text-sm text-muted-foreground mt-1">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
                   <span>
-                    {language === 'en' ? name : (chineseName || name)}
+                    {language === 'zh' ? name : name}
                   </span>
                 </div>
               )}

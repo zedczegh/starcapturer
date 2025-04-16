@@ -1,3 +1,4 @@
+
 import { LocationEntry } from "../locationDatabase";
 
 /**

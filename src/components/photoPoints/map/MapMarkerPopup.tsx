@@ -75,7 +75,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground line-clamp-1">
-            {language === 'en' ? location.name : (location.chineseName || location.name)}
+            {language === 'zh' ? location.name : location.name}
           </span>
         </div>
       )}
