@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -98,10 +99,13 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
       id="calculator" 
       className="py-12 px-4 md:px-8 min-h-[calc(100vh-5rem)] flex flex-col justify-center relative overflow-hidden"
     >
-      {/* New background image with cosmic nebula */}
+      {/* Background image with cosmic nebula - increased opacity for visibility */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 pointer-events-none"
-        style={{ backgroundImage: `url(${COSMIC_NEBULA_BG})` }}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 pointer-events-none"
+        style={{ 
+          backgroundImage: `url(${COSMIC_NEBULA_BG})`,
+          backgroundAttachment: 'fixed'
+        }}
       />
       
       {/* Gradient overlays for better text contrast */}

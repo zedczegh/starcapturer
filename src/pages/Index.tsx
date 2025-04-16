@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchPopularLocations } from '@/lib/queryPrefetcher';
@@ -16,12 +15,10 @@ const IndexPage = () => {
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   
-  // Always try to get the user's location on page load for global use
   const { coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
   });
   
-  // Save user location for global use
   const saveUserLocation = useCallback((location: { latitude: number; longitude: number }) => {
     try {
       localStorage.setItem('userLocation', JSON.stringify(location));
@@ -31,7 +28,6 @@ const IndexPage = () => {
     }
   }, []);
   
-  // Update user location when coords change
   useEffect(() => {
     if (coords) {
       const userLocation = {
@@ -42,26 +38,20 @@ const IndexPage = () => {
     }
   }, [coords, saveUserLocation]);
   
-  // Request location on page load
   useEffect(() => {
     getPosition();
   }, [getPosition]);
   
   useEffect(() => {
-    // Prefetch data for popular locations when the home page loads
     prefetchPopularLocations(queryClient);
     
-    // Check if we need to restore previous location
     try {
-      // Check localStorage for saved location
       const savedLocationString = localStorage.getItem('latest_siqs_location');
       
       if (savedLocationString) {
-        // We have a saved location, parse it and mark as restored
         const savedLocation = JSON.parse(savedLocationString);
         
         if (savedLocation && savedLocation.name) {
-          // Mark as restored to prevent auto-triggering current location
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
@@ -73,7 +63,6 @@ const IndexPage = () => {
       console.error("Error checking for location restoration:", error);
     }
     
-    // Scroll to calculator section or hash if present in URL
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
@@ -84,7 +73,6 @@ const IndexPage = () => {
       }
     }
     
-    // Update the currentSiqsStore value
     const updateCurrentSiqs = () => {
       try {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
@@ -105,10 +93,19 @@ const IndexPage = () => {
 
   return (
     <div 
-      className="min-h-screen bg-cosmic-950 bg-cover bg-center" 
-      style={{ backgroundImage: `url(${COSMIC_NEBULA_BG})`, backgroundAttachment: 'fixed', backgroundSize: 'cover' }}
+      className="min-h-screen bg-cosmic-950"
     >
-      <div className="absolute inset-0 bg-cosmic-950/70"></div>
+      <div 
+        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat z-0"
+        style={{ 
+          backgroundImage: `url(${COSMIC_NEBULA_BG})`, 
+          backgroundAttachment: 'fixed', 
+          backgroundSize: 'cover' 
+        }}
+      />
+      
+      <div className="fixed inset-0 bg-cosmic-950/70 z-0"></div>
+      
       <div className="relative z-10">
         <HeroSection />
         <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
@@ -120,5 +117,4 @@ const IndexPage = () => {
   );
 };
 
-// Export the component as default
 export default IndexPage;
