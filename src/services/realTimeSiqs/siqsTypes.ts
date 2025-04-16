@@ -1,13 +1,13 @@
 
-// SIQSResult type definition
+// Define types for SIQS calculation
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  factors?: Array<{
+  factors?: {
     name: string;
     score: number;
-    description?: string;
-  }>;
+    description: string;
+  }[];
   metadata?: {
     calculatedAt: string;
     sources: {
@@ -16,32 +16,26 @@ export interface SiqsResult {
       clearSky: boolean;
       lightPollution: boolean;
     };
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
   };
 }
 
-// Type for WeatherData with clear sky rate
 export interface WeatherDataWithClearSky {
   temperature: number;
   humidity: number;
   cloudCover: number;
   windSpeed: number;
   precipitation: number;
-  time: string;
-  condition?: string;
   clearSkyRate?: number;
   latitude: number;
   longitude: number;
-  _forecast?: any;
+  time?: string;
+  condition?: string;
   aqi?: number;
+  _forecast?: any;
 }
 
-// Type for the Moonless Night Info
 export interface MoonlessNightInfo {
-  duration: number;
+  duration: number; // in hours
   startTime: string;
   endTime: string;
   moonrise: string;
@@ -50,51 +44,9 @@ export interface MoonlessNightInfo {
   daysUntilNewMoon: number;
 }
 
-// Type for the Moon Phase Info
 export interface MoonPhaseInfo {
-  phase: number;
-  illumination: number;
+  phase: number; // 0-1 normalized value
   name: string;
+  illumination: number; // percentage 0-100
   isGoodForAstronomy: boolean;
-}
-
-// Add SiqsFactor back since it's used in other files
-export interface SiqsFactor {
-  name: string;
-  score: number;
-  description?: string;
-  nighttimeData?: any;
-}
-
-// Add SiqsCalculationOptions for API options
-export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
-}
-
-// Type for enhanced location data
-export interface EnhancedLocationData {
-  name: string;
-  latitude: number;
-  longitude: number;
-  clearSkyRate: number;
-  bortleScale?: number;
-  averageVisibility?: 'excellent' | 'good' | 'average' | 'poor';
-  isDarkSkyReserve?: boolean;
-  certification?: string;
-}
-
-// Type for climate region data
-export interface ClimateRegion {
-  name: string;
-  bounds: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
-  };
-  adjustmentFactors: {
-    [month: number]: number;
-  };
 }

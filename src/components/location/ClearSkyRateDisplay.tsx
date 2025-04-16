@@ -162,7 +162,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                 <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
                   {Object.entries(seasonalTrends).map(([season, data]) => {
-                    // Fix the type issue by ensuring we have the correct structure
+                    // Fix: Use type assertion with specific properties
                     const seasonData = data as { clearSkyRate: number; averageTemperature: number };
                     return (
                       <div key={season} className="flex items-center justify-between">

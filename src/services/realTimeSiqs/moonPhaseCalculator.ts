@@ -1,5 +1,6 @@
 
 import * as SunCalc from 'suncalc';
+import { MoonPhaseInfo } from './siqsTypes';
 
 /**
  * Calculate the current moon phase (0-1)
@@ -118,6 +119,30 @@ export function getMoonInfo(date = new Date()): { isGoodForAstronomy: boolean; n
     (winterSeason && (phase < 0.2 || phase > 0.8));
   
   return { isGoodForAstronomy, name };
+}
+
+/**
+ * Get complete moon phase information
+ * @param date Current date or custom date
+ * @returns MoonPhaseInfo object with phase, name, illumination, and astronomy suitability
+ */
+export function getDetailedMoonInfo(date = new Date()): MoonPhaseInfo {
+  const phase = calculateMoonPhase(date);
+  const name = getMoonPhaseNameByPhase(phase);
+  const illumination = calculateMoonIllumination(date);
+  const winterSeason = isWinterSeason(date);
+  
+  // Moon is good for astronomy when it's near new moon
+  const isGoodForAstronomy = phase < 0.15 || phase > 0.85 || 
+    // In winter, criteria can be slightly more forgiving due to longer nights
+    (winterSeason && (phase < 0.2 || phase > 0.8));
+  
+  return {
+    phase,
+    name,
+    illumination,
+    isGoodForAstronomy
+  };
 }
 
 // Helper function to determine hemisphere based on current location

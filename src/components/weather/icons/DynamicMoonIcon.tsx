@@ -1,9 +1,10 @@
 
 import React, { useMemo } from "react";
 import { Moon } from "lucide-react";
+import { getMoonPhaseNameByPhase } from "@/services/realTimeSiqs/moonPhaseCalculator";
 
 interface DynamicMoonIconProps {
-  phase: string;
+  phase: string | number;
   className?: string;
 }
 
@@ -38,6 +39,9 @@ const DynamicMoonIcon: React.FC<DynamicMoonIconProps> = ({ phase, className }) =
       if (phaseLower.includes("gibbous") || phaseLower.includes("凸月") || phaseLower.includes("盈凸")) {
         return 75; // Waxing gibbous
       }
+      if (phaseLower.includes("first") || phaseLower.includes("上弦")) {
+        return 50; // First quarter
+      }
     }
     
     // Waning (shrinking) phases
@@ -47,6 +51,9 @@ const DynamicMoonIcon: React.FC<DynamicMoonIconProps> = ({ phase, className }) =
       }
       if (phaseLower.includes("gibbous") || phaseLower.includes("凸月") || phaseLower.includes("亏凸")) {
         return 65; // Waning gibbous
+      }
+      if (phaseLower.includes("last") || phaseLower.includes("下弦")) {
+        return 50; // Last quarter
       }
     }
     
