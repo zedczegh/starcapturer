@@ -55,9 +55,11 @@ export interface MoonPhaseInfo {
   isGoodForAstronomy: boolean;
 }
 
-// Add missing SiqsCalculationOptions interface
+// Add SiqsCalculationOptions interface
 export interface SiqsCalculationOptions {
   anomalyDetection?: boolean;
   includeMetadata?: boolean;
   includeForecast?: boolean;
+  reliability?: boolean;
+  adjustForLatitude?: boolean;
 }

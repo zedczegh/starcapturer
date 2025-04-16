@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Star, StarHalf, StarOff, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
