@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -16,31 +16,36 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   // Default to system theme
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [theme, setTheme] = React.useState<Theme>(() => {
     // Try to get the theme from localStorage
-    const storedTheme = localStorage.getItem('theme') as Theme;
-    return storedTheme || 'system';
+    if (typeof window !== 'undefined') {
+      const storedTheme = localStorage.getItem('theme') as Theme;
+      return storedTheme || 'system';
+    }
+    return 'system';
   });
 
   useEffect(() => {
     // Update localStorage when theme changes
-    localStorage.setItem('theme', theme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', theme);
 
-    // Apply theme to document
-    const root = window.document.documentElement;
-    
-    // Remove previous theme classes
-    root.classList.remove('light', 'dark');
-    
-    // Set the theme class
-    if (theme === 'system') {
-      // Check system preference
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
+      // Apply theme to document
+      const root = window.document.documentElement;
+      
+      // Remove previous theme classes
+      root.classList.remove('light', 'dark');
+      
+      // Set the theme class
+      if (theme === 'system') {
+        // Check system preference
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light';
+        root.classList.add(systemTheme);
+      } else {
+        root.classList.add(theme);
+      }
     }
   }, [theme]);
 
