@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointCard from './PhotoPointCard';
@@ -27,10 +26,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
       const updateWithSiqs = async () => {
         try {
           // Use specialized certified locations update service
-          const updated = await updateCertifiedLocationsWithSiqs(
-            locations,
-            2 // Low parallelism to avoid rate limiting
-          );
+          const updated = await updateCertifiedLocationsWithSiqs(locations);
           console.log(`LocationsList: Enhanced ${updated.length} certified locations with SIQS data`);
           setEnhancedLocations(updated);
         } catch (err) {
