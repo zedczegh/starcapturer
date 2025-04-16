@@ -68,6 +68,7 @@ function getCertificationType(idaType: string): string {
 
 /**
  * Convert IDA places to our database format
+ * Ensuring correct typing for the 'type' property
  */
 export function convertToLocationEntries(places: IDASkyPlace[]): LocationEntry[] {
   return places.map(place => ({
@@ -75,7 +76,7 @@ export function convertToLocationEntries(places: IDASkyPlace[]): LocationEntry[]
     coordinates: [place.coordinates[0], place.coordinates[1]],
     bortleScale: estimateBortleScale(place.type),
     radius: getLocationRadius(place.type),
-    type: place.type,
+    type: place.type as 'dark-site' | 'urban' | 'natural' | 'rural' | 'suburban',
     certification: place.certification,
     chineseName: translateLocationName(place.name)
   }));

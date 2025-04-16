@@ -116,11 +116,12 @@ export function convertToSharedAstroSpot(
       siqs: Math.max(1, 10 - entry.bortleScale),
       bortleScale: entry.bortleScale,
       isDarkSkyReserve: true,
-      certification: 'International Dark Sky Association',
+      certification: entry.certification || 'International Dark Sky Association',
       description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
       distance: distance,
       cloudCover: 0, // Will be calculated by SIQS service
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      chineseName: entry.chineseName
     };
   } catch (error) {
     console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);
@@ -133,7 +134,8 @@ export function convertToSharedAstroSpot(
       longitude: entry.coordinates[1],
       bortleScale: entry.bortleScale || 5, // Provide a default value
       siqs: 0, // Default SIQS
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      chineseName: entry.chineseName
     };
   }
 }
