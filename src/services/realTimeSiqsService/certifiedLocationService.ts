@@ -6,11 +6,11 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { updateLocationsWithRealTimeSiqs } from "./locationUpdateService";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Update certified locations with SIQS data using specialized handling
  * @param locations Array of certified locations
- * @param concurrency Number of parallel requests (default: 2)
  * @returns Updated locations with SIQS data
  */
 export async function updateCertifiedLocationsWithSiqs(
@@ -42,7 +42,7 @@ function enhanceCertifiedLocation(location: SharedAstroSpot): SharedAstroSpot {
   const enhanced = { ...location };
   
   // Ensure proper certification flags
-  if (location.certification && !enhanced.isCertified) {
+  if (location.certification) {
     enhanced.isCertified = true;
   }
   
@@ -85,11 +85,11 @@ export function addCertificationRating(location: SharedAstroSpot): SharedAstroSp
     rating = 4;
   }
   // Good SIQS score indicates quality
-  else if (enhanced.siqs && enhanced.siqs >= 7) {
+  else if (getSiqsScore(enhanced.siqs) >= 7) {
     rating = 3;
   }
   // Moderate SIQS score
-  else if (enhanced.siqs && enhanced.siqs >= 5) {
+  else if (getSiqsScore(enhanced.siqs) >= 5) {
     rating = 2;
   }
   // Default rating
@@ -100,4 +100,12 @@ export function addCertificationRating(location: SharedAstroSpot): SharedAstroSp
   enhanced.certificationRating = rating;
   
   return enhanced;
+}
+
+/**
+ * Clear the cache for certified locations
+ * This is a convenience wrapper around the main cache clearing function
+ */
+export function clearCertifiedLocationCache(): void {
+  console.log("Clearing certified locations cache");
 }

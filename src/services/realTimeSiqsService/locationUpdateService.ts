@@ -7,6 +7,7 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
 import { batchCalculateRealTimeSiqs, clearSiqsCache } from "../realTimeSiqs/realTimeSiqsService";
+import { SiqsFactor } from "../realTimeSiqs/siqsTypes";
 
 /**
  * Update an array of locations with real-time SIQS data
@@ -82,13 +83,20 @@ async function processBatch(
       const siqs = siqsResults[index];
       
       if (siqs && siqs.siqs > 0) {
+        // Convert SiqsFactor[] to the expected format with required description
+        const factors = siqs.factors?.map(factor => ({
+          name: factor.name,
+          score: factor.score,
+          description: factor.description || `${factor.name} factor` // Ensure description is always present
+        }));
+        
         return {
           ...location,
           siqs: siqs.siqs,
           siqsResult: {
             score: siqs.siqs,
             isViable: siqs.isViable,
-            factors: siqs.factors || []
+            factors: factors || []
           }
         };
       }

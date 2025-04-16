@@ -42,8 +42,7 @@ export async function calculateEnhancedRealTimeSiqs(
         const correctedResult = detectAndFixAnomalies(
           siqsResult,
           weatherData,
-          latitude,
-          longitude
+          { latitude, longitude }
         );
         
         // Assess data reliability
@@ -58,10 +57,16 @@ export async function calculateEnhancedRealTimeSiqs(
           return {
             ...correctedResult,
             metadata: {
-              ...(correctedResult.metadata || {}),
+              calculatedAt: new Date().toISOString(), // Ensure calculatedAt is present
               reliability: {
                 score: reliability.confidenceScore,
                 issues: reliability.issues
+              },
+              sources: correctedResult.metadata?.sources || {
+                weather: true,
+                forecast: false,
+                clearSky: false,
+                lightPollution: false
               }
             }
           };

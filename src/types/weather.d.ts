@@ -69,5 +69,7 @@ declare module "@/types/weather" {
     type?: string;
     preferenceScore?: number; // Added for enhanced calculations
     clearSkyRate?: number; // Added for enhanced calculations
+    isCertified?: boolean; // Added for certified location handling
+    certificationRating?: number; // Added for certification rating
   }
 }

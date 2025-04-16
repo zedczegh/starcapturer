@@ -18,20 +18,20 @@ const CRITICAL_WEATHER_THRESHOLD = 80; // Cloud cover % that requires low score
  * 
  * @param siqs Calculated SIQS result
  * @param weatherData Weather data used in calculation
- * @param latitude Location latitude
- * @param longitude Location longitude
+ * @param location Location coordinates
  * @returns Corrected SIQS result
  */
 export function detectAndFixAnomalies(
   siqs: SiqsResult,
   weatherData: WeatherDataWithClearSky,
-  latitude: number,
-  longitude: number
+  location: { latitude: number; longitude: number }
 ): SiqsResult {
   // Don't process already invalid results
   if (!siqs || siqs.siqs <= 0) {
     return siqs;
   }
+
+  const { latitude, longitude } = location;
 
   // Check for physical impossibilities
   const correctedSiqs = correctPhysicalImpossibilities(siqs, weatherData);

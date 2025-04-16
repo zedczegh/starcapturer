@@ -22,13 +22,13 @@ export interface SiqsResult {
 export interface SiqsFactor {
   name: string;
   score: number;
-  description?: string;
+  description: string; // Changed from optional to required
   nighttimeData?: any;
 }
 
 // Metadata about SIQS calculation
 export interface SiqsMetadata {
-  calculatedAt: string;
+  calculatedAt: string; // This is required
   sources: {
     weather: boolean;
     forecast: boolean;
