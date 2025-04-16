@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Star, Moon, Info, Calendar } from 'lucide-react';
+import { Star, Moon, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { fetchClearSkyRate, clearClearSkyRateCache } from '@/lib/api/clearSkyRate';
@@ -22,6 +22,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
   const { language, t } = useLanguage();
   const [showMonthly, setShowMonthly] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Force refresh data when component mounts
   useEffect(() => {
@@ -29,16 +30,37 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     clearClearSkyRateCache(latitude, longitude);
   }, [latitude, longitude]);
   
-  const { data: clearSkyData, isLoading } = useQuery({
+  const { data: clearSkyData, isLoading, isFetching } = useQuery({
     queryKey: ['clearSkyRate', latitude, longitude, refreshKey],
     queryFn: () => fetchClearSkyRate(latitude, longitude),
     staleTime: 24 * 60 * 60 * 1000, // Cache for 24 hours
   });
 
+  // Reset refresh state when fetching completes
+  useEffect(() => {
+    if (!isFetching && isRefreshing) {
+      setIsRefreshing(false);
+    }
+  }, [isFetching]);
+
   const annualRate = clearSkyData?.annualRate || 0;
   const clearNightsPerYear = Math.round((annualRate / 100) * 365);
   const monthlyRates = clearSkyData?.monthlyRates || {};
   const dataSource = clearSkyData?.source || '';
+
+  // Determine the best viewing months
+  const getBestMonths = (): string => {
+    if (!monthlyRates || Object.keys(monthlyRates).length === 0) return '';
+    
+    const sortedMonths = Object.entries(monthlyRates)
+      .sort(([, rateA], [, rateB]) => rateB - rateA)
+      .slice(0, 3)
+      .map(([month]) => month);
+    
+    return language === 'en' 
+      ? `Best months: ${sortedMonths.join(', ')}`
+      : `最佳月份: ${sortedMonths.join(', ')}`;
+  };
 
   // Get the sky rating text based on percentage
   const getSkyRating = (percentage: number): string => {
@@ -80,6 +102,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
 
   // Handle refresh button click
   const handleRefresh = () => {
+    setIsRefreshing(true);
     clearClearSkyRateCache(latitude, longitude);
     setRefreshKey(prev => prev + 1);
   };
@@ -105,14 +128,10 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                 <TooltipTrigger asChild>
                   <button 
                     onClick={handleRefresh}
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    disabled={isRefreshing}
+                    className="text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
-                      <path d="M3 2v6h6"></path>
-                      <path d="M21 12A9 9 0 0 0 6 5.3L3 8"></path>
-                      <path d="M21 22v-6h-6"></path>
-                      <path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path>
-                    </svg>
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -145,16 +164,24 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="animate-pulse bg-cosmic-800/50 h-6 w-full rounded" />
+        {isLoading || isRefreshing ? (
+          <div className="animate-pulse space-y-2">
+            <div className="bg-cosmic-800/50 h-6 w-full rounded" />
+            <div className="bg-cosmic-800/50 h-4 w-3/4 rounded" />
+          </div>
         ) : showMonthly ? (
-          <div className="grid grid-cols-3 gap-1 text-xs mt-2">
-            {Object.entries(monthlyRates).map(([month, rate]) => (
-              <div key={month} className="flex items-center justify-between">
-                <span>{getMonthName(month)}:</span>
-                <span className={getRateColor(rate)}>{rate}%</span>
-              </div>
-            ))}
+          <div>
+            <div className="grid grid-cols-3 gap-1 text-xs mt-2">
+              {Object.entries(monthlyRates).map(([month, rate]) => (
+                <div key={month} className="flex items-center justify-between">
+                  <span>{getMonthName(month)}:</span>
+                  <span className={getRateColor(rate)}>{rate}%</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {getBestMonths()}
+            </div>
           </div>
         ) : (
           <div className="mt-1">
@@ -174,6 +201,10 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 text-xs text-muted-foreground">
               {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
+            </div>
+            
+            <div className="mt-1 text-xs text-muted-foreground">
+              {getBestMonths()}
             </div>
           </div>
         )}
