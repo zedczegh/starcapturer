@@ -1,11 +1,27 @@
 
 // This file serves as an index for all dynamic weather icons
-export { default as DynamicMoonIcon } from './icons/DynamicMoonIcon';
-export { default as DynamicSunIcon } from './icons/DynamicSunIcon';
-export { default as DynamicCloudCoverIcon } from './icons/DynamicCloudCoverIcon';
-export { default as DynamicLightbulbIcon } from './icons/DynamicLightbulbIcon';
-export { default as DynamicHumidityIcon } from './icons/DynamicHumidityIcon';
-export { default as DynamicWindIcon } from './icons/DynamicWindIcon';
-export { default as DynamicTemperatureIcon } from './icons/DynamicTemperatureIcon';
-export { default as DynamicSeeingIcon } from './icons/DynamicSeeingIcon';
-export { default as DynamicPrecipitationIcon } from './icons/DynamicPrecipitationIcon';
+// Importing and re-exporting from DynamicIcons.ts to maintain backward compatibility
+import {
+  DynamicMoonIcon,
+  DynamicSunIcon,
+  DynamicCloudCoverIcon,
+  DynamicLightbulbIcon,
+  DynamicHumidityIcon,
+  DynamicWindIcon,
+  DynamicTemperatureIcon,
+  DynamicSeeingIcon,
+  DynamicPrecipitationIcon
+} from "./DynamicIcons";
+
+// Re-export all components
+export {
+  DynamicMoonIcon,
+  DynamicSunIcon,
+  DynamicCloudCoverIcon,
+  DynamicLightbulbIcon,
+  DynamicHumidityIcon,
+  DynamicWindIcon,
+  DynamicTemperatureIcon,
+  DynamicSeeingIcon,
+  DynamicPrecipitationIcon
+};

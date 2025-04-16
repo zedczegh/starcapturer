@@ -7,6 +7,7 @@ import DynamicHumidityIcon from './icons/DynamicHumidityIcon';
 import DynamicWindIcon from './icons/DynamicWindIcon';
 import DynamicTemperatureIcon from './icons/DynamicTemperatureIcon';
 import DynamicPrecipitationIcon from './icons/DynamicPrecipitationIcon';
+import DynamicSeeingIcon from './icons/DynamicSeeingIcon';
 
 // Export all components
 export {
@@ -16,5 +17,6 @@ export {
   DynamicHumidityIcon,
   DynamicWindIcon,
   DynamicTemperatureIcon,
-  DynamicPrecipitationIcon
+  DynamicPrecipitationIcon,
+  DynamicSeeingIcon
 };
