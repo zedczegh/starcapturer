@@ -56,7 +56,7 @@ export const usePhotoPointsMap = ({
     // Create a Map to store unique locations
     const locationMap = new Map<string, SharedAstroSpot>();
     
-    // First, add all certified locations
+    // First, add all certified locations (regardless of distance)
     allCertifiedLocations.forEach(loc => {
       if (loc.latitude && loc.longitude) {
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -86,7 +86,7 @@ export const usePhotoPointsMap = ({
   
   console.log("Combined locations length:", combinedLocations().length);
   
-  // Use the location processing hook
+  // Use the location processing hook without distance filtering for certified locations
   const { processedLocations } = useMapLocations({
     userLocation,
     locations: combinedLocations(),

@@ -51,6 +51,13 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
           setCertifiedLocations(locations);
           setLoadingProgress(100);
           setIsLoading(false);
+          
+          // Cache locations for future use (with no filtering)
+          try {
+            localStorage.setItem('cachedCertifiedLocations', JSON.stringify(locations));
+          } catch (e) {
+            console.error("Error caching certified locations:", e);
+          }
         }
       } catch (error) {
         console.error("Error loading certified locations:", error);
@@ -103,6 +110,13 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
       setCertifiedLocations(freshLocations);
       setLoadingProgress(100);
       setIsLoading(false);
+      
+      // Update cache with fresh locations
+      try {
+        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(freshLocations));
+      } catch (e) {
+        console.error("Error caching certified locations:", e);
+      }
     } catch (error) {
       console.error("Error refreshing certified locations:", error);
       setIsError(true);

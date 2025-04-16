@@ -4,7 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointCard from './PhotoPointCard';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import { updateCertifiedLocationsWithSiqs } from '@/services/realTimeSiqsService/certifiedLocationService';
 
 interface LocationsListProps {
   locations: SharedAstroSpot[];
@@ -21,23 +21,20 @@ const LocationsList: React.FC<LocationsListProps> = ({
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Update locations with real-time SIQS - no distance filtering
+  // Update locations with real-time SIQS - no distance filtering for certified locations
   useEffect(() => {
     if (locations.length > 0) {
       const updateWithSiqs = async () => {
         try {
-          // Always process ALL locations without distance filtering
-          // This is critical for displaying certified locations
-          const updated = await updateLocationsWithRealTimeSiqs(
+          // Use specialized certified locations update service
+          const updated = await updateCertifiedLocationsWithSiqs(
             locations,
-            null, 
-            100000,
-            'certified'
+            2 // Low parallelism to avoid rate limiting
           );
-          console.log(`LocationsList: Enhanced ${updated.length} locations with SIQS data`);
+          console.log(`LocationsList: Enhanced ${updated.length} certified locations with SIQS data`);
           setEnhancedLocations(updated);
         } catch (err) {
-          console.error("Error updating locations with real-time SIQS:", err);
+          console.error("Error updating certified locations with real-time SIQS:", err);
           setEnhancedLocations(locations);
         }
       };

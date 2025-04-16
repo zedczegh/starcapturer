@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import LocationView from './location-display/LocationView';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
-import { useCertifiedLocationsFilter } from '@/hooks/photoPoints/useCertifiedLocationsFilter';
+import { matchesCertificationType } from '@/utils/certificationUtils';
 
 interface DarkSkyLocationsProps {
   locations: SharedAstroSpot[];
@@ -20,8 +20,20 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedCertificationType, setSelectedCertificationType] = useState<CertificationType>('all');
   
-  // Use custom hook for filtering certified locations
-  const { filteredLocations } = useCertifiedLocationsFilter(locations, selectedCertificationType);
+  // Filter certified locations based on certification type, without distance filtering
+  const filteredLocations = React.useMemo(() => {
+    if (!Array.isArray(locations)) return [];
+    
+    console.log(`Filtering ${locations.length} certified locations by type: ${selectedCertificationType}`);
+    
+    if (selectedCertificationType === 'all') {
+      return locations;
+    }
+    
+    return locations.filter(location => 
+      matchesCertificationType(location, selectedCertificationType)
+    );
+  }, [locations, selectedCertificationType]);
   
   return (
     <div>

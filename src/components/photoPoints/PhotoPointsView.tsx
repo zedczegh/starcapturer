@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -55,7 +54,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   
   const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
   
-  // For calculated view - filter by distance
+  // For calculated view - filter by distance, certified view - show all
   const filteredCalculatedLocations = React.useMemo(() => {
     if (!effectiveLocation) return calculatedLocations;
     
@@ -65,6 +64,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
       // Skip distance filtering for certified locations
       if (loc.isDarkSkyReserve || loc.certification) return true;
       
+      // Calculate distance if not already set
       const distance = loc.distance || calculateDistance(
         effectiveLocation.latitude,
         effectiveLocation.longitude,
@@ -72,10 +72,16 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
         loc.longitude
       );
       
+      // Only include locations within current radius
       return distance <= calculatedSearchRadius;
     });
   }, [calculatedLocations, effectiveLocation, calculatedSearchRadius]);
   
+  // When in certified view, don't filter by distance - show all certified locations globally
+  const displayedCertifiedLocations = React.useMemo(() => {
+    return certifiedLocations;
+  }, [certifiedLocations]);
+
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && onLocationClick) {
       const safeLocation = {
@@ -125,7 +131,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
         <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            locations={activeView === 'certified' ? displayedCertifiedLocations : filteredCalculatedLocations}
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
@@ -145,7 +151,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
         {activeView === 'certified' ? (
           <DarkSkyLocations
             key="certified-view"
-            locations={certifiedLocations}
+            locations={displayedCertifiedLocations}
             loading={loading}
             initialLoad={initialLoad}
           />
