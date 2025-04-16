@@ -6,7 +6,6 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { BackgroundProvider } from './contexts/BackgroundContext';
 import IndexPage from './pages/Index';
 import PhotoPointsNearby from './pages/PhotoPointsNearby';
 import NotFound from './pages/NotFound';
@@ -16,7 +15,6 @@ import LocationDetails from './pages/LocationDetails';
 import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
 import './App.css';
-import BackgroundSwitcher from './components/BackgroundSwitcher';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -34,23 +32,20 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <LanguageProvider>
-            <BackgroundProvider>
-              <Router>
-                <Routes>
-                  <Route path="/" element={<IndexPage />} />
-                  <Route path="/photo-points" element={<PhotoPointsNearby />} />
-                  <Route path="/about-siqs" element={<AboutSIQS />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/links" element={<UsefulLinks />} />
-                  <Route path="/useful-links" element={<UsefulLinks />} />
-                  <Route path="/share" element={<ShareLocation />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <BackgroundSwitcher />
-                <Toaster />
-              </Router>
-            </BackgroundProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<IndexPage />} />
+                <Route path="/photo-points" element={<PhotoPointsNearby />} />
+                <Route path="/about-siqs" element={<AboutSIQS />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/location/:id" element={<LocationDetails />} />
+                <Route path="/links" element={<UsefulLinks />} />
+                <Route path="/useful-links" element={<UsefulLinks />} />
+                <Route path="/share" element={<ShareLocation />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+            </Router>
           </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>

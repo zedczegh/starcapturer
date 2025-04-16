@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchPopularLocations } from '@/lib/queryPrefetcher';
@@ -8,13 +9,11 @@ import PhotoPointsSection from "@/components/index/PhotoPointsSection";
 import Footer from "@/components/index/Footer";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
-import { useBackground } from "@/contexts/BackgroundContext";
 
 const IndexPage = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
-  const { currentBackground } = useBackground();
   
   const { coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
@@ -92,19 +91,8 @@ const IndexPage = () => {
     updateCurrentSiqs();
   }, [queryClient]);
 
-  console.log("Using background image:", currentBackground);
-
   return (
     <div className="min-h-screen bg-cosmic-950">
-      <div 
-        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat z-0"
-        style={{ 
-          backgroundImage: `url(${currentBackground})`, 
-          backgroundAttachment: 'fixed', 
-          backgroundSize: 'cover' 
-        }}
-      />
-      
       <div className="fixed inset-0 bg-cosmic-950/70 z-0"></div>
       
       <div className="relative z-10">

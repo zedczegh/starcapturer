@@ -1,8 +1,8 @@
+
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { useBackground } from "@/contexts/BackgroundContext";
 
 // Create a global object to store the current SIQS value
 export const currentSiqsStore = {
@@ -60,7 +60,6 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 }) => {
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
-  const { currentBackground } = useBackground();
   
   // Define animations
   const containerVariants = {
@@ -99,16 +98,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
       id="calculator" 
       className="py-12 px-4 md:px-8 min-h-[calc(100vh-5rem)] flex flex-col justify-center relative overflow-hidden"
     >
-      {/* Background image with cosmic nebula - increased opacity for visibility */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 pointer-events-none"
-        style={{ 
-          backgroundImage: `url(${currentBackground})`,
-          backgroundAttachment: 'fixed'
-        }}
-      />
-      
-      {/* Gradient overlays for better text contrast */}
+      {/* Background with cosmic styling */}
       <div className="absolute inset-0 bg-cosmic-950/60 pointer-events-none" />
       <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-cosmic-950/90 to-transparent pointer-events-none" />
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-cosmic-950/90 to-transparent pointer-events-none" />
