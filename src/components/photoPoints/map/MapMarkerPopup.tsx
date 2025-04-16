@@ -31,8 +31,8 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
   // Determine if this is a certified location of any type
   const isCertified = location.isDarkSkyReserve || 
     (location.certification && location.certification !== '') || 
-    location.type === 'lodging' || 
-    location.type === 'dark-site';
+    (location.type === 'lodging') || 
+    (location.type === 'dark-site');
   
   // Get certification text safely
   const certificationText = location.certification || 

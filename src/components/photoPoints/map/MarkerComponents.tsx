@@ -51,12 +51,10 @@ const LocationMarker = memo(({
   const [siqsLoading, setSiqsLoading] = useState(false);
   
   const displayName = useMemo(() => {
-    // Always prioritize Chinese name in Chinese language mode
     if (language === 'zh' && location.chineseName) {
       return location.chineseName;
     }
     
-    // Fallback to regular name or placeholder
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
@@ -189,7 +187,6 @@ const LocationMarker = memo(({
     return null;
   }
   
-  // Determine if this is a certified location that should show real-time SIQS
   const shouldShowRealTimeSiqs = isCertified || 
     location.isDarkSkyReserve || 
     location.certification || 
@@ -200,7 +197,7 @@ const LocationMarker = memo(({
     <>
       <RealTimeSiqsFetcher
         isVisible={isHovered}
-        showRealTimeSiqs={shouldShowRealTimeSiqs}
+        showRealTimeSiqs={Boolean(shouldShowRealTimeSiqs)}
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}

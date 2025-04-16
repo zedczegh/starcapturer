@@ -27,16 +27,16 @@ export async function updateCertifiedLocationsWithSiqs(
   const certifiedLocations = locations.filter(loc => 
     loc.isDarkSkyReserve || 
     (loc.certification && loc.certification !== '') || 
-    loc.type === 'lodging' || 
-    loc.type === 'dark-site'
+    (loc.type === 'lodging' && loc.type) || 
+    (loc.type === 'dark-site' && loc.type)
   );
   
   // Keep non-certified locations untouched
   const nonCertifiedLocations = locations.filter(loc => 
     !(loc.isDarkSkyReserve || 
       (loc.certification && loc.certification !== '') || 
-      loc.type === 'lodging' || 
-      loc.type === 'dark-site')
+      (loc.type === 'lodging' && loc.type) || 
+      (loc.type === 'dark-site' && loc.type))
   );
   
   if (certifiedLocations.length === 0) {

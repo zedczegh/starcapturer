@@ -66,5 +66,6 @@ declare module "@/types/weather" {
     }>;
     certification?: string;
     isDarkSkyReserve?: boolean;
+    type?: string; // Adding the missing 'type' property
   }
 }
