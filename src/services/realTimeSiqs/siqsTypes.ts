@@ -16,6 +16,10 @@ export interface SiqsResult {
       clearSky: boolean;
       lightPollution: boolean;
     };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
   };
 }
 
@@ -52,6 +56,21 @@ export interface MoonPhaseInfo {
   illumination: number;
   name: string;
   isGoodForAstronomy: boolean;
+}
+
+// Add SiqsFactor back since it's used in other files
+export interface SiqsFactor {
+  name: string;
+  score: number;
+  description?: string;
+  nighttimeData?: any;
+}
+
+// Add SiqsCalculationOptions for API options
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  includeForecast?: boolean;
 }
 
 // Type for enhanced location data

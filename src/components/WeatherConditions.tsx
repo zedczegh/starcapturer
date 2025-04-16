@@ -7,7 +7,6 @@ import SecondaryConditions from "@/components/weather/SecondaryConditions";
 import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
-import NighttimeCloudInfo from "@/components/weather/NighttimeCloudInfo";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
@@ -183,11 +182,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             </motion.div>
           </div>
           
-          {nighttimeCloudData && nighttimeCloudData.average !== null && (
-            <motion.div variants={itemVariants} className="mt-4">
-              <NighttimeCloudInfo nighttimeCloudData={nighttimeCloudData} />
-            </motion.div>
-          )}
+          {/* Removed NighttimeCloudInfo component as requested */}
         </CardContent>
       </Card>
     </motion.div>

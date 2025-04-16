@@ -3,7 +3,7 @@ import React from 'react';
 import { Clock, CloudMoon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateMoonPhase, getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
+import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
 import {
   Tooltip,
@@ -19,6 +19,8 @@ interface MoonlessNightDisplayProps {
 
 const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, longitude }) => {
   const { t } = useLanguage();
+  
+  // Use our advanced moon phase algorithm to get moon info
   const { isGoodForAstronomy, name: moonPhaseName } = getMoonInfo();
   
   // Get moonless night information
