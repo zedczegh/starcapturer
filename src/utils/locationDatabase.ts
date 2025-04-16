@@ -3,6 +3,7 @@ import { LocationEntry } from '@/data/locationDatabase';
 import { findClosestLocationImpl, getLocationInfoImpl } from './locationFinder';
 import { calculateDistance, degToRad } from '@/utils/geoUtils';
 import { getBortleScaleDescription, getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
+import { quickLocationDatabase } from './quickLocationDatabase';
 
 /**
  * Find the closest location to given coordinates
@@ -14,7 +15,7 @@ export function findClosestLocation(latitude: number, longitude: number): {
   type?: string;
 } {
   try {
-    return findClosestLocationImpl(latitude, longitude, locationDatabase);
+    return findClosestLocationImpl(latitude, longitude, quickLocationDatabase);
   } catch (error) {
     console.error("Error finding closest location:", error);
     return {
@@ -34,7 +35,7 @@ export function getLocationInfo(latitude: number, longitude: number): {
   formattedName: string;
 } {
   try {
-    return getLocationInfoImpl(latitude, longitude, locationDatabase);
+    return getLocationInfoImpl(latitude, longitude, quickLocationDatabase);
   } catch (error) {
     console.error("Error getting location info:", error);
     return {
