@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
           ui: ['@/components/ui'],
+          vendor: ['suncalc'],
         }
       }
     },
@@ -32,6 +33,7 @@ export default defineConfig(({ mode }) => ({
     copyPublicDir: true, // Ensures public directory is copied to dist
   },
   optimizeDeps: {
-    exclude: ['lovable-tagger']
+    exclude: ['lovable-tagger'],
+    include: ['suncalc'],
   }
 }));
