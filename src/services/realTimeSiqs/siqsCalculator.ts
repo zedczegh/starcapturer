@@ -76,10 +76,7 @@ export async function calculateRealTimeSiqs(
     // that adjusts based on local conditions
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherDataWithClearSky,
-      finalBortleScale,
-      3, // Default seeing conditions
-      moonPhase,
-      forecastData
+      finalBortleScale
     );
     
     // Apply intelligent adjustments based on multiple factors
