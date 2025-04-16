@@ -11,6 +11,8 @@ import {
 import { calculateMoonPhase } from "./moonPhaseCalculator";
 import { applyIntelligentAdjustments } from "./siqsAdjustments";
 import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
+import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions";
+import { findClosestEnhancedLocation } from "./enhancedLocationData";
 
 /**
  * Calculate real-time SIQS for a given location with enhanced accuracy
@@ -41,6 +43,18 @@ export async function calculateRealTimeSiqs(
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
+    // Check if this is a known enhanced location with special data
+    const enhancedLocation = findClosestEnhancedLocation(latitude, longitude);
+    if (enhancedLocation) {
+      console.log(`Found enhanced location data for ${enhancedLocation.name}`);
+    }
+    
+    // Check for specific climate region data
+    const climateRegion = findClimateRegion(latitude, longitude);
+    if (climateRegion) {
+      console.log(`Location is in climate region: ${climateRegion.name}`);
+    }
+    
     // Parallel data fetching with all available data sources for efficiency
     const [weatherData, forecastData, clearSkyData, extraData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
@@ -61,19 +75,29 @@ export async function calculateRealTimeSiqs(
       const [pollutionData] = extraData;
       // Use light pollution data or default to medium value
       finalBortleScale = pollutionData?.bortleScale || 5;
+      
+      // Use enhanced location data if available
+      if (enhancedLocation && enhancedLocation.bortleScale) {
+        finalBortleScale = enhancedLocation.bortleScale;
+        console.log(`Using enhanced location Bortle scale: ${finalBortleScale}`);
+      }
     }
     
-    // Prepare comprehensive weather data with all available sources
+    // Prepare comprehensive weather data with all available sources and coordinates
     const weatherDataWithClearSky: WeatherDataWithClearSky = { 
       ...weatherData,
-      clearSkyRate: clearSkyData?.annualRate
+      clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
+      latitude,
+      longitude,
+      _forecast: forecastData
     };
     
     // Get current moon phase
     const moonPhase = calculateMoonPhase();
     
     // Default seeing conditions (1-5 scale, lower is better)
-    const seeingConditions = 3;
+    // Use enhanced data if available
+    const seeingConditions = enhancedLocation && enhancedLocation.averageVisibility === 'excellent' ? 2 : 3;
     
     // Enhanced SIQS calculation with machine learning-inspired weighting
     // that adjusts based on local conditions
@@ -89,9 +113,22 @@ export async function calculateRealTimeSiqs(
     let adjustedScore = applyIntelligentAdjustments(
       siqsResult.score,
       weatherDataWithClearSky,
-      clearSkyData,
+      clearSkyData || (enhancedLocation ? { 
+        annualRate: enhancedLocation.clearSkyRate,
+        isDarkSkyReserve: enhancedLocation.isDarkSkyReserve
+      } : null),
       finalBortleScale
     );
+    
+    // Apply climate region adjustments if available
+    if (climateRegion) {
+      const month = new Date().getMonth();
+      const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
+      if (climateAdjustment !== 1.0) {
+        console.log(`Applying climate region adjustment: ${climateAdjustment.toFixed(2)}`);
+        adjustedScore *= climateAdjustment;
+      }
+    }
     
     // Cap the score at realistic values
     adjustedScore = Math.min(9.5, adjustedScore); // Never allow perfect 10
@@ -114,8 +151,8 @@ export async function calculateRealTimeSiqs(
         sources: {
           weather: true,
           forecast: !!forecastData,
-          clearSky: !!clearSkyData,
-          lightPollution: !!extraData[0]
+          clearSky: !!clearSkyData || !!enhancedLocation,
+          lightPollution: !!extraData[0] || !!enhancedLocation
         }
       }
     });
