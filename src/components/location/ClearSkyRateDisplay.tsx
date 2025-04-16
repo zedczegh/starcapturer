@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, Moon, Info, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
-import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';
+import { fetchClearSkyRate, clearClearSkyRateCache } from '@/lib/api/clearSkyRate';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Tooltip,
@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 
 interface ClearSkyRateDisplayProps {
   latitude: number;
@@ -20,9 +21,16 @@ interface ClearSkyRateDisplayProps {
 const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, longitude }) => {
   const { language, t } = useLanguage();
   const [showMonthly, setShowMonthly] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Force refresh data when component mounts
+  useEffect(() => {
+    // Clear cache for this location on first load
+    clearClearSkyRateCache(latitude, longitude);
+  }, [latitude, longitude]);
   
   const { data: clearSkyData, isLoading } = useQuery({
-    queryKey: ['clearSkyRate', latitude, longitude],
+    queryKey: ['clearSkyRate', latitude, longitude, refreshKey],
     queryFn: () => fetchClearSkyRate(latitude, longitude),
     staleTime: 24 * 60 * 60 * 1000, // Cache for 24 hours
   });
@@ -30,6 +38,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
   const annualRate = clearSkyData?.annualRate || 0;
   const clearNightsPerYear = Math.round((annualRate / 100) * 365);
   const monthlyRates = clearSkyData?.monthlyRates || {};
+  const dataSource = clearSkyData?.source || '';
 
   // Get the sky rating text based on percentage
   const getSkyRating = (percentage: number): string => {
@@ -69,6 +78,12 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     return 'text-red-400';
   };
 
+  // Handle refresh button click
+  const handleRefresh = () => {
+    clearClearSkyRateCache(latitude, longitude);
+    setRefreshKey(prev => prev + 1);
+  };
+
   return (
     <Card className="p-4 bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
       <div className="space-y-2">
@@ -84,27 +99,50 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             </div>
           </div>
           
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={() => setShowMonthly(!showMonthly)}
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {showMonthly ? (
-                    <Star className="w-4 h-4" />
-                  ) : (
-                    <Calendar className="w-4 h-4" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {showMonthly 
-                  ? t('Show annual statistics', '显示年度统计') 
-                  : t('Show monthly breakdown', '显示月度分布')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center space-x-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={handleRefresh}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
+                      <path d="M3 2v6h6"></path>
+                      <path d="M21 12A9 9 0 0 0 6 5.3L3 8"></path>
+                      <path d="M21 22v-6h-6"></path>
+                      <path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path>
+                    </svg>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('Refresh data', '刷新数据')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={() => setShowMonthly(!showMonthly)}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {showMonthly ? (
+                      <Star className="w-4 h-4" />
+                    ) : (
+                      <Calendar className="w-4 h-4" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {showMonthly 
+                    ? t('Show annual statistics', '显示年度统计') 
+                    : t('Show monthly breakdown', '显示月度分布')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {isLoading ? (
@@ -145,7 +183,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 cursor-help">
                 <Info className="w-3 h-3" />
-                <span>{t('Based on historical data', '基于历史数据')}</span>
+                <span>{dataSource || t('Based on historical data', '基于历史数据')}</span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
