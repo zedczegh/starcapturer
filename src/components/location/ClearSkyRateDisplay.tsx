@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Star, Moon, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -208,14 +207,13 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                 <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
                   {Object.entries(seasonalTrends).map(([season, data]) => {
-                    // Properly type the data
                     const seasonData = data as { clearSkyRate: number; averageTemperature: number };
                     return (
                       <div key={season} className="flex items-center justify-between">
                         <span>{t(season.charAt(0).toUpperCase() + season.slice(1), 
                               season === 'spring' ? '春季' : 
                               season === 'summer' ? '夏季' : 
-                              season === 'fall' ? '秋季' : '冬季')}:</span>
+                              season === 'fall' ? '秋季' : '冬季')}</span>
                         <span className={getRateColor(seasonData.clearSkyRate)}>
                           {seasonData.clearSkyRate}%
                         </span>

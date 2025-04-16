@@ -1,3 +1,4 @@
+
 import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
@@ -7,6 +8,7 @@ import { determineWeatherCondition } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ClearSkyRateDisplay from "./ClearSkyRateDisplay";
 import MoonlessNightDisplay from "./MoonlessNightDisplay";
+import ForecastTabs from "./ForecastTabs";
 
 interface LocationContentGridProps {
   locationData: any;

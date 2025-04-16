@@ -57,15 +57,15 @@ export async function calculateEnhancedRealTimeSiqs(
             ...correctedResult,
             metadata: {
               calculatedAt: new Date().toISOString(), // Ensure calculatedAt is present
-              reliability: {
-                score: reliability.confidenceScore,
-                issues: reliability.issues
-              },
               sources: correctedResult.metadata?.sources || {
                 weather: true,
                 forecast: false,
                 clearSky: false,
                 lightPollution: false
+              },
+              reliability: {
+                score: reliability.confidenceScore,
+                issues: reliability.issues
               }
             }
           };

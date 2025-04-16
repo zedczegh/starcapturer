@@ -44,7 +44,11 @@ export interface SiqsResult {
       forecast: boolean;
       clearSky: boolean;
       lightPollution: boolean;
-    }
+    };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
   }
 }
 
@@ -55,4 +59,11 @@ export interface MoonlessNightInfo {
   endTime: string;
   nextNewMoon: string;
   daysUntilNewMoon: number;
+}
+
+// Add the missing SiqsCalculationOptions interface
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  includeForecast?: boolean;
 }
