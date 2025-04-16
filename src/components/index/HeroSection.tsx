@@ -1,8 +1,8 @@
 
 import React, { useEffect, useRef } from "react";
-import StarryBackground from "./StarryBackground";
 import HeroContent from "./HeroContent";
 import NavBar from "@/components/NavBar";
+import BackgroundWrapper from "@/components/layout/BackgroundWrapper";
 
 const HeroSection: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -13,10 +13,8 @@ const HeroSection: React.FC = () => {
       (entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
-            // Only render animations when visible
             entry.target.classList.add('animate-active');
           } else {
-            // Pause animations when not visible
             entry.target.classList.remove('animate-active');
           }
         });
@@ -36,12 +34,13 @@ const HeroSection: React.FC = () => {
   }, []);
   
   return (
-    <div ref={sectionRef} className="relative overflow-hidden pt-16 pb-8">
-      <StarryBackground />
-      <NavBar />
-      <HeroContent />
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-cosmic-900 to-transparent z-10"></div>
-    </div>
+    <BackgroundWrapper>
+      <div ref={sectionRef} className="relative overflow-hidden pt-16 pb-8">
+        <NavBar />
+        <HeroContent />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-cosmic-900 to-transparent z-10"></div>
+      </div>
+    </BackgroundWrapper>
   );
 };
 
