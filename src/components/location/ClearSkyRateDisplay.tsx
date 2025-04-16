@@ -235,7 +235,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
         ) : (
           <div className="mt-1">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
                 <span className="text-2xl font-semibold">{clearNightsPerYear}</span>
                 <span className="text-sm text-muted-foreground">{t('nights', '晚')}</span>
               </div>
