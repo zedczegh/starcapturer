@@ -28,31 +28,34 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     locationCounter: null
   });
   
+  // Determine if this is a certified location of any type
+  const isCertified = location.isDarkSkyReserve || 
+    (location.certification && location.certification !== '') || 
+    location.type === 'lodging' || 
+    location.type === 'dark-site';
+  
+  // Get certification text safely
+  const certificationText = location.certification || 
+    (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
+      (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
+  
   return (
     <div className="p-3 min-w-[200px] max-w-[280px]">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
-        {/* Show SIQS badge */}
+        {/* Always show SIQS badge if available */}
         {location.siqs !== undefined && (
           <SiqsScoreBadge score={formatSiqsScore(location.siqs)} compact={true} />
         )}
-        
-        {/* Fallback SIQS badge if SiqsScoreBadge doesn't render */}
-        {location.siqs !== undefined && isSiqsGreaterThan(location.siqs, 0) && !location.isDarkSkyReserve && (
-          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full border border-yellow-500/40">
-            <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
-            <span className="text-xs font-medium">{formatSiqsScore(location.siqs)}</span>
-          </div>
-        )}
       </div>
       
-      {/* Show certification if available */}
-      {(location.certification || location.isDarkSkyReserve) && (
+      {/* Show certification for all certified location types */}
+      {isCertified && certificationText && (
         <div className="flex items-center mb-2 mt-1">
           <div className="flex items-center text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
             <Star className="h-3.5 w-3.5 mr-1" />
-            <span>{location.certification || t("Dark Sky Reserve", "暗夜天空保护区")}</span>
+            <span>{certificationText}</span>
           </div>
         </div>
       )}

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -190,11 +189,18 @@ const LocationMarker = memo(({
     return null;
   }
   
+  // Determine if this is a certified location that should show real-time SIQS
+  const shouldShowRealTimeSiqs = isCertified || 
+    location.isDarkSkyReserve || 
+    location.certification || 
+    (location.type === 'lodging') ||
+    (location.type === 'dark-site');
+  
   return (
     <>
       <RealTimeSiqsFetcher
         isVisible={isHovered}
-        showRealTimeSiqs={isCertified}
+        showRealTimeSiqs={shouldShowRealTimeSiqs}
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}

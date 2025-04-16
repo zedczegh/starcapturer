@@ -23,14 +23,20 @@ export async function updateCertifiedLocationsWithSiqs(
   
   console.log(`Updating ${locations.length} certified locations with real-time SIQS`);
   
-  // Filter only certified locations
+  // Filter only certified locations - expanded criteria to include all types of certified locations
   const certifiedLocations = locations.filter(loc => 
-    loc.isDarkSkyReserve || (loc.certification && loc.certification !== '')
+    loc.isDarkSkyReserve || 
+    (loc.certification && loc.certification !== '') || 
+    loc.type === 'lodging' || 
+    loc.type === 'dark-site'
   );
   
   // Keep non-certified locations untouched
   const nonCertifiedLocations = locations.filter(loc => 
-    !(loc.isDarkSkyReserve || (loc.certification && loc.certification !== ''))
+    !(loc.isDarkSkyReserve || 
+      (loc.certification && loc.certification !== '') || 
+      loc.type === 'lodging' || 
+      loc.type === 'dark-site')
   );
   
   if (certifiedLocations.length === 0) {
@@ -62,11 +68,17 @@ export async function updateCertifiedLocationsWithSiqs(
       }
       
       try {
+        // Use better Bortle scale values for certified locations
+        // Most dark sky sites have better Bortle scale
+        const effectiveBortleScale = location.bortleScale || 
+          (location.type === 'lodging' ? 3 : 
+            location.isDarkSkyReserve ? 2 : 3);
+        
         // Calculate real-time SIQS with priority for certified locations
         const result = await calculateRealTimeSiqs(
           location.latitude,
           location.longitude,
-          location.bortleScale || 3 // Most dark sky sites have better Bortle scale
+          effectiveBortleScale
         );
         
         // Cache the result with longer expiry
