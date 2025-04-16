@@ -79,7 +79,7 @@ export async function calculateRealTimeSiqs(
       finalBortleScale,
       3, // Default seeing conditions
       moonPhase,
-      forecastData // This is the cause of the error - the function only expects 2 arguments
+      forecastData
     );
     
     // Apply intelligent adjustments based on multiple factors
