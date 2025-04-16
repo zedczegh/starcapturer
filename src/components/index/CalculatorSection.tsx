@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { COSMIC_NEBULA_BG } from "@/assets/index";
+import { useBackground } from "@/contexts/BackgroundContext";
 
 // Create a global object to store the current SIQS value
 export const currentSiqsStore = {
@@ -61,6 +60,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 }) => {
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
+  const { currentBackground } = useBackground();
   
   // Define animations
   const containerVariants = {
@@ -103,7 +103,7 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 pointer-events-none"
         style={{ 
-          backgroundImage: `url(${COSMIC_NEBULA_BG})`,
+          backgroundImage: `url(${currentBackground})`,
           backgroundAttachment: 'fixed'
         }}
       />

@@ -2,10 +2,11 @@
 import React, { useEffect, useRef } from "react";
 import HeroContent from "./HeroContent";
 import NavBar from "@/components/NavBar";
-import { COSMIC_NEBULA_BG } from "@/assets/index";
+import { useBackground } from "@/contexts/BackgroundContext";
 
 const HeroSection: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const { currentBackground } = useBackground();
   
   // Optimize background animation to reduce CPU load
   useEffect(() => {
@@ -40,7 +41,7 @@ const HeroSection: React.FC = () => {
       {/* Add the cosmic nebula background with opacity */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 -z-10"
-        style={{ backgroundImage: `url(${COSMIC_NEBULA_BG})` }}
+        style={{ backgroundImage: `url(${currentBackground})` }}
       />
       <NavBar />
       <HeroContent />
