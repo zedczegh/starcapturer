@@ -1,9 +1,9 @@
+
 import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
 import LocationUpdater from "@/components/location/LocationUpdater";
-import { ClearSkyRate } from "@/components/location/ClearSkyRate";
 import { determineWeatherCondition } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -98,12 +98,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           siqsResult={locationData.siqsResult || null}
           weatherData={weatherData}
           locationData={locationData}
-        />
-
-        <ClearSkyRate
-          locationName={locationData.name}
-          latitude={locationData.latitude}
-          longitude={locationData.longitude}
         />
       </div>
       
