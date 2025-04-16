@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -55,7 +56,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 
   const getLocationId = () => {
     if (!point || !point.latitude || !point.longitude) return null;
-    return `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    return point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
   };
 
   const handleViewDetails = (e: React.MouseEvent) => {
@@ -66,19 +67,20 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     const locationId = getLocationId();
     if (!locationId) return;
     
+    // Ensure Chinese name is properly included in the navigation state
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
-        name: point.name,
-        chineseName: point.chineseName,
+        name: point.name || '',
+        chineseName: point.chineseName || '',
         latitude: point.latitude,
         longitude: point.longitude,
         bortleScale: point.bortleScale || 4,
         siqsResult: {
           score: point.siqs || 0
         },
-        certification: point.certification,
-        isDarkSkyReserve: point.isDarkSkyReserve,
+        certification: point.certification || '',
+        isDarkSkyReserve: !!point.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
         fromPhotoPoints: true
       }
@@ -92,7 +94,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     >
       <div className="flex items-center justify-between mb-1.5">
         <h4 className="font-medium text-sm line-clamp-1">
-          {displayName}
+          {displayName || (language === 'zh' && point.chineseName ? point.chineseName : point.name)}
         </h4>
         
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
@@ -114,7 +116,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">
-            {language === 'en' ? point.name : (point.chineseName || point.name)}
+            {language === 'zh' ? (point.name || '') : (point.chineseName || point.name || '')}
           </span>
         </div>
       )}
@@ -137,36 +139,27 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      <div className="flex justify-between items-center mt-2">
-        <div className="flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-sm text-muted-foreground font-medium">
+      {userLocation && point.latitude && point.longitude && (
+        <div className="mt-1.5 mb-2 flex items-center">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">
             {formatCardDistance(point.distance)}
           </span>
         </div>
-        
-        <div className="flex items-center">
-          <LightPollutionIndicator 
-            bortleScale={point.bortleScale || 4} 
-            size="sm" 
-            showBortleNumber={true}
-            className="text-xs"
-          />
-        </div>
-      </div>
+      )}
       
       <div className="mt-3 flex justify-end">
         <Button 
-          size="sm" 
-          variant="ghost" 
-          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary/90 hover:text-primary"
+          variant="ghost"
+          size="sm"
           onClick={handleViewDetails}
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
         >
-          {t("View", "查看")}
+          {t("View Details", "查看详情")}
         </Button>
       </div>
     </div>
   );
 };
 
-export default React.memo(PhotoPointCard);
+export default PhotoPointCard;

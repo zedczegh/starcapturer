@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -51,9 +52,13 @@ const LocationMarker = memo(({
   const [siqsLoading, setSiqsLoading] = useState(false);
   
   const displayName = useMemo(() => {
-    return language === 'zh' && location.chineseName 
-      ? location.chineseName 
-      : location.name || t("Unnamed Location", "未命名位置");
+    // Always prioritize Chinese name in Chinese language mode
+    if (language === 'zh' && location.chineseName) {
+      return location.chineseName;
+    }
+    
+    // Fallback to regular name or placeholder
+    return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
   const siqsScore = useMemo(() => {
@@ -143,7 +148,7 @@ const LocationMarker = memo(({
     navigate(`/location/${locationId}`, { 
       state: navigationData 
     });
-  }, [location, navigate]);
+  }, [location, navigate, siqsScore]);
   
   const handleClick = useCallback(() => {
     onClick(location);

@@ -62,14 +62,14 @@ const LocationCard: React.FC<LocationCardProps> = ({
   
   // Create a location object that fully matches SharedAstroSpot interface
   const locationObj = {
-    id,  // Add the id from props
+    id,  
     name,
     chineseName,
     latitude,
     longitude,
-    bortleScale, // Add the bortleScale from props
+    bortleScale, 
     certification,
-    timestamp,  // Add the timestamp from props
+    timestamp,  
   };
 
   // Use the shared display name resolver
@@ -148,14 +148,18 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
+              <h3 className="font-semibold text-lg line-clamp-1">
+                {/* Use language-based name selection with fallbacks */}
+                {language === 'zh' && chineseName ? chineseName : displayName || name}
+              </h3>
               
-              {/* Show original name if different from the nearest town name */}
-              {showOriginalName && (
+              {/* Show original name in other language as secondary text */}
+              {((language === 'zh' && name && chineseName && name !== chineseName) || 
+                (language === 'en' && chineseName)) && (
                 <div className="flex items-center text-sm text-muted-foreground mt-1">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
                   <span>
-                    {language === 'zh' ? name : name}
+                    {language === 'zh' ? name : chineseName}
                   </span>
                 </div>
               )}
