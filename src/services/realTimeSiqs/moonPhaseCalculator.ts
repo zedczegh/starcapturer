@@ -148,3 +148,110 @@ export function getMoonInfo(): {
     isGoodForAstronomy
   };
 }
+
+/**
+ * Calculate moonrise and moonset times for a specific location
+ * 
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Object with moonrise and moonset times
+ */
+export function calculateMoonriseMoonsetTimes(
+  latitude: number,
+  longitude: number
+): { moonrise: string; moonset: string } {
+  // Get current phase
+  const phase = calculateMoonPhase();
+  const now = new Date();
+  
+  // Base calculations that factor in moon phase, latitude, and time of year
+  // - New moon rises and sets with the sun
+  // - Full moon rises at sunset, sets at sunrise
+  
+  // Get current date info
+  const month = now.getMonth();
+  const isWinter = (month >= 9 || month <= 2); // Oct to Mar is winter-ish
+  
+  // Estimate sunset/sunrise times based on season
+  let sunriseHour = isWinter ? 7 : 6;
+  let sunsetHour = isWinter ? 17 : 20;
+  
+  // Adjust for latitude - higher latitudes have more extreme day/night variation
+  const latitudeAdjustment = Math.abs(latitude) / 15; // 0 to 6 hours adjustment
+  if (Math.abs(latitude) > 23.5) { // Only adjust significantly beyond tropics
+    if (isWinter) {
+      // Winter: later sunrise, earlier sunset at high latitudes
+      sunriseHour += latitudeAdjustment * (latitude > 0 ? 1 : -1);
+      sunsetHour -= latitudeAdjustment * (latitude > 0 ? 1 : -1);
+    } else {
+      // Summer: earlier sunrise, later sunset at high latitudes
+      sunriseHour -= latitudeAdjustment * (latitude > 0 ? 1 : -1);
+      sunsetHour += latitudeAdjustment * (latitude > 0 ? 1 : -1);
+    }
+  }
+  
+  // Normalize hours to reasonable range
+  sunriseHour = Math.max(4, Math.min(9, sunriseHour));
+  sunsetHour = Math.max(17, Math.min(22, sunsetHour));
+  
+  // Calculate moonrise and moonset based on phase
+  let moonriseHour, moonsetHour;
+  
+  // New Moon - rises and sets with the sun
+  if (phase < 0.05 || phase > 0.95) {
+    moonriseHour = sunriseHour;
+    moonsetHour = sunsetHour;
+  } 
+  // Waxing Crescent - rises after sunrise, sets after sunset
+  else if (phase < 0.25) {
+    moonriseHour = sunriseHour + 3 + (phase * 12);
+    moonsetHour = sunsetHour + 3 + (phase * 12);
+  }
+  // First Quarter - rises around noon, sets around midnight
+  else if (phase < 0.30) {
+    moonriseHour = 12;
+    moonsetHour = 24;
+  }
+  // Waxing Gibbous - rises in afternoon, sets after midnight
+  else if (phase < 0.45) {
+    moonriseHour = 14 + ((phase - 0.3) * 12);
+    moonsetHour = 2 + ((phase - 0.3) * 12);
+  }
+  // Full Moon - rises at sunset, sets at sunrise
+  else if (phase < 0.55) {
+    moonriseHour = sunsetHour;
+    moonsetHour = sunriseHour + 24; // next day
+  }
+  // Waning Gibbous - rises after sunset, sets after sunrise
+  else if (phase < 0.70) {
+    moonriseHour = sunsetHour + 2 + ((phase - 0.55) * 8);
+    moonsetHour = sunriseHour + 2 + ((phase - 0.55) * 8) + 12;
+  }
+  // Last Quarter - rises around midnight, sets around noon
+  else if (phase < 0.80) {
+    moonriseHour = 24;
+    moonsetHour = 12 + 24; // noon next day
+  }
+  // Waning Crescent - rises in early morning, sets in afternoon
+  else {
+    moonriseHour = 3 + ((phase - 0.8) * 20);
+    moonsetHour = 15 + ((phase - 0.8) * 20);
+  }
+  
+  // Format times
+  const formatTime = (hour: number) => {
+    const hourInt = Math.floor(hour % 24);
+    const minutes = Math.round((hour % 1) * 60);
+    
+    // Create a date object for proper formatting
+    const date = new Date();
+    date.setHours(hourInt, minutes, 0, 0);
+    
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  return {
+    moonrise: formatTime(moonriseHour),
+    moonset: formatTime(moonsetHour)
+  };
+}

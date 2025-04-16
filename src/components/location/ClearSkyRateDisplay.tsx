@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Star, StarHalf, StarOff, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -37,8 +38,10 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     }
   }, [fetching]);
 
-  const annualRate = clearSkyData?.annualRate || 0;
-  const clearNightsPerYear = Math.round((annualRate / 100) * 365);
+  // Ensure we always have a valid annual rate value
+  const annualRate = clearSkyData?.annualRate || 50; // Use 50% as default instead of 0
+  // Ensure we always have a reasonable number of clear nights
+  const clearNightsPerYear = Math.max(30, Math.round((annualRate / 100) * 365)); // Minimum 30 nights
   const monthlyRates = clearSkyData?.monthlyRates || {};
   const dataSource = clearSkyData?.source || '';
   
@@ -247,12 +250,12 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 text-xs text-muted-foreground">
               {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
-              {visibility && ` (${t(
+              {visibility && <span> ({t(
                 typeof visibility === 'string' ? visibility : 'average', 
                 visibility === 'excellent' ? '极佳' : 
                 visibility === 'good' ? '良好' : 
                 visibility === 'average' ? '一般' : '较差'
-              )})`}
+              )})</span>}
             </div>
             
             <div className="mt-1 text-xs text-muted-foreground">

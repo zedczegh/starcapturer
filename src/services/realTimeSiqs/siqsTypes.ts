@@ -52,16 +52,18 @@ export interface SiqsResult {
   }
 }
 
-// Add new interface for moonless night calculations
+// Interface for moonless night calculations
 export interface MoonlessNightInfo {
   duration: number;  // Duration in hours
   startTime: string;
   endTime: string;
   nextNewMoon: string;
   daysUntilNewMoon: number;
+  moonrise: string;
+  moonset: string;
 }
 
-// Add the missing SiqsCalculationOptions interface
+// Add the SiqsCalculationOptions interface for API options
 export interface SiqsCalculationOptions {
   anomalyDetection?: boolean;
   includeMetadata?: boolean;
