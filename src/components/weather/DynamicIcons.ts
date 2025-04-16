@@ -1,6 +1,7 @@
 
 // Export all dynamic icons from a single file
 import DynamicMoonIcon from './icons/DynamicMoonIcon';
+import DynamicSunIcon from './icons/DynamicSunIcon';
 import DynamicLightbulbIcon from './icons/DynamicLightbulbIcon';
 import DynamicCloudCoverIcon from './icons/DynamicCloudCoverIcon';
 import DynamicHumidityIcon from './icons/DynamicHumidityIcon';
@@ -12,6 +13,7 @@ import DynamicSeeingIcon from './icons/DynamicSeeingIcon';
 // Export all components
 export {
   DynamicMoonIcon,
+  DynamicSunIcon,
   DynamicLightbulbIcon,
   DynamicCloudCoverIcon,
   DynamicHumidityIcon,
