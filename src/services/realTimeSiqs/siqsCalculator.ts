@@ -7,7 +7,7 @@ import {
   getCachedSiqs,
   setSiqsCache
 } from "./siqsCache";
-import { detectWaterLocation } from '@/utils/waterDetection/enhancedWaterDetector';
+import { detectWaterLocationAsync } from '@/utils/waterDetection/enhancedWaterDetector';
 
 interface WeatherDataWithClearSky extends Record<string, any> {
   cloudCover: number;
@@ -33,7 +33,7 @@ export async function calculateRealTimeSiqs(
     return { siqs: 0, isViable: false };
   }
   
-  const waterDetection = detectWaterLocation(latitude, longitude);
+  const waterDetection = await detectWaterLocationAsync(latitude, longitude);
   if (waterDetection.isWater && waterDetection.confidence > 0.9) {
     console.log(`Location at ${latitude}, ${longitude} detected as water (${waterDetection.source}) with ${waterDetection.confidence} confidence`);
     return { siqs: 0, isViable: false };
