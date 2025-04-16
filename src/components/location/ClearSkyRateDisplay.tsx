@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Star, Moon, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { fetchClearSkyRate, clearClearSkyRateCache } from '@/lib/api/clearSkyRate';
+import { useWeatherDataIntegration } from '@/hooks/useWeatherDataIntegration';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Tooltip,
@@ -21,35 +19,41 @@ interface ClearSkyRateDisplayProps {
 const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, longitude }) => {
   const { language, t } = useLanguage();
   const [showMonthly, setShowMonthly] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Force refresh data when component mounts
-  useEffect(() => {
-    // Clear cache for this location on first load
-    clearClearSkyRateCache(latitude, longitude);
-  }, [latitude, longitude]);
-  
-  const { data: clearSkyData, isLoading, isFetching } = useQuery({
-    queryKey: ['clearSkyRate', latitude, longitude, refreshKey],
-    queryFn: () => fetchClearSkyRate(latitude, longitude),
-    staleTime: 24 * 60 * 60 * 1000, // Cache for 24 hours
+  const { 
+    clearSkyData, 
+    historicalData,
+    loading, 
+    fetching, 
+    refresh,
+    isCertifiedLocation
+  } = useWeatherDataIntegration(latitude, longitude, {
+    includeHistoricalData: true
   });
 
-  // Reset refresh state when fetching completes
   useEffect(() => {
-    if (!isFetching && isRefreshing) {
+    if (!fetching && isRefreshing) {
       setIsRefreshing(false);
     }
-  }, [isFetching]);
+  }, [fetching]);
 
   const annualRate = clearSkyData?.annualRate || 0;
   const clearNightsPerYear = Math.round((annualRate / 100) * 365);
   const monthlyRates = clearSkyData?.monthlyRates || {};
   const dataSource = clearSkyData?.source || '';
+  
+  const seasonalTrends = historicalData?.seasonalTrends;
+  const clearestMonths = historicalData?.clearestMonths || [];
+  const visibility = historicalData?.visibility;
 
-  // Determine the best viewing months
   const getBestMonths = (): string => {
+    if (clearestMonths && clearestMonths.length > 0) {
+      return language === 'en'
+        ? `Best months: ${clearestMonths.join(', ')}`
+        : `最佳月份: ${clearestMonths.join(', ')}`;
+    }
+    
     if (!monthlyRates || Object.keys(monthlyRates).length === 0) return '';
     
     const sortedMonths = Object.entries(monthlyRates)
@@ -62,7 +66,6 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
       : `最佳月份: ${sortedMonths.join(', ')}`;
   };
 
-  // Get the sky rating text based on percentage
   const getSkyRating = (percentage: number): string => {
     if (percentage >= 75) return t('Excellent', '极好');
     if (percentage >= 60) return t('Very Good', '很好');
@@ -71,7 +74,6 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     return t('Poor', '较差');
   };
 
-  // Map months to localized names
   const getMonthName = (monthKey: string): string => {
     const monthMap: Record<string, [string, string]> = {
       'Jan': ['January', '一月'],
@@ -91,7 +93,6 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     return language === 'en' ? monthMap[monthKey][0] : monthMap[monthKey][1];
   };
 
-  // Get color based on clear sky rate
   const getRateColor = (rate: number): string => {
     if (rate >= 75) return 'text-green-400';
     if (rate >= 60) return 'text-blue-400';
@@ -100,11 +101,23 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     return 'text-red-400';
   };
 
-  // Handle refresh button click
   const handleRefresh = () => {
     setIsRefreshing(true);
-    clearClearSkyRateCache(latitude, longitude);
-    setRefreshKey(prev => prev + 1);
+    refresh();
+  };
+
+  const getCertifiedStatusDescription = () => {
+    if (!isCertifiedLocation) return '';
+    
+    if (clearSkyData?.isDarkSkyReserve) {
+      return t('Official Dark Sky Reserve', '官方暗夜天空保护区');
+    }
+    
+    if (clearSkyData?.certification) {
+      return clearSkyData.certification;
+    }
+    
+    return '';
   };
 
   return (
@@ -119,6 +132,12 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
               <h3 className="text-sm font-medium">
                 {t('Clear Nights Per Year', '年度晴朗夜晚')}
               </h3>
+              
+              {isCertifiedLocation && (
+                <div className="text-xs text-primary">
+                  {getCertifiedStatusDescription()}
+                </div>
+              )}
             </div>
           </div>
           
@@ -164,7 +183,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
           </div>
         </div>
 
-        {isLoading || isRefreshing ? (
+        {loading || isRefreshing ? (
           <div className="animate-pulse space-y-2">
             <div className="bg-cosmic-800/50 h-6 w-full rounded" />
             <div className="bg-cosmic-800/50 h-4 w-3/4 rounded" />
@@ -182,6 +201,25 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             <div className="mt-2 text-xs text-muted-foreground">
               {getBestMonths()}
             </div>
+            
+            {isCertifiedLocation && seasonalTrends && (
+              <div className="mt-2 border-t border-cosmic-700/50 pt-2">
+                <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {Object.entries(seasonalTrends).map(([season, data]) => (
+                    <div key={season} className="flex items-center justify-between">
+                      <span>{t(season.charAt(0).toUpperCase() + season.slice(1), 
+                            season === 'spring' ? '春季' : 
+                            season === 'summer' ? '夏季' : 
+                            season === 'fall' ? '秋季' : '冬季')}:</span>
+                      <span className={getRateColor((data as any).clearSkyRate)}>
+                        {(data as any).clearSkyRate}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-1">
@@ -201,11 +239,21 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 text-xs text-muted-foreground">
               {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
+              {visibility && ` (${t(visibility, 
+                                    visibility === 'excellent' ? '极佳' : 
+                                    visibility === 'good' ? '良好' : 
+                                    visibility === 'average' ? '一般' : '较差')})`}
             </div>
             
             <div className="mt-1 text-xs text-muted-foreground">
               {getBestMonths()}
             </div>
+            
+            {isCertifiedLocation && historicalData?.annualPrecipitationDays && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                {t('Average Precipitation:', '平均降水:')} {historicalData.annualPrecipitationDays} {t('days/year', '天/年')}
+              </div>
+            )}
           </div>
         )}
         
@@ -214,15 +262,24 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 cursor-help">
                 <Info className="w-3 h-3" />
-                <span>{dataSource || t('Based on historical data', '基于历史数据')}</span>
+                <span>
+                  {isCertifiedLocation 
+                    ? t('Based on certified location data', '基于认证地点数据') 
+                    : (dataSource || t('Based on historical data', '基于历史数据'))}
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
               <p className="text-xs max-w-[200px]">
-                {t(
-                  'Estimates based on geographical location, historical weather patterns, and regional climate data',
-                  '基于地理位置、历史天气模式和区域气候数据的估算'
-                )}
+                {isCertifiedLocation
+                  ? t(
+                      'Data from official certification records, enhanced with local measurements and climate analysis',
+                      '数据来自官方认证记录，并结合本地测量和气候分析进行增强'
+                    )
+                  : t(
+                      'Estimates based on geographical location, historical weather patterns, and regional climate data',
+                      '基于地理位置、历史天气模式和区域气候数据的估算'
+                    )}
               </p>
             </TooltipContent>
           </Tooltip>

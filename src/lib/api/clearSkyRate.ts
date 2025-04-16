@@ -7,8 +7,11 @@ import { environmentalDataCache } from '@/services/environmentalDataService';
 // Interface for clear sky rate data
 export interface ClearSkyRateData {
   annualRate: number;  // Annual clear sky rate as percentage
-  monthlyRates?: Record<string, number>;  // Optional monthly breakdown
+  monthlyRates: Record<string, number>;  // Optional monthly breakdown
   source: string;  // Source of the data
+  isDarkSkyReserve?: boolean;
+  isCertified?: boolean;
+  certification?: string;
 }
 
 // Enhanced regional data for major Chinese regions with more accurate adjustments
@@ -732,12 +735,14 @@ function generateGlobalMonthlyRates(
  * 
  * @param latitude Location latitude
  * @param longitude Location longitude
+ * @param includeHistoricalData Whether to include historical data in the calculation
  * @returns Promise resolving to clear sky rate data
  */
 export async function fetchClearSkyRate(
   latitude: number,
-  longitude: number
-): Promise<ClearSkyRateData | null> {
+  longitude: number,
+  includeHistoricalData: boolean = true
+): Promise<ClearSkyRateData> {
   try {
     // Simple cache key for the location
     const cacheKey = `clear-sky-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
@@ -765,6 +770,9 @@ export async function fetchClearSkyRate(
     let baseRate = 0;
     let monthlyRates: Record<string, number> = {};
     let dataSource = "Historical Weather Pattern Analysis";
+    let isDarkSkyReserve = false;
+    let isCertified = false;
+    let certificationName = "";
     
     // Special handling for China
     if (isInChina(latitude, longitude)) {
@@ -936,7 +944,9 @@ export async function fetchClearSkyRate(
       annualRate: Math.round(baseRate),
       monthlyRates: monthlyRates,
       source: dataSource,
-      timestamp: Date.now() // Add timestamp for cache freshness checking
+      isDarkSkyReserve: isDarkSkyReserve,
+      isCertified: isCertified,
+      certification: certificationName
     };
     
     // Cache the result
