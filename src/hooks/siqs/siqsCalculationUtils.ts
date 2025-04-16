@@ -1,5 +1,4 @@
 
-// Import required functions and types
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
 import { protectedFactors } from '@/lib/siqs/protectedFactors';
