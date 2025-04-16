@@ -7,7 +7,7 @@ import {
   DynamicTemperatureIcon,
   DynamicWindIcon,
   DynamicSeeingIcon
-} from "./DynamicIcons";
+} from "@/components/weather/DynamicIcons";
 
 interface PrimaryConditionsProps {
   temperature: number;

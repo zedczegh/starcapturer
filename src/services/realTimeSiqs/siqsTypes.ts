@@ -16,6 +16,10 @@ export interface SiqsResult {
       clearSky: boolean;
       lightPollution: boolean;
     };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
   };
 }
 
@@ -49,4 +53,11 @@ export interface MoonPhaseInfo {
   name: string;
   illumination: number; // percentage 0-100
   isGoodForAstronomy: boolean;
+}
+
+// Add missing SiqsCalculationOptions interface
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  includeForecast?: boolean;
 }
