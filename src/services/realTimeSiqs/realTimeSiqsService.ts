@@ -48,8 +48,7 @@ export async function calculateEnhancedRealTimeSiqs(
         // Assess data reliability
         const reliability = assessDataReliability(
           weatherData,
-          null, // We don't have forecast data here
-          bortleScale
+          null // We don't have forecast data here
         );
         
         // Add reliability metadata
