@@ -148,7 +148,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             <div className="grid grid-cols-3 gap-1 text-xs mt-2">
               {Object.entries(monthlyRates).map(([month, rate]) => (
                 <div key={month} className="flex items-center justify-between">
-                  <span>{getMonthName(month, language)}:</span>
+                  <span>{getMonthName(month, language)}</span>
                   <span className={getRateColor(Number(rate))}>{rate}%</span>
                 </div>
               ))}
@@ -162,6 +162,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                 <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
                   {Object.entries(seasonalTrends).map(([season, data]) => {
+                    // Fix the type issue by casting data to the expected type
                     const seasonData = data as { clearSkyRate: number; averageTemperature: number };
                     return (
                       <div key={season} className="flex items-center justify-between">

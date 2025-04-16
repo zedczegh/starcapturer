@@ -1,4 +1,5 @@
-import { SunCalc } from 'suncalc';
+
+import * as SunCalc from 'suncalc';
 
 /**
  * Calculate the current moon phase (0-1)
