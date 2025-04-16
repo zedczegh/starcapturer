@@ -187,11 +187,13 @@ const LocationMarker = memo(({
     return null;
   }
   
-  const shouldShowRealTimeSiqs = isCertified || 
+  const shouldShowRealTimeSiqs = Boolean(
+    isCertified || 
     location.isDarkSkyReserve || 
     location.certification || 
     (location.type === 'lodging') ||
-    (location.type === 'dark-site');
+    (location.type === 'dark-site')
+  );
   
   return (
     <>

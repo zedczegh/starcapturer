@@ -23,20 +23,20 @@ export async function updateCertifiedLocationsWithSiqs(
   
   console.log(`Updating ${locations.length} certified locations with real-time SIQS`);
   
-  // Filter only certified locations - expanded criteria to include all types of certified locations
+  // Filter only certified locations - safely handle potentially undefined type property
   const certifiedLocations = locations.filter(loc => 
     loc.isDarkSkyReserve || 
     (loc.certification && loc.certification !== '') || 
-    (loc.type === 'lodging' && loc.type) || 
-    (loc.type === 'dark-site' && loc.type)
+    (loc.type === 'lodging') || 
+    (loc.type === 'dark-site')
   );
   
-  // Keep non-certified locations untouched
+  // Keep non-certified locations untouched - safely handle potentially undefined type property
   const nonCertifiedLocations = locations.filter(loc => 
     !(loc.isDarkSkyReserve || 
       (loc.certification && loc.certification !== '') || 
-      (loc.type === 'lodging' && loc.type) || 
-      (loc.type === 'dark-site' && loc.type))
+      (loc.type === 'lodging') || 
+      (loc.type === 'dark-site'))
   );
   
   if (certifiedLocations.length === 0) {
