@@ -30,7 +30,7 @@ export async function calculateRealTimeSiqs(
   const CACHE_DURATION_MINS = 30;
   
   // Check cache first with shorter duration for more frequent updates
-  if (hasCachedSiqs(latitude, longitude, CACHE_DURATION_MINS)) {
+  if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData) {
       console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
@@ -72,11 +72,17 @@ export async function calculateRealTimeSiqs(
     // Get current moon phase
     const moonPhase = calculateMoonPhase();
     
+    // Default seeing conditions (1-5 scale, lower is better)
+    const seeingConditions = 3;
+    
     // Enhanced SIQS calculation with machine learning-inspired weighting
     // that adjusts based on local conditions
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherDataWithClearSky,
-      finalBortleScale
+      finalBortleScale,
+      seeingConditions,
+      moonPhase,
+      forecastData
     );
     
     // Apply intelligent adjustments based on multiple factors

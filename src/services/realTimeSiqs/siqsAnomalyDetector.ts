@@ -89,7 +89,7 @@ function ensureTemporalConsistency(
   longitude: number
 ): SiqsResult {
   // Check if we have a previous calculation to compare against
-  if (hasCachedSiqs(latitude, longitude, 120)) {
+  if (hasCachedSiqs(latitude, longitude)) {
     const previousSiqs = getCachedSiqs(latitude, longitude);
     
     if (previousSiqs && Math.abs(previousSiqs.siqs - siqs.siqs) > MAX_SCORE_DELTA) {
