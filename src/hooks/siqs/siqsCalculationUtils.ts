@@ -23,7 +23,7 @@ export async function calculateSIQSWithWeatherData(
   bortleScale: number,
   seeingConditions: number,
   moonPhase: number,
-  forecastData: any | null
+  forecastData: any | null = null
 ): Promise<any> {
   // First try to fetch clear sky rate data if not already provided
   let clearSkyRate: number | undefined = weatherData.clearSkyRate;
