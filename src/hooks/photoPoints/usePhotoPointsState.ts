@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,11 +8,11 @@ export const usePhotoPointsState = () => {
   const { t } = useLanguage();
   const location = useLocation();
   
-  // For view toggling
-  const [activeView, setActiveView] = useState<'certified' | 'calculated'>('certified');
+  // Changed initial view to 'calculated'
+  const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
   
-  // For layout toggling
-  const [showMap, setShowMap] = useState(false);
+  // Set showMap to true by default
+  const [showMap, setShowMap] = useState(true);
   
   // For initializing states
   const [initialLoad, setInitialLoad] = useState(true);
