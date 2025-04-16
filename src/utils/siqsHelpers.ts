@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for safely working with SIQS values that might be numbers or objects
  */
@@ -9,17 +10,35 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * @param siqs SIQS value which could be a number or object
  * @returns number value of SIQS or 0 if undefined
  */
-export function getSiqsScore(siqs?: number | { score: number; isViable: boolean } | any): number {
+export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
   if (siqs === undefined || siqs === null) {
     return 0;
   }
   
-  if (typeof siqs === 'number') {
-    return siqs;
+  // Handle string values (parsing to number)
+  if (typeof siqs === 'string') {
+    const parsed = parseFloat(siqs);
+    return isNaN(parsed) ? 0 : parsed;
   }
   
+  // Handle numeric values directly
+  if (typeof siqs === 'number') {
+    return isNaN(siqs) ? 0 : siqs;
+  }
+  
+  // Handle SharedAstroSpot object with siqs property
   if (typeof siqs === 'object' && siqs !== null) {
-    // Handle object format with score property
+    // Case: location.siqs passed directly as an object with score property
+    if ('siqs' in siqs && typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
+      return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
+    }
+    
+    // Case: entire location object passed (need to extract siqs)
+    if ('siqs' in siqs && (typeof siqs.siqs === 'number' || typeof siqs.siqs === 'string')) {
+      return typeof siqs.siqs === 'number' ? siqs.siqs : parseFloat(siqs.siqs);
+    }
+    
+    // Handle direct score property (standard format)
     if ('score' in siqs && typeof siqs.score === 'number') {
       return siqs.score;
     }

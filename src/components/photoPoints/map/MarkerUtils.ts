@@ -1,16 +1,16 @@
-
 import L from 'leaflet';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/locationValidator";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Get SIQS quality class for styling
  * @param siqs SIQS score
  * @returns CSS class name based on SIQS quality
  */
-export const getSiqsClass = (siqs?: number): string => {
-  if (!siqs) return '';
+export const getSiqsClass = (siqs?: number | null): string => {
+  if (siqs === undefined || siqs === null || siqs <= 0) return '';
   if (siqs >= 7.5) return 'siqs-excellent';
   if (siqs >= 5.5) return 'siqs-good';
   return 'siqs-poor';
@@ -98,18 +98,9 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
     return getCertificationColor(location);
   } else {
     const defaultColor = '#4ADE80'; // Bright green fallback
-    
-    // Handle both number and object SIQS format
-    let siqsValue = 0;
-    if (typeof location.siqs === 'number') {
-      siqsValue = location.siqs;
-    } else if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
-      siqsValue = location.siqs.score;
-    } else if (location.siqsResult && typeof location.siqsResult.score === 'number') {
-      siqsValue = location.siqsResult.score;
-    }
-    
-    return siqsValue ? getProgressColor(siqsValue) : defaultColor;
+    // Use our centralized getSiqsScore helper
+    const siqsScore = getSiqsScore(location);
+    return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
   }
 };
 

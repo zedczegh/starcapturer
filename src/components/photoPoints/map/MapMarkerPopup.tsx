@@ -42,9 +42,9 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
-  // Extract SIQS score from any format
-  const hasSiqs = location.siqs !== undefined || (location.siqsResult && location.siqsResult.score !== undefined);
+  // Extract SIQS score from any format using our helper function
   const siqsScore = getSiqsScore(location);
+  const hasSiqs = siqsScore > 0;
   
   return (
     <div className="p-3 min-w-[200px] max-w-[280px]">
@@ -52,7 +52,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
         {/* Always show SIQS badge if available */}
-        {hasSiqs && siqsScore > 0 && (
+        {hasSiqs && (
           <SiqsScoreBadge score={siqsScore} compact={true} />
         )}
       </div>

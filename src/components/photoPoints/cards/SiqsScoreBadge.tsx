@@ -15,7 +15,12 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   compact = false 
 }) => {
   // Convert score to number using our helper function
-  const numericScore = typeof score === 'string' ? parseFloat(score) : getSiqsScore(score);
+  const numericScore = getSiqsScore(score);
+  
+  // Skip rendering if score is 0 (invalid)
+  if (numericScore <= 0 && !loading) {
+    return null;
+  }
   
   // Format score for display with one decimal place
   const displayScore = numericScore.toFixed(1);
