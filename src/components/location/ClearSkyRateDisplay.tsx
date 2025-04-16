@@ -234,10 +234,14 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
           </div>
         ) : (
           <div className="mt-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1">
-                <span className="text-2xl font-semibold">{clearNightsPerYear}</span>
-                <span className="text-sm text-muted-foreground">{t('nights', '晚')}</span>
+            <div className="flex items-center">
+              <span className="text-2xl font-semibold">{clearNightsPerYear}</span>
+              <span className="ml-1 text-sm text-muted-foreground">{t('nights', '晚')}</span>
+            </div>
+            
+            <div className="mt-1 flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">
+                {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
               </div>
               
               <div className="flex items-center space-x-1">
@@ -249,13 +253,12 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             </div>
             
             <div className="mt-1 text-xs text-muted-foreground">
-              {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
-              {visibility && <span> ({t(
+              {visibility && <span>{t(
                 typeof visibility === 'string' ? visibility : 'average', 
                 visibility === 'excellent' ? '极佳' : 
                 visibility === 'good' ? '良好' : 
                 visibility === 'average' ? '一般' : '较差'
-              )})</span>}
+              )}</span>}
             </div>
             
             <div className="mt-1 text-xs text-muted-foreground">
