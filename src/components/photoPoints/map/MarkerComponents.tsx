@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -59,12 +60,22 @@ const LocationMarker = memo(({
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
+  // Improved SIQS score handling, ensuring certified locations always have a score
   const siqsScore = useMemo(() => {
+    // Use real-time SIQS if available
     if (realTimeSiqs !== null) return realTimeSiqs;
     
-    const score = getSiqsScore(location);
-    return score > 0 ? score : null;
-  }, [location, realTimeSiqs]);
+    // Use location's SIQS if available
+    const locationSiqs = getSiqsScore(location);
+    if (locationSiqs > 0) return locationSiqs;
+    
+    // For certified locations without SIQS, provide a default good score
+    if (isCertified) {
+      return location.isDarkSkyReserve ? 7.5 : 6.5;
+    }
+    
+    return null;
+  }, [location, realTimeSiqs, isCertified]);
   
   const siqsClass = getSiqsClass(siqsScore);
 
@@ -189,6 +200,7 @@ const LocationMarker = memo(({
     return null;
   }
   
+  // Always fetch real-time SIQS for certified locations
   const shouldShowRealTimeSiqs = Boolean(
     isCertified || 
     location.isDarkSkyReserve || 
@@ -201,7 +213,7 @@ const LocationMarker = memo(({
     <>
       <RealTimeSiqsFetcher
         isVisible={isHovered}
-        showRealTimeSiqs={Boolean(shouldShowRealTimeSiqs)}
+        showRealTimeSiqs={shouldShowRealTimeSiqs}
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}
@@ -247,10 +259,11 @@ const LocationMarker = memo(({
             )}
             
             <div className="mt-2 flex items-center justify-between">
-              {(siqsScore !== null || location.siqs !== undefined) && (
+              {/* Always show SIQS badge for certified locations */}
+              {(siqsScore !== null || isCertified) && (
                 <div className="flex items-center gap-1.5">
                   <SiqsScoreBadge 
-                    score={siqsScore !== null ? siqsScore : location.siqs} 
+                    score={siqsScore !== null ? siqsScore : (isCertified ? 6.5 : 0)} 
                     compact={true} 
                     loading={siqsLoading && isHovered}
                   />
