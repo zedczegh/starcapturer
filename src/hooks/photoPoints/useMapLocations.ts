@@ -6,7 +6,7 @@ import {
   separateLocationTypes, 
   mergeLocations 
 } from '@/utils/locationFiltering';
-import { isWaterLocation } from '@/utils/validation/waterLocationValidator';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -52,7 +52,7 @@ export const useMapLocations = ({
     
     // Add all current locations to the map
     locations.forEach(loc => {
-      if (loc && loc.latitude && loc.longitude) {
+      if (loc.latitude && loc.longitude) {
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
         newLocationsMap.set(key, loc as SharedAstroSpot);
       }
@@ -63,7 +63,7 @@ export const useMapLocations = ({
       if (!newLocationsMap.has(key)) {
         // Apply location filtering based on view mode
         if (activeView === 'calculated') {
-          // Keep locations within search radius for calculated view
+          // Keep locations within search radius
           if (userLocation && !loc.isDarkSkyReserve && !loc.certification) {
             const distance = calculateDistance(
               userLocation.latitude,
@@ -72,12 +72,12 @@ export const useMapLocations = ({
               loc.longitude
             );
             
-            // Always keep calculated locations within radius
-            if (distance <= searchRadius) {
+            // Filter out locations outside search radius or in water
+            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
               newLocationsMap.set(key, loc as SharedAstroSpot);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {
-            // Always keep certified locations
+            // Keep certified locations
             newLocationsMap.set(key, loc as SharedAstroSpot);
           }
         } else if (activeView === 'certified' && (loc.isDarkSkyReserve || loc.certification)) {
@@ -98,19 +98,10 @@ export const useMapLocations = ({
     const timeoutId = setTimeout(() => {
       try {
         // Filter valid locations
-        const validLocations = allLocations.filter(loc => 
-          loc && loc.latitude && loc.longitude
-        );
+        const validLocations = filterValidLocations(allLocations);
         
         // Separate locations by type
-        const certifiedLocations = validLocations.filter(loc => 
-          loc.isDarkSkyReserve || loc.certification
-        );
-        
-        const calculatedLocations = validLocations.filter(loc => 
-          !loc.isDarkSkyReserve && !loc.certification
-        );
-        
+        const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
         console.log(`Location counts - certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}, total: ${validLocations.length}`);
         
         // Determine which locations to show based on view
@@ -120,8 +111,15 @@ export const useMapLocations = ({
           // In certified view, only show certified locations
           locationsToShow = certifiedLocations as SharedAstroSpot[];
         } else {
-          // For calculated view, show all valid locations
-          locationsToShow = validLocations as SharedAstroSpot[];
+          // For calculated view, show calculated locations
+          locationsToShow = calculatedLocations as SharedAstroSpot[];
+          
+          // In calculated view, certified locations are handled separately in the UI
+          // Only include certified locations if explicitly requested
+          if (viewChanged || userLocation) {
+            // Merge calculated and certified for calculated view
+            locationsToShow = [...calculatedLocations] as SharedAstroSpot[];
+          }
         }
         
         setProcessedLocations(locationsToShow);
