@@ -67,7 +67,7 @@ declare module "@/types/weather" {
     certification?: string;
     isDarkSkyReserve?: boolean;
     type?: string;
-    preferenceScore?: number; // Added this property
+    preferenceScore?: number; // Added for enhanced calculations
     clearSkyRate?: number; // Added for enhanced calculations
   }
 }

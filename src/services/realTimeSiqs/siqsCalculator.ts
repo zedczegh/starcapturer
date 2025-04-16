@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -56,9 +55,8 @@ export async function calculateRealTimeSiqs(
       fetchForecastData({ latitude, longitude, days: 2 }),
       fetchClearSkyRate(latitude, longitude),
       Promise.all([
-        fetchLightPollutionData(latitude, longitude),
-        fetchClearSkyRate(latitude, longitude)
-      ]).catch(() => [null, null])
+        fetchLightPollutionData(latitude, longitude)
+      ]).catch(() => [null])
     ]);
     
     if (!weatherData) {
@@ -85,8 +83,8 @@ export async function calculateRealTimeSiqs(
       weatherDataWithClearSky,
       finalBortleScale,
       3, // Default seeing conditions
-      getMoonPhaseEstimate(), // Get estimated moon phase
-      forecastData // Pass the forecastData as fifth argument
+      getMoonPhaseEstimate(),
+      forecastData // Pass forecast data as fifth argument
     );
     
     // Apply intelligent adjustments based on multiple factors

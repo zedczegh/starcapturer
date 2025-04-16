@@ -3,7 +3,7 @@ import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
-import LocationControls from './LocationControls';
+import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
 
 interface RealTimeLocationUpdaterProps {
@@ -159,7 +159,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
 
   return (
     <div className="absolute bottom-4 left-4 z-[1000] flex flex-col space-y-2">
-      <LocationControls
+      <LocationControllers
         onGetLocation={handleGetCurrentLocation}
         onClearCache={handleClearCache}
         loading={loading}
