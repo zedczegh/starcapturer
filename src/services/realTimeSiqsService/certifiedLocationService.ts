@@ -7,6 +7,7 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { updateLocationsWithRealTimeSiqs } from "./locationUpdateService";
 import { getSiqsScore } from "@/utils/siqsHelpers";
+import { darkSkyLocations } from "@/data/regions/darkSkyLocations";
 
 /**
  * Update certified locations with SIQS data using specialized handling
@@ -44,6 +45,8 @@ function enhanceCertifiedLocation(location: SharedAstroSpot): SharedAstroSpot {
     seasonalTrends?: Record<string, any>;
     clearestMonths?: string[];
     averageVisibility?: string;
+    clearSkyRate?: number;
+    annualPrecipitationDays?: number;
   };
   
   // Ensure proper certification flags
@@ -62,6 +65,32 @@ function enhanceCertifiedLocation(location: SharedAstroSpot): SharedAstroSpot {
     }
   }
   
+  // Check if this location matches a known dark sky location in our database
+  if (enhanced.latitude && enhanced.longitude) {
+    const matchedLocation = findMatchingDarkSkyLocation(enhanced.latitude, enhanced.longitude);
+    
+    if (matchedLocation) {
+      // Enhance with pre-defined dark sky data
+      if (matchedLocation.clearSkyRate) enhanced.clearSkyRate = matchedLocation.clearSkyRate;
+      if (matchedLocation.clearestMonths) enhanced.clearestMonths = matchedLocation.clearestMonths;
+      if (matchedLocation.seasonalTrends) enhanced.seasonalTrends = matchedLocation.seasonalTrends;
+      if (matchedLocation.visibility) enhanced.averageVisibility = matchedLocation.visibility;
+      if (matchedLocation.annualPrecipitationDays) enhanced.annualPrecipitationDays = matchedLocation.annualPrecipitationDays;
+      
+      // Ensure there's a very reliable Bortle scale value
+      if (matchedLocation.bortleScale && (!enhanced.bortleScale || enhanced.bortleScale > matchedLocation.bortleScale)) {
+        enhanced.bortleScale = matchedLocation.bortleScale;
+      }
+      
+      // If it's in our dark sky database but not marked as a reserve, correct that
+      if (!enhanced.isDarkSkyReserve && matchedLocation.type === 'dark-site') {
+        enhanced.isDarkSkyReserve = true;
+      }
+      
+      return enhanced;
+    }
+  }
+  
   // Add seasonal data for dark sky locations
   if (enhanced.isDarkSkyReserve || enhanced.certification) {
     // Add seasonal trends based on climate zone
@@ -73,9 +102,37 @@ function enhanceCertifiedLocation(location: SharedAstroSpot): SharedAstroSpot {
     // Estimated visibility based on Bortle scale and location type
     enhanced.averageVisibility = enhanced.bortleScale <= 3 ? 'excellent' : 
                                 enhanced.bortleScale <= 5 ? 'good' : 'moderate';
+                                
+    // Estimate annual precipitation days if not already set
+    if (!enhanced.annualPrecipitationDays) {
+      enhanced.annualPrecipitationDays = estimateAnnualPrecipitationDays(enhanced);
+    }
   }
   
   return enhanced;
+}
+
+/**
+ * Find a matching dark sky location from our enhanced database
+ */
+function findMatchingDarkSkyLocation(latitude: number, longitude: number) {
+  return darkSkyLocations.find(loc => {
+    if (!loc.coordinates || !Array.isArray(loc.coordinates) || loc.coordinates.length !== 2) return false;
+    
+    // Calculate distance in kilometers
+    const R = 6371; // Earth radius in km
+    const dLat = (loc.coordinates[0] - latitude) * Math.PI / 180;
+    const dLon = (loc.coordinates[1] - longitude) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(latitude * Math.PI / 180) * Math.cos(loc.coordinates[0] * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    
+    // Within a 15km radius (more precise matching)
+    return distance < 15;
+  });
 }
 
 /**
@@ -170,6 +227,31 @@ function getLocationSeasonalTrends(location: SharedAstroSpot): Record<string, an
         winter: { clearSkyRate: 55, averageTemperature: isNorthern ? 12 : 25 }
       };
     }
+    
+    // East Asian monsoon areas (Southeast China, Taiwan, Japan, Korea)
+    if ((location.latitude >= 20 && location.latitude <= 40) && 
+        (location.longitude >= 110 && location.longitude <= 145)) {
+      return {
+        spring: { clearSkyRate: 55, averageTemperature: 20 },
+        summer: { clearSkyRate: 40, averageTemperature: 30 },
+        fall: { clearSkyRate: 65, averageTemperature: 22 },
+        winter: { clearSkyRate: 70, averageTemperature: 10 }
+      };
+    }
+    
+    // Mediterranean climate regions
+    if (((location.latitude >= 30 && location.latitude <= 45) && 
+         (location.longitude >= -20 && location.longitude <= 40)) ||
+        ((location.latitude >= -45 && location.latitude <= -30) && 
+         ((location.longitude >= 110 && location.longitude <= 150) || 
+          (location.longitude >= -80 && location.longitude <= -55)))) {
+      return {
+        spring: { clearSkyRate: 60, averageTemperature: isNorthern ? 15 : 22 },
+        summer: { clearSkyRate: 80, averageTemperature: isNorthern ? 28 : 15 },
+        fall: { clearSkyRate: 65, averageTemperature: isNorthern ? 18 : 20 },
+        winter: { clearSkyRate: 50, averageTemperature: isNorthern ? 10 : 25 }
+      };
+    }
   }
   
   // Default based on hemisphere
@@ -217,9 +299,114 @@ function getClerestMonthsForLocation(location: SharedAstroSpot): string[] {
       return location.latitude > 0 ? 
         ['May', 'Sep', 'Oct'] : ['Mar', 'Apr', 'Nov'];
     }
+    
+    // East Asia - better months for astronomy (drier winter months)
+    if ((location.latitude >= 22 && location.latitude <= 40) && 
+        (location.longitude >= 100 && location.longitude <= 145)) {
+      return ['Oct', 'Nov', 'Dec', 'Jan'];
+    }
+    
+    // Mediterranean regions
+    if (((location.latitude >= 30 && location.latitude <= 45) && 
+         (location.longitude >= -20 && location.longitude <= 40))) {
+      return ['Jun', 'Jul', 'Aug', 'Sep']; // Summer months are clearest
+    }
   }
   
   return baseMonths;
+}
+
+/**
+ * Estimate annual precipitation days based on location characteristics
+ */
+function estimateAnnualPrecipitationDays(location: SharedAstroSpot): number {
+  if (!location.latitude || !location.longitude) return 100; // Default
+  
+  // Desert regions have very little precipitation
+  if (isDesertRegion(location.latitude, location.longitude)) {
+    return 30;
+  }
+  
+  // Tropical rainforest regions have high precipitation
+  if (isTropicalRainforestRegion(location.latitude, location.longitude)) {
+    return 200;
+  }
+  
+  // Mediterranean climate has moderate precipitation mostly in winter
+  if (isMediterraneanRegion(location.latitude, location.longitude)) {
+    return 75;
+  }
+  
+  // East Asian monsoon climate has concentrated summer precipitation
+  if (isEastAsianMonsoonRegion(location.latitude, location.longitude)) {
+    return 140;
+  }
+  
+  // Continental climates vary by region
+  if (isContinentalClimateRegion(location.latitude, location.longitude)) {
+    return 120;
+  }
+  
+  // Arctic/Antarctic has low precipitation but extended periods of clouds
+  if (isPolarRegion(location.latitude, location.longitude)) {
+    return 60;
+  }
+  
+  // Default case - moderate precipitation
+  return 100;
+}
+
+// Climate region detection functions
+function isDesertRegion(latitude: number, longitude: number): boolean {
+  // Major desert regions worldwide
+  return (
+    // Sahara, Arabian, Middle East deserts
+    ((latitude >= 15 && latitude <= 35) && (longitude >= -15 && longitude <= 60)) ||
+    // Australian deserts
+    ((latitude <= -20 && latitude >= -32) && (longitude >= 115 && longitude <= 140)) ||
+    // Atacama desert
+    ((latitude >= -30 && latitude <= -20) && (longitude >= -72 && longitude <= -68)) ||
+    // North American deserts
+    ((latitude >= 25 && latitude <= 42) && (longitude >= -120 && longitude <= -100))
+  );
+}
+
+function isTropicalRainforestRegion(latitude: number, longitude: number): boolean {
+  return Math.abs(latitude) < 10; // Approximate equatorial band
+}
+
+function isMediterraneanRegion(latitude: number, longitude: number): boolean {
+  return (
+    // Mediterranean basin
+    ((latitude >= 30 && latitude <= 45) && (longitude >= -10 && longitude <= 40)) ||
+    // California
+    ((latitude >= 32 && latitude <= 42) && (longitude >= -125 && longitude <= -115)) ||
+    // Chile
+    ((latitude >= -40 && latitude <= -30) && (longitude >= -75 && longitude <= -70)) ||
+    // South Africa
+    ((latitude >= -35 && latitude <= -28) && (longitude >= 15 && longitude <= 25)) ||
+    // Southern Australia
+    ((latitude >= -40 && latitude <= -32) && (longitude >= 115 && longitude <= 150))
+  );
+}
+
+function isEastAsianMonsoonRegion(latitude: number, longitude: number): boolean {
+  return (
+    (latitude >= 20 && latitude <= 40) && (longitude >= 100 && longitude <= 145)
+  );
+}
+
+function isContinentalClimateRegion(latitude: number, longitude: number): boolean {
+  return (
+    // North America
+    ((latitude >= 40 && latitude <= 55) && (longitude >= -100 && longitude <= -70)) ||
+    // Europe and Russia
+    ((latitude >= 45 && latitude <= 60) && (longitude >= 0 && longitude <= 120))
+  );
+}
+
+function isPolarRegion(latitude: number, longitude: number): boolean {
+  return Math.abs(latitude) > 66;
 }
 
 /**

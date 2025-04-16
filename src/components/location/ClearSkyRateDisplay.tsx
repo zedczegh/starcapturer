@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Star, Moon, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -57,7 +58,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     if (!monthlyRates || Object.keys(monthlyRates).length === 0) return '';
     
     const sortedMonths = Object.entries(monthlyRates)
-      .sort(([, rateA], [, rateB]) => rateB - rateA)
+      .sort(([, rateA], [, rateB]) => Number(rateB) - Number(rateA))
       .slice(0, 3)
       .map(([month]) => month);
     
@@ -194,7 +195,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
               {Object.entries(monthlyRates).map(([month, rate]) => (
                 <div key={month} className="flex items-center justify-between">
                   <span>{getMonthName(month)}:</span>
-                  <span className={getRateColor(rate)}>{rate}%</span>
+                  <span className={getRateColor(Number(rate))}>{rate}%</span>
                 </div>
               ))}
             </div>
@@ -212,7 +213,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                             season === 'spring' ? '春季' : 
                             season === 'summer' ? '夏季' : 
                             season === 'fall' ? '秋季' : '冬季')}:</span>
-                      <span className={getRateColor((data as any).clearSkyRate)}>
+                      <span className={getRateColor(Number((data as any).clearSkyRate))}>
                         {(data as any).clearSkyRate}%
                       </span>
                     </div>
@@ -239,7 +240,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 text-xs text-muted-foreground">
               {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
-              {visibility && ` (${t(visibility, 
+              {visibility && ` (${t(visibility as string, 
                                     visibility === 'excellent' ? '极佳' : 
                                     visibility === 'good' ? '良好' : 
                                     visibility === 'average' ? '一般' : '较差')})`}
