@@ -52,7 +52,6 @@ export async function getAllCertifiedLocations(): Promise<SharedAstroSpot[]> {
 
 /**
  * Add Dark Sky Lodging locations from IDA's website
- * These are hotels, inns, and other accommodations certified for dark sky viewing
  */
 function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
   // Create a map of existing locations by coordinates
@@ -64,13 +63,11 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     locationMap.set(key, loc);
   });
   
-  // List of IDA-approved dark sky lodging locations
-  // Data sourced from IDA website and dark sky tourism sites
   const darkSkyLodgings = [
-    // North America
     {
       id: 'under-canvas-mt',
       name: 'Under Canvas Mount Rushmore',
+      chineseName: '拉什莫尔山露营地暗夜天空点',
       latitude: 43.8791,
       longitude: -103.4591,
       isDarkSkyReserve: false,
@@ -82,6 +79,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'gateway-canyons',
       name: 'Gateway Canyons Resort',
+      chineseName: '峡谷之门度假村暗夜天空点',
       latitude: 38.6825,
       longitude: -108.9653,
       isDarkSkyReserve: false,
@@ -93,6 +91,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'amangiri',
       name: 'Amangiri Resort',
+      chineseName: '安缦圭丽度假村暗夜天空点',
       latitude: 37.0153,
       longitude: -111.6258,
       isDarkSkyReserve: false,
@@ -101,10 +100,10 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
       bortleScale: 1,
       type: 'lodging'
     },
-    // Europe
     {
       id: 'finnich-cottages',
       name: 'Finnich Cottages',
+      chineseName: '芬尼奇小屋暗夜天空点',
       latitude: 56.0486,
       longitude: -4.4681,
       isDarkSkyReserve: false,
@@ -116,6 +115,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'hotel-rangá',
       name: 'Hotel Rangá',
+      chineseName: '朗加酒店暗夜天空点',
       latitude: 63.8366,
       longitude: -20.3561,
       isDarkSkyReserve: false,
@@ -124,10 +124,10 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
       bortleScale: 2,
       type: 'lodging'
     },
-    // Asia and Oceania
     {
       id: 'crystal-creek-rainforest',
       name: 'Crystal Creek Rainforest Retreat',
+      chineseName: '水晶溪雨林度假村暗夜天空点',
       latitude: -28.3922,
       longitude: 153.1689,
       isDarkSkyReserve: false,
@@ -139,6 +139,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'hoshinoya-karuizawa',
       name: 'Hoshinoya Karuizawa',
+      chineseName: '星野轻井泽暗夜天空点',
       latitude: 36.3339,
       longitude: 138.5928,
       isDarkSkyReserve: false,
@@ -147,10 +148,10 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
       bortleScale: 3,
       type: 'lodging'
     },
-    // Additional lodgings around the world
     {
       id: 'kakslauttanen-arctic-resort',
       name: 'Kakslauttanen Arctic Resort',
+      chineseName: '卡克斯劳塔宁北极度假村暗夜天空点',
       latitude: 68.3352,
       longitude: 27.3350,
       isDarkSkyReserve: false,
@@ -162,6 +163,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'explora-atacama',
       name: 'Explora Atacama',
+      chineseName: '阿塔卡马探索酒店暗夜天空点',
       latitude: -22.9083,
       longitude: -68.2025,
       isDarkSkyReserve: false,
@@ -173,6 +175,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'exclusive-namibia',
       name: 'AndBeyond Sossusvlei Desert Lodge',
+      chineseName: 'AndBeyond 索苏斯维利沙漠小屋暗夜天空点',
       latitude: -24.7887,
       longitude: 15.3854,
       isDarkSkyReserve: false,
@@ -198,6 +201,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
  * Add Urban Night Sky Places
  */
 function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  // Create a map of existing locations by coordinates
   const locationMap = new Map<string, SharedAstroSpot>();
   
   existingLocations.forEach(loc => {
@@ -206,11 +210,11 @@ function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): Shared
     locationMap.set(key, loc);
   });
   
-  // Urban Night Sky Places from IDA
   const urbanLocations = [
     {
       id: 'flagstaff-urban',
       name: 'Flagstaff Urban Night Sky Place',
+      chineseName: '弗拉格斯塔夫城市暗夜天空区',
       latitude: 35.1983,
       longitude: -111.6513,
       isDarkSkyReserve: false,
@@ -221,6 +225,7 @@ function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): Shared
     {
       id: 'montreal-urban',
       name: 'Mont-Mégantic Urban Night Sky Reserve',
+      chineseName: '梅甘蒂克山城市暗夜天空保护区',
       latitude: 45.4555,
       longitude: -71.1522,
       isDarkSkyReserve: false,
@@ -231,6 +236,7 @@ function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): Shared
     {
       id: 'tucson-urban',
       name: 'Tucson Urban Night Sky District',
+      chineseName: '图森城市暗夜天空区',
       latitude: 32.2226,
       longitude: -110.9747,
       isDarkSkyReserve: false,
@@ -241,9 +247,10 @@ function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): Shared
     {
       id: 'sedona-urban',
       name: 'Sedona Urban Night Sky Community',
+      chineseName: '塞多纳城市暗夜天空社区',
       latitude: 34.8697,
       longitude: -111.7610,
-      isDarkSkyReserve: false, 
+      isDarkSkyReserve: false,
       certification: 'Urban Night Sky Place - International Dark Sky Association',
       timestamp: new Date().toISOString(),
       bortleScale: 4
@@ -265,6 +272,7 @@ function addUrbanNightSkyLocations(existingLocations: SharedAstroSpot[]): Shared
  * Add Dark Sky Communities
  */
 function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  // Create a map of existing locations by coordinates
   const locationMap = new Map<string, SharedAstroSpot>();
   
   existingLocations.forEach(loc => {
@@ -273,11 +281,11 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
     locationMap.set(key, loc);
   });
   
-  // Dark Sky Communities from IDA
   const communityLocations = [
     {
       id: 'westcliffe-community',
       name: 'Westcliffe & Silver Cliff Dark Sky Community',
+      chineseName: '韦斯特克利夫和银崖暗夜天空社区',
       latitude: 38.1315,
       longitude: -105.4640,
       isDarkSkyReserve: false,
@@ -288,6 +296,7 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'fountain-hills-community',
       name: 'Fountain Hills Dark Sky Community',
+      chineseName: '喷泉山暗夜天空社区',
       latitude: 33.6045,
       longitude: -111.7250,
       isDarkSkyReserve: false,
@@ -298,6 +307,7 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'borrego-springs-community',
       name: 'Borrego Springs Dark Sky Community',
+      chineseName: '博雷戈温泉暗夜天空社区',
       latitude: 33.2550,
       longitude: -116.3763,
       isDarkSkyReserve: false,
@@ -308,6 +318,7 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'dripping-springs-community',
       name: 'Dripping Springs Dark Sky Community',
+      chineseName: '滴泉暗夜天空社区',
       latitude: 30.1902,
       longitude: -98.0867,
       isDarkSkyReserve: false,
