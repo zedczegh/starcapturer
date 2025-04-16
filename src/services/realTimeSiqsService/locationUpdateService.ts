@@ -1,5 +1,17 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
+
+// In-memory cache for location data
+const locationCache: Map<string, { data: SharedAstroSpot, timestamp: number }> = new Map();
+
+/**
+ * Clears the location cache
+ */
+export function clearLocationCache(): void {
+  locationCache.clear();
+  console.log("Location cache cleared");
+}
 
 /**
  * Updates a batch of locations with their real-time SIQS scores

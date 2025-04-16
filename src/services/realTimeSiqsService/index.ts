@@ -1,3 +1,3 @@
 
 export { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
-export { updateLocationsWithRealTimeSiqs } from './locationUpdateService';
+export { updateLocationsWithRealTimeSiqs, clearLocationCache } from './locationUpdateService';
