@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
+import { getSkyRating, getRateColor, getMinimumClearNights, getBestMonths, getMonthName } from '@/utils/weather/clearSkyUtils';
 
 interface ClearSkyRateDisplayProps {
   latitude: number;
@@ -41,67 +42,13 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
   // Ensure we always have a valid annual rate value
   const annualRate = clearSkyData?.annualRate || 50; // Use 50% as default instead of 0
   // Ensure we always have a reasonable number of clear nights
-  const clearNightsPerYear = Math.max(30, Math.round((annualRate / 100) * 365)); // Minimum 30 nights
+  const clearNightsPerYear = getMinimumClearNights(annualRate);
   const monthlyRates = clearSkyData?.monthlyRates || {};
   const dataSource = clearSkyData?.source || '';
   
   const seasonalTrends = historicalData?.seasonalTrends;
   const clearestMonths = historicalData?.clearestMonths || [];
   const visibility = historicalData?.visibility;
-
-  const getBestMonths = (): string => {
-    if (clearestMonths && clearestMonths.length > 0) {
-      return language === 'en'
-        ? `Best months: ${clearestMonths.join(', ')}`
-        : `最佳月份: ${clearestMonths.join(', ')}`;
-    }
-    
-    if (!monthlyRates || Object.keys(monthlyRates).length === 0) return '';
-    
-    const sortedMonths = Object.entries(monthlyRates)
-      .sort(([, rateA], [, rateB]) => Number(rateB) - Number(rateA))
-      .slice(0, 3)
-      .map(([month]) => month);
-    
-    return language === 'en' 
-      ? `Best months: ${sortedMonths.join(', ')}`
-      : `最佳月份: ${sortedMonths.join(', ')}`;
-  };
-
-  const getSkyRating = (percentage: number): string => {
-    if (percentage >= 75) return t('Excellent', '极好');
-    if (percentage >= 60) return t('Very Good', '很好');
-    if (percentage >= 45) return t('Good', '良好');
-    if (percentage >= 30) return t('Fair', '一般');
-    return t('Poor', '较差');
-  };
-
-  const getMonthName = (monthKey: string): string => {
-    const monthMap: Record<string, [string, string]> = {
-      'Jan': ['January', '一月'],
-      'Feb': ['February', '二月'],
-      'Mar': ['March', '三月'],
-      'Apr': ['April', '四月'],
-      'May': ['May', '五月'],
-      'Jun': ['June', '六月'],
-      'Jul': ['July', '七月'],
-      'Aug': ['August', '八月'],
-      'Sep': ['September', '九月'],
-      'Oct': ['October', '十月'],
-      'Nov': ['November', '十一月'],
-      'Dec': ['December', '十二月']
-    };
-    
-    return language === 'en' ? monthMap[monthKey][0] : monthMap[monthKey][1];
-  };
-
-  const getRateColor = (rate: number): string => {
-    if (rate >= 75) return 'text-green-400';
-    if (rate >= 60) return 'text-blue-400';
-    if (rate >= 45) return 'text-yellow-400';
-    if (rate >= 30) return 'text-orange-400';
-    return 'text-red-400';
-  };
 
   const getStarIcon = (rate: number) => {
     if (rate >= 75) return <Star className="text-yellow-400" />;
@@ -201,13 +148,13 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             <div className="grid grid-cols-3 gap-1 text-xs mt-2">
               {Object.entries(monthlyRates).map(([month, rate]) => (
                 <div key={month} className="flex items-center justify-between">
-                  <span>{getMonthName(month)}:</span>
+                  <span>{getMonthName(month, language)}:</span>
                   <span className={getRateColor(Number(rate))}>{rate}%</span>
                 </div>
               ))}
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              {getBestMonths()}
+              {getBestMonths(monthlyRates, clearestMonths, language)}
             </div>
             
             {isCertifiedLocation && seasonalTrends && (
@@ -241,7 +188,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 flex items-center justify-between">
               <div className="text-xs text-muted-foreground">
-                {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate)}
+                {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate, t)}
               </div>
               
               <div className="flex items-center space-x-1">
@@ -253,16 +200,18 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             </div>
             
             <div className="mt-1 text-xs text-muted-foreground">
-              {visibility && <span>{t(
-                typeof visibility === 'string' ? visibility : 'average', 
-                visibility === 'excellent' ? '极佳' : 
-                visibility === 'good' ? '良好' : 
-                visibility === 'average' ? '一般' : '较差'
-              )}</span>}
+              {visibility && (
+                <span>{t(
+                  typeof visibility === 'string' ? visibility : 'average', 
+                  visibility === 'excellent' ? '极佳' : 
+                  visibility === 'good' ? '良好' : 
+                  visibility === 'average' ? '一般' : '较差'
+                )}</span>
+              )}
             </div>
             
             <div className="mt-1 text-xs text-muted-foreground">
-              {getBestMonths()}
+              {getBestMonths(monthlyRates, clearestMonths, language)}
             </div>
             
             {isCertifiedLocation && historicalData?.annualPrecipitationDays && (
