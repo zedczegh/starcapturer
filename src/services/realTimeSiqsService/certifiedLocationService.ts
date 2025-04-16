@@ -39,7 +39,7 @@ export async function updateCertifiedLocationsWithSiqs(
  * Enhance certified location with additional metadata and quality indicators
  */
 function enhanceCertifiedLocation(location: SharedAstroSpot): SharedAstroSpot {
-  const enhanced = { ...location };
+  const enhanced = { ...location } as SharedAstroSpot & { isCertified?: boolean };
   
   // Ensure proper certification flags
   if (location.certification) {
@@ -66,7 +66,7 @@ function enhanceCertifiedLocation(location: SharedAstroSpot): SharedAstroSpot {
 export function addCertificationRating(location: SharedAstroSpot): SharedAstroSpot {
   if (!location) return location;
   
-  const enhanced = { ...location };
+  const enhanced = { ...location } as SharedAstroSpot & { certificationRating?: number };
   
   // Skip if already has rating
   if (enhanced.certificationRating) {

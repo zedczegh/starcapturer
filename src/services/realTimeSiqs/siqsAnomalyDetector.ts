@@ -118,8 +118,7 @@ function ensureTemporalConsistency(
  */
 export function assessDataReliability(
   weatherData: WeatherDataWithClearSky | null,
-  forecastData: any | null,
-  bortleScale: number | null
+  forecastData: any | null
 ): { 
   reliable: boolean;
   confidenceScore: number;
@@ -137,11 +136,6 @@ export function assessDataReliability(
   if (!forecastData || !forecastData.hourly) {
     issues.push("Missing forecast data");
     confidenceScore -= 3;
-  }
-  
-  if (!bortleScale || bortleScale < 1 || bortleScale > 9) {
-    issues.push("Invalid Bortle scale");
-    confidenceScore -= 2;
   }
   
   // Check data freshness if available
