@@ -116,7 +116,7 @@ export function convertToSharedAstroSpot(
       siqs: Math.max(1, 10 - entry.bortleScale),
       bortleScale: entry.bortleScale,
       isDarkSkyReserve: true,
-      certification: entry.certification || 'International Dark Sky Association',
+      certification: (entry as any).certification || 'International Dark Sky Association',
       description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
       distance: distance,
       cloudCover: 0, // Will be calculated by SIQS service
