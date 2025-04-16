@@ -1,42 +1,13 @@
 
-export interface WeatherDataWithClearSky {
-  temperature: number;
-  humidity: number;
-  cloudCover: number;
-  windSpeed: number;
-  precipitation: number;
-  time: string;
-  condition?: string;
-  weatherCondition?: string | number;
-  aqi?: number;
-  clearSkyRate?: number;
-  
-  // Added for geolocation context
-  latitude?: number;
-  longitude?: number;
-  
-  // Added for forecast data access
-  _forecast?: {
-    hourly?: {
-      time?: string[];
-      temperature_2m?: number[];
-      cloud_cover?: number[];
-      relative_humidity_2m?: number[];
-    }
-  }
-}
-
-export interface SiqsFactor {
-  name: string;
-  score: number;
-  description?: string;
-  nighttimeData?: any;
-}
-
+// SIQSResult type definition
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  factors?: SiqsFactor[];
+  factors?: Array<{
+    name: string;
+    score: number;
+    description?: string;
+  }>;
   metadata?: {
     calculatedAt: string;
     sources: {
@@ -45,27 +16,66 @@ export interface SiqsResult {
       clearSky: boolean;
       lightPollution: boolean;
     };
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
-  }
+  };
 }
 
-// Interface for moonless night calculations
+// Type for WeatherData with clear sky rate
+export interface WeatherDataWithClearSky {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
+  time: string;
+  condition?: string;
+  clearSkyRate?: number;
+  latitude: number;
+  longitude: number;
+  _forecast?: any;
+  aqi?: number;
+}
+
+// Type for the Moonless Night Info
 export interface MoonlessNightInfo {
-  duration: number;  // Duration in hours
+  duration: number;
   startTime: string;
   endTime: string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
   moonrise: string;
   moonset: string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
 }
 
-// Add the SiqsCalculationOptions interface for API options
-export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
+// Type for the Moon Phase Info
+export interface MoonPhaseInfo {
+  phase: number;
+  illumination: number;
+  name: string;
+  isGoodForAstronomy: boolean;
+}
+
+// Type for enhanced location data
+export interface EnhancedLocationData {
+  name: string;
+  latitude: number;
+  longitude: number;
+  clearSkyRate: number;
+  bortleScale?: number;
+  averageVisibility?: 'excellent' | 'good' | 'average' | 'poor';
+  isDarkSkyReserve?: boolean;
+  certification?: string;
+}
+
+// Type for climate region data
+export interface ClimateRegion {
+  name: string;
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  adjustmentFactors: {
+    [month: number]: number;
+  };
 }
