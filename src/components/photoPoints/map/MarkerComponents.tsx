@@ -1,5 +1,4 @@
-
-import React, { useEffect, useCallback, useRef, memo, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,6 +16,7 @@ import {
   isValidAstronomyLocation
 } from './MarkerUtils';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import RealTimeSiqsFetcher from '../cards/RealTimeSiqsFetcher';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -47,6 +47,8 @@ const LocationMarker = memo(({
   const navigate = useNavigate();
   const markerRef = useRef<L.Marker | null>(null);
   const isMobile = useIsMobile();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
   
   const displayName = useMemo(() => {
     return language === 'zh' && location.chineseName 
@@ -54,26 +56,28 @@ const LocationMarker = memo(({
       : location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
-  // Fix TS error by safely handling null siqsScore
-  const siqsScore = location.siqs !== undefined && location.siqs !== null ? 
-    (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
+  const siqsScore = useMemo(() => {
+    if (realTimeSiqs !== null) return realTimeSiqs;
+    return location.siqs !== undefined && location.siqs !== null ? 
+      (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
+  }, [location.siqs, realTimeSiqs]);
   
   const siqsClass = getSiqsClass(siqsScore);
+
+  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqs);
+    setSiqsLoading(loading);
+  }, []);
   
-  // Don't show certified locations in calculated view unless they are actively displayed
   const shouldRender = useMemo(() => {
-    // In certified view, only show certified locations
     if (activeView === 'certified') {
       return isCertified;
     }
     
-    // In calculated view...
-    // Always show certified locations if the location is certified
     if (isCertified) {
       return true; 
     }
     
-    // For non-certified locations, filter out water
     if (isWaterSpot(location)) {
       return false;
     }
@@ -118,10 +122,6 @@ const LocationMarker = memo(({
   const goToLocationDetails = useCallback(() => {
     const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    // Handle the siqs value safely
-    const siqsScore = location.siqs !== undefined && location.siqs !== null ?
-      (typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0) : null;
-    
     const navigationData = {
       id: locationId,
       name: location.name || 'Unnamed Location',
@@ -157,7 +157,6 @@ const LocationMarker = memo(({
     onHover(null);
   }, [onHover]);
   
-  // Touch event handlers
   const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
     if (handleTouchStart) {
       handleTouchStart(e, locationId);
@@ -187,70 +186,85 @@ const LocationMarker = memo(({
   }
   
   return (
-    <Marker
-      position={[location.latitude, location.longitude]}
-      icon={icon}
-      ref={markerRef}
-      onClick={handleClick}
-    >
-      <MarkerEventHandler 
-        marker={markerRef.current}
-        eventMap={{
-          mouseover: handleMouseOver,
-          mouseout: handleMouseOut,
-          touchstart: handleMarkerTouchStart,
-          touchend: handleMarkerTouchEnd,
-          touchmove: handleMarkerTouchMove
-        }}
+    <>
+      <RealTimeSiqsFetcher
+        isVisible={isHovered}
+        showRealTimeSiqs={isCertified}
+        latitude={location.latitude}
+        longitude={location.longitude}
+        bortleScale={location.bortleScale}
+        onSiqsCalculated={handleSiqsCalculated}
       />
       
-      <Popup 
-        closeOnClick={false}
-        autoClose={false}
-        offset={[0, 10]}
-        direction="bottom"
+      <Marker
+        position={[location.latitude, location.longitude]}
+        icon={icon}
+        ref={markerRef}
+        onClick={handleClick}
       >
-        <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
-          <div className="font-medium text-sm mb-1.5 flex items-center">
-            {isCertified && (
-              <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
-            )}
-            <span className="text-gray-100">{displayName || t("Unnamed Location", "未命名位置")}</span>
-          </div>
-          
-          {isCertified && location.certification && (
-            <div className="mt-1 text-xs font-medium text-primary flex items-center">
-              <Award className="h-3 w-3 mr-1" />
-              {location.certification}
+        <MarkerEventHandler 
+          marker={markerRef.current}
+          eventMap={{
+            mouseover: handleMouseOver,
+            mouseout: handleMouseOut,
+            touchstart: handleMarkerTouchStart,
+            touchend: handleMarkerTouchEnd,
+            touchmove: handleMarkerTouchMove
+          }}
+        />
+        
+        <Popup 
+          closeOnClick={false}
+          autoClose={false}
+          offset={[0, 10]}
+          direction="bottom"
+        >
+          <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
+            <div className="font-medium text-sm mb-1.5 flex items-center">
+              {isCertified && (
+                <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
+              )}
+              <span className="text-gray-100">{displayName || t("Unnamed Location", "未命名位置")}</span>
             </div>
-          )}
-          
-          <div className="mt-2 flex items-center justify-between">
-            {location.siqs !== undefined && location.siqs !== null && (
-              <div className="flex items-center gap-1.5">
-                <SiqsScoreBadge score={typeof location.siqs === 'number' ? location.siqs : (location.siqs as any)?.score || 0} compact={true} />
+            
+            {isCertified && location.certification && (
+              <div className="mt-1 text-xs font-medium text-primary flex items-center">
+                <Award className="h-3 w-3 mr-1" />
+                {location.certification}
               </div>
             )}
             
-            {typeof location.distance === 'number' && isFinite(location.distance) && (
-              <span className="text-xs text-gray-300 flex items-center justify-end">
-                {formatDistance(location.distance)}
-              </span>
-            )}
+            <div className="mt-2 flex items-center justify-between">
+              {siqsScore !== null && (
+                <div className="flex items-center gap-1.5">
+                  <SiqsScoreBadge 
+                    score={siqsScore} 
+                    compact={true} 
+                    loading={siqsLoading && isHovered}
+                  />
+                </div>
+              )}
+              
+              {typeof location.distance === 'number' && isFinite(location.distance) && (
+                <span className="text-xs text-gray-300 flex items-center justify-end">
+                  {formatDistance(location.distance)}
+                </span>
+              )}
+            </div>
+            
+            <div className="mt-2 text-center">
+              <button 
+                onClick={goToLocationDetails}
+                className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                {t("View Details", "查看详情")}
+              </button>
+            </div>
           </div>
-          
-          <div className="mt-2 text-center">
-            <button 
-              onClick={goToLocationDetails}
-              className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              {t("View Details", "查看详情")}
-            </button>
-          </div>
-        </div>
-      </Popup>
-    </Marker>
+        </Popup>
+      </Marker>
+    </>
   );
 });
 
@@ -266,7 +280,6 @@ const UserLocationMarker = memo(({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Import and use createCustomMarker function
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   
   return (
