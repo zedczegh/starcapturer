@@ -4,8 +4,7 @@
  */
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { isWaterLocation } from '@/utils/locationValidator';
-import { isCertifiedLocation } from '@/utils/locationFiltering';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
 import L from 'leaflet';
 import { isValidAstronomyLocation as checkValidAstronomyLocation } from '@/utils/locationValidator';
@@ -33,6 +32,17 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   } else {
     return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
   }
+};
+
+/**
+ * Check if a location is a certified location
+ */
+export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
+  return Boolean(
+    location.certification || 
+    location.isDarkSkyReserve || 
+    (location.type && location.type.includes('dark-sky'))
+  );
 };
 
 /**

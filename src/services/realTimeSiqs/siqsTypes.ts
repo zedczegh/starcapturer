@@ -14,17 +14,36 @@ export interface WeatherDataWithClearSky {
   clearSkyRate: number;
   rain?: number;
   snow?: number;
+  precipitation?: number;  // Added for compatibility
+  time?: string;          // Added timestamp
+  latitude?: number;      // Added for location reference
+  longitude?: number;     // Added for location reference
+  _forecast?: any;        // Added for forecast data reference
 }
 
 // SIQS calculation result
 export interface SiqsResult {
-  score: number;
+  score: number;          // Primary SIQS score
+  siqs?: number;          // Legacy field for backward compatibility
   isViable: boolean;
   factors?: Array<{
     name: string;
     score: number;
     description: string;
   }>;
+  metadata?: {
+    calculatedAt?: string;
+    sources?: {
+      weather: boolean;
+      forecast: boolean;
+      clearSky: boolean;
+      lightPollution: boolean;
+    };
+    reliability?: {
+      confidenceScore: number;
+      issues: string[];
+    };
+  };
 }
 
 // SIQS location result
@@ -43,13 +62,21 @@ export interface SiqsLocationResult {
   isDarkSkyReserve?: boolean;
   timestamp: string;
   type?: string;
-  siqsResult?: {
-    score: number;
-    isViable: boolean;
-    factors?: Array<{
-      name: string;
-      score: number;
-      description: string;
-    }>;
-  };
+  siqsResult?: SiqsResult;
+}
+
+// Moon phase information
+export interface MoonPhaseInfo {
+  phase: number;
+  illumination: number;
+  name: string;
+  isNewMoon: boolean;
+  isFullMoon: boolean;
+}
+
+// SIQS calculation options
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  cacheDuration?: number;
 }

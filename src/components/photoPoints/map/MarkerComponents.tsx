@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -18,6 +17,7 @@ import {
 } from './MarkerUtils';
 import RealTimeSiqsFetcher from '../cards/RealTimeSiqsFetcher';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import { createCustomMarker } from './utils/markerHelpers';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -59,16 +59,12 @@ const LocationMarker = memo(({
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
-  // Improved SIQS score handling, ensuring certified locations always have a score
   const siqsScore = useMemo(() => {
-    // Use real-time SIQS if available
     if (realTimeSiqs !== null) return realTimeSiqs;
     
-    // Use location's SIQS if available
     const locationSiqs = getSiqsScore(location);
     if (locationSiqs > 0) return locationSiqs;
     
-    // For certified locations without SIQS, provide a default good score
     if (isCertified) {
       return location.isDarkSkyReserve ? 7.5 : 6.5;
     }
@@ -199,7 +195,6 @@ const LocationMarker = memo(({
     return null;
   }
   
-  // Always fetch real-time SIQS for certified locations
   const shouldShowRealTimeSiqs = Boolean(
     isCertified || 
     location.isDarkSkyReserve || 
@@ -258,7 +253,6 @@ const LocationMarker = memo(({
             )}
             
             <div className="mt-2 flex items-center justify-between">
-              {/* Always show SIQS badge for certified locations */}
               {(siqsScore !== null || isCertified) && (
                 <div className="flex items-center gap-1.5">
                   <SiqsScoreBadge 

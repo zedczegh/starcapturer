@@ -8,6 +8,7 @@ import {
   getCachedSiqs,
   setSiqsCache
 } from "./siqsCache";
+import { SiqsResult } from "./siqsTypes";
 
 /**
  * Calculate real-time SIQS for a given location
@@ -20,11 +21,11 @@ export async function calculateRealTimeSiqs(
   latitude: number,
   longitude: number,
   bortleScale: number = 4
-) {
+): Promise<SiqsResult> {
   try {
     // Check cache first
     if (hasCachedSiqs(latitude, longitude)) {
-      return getCachedSiqs(latitude, longitude);
+      return getCachedSiqs(latitude, longitude) as SiqsResult;
     }
     
     // Fetch weather data
@@ -48,17 +49,21 @@ export async function calculateRealTimeSiqs(
       bortleScale
     );
     
-    // Cache the result
-    setSiqsCache(latitude, longitude, siqsResult);
-    
-    return {
-      siqs: siqsResult.score,
-      isViable: siqsResult.isViable
+    // Convert legacy format to new SiqsResult format if needed
+    const standardizedResult: SiqsResult = {
+      score: siqsResult.score || (typeof siqsResult.siqs === 'number' ? siqsResult.siqs : 0),
+      isViable: siqsResult.isViable,
+      factors: siqsResult.factors
     };
+    
+    // Cache the result
+    setSiqsCache(latitude, longitude, standardizedResult);
+    
+    return standardizedResult;
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
     return {
-      siqs: 0,
+      score: 0,
       isViable: false
     };
   }

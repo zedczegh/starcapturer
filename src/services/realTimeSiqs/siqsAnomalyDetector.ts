@@ -27,7 +27,7 @@ export function detectAndFixAnomalies(
   location: { latitude: number; longitude: number }
 ): SiqsResult {
   // Don't process already invalid results
-  if (!siqs || siqs.siqs <= 0) {
+  if (!siqs || siqs.score <= 0) {
     return siqs;
   }
 
@@ -55,26 +55,26 @@ function correctPhysicalImpossibilities(
   const result = { ...siqs };
   
   // High cloud cover should prevent high SIQS scores
-  if (weatherData.cloudCover >= CRITICAL_WEATHER_THRESHOLD && siqs.siqs > 5) {
-    console.log(`Anomaly detected: ${weatherData.cloudCover}% cloud cover but SIQS ${siqs.siqs.toFixed(1)}`);
+  if (weatherData.cloudCover >= CRITICAL_WEATHER_THRESHOLD && siqs.score > 5) {
+    console.log(`Anomaly detected: ${weatherData.cloudCover}% cloud cover but SIQS ${siqs.score.toFixed(1)}`);
     
     // Apply cloud-based correction
-    const correctedScore = Math.min(siqs.siqs, 10 - (weatherData.cloudCover / 20));
+    const correctedScore = Math.min(siqs.score, 10 - (weatherData.cloudCover / 20));
     
-    result.siqs = Math.round(correctedScore * 10) / 10;
-    result.isViable = result.siqs >= 2.0;
+    result.score = Math.round(correctedScore * 10) / 10;
+    result.isViable = result.score >= 2.0;
     
-    console.log(`Corrected to ${result.siqs.toFixed(1)} based on physical impossibility`);
+    console.log(`Corrected to ${result.score.toFixed(1)} based on physical impossibility`);
   }
   
   // Active precipitation should limit maximum score
-  if (weatherData.precipitation > 0 && siqs.siqs > 6) {
-    const correctedScore = Math.min(siqs.siqs, 6.0);
+  if (weatherData.precipitation && weatherData.precipitation > 0 && siqs.score > 6) {
+    const correctedScore = Math.min(siqs.score, 6.0);
     
-    result.siqs = Math.round(correctedScore * 10) / 10;
-    result.isViable = result.siqs >= 2.0;
+    result.score = Math.round(correctedScore * 10) / 10;
+    result.isViable = result.score >= 2.0;
     
-    console.log(`Corrected SIQS from ${siqs.siqs.toFixed(1)} to ${result.siqs.toFixed(1)} due to active precipitation`);
+    console.log(`Corrected SIQS from ${siqs.score.toFixed(1)} to ${result.score.toFixed(1)} due to active precipitation`);
   }
   
   return result;
@@ -92,20 +92,20 @@ function ensureTemporalConsistency(
   if (hasCachedSiqs(latitude, longitude)) {
     const previousSiqs = getCachedSiqs(latitude, longitude);
     
-    if (previousSiqs && Math.abs(previousSiqs.siqs - siqs.siqs) > MAX_SCORE_DELTA) {
-      console.log(`Anomaly detected: SIQS changed by ${Math.abs(previousSiqs.siqs - siqs.siqs).toFixed(1)} points`);
+    if (previousSiqs && Math.abs(previousSiqs.score - siqs.score) > MAX_SCORE_DELTA) {
+      console.log(`Anomaly detected: SIQS changed by ${Math.abs(previousSiqs.score - siqs.score).toFixed(1)} points`);
       
       // Calculate a more reasonable transition
-      const direction = siqs.siqs > previousSiqs.siqs ? 1 : -1;
+      const direction = siqs.score > previousSiqs.score ? 1 : -1;
       const allowedChange = MAX_SCORE_DELTA * direction;
-      const smoothedScore = previousSiqs.siqs + allowedChange;
+      const smoothedScore = previousSiqs.score + allowedChange;
       
       // Create a smoothed result
       const result = { ...siqs };
-      result.siqs = Math.round(smoothedScore * 10) / 10;
-      result.isViable = result.siqs >= 2.0;
+      result.score = Math.round(smoothedScore * 10) / 10;
+      result.isViable = result.score >= 2.0;
       
-      console.log(`Smoothed SIQS from ${siqs.siqs.toFixed(1)} to ${result.siqs.toFixed(1)} for temporal consistency`);
+      console.log(`Smoothed SIQS from ${siqs.score.toFixed(1)} to ${result.score.toFixed(1)} for temporal consistency`);
       return result;
     }
   }

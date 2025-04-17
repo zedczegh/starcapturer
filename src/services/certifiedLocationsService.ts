@@ -1,4 +1,29 @@
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { findCertifiedLocations } from '@/services/locationSearchService';
+
+// Export the function directly for external use
+export { findCertifiedLocations };
+
+/**
+ * Fetch certified dark sky locations within radius
+ * @param latitude User latitude
+ * @param longitude User longitude
+ * @param radius Search radius in km
+ * @returns Promise of certified locations
+ */
+export async function fetchCertifiedLocationsNearby(
+  latitude: number,
+  longitude: number,
+  radius: number = 500
+): Promise<SharedAstroSpot[]> {
+  try {
+    // Call the location service
+    return await findCertifiedLocations(latitude, longitude, radius);
+  } catch (error) {
+    console.error("Error fetching certified locations:", error);
+    return [];
+  }
+}
 
 // Cache for certified locations to avoid repeated API calls
 let cachedCertifiedLocations: SharedAstroSpot[] | null = null;
@@ -115,7 +140,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'hotel-rangá',
       name: 'Hotel Rangá',
-      chineseName: '朗加��店暗夜天空点',
+      chineseName: '朗加����店暗夜天空点',
       latitude: 63.8366,
       longitude: -20.3561,
       isDarkSkyReserve: false,

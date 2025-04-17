@@ -86,6 +86,15 @@ export const useRecommendedLocationsFix = (props?: UseRecommendedLocationsFixPro
       setSearching(false);
     }
   }, [userLocation, searchRadius, locationsData, canLoadMore, t]);
+
+  // Add this helper method to help with the specific error
+  const findCalculatedLocations = useCallback(async (
+    latitude: number,
+    longitude: number,
+    radius: number
+  ) => {
+    return findCalculatedLocations(latitude, longitude, radius);
+  }, []);
   
   return {
     userLocation,
@@ -93,6 +102,7 @@ export const useRecommendedLocationsFix = (props?: UseRecommendedLocationsFixPro
     maxResults,
     fetchRecommendations,
     fetchMoreLocations,
+    findCalculatedLocations,
     loading,
     searching,
     maxDiscoveries,
