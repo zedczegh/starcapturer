@@ -2,16 +2,39 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Camera, Map, Award } from "lucide-react";
+import { Camera, Map, Award, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { motion } from "framer-motion";
 
-const PhotoPointsSection: React.FC = () => {
+interface PhotoPointsSectionProps {
+  currentSiqs?: number | null;
+}
+
+const PhotoPointsSection: React.FC<PhotoPointsSectionProps> = ({ currentSiqs }) => {
   const { t } = useLanguage();
+  
+  const fadeInUpVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.7, 
+        ease: "easeOut" 
+      } 
+    }
+  };
   
   return (
     <section className="py-16 bg-cosmic-800">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col items-center text-center mb-12">
+        <motion.div 
+          className="flex flex-col items-center text-center mb-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={fadeInUpVariants}
+        >
           <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 mb-6">
             <Map className="h-3.5 w-3.5 text-primary mr-2" />
             <span className="text-xs font-medium text-primary">
@@ -42,7 +65,29 @@ const PhotoPointsSection: React.FC = () => {
               )}
             </p>
           </div>
-        </div>
+        </motion.div>
+        
+        {currentSiqs !== null && currentSiqs >= 6 && (
+          <motion.div 
+            className="mb-8 max-w-md mx-auto text-center p-4 rounded-lg bg-green-500/10 border border-green-500/20"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-center justify-center mb-2">
+              <Star className="h-5 w-5 text-yellow-400 mr-2" fill="#facc15" />
+              <p className="text-green-400 font-semibold">
+                {t("Great SIQS Score Detected!", "检测到优秀的SIQS评分！")}
+              </p>
+            </div>
+            <p className="text-sm text-white/90">
+              {t(
+                "Your location has excellent astrophotography conditions with a SIQS score of",
+                "您的位置拥有优秀的天文摄影条件，SIQS评分为"
+              )} <span className="font-bold text-green-300">{currentSiqs.toFixed(1)}</span>
+            </p>
+          </motion.div>
+        )}
         
         <div className="flex justify-center">
           <Button 

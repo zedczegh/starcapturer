@@ -55,7 +55,7 @@ const IndexPage = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          const locationSiqs = savedLocation.siqs || currentSiqsStore((state) => state.value);
+          const locationSiqs = savedLocation.siqs || currentSiqsStore.getState().value;
           setCurrentSiqs(locationSiqs);
         }
       }
@@ -73,22 +73,14 @@ const IndexPage = () => {
       }
     }
     
-    const updateCurrentSiqs = () => {
-      try {
-        const savedLocationString = localStorage.getItem('latest_siqs_location');
-        if (savedLocationString) {
-          const savedLocation = JSON.parse(savedLocationString);
-          if (savedLocation && savedLocation.siqs) {
-            currentSiqsStore.getState().setValue(savedLocation.siqs);
-            setCurrentSiqs(savedLocation.siqs);
-          }
-        }
-      } catch (error) {
-        console.error("Error updating current SIQS:", error);
-      }
-    };
+    // Listen for SIQS updates from the store
+    const unsubscribe = currentSiqsStore.subscribe(
+      state => setCurrentSiqs(state.value)
+    );
     
-    updateCurrentSiqs();
+    return () => {
+      unsubscribe();
+    };
   }, [queryClient]);
 
   return (
@@ -97,9 +89,9 @@ const IndexPage = () => {
       
       <div className="relative z-10">
         <HeroSection />
-        <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
+        <CalculatorSection id="calculator-section" noAutoLocationRequest={hasRestoredLocation} />
         <ScienceSection />
-        <PhotoPointsSection />
+        <PhotoPointsSection currentSiqs={currentSiqs} />
         <Footer />
       </div>
     </div>

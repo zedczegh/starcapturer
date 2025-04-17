@@ -25,9 +25,15 @@ export const currentSiqsStore = create<SiqsState>((set) => ({
   setMetadata: (name, lat, lng) => set({ locationName: name, latitude: lat, longitude: lng })
 }));
 
-const CalculatorSection: React.FC<{
+interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
-}> = ({ noAutoLocationRequest = false }) => {
+  id?: string;
+}
+
+const CalculatorSection: React.FC<CalculatorSectionProps> = ({ 
+  noAutoLocationRequest = false,
+  id = "calculator" 
+}) => {
   const { t } = useLanguage();
   const [siqsCalculated, setSiqsCalculated] = useState<number | null>(null);
   const [locationData, setLocationData] = useState<any>(null);
@@ -40,27 +46,36 @@ const CalculatorSection: React.FC<{
   // Create simulated weather data for the SIQS Summary component
   useEffect(() => {
     if (siqsCalculated !== null && locationLatitude && locationLongitude) {
-      const { start, end } = calculateAstronomicalNight(
-        locationLatitude, 
-        locationLongitude
-      );
-      
-      setLocationData({
-        name: locationName,
-        latitude: locationLatitude,
-        longitude: locationLongitude,
-        timestamp: new Date().toISOString(),
-        weatherData: {
-          temperature: 15,
-          humidity: 60,
-          windSpeed: 10,
-          clearSkyRate: 70
-        },
-        siqsResult: {
-          score: siqsCalculated,
-          isViable: siqsCalculated >= 2.5
-        }
-      });
+      try {
+        const { start, end } = calculateAstronomicalNight(
+          locationLatitude, 
+          locationLongitude
+        );
+        
+        setLocationData({
+          name: locationName,
+          latitude: locationLatitude,
+          longitude: locationLongitude,
+          timestamp: new Date().toISOString(),
+          astronomicalNight: {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            formattedTime: `${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`
+          },
+          weatherData: {
+            temperature: 15,
+            humidity: 60,
+            windSpeed: 10,
+            clearSkyRate: 70
+          },
+          siqsResult: {
+            score: siqsCalculated,
+            isViable: siqsCalculated >= 2.5
+          }
+        });
+      } catch (err) {
+        console.error("Error calculating astronomical night for SIQS summary:", err);
+      }
     }
   }, [siqsCalculated, locationLatitude, locationLongitude, locationName]);
   
@@ -70,7 +85,7 @@ const CalculatorSection: React.FC<{
   };
 
   return (
-    <section id="calculator" className="py-16 px-4 relative">
+    <section id={id} className="py-16 px-4 relative">
       <div className="max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
