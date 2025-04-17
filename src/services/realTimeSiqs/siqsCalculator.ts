@@ -1,199 +1,113 @@
 
-/**
- * Core SIQS calculation logic
- */
+import axios from 'axios';
+import { calculateSIQS } from '@/lib/calculateSIQS';
+import { getCurrentMoonPhase } from '@/utils/moonPhaseCalculator';
+import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
+import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
+import { SiqsResult } from './siqsTypes';
 
-import { SiqsResult, WeatherDataWithClearSky, SiqsCalculationOptions, SiqsFactor } from './siqsTypes';
-import { applyIntelligentAdjustments } from './siqsAdjustments';
-import { findClimateRegion, getClimateAdjustmentFactor } from './climateRegions';
+// Cache for SIQS calculations to prevent excessive API calls
+const siqsCache = new Map<string, { siqs: number; timestamp: number }>();
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 /**
- * Calculate basic SIQS score based on Bortle scale and weather
- * This is a simplified version of the algorithm
+ * Calculate real-time SIQS for a specific location
  */
-export function calculateSiqsScore(
-  bortleScale: number, 
-  weatherData: WeatherDataWithClearSky,
-  options: SiqsCalculationOptions = {}
-): SiqsResult {
-  // Validate inputs
-  const validBortle = Math.max(1, Math.min(9, bortleScale));
-  
-  // Base score inversely related to Bortle scale (1-9)
-  // Bortle 1 = best (9 points), Bortle 9 = worst (1 point)
-  const bortleBase = 10 - validBortle;
-  
-  // Clear sky factor (0-1)
-  const clearSkyFactor = Math.min(1, Math.max(0, weatherData.clearSky / 100));
-  
-  // Weather factors
-  const tempFactor = getTemperatureFactor(weatherData.temperature);
-  const humidityFactor = getHumidityFactor(weatherData.humidity);
-  const windFactor = getWindFactor(weatherData.windSpeed || 0);
-  
-  // Calculate factors
-  const factors: SiqsFactor[] = [];
-  
-  // Light pollution factor (40% weight)
-  const lightPollutionScore = bortleBase;
-  factors.push({
-    name: 'Light Pollution',
-    score: lightPollutionScore,
-    description: `Bortle scale ${validBortle}/9`,
-    value: validBortle
-  });
-  
-  // Cloud cover factor (30% weight)
-  const cloudCoverScore = clearSkyFactor * 10;
-  factors.push({
-    name: 'Cloud Cover',
-    score: cloudCoverScore,
-    description: `${100 - (weatherData.cloudCover || 0)}% clear`,
-    value: weatherData.cloudCover
-  });
-  
-  // Humidity factor (10% weight)
-  const humidityScore = humidityFactor * 10;
-  factors.push({
-    name: 'Humidity',
-    score: humidityScore,
-    description: `${weatherData.humidity}% relative humidity`,
-    value: weatherData.humidity
-  });
-  
-  // Wind factor (10% weight)
-  const windScore = windFactor * 10;
-  factors.push({
-    name: 'Wind',
-    score: windScore,
-    description: `${weatherData.windSpeed || 0} km/h`,
-    value: weatherData.windSpeed
-  });
-  
-  // Temperature factor (10% weight)
-  const temperatureScore = tempFactor * 10;
-  factors.push({
-    name: 'Temperature',
-    score: temperatureScore,
-    description: `${weatherData.temperature}°C`,
-    value: weatherData.temperature
-  });
-  
-  // Calculate composite score with proper weighting
-  let compositeScore = 
-    (lightPollutionScore * 0.4) +
-    (cloudCoverScore * 0.3) +
-    (humidityScore * 0.1) +
-    (windScore * 0.1) +
-    (temperatureScore * 0.1);
-  
-  // Air quality adjustment if available
-  if (weatherData.aqi !== undefined) {
-    const aqiFactor = getAqiFactor(weatherData.aqi);
-    compositeScore *= aqiFactor;
+export async function calculateRealTimeSiqs(latitude: number, longitude: number, bortleScale: number): Promise<SiqsResult> {
+  try {
+    console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, Bortle: ${bortleScale}`);
     
-    factors.push({
-      name: 'Air Quality',
-      score: aqiFactor * 10,
-      description: `AQI: ${weatherData.aqi}`,
-      value: weatherData.aqi
-    });
-  }
-  
-  // Round to one decimal place
-  compositeScore = Math.round(compositeScore * 10) / 10;
-  
-  // Determine if conditions are viable for astronomy
-  // Generally, SIQS >= 5.0 is considered viable
-  const isViable = compositeScore >= 5.0;
-  
-  // Create the final result
-  const result: SiqsResult = {
-    siqs: compositeScore,
-    score: compositeScore, // Set both for compatibility
-    isViable,
-    factors: options.includeFactors ? factors : undefined
-  };
-  
-  // Add metadata if requested
-  if (options.includeMetadata) {
-    result.metadata = {
-      timestamp: new Date().toISOString(),
-      bortleScale: validBortle,
-      weatherSnapshot: { ...weatherData }
+    // Check cache first
+    const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}`;
+    const cached = siqsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+      console.log('Using cached SIQS data:', cached.siqs);
+      return { 
+        siqs: cached.siqs,
+        isViable: cached.siqs >= 5.0
+      };
+    }
+    
+    // Fetch weather data
+    let weatherData;
+    try {
+      const response = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m&timezone=auto`);
+      weatherData = response.data;
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      // Fallback to reasonable default values
+      weatherData = {
+        hourly: {
+          temperature_2m: Array(24).fill(15), 
+          relativehumidity_2m: Array(24).fill(60),
+          cloudcover: Array(24).fill(50),
+          windspeed_10m: Array(24).fill(10)
+        }
+      };
+    }
+    
+    // Calculate moon phase
+    const moonPhase = getCurrentMoonPhase();
+    
+    // Calculate cloud cover during astronomical night
+    let cloudCover = 50; // Default value
+    let tonightCloudCover = null;
+    
+    try {
+      if (weatherData?.hourly?.cloudcover) {
+        tonightCloudCover = calculateTonightCloudCover(weatherData.hourly, latitude, longitude);
+        cloudCover = tonightCloudCover;
+        console.log(`Tonight's astronomical night cloud cover: ${cloudCover}%`);
+      }
+    } catch (error) {
+      console.error('Error calculating tonight cloud cover:', error);
+      // Use the current hour's cloud cover as fallback
+      const currentHour = new Date().getHours();
+      cloudCover = weatherData?.hourly?.cloudcover[currentHour] || 50;
+    }
+    
+    // Get current weather conditions
+    const currentHour = new Date().getHours();
+    const currentTemp = weatherData?.hourly?.temperature_2m?.[currentHour] || 15;
+    const currentHumidity = weatherData?.hourly?.relativehumidity_2m?.[currentHour] || 60;
+    const currentWindSpeed = weatherData?.hourly?.windspeed_10m?.[currentHour] || 10;
+    
+    // Build up SIQS input data with all available information
+    const siqsInput = {
+      cloudCover,
+      bortleScale,
+      seeingConditions: 2.5, // Default seeing conditions
+      windSpeed: currentWindSpeed,
+      humidity: currentHumidity, 
+      moonPhase,
+      clearSkyRate: 100 - cloudCover
     };
+    
+    // Calculate SIQS score using our algorithm
+    const siqsResult = calculateSIQS(siqsInput);
+    const siqs = siqsResult.score;
+    
+    console.log('Calculated SIQS score:', siqs);
+    
+    // Update cache
+    siqsCache.set(cacheKey, { siqs, timestamp: Date.now() });
+    
+    return { 
+      siqs,
+      isViable: siqs >= 5.0,
+      factors: siqsResult.factors
+    };
+    
+  } catch (error) {
+    console.error('Error in calculateRealTimeSiqs:', error);
+    throw new Error(`Failed to calculate SIQS: ${error}`);
   }
-  
-  return result;
 }
 
 /**
- * Get temperature factor (0-1)
- * Optimal temperatures are between 5°C and 25°C
+ * Clear the location SIQS cache
  */
-function getTemperatureFactor(temperature: number): number {
-  if (temperature >= 5 && temperature <= 25) {
-    return 1.0; // Optimal range
-  }
-  
-  if (temperature < -10 || temperature > 35) {
-    return 0.6; // Poor conditions
-  }
-  
-  if (temperature < 0 || temperature > 30) {
-    return 0.8; // Below average conditions
-  }
-  
-  return 0.9; // Slight impact
-}
-
-/**
- * Get humidity factor (0-1)
- * Lower humidity is better for astronomy
- */
-function getHumidityFactor(humidity: number): number {
-  if (humidity <= 40) {
-    return 1.0; // Excellent
-  }
-  
-  if (humidity >= 90) {
-    return 0.5; // Poor
-  }
-  
-  // Linear scale between 40% and 90%
-  return 1.0 - ((humidity - 40) / 100);
-}
-
-/**
- * Get wind factor (0-1)
- * Moderate wind is OK, strong wind is bad for astronomy
- */
-function getWindFactor(windSpeed: number): number {
-  if (windSpeed <= 10) {
-    return 1.0; // Excellent
-  }
-  
-  if (windSpeed >= 30) {
-    return 0.4; // Poor
-  }
-  
-  // Linear scale between 10km/h and 30km/h
-  return 1.0 - ((windSpeed - 10) / 40);
-}
-
-/**
- * Get air quality factor (0-1)
- * Lower AQI is better for astronomy
- */
-function getAqiFactor(aqi: number): number {
-  if (aqi <= 50) {
-    return 1.0; // Excellent
-  }
-  
-  if (aqi >= 200) {
-    return 0.6; // Poor
-  }
-  
-  // Linear scale between 50 and 200
-  return 1.0 - ((aqi - 50) / 375);
+export function clearLocationCache() {
+  siqsCache.clear();
+  console.log("Cleared SIQS location cache");
 }

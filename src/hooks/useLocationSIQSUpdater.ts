@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
-import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
+import { calculateNighttimeSIQS, calculateTonightCloudCover, getCachedAstronomicalNight } from '@/utils/nighttimeSIQS';
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
@@ -69,26 +69,58 @@ export const useLocationSIQSUpdater = (
         const latitude = locationData.latitude || 0;
         const longitude = locationData.longitude || 0;
         
-        // Get astronomical night times
-        const { start, end } = calculateAstronomicalNight(latitude, longitude);
-        const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
+        // First check for cached astronomical night data
+        let nightTimeStr: string;
+        const cachedNight = getCachedAstronomicalNight(latitude, longitude);
         
-        console.log(`Astronomical night for location: ${nightTimeStr}`);
+        if (cachedNight) {
+          nightTimeStr = cachedNight.formatted;
+          console.log(`Using cached astronomical night: ${nightTimeStr}`);
+        } else {
+          // Get astronomical night times
+          const { start, end } = calculateAstronomicalNight(latitude, longitude);
+          nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
+          console.log(`Calculated astronomical night for location: ${nightTimeStr}`);
+        }
         
-        // Calculate new SIQS based on astronomical nighttime conditions
+        // First try calculating with our enhanced nighttime SIQS algorithm
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
           console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
           
+          // Make a copy to avoid modifying the original
+          const updatedLocationData = { ...locationData };
+          
+          // Ensure we have metadata object for astronomical night data
+          if (!updatedLocationData.metadata) {
+            updatedLocationData.metadata = {};
+          }
+          
+          // Add astronomical night data if it doesn't exist
+          if (!updatedLocationData.metadata.astronomicalNight) {
+            if (cachedNight) {
+              updatedLocationData.metadata.astronomicalNight = {
+                start: cachedNight.start.toISOString(),
+                end: cachedNight.end.toISOString(),
+                formattedTime: cachedNight.formatted
+              };
+            } else {
+              const { start, end } = calculateAstronomicalNight(latitude, longitude);
+              updatedLocationData.metadata.astronomicalNight = {
+                start: start.toISOString(),
+                end: end.toISOString(),
+                formattedTime: nightTimeStr
+              };
+            }
+          }
+          
           // Update the SIQS result with the fresh calculation
-          setLocationData({
-            ...locationData,
-            siqsResult: freshSIQSResult
-          });
+          updatedLocationData.siqsResult = freshSIQSResult;
+          setLocationData(updatedLocationData);
           
           updateAttemptedRef.current = true;
-        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
+        } else if (forecastData?.hourly?.cloud_cover && locationData) {
           // If we couldn't calculate nighttime SIQS but have forecast data,
           // use our improved astronomical night cloud cover calculation
           
@@ -104,28 +136,52 @@ export const useLocationSIQSUpdater = (
           
           console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
           
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: tonightCloudCover < 40,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: (100 - tonightCloudCover * 2.5) / 10,
-                  description: t 
-                    ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
-                      `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
-                    : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
-                  nighttimeData: {
-                    average: tonightCloudCover,
-                    timeRange: nightTimeStr
-                  }
-                }
-              ]
-            }
-          });
+          const updatedLocationData = { ...locationData };
           
+          // Ensure we have metadata object
+          if (!updatedLocationData.metadata) {
+            updatedLocationData.metadata = {};
+          }
+          
+          // Add astronomical night data
+          if (!updatedLocationData.metadata.astronomicalNight) {
+            if (cachedNight) {
+              updatedLocationData.metadata.astronomicalNight = {
+                start: cachedNight.start.toISOString(),
+                end: cachedNight.end.toISOString(),
+                formattedTime: cachedNight.formatted
+              };
+            } else {
+              const { start, end } = calculateAstronomicalNight(latitude, longitude);
+              updatedLocationData.metadata.astronomicalNight = {
+                start: start.toISOString(),
+                end: end.toISOString(),
+                formattedTime: nightTimeStr
+              };
+            }
+          }
+          
+          // Update with simplified SIQS calculation
+          updatedLocationData.siqsResult = {
+            score: estimatedScore,
+            isViable: tonightCloudCover < 40,
+            factors: [
+              {
+                name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+                score: (100 - tonightCloudCover * 2.5) / 10,
+                description: t 
+                  ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
+                    `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
+                  : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
+                nighttimeData: {
+                  average: tonightCloudCover,
+                  timeRange: nightTimeStr
+                }
+              }
+            ]
+          };
+          
+          setLocationData(updatedLocationData);
           updateAttemptedRef.current = true;
         } else if (locationData.weatherData?.cloudCover !== undefined) {
           // Last fallback to current weather if forecast is unavailable
@@ -138,24 +194,39 @@ export const useLocationSIQSUpdater = (
           
           console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
           
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: estimatedScore > 2,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
-                  description: t 
-                    ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
-                      `${currentCloudCover}%的云量影响成像质量`) 
-                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
-                }
-              ]
-            }
-          });
+          const updatedLocationData = { ...locationData };
           
+          // Ensure we have metadata object
+          if (!updatedLocationData.metadata) {
+            updatedLocationData.metadata = {};
+          }
+          
+          // Add astronomical night data if we have coordinates
+          if (!updatedLocationData.metadata.astronomicalNight && latitude && longitude) {
+            const { start, end } = calculateAstronomicalNight(latitude, longitude);
+            updatedLocationData.metadata.astronomicalNight = {
+              start: start.toISOString(),
+              end: end.toISOString(),
+              formattedTime: `${formatTime(start)}-${formatTime(end)}`
+            };
+          }
+          
+          updatedLocationData.siqsResult = {
+            score: estimatedScore,
+            isViable: estimatedScore > 2,
+            factors: [
+              {
+                name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+                score: estimatedScore, // Already on 0-10 scale
+                description: t 
+                  ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
+                    `${currentCloudCover}%的云量影响成像质量`) 
+                  : `Cloud cover of ${currentCloudCover}% affects imaging quality`
+              }
+            ]
+          };
+          
+          setLocationData(updatedLocationData);
           updateAttemptedRef.current = true;
         }
       } catch (error) {

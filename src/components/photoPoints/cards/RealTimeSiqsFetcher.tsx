@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
+import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -22,7 +23,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache duration
+  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
@@ -56,12 +57,11 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               }
             }
             
-            // If we have coordinates, calculate astronomical night for logging purposes
-            if (latitude && longitude) {
-              const { start, end } = calculateAstronomicalNight(latitude, longitude);
-              console.log(`Astronomical night for this location: ${formatTime(start)}-${formatTime(end)}`);
-            }
+            // Calculate astronomical night for this location
+            const { start, end } = calculateAstronomicalNight(latitude, longitude);
+            console.log(`Astronomical night for this location: ${formatTime(start)}-${formatTime(end)}`);
             
+            // Get real-time SIQS using astronomical night cloud cover
             const result = await calculateRealTimeSiqs(
               latitude,
               longitude,
@@ -72,10 +72,14 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
               
               // Cache the result in sessionStorage
-              sessionStorage.setItem(cacheKey, JSON.stringify({
-                data: result,
-                timestamp: now
-              }));
+              try {
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                  data: result,
+                  timestamp: now
+                }));
+              } catch (err) {
+                console.error("Error caching SIQS data:", err);
+              }
               
               onSiqsCalculated(result.siqs, false);
             } else {

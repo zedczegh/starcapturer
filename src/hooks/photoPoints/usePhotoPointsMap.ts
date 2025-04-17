@@ -1,9 +1,16 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations, useMapUtils } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+declare global {
+  interface Window {
+    leafletMap?: any;
+  }
+}
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -18,22 +25,22 @@ export const usePhotoPointsMap = ({
   searchRadius,
   activeView
 }: UsePhotoPointsMapProps) => {
+  const { t } = useLanguage();
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
-  // IMPORTANT: Always load certified locations regardless of view
-  const shouldLoadCertified = true; // Always load certified locations
+  const shouldLoadCertified = true;
   
-  // Use our certified locations loader with always-on loading
   const { 
     certifiedLocations: allCertifiedLocations, 
     isLoading: certifiedLocationsLoading,
-    loadingProgress 
+    loadingProgress,
+    refreshLocations: refreshCertifiedLocations
   } = useCertifiedLocationsLoader(shouldLoadCertified);
   
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   
-  // Store all certified locations for persistence
   useEffect(() => {
     if (allCertifiedLocations.length > 0) {
       console.log(`Storing ${allCertifiedLocations.length} certified locations in persistent storage`);
@@ -43,20 +50,26 @@ export const usePhotoPointsMap = ({
         }
       });
       setCertifiedLocationsLoaded(true);
+    } else if (mapReady && !certifiedLocationsLoading && retryCount < 3) {
+      console.log("No certified locations loaded, retrying...");
+      setTimeout(() => {
+        refreshCertifiedLocations();
+        setRetryCount(prev => prev + 1);
+      }, 2000);
     }
-  }, [allCertifiedLocations]);
+  }, [allCertifiedLocations, mapReady, certifiedLocationsLoading, refreshCertifiedLocations, retryCount]);
   
-  // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Combine locations - always include all relevant locations
+  useEffect(() => {
+    console.log(`Current state - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, calculated: ${locations.length}`);
+  }, [activeView, allCertifiedLocations.length, locations.length]);
+  
   const combinedLocations = useCallback(() => {
     console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations?.length || 0}`);
     
-    // Create a Map to store unique locations
     const locationMap = new Map<string, SharedAstroSpot>();
     
-    // First, add all certified locations (regardless of distance)
     allCertifiedLocations.forEach(loc => {
       if (loc.latitude && loc.longitude) {
         const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -64,9 +77,7 @@ export const usePhotoPointsMap = ({
       }
     });
     
-    // For calculated view, also add non-certified locations
     if (activeView === 'calculated') {
-      // Add regular locations without overriding certified ones
       if (Array.isArray(locations)) {
         locations.forEach(loc => {
           if (loc.latitude && loc.longitude) {
@@ -81,12 +92,19 @@ export const usePhotoPointsMap = ({
     
     const result = Array.from(locationMap.values());
     console.log(`Combined ${allCertifiedLocations.length} certified and ${locations?.length || 0} calculated locations for map display. Total: ${result.length}`);
+    
+    if (activeView === 'calculated' && allCertifiedLocations.length > 0 && locations.length === 0 && mapReady) {
+      setTimeout(() => {
+        toast.info(t(
+          "Use the search radius control to find calculated spots",
+          "使用搜索半径控制找到计算点"
+        ));
+      }, 1000);
+    }
+    
     return result;
-  }, [locations, allCertifiedLocations, activeView]);
+  }, [locations, allCertifiedLocations, activeView, mapReady, t]);
   
-  console.log("Combined locations length:", combinedLocations().length);
-  
-  // Use the location processing hook without distance filtering for certified locations
   const { processedLocations } = useMapLocations({
     userLocation,
     locations: combinedLocations(),
@@ -97,21 +115,21 @@ export const usePhotoPointsMap = ({
 
   console.log(`Processed locations: ${processedLocations.length}`);
 
-  // Calculate map center coordinates - default to China if no location
   const mapCenter: [number, number] = userLocation 
     ? [userLocation.latitude, userLocation.longitude]
-    : [35.8617, 104.1954]; // Default center (Center of China)
+    : [35.8617, 104.1954];
 
   const handleMapReady = useCallback(() => {
     console.log("Map ready signal received");
     setMapReady(true);
+    
+    if (window.leafletMap) {
+      console.log("Global leaflet map instance available");
+    }
   }, []);
 
-  // Always use a more zoomed-out initial view
-  const initialZoom = 4; // Zoomed out to see large regions
-  
-  console.log(`usePhotoPointsMap: processedLocations=${processedLocations.length}, activeView=${activeView}, searchRadius=${searchRadius}`);
-  
+  const initialZoom = userLocation ? 6 : 4;
+
   return {
     mapReady,
     handleMapReady,

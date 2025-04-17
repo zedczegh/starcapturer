@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import WeatherDataService from '@/services/weatherDataService';
-import { getClimateRegion, getLocationClimateInfo } from '@/services/realTimeSiqs/climateRegions';
+import { findClosestEnhancedLocation } from '@/services/realTimeSiqs/enhancedLocationData';
+import { findClimateRegion, getLocationClimateInfo } from '@/services/realTimeSiqs/climateRegions';
 
 interface WeatherDataIntegrationOptions {
   refreshInterval?: number;
@@ -34,7 +34,7 @@ export function useWeatherDataIntegration(
   
   // Check for climate region data
   const climateRegion = latitude !== null && longitude !== null ?
-    getClimateRegion(latitude, longitude) : null;
+    findClimateRegion(latitude, longitude) : null;
   
   // Query for clear sky rate data with historical data support
   const {
@@ -50,7 +50,7 @@ export function useWeatherDataIntegration(
         console.log(`Using enhanced location data for ${enhancedLocationData.name}`);
         return {
           annualRate: enhancedLocationData.clearSkyRate,
-          monthlyRates: generateSimpleMonthlyRates(enhancedLocationData.seasonalTrends),
+          monthlyRates: generateMonthlyRatesFromSeasons(enhancedLocationData.seasonalTrends),
           source: `Enhanced location data: ${enhancedLocationData.name}`,
           isDarkSkyReserve: enhancedLocationData.isDarkSkyReserve || false,
           certification: enhancedLocationData.certification,
@@ -187,17 +187,10 @@ export function useWeatherDataIntegration(
   };
 }
 
-// Helper function to find enhanced location data
-function findClosestEnhancedLocation(latitude: number, longitude: number): any | null {
-  // This would normally use a database of enhanced locations
-  // For now, return null since we don't have the actual implementation
-  return null;
-}
-
 /**
- * Generate monthly rates from seasonal data - simplified version for type compatibility
+ * Generate monthly rates from seasonal data
  */
-function generateSimpleMonthlyRates(seasonalTrends?: any): Record<string, number> {
+function generateMonthlyRatesFromSeasons(seasonalTrends?: Record<string, { clearSkyRate: number, averageTemperature: number }>): Record<string, number> {
   if (!seasonalTrends) {
     return defaultMonthlyRates();
   }
@@ -214,13 +207,7 @@ function generateSimpleMonthlyRates(seasonalTrends?: any): Record<string, number
   // Apply base seasonal rates with small variations for each month
   Object.keys(monthMap).forEach(month => {
     const season = monthMap[month];
-    const seasonData = seasonalTrends[season];
-    
-    // Extract clearSkyRate or use a default
-    const baseRate = seasonData && typeof seasonData === 'object' && 'clearSkyRate' in seasonData 
-      ? seasonData.clearSkyRate 
-      : (typeof seasonData === 'number' ? seasonData : 60);
-      
+    const baseRate = seasonalTrends[season]?.clearSkyRate || 60;
     // Add -5 to +5 variation to make it realistic
     const variation = Math.floor(Math.random() * 11) - 5;
     result[month] = Math.min(100, Math.max(0, baseRate + variation));
@@ -230,14 +217,43 @@ function generateSimpleMonthlyRates(seasonalTrends?: any): Record<string, number
 }
 
 /**
+ * Generate seasonal trends from climate region
+ */
+function generateSeasonalTrendsFromClimate(region: any): Record<string, { clearSkyRate: number, averageTemperature: number }> {
+  // Base values
+  const baseTemp = 15;
+  const baseClearSky = region.avgClearSkyRate || 60;
+  
+  // Create seasonal variations
+  return {
+    spring: { 
+      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + (region.seasonalFactors?.spring ? (region.seasonalFactors.spring - 1) * 20 : 0))), 
+      averageTemperature: baseTemp 
+    },
+    summer: { 
+      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + (region.seasonalFactors?.summer ? (region.seasonalFactors.summer - 1) * 20 : 0))), 
+      averageTemperature: baseTemp + 10 
+    },
+    fall: { 
+      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + (region.seasonalFactors?.fall ? (region.seasonalFactors.fall - 1) * 20 : 0))), 
+      averageTemperature: baseTemp 
+    },
+    winter: { 
+      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + (region.seasonalFactors?.winter ? (region.seasonalFactors.winter - 1) * 20 : 0))), 
+      averageTemperature: baseTemp - 10
+    }
+  };
+}
+
+/**
  * Generate monthly rates from climate region
  */
 function generateMonthlyRatesFromClimateRegion(region: any): Record<string, number> {
   const result: Record<string, number> = defaultMonthlyRates();
-  const avgRate = region.conditions ? (100 - region.conditions.cloudCover) : 60;
+  const avgRate = region.avgClearSkyRate || 60;
   
   // Months are 0-11 for Jan-Dec
-  const bestMonths = [3, 4, 5, 9]; // Default best months (spring and fall)
+  const bestMonths = region.bestMonths || [];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
   // Set base rate for all months
@@ -262,39 +278,10 @@ function generateMonthlyRatesFromClimateRegion(region: any): Record<string, numb
 }
 
 /**
- * Generate seasonal trends from climate region
- */
-function generateSeasonalTrendsFromClimate(region: any): Record<string, { clearSkyRate: number, averageTemperature: number }> {
-  // Base values
-  const baseTemp = 15;
-  const baseClearSky = region.conditions ? (100 - region.conditions.cloudCover) : 60;
-  
-  // Create seasonal variations
-  return {
-    spring: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + 5)), 
-      averageTemperature: baseTemp 
-    },
-    summer: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky)), 
-      averageTemperature: baseTemp + 10 
-    },
-    fall: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + 10)), 
-      averageTemperature: baseTemp 
-    },
-    winter: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky - 10)), 
-      averageTemperature: baseTemp - 10
-    }
-  };
-}
-
-/**
  * Estimate precipitation days from climate region
  */
 function estimatePrecipitationDays(region: any): number {
-  const avgClearSky = region.conditions ? (100 - region.conditions.cloudCover) : 60;
+  const avgClearSky = region.avgClearSkyRate || 60;
   
   // Inverse relationship between clear sky and precipitation
   return Math.round(365 * (1 - (avgClearSky / 150))); // Formula gives reasonable estimates

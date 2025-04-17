@@ -1,228 +1,209 @@
 
-import React, { useState, useEffect } from "react";
-import SIQSCalculator from "@/components/SIQSCalculator";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import SIQSCalculator from "@/components/SIQSCalculator";
+import { create } from "zustand";
+import SIQSSummary from "@/components/SIQSSummary";
+import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { Star, Calculator } from "lucide-react";
 
-// Create a global object to store the current SIQS value
-export const currentSiqsStore = {
-  value: null as number | null,
-  setValue: (value: number | null) => {
-    currentSiqsStore.value = value;
-    // Also save to localStorage for persistence
-    if (value !== null) {
-      try {
-        localStorage.setItem('current_siqs_value', value.toString());
-      } catch (e) {
-        console.error("Error saving SIQS to localStorage:", e);
-      }
-    }
-  },
-  getValue: () => {
-    // If no value in memory, try localStorage
-    if (currentSiqsStore.value === null) {
-      try {
-        const storedValue = localStorage.getItem('current_siqs_value');
-        if (storedValue) {
-          const parsedValue = parseFloat(storedValue);
-          if (!isNaN(parsedValue)) {
-            currentSiqsStore.value = parsedValue;
-          }
-        }
-      } catch (e) {
-        console.error("Error reading SIQS from localStorage:", e);
-      }
-    }
-    return currentSiqsStore.value;
-  },
-  // Add metadata about the calculation
-  metadata: {
-    locationName: null as string | null,
-    latitude: null as number | null,
-    longitude: null as number | null,
-    timestamp: null as string | null,
-    setMetadata: (name: string, lat: number, lon: number) => {
-      currentSiqsStore.metadata.locationName = name;
-      currentSiqsStore.metadata.latitude = lat;
-      currentSiqsStore.metadata.longitude = lon;
-      currentSiqsStore.metadata.timestamp = new Date().toISOString();
-      
-      // Save to localStorage for persistence
-      try {
-        localStorage.setItem('siqs_metadata', JSON.stringify({
-          locationName: name,
-          latitude: lat,
-          longitude: lon,
-          timestamp: currentSiqsStore.metadata.timestamp
-        }));
-      } catch (e) {
-        console.error("Error saving SIQS metadata to localStorage:", e);
-      }
-    },
-    getMetadata: () => {
-      if (!currentSiqsStore.metadata.locationName) {
-        try {
-          const storedMetadata = localStorage.getItem('siqs_metadata');
-          if (storedMetadata) {
-            const parsedMetadata = JSON.parse(storedMetadata);
-            currentSiqsStore.metadata.locationName = parsedMetadata.locationName || null;
-            currentSiqsStore.metadata.latitude = parsedMetadata.latitude || null;
-            currentSiqsStore.metadata.longitude = parsedMetadata.longitude || null;
-            currentSiqsStore.metadata.timestamp = parsedMetadata.timestamp || null;
-          }
-        } catch (e) {
-          console.error("Error reading SIQS metadata from localStorage:", e);
-        }
-      }
-      return {
-        locationName: currentSiqsStore.metadata.locationName,
-        latitude: currentSiqsStore.metadata.latitude,
-        longitude: currentSiqsStore.metadata.longitude,
-        timestamp: currentSiqsStore.metadata.timestamp
-      };
-    }
-  }
-};
-
-// Version hash to detect algorithm tampering
-// This should be updated whenever the algorithm is legitimately changed
-export const SIQS_ALGORITHM_VERSION = "v1.0.4-astronomical-night";
-
-// Check if algorithm has been tampered with
-try {
-  // Load the expected algorithm signature
-  const expectedSignature = localStorage.getItem('siqs_algorithm_signature');
-  
-  // This is a simplified check - in a production environment this would use a
-  // cryptographic hash function to verify algorithm integrity
-  if (expectedSignature && expectedSignature !== SIQS_ALGORITHM_VERSION) {
-    console.warn("SIQS algorithm version mismatch - possible unauthorized modification");
-    // Update to the new version
-    localStorage.setItem('siqs_algorithm_signature', SIQS_ALGORITHM_VERSION);
-  } else if (!expectedSignature) {
-    // First time running this version, save the signature
-    localStorage.setItem('siqs_algorithm_signature', SIQS_ALGORITHM_VERSION);
-  }
-} catch (err) {
-  // Non-critical error, just log it
-  console.error("Error verifying algorithm integrity:", err);
+// Create a store for the current SIQS value
+interface SiqsState {
+  value: number | null;
+  setValue: (value: number | null) => void;
+  locationName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  setMetadata: (name: string, lat: number, lng: number) => void;
 }
+
+export const currentSiqsStore = create<SiqsState>((set) => ({
+  value: null,
+  setValue: (value) => set({ value }),
+  locationName: null,
+  latitude: null,
+  longitude: null,
+  setMetadata: (name, lat, lng) => set({ locationName: name, latitude: lat, longitude: lng })
+}));
 
 interface CalculatorSectionProps {
   noAutoLocationRequest?: boolean;
+  id?: string;
 }
 
 const CalculatorSection: React.FC<CalculatorSectionProps> = ({ 
-  noAutoLocationRequest = false 
+  noAutoLocationRequest = false,
+  id = "calculator" 
 }) => {
   const { t } = useLanguage();
-  const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
+  const [siqsCalculated, setSiqsCalculated] = useState<number | null>(null);
+  const [locationData, setLocationData] = useState<any>(null);
+  const [calculationSuccessful, setCalculationSuccessful] = useState(false);
   
-  // Load metadata when component mounts
-  useEffect(() => {
-    const metadata = currentSiqsStore.metadata.getMetadata();
-    console.log("Loaded SIQS metadata:", metadata);
-  }, []);
+  const currentSiqs = currentSiqsStore(state => state.value);
+  const locationLatitude = currentSiqsStore(state => state.latitude);
+  const locationLongitude = currentSiqsStore(state => state.longitude);
+  const locationName = currentSiqsStore(state => state.locationName);
   
-  // Define animations
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: 0.2,
-        duration: 0.8
+  // Create simulated weather data for the SIQS Summary component
+  const updateSummaryData = useCallback(() => {
+    if (siqsCalculated !== null && locationLatitude && locationLongitude && locationName) {
+      try {
+        const { start, end } = calculateAstronomicalNight(
+          locationLatitude, 
+          locationLongitude
+        );
+        
+        setLocationData({
+          name: locationName,
+          latitude: locationLatitude,
+          longitude: locationLongitude,
+          timestamp: new Date().toISOString(),
+          astronomicalNight: {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            formattedTime: `${formatTime(start)} - ${formatTime(end)}`
+          },
+          weatherData: {
+            temperature: 15,
+            humidity: 60,
+            windSpeed: 10,
+            clearSkyRate: 75
+          },
+          siqsResult: {
+            score: siqsCalculated,
+            isViable: siqsCalculated >= 2.5
+          }
+        });
+        
+        // Mark calculation as successful for animations
+        if (!calculationSuccessful) {
+          setCalculationSuccessful(true);
+        }
+        
+      } catch (err) {
+        console.error("Error calculating astronomical night for SIQS summary:", err);
       }
     }
-  };
+  }, [siqsCalculated, locationLatitude, locationLongitude, locationName, calculationSuccessful]);
   
-  const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
+  // Update summary when SIQS is calculated
+  useEffect(() => {
+    updateSummaryData();
+  }, [siqsCalculated, locationLatitude, locationLongitude, updateSummaryData]);
+  
+  const handleSiqsCalculated = useCallback((siqs: number | null) => {
+    console.log("SIQS calculated:", siqs);
+    setSiqsCalculated(siqs);
+    currentSiqsStore.getState().setValue(siqs);
+    
+    if (siqs !== null && siqs > 0) {
+      // Show toast for successful calculation
+      toast.success(
+        t("SIQS calculated successfully!", "SIQS计算成功！"),
+        {
+          description: t(
+            `Score: ${siqs.toFixed(1)} - ${siqs >= 7 ? 'Excellent' : siqs >= 5 ? 'Good' : siqs >= 3 ? 'Fair' : 'Poor'} conditions`,
+            `分数: ${siqs.toFixed(1)} - ${siqs >= 7 ? '极佳' : siqs >= 5 ? '良好' : siqs >= 3 ? '一般' : '较差'}条件`
+          )
+        }
+      );
+    }
+  }, [t]);
+
+  // Animation variants for sections
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
-      y: 0,
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 24 
-      }
+      y: 0, 
+      transition: { duration: 0.6 }
     }
   };
-  
-  // Update current SIQS value when calculated
-  const handleSiqsCalculated = (value: number | null) => {
-    setCurrentSiqs(value);
-    currentSiqsStore.setValue(value);
-  };
-  
+
   return (
-    <section 
-      id="calculator" 
-      className="py-12 px-4 md:px-8 min-h-[calc(100vh-5rem)] flex flex-col justify-center relative overflow-hidden"
-    >
-      {/* Background with cosmic styling */}
-      <div className="absolute inset-0 bg-cosmic-950/60 pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-cosmic-950/90 to-transparent pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-cosmic-950/90 to-transparent pointer-events-none" />
-      
-      {/* Animated glow effects with improved visibility */}
-      <motion.div 
-        className="absolute top-40 right-1/4 w-64 h-64 rounded-full bg-cosmic-glow opacity-30 pointer-events-none"
-        animate={{ 
-          scale: [1, 1.2, 1],
-          opacity: [0.2, 0.4, 0.2]
-        }}
-        transition={{ 
-          duration: 8, 
-          ease: "easeInOut", 
-          repeat: Infinity 
-        }}
-      />
-      
-      <motion.div 
-        className="absolute bottom-40 left-1/4 w-80 h-80 rounded-full bg-cosmic-glow opacity-30 pointer-events-none"
-        animate={{ 
-          scale: [1, 1.3, 1],
-          opacity: [0.2, 0.35, 0.2]
-        }}
-        transition={{ 
-          duration: 10, 
-          ease: "easeInOut", 
-          repeat: Infinity,
-          delay: 2
-        }}
-      />
-      
-      <motion.div 
-        className="container mx-auto max-w-5xl relative z-10"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
+    <section id={id} className="py-16 px-4 relative">
+      <div className="max-w-6xl mx-auto relative z-10">
         <motion.div 
-          className="text-center mb-6"
-          variants={itemVariants}
+          className="text-center mb-10"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={fadeInUp}
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-primary-foreground">
-            {t("Sky Imaging Quality Score Calculator", "天空成像质量评分计算器")}
-          </h2>
+          <div className="flex items-center justify-center mb-2">
+            <Calculator className="h-6 w-6 text-primary mr-2" />
+            <h2 className="text-3xl md:text-4xl font-bold text-white">
+              {t("SIQS Calculator", "SIQS计算器")}
+            </h2>
+          </div>
+          
+          <div className="h-1 w-24 bg-primary/30 mx-auto my-4">
+            <div className="h-full bg-primary" style={{ width: siqsCalculated ? '100%' : '30%' }}></div>
+          </div>
+          
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            {t(
+              "Calculate the Sky Imaging Quality Score for any location on Earth.",
+              "计算地球上任何位置的天空成像质量评分。"
+            )}
+          </p>
         </motion.div>
         
-        <motion.div
-          variants={itemVariants}
-          className="transform-gpu hover:scale-[1.01] transition-transform duration-500 relative"
-        >
-          {/* Enhanced decorative light effect behind calculator */}
-          <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-3xl -z-10 transform -translate-y-4 scale-105"></div>
+        <div className="grid md:grid-cols-2 gap-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={{
+              hidden: { opacity: 0, x: -20 },
+              visible: { opacity: 1, x: 0, transition: { duration: 0.6 } }
+            }}
+          >
+            <SIQSCalculator
+              hideRecommendedPoints={false}
+              noAutoLocationRequest={noAutoLocationRequest}
+              onSiqsCalculated={handleSiqsCalculated}
+            />
+          </motion.div>
           
-          <SIQSCalculator 
-            className="mx-auto max-w-2xl" 
-            noAutoLocationRequest={noAutoLocationRequest}
-            onSiqsCalculated={handleSiqsCalculated}
-          />
-        </motion.div>
-      </motion.div>
+          <motion.div 
+            className="flex flex-col justify-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={{
+              hidden: { opacity: 0, x: 20 },
+              visible: { opacity: 1, x: 0, transition: { duration: 0.6, delay: 0.2 } }
+            }}
+          >
+            {locationData && locationData.siqsResult ? (
+              <div className={`transition-all duration-500 ${calculationSuccessful ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+                <SIQSSummary 
+                  siqsResult={locationData.siqsResult} 
+                  weatherData={locationData.weatherData}
+                  locationData={locationData}
+                />
+              </div>
+            ) : (
+              <div className="glassmorphism-strong rounded-xl p-6 text-center">
+                <Star className="h-8 w-8 text-primary mx-auto mb-3 opacity-60" />
+                <h3 className="text-xl font-medium mb-4">
+                  {t("Select a Location", "选择位置")}
+                </h3>
+                <p className="text-muted-foreground">
+                  {t(
+                    "Use the calculator on the left to select a location and calculate its SIQS score.",
+                    "使用左侧计算器选择位置并计算其SIQS评分。"
+                  )}
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
     </section>
   );
 };

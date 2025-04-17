@@ -1,3 +1,4 @@
+
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -9,7 +10,7 @@ import { getCachedLocations, cacheLocations } from '@/services/locationCacheServ
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
-import { filterLocations, sortLocationsByQuality } from './locationFilters';
+import { filterLocations, sortLocationsByQuality, generateRandomPoint } from './locationFilters';
 
 /**
  * Find all locations within a radius of a center point
@@ -440,3 +441,6 @@ function combineWithIDACertifiedLocations(
     return existingLocations;
   }
 }
+
+// Export the sortLocationsByQuality function
+export { sortLocationsByQuality } from './locationFilters';

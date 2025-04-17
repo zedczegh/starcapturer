@@ -203,6 +203,3 @@ export function generateDistributedPoints(
   
   return selectedPoints;
 }
-
-// Remove the duplicate export at the end of the file
-// export { sortLocationsByQuality };

@@ -1,116 +1,104 @@
-import { fetchAirQualityData } from '.';
-import { calculateDistance } from './coordinates';
-import { isValidAstronomyLocation, isWaterLocation } from '@/utils/locationValidator';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+/**
+ * Types and functions for working with shared astronomy spots
+ * Enhanced with better Dark Sky International location support
+ */
 
+import { normalizeCoordinates } from './coordinates';
+import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
+import { calculateDistance } from '@/data/utils/distanceCalculator';
+import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
+
+/**
+ * Represents a shared astronomy spot with location details and quality metrics
+ */
 export interface SharedAstroSpot {
   id: string;
   name: string;
+  chineseName?: string;
   latitude: number;
   longitude: number;
-  chineseName?: string;
+  bortleScale: number;
+  siqs?: number | { score: number; isViable: boolean };
+  isViable?: boolean;
+  distance?: number;
   description?: string;
-  shortDescription?: string;
-  siqs?: number;
-  bortleScale?: number;
+  date?: string;
+  timestamp: string;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  distance?: number;
-  timestamp?: string;
-  weatherData?: any;
-  seeingConditions?: number;
-  averageVisibility?: number;
-  lightPollutionData?: any;
-  photos?: string[];
-  tags?: string[];
-  tips?: string[];
-  address?: string;
-  city?: string;
-  country?: string;
-  admin1?: string;
-  isCoastal?: boolean;
-  isMountainTop?: boolean;
-  nearestCity?: string;
-  population?: number;
-  elevation?: number;
-  aqi?: number;
-  dominantPollutant?: string;
-  siqsResult?: any;
+  photographer?: string;
+  cloudCover?: number;
+  visibility?: number;
+  type?: string; // Adding the missing type property
+  siqsResult?: {
+    score: number;
+    isViable: boolean;
+    factors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+  };
 }
 
 /**
- * Fetch recommended photo points near a location
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @param radius Search radius in kilometers
- * @param certifiedOnly Only return certified locations
- * @param limit Maximum number of results to return
- * @returns Array of SharedAstroSpot objects
+ * Type for API response when creating or sharing a spot
+ */
+export interface SharingResponse {
+  success: boolean;
+  message: string;
+  id?: string;
+}
+
+/**
+ * Fetch shared astronomy spots near specified coordinates
+ * Enhanced to include real Dark Sky International locations
+ * Optimized for better performance and stability
+ * @param latitude - Latitude of the center point
+ * @param longitude - Longitude of the center point
+ * @param radiusKm - Search radius in kilometers
+ * @param certifiedOnly - Whether to return only certified locations
+ * @param limit - Maximum number of locations to return
+ * @returns Promise containing array of SharedAstroSpot
  */
 export async function getRecommendedPhotoPoints(
   latitude: number,
   longitude: number,
-  radius: number = 50,
-  certifiedOnly: boolean = false,
-  limit: number = 50
+  radiusKm = 100,
+  certifiedOnly = false,
+  limit = 30,
 ): Promise<SharedAstroSpot[]> {
   try {
-    const url = `${API_BASE_URL}/api/photo-points/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radius}&limit=${limit}&certifiedOnly=${certifiedOnly}`;
-    const response = await fetch(url);
+    // Normalize coordinates to ensure valid values
+    const coords = normalizeCoordinates({ latitude, longitude });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+    console.log(`Fetching photo points around ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)} with radius ${radiusKm}km, limit: ${limit}`);
+    
+    // First, find real Dark Sky certified locations within the radius
+    const certifiedLocations = getCertifiedLocationsNearby(coords.latitude, coords.longitude, radiusKm);
+    console.log(`Found ${certifiedLocations.length} certified locations within ${radiusKm}km radius`);
+    
+    // If certifiedOnly is true, return only certified locations
+    if (certifiedOnly) {
+      return certifiedLocations.slice(0, limit);
     }
     
-    const data = await response.json();
+    // Calculate how many regular locations we need
+    const regularLocationsNeeded = Math.max(0, limit - certifiedLocations.length);
     
-    if (!Array.isArray(data)) {
-      console.error('Invalid data format received:', data);
-      return [];
-    }
+    // Generate additional calculated spots if needed (limited to 10 to avoid excessive API calls)
+    const calculatedLimit = Math.min(regularLocationsNeeded, 10); // Limit calculated spots to 10 max
     
-    // Enhanced validation and transformation
-    const validatedPoints: SharedAstroSpot[] = data.map(point => {
-      const validatedPoint: SharedAstroSpot = {
-        id: String(point.id || Math.random()),
-        name: String(point.name || 'Unnamed Location'),
-        latitude: Number(point.latitude),
-        longitude: Number(point.longitude),
-        chineseName: point.chineseName ? String(point.chineseName) : undefined,
-        description: point.description ? String(point.description) : undefined,
-        shortDescription: point.shortDescription ? String(point.shortDescription) : undefined,
-        siqs: point.siqs !== undefined ? Number(point.siqs) : undefined,
-        bortleScale: point.bortleScale !== undefined ? Number(point.bortleScale) : undefined,
-        isDarkSkyReserve: !!point.isDarkSkyReserve,
-        certification: point.certification ? String(point.certification) : undefined,
-        distance: point.distance !== undefined ? Number(point.distance) : undefined,
-        timestamp: point.timestamp ? String(point.timestamp) : new Date().toISOString(),
-        weatherData: point.weatherData || undefined,
-        seeingConditions: point.seeingConditions !== undefined ? Number(point.seeingConditions) : undefined,
-        averageVisibility: point.averageVisibility !== undefined ? Number(point.averageVisibility) : undefined,
-        lightPollutionData: point.lightPollutionData || undefined,
-        photos: Array.isArray(point.photos) ? point.photos.map(String) : [],
-        tags: Array.isArray(point.tags) ? point.tags.map(String) : [],
-        tips: Array.isArray(point.tips) ? point.tips.map(String) : [],
-        address: point.address ? String(point.address) : undefined,
-        city: point.city ? String(point.city) : undefined,
-        country: point.country ? String(point.country) : undefined,
-        admin1: point.admin1 ? String(point.admin1) : undefined,
-        isCoastal: !!point.isCoastal,
-        isMountainTop: !!point.isMountainTop,
-        nearestCity: point.nearestCity ? String(point.nearestCity) : undefined,
-        population: point.population !== undefined ? Number(point.population) : undefined,
-        elevation: point.elevation !== undefined ? Number(point.elevation) : undefined,
-        aqi: point.aqi !== undefined ? Number(point.aqi) : undefined,
-        dominantPollutant: point.dominantPollutant ? String(point.dominantPollutant) : undefined,
-        siqsResult: point.siqsResult || undefined
-      };
-      
-      return validatedPoint;
-    });
+    const calculatedSpots = calculatedLimit > 0 
+      ? generateCalculatedSpots(coords.latitude, coords.longitude, calculatedLimit, radiusKm, certifiedLocations)
+      : [];
     
-    return validatedPoints;
+    // Combine certified and calculated locations and sort by nearest first
+    const combinedSpots = [...certifiedLocations, ...calculatedSpots]
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+    
+    return combinedSpots.slice(0, limit);
   } catch (error) {
     console.error('Error fetching recommended photo points:', error);
     return [];
@@ -118,332 +106,345 @@ export async function getRecommendedPhotoPoints(
 }
 
 /**
- * Generate a set of random points within a specified radius
- * @param centerLat Center latitude
- * @param centerLng Center longitude
- * @param radius Search radius in kilometers
- * @param numPoints Number of points to generate
- * @returns Array of SharedAstroSpot objects
+ * Fetch a specific shared astronomy spot by ID
+ * @param id - Unique identifier for the spot
+ * @returns Promise containing the SharedAstroSpot or null if not found
  */
-export async function generateRandomPhotoPoints(
-  centerLat: number,
-  centerLng: number,
-  radius: number = 50,
-  numPoints: number = 10
-): Promise<SharedAstroSpot[]> {
-  const points: SharedAstroSpot[] = [];
-  
-  for (let i = 0; i < numPoints; i++) {
-    // Generate random coordinates within the radius
-    const randomLat = centerLat + (Math.random() - 0.5) * (2 * radius / 111);
-    const randomLng = centerLng + (Math.random() - 0.5) * (2 * radius / (111 * Math.cos(centerLat * Math.PI / 180)));
+export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | null> {
+  try {
+    // In a real implementation, this would be an API call
+    // For now, return a mock spot
+    await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Ensure coordinates are within valid range
-    const latitude = Math.max(-90, Math.min(90, randomLat));
-    const longitude = Math.max(-180, Math.min(180, randomLng));
+    // Return null for unknown IDs
+    if (id === 'unknown') return null;
     
-    // Check if the generated point is a water location
-    if (isWaterLocation(latitude, longitude)) {
-      console.log(`Generated water location, skipping: ${latitude}, ${longitude}`);
-      continue; // Skip this point and generate another one
-    }
-    
-    // Calculate distance from center
-    const distance = calculateDistance(centerLat, centerLng, latitude, longitude);
-    
-    // Fetch air quality data
-    const airQuality = await fetchAirQualityData(latitude, longitude);
-    
-    // Create a SharedAstroSpot object
-    const point: SharedAstroSpot = {
-      id: `random-${latitude}-${longitude}-${i}`,
-      name: `Random Spot ${i + 1}`,
-      latitude: latitude,
-      longitude: longitude,
-      description: `A randomly generated spot within ${radius} km of the center.`,
-      siqs: Math.random() * 10, // Random SIQS score for testing
-      distance: distance,
+    return {
+      id,
+      name: `Astronomy Spot ${id.substring(0, 4)}`,
+      chineseName: `天文观测点 ${id.substring(0, 4)}`,
+      latitude: 40.7128,
+      longitude: -74.0060,
+      bortleScale: 4,
+      siqs: 7.2,
+      isViable: true,
+      description: "A great spot for astrophotography with minimal light pollution.",
       timestamp: new Date().toISOString(),
-      aqi: airQuality?.aqi,
-      dominantPollutant: airQuality?.dominantPollutant
+      isDarkSkyReserve: id.includes('reserve'),
+      certification: id.includes('certified') ? "International Dark Sky Park" : undefined,
+      photographer: "John Doe",
+      cloudCover: 0.5,
+      visibility: 10
     };
-    
-    points.push(point);
-  }
-  
-  return points;
-}
-
-/**
- * Upload a new photo point
- * @param photoPoint Photo point data
- * @returns The uploaded SharedAstroSpot object
- */
-export async function uploadPhotoPoint(photoPoint: SharedAstroSpot): Promise<SharedAstroSpot | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(photoPoint),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data) {
-      console.error('No data received after upload.');
-      return null;
-    }
-    
-    return data as SharedAstroSpot;
   } catch (error) {
-    console.error('Error uploading photo point:', error);
+    console.error('Error fetching shared astronomy spot:', error);
     return null;
   }
 }
 
 /**
- * Get a single photo point by ID
- * @param id Photo point ID
- * @returns The SharedAstroSpot object or null if not found
+ * Share a new astronomy spot
+ * @param spot - The spot data to share
+ * @returns Promise containing sharing response
  */
-export async function getPhotoPointById(id: string): Promise<SharedAstroSpot | null> {
+export async function shareAstroSpot(spot: Omit<SharedAstroSpot, 'id'>): Promise<SharingResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points/${id}`);
+    // In a real implementation, this would be an API call to create the spot
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
+    // Generate a random ID for the newly created spot
+    const newId = Math.random().toString(36).substring(2, 10);
     
-    const data = await response.json();
-    
-    if (!data) {
-      console.error('No data received for ID:', id);
-      return null;
-    }
-    
-    return data as SharedAstroSpot;
+    return {
+      success: true,
+      message: 'Spot shared successfully!',
+      id: newId
+    };
   } catch (error) {
-    console.error(`Error fetching photo point with ID ${id}:`, error);
-    return null;
+    console.error('Error sharing astronomy spot:', error);
+    return {
+      success: false,
+      message: 'Failed to share spot. Please try again later.'
+    };
   }
 }
 
 /**
- * Update an existing photo point
- * @param id Photo point ID
- * @param updates Updates to apply
- * @returns The updated SharedAstroSpot object or null if update failed
- */
-export async function updatePhotoPoint(id: string, updates: Partial<SharedAstroSpot>): Promise<SharedAstroSpot | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data) {
-      console.error('No data received after update.');
-      return null;
-    }
-    
-    return data as SharedAstroSpot;
-  } catch (error) {
-    console.error(`Error updating photo point with ID ${id}:`, error);
-    return null;
-  }
-}
-
-/**
- * Delete a photo point by ID
- * @param id Photo point ID
- * @returns True if deletion was successful, false otherwise
- */
-export async function deletePhotoPoint(id: string): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points/${id}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    return response.status === 204;
-  } catch (error) {
-    console.error(`Error deleting photo point with ID ${id}:`, error);
-    return false;
-  }
-}
-
-/**
- * Fetch all photo points
- * @returns Array of SharedAstroSpot objects
- */
-export async function getAllPhotoPoints(): Promise<SharedAstroSpot[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!Array.isArray(data)) {
-      console.error('Invalid data format received:', data);
-      return [];
-    }
-    
-    return data as SharedAstroSpot[];
-  } catch (error) {
-    console.error('Error fetching all photo points:', error);
-    return [];
-  }
-}
-
-/**
- * Fetch a limited number of photo points with offset for pagination
- * @param limit Number of results to return
- * @param offset Offset for pagination
- * @returns Array of SharedAstroSpot objects
- */
-export async function getPhotoPointsPaginated(limit: number = 10, offset: number = 0): Promise<SharedAstroSpot[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points?limit=${limit}&offset=${offset}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!Array.isArray(data)) {
-      console.error('Invalid data format received:', data);
-      return [];
-    }
-    
-    return data as SharedAstroSpot[];
-  } catch (error) {
-    console.error('Error fetching paginated photo points:', error);
-    return [];
-  }
-}
-
-/**
- * Find photo points by search query
- * @param query Search query
- * @returns Array of SharedAstroSpot objects
- */
-export async function searchPhotoPoints(query: string): Promise<SharedAstroSpot[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/photo-points/search?query=${query}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!Array.isArray(data)) {
-      console.error('Invalid data format received:', data);
-      return [];
-    }
-    
-    return data as SharedAstroSpot[];
-  } catch (error) {
-    console.error('Error searching photo points:', error);
-    return [];
-  }
-}
-
-/**
- * Find certified dark sky locations within radius
- * @param latitude Center latitude
- * @param longitude Center longitude
- * @param radius Search radius in km
+ * Get certified Dark Sky locations from the database
+ * Uses the actual Dark Sky International locations
+ * @param centerLat - Latitude of center point
+ * @param centerLng - Longitude of center point
+ * @param radiusKm - Search radius in kilometers
  * @returns Array of SharedAstroSpot
  */
-export async function findCertifiedDarkSkyLocations(
-  latitude: number,
-  longitude: number,
-  radius: number
-): Promise<SharedAstroSpot[]> {
-  try {
-    const url = `${API_BASE_URL}/api/dark-sky-locations/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radius}`;
-    const response = await fetch(url);
+function getCertifiedLocationsNearby(
+  centerLat: number,
+  centerLng: number,
+  radiusKm: number
+): SharedAstroSpot[] {
+  const locations: SharedAstroSpot[] = [];
+  
+  // Official certification types based on Dark Sky International
+  const certificationTypes = {
+    'dark-sky-sanctuary': 'International Dark Sky Sanctuary',
+    'dark-sky-reserve': 'International Dark Sky Reserve',
+    'dark-sky-park': 'International Dark Sky Park',
+    'dark-sky-community': 'International Dark Sky Community',
+    'urban-night-sky-place': 'Urban Night Sky Place'
+  };
+  
+  // Go through our database of real Dark Sky locations
+  for (const location of darkSkyLocations) {
+    const distance = calculateDistance(
+      centerLat, 
+      centerLng, 
+      location.coordinates[0], 
+      location.coordinates[1]
+    );
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!Array.isArray(data)) {
-      console.error('Invalid data format received:', data);
-      return [];
-    }
-    
-    // Enhanced validation and transformation
-    const validatedPoints: SharedAstroSpot[] = data.map(point => {
-      const validatedPoint: SharedAstroSpot = {
-        id: String(point.id || Math.random()),
-        name: String(point.name || 'Unnamed Location'),
-        latitude: Number(point.latitude),
-        longitude: Number(point.longitude),
-        chineseName: point.chineseName ? String(point.chineseName) : undefined,
-        description: point.description ? String(point.description) : undefined,
-        shortDescription: point.shortDescription ? String(point.shortDescription) : undefined,
-        siqs: point.siqs !== undefined ? Number(point.siqs) : undefined,
-        bortleScale: point.bortleScale !== undefined ? Number(point.bortleScale) : undefined,
-        isDarkSkyReserve: !!point.isDarkSkyReserve,
-        certification: point.certification ? String(point.certification) : undefined,
-        distance: point.distance !== undefined ? Number(point.distance) : undefined,
-        timestamp: point.timestamp ? String(point.timestamp) : new Date().toISOString(),
-        weatherData: point.weatherData || undefined,
-        seeingConditions: point.seeingConditions !== undefined ? Number(point.seeingConditions) : undefined,
-        averageVisibility: point.averageVisibility !== undefined ? Number(point.averageVisibility) : undefined,
-        lightPollutionData: point.lightPollutionData || undefined,
-        photos: Array.isArray(point.photos) ? point.photos.map(String) : [],
-        tags: Array.isArray(point.tags) ? point.tags.map(String) : [],
-        tips: Array.isArray(point.tips) ? point.tips.map(String) : [],
-        address: point.address ? String(point.address) : undefined,
-        city: point.city ? String(point.city) : undefined,
-        country: point.country ? String(point.country) : undefined,
-        admin1: point.admin1 ? String(point.admin1) : undefined,
-        isCoastal: !!point.isCoastal,
-        isMountainTop: !!point.isMountainTop,
-        nearestCity: point.nearestCity ? String(point.nearestCity) : undefined,
-        population: point.population !== undefined ? Number(point.population) : undefined,
-        elevation: point.elevation !== undefined ? Number(point.elevation) : undefined,
-        aqi: point.aqi !== undefined ? Number(point.aqi) : undefined,
-        dominantPollutant: point.dominantPollutant ? String(point.dominantPollutant) : undefined,
-        siqsResult: point.siqsResult || undefined
-      };
+    if (distance <= radiusKm) {
+      // Filter out water locations
+      if (isWaterLocation(location.coordinates[0], location.coordinates[1])) {
+        console.log(`Filtered out water location: ${location.name}`);
+        continue;
+      }
       
-      return validatedPoint;
-    });
-    
-    return validatedPoints;
-  } catch (error) {
-    console.error('Error fetching certified dark sky locations:', error);
-    return [];
+      // Determine certification type based on location name or type
+      let certification = '';
+      let isDarkSkyReserve = false;
+      
+      const lowerName = location.name.toLowerCase();
+      
+      if (lowerName.includes('sanctuary') || lowerName.includes('wildernes')) {
+        certification = certificationTypes['dark-sky-sanctuary'];
+      } else if (lowerName.includes('reserve')) {
+        certification = certificationTypes['dark-sky-reserve'];
+        isDarkSkyReserve = true;
+      } else if (lowerName.includes('community') || 
+                lowerName.includes('village') || 
+                lowerName.includes('town') ||
+                lowerName.includes('city')) {
+        certification = certificationTypes['dark-sky-community'];
+      } else if (lowerName.includes('urban')) {
+        certification = certificationTypes['urban-night-sky-place'];
+      } else {
+        // Default to park for national parks, state parks, etc.
+        certification = certificationTypes['dark-sky-park'];
+      }
+      
+      // Calculate a realistic SIQS score based on Bortle scale
+      // Dark Sky locations tend to have excellent sky quality
+      const baseSiqs = 10 - location.bortleScale;
+      // Add some variability but keep scores high for certified locations
+      const siqs = Math.max(7, Math.min(9, baseSiqs + (Math.random() * 1.5)));
+      
+      locations.push({
+        id: `certified-${locations.length}-${Date.now()}`,
+        name: location.name,
+        // Chinese name is transliteration with "Dark Sky" prefix
+        chineseName: `暗夜天空 ${location.name}`,
+        latitude: location.coordinates[0],
+        longitude: location.coordinates[1],
+        bortleScale: location.bortleScale,
+        siqs: siqs,
+        isViable: true,
+        distance: distance,
+        description: `An officially certified dark sky location designated by the International Dark-Sky Association.`,
+        timestamp: new Date().toISOString(),
+        isDarkSkyReserve: isDarkSkyReserve,
+        certification: certification
+      });
+    }
   }
+  
+  return locations;
+}
+
+/**
+ * Generate calculated astronomy spots for general recommendations
+ * These are potential good locations that aren't officially certified
+ * @param centerLat - Latitude of center point
+ * @param centerLng - Longitude of center point
+ * @param count - Number of locations to generate
+ * @param radiusKm - Search radius in kilometers
+ * @param existingLocations - Existing locations to avoid duplicating
+ * @returns Array of SharedAstroSpot
+ */
+function generateCalculatedSpots(
+  centerLat: number, 
+  centerLng: number, 
+  count: number,
+  radiusKm: number,
+  existingLocations: SharedAstroSpot[]
+): SharedAstroSpot[] {
+  const spots: SharedAstroSpot[] = [];
+  
+  // Names for calculated locations - authentic and not misleading
+  // IMPORTANT: Removed any names that might suggest water locations
+  const englishNames = [
+    "Mountain Observation Point", "Valley Viewpoint", "Highland Observation Spot",
+    "Ridge Viewpoint", "Observatory Site", "Canyon Overlook",
+    "Peak Observation Area", "Plateau Viewpoint", "Hillside Overlook",
+    "Meadow Observation Point", "Forest Clearing", "Grassland Viewpoint", 
+    "Desert Observation Site", "Rocky Viewpoint", "Rural Observatory Point",
+    "Countryside Viewing Area", "Remote Viewing Site", "Hilltop Viewpoint"
+  ];
+  
+  const chineseNames = [
+    "山区观测点", "山谷观景点", "高地观测点",
+    "山脊观景台", "天文台址", "峡谷观景点",
+    "峰顶观测区", "高原观景台", "山坡瞭望点",
+    "草地观测点", "林间空地", "草原观景点", 
+    "沙漠观测站", "岩石观景点", "乡村天文点",
+    "乡间观景区", "偏远观测站", "山顶观景点"
+  ];
+  
+  // Create a grid of potential points to avoid duplicating locations
+  const existingPositions = new Set();
+  
+  // Add existing certified locations to avoid overlap
+  existingLocations.forEach(loc => {
+    const posKey = `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
+    existingPositions.add(posKey);
+  });
+  
+  let attemptsCount = 0;
+  const maxAttempts = count * 15; // Increased attempts to ensure we find enough valid land locations
+  
+  while (spots.length < count && attemptsCount < maxAttempts) {
+    attemptsCount++;
+    
+    // Generate a position within the specified radius
+    const randomPoint = generateRandomPoint(centerLat, centerLng, radiusKm);
+    
+    // Check if this position already exists (avoid duplicates)
+    const posKey = `${randomPoint.latitude.toFixed(2)},${randomPoint.longitude.toFixed(2)}`;
+    if (existingPositions.has(posKey)) {
+      continue;
+    }
+    
+    // Triple-check that this is not a water location
+    // 1. First check with standard water detection
+    if (isWaterLocation(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected water location at ${randomPoint.latitude}, ${randomPoint.longitude}`);
+      continue;
+    }
+    
+    // 2. Second check with coastal water detection
+    if (isLikelyCoastalWater(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected coastal water at ${randomPoint.latitude}, ${randomPoint.longitude}`);
+      continue;
+    }
+    
+    // 3. Third check with general astronomy validation
+    if (!isValidAstronomyLocation(randomPoint.latitude, randomPoint.longitude)) {
+      console.log(`Rejected invalid astronomy location at ${randomPoint.latitude}, ${randomPoint.longitude}`);
+      continue;
+    }
+    
+    existingPositions.add(posKey);
+    
+    const nameIndex = spots.length % englishNames.length;
+    
+    // Realistic Bortle scale distribution weighted toward better viewing conditions
+    // This creates a more realistic set of results that are good for astronomy
+    let bortleScale;
+    const rand = Math.random();
+    if (rand < 0.5) {
+      // 50% chance of good locations (Bortle 2-4)
+      bortleScale = Math.floor(Math.random() * 3) + 2;
+    } else if (rand < 0.8) {
+      // 30% chance of moderate locations (Bortle 4-5)
+      bortleScale = Math.floor(Math.random() * 2) + 4;
+    } else {
+      // 20% chance of challenging locations (Bortle 6-7)
+      bortleScale = Math.floor(Math.random() * 2) + 6;
+    }
+    
+    // Calculate a realistic SIQS score based on Bortle scale
+    // SIQS is roughly inverse to Bortle scale but with some randomness
+    const baseSiqs = 10 - bortleScale;
+    const siqs = Math.max(1, Math.min(9, baseSiqs + (Math.random() * 2 - 1)));
+    
+    // Ensure location is viable for astrophotography
+    const isViable = siqs >= 5;
+    
+    // Only add viable locations or locations with good SIQS scores
+    if (isViable || siqs >= 6) {
+      spots.push({
+        id: `calculated-${spots.length}-${Date.now()}`,
+        name: englishNames[nameIndex],
+        chineseName: chineseNames[nameIndex],
+        latitude: randomPoint.latitude,
+        longitude: randomPoint.longitude,
+        bortleScale,
+        siqs: siqs,
+        isViable,
+        distance: randomPoint.distance,
+        description: "A calculated location with potentially good conditions for astrophotography.",
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+  
+  return spots;
+}
+
+/**
+ * Generate a random point within a given radius of a center point
+ * @param centerLat - Latitude of center point
+ * @param centerLng - Longitude of center point
+ * @param radiusKm - Search radius in kilometers
+ * @returns Object with latitude, longitude and distance
+ */
+function generateRandomPoint(
+  centerLat: number, 
+  centerLng: number, 
+  radiusKm: number
+): { latitude: number; longitude: number; distance: number } {
+  // Convert radius from kilometers to degrees
+  const radiusInDegrees = radiusKm / 111.32;
+  
+  // Generate a random angle in radians
+  const randomAngle = Math.random() * Math.PI * 2;
+  
+  // Generate a random radius between 0.1*radiusInDegrees and radiusInDegrees
+  // This prevents too many points being generated exactly at the center
+  const randomRadius = (0.1 + 0.9 * Math.random()) * radiusInDegrees;
+  
+  // Calculate the new position
+  const latitude = centerLat + randomRadius * Math.cos(randomAngle);
+  const longitude = centerLng + randomRadius * Math.sin(randomAngle) / Math.cos(centerLat * Math.PI / 180);
+  
+  // Calculate actual distance in kilometers for accurate display
+  const distance = haversineDistance(centerLat, centerLng, latitude, longitude);
+  
+  return { latitude, longitude, distance };
+}
+
+/**
+ * Calculate the distance between two points using the Haversine formula
+ * @param lat1 - Latitude of first point
+ * @param lon1 - Longitude of first point
+ * @param lat2 - Latitude of second point
+ * @param lon2 - Longitude of second point
+ * @returns Distance in kilometers
+ */
+function haversineDistance(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
 }

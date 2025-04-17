@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Language } from '@/services/geocoding/types';
-import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
-import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { getLocationNameForCoordinates } from '@/services/geocoding/geocodingService';
 
 interface EnhancedLocationDetailsProps {
   latitude?: number;
@@ -30,9 +29,9 @@ export const useEnhancedLocationDetails = ({
     if (latitude !== undefined && longitude !== undefined) {
       const typedLanguage: Language = language === 'zh' ? 'zh' : 'en';
       
-      getEnhancedLocationDetails(latitude, longitude, typedLanguage)
+      getLocationNameForCoordinates(latitude, longitude, typedLanguage)
         .then(details => {
-          setEnhancedLocation(details);
+          setEnhancedLocation({ formattedName: details });
         })
         .catch(error => {
           console.error("Error fetching enhanced location for map tooltip:", error);
@@ -41,13 +40,10 @@ export const useEnhancedLocationDetails = ({
   }, [latitude, longitude, language]);
   
   // Get detailed location information if coordinates are available and enhanced details not yet loaded
-  const nearestTownInfo = (latitude !== undefined && longitude !== undefined && !enhancedLocation) ? 
-    findNearestTown(latitude, longitude, language === 'zh' ? 'zh' : 'en') : null;
+  const nearestTownInfo = null;
   
   // Determine what location information to display
-  const detailedName = enhancedLocation?.formattedName || 
-                       enhancedLocation?.detailedName || 
-                       (nearestTownInfo && nearestTownInfo.detailedName);
+  const detailedName = enhancedLocation?.formattedName || null;
   
   return { detailedName, nearestTown: nearestTownInfo };
 };
