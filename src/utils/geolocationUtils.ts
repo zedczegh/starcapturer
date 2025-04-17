@@ -1,4 +1,3 @@
-
 /**
  * Extended GeolocationOptions with language support
  * Note: The language property is not part of the standard GeolocationOptions
@@ -23,6 +22,9 @@ export function toStandardGeolocationOptions(options: ExtendedGeolocationOptions
   };
 }
 
+// Keep track of ongoing geolocation requests to prevent duplicates
+const pendingRequests: Record<string, boolean> = {};
+
 /**
  * Enhanced getCurrentPosition with better mobile support
  * and handling of common mobile browser issues
@@ -43,8 +45,20 @@ export function getCurrentPosition(
     return;
   }
   
+  // Create a request key based on the options
+  const requestKey = JSON.stringify(options || {});
+  
+  // Check if there's already a pending request with these options
+  if (pendingRequests[requestKey]) {
+    console.log("Geolocation request already in progress, skipping duplicate");
+    return;
+  }
+  
+  // Mark this request as pending
+  pendingRequests[requestKey] = true;
+  
   // Use shorter timeout for faster feedback
-  const defaultTimeout = 6000; // 6 seconds instead of 10
+  const defaultTimeout = 5000; // 5 seconds instead of 6
   const opts = {
     enableHighAccuracy: true,
     timeout: defaultTimeout,
@@ -68,6 +82,7 @@ export function getCurrentPosition(
           error.code = 1; // Permission denied
           errorCallback(error);
         }
+        pendingRequests[requestKey] = false; // Clear pending flag
         return;
       }
     }
@@ -79,8 +94,9 @@ export function getCurrentPosition(
     if (cachedPosition && Date.now() - cachedTimestamp < opts.maximumAge) {
       try {
         const position = JSON.parse(cachedPosition);
-        // Return cached position in next event loop to maintain async behavior
-        setTimeout(() => successCallback(position), 0);
+        // Return cached position immediately for faster response
+        successCallback(position);
+        pendingRequests[requestKey] = false; // Clear pending flag
         
         // Still try to get fresh position in the background
         navigator.geolocation.getCurrentPosition(
@@ -120,6 +136,7 @@ export function getCurrentPosition(
         error.code = 3; // Timeout
         errorCallback(error);
       }
+      pendingRequests[requestKey] = false; // Clear pending flag on timeout
     }, timeoutDuration + 1000); // Add 1 second buffer to browser's internal timeout
   }
   
@@ -141,6 +158,7 @@ export function getCurrentPosition(
     }
     
     successCallback(position);
+    pendingRequests[requestKey] = false; // Clear pending flag on success
   };
   
   const errorWrapper: PositionErrorCallback = (error) => {
@@ -161,6 +179,8 @@ export function getCurrentPosition(
     if (errorCallback) {
       errorCallback(error);
     }
+    
+    pendingRequests[requestKey] = false; // Clear pending flag on error
   };
   
   // Use standard options

@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -29,6 +30,7 @@ const LocationDetails = () => {
   const siqsUpdateRequiredRef = useRef(true);
   const initialRenderRef = useRef(true);
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const locationInitializedRef = useRef(false); // Track if we've already initialized location
   
   const {
     locationData, 
@@ -55,15 +57,21 @@ const LocationDetails = () => {
 
   // Handle using current location when no location data is available
   useEffect(() => {
-    // If we're not loading and still don't have location data, get the current location
-    if (!isLoading && !locationData && !loadingCurrentLocation) {
+    // Only proceed if we're not loading, don't have location data, not already getting location,
+    // and haven't already initialized location
+    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current) {
+      locationInitializedRef.current = true; // Mark as initialized to prevent multiple calls
       handleUseCurrentLocation();
     }
   }, [isLoading, locationData]);
 
   const handleUseCurrentLocation = () => {
+    if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls
+    
     setLoadingCurrentLocation(true);
-    toast.success(t("Getting your current location...", "正在获取您的位置..."));
+    toast.success(t("Getting your current location...", "正在获取您的位置..."), {
+      id: "getting-location" // Use a consistent ID to prevent duplicates
+    });
     
     getCurrentPosition(
       (position) => {
