@@ -105,26 +105,9 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           )}
         </motion.p>
       </div>
-      
-      {/* User location section */}
-      {!userLocation && (
-        <div className="flex justify-center mb-8">
-          <Button
-            onClick={getPosition}
-            className="flex items-center gap-2"
-            disabled={locationLoading}
-          >
-            {locationLoading ? (
-              <span className="animate-pulse">•••</span>
-            ) : (
-              <MapPin className="h-4 w-4" />
-            )}
-            {t("Use My Location", "使用我的位置")}
-          </Button>
-        </div>
-      )}
     </motion.div>
   );
 };
 
 export default PhotoPointsHeader;
+
