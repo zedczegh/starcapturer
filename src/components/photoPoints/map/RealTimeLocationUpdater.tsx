@@ -1,8 +1,8 @@
 
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { clearLocationCache } from '@/services/realTimeSiqsService';
+import { calculateSiqs, calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
+import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
 
@@ -50,7 +50,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       // Default Bortle scale if not available
       const defaultBortleScale = 4;
       
-      const result = await calculateRealTimeSiqs(
+      const result = await calculateSiqs(
         userLocation.latitude,
         userLocation.longitude,
         defaultBortleScale
@@ -69,6 +69,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   const handleClearCache = useCallback(() => {
     try {
       clearLocationCache();
+      clearSiqsCache(); // Also clear the SIQS cache
       setCacheCleared(true);
       console.log("Location cache cleared");
       

@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -27,6 +28,9 @@ const LocationDetails = () => {
   const siqsUpdateRequiredRef = useRef(true);
   const initialRenderRef = useRef(true);
   
+  // For homepage (no ID), we'll use a default location or user's saved location
+  const isHomepage = !id;
+  
   const {
     locationData, 
     setLocationData, 
@@ -38,7 +42,8 @@ const LocationDetails = () => {
   } = useLocationDataManager({ 
     id, 
     initialState: location.state, 
-    navigate 
+    navigate,
+    defaultLocation: isHomepage
   });
 
   // Use the SIQS updater to keep scores in sync with forecast data
@@ -77,18 +82,20 @@ const LocationDetails = () => {
     }
   }, [locationData, resetUpdateState]);
 
-  // Handle back navigation to ensure clean return to home page
+  // Handle back navigation to ensure clean return
   useEffect(() => {
-    const handleBackNavigation = () => {
-      navigate("/", { replace: true });
-    };
+    if (!isHomepage) {
+      const handleBackNavigation = () => {
+        navigate("/", { replace: true });
+      };
 
-    window.addEventListener('popstate', handleBackNavigation);
-    
-    return () => {
-      window.removeEventListener('popstate', handleBackNavigation);
-    };
-  }, [navigate]);
+      window.addEventListener('popstate', handleBackNavigation);
+      
+      return () => {
+        window.removeEventListener('popstate', handleBackNavigation);
+      };
+    }
+  }, [navigate, isHomepage]);
 
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
@@ -178,6 +185,46 @@ const LocationDetails = () => {
     );
   }
 
+  // For homepage with no location data, show a welcome screen that guides users
+  if (!locationData && isHomepage) {
+    return (
+      <>
+        <NavBar />
+        <Suspense fallback={<PageLoader />}>
+          <div className="container mx-auto px-4 py-16 md:py-24">
+            <div className="text-center space-y-6">
+              <h1 className="text-3xl md:text-4xl font-bold text-primary">
+                {t("Welcome to SIQS Sky Viewer", "欢迎使用SIQS天空查看器")}
+              </h1>
+              <p className="text-lg">
+                {t("Your guide to perfect astrophotography conditions", "您的天文摄影条件完美指南")}
+              </p>
+              
+              {/* Add a "Get Started" button that triggers geolocation */}
+              <button 
+                className="bg-primary text-white px-6 py-3 rounded-lg shadow-lg hover:bg-primary/90 transition-colors"
+                onClick={() => {
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      const { latitude, longitude } = position.coords;
+                      navigate(`/location/current?lat=${latitude}&lng=${longitude}`);
+                    },
+                    (error) => {
+                      console.error("Geolocation error:", error);
+                      setStatusMessage(t ? t("Could not get your location. Please try entering it manually.", "无法获取您的位置。请尝试手动输入。") : "Could not get your location");
+                    }
+                  );
+                }}
+              >
+                {t("Get Started with Your Location", "使用您的位置开始")}
+              </button>
+            </div>
+          </div>
+        </Suspense>
+      </>
+    );
+  }
+
   if (!locationData) {
     return (
       <>
@@ -199,7 +246,10 @@ const LocationDetails = () => {
           statusMessage={statusMessage}
           messageType={messageType}
           setStatusMessage={setStatusMessage}
-          handleUpdateLocation={handleUpdateLocation}
+          handleUpdateLocation={async (updatedData: any) => {
+            // Wrap the handleUpdateLocation function to make it return void
+            await handleUpdateLocation(updatedData);
+          }}
         />
       </Suspense>
     </>

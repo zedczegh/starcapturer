@@ -1,12 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
-import { 
-  filterValidLocations, 
-  separateLocationTypes, 
-  mergeLocations 
-} from '@/utils/locationFiltering';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/locationValidator';
+import { isCertifiedLocation } from '@/utils/locationFiltering';
 
 interface UseMapLocationsProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -73,7 +69,7 @@ export const useMapLocations = ({
             );
             
             // Filter out locations outside search radius or in water
-            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
+            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude)) {
               newLocationsMap.set(key, loc as SharedAstroSpot);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {
@@ -137,3 +133,20 @@ export const useMapLocations = ({
     processedLocations
   };
 };
+
+function filterValidLocations(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  if (!locations || !Array.isArray(locations)) {
+    return [];
+  }
+  
+  return locations.filter(location => {
+    return location && location.latitude && location.longitude;
+  });
+}
+
+function separateLocationTypes(locations: SharedAstroSpot[]): { certifiedLocations: SharedAstroSpot[], calculatedLocations: SharedAstroSpot[] } {
+  const certifiedLocations = locations.filter(loc => isCertifiedLocation(loc));
+  const calculatedLocations = locations.filter(loc => !isCertifiedLocation(loc));
+  
+  return { certifiedLocations, calculatedLocations };
+}

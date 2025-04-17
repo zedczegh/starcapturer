@@ -33,7 +33,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ThemeProvider>
           <LanguageProvider>
             <App />
-            <Toaster />
             <SonnerToaster position="top-center" closeButton richColors />
           </LanguageProvider>
         </ThemeProvider>

@@ -14,6 +14,9 @@ const NavBar = () => {
     ? location.pathname.split('/location/')[1] 
     : null;
 
+  // Check if we are on the homepage (no location ID)
+  const isHomepage = location.pathname === '/';
+
   useEffect(() => {
     const handleScroll = () => {
       const isScrolled = window.scrollY > 10;
@@ -34,6 +37,7 @@ const NavBar = () => {
           <DesktopNav 
             location={location} 
             locationId={locationId}
+            isHomepage={isHomepage}
           />
         </div>
       </NavHeader>
@@ -41,6 +45,7 @@ const NavBar = () => {
       <MobileNav 
         location={location} 
         locationId={locationId}
+        isHomepage={isHomepage}
       />
     </>
   );

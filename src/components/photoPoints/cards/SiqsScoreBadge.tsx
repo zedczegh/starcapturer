@@ -8,7 +8,7 @@ interface SiqsScoreBadgeProps {
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
-  forceCertified?: boolean; // Added this prop to support forcing certified status
+  forceCertified?: boolean;
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 

@@ -1,166 +1,199 @@
 
-import { fetchForecastData, fetchWeatherData } from "@/lib/api";
-import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
-import { fetchLightPollutionData } from "@/lib/api/pollution";
-import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
-import {
-  hasCachedSiqs,
-  getCachedSiqs,
-  setSiqsCache
-} from "./siqsCache";
-import { calculateMoonPhase } from "./moonPhaseCalculator";
-import { applyIntelligentAdjustments } from "./siqsAdjustments";
-import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
-import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions";
-import { findClosestEnhancedLocation } from "./enhancedLocationData";
+/**
+ * Core SIQS calculation logic
+ */
+
+import { SiqsResult, WeatherDataWithClearSky, SiqsCalculationOptions, SiqsFactor } from './siqsTypes';
+import { applyIntelligentAdjustments } from './siqsAdjustments';
+import { findClimateRegion, getClimateAdjustmentFactor } from './climateRegions';
 
 /**
- * Calculate real-time SIQS for a given location with enhanced accuracy
- * using state-of-the-art algorithms and multiple data sources
+ * Calculate basic SIQS score based on Bortle scale and weather
+ * This is a simplified version of the algorithm
  */
-export async function calculateRealTimeSiqs(
-  latitude: number, 
-  longitude: number, 
-  bortleScale: number
-): Promise<SiqsResult> {
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    console.error("Invalid coordinates provided to calculateRealTimeSiqs");
-    return { siqs: 0, isViable: false };
-  }
+export function calculateSiqsScore(
+  bortleScale: number, 
+  weatherData: WeatherDataWithClearSky,
+  options: SiqsCalculationOptions = {}
+): SiqsResult {
+  // Validate inputs
+  const validBortle = Math.max(1, Math.min(9, bortleScale));
   
-  // Use shorter caching duration for greater accuracy
-  const CACHE_DURATION_MINS = 30;
+  // Base score inversely related to Bortle scale (1-9)
+  // Bortle 1 = best (9 points), Bortle 9 = worst (1 point)
+  const bortleBase = 10 - validBortle;
   
-  // Check cache first with shorter duration for more frequent updates
-  if (hasCachedSiqs(latitude, longitude)) {
-    const cachedData = getCachedSiqs(latitude, longitude);
-    if (cachedData) {
-      console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
-      return cachedData;
-    }
-  }
+  // Clear sky factor (0-1)
+  const clearSkyFactor = Math.min(1, Math.max(0, weatherData.clearSky / 100));
   
-  console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  // Weather factors
+  const tempFactor = getTemperatureFactor(weatherData.temperature);
+  const humidityFactor = getHumidityFactor(weatherData.humidity);
+  const windFactor = getWindFactor(weatherData.windSpeed || 0);
   
-  try {
-    // Check if this is a known enhanced location with special data
-    const enhancedLocation = findClosestEnhancedLocation(latitude, longitude);
-    if (enhancedLocation) {
-      console.log(`Found enhanced location data for ${enhancedLocation.name}`);
-    }
+  // Calculate factors
+  const factors: SiqsFactor[] = [];
+  
+  // Light pollution factor (40% weight)
+  const lightPollutionScore = bortleBase;
+  factors.push({
+    name: 'Light Pollution',
+    score: lightPollutionScore,
+    description: `Bortle scale ${validBortle}/9`,
+    value: validBortle
+  });
+  
+  // Cloud cover factor (30% weight)
+  const cloudCoverScore = clearSkyFactor * 10;
+  factors.push({
+    name: 'Cloud Cover',
+    score: cloudCoverScore,
+    description: `${100 - (weatherData.cloudCover || 0)}% clear`,
+    value: weatherData.cloudCover
+  });
+  
+  // Humidity factor (10% weight)
+  const humidityScore = humidityFactor * 10;
+  factors.push({
+    name: 'Humidity',
+    score: humidityScore,
+    description: `${weatherData.humidity}% relative humidity`,
+    value: weatherData.humidity
+  });
+  
+  // Wind factor (10% weight)
+  const windScore = windFactor * 10;
+  factors.push({
+    name: 'Wind',
+    score: windScore,
+    description: `${weatherData.windSpeed || 0} km/h`,
+    value: weatherData.windSpeed
+  });
+  
+  // Temperature factor (10% weight)
+  const temperatureScore = tempFactor * 10;
+  factors.push({
+    name: 'Temperature',
+    score: temperatureScore,
+    description: `${weatherData.temperature}°C`,
+    value: weatherData.temperature
+  });
+  
+  // Calculate composite score with proper weighting
+  let compositeScore = 
+    (lightPollutionScore * 0.4) +
+    (cloudCoverScore * 0.3) +
+    (humidityScore * 0.1) +
+    (windScore * 0.1) +
+    (temperatureScore * 0.1);
+  
+  // Air quality adjustment if available
+  if (weatherData.aqi !== undefined) {
+    const aqiFactor = getAqiFactor(weatherData.aqi);
+    compositeScore *= aqiFactor;
     
-    // Check for specific climate region data
-    const climateRegion = findClimateRegion(latitude, longitude);
-    if (climateRegion) {
-      console.log(`Location is in climate region: ${climateRegion.name}`);
-    }
-    
-    // Parallel data fetching with all available data sources for efficiency
-    const [weatherData, forecastData, clearSkyData, extraData] = await Promise.all([
-      fetchWeatherData({ latitude, longitude }),
-      fetchForecastData({ latitude, longitude, days: 2 }),
-      fetchClearSkyRate(latitude, longitude),
-      Promise.all([
-        fetchLightPollutionData(latitude, longitude)
-      ]).catch(() => [null])
-    ]);
-    
-    if (!weatherData) {
-      return { siqs: 0, isViable: false };
-    }
-    
-    // Enhanced Bortle scale handling with more sophisticated logic
-    let finalBortleScale = bortleScale;
-    if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
-      const [pollutionData] = extraData;
-      // Use light pollution data or default to medium value
-      finalBortleScale = pollutionData?.bortleScale || 5;
-      
-      // Use enhanced location data if available
-      if (enhancedLocation && enhancedLocation.bortleScale) {
-        finalBortleScale = enhancedLocation.bortleScale;
-        console.log(`Using enhanced location Bortle scale: ${finalBortleScale}`);
-      }
-    }
-    
-    // Prepare comprehensive weather data with all available sources and coordinates
-    const weatherDataWithClearSky: WeatherDataWithClearSky = { 
-      ...weatherData,
-      clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
-      latitude,
-      longitude,
-      _forecast: forecastData
-    };
-    
-    // Get current moon phase
-    const moonPhase = calculateMoonPhase();
-    
-    // Default seeing conditions (1-5 scale, lower is better)
-    // Use enhanced data if available
-    const seeingConditions = enhancedLocation && enhancedLocation.averageVisibility === 'excellent' ? 2 : 3;
-    
-    // Enhanced SIQS calculation with machine learning-inspired weighting
-    // that adjusts based on local conditions
-    const siqsResult = await calculateSIQSWithWeatherData(
-      weatherDataWithClearSky,
-      finalBortleScale,
-      seeingConditions,
-      moonPhase,
-      forecastData
-    );
-    
-    // Apply intelligent adjustments based on multiple factors
-    let adjustedScore = applyIntelligentAdjustments(
-      siqsResult.score,
-      weatherDataWithClearSky,
-      clearSkyData || (enhancedLocation ? { 
-        annualRate: enhancedLocation.clearSkyRate,
-        isDarkSkyReserve: enhancedLocation.isDarkSkyReserve
-      } : null),
-      finalBortleScale
-    );
-    
-    // Apply climate region adjustments if available
-    if (climateRegion) {
-      const month = new Date().getMonth();
-      const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
-      if (climateAdjustment !== 1.0) {
-        console.log(`Applying climate region adjustment: ${climateAdjustment.toFixed(2)}`);
-        adjustedScore *= climateAdjustment;
-      }
-    }
-    
-    // Cap the score at realistic values
-    adjustedScore = Math.min(9.5, adjustedScore); // Never allow perfect 10
-    adjustedScore = Math.max(0, adjustedScore); // Never allow negative
-    
-    // Round to 1 decimal for consistency
-    const finalScore = Math.round(adjustedScore * 10) / 10;
-    
-    const result = {
-      siqs: finalScore,
-      isViable: finalScore >= 2.0,
-      factors: siqsResult.factors
-    };
-    
-    // Store in cache with metadata
-    setSiqsCache(latitude, longitude, {
-      ...result,
-      metadata: {
-        calculatedAt: new Date().toISOString(),
-        sources: {
-          weather: true,
-          forecast: !!forecastData,
-          clearSky: !!clearSkyData || !!enhancedLocation,
-          lightPollution: !!extraData[0] || !!enhancedLocation
-        }
-      }
+    factors.push({
+      name: 'Air Quality',
+      score: aqiFactor * 10,
+      description: `AQI: ${weatherData.aqi}`,
+      value: weatherData.aqi
     });
-    
-    return result;
-    
-  } catch (error) {
-    console.error("Error calculating real-time SIQS:", error);
-    return { siqs: 0, isViable: false };
   }
+  
+  // Round to one decimal place
+  compositeScore = Math.round(compositeScore * 10) / 10;
+  
+  // Determine if conditions are viable for astronomy
+  // Generally, SIQS >= 5.0 is considered viable
+  const isViable = compositeScore >= 5.0;
+  
+  // Create the final result
+  const result: SiqsResult = {
+    siqs: compositeScore,
+    score: compositeScore, // Set both for compatibility
+    isViable,
+    factors: options.includeFactors ? factors : undefined
+  };
+  
+  // Add metadata if requested
+  if (options.includeMetadata) {
+    result.metadata = {
+      timestamp: new Date().toISOString(),
+      bortleScale: validBortle,
+      weatherSnapshot: { ...weatherData }
+    };
+  }
+  
+  return result;
+}
+
+/**
+ * Get temperature factor (0-1)
+ * Optimal temperatures are between 5°C and 25°C
+ */
+function getTemperatureFactor(temperature: number): number {
+  if (temperature >= 5 && temperature <= 25) {
+    return 1.0; // Optimal range
+  }
+  
+  if (temperature < -10 || temperature > 35) {
+    return 0.6; // Poor conditions
+  }
+  
+  if (temperature < 0 || temperature > 30) {
+    return 0.8; // Below average conditions
+  }
+  
+  return 0.9; // Slight impact
+}
+
+/**
+ * Get humidity factor (0-1)
+ * Lower humidity is better for astronomy
+ */
+function getHumidityFactor(humidity: number): number {
+  if (humidity <= 40) {
+    return 1.0; // Excellent
+  }
+  
+  if (humidity >= 90) {
+    return 0.5; // Poor
+  }
+  
+  // Linear scale between 40% and 90%
+  return 1.0 - ((humidity - 40) / 100);
+}
+
+/**
+ * Get wind factor (0-1)
+ * Moderate wind is OK, strong wind is bad for astronomy
+ */
+function getWindFactor(windSpeed: number): number {
+  if (windSpeed <= 10) {
+    return 1.0; // Excellent
+  }
+  
+  if (windSpeed >= 30) {
+    return 0.4; // Poor
+  }
+  
+  // Linear scale between 10km/h and 30km/h
+  return 1.0 - ((windSpeed - 10) / 40);
+}
+
+/**
+ * Get air quality factor (0-1)
+ * Lower AQI is better for astronomy
+ */
+function getAqiFactor(aqi: number): number {
+  if (aqi <= 50) {
+    return 1.0; // Excellent
+  }
+  
+  if (aqi >= 200) {
+    return 0.6; // Poor
+  }
+  
+  // Linear scale between 50 and 200
+  return 1.0 - ((aqi - 50) / 375);
 }
