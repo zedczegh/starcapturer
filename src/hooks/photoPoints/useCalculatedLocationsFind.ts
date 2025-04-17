@@ -4,7 +4,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findCalculatedLocations } from "@/services/locationSearchService";
 import { isSiqsAtLeast } from "@/utils/siqsHelpers";
-import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
 
 export const useCalculatedLocationsFind = () => {
   const { t } = useLanguage();
@@ -34,29 +33,6 @@ export const useCalculatedLocationsFind = () => {
           limit
         );
         
-        // Process locations to add astronomical night data
-        const processedLocations = newLocations.map(location => {
-          try {
-            if (location.latitude && location.longitude) {
-              // Calculate astronomical night for this location
-              const { start, end } = calculateAstronomicalNight(location.latitude, location.longitude);
-              const nightTimeStr = formatTime(start) + "-" + formatTime(end);
-              
-              // Add the data to the location object
-              location.metadata = location.metadata || {};
-              location.metadata.astronomicalNight = {
-                start: start.toISOString(),
-                end: end.toISOString(),
-                formattedTime: nightTimeStr
-              };
-            }
-            return location;
-          } catch (err) {
-            console.error("Error calculating astronomical night for location:", err);
-            return location;
-          }
-        });
-        
         if (preservePrevious && previousLocations.length > 0) {
           console.log(`Preserving ${previousLocations.length} previous locations`);
           
@@ -66,7 +42,7 @@ export const useCalculatedLocationsFind = () => {
           );
           
           // Filter out locations we already have
-          const uniqueNewLocations = processedLocations.filter(loc => {
+          const uniqueNewLocations = newLocations.filter(loc => {
             const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
             return !existingCoords.has(coordKey);
           });
@@ -83,7 +59,7 @@ export const useCalculatedLocationsFind = () => {
         }
         
         // Filter new locations by quality
-        const qualityFilteredLocations = processedLocations.filter(loc => {
+        const qualityFilteredLocations = newLocations.filter(loc => {
           // If siqs is null/undefined or >= 5, keep the location
           return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
         });

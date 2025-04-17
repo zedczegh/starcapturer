@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
@@ -27,7 +26,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
 }) => {
   const { t } = useLanguage();
   const [isInitialized, setIsInitialized] = useState(false);
-  const currentSiqs = currentSiqsStore((state) => state.value);
+  const currentSiqs = currentSiqsStore.getValue();
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedLocations, setCachedLocations] = useState<SharedAstroSpot[]>([]);
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);

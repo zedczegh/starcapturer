@@ -5,29 +5,17 @@ import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 interface SiqsDisplayProps {
   realTimeSiqs: number | null;
   loading: boolean;
-  latitude?: number;
-  longitude?: number;
 }
 
 /**
- * Component to display SIQS score with astronomical night data
+ * Component to display SIQS score
  */
-const SiqsDisplay: React.FC<SiqsDisplayProps> = ({ 
-  realTimeSiqs, 
-  loading,
-  latitude,
-  longitude 
-}) => {
+const SiqsDisplay: React.FC<SiqsDisplayProps> = ({ realTimeSiqs, loading }) => {
   if (realTimeSiqs === null) return null;
   
   return (
     <div className="bg-cosmic-800/90 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30">
-      <SiqsScoreBadge 
-        score={realTimeSiqs} 
-        loading={loading}
-        latitude={latitude}
-        longitude={longitude}
-      />
+      <SiqsScoreBadge score={realTimeSiqs} loading={loading} />
     </div>
   );
 };
