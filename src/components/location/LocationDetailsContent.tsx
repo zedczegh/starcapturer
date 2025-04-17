@@ -23,17 +23,19 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
   // Extract SIQS score using our helper to ensure consistency
   const siqsScore = getSiqsScore(locationData?.siqsResult);
   
-  // Get forecast data
+  // Get forecast data - using destructured properties that actually exist in the hook
   const {
     forecastData,
     longRangeForecast,
     forecastLoading,
     longRangeLoading,
-    gettingUserLocation,
-    setGettingUserLocation,
-    onRefreshForecast,
-    onRefreshLongRange
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast
   } = useForecastData(locationData);
+  
+  // For components that need these props, we'll create them locally
+  const gettingUserLocation = false;
+  const setGettingUserLocation = () => {};
   
   // Use SIQS updater hook
   const { updateSIQSWithForecast, resetUpdateState } = useSIQSUpdater();
@@ -83,8 +85,8 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
         onLocationUpdate={onLocationUpdate}
         setGettingUserLocation={setGettingUserLocation}
         setStatusMessage={() => {}}
-        onRefreshForecast={onRefreshForecast}
-        onRefreshLongRange={onRefreshLongRange}
+        onRefreshForecast={handleRefreshForecast}
+        onRefreshLongRange={handleRefreshLongRangeForecast}
       />
     </div>
   );
