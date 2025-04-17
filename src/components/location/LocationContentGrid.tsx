@@ -78,6 +78,21 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return language === 'en' ? "Loading..." : "加载中...";
   }, [language]);
 
+  // Get clear sky rate from location data
+  const clearSkyRate = useMemo(() => {
+    return locationData?.clearSkyData?.annualRate || 60;
+  }, [locationData?.clearSkyData]);
+
+  // Get monthly rates from location data
+  const monthlyRates = useMemo(() => {
+    return locationData?.clearSkyData?.monthlyRates || {};
+  }, [locationData?.clearSkyData]);
+
+  // Get clearest months from historical data
+  const clearestMonths = useMemo(() => {
+    return locationData?.historicalData?.clearestMonths || [];
+  }, [locationData?.historicalData]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
       <div className="space-y-6 lg:space-y-8">
@@ -92,7 +107,10 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ClearSkyRateDisplay 
             latitude={locationData.latitude} 
-            longitude={locationData.longitude} 
+            longitude={locationData.longitude}
+            clearSkyRate={clearSkyRate}
+            monthlyRates={monthlyRates}
+            clearestMonths={clearestMonths}
           />
           <MoonlessNightDisplay
             latitude={locationData.latitude}
