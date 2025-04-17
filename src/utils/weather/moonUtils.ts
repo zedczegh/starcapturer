@@ -93,7 +93,7 @@ export const calculateMoonlessNightDuration = (latitude: number, longitude: numb
   // Determine moonless periods during astronomical night
   const { moonlessStart, moonlessEnd, description } = 
     calculateMoonlessPeriodsInNight(adjustedTimes.moonrise, adjustedTimes.moonset, 
-                                   adjustedTimes.sunset, adjustedTimes.sunrise);
+                                   adjustedTimes.sunset, adjustedTimes.sunrise, latitude);
   
   console.log(`Moonless period: ${moonlessStart.toLocaleTimeString()} - ${moonlessEnd.toLocaleTimeString()}`);
   console.log(`Calculation method: ${description}`);
@@ -272,7 +272,8 @@ function calculateMoonlessPeriodsInNight(
   moonrise: Date,
   moonset: Date,
   sunset: Date,
-  sunrise: Date
+  sunrise: Date,
+  latitudeParam: number // Renamed from 'latitude' to avoid name conflicts
 ): { moonlessStart: Date; moonlessEnd: Date; description: string } {
   // Night period (when sun is down)
   const nightStart = sunset;
@@ -337,9 +338,26 @@ function calculateMoonlessPeriodsInNight(
   // Case 7: Moon is visible all night (rises before sunset, sets after sunrise)
   else {
     // Get phase-based estimate for nights when moon is visible throughout
-    const phaseBasedInfo = getPhaseBasedMoonlessNight(calculateMoonPhase(), latitude);
-    const time1 = parseMoonTime(phaseBasedInfo.startTime) || new Date(nightStart);
-    const time2 = parseMoonTime(phaseBasedInfo.endTime) || new Date(nightEnd);
+    const phaseBasedInfo = getPhaseBasedMoonlessNight(calculateMoonPhase(), latitudeParam);
+    
+    // Use the local parseMoonTime function to parse the times
+    const localParseMoonTime = (timeStr: string) => {
+      if (!timeStr) return null;
+      
+      const now = new Date();
+      const [hoursStr, minutesStr] = timeStr.split(':');
+      const hours = parseInt(hoursStr);
+      const minutes = parseInt(minutesStr);
+      
+      if (isNaN(hours) || isNaN(minutes)) return null;
+      
+      const result = new Date(now);
+      result.setHours(hours, minutes, 0, 0);
+      return result;
+    };
+    
+    const time1 = localParseMoonTime(phaseBasedInfo.startTime) || new Date(nightStart);
+    const time2 = localParseMoonTime(phaseBasedInfo.endTime) || new Date(nightEnd);
     
     // Use the phase-based times but ensure they fall within night period
     moonlessStart = new Date(Math.max(time1.getTime(), nightStart.getTime()));
