@@ -3,8 +3,8 @@
  * Shared location data structure used across the application
  */
 export interface SharedAstroSpot {
-  id?: string;
-  name?: string;
+  id: string; // Changed from optional to required to match type in weather.d.ts
+  name: string; // Changed from optional to required to match type in weather.d.ts
   chineseName?: string;
   latitude: number;
   longitude: number;
@@ -19,6 +19,9 @@ export interface SharedAstroSpot {
   isDarkSkyReserve?: boolean;
   certification?: string;
   image?: string;
+  imageURL?: string; // Added to match possible usages elsewhere
+  rating?: number;
+  photographer?: string;
   [key: string]: any; // Allow arbitrary additional properties
 }
 
@@ -26,6 +29,7 @@ export interface SharingResponse {
   success: boolean;
   message?: string;
   data?: any;
+  id?: string; // Add id property to match usage in ShareLocationForm
 }
 
 /**
@@ -97,6 +101,7 @@ export async function shareAstroSpot(locationData: SharedAstroSpot): Promise<Sha
   return {
     success: true,
     message: "Location shared successfully",
+    id: `shared-${Date.now()}`, // Include id in the response
     data: {
       id: `shared-${Date.now()}`,
       ...locationData

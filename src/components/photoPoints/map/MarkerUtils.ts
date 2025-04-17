@@ -27,11 +27,10 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
     return false;
   }
   
-  // Use enhanced water detection
+  // Use enhanced water detection - fixed parameter count
   return isWaterLocation(
     location.latitude, 
-    location.longitude, 
-    Boolean(location.isDarkSkyReserve || location.certification)
+    location.longitude
   );
 };
 

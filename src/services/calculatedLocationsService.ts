@@ -377,3 +377,19 @@ export {
   getAllLocationsFromStore,
   clearLocationStore
 } from './locationStore';
+
+/**
+ * Check if a location is valid for astronomy viewing
+ */
+export function isValidForAstronomy(latitude: number, longitude: number): boolean {
+  return isValidAstronomyLocation(latitude, longitude);
+}
+
+/**
+ * Filter out water locations from a list of locations
+ */
+export function filterWaterLocations(locations: any[]): any[] {
+  return locations.filter(location => {
+    return !isWaterLocation(location.latitude, location.longitude);
+  });
+}

@@ -1,10 +1,45 @@
-
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore } from '@/utils/siqsHelpers';
-import { calculateDistance } from '@/utils/geoUtils';
+import { getRecommendedPhotoPoints, SharedAstroSpot } from '@/lib/api/astroSpots';
 import { batchCalculateSiqs } from '@/services/realTimeSiqs/realTimeSiqsService';
-import { getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
-import { isValidCoordinates, isSuitableLocation } from '@/utils/locationValidator';
+import { haversine } from '@/utils/haversine';
+import { isValidAstronomyLocation } from '@/utils/locationValidator';
+
+/**
+ * Find certified dark sky locations near given coordinates
+ */
+export async function findCertifiedLocations(
+  latitude: number,
+  longitude: number,
+  radius: number = 500,
+  limit: number = 50
+): Promise<SharedAstroSpot[]> {
+  // In a real app, this would query a database or API for certified dark sky locations
+  console.log(`Finding certified locations near ${latitude}, ${longitude} within ${radius}km`);
+  
+  // For now, return a mock response
+  return [
+    {
+      id: "certified-1",
+      name: "Dark Sky Reserve Example",
+      latitude: latitude + 0.7,
+      longitude: longitude + 0.5,
+      bortleScale: 2,
+      description: "An international dark sky reserve with excellent stargazing",
+      isDarkSkyReserve: true,
+      certification: "International Dark Sky Reserve",
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: "certified-2",
+      name: "Dark Sky Park Example",
+      latitude: latitude - 0.5,
+      longitude: longitude + 1.2,
+      bortleScale: 2,
+      description: "Protected dark sky park with public astronomy programs",
+      certification: "International Dark Sky Park",
+      timestamp: new Date().toISOString()
+    }
+  ];
+}
 
 /**
  * Find locations within a specific radius
@@ -26,7 +61,7 @@ export async function findLocationsWithinRadius(
     
     // Calculate distance and filter by radius
     const locationsWithDistance = locations.map(location => {
-      const distance = calculateDistance(
+      const distance = haversine(
         latitude, 
         longitude, 
         location.latitude, 

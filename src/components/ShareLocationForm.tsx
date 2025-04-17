@@ -57,16 +57,16 @@ const ShareLocationForm: React.FC<{
     setIsSubmitting(true);
     
     try {
-      // Create spot data object
-      // Removed the photoUrl field which was causing the TypeScript error
-      const spotData: Omit<SharedAstroSpot, 'id'> = {
+      // Create spot data object with required fields
+      const spotData: SharedAstroSpot = {
+        id: `temp-${Date.now()}`, // Generate temporary ID to satisfy required field
         name,
-        chineseName: chineseName || undefined,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         bortleScale: parseInt(bortleScale),
         description: description || undefined,
         timestamp: new Date().toISOString(),
+        chineseName: chineseName || undefined,
         isDarkSkyReserve: isDarkSkyReserve,
         certification: certification || undefined,
         photographer: photographer || undefined

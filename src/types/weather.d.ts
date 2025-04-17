@@ -1,4 +1,3 @@
-
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -43,14 +42,14 @@ declare module "@/types/weather" {
 
   export interface SharedAstroSpot {
     id?: string;
-    name: string;
+    name?: string;
     latitude: number;
     longitude: number;
-    bortleScale: number;
+    bortleScale?: number;
     description?: string;
     imageURL?: string;
     rating?: number;
-    timestamp: string;
+    timestamp?: string;
     chineseName?: string;
     siqs?: number | {
       score: number;
@@ -73,5 +72,6 @@ declare module "@/types/weather" {
     certificationRating?: number;
     image?: string;
     lastVisit?: string;
+    photographer?: string;
   }
 }

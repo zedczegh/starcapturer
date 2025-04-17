@@ -6,13 +6,13 @@
 export interface ClimateRegion {
   id: string;
   name: string;
-  borders?: {
+  borders: {
     north: number;
     south: number;
     east: number;
     west: number;
   };
-  adjustmentFactors?: {
+  adjustmentFactors: {
     humidity: number;
     temperature: number;
     cloudCover: number;
@@ -34,7 +34,23 @@ export interface WeatherDataWithClearSky {
   humidity: number;
   cloudCover: number;
   clearSky?: number;
-  windSpeed?: number;
+  windSpeed: number; // Making this required since it's used in calculations
   precipitation?: number;
   [key: string]: any;
+}
+
+/**
+ * Enhanced location data with additional astronomy information
+ */
+export interface EnhancedLocation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  clearSkyRate?: number;
+  siqsScore?: number;
+  weatherData?: WeatherDataWithClearSky;
+  distance?: number;
+  timestamp?: string;
 }
