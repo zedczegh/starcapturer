@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -223,6 +224,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         onGetLocation={handleGetLocation}
         className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute top-4 right-16 z-[999]"}
         shouldCenter={false}
+        hasLocation={userLocation !== null}
       />
     </div>
   );

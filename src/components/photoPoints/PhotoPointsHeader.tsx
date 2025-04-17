@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin, List, Map } from 'lucide-react';
+import { MapPin, List, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
@@ -59,24 +59,34 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       animate="visible"
       variants={headerVariants}
     >
-      {/* Back Button and Map Toggle */}
+      {/* Back Button, Map Toggle, and Location Status */}
       <div className="flex justify-between items-center mb-6">
         <BackButton destination="/" />
         
-        {showMapToggle && toggleMapView && (
-          <Button 
-            onClick={toggleMapView}
-            variant="outline"
-            size="sm"
-            className="shadow-sm hover:bg-muted/60"
-          >
-            {showMap ? (
-              <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
-            ) : (
-              <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
-            )}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Show loading indicator when getting location */}
+          {locationLoading && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              {t("Getting location...", "正在获取位置...")}
+            </div>
+          )}
+          
+          {showMapToggle && toggleMapView && (
+            <Button 
+              onClick={toggleMapView}
+              variant="outline"
+              size="sm"
+              className="shadow-sm hover:bg-muted/60"
+            >
+              {showMap ? (
+                <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
+              ) : (
+                <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="flex flex-col items-center text-center mb-8">
@@ -110,4 +120,3 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
 };
 
 export default PhotoPointsHeader;
-
