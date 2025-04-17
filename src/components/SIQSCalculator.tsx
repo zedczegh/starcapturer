@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useSiqsCalculatorState } from "./siqs/hooks/useSiqsCalculatorState";
@@ -10,6 +10,8 @@ import SIQSCalculatorHeader from "./siqs/SIQSCalculatorHeader";
 import StatusMessage from "./siqs/StatusMessage";
 import { motion } from "framer-motion";
 import { useLocationHandlers } from "./siqs/hooks/useLocationHandlers";
+import { currentSiqsStore } from "./index/CalculatorSection";
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqs/siqsCalculator";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -36,7 +38,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     isMounted,
     siqsScore,
     calculateSIQSForLocation,
-    setStatusMessage
+    setStatusMessage,
+    setLoading
   } = useSiqsCalculatorState({
     noAutoLocationRequest,
     onSiqsCalculated
@@ -68,6 +71,47 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   // Get advanced settings
   const { seeingConditions } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
   
+  // When location changes, update the metadata and calculate real-time SIQS
+  useEffect(() => {
+    if (locationName && parsedLatitude !== 0 && parsedLongitude !== 0) {
+      // Update metadata in global store
+      currentSiqsStore.metadata.setMetadata(locationName, parsedLatitude, parsedLongitude);
+      
+      // If we have a Bortle scale, calculate real-time SIQS
+      if (localBortleScale && !calculationInProgress) {
+        setLoading(true);
+        
+        // Calculate in background
+        const fetchSiqs = async () => {
+          try {
+            console.log("Calculating real-time SIQS for selected location");
+            const result = await calculateRealTimeSiqs(
+              parsedLatitude, 
+              parsedLongitude, 
+              localBortleScale
+            );
+            
+            if (result && typeof result.siqs === 'number') {
+              // Update the SIQS score in the global store
+              currentSiqsStore.setValue(result.siqs);
+              
+              // Notify through provided callback
+              if (onSiqsCalculated) {
+                onSiqsCalculated(result.siqs);
+              }
+            }
+          } catch (error) {
+            console.error("Error calculating real-time SIQS:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        fetchSiqs();
+      }
+    }
+  }, [locationName, parsedLatitude, parsedLongitude, localBortleScale, onSiqsCalculated, calculationInProgress, setLoading]);
+  
   // Animation variants
   const animationVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -95,7 +139,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         variants={animationVariants}
         transition={{ delay: 0.1 }}
       >
-        <StatusMessage message={statusMessage} loading={calculationInProgress} />
+        <StatusMessage message={statusMessage} loading={calculationInProgress || loading} />
       </motion.div>
       
       {siqsScore !== null && (
@@ -105,8 +149,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         >
           <SIQSScore 
             siqsScore={siqsScore} 
-            latitude={parseFloat(latitude)}
-            longitude={parseFloat(longitude)}
+            latitude={parsedLatitude}
+            longitude={parsedLongitude}
             locationName={locationName}
           />
         </motion.div>

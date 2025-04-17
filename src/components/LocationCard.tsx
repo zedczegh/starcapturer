@@ -7,6 +7,7 @@ import { formatTime, calculateAstronomicalNight } from '@/utils/astronomy/nightT
 import { siqsToColor } from '@/lib/siqs/utils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
+import { Star, Clock, MapPin } from 'lucide-react';
 
 interface LocationCardProps {
   id: string;
@@ -41,18 +42,25 @@ const LocationCard: React.FC<LocationCardProps> = ({
     <Link to={`/location/${id}`} className="block">
       <Card className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 shadow-md hover:shadow-lg">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-50">{name}</h3>
             <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
           </div>
-          <div className="text-sm text-gray-400">
-            {t("Latitude", "纬度")}: {latitude.toFixed(4)}
-            <br />
-            {t("Longitude", "经度")}: {longitude.toFixed(4)}
-            <br />
-            {t("Astronomical Night", "天文夜晚")}: {nightTimeStr}
-            <br />
-            {t("Last Updated", "最近更新")}: {formattedTimestamp}
+          <div className="space-y-2 text-sm text-gray-400">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-2 text-cosmic-400" />
+              <span>{t("Latitude", "纬度")}: {latitude.toFixed(4)}, {t("Longitude", "经度")}: {longitude.toFixed(4)}</span>
+            </div>
+            
+            <div className="flex items-center">
+              <Star className="h-4 w-4 mr-2 text-cosmic-400" />
+              <span>{t("Astronomical Night", "天文夜晚")}: {nightTimeStr}</span>
+            </div>
+            
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-2 text-cosmic-400" />
+              <span>{t("Last Updated", "最近更新")}: {formattedTimestamp}</span>
+            </div>
           </div>
         </CardContent>
       </Card>

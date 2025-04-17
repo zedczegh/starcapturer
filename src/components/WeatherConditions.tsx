@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
 import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
-import { Cloud, Gauge } from "lucide-react";
+import { Cloud } from "lucide-react";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -146,8 +146,11 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <motion.div variants={itemVariants}>
+              <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                {t("Observing Conditions", "观测条件")}
+              </h3>
               <PrimaryConditions
                 temperature={stableWeatherData.temperature}
                 humidity={stableWeatherData.humidity}
@@ -157,6 +160,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             </motion.div>
             
             <motion.div variants={itemVariants}>
+              <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                {t("Sky Conditions", "天空状况")}
+              </h3>
               <SecondaryConditions
                 cloudCover={stableWeatherData.cloudCover}
                 moonPhase={translatedData.moonPhase}
