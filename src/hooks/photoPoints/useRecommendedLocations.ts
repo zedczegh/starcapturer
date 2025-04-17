@@ -1,282 +1,168 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useLocationFind } from './useLocationFind';
-import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
-import { isWaterLocation } from '@/utils/locationValidator';
-import { toast } from '@/components/ui/use-toast'; // Fix import path
+import { findCalculatedLocations } from '@/services/locationSearchService';
+import { batchCalculateRealTimeSiqs } from '@/services/realTimeSiqs/batchProcessor';
 
-interface Location {
-  latitude: number;
-  longitude: number;
+interface UseRecommendedLocationsProps {
+  userLocation?: { latitude: number; longitude: number } | null;
+  initialRadius?: number;
 }
 
-const MAX_LOAD_MORE_CLICKS = 2;
-
-const DEFAULT_CALCULATED_RADIUS = 100;
-const DEFAULT_CERTIFIED_RADIUS = 10000;
-
 export const useRecommendedLocations = (
-  userLocation: Location | null,
-  initialRadius: number = DEFAULT_CALCULATED_RADIUS
+  userLocation?: { latitude: number; longitude: number } | null,
+  initialRadius: number = 100
 ) => {
   const { t } = useLanguage();
-  const [searchRadius, setSearchRadius] = useState<number>(initialRadius);
+  const [searchRadius, setSearchRadius] = useState(initialRadius);
+  const [maxResults, setMaxResults] = useState(50);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [searching, setSearching] = useState<boolean>(false);
-  const [hasMore, setHasMore] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1);
-  const prevRadiusRef = useRef<number>(searchRadius);
-  const prevLocationRef = useRef<Location | null>(userLocation);
-  const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [loadMoreClickCount, setLoadMoreClickCount] = useState(0);
+  const [maxLoadMoreClicks, setMaxLoadMoreClicks] = useState(3);
   
-  const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
-  const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
+  const maxDiscoveries = 20;
+  const canLoadMoreCalculated = loadMoreClickCount < maxLoadMoreClicks;
   
-  const currentSiqs = currentSiqsStore.getValue();
-  
-  const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
-  const { findCalculatedLocations } = useCalculatedLocationsFind();
-  
-  const loadLocations = useCallback(async () => {
-    if (!userLocation) {
-      return;
+  // Fetch data when user location changes
+  useEffect(() => {
+    if (userLocation) {
+      fetchLocations();
     }
+  }, [userLocation]);
+  
+  // Fetch locations based on user location and search radius
+  const fetchLocations = useCallback(async () => {
+    if (!userLocation) return;
+    
+    setLoading(true);
+    setInitialLoad(false);
     
     try {
-      setLoading(true);
-      
-      const isRadiusIncrease = searchRadius > prevRadiusRef.current && 
-                               prevLocationRef.current && 
-                               userLocation.latitude === prevLocationRef.current.latitude &&
-                               userLocation.longitude === prevLocationRef.current.longitude;
-      
-      const locationChanged = !prevLocationRef.current ||
-        Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 ||
-        Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001;
-      
-      prevRadiusRef.current = searchRadius;
-      prevLocationRef.current = userLocation;
-      
-      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease && !locationChanged}`);
-      
-      const certifiedResults = await findLocationsWithinRadius(
-        userLocation.latitude,
-        userLocation.longitude,
-        DEFAULT_CERTIFIED_RADIUS
-      );
-      
-      const calculatedResults = await findCalculatedLocations(
+      // Get locations from service
+      const locationsData = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
         searchRadius
       );
       
-      const filteredCalculatedResults = calculatedResults.filter(loc => 
-        !isWaterLocation(loc.latitude, loc.longitude)
-      );
-      
-      const combinedResults = [...certifiedResults, ...filteredCalculatedResults];
-      
-      if (combinedResults.length === 0) {
-        console.log("No locations found within the search radius");
-        setLocations([]);
-        previousLocationsRef.current = [];
-        setHasMore(false);
-        setCanLoadMoreCalculated(false);
-      } else {
-        const sortedResults = sortLocationsByQuality(combinedResults);
-        setLocations(sortedResults);
-        previousLocationsRef.current = sortedResults;
-        setHasMore(sortedResults.length >= 20);
-        setCanLoadMoreCalculated(true);
-        setLoadMoreClickCount(0);
-      }
-      
-      setPage(1);
+      setLocations(locationsData);
+      setHasMore(locationsData.length >= maxResults);
     } catch (error) {
-      console.error("Error loading recommended locations:", error);
-      toast({
-        variant: "destructive",
-        title: t(
-          "Failed to load recommended locations",
-          "加载推荐位置失败"
-        ),
-        description: t(
-          "Please try again.",
-          "请重试。"
-        )
-      });
-      setLocations([]);
-      setHasMore(false);
-      setCanLoadMoreCalculated(false);
+      console.error('Failed to fetch locations:', error);
+      toast.error(t('Failed to fetch nearby locations', '获取附近位置失败'));
     } finally {
       setLoading(false);
     }
-  }, [searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
+  }, [userLocation, searchRadius, maxResults, t]);
   
+  // Load more locations
   const loadMore = useCallback(async () => {
-    if (!userLocation || !hasMore) {
-      return;
-    }
+    if (!userLocation || !hasMore || loading) return;
+    
+    setSearching(true);
     
     try {
-      setLoading(true);
-      const nextPage = page + 1;
-      
-      const results = await findLocationsWithinRadius(
+      // Get more locations with increased radius
+      const expandedRadius = searchRadius * 1.5;
+      const additionalLocations = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        expandedRadius
       );
       
-      const filteredResults = results.filter(loc => 
-        loc.isDarkSkyReserve || loc.certification || !isWaterLocation(loc.latitude, loc.longitude)
+      // Filter out duplicates
+      const existingIds = new Set(locations.map(loc => `${loc.latitude}-${loc.longitude}`));
+      
+      const newLocations = additionalLocations.filter(loc => 
+        !existingIds.has(`${loc.latitude}-${loc.longitude}`)
       );
       
-      const existingIds = new Set(locations.map(loc => loc.id));
-      const newResults = filteredResults.filter(loc => !existingIds.has(loc.id));
-      
-      if (newResults.length > 0) {
-        const allLocations = [...locations, ...newResults];
-        const sortedResults = sortLocationsByQuality(allLocations);
-        
-        setLocations(sortedResults);
-        previousLocationsRef.current = sortedResults;
-        setHasMore(newResults.length >= 10);
-        setPage(nextPage);
-      } else {
-        setHasMore(false);
-      }
+      setLocations(prev => [...prev, ...newLocations]);
+      setHasMore(newLocations.length > 0);
     } catch (error) {
-      console.error("Error loading more locations:", error);
-      toast({
-        variant: "destructive",
-        title: t(
-          "Failed to load more locations",
-          "加载更多位置失败"
-        ),
-        description: t(
-          "Please try again.",
-          "请重试。"
-        )
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
-  
-  const loadMoreCalculatedLocations = useCallback(async () => {
-    if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
-      return;
-    }
-    
-    try {
-      setSearching(true);
-      console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
-      
-      const calculatedResults = await findCalculatedLocations(
-        userLocation.latitude,
-        userLocation.longitude,
-        searchRadius
-      );
-      
-      const filteredResults = calculatedResults.filter(loc => 
-        !isWaterLocation(loc.latitude, loc.longitude)
-      );
-      
-      const existingCoords = new Set(locations.map(loc => 
-        `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`
-      ));
-      
-      const newResults = filteredResults.filter(loc => {
-        const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
-        return !existingCoords.has(coordKey);
-      });
-      
-      if (newResults.length > 0) {
-        const allLocations = [...locations, ...newResults];
-        const sortedResults = sortLocationsByQuality(allLocations);
-        
-        setLocations(sortedResults);
-        previousLocationsRef.current = sortedResults;
-        
-        const newClickCount = loadMoreClickCount + 1;
-        setLoadMoreClickCount(newClickCount);
-        
-        if (newClickCount >= MAX_LOAD_MORE_CLICKS) {
-          setCanLoadMoreCalculated(false);
-        }
-        
-        toast({
-          title: t(
-            `Added ${newResults.length} more locations`,
-            `添加了${newResults.length}个更多位置`
-          )
-        });
-      } else {
-        toast({
-          title: t(
-            "No more unique locations found",
-            "未找到更多独特位置"
-          )
-        });
-        
-        setCanLoadMoreCalculated(false);
-      }
-    } catch (error) {
-      console.error("Error loading more calculated locations:", error);
-      toast({
-        variant: "destructive",
-        title: t(
-          "Failed to load more locations",
-          "加载更多位置失败"
-        )
-      });
+      console.error('Failed to load more locations:', error);
+      toast.error(t('Failed to load more locations', '加载更多位置失败'));
     } finally {
       setSearching(false);
     }
-  }, [loadMoreClickCount, locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
+  }, [userLocation, hasMore, loading, searchRadius, locations, t]);
   
+  // Refresh SIQS data for locations
   const refreshSiqsData = useCallback(async () => {
-    if (!userLocation) {
-      return;
-    }
+    if (!locations.length) return;
     
     try {
-      setLoading(true);
+      const locationsToUpdate = locations.slice(0, 5);
       
-      await loadLocations();
-    } catch (error) {
-      console.error("Error refreshing SIQS data:", error);
-      toast({
-        variant: "destructive",
-        title: t(
-          "Failed to refresh location data",
-          "刷新位置数据失败"
-        )
+      // Update SIQS scores
+      const results = await batchCalculateRealTimeSiqs(
+        locationsToUpdate.map(loc => ({ 
+          latitude: loc.latitude, 
+          longitude: loc.longitude, 
+          bortleScale: loc.bortleScale 
+        }))
+      );
+      
+      // Update locations with new SIQS data
+      const updatedLocations = locations.map((loc, index) => {
+        if (index < 5) {
+          return {
+            ...loc,
+            siqs: results[index]
+          };
+        }
+        return loc;
       });
+      
+      setLocations(updatedLocations);
+    } catch (error) {
+      console.error('Failed to refresh SIQS data:', error);
+    }
+  }, [locations]);
+  
+  // Load more calculated locations
+  const loadMoreCalculatedLocations = useCallback(async () => {
+    if (!canLoadMoreCalculated || !userLocation) return;
+    
+    setLoadMoreClickCount(prev => prev + 1);
+    setLoading(true);
+    
+    try {
+      const expandedRadius = searchRadius * (1 + loadMoreClickCount);
+      
+      // Get locations from service with expanded radius
+      const additionalLocations = await findCalculatedLocations(
+        userLocation.latitude,
+        userLocation.longitude,
+        expandedRadius,
+        maxResults
+      );
+      
+      // Filter out duplicates
+      const existingIds = new Set(locations.map(loc => `${loc.latitude}-${loc.longitude}`));
+      
+      const newLocations = additionalLocations.filter(loc => 
+        !existingIds.has(`${loc.latitude}-${loc.longitude}`)
+      );
+      
+      // Merge with existing locations
+      setLocations(prev => [...prev, ...newLocations]);
+      
+      // Update search radius for future queries
+      setSearchRadius(expandedRadius);
+    } catch (error) {
+      console.error('Failed to load more calculated locations:', error);
+      toast.error(t('Failed to load more locations', '加载更多位置失败'));
     } finally {
       setLoading(false);
     }
-  }, [loadLocations, userLocation, t]);
-  
-  useEffect(() => {
-    const radiusChanged = searchRadius !== prevRadiusRef.current;
-    const locationChanged = 
-      (userLocation && !prevLocationRef.current) ||
-      (!userLocation && prevLocationRef.current) ||
-      (userLocation && prevLocationRef.current && 
-        (Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 || 
-         Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001));
-    
-    if (userLocation && (radiusChanged || locationChanged)) {
-      loadLocations();
-    }
-  }, [loadLocations, searchRadius, userLocation]);
+  }, [canLoadMoreCalculated, userLocation, searchRadius, loadMoreClickCount, maxResults, locations, t]);
   
   return {
     searchRadius,
@@ -290,7 +176,7 @@ export const useRecommendedLocations = (
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
     loadMoreClickCount,
-    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs
+    maxLoadMoreClicks,
+    maxDiscoveries
   };
 };

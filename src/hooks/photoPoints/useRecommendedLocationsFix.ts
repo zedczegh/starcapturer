@@ -36,8 +36,7 @@ export const useRecommendedLocationsFix = (props?: UseRecommendedLocationsFixPro
       const calculatedLocations = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        true // Allow expanding search radius
+        searchRadius
       );
       
       setLocationsData(calculatedLocations);
@@ -63,8 +62,7 @@ export const useRecommendedLocationsFix = (props?: UseRecommendedLocationsFixPro
       const newLocations = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        expandedRadius,
-        true
+        expandedRadius
       );
       
       // Filter out duplicates
@@ -86,15 +84,6 @@ export const useRecommendedLocationsFix = (props?: UseRecommendedLocationsFixPro
       setSearching(false);
     }
   }, [userLocation, searchRadius, locationsData, canLoadMore, t]);
-
-  // Add this helper method to help with the specific error
-  const findCalculatedLocations = useCallback(async (
-    latitude: number,
-    longitude: number,
-    radius: number
-  ) => {
-    return findCalculatedLocations(latitude, longitude, radius);
-  }, []);
   
   return {
     userLocation,
@@ -102,14 +91,17 @@ export const useRecommendedLocationsFix = (props?: UseRecommendedLocationsFixPro
     maxResults,
     fetchRecommendations,
     fetchMoreLocations,
-    findCalculatedLocations,
     loading,
     searching,
     maxDiscoveries,
     canLoadMore,
     loadMoreClickCount,
     maxLoadMoreClicks,
-    locationsData
+    locationsData,
+    // Add this helper function directly in the return object
+    findCalculatedLocations: useCallback((lat: number, lng: number, radius: number) => {
+      return findCalculatedLocations(lat, lng, radius);
+    }, [])
   };
 };
 

@@ -29,13 +29,22 @@ export async function calculateRealTimeSiqs(
     }
     
     // Fetch weather data
-    const weatherData = await fetchWeatherData(latitude, longitude);
+    const weatherData = await fetchWeatherData({
+      latitude, 
+      longitude
+    });
     
     // Fetch forecast data
-    const forecastData = await fetchForecastData(latitude, longitude);
+    const forecastData = await fetchForecastData({
+      latitude, 
+      longitude
+    });
     
     // Fetch light pollution data
-    const lightPollutionData = await fetchLightPollutionData(latitude, longitude);
+    const lightPollutionData = await fetchLightPollutionData({
+      latitude, 
+      longitude
+    });
     
     // Fetch clear sky rate
     const clearSkyRate = await fetchClearSkyRate(latitude, longitude);

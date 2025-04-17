@@ -74,6 +74,20 @@ export interface MoonPhaseInfo {
   isFullMoon: boolean;
 }
 
+// Moon night info used in moonUtils.ts
+export interface MoonlessNightInfo {
+  duration: number;
+  startTime: string;
+  endTime: string;
+  moonrise: Date | string;
+  moonset: Date | string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
+}
+
 // SIQS calculation options
 export interface SiqsCalculationOptions {
   anomalyDetection?: boolean;

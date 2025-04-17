@@ -56,7 +56,6 @@ export async function findLocationsWithinRadius(
  * @param latitude Center latitude
  * @param longitude Center longitude
  * @param radius Search radius in km
- * @param allowExpandRadius Allow expanding search radius if no results
  * @param maxResults Maximum number of results to return
  * @returns Promise resolving to array of calculated locations
  */
@@ -64,7 +63,6 @@ export async function findCalculatedLocations(
   latitude: number,
   longitude: number,
   radius: number,
-  allowExpandRadius: boolean = false,
   maxResults: number = 10
 ): Promise<SharedAstroSpot[]> {
   // Generate some calculated locations in various directions
@@ -75,7 +73,7 @@ export async function findCalculatedLocations(
     { lat: latitude - 0.1, lng: longitude - 0.1 },
   ];
   
-  // Create sample locations
+  // Create sample locations with timestamps
   const calculatedLocations: SharedAstroSpot[] = basePoints.map((point, index) => ({
     id: `calc-${index}`,
     name: `Calculated Point ${index + 1}`,

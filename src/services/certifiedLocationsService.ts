@@ -1,5 +1,29 @@
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { findCertifiedLocations } from '@/services/locationSearchService';
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { findCertifiedLocations } from "./locationSearchService";
+
+/**
+ * Check if a location is certified (Dark Sky Reserve, Park, etc.)
+ * @param location Location to check
+ * @returns boolean indicating if the location is certified
+ */
+export function isCertifiedLocation(location: SharedAstroSpot): boolean {
+  return Boolean(
+    location.certification || 
+    location.isDarkSkyReserve || 
+    (location.type && location.type.includes('dark-sky'))
+  );
+}
+
+/**
+ * Find certified locations within radius
+ */
+export async function getCertifiedLocations(
+  latitude: number,
+  longitude: number,
+  radius: number = 300
+): Promise<SharedAstroSpot[]> {
+  return findCertifiedLocations(latitude, longitude, radius);
+}
 
 // Export the function directly for external use
 export { findCertifiedLocations };
