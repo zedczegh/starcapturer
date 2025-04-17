@@ -8,23 +8,25 @@ interface SiqsScoreBadgeProps {
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
+  forceCertified?: boolean; // Added this prop to support forcing certified status
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
   score, 
   loading = false,
   compact = false,
-  isCertified = false
+  isCertified = false,
+  forceCertified = false
 }) => {
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
   // Skip rendering if score is 0 (invalid) and not certified
-  if (numericScore <= 0 && !loading && !isCertified) {
+  if (numericScore <= 0 && !loading && !isCertified && !forceCertified) {
     return null;
   }
   
-  // For certified locations with no score, provide a default good score
+  // For certified locations with no score or when forceCertified is true, provide a default good score
   const displayScore = numericScore > 0 ? numericScore.toFixed(1) : "6.5";
   
   // Get appropriate color based on score value

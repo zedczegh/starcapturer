@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SIQSCalculator from "@/components/SIQSCalculator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -11,27 +11,82 @@ export const currentSiqsStore = {
     currentSiqsStore.value = value;
     // Also save to localStorage for persistence
     if (value !== null) {
-      localStorage.setItem('current_siqs_value', value.toString());
+      try {
+        localStorage.setItem('current_siqs_value', value.toString());
+      } catch (e) {
+        console.error("Error saving SIQS to localStorage:", e);
+      }
     }
   },
   getValue: () => {
     // If no value in memory, try localStorage
     if (currentSiqsStore.value === null) {
-      const storedValue = localStorage.getItem('current_siqs_value');
-      if (storedValue) {
-        const parsedValue = parseFloat(storedValue);
-        if (!isNaN(parsedValue)) {
-          currentSiqsStore.value = parsedValue;
+      try {
+        const storedValue = localStorage.getItem('current_siqs_value');
+        if (storedValue) {
+          const parsedValue = parseFloat(storedValue);
+          if (!isNaN(parsedValue)) {
+            currentSiqsStore.value = parsedValue;
+          }
         }
+      } catch (e) {
+        console.error("Error reading SIQS from localStorage:", e);
       }
     }
     return currentSiqsStore.value;
+  },
+  // Add metadata about the calculation
+  metadata: {
+    locationName: null as string | null,
+    latitude: null as number | null,
+    longitude: null as number | null,
+    timestamp: null as string | null,
+    setMetadata: (name: string, lat: number, lon: number) => {
+      currentSiqsStore.metadata.locationName = name;
+      currentSiqsStore.metadata.latitude = lat;
+      currentSiqsStore.metadata.longitude = lon;
+      currentSiqsStore.metadata.timestamp = new Date().toISOString();
+      
+      // Save to localStorage for persistence
+      try {
+        localStorage.setItem('siqs_metadata', JSON.stringify({
+          locationName: name,
+          latitude: lat,
+          longitude: lon,
+          timestamp: currentSiqsStore.metadata.timestamp
+        }));
+      } catch (e) {
+        console.error("Error saving SIQS metadata to localStorage:", e);
+      }
+    },
+    getMetadata: () => {
+      if (!currentSiqsStore.metadata.locationName) {
+        try {
+          const storedMetadata = localStorage.getItem('siqs_metadata');
+          if (storedMetadata) {
+            const parsedMetadata = JSON.parse(storedMetadata);
+            currentSiqsStore.metadata.locationName = parsedMetadata.locationName || null;
+            currentSiqsStore.metadata.latitude = parsedMetadata.latitude || null;
+            currentSiqsStore.metadata.longitude = parsedMetadata.longitude || null;
+            currentSiqsStore.metadata.timestamp = parsedMetadata.timestamp || null;
+          }
+        } catch (e) {
+          console.error("Error reading SIQS metadata from localStorage:", e);
+        }
+      }
+      return {
+        locationName: currentSiqsStore.metadata.locationName,
+        latitude: currentSiqsStore.metadata.latitude,
+        longitude: currentSiqsStore.metadata.longitude,
+        timestamp: currentSiqsStore.metadata.timestamp
+      };
+    }
   }
 };
 
 // Version hash to detect algorithm tampering
 // This should be updated whenever the algorithm is legitimately changed
-export const SIQS_ALGORITHM_VERSION = "v1.0.3-protected";
+export const SIQS_ALGORITHM_VERSION = "v1.0.4-astronomical-night";
 
 // Check if algorithm has been tampered with
 try {
@@ -42,6 +97,8 @@ try {
   // cryptographic hash function to verify algorithm integrity
   if (expectedSignature && expectedSignature !== SIQS_ALGORITHM_VERSION) {
     console.warn("SIQS algorithm version mismatch - possible unauthorized modification");
+    // Update to the new version
+    localStorage.setItem('siqs_algorithm_signature', SIQS_ALGORITHM_VERSION);
   } else if (!expectedSignature) {
     // First time running this version, save the signature
     localStorage.setItem('siqs_algorithm_signature', SIQS_ALGORITHM_VERSION);
@@ -60,6 +117,12 @@ const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 }) => {
   const { t } = useLanguage();
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(currentSiqsStore.getValue());
+  
+  // Load metadata when component mounts
+  useEffect(() => {
+    const metadata = currentSiqsStore.metadata.getMetadata();
+    console.log("Loaded SIQS metadata:", metadata);
+  }, []);
   
   // Define animations
   const containerVariants = {
