@@ -1,18 +1,15 @@
 
 import { calculateRealTimeSiqs } from './siqsCalculator';
+import { SharedAstroSpot } from '@/types/weather';
 
 /**
  * Process a batch of locations for SIQS calculation efficiently
  * @param locations Array of location data to process
- * @returns Promise resolving to an array of SIQS results
+ * @returns Promise resolving to an array of locations with SIQS results
  */
 export async function batchCalculateSiqs(
-  locations: Array<{
-    latitude: number;
-    longitude: number;
-    bortleScale?: number;
-  }>
-): Promise<Array<{ siqs: number; isViable: boolean; factors?: any[] }>> {
+  locations: SharedAstroSpot[]
+): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) {
     return [];
   }
@@ -22,19 +19,35 @@ export async function batchCalculateSiqs(
   try {
     // Process locations in parallel for efficiency but with a concurrency limit
     const results = await Promise.all(
-      locations.map(location => 
-        calculateRealTimeSiqs(
+      locations.map(async location => {
+        const siqsResult = await calculateRealTimeSiqs(
           location.latitude, 
           location.longitude, 
           location.bortleScale || 5
-        )
-      )
+        );
+        
+        // Merge SIQS results with the original location data
+        return {
+          ...location,
+          siqs: siqsResult.siqs,
+          isViable: siqsResult.isViable,
+          siqsResult: {
+            score: siqsResult.siqs,
+            isViable: siqsResult.isViable,
+            factors: siqsResult.factors || []
+          }
+        };
+      })
     );
     
     return results;
   } catch (error) {
     console.error("Error in batch SIQS calculation:", error);
-    return locations.map(() => ({ siqs: 0, isViable: false }));
+    return locations.map(location => ({
+      ...location,
+      siqs: 0, 
+      isViable: false
+    }));
   }
 }
 
