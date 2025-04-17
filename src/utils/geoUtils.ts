@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for geographic calculations and formatting
  */
@@ -70,3 +71,6 @@ export function haversineDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
+
+// Export haversineDistance as calculateDistance for backward compatibility
+export const calculateDistance = haversineDistance;

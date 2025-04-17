@@ -7,6 +7,7 @@ export interface SiqsResult {
   siqs: number;
   isViable: boolean;
   factors?: SiqsFactor[];
+  metadata?: Record<string, any>; // Added metadata property
 }
 
 export interface SiqsFactor {
@@ -47,6 +48,12 @@ export interface EnhancedLocation {
   hasDarkSkyStatus?: boolean;
   certification?: string;
   siqsResult?: SiqsResult;
+  isDarkSkyReserve?: boolean;
+  clearSkyRate?: number;
+  seasonalTrends?: Record<string, number>;
+  bestMonths?: string[];
+  annualPrecipitationDays?: number;
+  characteristics?: string[];
 }
 
 export interface WeatherData {
@@ -59,4 +66,17 @@ export interface WeatherData {
   condition?: string;
   clearSky?: number;
   aqi?: number;
+}
+
+export interface WeatherDataWithClearSky extends WeatherData {
+  clearSky: number;
+}
+
+export interface SiqsCalculationOptions {
+  includeFactors?: boolean;
+  adjustForSeasonality?: boolean;
+  adjustForTime?: boolean;
+  adjustForElevation?: boolean;
+  includeMetadata?: boolean;
+  locale?: string;
 }

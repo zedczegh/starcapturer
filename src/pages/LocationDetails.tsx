@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -245,7 +246,10 @@ const LocationDetails = () => {
           statusMessage={statusMessage}
           messageType={messageType}
           setStatusMessage={setStatusMessage}
-          handleUpdateLocation={handleUpdateLocation}
+          handleUpdateLocation={async (updatedData: any) => {
+            // Wrap the handleUpdateLocation function to make it return void
+            await handleUpdateLocation(updatedData);
+          }}
         />
       </Suspense>
     </>

@@ -38,6 +38,28 @@ export function isWaterLocation(location: any): boolean {
   return false;
 }
 
+export function isLikelyCoastalWater(latitude: number, longitude: number): boolean {
+  // Simplified check - this could be replaced with a more sophisticated algorithm
+  // using actual coastline data or a service API
+  
+  // For now, just check if the coordinates match known ocean areas
+  // This is extremely simplified and would need to be replaced with real logic
+  
+  // Check for major oceans (very rough approximation)
+  if (
+    // Pacific Ocean (very rough boundaries)
+    (longitude > 100 && longitude < -100 && Math.abs(latitude) < 65) ||
+    // Atlantic Ocean (very rough boundaries)
+    (longitude > -100 && longitude < 20 && Math.abs(latitude) < 65) ||
+    // Indian Ocean (very rough boundaries)
+    (longitude > 20 && longitude < 100 && latitude < 30 && latitude > -65)
+  ) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Validate location for astronomy usage
 export function isValidAstronomyLocation(location: any): boolean {
   // Must have valid coordinates

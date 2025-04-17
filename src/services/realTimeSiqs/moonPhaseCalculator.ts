@@ -57,8 +57,33 @@ export function getMoonInfo(date = new Date(), latitude = 0, longitude = 0): any
   };
 }
 
-// Export functions
-export {
-  calculateMoonPhase,
-  getMoonInfo
-};
+// Add this function for the DynamicMoonIcon component
+export function getMoonPhaseNameByPhase(phase: number): string {
+  if (phase < 0.05 || phase > 0.95) return "new";
+  if (phase < 0.20) return "waxing-crescent";
+  if (phase < 0.30) return "first-quarter";
+  if (phase < 0.45) return "waxing-gibbous";
+  if (phase < 0.55) return "full";
+  if (phase < 0.70) return "waning-gibbous";
+  if (phase < 0.80) return "third-quarter";
+  if (phase < 0.95) return "waning-crescent";
+  return "new";
+}
+
+// Additional moon functions
+export function calculateMoonriseMoonsetTimes(date: Date, latitude: number, longitude: number): any {
+  // Simplified implementation
+  return {
+    moonrise: new Date(date.setHours(18, 0, 0, 0)), // Placeholder
+    moonset: new Date(date.setHours(6, 0, 0, 0))    // Placeholder
+  };
+}
+
+export function getNextNewMoonDate(currentDate: Date = new Date()): Date {
+  // Simplified implementation - find the next new moon
+  const currentPhase = calculateMoonPhase(currentDate);
+  const daysToNewMoon = (1 - currentPhase) * 29.53;
+  const nextNewMoon = new Date(currentDate);
+  nextNewMoon.setDate(currentDate.getDate() + Math.round(daysToNewMoon));
+  return nextNewMoon;
+}
