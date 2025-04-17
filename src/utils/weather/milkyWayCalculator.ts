@@ -61,6 +61,8 @@ export function calculateMilkyWayVisibility(
   // Core is best visible during dark nights in summer months
   const month = date.getMonth();
   const isNorthern = latitude >= 0;
+  
+  // Updated seasonal visibility logic based on hemisphere
   const isSummerMonths = isNorthern ? 
     (month >= 3 && month <= 8) : // Apr-Sep for Northern Hemisphere
     (month >= 9 || month <= 2);  // Oct-Mar for Southern Hemisphere
@@ -69,8 +71,33 @@ export function calculateMilkyWayVisibility(
   const midPoint = new Date((riseTime.getTime() + setTime.getTime()) / 2);
   const bestViewing = formatTimeString(midPoint);
 
-  // Check if latitude is too far north where Sagittarius might not rise
-  const isVisible = Math.abs(latitude) < 63 && isSummerMonths;
+  // Enhanced visibility check for extreme latitudes
+  let isVisible = isSummerMonths;
+  
+  // In polar regions during winter, the Milky Way core might not be visible at all
+  if (Math.abs(latitude) > 60) {
+    const isPolarWinter = (isNorthern && (month >= 10 || month <= 1)) || 
+                         (!isNorthern && (month >= 4 && month <= 7));
+    if (isPolarWinter) {
+      isVisible = false;
+    }
+  }
+  
+  // Near the equator, the Milky Way is visible year-round but at different times
+  if (Math.abs(latitude) < 30) {
+    isVisible = true;
+  }
+  
+  // For mid-latitude locations, check if the rise/set times make sense
+  // If the object never rises or sets (LST calculation returns default values),
+  // adjust visibility accordingly
+  if (LST_rise === 0 && LST_set === 12) {
+    if (latitude * sagittariusDecl > 0) { // Same hemisphere as Sagittarius
+      isVisible = latitude > 0 ? (month >= 3 && month <= 8) : (month >= 9 || month <= 2);
+    } else {
+      isVisible = false; // Opposite hemisphere during wrong season
+    }
+  }
 
   return {
     rise: riseString,
@@ -99,15 +126,25 @@ function calculateRiseSetLST(declination: number, latitude: number, isRising: bo
   const tanLat = Math.tan(lat);
   const tanDecl = Math.tan(decl);
   
-  // For extreme latitudes or declinations, this can be impossible (object always above/below horizon)
-  // Handle that case by returning appropriate values
-  if (Math.abs(tanLat * tanDecl) > 1) {
-    // Object never rises/sets at this latitude
-    return isRising ? 0 : 12; // Default values
+  // Check for circumpolar or never-visible conditions
+  const cosH = -tanLat * tanDecl;
+  
+  if (Math.abs(cosH) > 1) {
+    // Object never rises/sets at this latitude (circumpolar or never visible)
+    // Check if it's always above horizon (circumpolar) or always below (never visible)
+    const isCircumpolar = latitude * declination > 0 && Math.abs(declination) > (90 - Math.abs(latitude));
+    
+    if (isCircumpolar) {
+      // Object is circumpolar (always above horizon)
+      return isRising ? 0 : 12; // Use conventional values
+    } else {
+      // Object is never visible (always below horizon)
+      return isRising ? 0 : 12; // Use conventional values
+    }
   }
   
   // Calculate hour angle in radians
-  const H = Math.acos(-tanLat * tanDecl);
+  const H = Math.acos(cosH);
   
   // Convert hour angle to hours (0-24)
   const hourAngle = (H * 12) / Math.PI;
@@ -155,39 +192,39 @@ function lstToLocalTime(LST: number, longitude: number, date: Date): Date {
  * @returns GMST in hours
  */
 function calculateGMST0(date: Date): number {
-  // Get Julian Date
-  const JD = getJulianDate(date);
-  const T = (JD - 2451545.0) / 36525;
+  // Get Julian Date for 0h UT on the given date
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
   
-  // Calculate GMST at 0h UT
-  let GMST = 6.697374558 + 0.06570982441908 * 36525 * T;
+  // Calculate JD for 0h UT
+  let JD0;
+  
+  if (month <= 2) {
+    JD0 = Math.floor(365.25 * (year - 1)) + 
+          Math.floor(30.6001 * (month + 12)) + 
+          day + 1720981.5;
+  } else {
+    JD0 = Math.floor(365.25 * year) + 
+          Math.floor(30.6001 * (month + 1)) + 
+          day + 1720981.5;
+  }
+  
+  // Calculate T (centuries since J2000.0)
+  const T = (JD0 - 2451545.0) / 36525;
+  
+  // Calculate GMST at 0h UT using more precise formula
+  let GMST = 100.46061837 + 36000.770053608 * T + 0.000387933 * T * T - 
+             T * T * T / 38710000.0;
+             
+  // Convert to hours (GMST is in degrees)
+  GMST = GMST / 15.0;
+  
+  // Normalize to 0-24 range
   GMST = GMST % 24;
-  
   if (GMST < 0) GMST += 24;
   
   return GMST;
-}
-
-/**
- * Calculate Julian Date
- * @param date Date object
- * @returns Julian Date
- */
-function getJulianDate(date: Date): number {
-  // Get year, month, day, and decimal day
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // JavaScript months are 0-based
-  const day = date.getDate();
-  
-  // Calculate Julian Date
-  const a = Math.floor((14 - month) / 12);
-  const y = year + 4800 - a;
-  const m = month + 12 * a - 3;
-  
-  const JD = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - 
-            Math.floor(y / 100) + Math.floor(y / 400) - 32045;
-  
-  return JD;
 }
 
 /**
