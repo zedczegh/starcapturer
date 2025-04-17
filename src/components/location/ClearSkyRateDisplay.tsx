@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Star, StarHalf, StarOff, Info, Calendar, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -39,9 +38,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
     }
   }, [fetching]);
 
-  // Ensure we always have a valid annual rate value
-  const annualRate = clearSkyData?.annualRate || 50; // Use 50% as default instead of 0
-  // Ensure we always have a reasonable number of clear nights
+  const annualRate = clearSkyData?.annualRate || 50;
   const clearNightsPerYear = getMinimumClearNights(annualRate);
   const monthlyRates = clearSkyData?.monthlyRates || {};
   const dataSource = clearSkyData?.source || '';
@@ -162,7 +159,6 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
                 <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
                   {Object.entries(seasonalTrends).map(([season, data]) => {
-                    // Fix the type error by properly typing the data
                     const seasonData = data as { clearSkyRate: number; averageTemperature: number };
                     return (
                       <div key={season} className="flex items-center justify-between">
@@ -202,15 +198,16 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 text-xs text-muted-foreground">
               {visibility && (
-                <span>{typeof visibility === 'string' ? 
-                  t(
-                    visibility, 
-                    visibility === 'excellent' ? '极佳' : 
-                    visibility === 'good' ? '良好' : 
-                    visibility === 'average' ? '一般' : '较差'
-                  ) : 
-                  t('average', '一般')
-                }</span>
+                <span>
+                  {typeof visibility === 'string' ? 
+                    t(
+                      visibility, 
+                      visibility === 'excellent' ? '极佳' : 
+                      visibility === 'good' ? '良好' : 
+                      visibility === 'average' ? '一般' : '较差'
+                    ) : 
+                    t('average', '一般')}
+                </span>
               )}
             </div>
             

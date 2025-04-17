@@ -26,3 +26,19 @@ export const normalizeMoonPhase = (phase: string | number): string => {
   
   return phase;
 };
+
+/**
+ * Extended MoonlessNightInfo type to include astronomical night information
+ */
+export interface ExtendedMoonlessNightInfo {
+  duration: number;
+  startTime: string;
+  endTime: string;
+  moonrise: Date | string;
+  moonset: Date | string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
+}

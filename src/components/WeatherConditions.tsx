@@ -174,15 +174,13 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             <motion.div variants={itemVariants}>
               <SecondaryConditions
                 cloudCover={stableWeatherData.cloudCover}
-                moonPhase={translatedData.moonPhase}
+                moonPhase={translatedData.moonPhase as React.ReactNode}
                 bortleScale={bortleScale}
                 aqi={stableWeatherData.aqi}
                 nighttimeCloudData={nighttimeCloudData}
               />
             </motion.div>
           </div>
-          
-          {/* Removed NighttimeCloudInfo component as requested */}
         </CardContent>
       </Card>
     </motion.div>
