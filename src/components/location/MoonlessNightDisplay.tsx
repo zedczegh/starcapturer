@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { CloudMoon, Sun, Moon, Calendar } from 'lucide-react';
+import { CloudMoon, Sun, Moon, Calendar, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
+import { calculateMilkyWayVisibility } from '@/utils/weather/milkyWayCalculator';
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +26,9 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   
   // Get moonless night information with detailed timing data
   const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
+  
+  // Get Milky Way visibility information
+  const milkyWayInfo = calculateMilkyWayVisibility(latitude, longitude);
   
   // Format time label and value with better alignment
   const TimeItem = ({ label, value }: { label: string; value: string }) => (
@@ -112,6 +116,55 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
               label={t('Set', '月落')} 
               value={formatMoonTime(nightInfo.moonset)} 
             />
+          </div>
+        </div>
+        
+        {/* Milky Way Information - New Section */}
+        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-200" />
+              <span className="text-xs font-medium">{t('Milky Way', '银河')}</span>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-xs text-primary cursor-help">
+                    {milkyWayInfo.duration}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    {t(
+                      'Core visibility period (Sagittarius region)',
+                      '银河核心可见期（人马座区域）'
+                    )}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <TimeItem 
+              label={t('Rise', '升起')} 
+              value={milkyWayInfo.rise} 
+            />
+            <TimeItem 
+              label={t('Set', '落下')} 
+              value={milkyWayInfo.set} 
+            />
+          </div>
+          
+          <TimeItem 
+            label={t('Best Viewing', '最佳观测')} 
+            value={milkyWayInfo.bestViewing} 
+          />
+          
+          <div className="mt-1 text-xs text-blue-300">
+            {milkyWayInfo.isVisible 
+              ? t('Core visible tonight', '今晚可见银河核心') 
+              : t('Core may not be visible from this location', '此位置可能看不到银河核心')}
           </div>
         </div>
         
