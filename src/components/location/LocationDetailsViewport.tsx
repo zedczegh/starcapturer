@@ -12,6 +12,10 @@ import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationDetailsHeader from "./LocationDetailsHeader";
 import BackButton from "@/components/navigation/BackButton";
+import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import LocationSearch from "./LocationSearch";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -31,6 +35,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   handleUpdateLocation
 }) => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const { language, t } = useLanguage();
   const { loading, handleRefreshAll } = useWeatherUpdater();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,6 +85,9 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       // Reset SIQS update state when location changes
       resetUpdateState();
       setStatusMessage(t ? t("Location updated successfully", "位置更新成功") : "Location updated successfully");
+      
+      // Close the search dialog after selection
+      setSearchDialogOpen(false);
     } catch (error) {
       console.error("Error updating location:", error);
       setStatusMessage(t ? t("Failed to update location", "更新位置失败") : "Failed to update location");
@@ -154,9 +162,24 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       ref={containerRef}
       data-refresh-trigger="true"
     >
-      <div className="mb-6">
+      <div className="flex justify-between items-center mb-6">
         <BackButton destination="/photo-points" />
+        <Button 
+          variant="outline" 
+          onClick={() => setSearchDialogOpen(true)}
+          className="flex items-center gap-1 font-medium"
+        >
+          <Search className="h-4 w-4" />
+          {t("Search", "搜索")}
+        </Button>
       </div>
+      
+      {/* Search Dialog */}
+      <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <LocationSearch onSelectLocation={onLocationUpdate} />
+        </DialogContent>
+      </Dialog>
       
       <LocationStatusMessage 
         message={statusMessage}
