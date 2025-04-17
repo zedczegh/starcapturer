@@ -3,7 +3,6 @@ import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MapPin, List, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -59,34 +58,30 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       animate="visible"
       variants={headerVariants}
     >
-      {/* Back Button, Map Toggle, and Location Status */}
-      <div className="flex justify-between items-center mb-6">
-        <BackButton destination="/" />
+      {/* Map Toggle and Location Status */}
+      <div className="flex justify-end items-center mb-6">
+        {/* Show loading indicator when getting location */}
+        {locationLoading && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            {t("Getting location...", "正在获取位置...")}
+          </div>
+        )}
         
-        <div className="flex items-center gap-2">
-          {/* Show loading indicator when getting location */}
-          {locationLoading && (
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-              {t("Getting location...", "正在获取位置...")}
-            </div>
-          )}
-          
-          {showMapToggle && toggleMapView && (
-            <Button 
-              onClick={toggleMapView}
-              variant="outline"
-              size="sm"
-              className="shadow-sm hover:bg-muted/60"
-            >
-              {showMap ? (
-                <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
-              ) : (
-                <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
-              )}
-            </Button>
-          )}
-        </div>
+        {showMapToggle && toggleMapView && (
+          <Button 
+            onClick={toggleMapView}
+            variant="outline"
+            size="sm"
+            className="shadow-sm hover:bg-muted/60"
+          >
+            {showMap ? (
+              <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
+            ) : (
+              <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
+            )}
+          </Button>
+        )}
       </div>
       
       <div className="flex flex-col items-center text-center mb-8">

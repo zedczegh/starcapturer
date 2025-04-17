@@ -11,6 +11,7 @@ import { useRefreshManager } from "@/hooks/location/useRefreshManager";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationDetailsHeader from "./LocationDetailsHeader";
+import BackButton from "@/components/navigation/BackButton";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -153,6 +154,10 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       ref={containerRef}
       data-refresh-trigger="true"
     >
+      <div className="mb-6">
+        <BackButton destination="/photo-points" />
+      </div>
+      
       <LocationStatusMessage 
         message={statusMessage}
         type={messageType}

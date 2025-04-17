@@ -13,6 +13,7 @@ import CameraMeasurementSection from "@/components/bortleNow/CameraMeasurementSe
 import CameraPermissionDialog from "@/components/bortleNow/CameraPermissionDialog";
 import CountdownOverlay from "@/components/bortleNow/CountdownOverlay";
 import { AnimatePresence } from "framer-motion";
+import BackButton from "@/components/navigation/BackButton";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -333,6 +334,10 @@ const BortleNow: React.FC = () => {
     <>
       <NavBar />
       <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
+        <div className="mb-6">
+          <BackButton destination="/photo-points" />
+        </div>
+        
         <BortleNowHeader />
         
         {error && (
