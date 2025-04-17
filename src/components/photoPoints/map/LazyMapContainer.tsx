@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
-import { LocationMarker, UserMarker } from './MarkerComponents';
+import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
@@ -15,7 +15,7 @@ import L from 'leaflet';
 import CenteringPinpointButton from './CenteringPinpointButton';
 import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 configureLeaflet();
 
@@ -38,12 +38,6 @@ interface LazyMapContainerProps {
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
 }
-
-const UserLocationMarker = ({ position, currentSiqs }: { position: [number, number]; currentSiqs?: number | null }) => {
-  return (
-    <UserMarker position={position} />
-  );
-};
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,
@@ -254,9 +248,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             <LocationMarker
               key={locationId}
               location={location}
-              onLocationClick={stableOnLocationClick}
+              onClick={stableOnLocationClick}
               isHovered={isHovered}
-              onHover={onMarkerHover}
+              onHover={onMarkerHover || (() => {})}
               locationId={locationId}
               isCertified={isCertified}
               activeView={activeView}

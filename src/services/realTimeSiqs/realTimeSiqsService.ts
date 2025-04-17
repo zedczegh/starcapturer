@@ -44,6 +44,8 @@ export async function calculateRealTimeSiqs(
         precipitation: 0
       }),
       clearSky: 100 - (weatherData?.cloudCover || 0),
+      latitude: latitude, // Include for additional context
+      longitude: longitude // Include for additional context
     };
     
     // Calculate base SIQS score
@@ -81,4 +83,3 @@ export async function calculateRealTimeSiqs(
     };
   }
 }
-

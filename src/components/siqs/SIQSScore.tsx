@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqs/siqsCalculator";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -74,11 +74,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
       const prefetchSiqs = async () => {
         try {
           console.log("Pre-calculating SIQS data for faster navigation");
-          await calculateRealTimeSiqs(
-            latitude,
-            longitude,
-            bortleScale
-          );
+          await calculateRealTimeSiqs(latitude, longitude, bortleScale);
         } catch (error) {
           console.error("Error pre-calculating SIQS:", error);
         }

@@ -1,106 +1,121 @@
 
 /**
- * Cache system for SIQS calculations
- * Reduces API calls and improves performance
+ * Caching service for SIQS calculations
  */
-import { SiqsResult } from './siqsTypes';
 
-// In-memory cache for SIQS results
-const siqsCache = new Map<string, { result: SiqsResult; timestamp: number }>();
+// Cache for SIQS calculations
+const siqsCache: Record<string, { result: any, timestamp: number }> = {};
 
-// Cache expiration time in milliseconds (30 minutes)
-const CACHE_EXPIRY = 30 * 60 * 1000;
+// Location SIQS cache
+const locationSiqsCache: Record<string, { result: any, timestamp: number }> = {};
 
 /**
- * Generate a cache key from location parameters
+ * Cache SIQS result
+ */
+export function cacheSiqsResult(key: string, result: any): void {
+  siqsCache[key] = {
+    result,
+    timestamp: Date.now()
+  };
+}
+
+/**
+ * Get cached SIQS result if valid
+ * @returns Cached result or null if expired/missing
+ */
+export function getCachedSiqsResult(key: string, maxAgeMs: number = 10 * 60 * 1000): any | null {
+  const cached = siqsCache[key];
+  if (cached && (Date.now() - cached.timestamp) < maxAgeMs) {
+    return cached.result;
+  }
+  return null;
+}
+
+/**
+ * Clear SIQS cache
+ */
+export function clearSiqsCache(): void {
+  Object.keys(siqsCache).forEach(key => {
+    delete siqsCache[key];
+  });
+  console.log("SIQS cache cleared");
+}
+
+/**
+ * Generate cache key for SIQS calculation
  */
 export function generateSiqsCacheKey(
-  latitude: number,
-  longitude: number,
+  latitude: number, 
+  longitude: number, 
   bortleScale: number,
   weatherData?: any
 ): string {
-  // Round coordinates to reduce unnecessary variations
-  const lat = latitude.toFixed(5);
-  const lng = longitude.toFixed(5);
-  
-  // Include weather data hash if available
-  let weatherHash = '';
-  if (weatherData) {
-    const { cloudCover = 0, humidity = 50, temperature = 15 } = weatherData;
-    weatherHash = `-w${cloudCover.toFixed(0)}-${humidity.toFixed(0)}-${temperature.toFixed(0)}`;
-  }
-  
-  return `siqs-${lat}-${lng}-b${bortleScale}${weatherHash}`;
+  return `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}-${JSON.stringify(weatherData || {})}`;
 }
 
 /**
- * Store SIQS result in cache
+ * Cache location SIQS result
  */
-export function cacheSiqsResult(key: string, result: SiqsResult): void {
-  siqsCache.set(key, {
+export function cacheLocationSiqs(key: string, result: any): void {
+  locationSiqsCache[key] = {
     result,
     timestamp: Date.now()
+  };
+}
+
+/**
+ * Get cached location SIQS
+ */
+export function getCachedLocationSiqs(key: string, maxAgeMs: number = 10 * 60 * 1000): any | null {
+  const cached = locationSiqsCache[key];
+  if (cached && (Date.now() - cached.timestamp) < maxAgeMs) {
+    return cached.result;
+  }
+  return null;
+}
+
+/**
+ * Check if SIQS is cached
+ */
+export function hasCachedSiqs(key: string, maxAgeMs: number = 10 * 60 * 1000): boolean {
+  const cached = siqsCache[key];
+  return !!(cached && (Date.now() - cached.timestamp) < maxAgeMs);
+}
+
+/**
+ * Get cached SIQS
+ */
+export function getCachedSiqs(key: string, maxAgeMs: number = 10 * 60 * 1000): any | null {
+  return getCachedSiqsResult(key, maxAgeMs);
+}
+
+/**
+ * Clear location SIQS cache
+ */
+export function clearLocationSiqsCache(): void {
+  Object.keys(locationSiqsCache).forEach(key => {
+    delete locationSiqsCache[key];
   });
+  console.log("Location SIQS cache cleared");
 }
 
 /**
- * Get cached SIQS result if available
+ * Clean up expired cache entries
  */
-export function getCachedSiqsResult(key: string): SiqsResult | null {
-  const cached = siqsCache.get(key);
-  
-  // Return null if not found
-  if (!cached) {
-    return null;
-  }
-  
-  // Check if cache has expired
-  if (Date.now() - cached.timestamp > CACHE_EXPIRY) {
-    siqsCache.delete(key);
-    return null;
-  }
-  
-  return cached.result;
-}
-
-/**
- * Clear expired cache entries
- */
-export function cleanupExpiredCache(): void {
+export function cleanupExpiredCache(maxAgeMs: number = 24 * 60 * 60 * 1000): void {
   const now = Date.now();
   
-  for (const [key, cached] of siqsCache.entries()) {
-    if (now - cached.timestamp > CACHE_EXPIRY) {
-      siqsCache.delete(key);
+  // Clean up SIQS cache
+  Object.keys(siqsCache).forEach(key => {
+    if ((now - siqsCache[key].timestamp) >= maxAgeMs) {
+      delete siqsCache[key];
     }
-  }
-}
-
-/**
- * Clear the entire SIQS cache
- */
-export function clearSiqsCache(): void {
-  siqsCache.clear();
-}
-
-/**
- * Clear cache entries for a specific location
- */
-export function clearLocationSiqsCache(latitude?: number, longitude?: number): void {
-  if (latitude && longitude) {
-    // Clear only for the specified location
-    const lat = latitude.toFixed(5);
-    const lng = longitude.toFixed(5);
-    const prefix = `siqs-${lat}-${lng}`;
-    
-    for (const key of siqsCache.keys()) {
-      if (key.startsWith(prefix)) {
-        siqsCache.delete(key);
-      }
+  });
+  
+  // Clean up location SIQS cache
+  Object.keys(locationSiqsCache).forEach(key => {
+    if ((now - locationSiqsCache[key].timestamp) >= maxAgeMs) {
+      delete locationSiqsCache[key];
     }
-  } else {
-    // Clear all cache entries
-    siqsCache.clear();
-  }
+  });
 }

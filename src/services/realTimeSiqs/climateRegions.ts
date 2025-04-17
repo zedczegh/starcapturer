@@ -1,134 +1,99 @@
 
+import { ClimateRegion } from './siqsTypes';
+
 /**
- * Climate region utilities for SIQS calculation
+ * Major climate regions with their characteristic conditions
  */
-
-interface ClimateRegion {
-  name: string;
-  minLat: number;
-  maxLat: number;
-  minLng: number;
-  maxLng: number;
-  description?: string;
-}
-
-// Basic climate regions classification
-const CLIMATE_REGIONS: ClimateRegion[] = [
+const climateRegions: ClimateRegion[] = [
+  // Desert/Arid climates
   {
-    name: "Arctic",
-    minLat: 66.5,
-    maxLat: 90,
-    minLng: -180,
-    maxLng: 180,
-    description: "Very cold with low humidity, often excellent for astronomy when dark."
+    name: 'Desert/Arid',
+    region: { north: 35, south: -35, east: 180, west: -180 },
+    conditions: { humidity: 20, temperature: 25, cloudCover: 10 },
+    adjustmentFactors: [1.2, 0.9, 1.3]
   },
+  
+  // Tropical climates
   {
-    name: "Desert",
-    minLat: 15,
-    maxLat: 35,
-    minLng: -120,
-    maxLng: 130,
-    description: "Dry air with excellent transparency and low humidity."
+    name: 'Tropical',
+    region: { north: 23.5, south: -23.5, east: 180, west: -180 },
+    conditions: { humidity: 80, temperature: 28, cloudCover: 60 },
+    adjustmentFactors: [0.8, 1.1, 0.7]
   },
+  
+  // Northern polar/sub-polar
   {
-    name: "Tropical",
-    minLat: -23.5,
-    maxLat: 23.5,
-    minLng: -180,
-    maxLng: 180,
-    description: "High humidity and heat can impact viewing conditions."
+    name: 'Northern Polar',
+    region: { north: 90, south: 60, east: 180, west: -180 },
+    conditions: { humidity: 70, temperature: -10, cloudCover: 50 },
+    adjustmentFactors: [0.9, 0.8, 1.1]
   },
+  
+  // Southern polar/sub-polar
   {
-    name: "Mediterranean",
-    minLat: 30,
-    maxLat: 45,
-    minLng: -10,
-    maxLng: 40,
-    description: "Mild conditions with generally good viewing opportunities."
+    name: 'Southern Polar',
+    region: { north: -60, south: -90, east: 180, west: -180 },
+    conditions: { humidity: 70, temperature: -15, cloudCover: 40 },
+    adjustmentFactors: [0.9, 0.8, 1.2]
   },
+  
+  // Mediterranean climate
   {
-    name: "Temperate",
-    minLat: 40,
-    maxLat: 60,
-    minLng: -180,
-    maxLng: 180,
-    description: "Variable conditions with seasonality affecting viewing."
+    name: 'Mediterranean',
+    region: { north: 45, south: 30, east: 40, west: -10 },
+    conditions: { humidity: 60, temperature: 18, cloudCover: 25 },
+    adjustmentFactors: [1.1, 1.0, 1.0]
   }
 ];
 
 /**
- * Get climate region for a specific location
+ * Find the climate region for a given location
  * @param latitude Location latitude
  * @param longitude Location longitude
- * @returns ClimateRegion or undefined if not found
+ * @returns Climate region or undefined if not found
  */
-export function getClimateRegion(
-  latitude: number,
-  longitude: number
-): ClimateRegion | undefined {
+export function findClimateRegion(latitude: number, longitude: number): ClimateRegion | undefined {
+  // Normalize longitude to -180 to 180 range
+  const normalizedLon = ((longitude + 180) % 360 + 360) % 360 - 180;
+  
   // Find matching climate region
-  return CLIMATE_REGIONS.find(region => 
-    latitude >= region.minLat && 
-    latitude <= region.maxLat && 
-    longitude >= region.minLng && 
-    longitude <= region.maxLng
-  );
-}
-
-/**
- * Get detailed climate information for a location
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Climate information object
- */
-export function getLocationClimateInfo(
-  latitude: number,
-  longitude: number
-): {
-  averageCloudiness: number;
-  seasonalVariation: string;
-  clearSkyAverage: number;
-} {
-  const region = getClimateRegion(latitude, longitude);
-  
-  // Default values
-  let averageCloudiness = 50; // percent
-  let seasonalVariation = "Moderate";
-  let clearSkyAverage = 60; // percent
-  
-  // Adjust values based on climate region
-  if (region) {
-    switch (region.name) {
-      case "Arctic":
-        averageCloudiness = 60;
-        seasonalVariation = "Extreme";
-        clearSkyAverage = 40;
-        break;
-      case "Desert":
-        averageCloudiness = 20;
-        seasonalVariation = "Low";
-        clearSkyAverage = 85;
-        break;
-      case "Tropical":
-        averageCloudiness = 70;
-        seasonalVariation = "Low";
-        clearSkyAverage = 45;
-        break;
-      case "Mediterranean":
-        averageCloudiness = 40;
-        seasonalVariation = "Moderate";
-        clearSkyAverage = 65;
-        break;
-      case "Temperate":
-      default:
-        // Use default values
-        break;
+  for (const region of climateRegions) {
+    if (
+      latitude <= region.region.north &&
+      latitude >= region.region.south &&
+      (
+        // Handle regions that cross the International Date Line
+        (region.region.west <= region.region.east &&
+          normalizedLon >= region.region.west &&
+          normalizedLon <= region.region.east) ||
+        (region.region.west > region.region.east &&
+          (normalizedLon >= region.region.west || normalizedLon <= region.region.east))
+      )
+    ) {
+      return region;
     }
   }
   
-  return {
-    averageCloudiness,
-    seasonalVariation,
-    clearSkyAverage
-  };
+  return undefined;
+}
+
+/**
+ * Get climate adjustment factor for a location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param factorIndex Which adjustment factor to use (0-2)
+ * @returns Adjustment factor (default 1.0)
+ */
+export function getClimateAdjustmentFactor(
+  latitude: number,
+  longitude: number,
+  factorIndex: number = 0
+): number {
+  const region = findClimateRegion(latitude, longitude);
+  
+  if (!region || factorIndex >= region.adjustmentFactors.length) {
+    return 1.0; // Default adjustment factor
+  }
+  
+  return region.adjustmentFactors[factorIndex];
 }

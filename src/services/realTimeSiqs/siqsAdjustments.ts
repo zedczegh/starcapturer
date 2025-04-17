@@ -1,15 +1,13 @@
-/**
- * Intelligent adjustments for SIQS scores based on location
- */
-import { getClimateRegion } from './climateRegions';
+
 import { WeatherData } from './siqsTypes';
+import { findClimateRegion } from './climateRegions';
 
 /**
- * Apply intelligent adjustments to SIQS score based on location and conditions
- * @param baseScore Initial SIQS score
+ * Apply intelligent adjustments to SIQS based on location and conditions
+ * @param baseScore Base SIQS score
  * @param latitude Location latitude
  * @param longitude Location longitude
- * @param weatherData Weather data if available
+ * @param weatherData Weather data
  * @returns Adjusted SIQS score
  */
 export function applyIntelligentAdjustments(
@@ -20,40 +18,40 @@ export function applyIntelligentAdjustments(
 ): number {
   let adjustedScore = baseScore;
   
-  // Get climate region for this location
-  const climateRegion = getClimateRegion(latitude, longitude);
-  
-  // Apply adjustments based on climate region
+  // Apply climate region adjustment
+  const climateRegion = findClimateRegion(latitude, longitude);
   if (climateRegion) {
-    switch(climateRegion.name) {
-      case 'Desert':
-        // Desert regions have better transparency
-        adjustedScore *= 1.05;
-        break;
-      case 'Arctic':
-        // Arctic regions often have very clear air when weather is good
-        if (weatherData?.cloudCover && weatherData.cloudCover < 30) {
-          adjustedScore *= 1.1;
-        }
-        break;
-      case 'Tropical':
-        // Tropical regions often have higher humidity affecting seeing
-        adjustedScore *= 0.95;
-        break;
-      // Other regions use base score
+    // Get climate-specific adjustment
+    const regionFactor = climateRegion.adjustmentFactors[0] || 1.0;
+    adjustedScore *= regionFactor;
+  }
+  
+  // Apply elevation adjustment (if we had elevation data)
+  // For now, assume higher SIQS at high latitudes due to darker skies
+  const latitudeAbs = Math.abs(latitude);
+  if (latitudeAbs > 50) {
+    // Polar regions get a bonus for darker skies
+    adjustedScore *= 1.1;
+  }
+  
+  // Apply weather condition adjustments
+  if (weatherData) {
+    // Adjust for extreme temperatures
+    if (weatherData.temperature < -20 || weatherData.temperature > 35) {
+      adjustedScore *= 0.9; // Penalty for uncomfortable viewing conditions
+    }
+    
+    // Adjust for high wind speed
+    if (weatherData.windSpeed && weatherData.windSpeed > 20) {
+      adjustedScore *= 0.85; // Significant penalty for high winds
+    }
+    
+    // Adjust for air quality
+    if (weatherData.aqi && weatherData.aqi > 100) {
+      adjustedScore *= 0.8; // Penalty for poor air quality
     }
   }
   
-  // Apply adjustments for elevation (estimated by latitude)
-  // High elevation locations tend to have better seeing conditions
-  const isLikelyHighElevation = 
-    (Math.abs(latitude) > 35 && Math.abs(latitude) < 50) || // Mountain ranges
-    (longitude > -120 && longitude < -100 && latitude > 35 && latitude < 45); // Rocky Mountains
-    
-  if (isLikelyHighElevation) {
-    adjustedScore *= 1.05;
-  }
-  
-  // Ensure score stays within 0-10 range
-  return Math.min(10, Math.max(0, adjustedScore));
+  // Ensure score stays within valid range
+  return Math.max(1, Math.min(10, adjustedScore));
 }

@@ -1,6 +1,5 @@
 
-import { calculateSiqs } from '../realTimeSiqsService';
-import { calculateRealTimeSiqs } from '../realTimeSiqs/realTimeSiqsService';
+import { calculateSiqs, calculateRealTimeSiqs } from '../realTimeSiqsService';
 import { haversineDistance } from '@/utils/geoUtils';
 
 // A simple cache to store location SIQS results

@@ -6,6 +6,8 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isWaterLocation as isCoastalWater } from '@/utils/locationWaterCheck';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -445,70 +447,4 @@ function haversineDistance(
   
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   return R * c;
-}
-
-/**
- * Check if location is valid for astronomy
- * @param location - The location to check
- * @returns True if the location is valid, false otherwise
- */
-export function isValidAstronomyLocation(location: any): boolean {
-  if (!location || typeof location !== 'object') {
-    return false;
-  }
-  
-  // Don't filter out certified locations
-  if (location.certification || location.isDarkSkyReserve) {
-    return true;
-  }
-  
-  // Check for valid coordinates
-  if (!location.latitude || !location.longitude || 
-      isNaN(location.latitude) || isNaN(location.longitude)) {
-    return false;
-  }
-  
-  // Filter out water locations
-  if (isWaterLocation(location.latitude, location.longitude)) {
-    return false;
-  }
-  
-  return true;
-}
-
-/**
- * Check if a location is likely in water
- * @param latitude - Latitude of the location
- * @returns True if the location is likely in water, false otherwise
- */
-export function isWaterLocation(latitude: number, longitude: number): boolean {
-  // Simple implementation to check if a location is likely in water
-  // This is a simplified check that just looks at coordinates that are likely in oceans
-  
-  // Simple check for Pacific Ocean
-  if (longitude < -120 && longitude > -180 && latitude > -60 && latitude < 60) {
-    return true;
-  }
-  
-  // Atlantic Ocean
-  if (longitude < -30 && longitude > -80 && latitude > -60 && latitude < 60) {
-    return true;
-  }
-  
-  // Indian Ocean
-  if (longitude > 40 && longitude < 100 && latitude > -60 && latitude < 30) {
-    return true;
-  }
-  
-  // Arctic Ocean
-  if (latitude > 70) {
-    return true;
-  }
-  
-  // Antarctic waters
-  if (latitude < -60) {
-    return true;
-  }
-  
-  return false;
 }
