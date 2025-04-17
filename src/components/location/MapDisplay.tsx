@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { createCustomMarker } from './map/MapMarkerUtils';
 import MapTooltip from './map/MapTooltip';
 import MapClickHandler from './map/MapClickHandler';
