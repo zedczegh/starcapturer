@@ -1,3 +1,4 @@
+
 /**
  * Clear sky rate utility functions with performance optimizations
  */
@@ -124,12 +125,18 @@ export function getSkyRating(rate: number, t: (en: string, zh: string) => string
 
 /**
  * Calculate minimum number of clear nights per year
+ * Enhanced to provide more accurate estimates based on location and climate data
  * @param clearSkyRate Annual clear sky rate percentage
- * @param latitude Location latitude (optional, for seasonal adjustments)
+ * @param latitude Location latitude for seasonal adjustments
+ * @param longitude Location longitude for regional climate patterns
  * @returns Estimated number of clear nights
  */
-export function getMinimumClearNights(clearSkyRate: number, latitude?: number): number {
-  const cacheKey = `clear_nights_${Math.round(clearSkyRate)}_${latitude ? Math.round(latitude) : 'null'}`;
+export function getMinimumClearNights(
+  clearSkyRate: number, 
+  latitude?: number,
+  longitude?: number
+): number {
+  const cacheKey = `clear_nights_${Math.round(clearSkyRate)}_${latitude ? Math.round(latitude) : 'null'}_${longitude ? Math.round(longitude) : 'null'}`;
   
   // Check cache
   const cached = clearSkyCalculationCache.get(cacheKey);
@@ -137,21 +144,60 @@ export function getMinimumClearNights(clearSkyRate: number, latitude?: number): 
     return cached.result;
   }
   
-  // Base calculation - assuming 365 nights per year
-  let clearNights = Math.round((clearSkyRate / 100) * 365);
+  // Base calculation - starting point from clear sky rate
+  let baseNights = Math.round((clearSkyRate / 100) * 365);
   
-  // Apply seasonal adjustments based on latitude if provided
-  if (latitude !== undefined) {
-    // For extreme latitudes (polar regions), adjust for polar day/night
-    if (Math.abs(latitude) > 65) {
-      // Fewer available nights in polar regions
-      clearNights = Math.round(clearNights * 0.7);
-    } 
-    // For mid-latitudes, slight adjustment for seasonal variation
-    else if (Math.abs(latitude) > 45) {
-      clearNights = Math.round(clearNights * 0.9);
+  // Apply adjustments based on region and climate patterns
+  let clearNights = baseNights;
+  
+  if (latitude !== undefined && longitude !== undefined) {
+    // Apply region-specific adjustments
+    
+    // Guizhou province (China) adjustment - known for more overcast days 
+    // Approximate coordinates: latitude 24.5-29, longitude 104-109.5
+    if (latitude >= 24.5 && latitude <= 29 && longitude >= 104 && longitude <= 109.5) {
+      // Adjust for Guizhou's karst topography and subtropical monsoon climate
+      // This region has high humidity and frequent fog/mist, reducing clear nights
+      clearNights = Math.round(baseNights * 0.75);
+    }
+    // Southern China adjustment (generally more rainfall/humidity)
+    else if (latitude > 20 && latitude < 35 && longitude > 100 && longitude < 120) {
+      clearNights = Math.round(baseNights * 0.85);
+    }
+    // Desert regions adjustment (typically more clear nights)
+    else if (isDesertRegion(latitude, longitude)) {
+      clearNights = Math.round(baseNights * 1.15);
+    }
+    // Tropical rainforest regions (high precipitation)
+    else if (isTropicalRainforestRegion(latitude, longitude)) {
+      clearNights = Math.round(baseNights * 0.8);
+    }
+    // Mediterranean climate regions (dry summers, wet winters)
+    else if (isMediterraneanRegion(latitude, longitude)) {
+      // These regions have very seasonal clear nights
+      clearNights = Math.round(baseNights * 1.05);
+    }
+    // Polar/sub-polar regions
+    else if (Math.abs(latitude) > 60) {
+      // Fewer observable nights in polar regions due to extended daylight periods
+      const polarAdjustment = 1 - (Math.abs(latitude) - 60) / 60;
+      clearNights = Math.round(baseNights * polarAdjustment);
     }
   }
+  
+  // Further latitude-based seasonal adjustments
+  if (latitude !== undefined) {
+    const absLat = Math.abs(latitude);
+    
+    // Mid-latitude regions have more seasonal variations
+    if (absLat > 30 && absLat < 60) {
+      // Adjust for stronger seasonal effects in mid-latitudes
+      clearNights = Math.round(clearNights * 0.95);
+    }
+  }
+  
+  // Ensure the result is within reasonable bounds
+  clearNights = Math.max(30, Math.min(clearNights, 330)); 
   
   // Cache result with a month validity
   clearSkyCalculationCache.set(cacheKey, {
@@ -161,6 +207,104 @@ export function getMinimumClearNights(clearSkyRate: number, latitude?: number): 
   });
   
   return clearNights;
+}
+
+/**
+ * Determine if coordinates are in a desert region
+ */
+function isDesertRegion(latitude: number, longitude: number): boolean {
+  // Major desert regions of the world
+  
+  // Sahara Desert
+  if (latitude >= 15 && latitude <= 35 && longitude >= -15 && longitude <= 35) {
+    return true;
+  }
+  
+  // Arabian Desert
+  if (latitude >= 15 && latitude <= 30 && longitude >= 35 && longitude <= 60) {
+    return true;
+  }
+  
+  // Gobi Desert
+  if (latitude >= 40 && latitude <= 45 && longitude >= 90 && longitude <= 120) {
+    return true;
+  }
+  
+  // Australian Deserts
+  if (latitude <= -20 && latitude >= -30 && longitude >= 120 && longitude <= 140) {
+    return true;
+  }
+  
+  // Southwestern US Deserts
+  if (latitude >= 30 && latitude <= 40 && longitude >= -120 && longitude <= -100) {
+    return true;
+  }
+  
+  // Atacama Desert
+  if (latitude >= -30 && latitude <= -20 && longitude >= -72 && longitude <= -68) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Determine if coordinates are in a tropical rainforest region
+ */
+function isTropicalRainforestRegion(latitude: number, longitude: number): boolean {
+  // Must be in tropical latitudes
+  if (Math.abs(latitude) > 23.5) {
+    return false;
+  }
+  
+  // Amazon Rainforest
+  if (latitude >= -20 && latitude <= 5 && longitude >= -75 && longitude <= -45) {
+    return true;
+  }
+  
+  // Congo Rainforest
+  if (latitude >= -5 && latitude <= 5 && longitude >= 10 && longitude <= 30) {
+    return true;
+  }
+  
+  // Southeast Asian Rainforests
+  if (latitude >= -10 && latitude <= 10 && longitude >= 95 && longitude <= 150) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Determine if coordinates are in a Mediterranean climate region
+ */
+function isMediterraneanRegion(latitude: number, longitude: number): boolean {
+  // Mediterranean Basin
+  if (latitude >= 30 && latitude <= 45 && longitude >= -10 && longitude <= 40) {
+    return true;
+  }
+  
+  // California
+  if (latitude >= 32 && latitude <= 42 && longitude >= -124 && longitude <= -115) {
+    return true;
+  }
+  
+  // Chile
+  if (latitude >= -40 && latitude <= -30 && longitude >= -75 && longitude <= -70) {
+    return true;
+  }
+  
+  // Cape Town region
+  if (latitude >= -35 && latitude <= -30 && longitude >= 15 && longitude <= 25) {
+    return true;
+  }
+  
+  // Southwest and South Australia
+  if (latitude >= -38 && latitude <= -32 && longitude >= 115 && longitude <= 140) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**

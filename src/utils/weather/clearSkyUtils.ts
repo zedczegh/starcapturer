@@ -62,44 +62,20 @@ export const getSkyRating = (rate: number, t: any): string => {
 
 /**
  * Calculate minimum clear nights per year based on clear sky rate
- * Enhanced to be more accurate globally (accounts for climate zones)
+ * Enhanced to be more accurate globally (accounts for climate zones and regional patterns)
  * @param rate Clear sky rate percentage 
- * @param latitude Optional latitude to adjust for climate zone
+ * @param latitude Location latitude for climate zone adjustments
+ * @param longitude Location longitude for regional climate patterns
  * @returns Estimated number of clear nights per year
  */
-export const getMinimumClearNights = (rate: number, latitude?: number): number => {
-  // Base calculation: percentage of 365 days
-  let clearNights = Math.round((rate / 100) * 365);
-  
-  // Apply climate zone adjustments if latitude is provided
-  if (latitude !== undefined) {
-    const absLat = Math.abs(latitude);
-    
-    // Tropical adjustments (greater variability between wet/dry seasons)
-    if (absLat < 23.5) {
-      if (rate < 50) {
-        // Tropical regions with low clear sky rate often have very distinct wet seasons
-        clearNights = Math.round(clearNights * 0.85); // More concentrated in dry season
-      } else {
-        // High clear sky tropical regions have more consistent good weather
-        clearNights = Math.round(clearNights * 1.05); // Slightly more favorable
-      }
-    }
-    // Temperate mid-latitude adjustments
-    else if (absLat < 55) {
-      // Standard calculation works well for mid-latitudes
-    }
-    // Polar region adjustments (account for long day/night cycles)
-    else {
-      // Fewer observable nights due to long daylight in summer
-      const monthsWithoutDarkness = Math.min(4, Math.floor((absLat - 55) / 5)); // 0-4 months
-      const adjustmentFactor = (12 - monthsWithoutDarkness) / 12;
-      clearNights = Math.round(clearNights * adjustmentFactor);
-    }
-  }
-  
-  // Ensure reasonable bounds
-  return Math.max(10, Math.min(clearNights, 350)); // Never less than 10 or more than 350
+export const getMinimumClearNights = (
+  rate: number, 
+  latitude?: number,
+  longitude?: number
+): number => {
+  // Import the enhanced calculation from clearSkyRateUtils
+  const { getMinimumClearNights } = require('../weather/clearSkyRateUtils');
+  return getMinimumClearNights(rate, latitude, longitude);
 };
 
 /**
