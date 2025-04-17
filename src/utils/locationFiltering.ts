@@ -1,105 +1,122 @@
-
-import { SharedAstroSpot } from '@/types/weather';
-
 /**
- * Filters out invalid locations from an array of locations
- * @param locations The array of locations to filter
- * @returns An array of valid locations
+ * Utility functions for filtering and processing location data
  */
-export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-  // Make sure locations is an array
+import { isValidAstronomyLocation, isWaterLocation } from './locationValidator';
+import { haversineDistance } from './geoUtils';
+
+// Check if a location is certified
+export function isCertifiedLocation(location: any): boolean {
+  return Boolean(
+    location?.certification ||
+    location?.isDarkSkyReserve ||
+    location?.type === 'dark-site' ||
+    location?.type === 'lodging'
+  );
+}
+
+// Filter out invalid locations
+export function filterValidLocations(locations: any[]): any[] {
   if (!Array.isArray(locations)) {
-    console.warn('filterValidLocations received non-array input:', locations);
     return [];
   }
   
-  console.log(`Filtering ${locations.length} locations for validity`);
-  
-  // Filter out invalid locations
-  return locations.filter(
-    loc => loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
-  );
-};
-
-/**
- * Separates certified and calculated locations into different arrays
- * @param locations The array of locations to separate
- * @returns An object containing certified and calculated locations
- */
-export const separateLocationTypes = (
-  locations: SharedAstroSpot[]
-): { certifiedLocations: SharedAstroSpot[]; calculatedLocations: SharedAstroSpot[] } => {
-  // Make sure locations is an array
-  if (!Array.isArray(locations)) {
-    console.warn('separateLocationTypes received non-array input:', locations);
-    return { certifiedLocations: [], calculatedLocations: [] };
-  }
-
-  const certifiedLocations: SharedAstroSpot[] = [];
-  const calculatedLocations: SharedAstroSpot[] = [];
-
-  for (const location of locations) {
-    if (isCertifiedLocation(location)) {
-      certifiedLocations.push(location);
-    } else {
-      calculatedLocations.push(location);
+  return locations.filter(location => {
+    // Must have valid coordinates
+    if (!location || !location.latitude || !location.longitude) {
+      return false;
     }
-  }
-  
-  console.log(`Separated locations: ${certifiedLocations.length} certified, ${calculatedLocations.length} calculated`);
+    
+    // Not in water
+    if (isWaterLocation(location)) {
+      return false;
+    }
+    
+    return true;
+  });
+}
 
-  return { certifiedLocations, calculatedLocations };
-};
+// Separate locations by type
+export function separateLocationTypes(locations: any[]): { 
+  certified: any[],
+  regular: any[]
+} {
+  const certified: any[] = [];
+  const regular: any[] = [];
+  
+  if (!Array.isArray(locations)) {
+    return { certified, regular };
+  }
+  
+  locations.forEach(location => {
+    if (isCertifiedLocation(location)) {
+      certified.push(location);
+    } else {
+      regular.push(location);
+    }
+  });
+  
+  return { certified, regular };
+}
 
-/**
- * Merges certified and calculated locations with proper prioritization
- * @param certifiedLocations Array of certified locations
- * @param calculatedLocations Array of calculated locations
- * @param activeView Current view mode
- * @returns Merged array of locations
- */
-export const mergeLocations = (
-  certifiedLocations: SharedAstroSpot[],
-  calculatedLocations: SharedAstroSpot[],
-  activeView: 'certified' | 'calculated'
-): SharedAstroSpot[] => {
-  if (activeView === 'certified') {
-    console.log(`Returning certified-only locations: ${certifiedLocations.length}`);
-    return [...certifiedLocations];
-  }
+// Merge multiple location arrays with deduplication
+export function mergeLocations(
+  locationsArrays: any[][],
+  maxDistance: number = 1.0  // Maximum distance in kilometers to consider duplicates
+): any[] {
+  const allLocations: any[] = [];
+  const seenKeys = new Set<string>();
   
-  // For calculated view, include both but prioritize certified locations
-  const combinedCount = certifiedLocations.length + calculatedLocations.length;
-  console.log(`Returning combined locations for calculated view: ${combinedCount}`);
-  return [...certifiedLocations, ...calculatedLocations];
-};
-
-/**
- * Checks if a location is a certified location (has certification or is a dark sky reserve)
- * @param location The location to check
- * @returns True if the location is certified, false otherwise
- */
-export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return Boolean(location?.isDarkSkyReserve || location?.certification);
-};
-
-/**
- * Gets the SIQS score from a location, handling different formats
- * @param location The location to get the SIQS score from
- * @returns The SIQS score, or null if not available
- */
-export const getSiqsScore = (location: SharedAstroSpot): number | null => {
-  if (typeof location.siqs === 'number') {
-    return location.siqs;
-  }
+  // Helper function to generate a location key
+  const getLocationKey = (loc: any) => {
+    return `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
+  };
   
-  if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
-    return location.siqs.score;
-  }
+  // Process all location arrays
+  locationsArrays.forEach(locations => {
+    if (!Array.isArray(locations)) return;
+    
+    locations.forEach(location => {
+      // Skip invalid locations
+      if (!location || !location.latitude || !location.longitude) {
+        return;
+      }
+      
+      // Check exact location key
+      const locationKey = getLocationKey(location);
+      if (seenKeys.has(locationKey)) {
+        return; // Skip this duplicate
+      }
+      
+      // Check for close locations
+      let isDuplicate = false;
+      for (const existingLocation of allLocations) {
+        const distance = haversineDistance(
+          location.latitude, location.longitude,
+          existingLocation.latitude, existingLocation.longitude
+        );
+        
+        if (distance < maxDistance) {
+          // Keep the better location (certified or with higher SIQS score)
+          if (isCertifiedLocation(location) && !isCertifiedLocation(existingLocation)) {
+            // Remove the existing location and add the new certified one
+            const index = allLocations.indexOf(existingLocation);
+            if (index !== -1) {
+              allLocations.splice(index, 1);
+            }
+            break;
+          } else {
+            isDuplicate = true;
+            break;
+          }
+        }
+      }
+      
+      if (!isDuplicate) {
+        seenKeys.add(locationKey);
+        allLocations.push(location);
+      }
+    });
+  });
   
-  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
-    return location.siqsResult.score;
-  }
-  
-  return null;
-};
+  return allLocations;
+}

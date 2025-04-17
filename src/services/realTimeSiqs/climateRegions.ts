@@ -5,12 +5,32 @@ import { ClimateRegion } from './siqsTypes';
 const climateRegions: ClimateRegion[] = [
   {
     name: "Desert Southwest",
-    borders: [[32, -115], [36, -115], [36, -109], [32, -109]],
+    region: {
+      north: 36,
+      south: 32,
+      east: -109,
+      west: -115
+    },
+    conditions: {
+      humidity: 30,
+      temperature: 25,
+      cloudCover: 20
+    },
     adjustmentFactors: [1.1, 1.1, 1.05, 1.0, 0.95, 0.9, 0.8, 0.85, 0.9, 1.0, 1.05, 1.1]
   },
   {
     name: "Pacific Northwest",
-    borders: [[42, -124], [49, -124], [49, -116], [42, -116]],
+    region: {
+      north: 49,
+      south: 42,
+      east: -116,
+      west: -124
+    },
+    conditions: {
+      humidity: 70,
+      temperature: 15,
+      cloudCover: 60
+    },
     adjustmentFactors: [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.1, 1.1, 1.05, 0.9, 0.8, 0.7]
   }
 ];
@@ -19,13 +39,12 @@ const climateRegions: ClimateRegion[] = [
  * Find the climate region for a given location
  */
 export function findClimateRegion(latitude: number, longitude: number): ClimateRegion | null {
-  // Simple implementation for now - just check if point is within rectangular bounds
+  // Simple implementation - check if point is within rectangular bounds
   for (const region of climateRegions) {
-    const [minLat, minLng] = region.borders[0];
-    const [maxLat, maxLng] = region.borders[2];
+    const { north, south, east, west } = region.region;
     
-    if (latitude >= minLat && latitude <= maxLat && 
-        longitude >= minLng && longitude <= maxLng) {
+    if (latitude >= south && latitude <= north && 
+        longitude >= west && longitude <= east) {
       return region;
     }
   }
@@ -49,4 +68,11 @@ export function getClimateAdjustmentFactor(
   
   // Default: no adjustment
   return 1.0;
+}
+
+/**
+ * Get climate region for SIQS adjustments
+ */
+export function getClimateRegion(latitude: number, longitude: number): ClimateRegion | null {
+  return findClimateRegion(latitude, longitude);
 }
