@@ -72,3 +72,37 @@ export function getSiqsColorClass(score: number | string | any): string {
   if (numericScore >= 3.5) return 'text-orange-300';
   return 'text-red-300';
 }
+
+/**
+ * Format SIQS score for display
+ * @param score SIQS score value
+ * @returns Formatted score string
+ */
+export function formatSiqsScore(score: number | string | any): string {
+  const numericScore = getSiqsScore(score);
+  
+  if (numericScore <= 0) return 'N/A';
+  return numericScore.toFixed(1);
+}
+
+/**
+ * Check if a SIQS score is greater than a specified value
+ * @param score SIQS score to check
+ * @param threshold Threshold value to compare against
+ * @returns Boolean result of comparison
+ */
+export function isSiqsGreaterThan(score: number | string | any, threshold: number): boolean {
+  const numericScore = getSiqsScore(score);
+  return numericScore > threshold;
+}
+
+/**
+ * Check if a SIQS score is at least a specified value
+ * @param score SIQS score to check
+ * @param threshold Threshold value to compare against
+ * @returns Boolean result of comparison
+ */
+export function isSiqsAtLeast(score: number | string | any, threshold: number): boolean {
+  const numericScore = getSiqsScore(score);
+  return numericScore >= threshold;
+}

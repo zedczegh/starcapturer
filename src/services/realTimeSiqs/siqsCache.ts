@@ -20,14 +20,29 @@ const DEFAULT_CACHE_DURATION = 30 * 60 * 1000;
 /**
  * Generate a cache key for a location
  */
-function getCacheKey(latitude: number, longitude: number, bortleScale: number): string {
-  return `${latitude.toFixed(4)},${longitude.toFixed(4)},${bortleScale}`;
+function getCacheKey(latitude: number, longitude: number, bortleScale?: number): string {
+  const bortleStr = bortleScale !== undefined ? `,${bortleScale}` : '';
+  return `${latitude.toFixed(4)},${longitude.toFixed(4)}${bortleStr}`;
+}
+
+/**
+ * Check if SIQS result exists in cache
+ */
+export function hasCachedSiqs(latitude: number, longitude: number, bortleScale?: number): boolean {
+  const key = getCacheKey(latitude, longitude, bortleScale);
+  const entry = cache[key];
+  
+  if (entry && entry.expiry > Date.now()) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
  * Get SIQS result from cache if available
  */
-export function getCachedSiqs(latitude: number, longitude: number, bortleScale: number): any | null {
+export function getCachedSiqs(latitude: number, longitude: number, bortleScale?: number): any | null {
   const key = getCacheKey(latitude, longitude, bortleScale);
   const entry = cache[key];
   
@@ -97,12 +112,18 @@ export function getSiqsCacheSize(): number {
 
 /**
  * Clean up expired entries in the cache
+ * @returns Number of entries removed
  */
-export function cleanupExpiredCache(): void {
+export function cleanupExpiredCache(): number {
   const now = Date.now();
+  let removed = 0;
+  
   for (const key in cache) {
     if (cache[key].expiry < now) {
       delete cache[key];
+      removed++;
     }
   }
+  
+  return removed;
 }

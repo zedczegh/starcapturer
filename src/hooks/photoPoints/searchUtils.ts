@@ -1,165 +1,92 @@
-import { toast } from "sonner";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { findLocationsWithinRadius, findCalculatedLocations } from "@/services/locationSearchService";
-import { isValidAstronomyLocation } from "@/utils/locationValidator";
-import { Language } from "@/contexts/LanguageContext";
-import { isSiqsGreaterThan } from "@/utils/siqsHelpers";
 
-// Maximum calculated locations to request per batch
-export const MAX_CALCULATED_LOCATIONS = 10;
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { haversineDistance } from '@/utils/haversine';
+import { useState, useCallback } from 'react';
+import { getSiqsScore, isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 /**
- * Search for locations within radius
- * @param latitude User latitude
- * @param longitude User longitude
- * @param searchDistance Search radius in km
- * @param language Current language
- * @returns Found locations
+ * Filter locations by search criteria
  */
-export const searchStandardLocations = async (
-  latitude: number,
-  longitude: number,
-  searchDistance: number,
-  language: Language
-): Promise<{ locations: SharedAstroSpot[], message: string | null }> => {
-  try {
-    // Find locations within radius
-    const locations = await findLocationsWithinRadius(
-      latitude,
-      longitude,
-      searchDistance
-    );
-    
-    if (locations.length === 0) {
-      return { 
-        locations: [], 
-        message: language === "en" 
-          ? "No standard locations found in this area" 
-          : "在此区域未找到标准位置" 
-      };
-    }
-    
-    // Filter out any invalid locations
-    const validLocations = locations.filter(loc => {
-      // First check if location is valid (not on water)
-      if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
-        console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
-        return false;
-      }
-      
-      // Then check SIQS
-      return loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0);
-    });
-    
-    return { locations: validLocations, message: null };
-  } catch (error) {
-    console.error("Error searching standard locations:", error);
-    return { 
-      locations: [], 
-      message: language === "en" 
-        ? "Error searching for locations" 
-        : "搜索位置时出错" 
-    };
-  }
-};
-
-/**
- * Search for calculated locations when standard locations aren't found
- * @param latitude User latitude
- * @param longitude User longitude
- * @param searchDistance Search radius in km
- * @param language Current language
- * @param existingLocations Any existing locations to avoid duplicates
- * @returns Found calculated locations
- */
-export const searchCalculatedLocations = async (
-  latitude: number,
-  longitude: number,
-  searchDistance: number,
-  language: Language,
-  existingLocations: SharedAstroSpot[] = []
-): Promise<{ locations: SharedAstroSpot[], message: string | null }> => {
-  try {
-    const calculatedLocations = await findCalculatedLocations(
-      latitude,
-      longitude,
-      searchDistance,
-      true, // Allow expanding the search radius
-      MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
-    );
-    
-    // Apply filtering to ensure valid locations
-    const validLocations = calculatedLocations.filter(loc => {
-      // Check for duplicates in existing locations
-      const isDuplicate = existingLocations.some(existing => 
-        existing.latitude === loc.latitude && 
-        existing.longitude === loc.longitude
-      );
-      
-      if (isDuplicate) {
-        return false;
-      }
-      
-      // Check if location is valid (not on water)
-      if (!isValidAstronomyLocation(loc.latitude, loc.longitude, loc.name)) {
-        console.log(`Filtered out ${loc.name} at ${loc.latitude}, ${loc.longitude} as invalid astronomy location`);
-        return false;
-      }
-      
-      // Then check SIQS
-      return loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0);
-    });
-    
-    if (validLocations.length === 0) {
-      return { 
-        locations: [], 
-        message: language === "en" 
-          ? "No suitable locations found in this area" 
-          : "在此区域未找到适合的位置" 
-      };
-    }
-    
-    return { 
-      locations: validLocations, 
-      message: language === "en" 
-        ? "Using calculated locations with good viewing conditions" 
-        : "使用计算出的良好观测条件位置" 
-    };
-  } catch (error) {
-    console.error("Error searching calculated locations:", error);
-    return { 
-      locations: [], 
-      message: language === "en" 
-        ? "Error searching for locations" 
-        : "搜索位置时出错" 
-    };
-  }
-};
-
-/**
- * Show toast notification based on search results
- * @param message Toast message
- * @param isError Whether this is an error message
- * @param language Current language
- */
-export const showSearchResultToast = (
-  message: string | null, 
-  isError: boolean = false,
-  language: Language
-) => {
-  if (!message) return;
+export function filterLocations(
+  locations: SharedAstroSpot[], 
+  userLocation: { latitude: number; longitude: number } | null,
+  searchRadius: number,
+  minSiqsScore = 0
+): SharedAstroSpot[] {
+  if (!locations || locations.length === 0) return [];
+  if (!userLocation) return locations;
   
-  if (isError) {
-    toast.error(message, { 
-      description: language === "en" 
-        ? "Please try again later" 
-        : "请稍后再试" 
-    });
-  } else {
-    toast.info(message, { 
-      description: language === "en" 
-        ? "These are areas likely to have clear skies" 
-        : "这些是可能有晴朗天空的区域" 
-    });
-  }
-};
+  const { latitude, longitude } = userLocation;
+  
+  return locations.filter(location => {
+    if (!location.latitude || !location.longitude) return false;
+    
+    // Calculate distance
+    const distance = haversineDistance(
+      latitude, 
+      longitude, 
+      location.latitude, 
+      location.longitude
+    );
+    
+    // Filter by distance
+    const withinRadius = searchRadius <= 0 || distance <= searchRadius;
+    
+    // Filter by SIQS score
+    const goodEnoughScore = minSiqsScore <= 0 || 
+      (location.siqs !== undefined && isSiqsGreaterThan(location.siqs, minSiqsScore));
+    
+    // Add distance to location for later use
+    if (withinRadius && goodEnoughScore) {
+      location.distance = distance;
+      return true;
+    }
+    
+    return false;
+  });
+}
+
+/**
+ * Hook for filtering locations
+ */
+export function useLocationFiltering() {
+  const [filteredLocations, setFilteredLocations] = useState<SharedAstroSpot[]>([]);
+  
+  const filterLocationsByDistance = useCallback((
+    locations: SharedAstroSpot[],
+    userLocation: { latitude: number; longitude: number } | null,
+    searchRadius: number = 100,
+    minSiqsScore: number = 0
+  ): SharedAstroSpot[] => {
+    const filtered = filterLocations(locations, userLocation, searchRadius, minSiqsScore);
+    setFilteredLocations(filtered);
+    return filtered;
+  }, []);
+  
+  return {
+    filteredLocations,
+    filterLocationsByDistance
+  };
+}
+
+/**
+ * Sort locations by SIQS score
+ */
+export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  return [...locations].sort((a, b) => {
+    const aScore = getSiqsScore(a.siqs);
+    const bScore = getSiqsScore(b.siqs);
+    return bScore - aScore;
+  });
+}
+
+/**
+ * Sort locations by distance
+ */
+export function sortLocationsByDistance(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  return [...locations].sort((a, b) => {
+    const aDistance = a.distance || Infinity;
+    const bDistance = b.distance || Infinity;
+    return aDistance - bDistance;
+  });
+}

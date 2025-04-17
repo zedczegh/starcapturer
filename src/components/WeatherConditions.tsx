@@ -8,7 +8,7 @@ import { getSeeingConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
-import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
+import { calculateMoonPhase } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
 import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
 import { Cloud } from "lucide-react";
@@ -107,16 +107,17 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   }, [weatherData, forecastData, toast, t]);
   
-  const { name: calculatedMoonPhaseName } = getMoonInfo();
+  // Get moon phase information
+  const moonInfo = calculateMoonPhase();
   
   const translatedData = useMemo(() => {
     return {
       seeingConditions: language === 'zh' 
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
-      moonPhase: calculatedMoonPhaseName,
+      moonPhase: moonInfo.name,
     };
-  }, [language, seeingConditions, calculatedMoonPhaseName]);
+  }, [language, seeingConditions, moonInfo.name]);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },

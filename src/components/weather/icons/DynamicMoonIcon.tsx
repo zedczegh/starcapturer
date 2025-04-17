@@ -1,7 +1,7 @@
 
 import React, { useMemo } from "react";
 import { Moon } from "lucide-react";
-import { getMoonPhaseNameByPhase } from "@/services/realTimeSiqs/moonPhaseCalculator";
+import { getMoonPhaseName } from "@/services/realTimeSiqs/moonPhaseCalculator";
 
 interface DynamicMoonIconProps {
   phase: string | number;

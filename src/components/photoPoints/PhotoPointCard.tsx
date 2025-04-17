@@ -1,170 +1,131 @@
 
-import React, { useState, useEffect, useMemo } from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Star, Navigation } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatSiqsScore } from "@/utils/siqsHelpers";
-import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
-import { useNavigate } from "react-router-dom";
-import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useDisplayName } from "./cards/DisplayNameResolver";
-import { findNearestTown } from "@/utils/nearestTownCalculator";
-import { formatDistance } from "@/utils/location/formatDistance";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { MapPin, Calendar, Award, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { formatSiqsScore } from '@/utils/siqsHelpers';
+import SiqsScoreBadge from './cards/SiqsScoreBadge';
 
 interface PhotoPointCardProps {
-  point: SharedAstroSpot;
-  onSelect?: (point: SharedAstroSpot) => void;
-  onViewDetails: (point: SharedAstroSpot) => void;
-  userLocation: { latitude: number; longitude: number } | null;
+  location: SharedAstroSpot;
+  onClick: (location: SharedAstroSpot) => void;
+  compact?: boolean;
+  className?: string;
 }
 
 const PhotoPointCard: React.FC<PhotoPointCardProps> = ({ 
-  point, 
-  onSelect,
-  onViewDetails,
-  userLocation
+  location, 
+  onClick,
+  compact = false,
+  className = ""
 }) => {
-  const { language, t } = useLanguage();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const certInfo = useMemo(() => getCertificationInfo(point), [point]);
+  const { t, language } = useLanguage();
+  const [imageError, setImageError] = useState(false);
   
-  const { displayName, showOriginalName } = useDisplayName({
-    location: point,
-    language,
-    locationCounter: null
-  });
+  const handleImageError = () => {
+    setImageError(true);
+  };
   
-  const nearestTownInfo = useMemo(() => 
-    point.latitude && point.longitude ? 
-      findNearestTown(point.latitude, point.longitude, language) : 
-      null
-  , [point.latitude, point.longitude, language]);
+  // Format distance to show km or miles based on language preference
+  const formatDistance = (distance?: number): string => {
+    if (!distance) return '';
+    
+    if (language === 'zh') {
+      return `${distance.toFixed(1)} 公里`;
+    } else {
+      const miles = distance * 0.621371;
+      return `${miles.toFixed(1)} mi`;
+    }
+  };
   
-  const formatCardDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
-    
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m`, `${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km`, `${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km`, `${Math.round(distance / 100) * 100} 公里`);
-  };
-
-  const getLocationId = () => {
-    if (!point || !point.latitude || !point.longitude) return null;
-    return point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
-  };
-
-  const handleViewDetails = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!point || !point.latitude || !point.longitude) return;
-    
-    const locationId = getLocationId();
-    if (!locationId) return;
-    
-    // Ensure Chinese name is properly included in the navigation state
-    navigate(`/location/${locationId}`, {
-      state: {
-        id: locationId,
-        name: point.name || '',
-        chineseName: point.chineseName || '',
-        latitude: point.latitude,
-        longitude: point.longitude,
-        bortleScale: point.bortleScale || 4,
-        siqsResult: {
-          score: point.siqs || 0
-        },
-        certification: point.certification || '',
-        isDarkSkyReserve: !!point.isDarkSkyReserve,
-        timestamp: new Date().toISOString(),
-        fromPhotoPoints: true
-      }
-    });
-  };
-
-  // Determine the name to display based on language preference
-  const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
-  const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
+  // Get distance display text
+  const distanceText = location.distance ? formatDistance(location.distance) : '';
+  
+  // Determine card size class based on compact mode
+  const cardSizeClass = compact ? 'h-64' : 'h-[340px]';
+  
+  // Get card content class based on compact mode
+  const contentClass = compact ? "p-3" : "p-4";
+  
+  // Determine if location is certified
+  const isCertified = location.certification || location.isDarkSkyReserve;
   
   return (
-    <div 
-      className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
-      onClick={() => onSelect?.(point)}
+    <Card 
+      className={`overflow-hidden transition-all hover:shadow-lg relative ${cardSizeClass} ${className}`}
+      onClick={() => onClick(location)}
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <h4 className="font-medium text-sm line-clamp-1">
-          {displayName || primaryName}
-        </h4>
+      <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
+        <SiqsScoreBadge score={location.siqs} isCertified={isCertified} />
         
-        <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-          <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
-        </div>
+        {isCertified && (
+          <Badge className="bg-amber-600 hover:bg-amber-700 text-white flex gap-1 items-center">
+            <Award className="h-3 w-3" /> 
+            {t("Certified", "认证地点")}
+          </Badge>
+        )}
       </div>
       
-      {certInfo && (
-        <div className="flex items-center mt-1.5 mb-2">
-          <Badge variant="outline" className={`${certInfo.color} px-2 py-0.5 rounded-full flex items-center`}>
-            {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
-            <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
-          </Badge>
-        </div>
-      )}
+      <div className="relative h-1/2 overflow-hidden bg-muted">
+        {!imageError && location.image ? (
+          <img 
+            src={location.image} 
+            alt={location.name || "Location"} 
+            className="w-full h-full object-cover"
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900">
+            <MapPin className="h-12 w-12 text-slate-500" />
+          </div>
+        )}
+      </div>
       
-      {/* Show secondary name if available */}
-      {secondaryName && (
-        <div className="mt-1.5 mb-2 flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground line-clamp-1">
-            {secondaryName}
+      <CardContent className={`${contentClass}`}>
+        <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+          {location.name || t("Unnamed Location", "未命名位置")}
+        </h3>
+        
+        {!compact && (
+          <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+            {location.description || t("No description available", "暂无描述")}
+          </p>
+        )}
+        
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+          <MapPin className="h-3.5 w-3.5" />
+          <span className="line-clamp-1">
+            {distanceText}
           </span>
         </div>
-      )}
+        
+        {location.lastVisit && !compact && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>
+              {new Date(location.lastVisit).toLocaleDateString()}
+            </span>
+          </div>
+        )}
+      </CardContent>
       
-      {/* Only show nearest town if we don't have both names */}
-      {!secondaryName && nearestTownInfo && nearestTownInfo.detailedName && (
-        <div className="mt-1.5 mb-2 flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground line-clamp-1">
-            {nearestTownInfo.detailedName}
-          </span>
-        </div>
-      )}
-      
-      {point.latitude && point.longitude && (
-        <div className="mt-1.5 mb-2 flex items-center">
-          <Navigation className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground">
-            {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
-          </span>
-        </div>
-      )}
-      
-      {userLocation && point.latitude && point.longitude && (
-        <div className="mt-1.5 mb-2 flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground">
-            {formatCardDistance(point.distance)}
-          </span>
-        </div>
-      )}
-      
-      <div className="mt-3 flex justify-end">
+      <CardFooter className={`${compact ? "p-3 pt-0" : "p-4 pt-0"}`}>
         <Button 
-          variant="ghost"
-          size="sm"
-          onClick={handleViewDetails}
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
+          variant="secondary" 
+          size={compact ? "sm" : "default"} 
+          className="w-full"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(location);
+          }}
         >
           {t("View Details", "查看详情")}
         </Button>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 };
 

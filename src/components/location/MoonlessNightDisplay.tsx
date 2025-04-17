@@ -1,17 +1,12 @@
 
-import React, { useMemo } from 'react';
-import { CloudMoon, Sun, Moon, Calendar, Sparkles } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
-import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger 
-} from '@/components/ui/tooltip';
-import { getAstronomicalData, formatAstronomicalTime } from '@/services/astronomy/astronomyCalculationService';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { getNextMoonlessNight, calculateMoonlessNightDuration } from "@/utils/weather/moonUtils";
+import { getMoonInfo } from "@/services/realTimeSiqs/moonPhaseCalculator";
+import { formatDistance } from "date-fns";
+import { motion } from "framer-motion";
+import { Clock, MoonIcon } from "lucide-react";
 
 interface MoonlessNightDisplayProps {
   latitude: number;
@@ -19,201 +14,99 @@ interface MoonlessNightDisplayProps {
 }
 
 const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, longitude }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [nextMoonlessNight, setNextMoonlessNight] = useState<any>(null);
+  const [duration, setDuration] = useState<number | null>(null);
   
-  // Get comprehensive astronomical data using our optimized service
-  const astronomyData = useMemo(() => {
-    return getAstronomicalData(latitude, longitude);
+  // Get current moon phase
+  const moonInfo = getMoonInfo();
+  
+  useEffect(() => {
+    const fetchMoonlessNight = async () => {
+      setLoading(true);
+      
+      try {
+        // Get the next moonless night data
+        const data = await getNextMoonlessNight(latitude, longitude);
+        setNextMoonlessNight(data);
+        
+        // Calculate duration
+        const calculatedDuration = calculateMoonlessNightDuration(
+          latitude,
+          longitude
+        );
+        setDuration(calculatedDuration);
+      } catch (error) {
+        console.error("Error fetching moonless night data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (latitude && longitude) {
+      fetchMoonlessNight();
+    }
   }, [latitude, longitude]);
   
-  // Use our advanced moon phase algorithm to get moon info
-  const { isGoodForAstronomy, name: moonPhaseName } = getMoonInfo();
-  
-  // Get moonless night information with detailed timing data
-  const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
-  
-  // Format time label and value with better alignment
-  const TimeItem = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex justify-between items-center">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium ml-2">{value}</span>
-    </div>
-  );
-  
-  // Format moon time for display safely
-  const formatMoonTime = (time: Date | string) => {
-    if (typeof time === 'string') return time;
-    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Format astronomical night times
-  const astroNightStart = formatAstronomicalTime(astronomyData.astronomicalNight.start);
-  const astroNightEnd = formatAstronomicalTime(astronomyData.astronomicalNight.end);
+  // Format the date for next moonless night
+  const formattedDate = nextMoonlessNight ? 
+    formatDistance(new Date(nextMoonlessNight.date), new Date(), { addSuffix: true }) : 
+    "";
 
   return (
-    <Card className="p-4 bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-3">
-            <div className="bg-cosmic-800/50 p-2 rounded-full">
-              <CloudMoon className="w-5 h-5 text-primary" />
+    <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
+      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <MoonIcon className="w-4 h-4 text-purple-400" />
+          {t("Moonless Night", "无月之夜")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-5 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
+        {loading ? (
+          <div className="animate-pulse space-y-2">
+            <div className="h-4 bg-slate-700/60 rounded w-3/4"></div>
+            <div className="h-4 bg-slate-700/60 rounded w-1/2"></div>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-3"
+          >
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-cosmic-100">
+                {t("Next Opportunity", "下次机会")}:
+              </div>
+              <div className="text-sm font-medium text-purple-400">
+                {formattedDate}
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-medium">
-                {t('Astronomical Night', '天文夜晚')}
-              </h3>
+            
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-cosmic-100">
+                {t("Expected Duration", "预计持续时间")}:
+              </div>
+              <div className="text-sm font-medium text-purple-400 flex items-center">
+                <Clock className="w-3.5 h-3.5 mr-1 text-purple-400/70" />
+                {duration ? `${duration.toFixed(1)} ${t("hours", "小时")}` : "Unknown"}
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Sun/Day Information - Condensed format */}
-        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <Sun className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs font-medium">{t('Daylight', '日照时间')}</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Rise', '日出')} value={astroNightEnd} />
-            <TimeItem label={t('Set', '日落')} value={astroNightStart} />
-          </div>
-        </div>
-        
-        {/* Night Information - Condensed format */}
-        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <CloudMoon className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium">{t('Night', '夜晚')}</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Begins', '开始')} value={astroNightStart} />
-            <TimeItem label={t('Ends', '结束')} value={astroNightEnd} />
-          </div>
-          
-          <TimeItem 
-            label={t('Duration', '持续时间')} 
-            value={`${astronomyData.astronomicalNight.duration} ${t('hrs', '小时')}`} 
-          />
-        </div>
-        
-        {/* Moon Information - Condensed format */}
-        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <Moon className="w-4 h-4 text-gray-300" />
-            <span className="text-xs font-medium">
-              {t('Moon', '月相')}: {t(moonPhaseName, 
-                moonPhaseName === 'New Moon' ? '新月' : 
-                moonPhaseName === 'Full Moon' ? '满月' : 
-                moonPhaseName === 'First Quarter' ? '上弦月' : 
-                moonPhaseName === 'Last Quarter' ? '下弦月' : 
-                moonPhaseName === 'Waxing Crescent' ? '蛾眉月' : 
-                moonPhaseName === 'Waning Crescent' ? '残月' : 
-                moonPhaseName === 'Waxing Gibbous' ? '盈凸月' : '亏凸月')}
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem 
-              label={t('Rise', '月出')} 
-              value={formatMoonTime(nightInfo.moonrise)} 
-            />
-            <TimeItem 
-              label={t('Set', '月落')} 
-              value={formatMoonTime(nightInfo.moonset)} 
-            />
-          </div>
-        </div>
-        
-        {/* Milky Way Information - New Section */}
-        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-200" />
-              <span className="text-xs font-medium">{t('Milky Way', '银河')}</span>
+            
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-cosmic-100">
+                {t("Current Moon Phase", "当前月相")}:
+              </div>
+              <div className="text-sm font-medium text-purple-400">
+                {moonInfo.name}
+              </div>
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-xs text-primary cursor-help">
-                    {astronomyData.milkyWay.duration}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">
-                    {t(
-                      'Core visibility period (Sagittarius region)',
-                      '银河核心可见期（人马座区域）'
-                    )}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem 
-              label={t('Rise', '升起')} 
-              value={astronomyData.milkyWay.rise} 
-            />
-            <TimeItem 
-              label={t('Set', '落下')} 
-              value={astronomyData.milkyWay.set} 
-            />
-          </div>
-          
-          <TimeItem 
-            label={t('Best Viewing', '最佳观测')} 
-            value={astronomyData.milkyWay.bestViewing} 
-          />
-          
-          <div className="mt-1 text-xs text-blue-300">
-            {astronomyData.milkyWay.isVisible 
-              ? t('Core visible tonight', '今晚可见银河核心') 
-              : t('Core may not be visible from this location', '此位置可能看不到银河核心')}
-          </div>
-        </div>
-        
-        {/* Moonless Night Information - This is the key section */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <CloudMoon className="w-4 h-4 text-primary" />
-              <span className="text-xs font-medium">{t('Moonless Night', '无月夜晚')}</span>
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-xs text-primary cursor-help">
-                    {nightInfo.duration} {t('hrs', '小时')}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">
-                    {t(
-                      'Period when the moon is not visible during night',
-                      '夜晚期间月亮不可见的时段'
-                    )}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Begins', '开始')} value={nightInfo.startTime} />
-            <TimeItem label={t('Ends', '结束')} value={nightInfo.endTime} />
-          </div>
-          
-          <div className={`mt-1 text-xs ${isGoodForAstronomy ? 'text-green-400' : 'text-yellow-400'}`}>
-            {isGoodForAstronomy 
-              ? t('Optimal moon phase for astronomy', '最佳天文观测月相')
-              : t('Next new moon in', '下一个新月在') + ` ${nightInfo.daysUntilNewMoon} ` + t('days', '天')}
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </CardContent>
     </Card>
   );
 };
 
-export default React.memo(MoonlessNightDisplay);
+export default MoonlessNightDisplay;

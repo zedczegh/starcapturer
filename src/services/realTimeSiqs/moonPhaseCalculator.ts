@@ -70,6 +70,23 @@ function getMoonPhaseName(phase: number): string {
 }
 
 /**
+ * Get moon phase name by phase value
+ * @param phase Moon phase value (0-1)
+ * @returns Moon phase name
+ */
+export function getMoonPhaseNameByPhase(phase: number): string {
+  return getMoonPhaseName(phase);
+}
+
+/**
+ * Get current moon info
+ * @returns Current moon phase information
+ */
+export function getMoonInfo(): MoonPhaseInfo {
+  return calculateMoonPhase(new Date());
+}
+
+/**
  * Calculate next new moon date
  * @param date Reference date
  * @returns Date of the next new moon
@@ -90,52 +107,4 @@ export function getNextNewMoon(date: Date = new Date()): Date {
   nextNewMoon.setDate(date.getDate() + Math.round(daysToNewMoon));
   
   return nextNewMoon;
-}
-
-/**
- * Calculate the next full moon date
- * @param date Reference date
- * @returns Date of the next full moon
- */
-export function getNextFullMoon(date: Date = new Date()): Date {
-  const synodic = 29.53058867; // Days in a lunar month
-  const julianDate = dateToJulian(date);
-  const newMoonRef = 2451550.1;
-  
-  const daysSinceNewMoon = julianDate - newMoonRef;
-  const phase = (daysSinceNewMoon % synodic) / synodic;
-  
-  // Calculate days until next full moon (phase = 0.5)
-  let daysToFullMoon = synodic * (0.5 - phase);
-  if (daysToFullMoon < 0) daysToFullMoon += synodic;
-  
-  // Create new date for next full moon
-  const nextFullMoon = new Date(date);
-  nextFullMoon.setDate(date.getDate() + Math.round(daysToFullMoon));
-  
-  return nextFullMoon;
-}
-
-/**
- * Get array of moon phases for the next N days
- * @param days Number of days to calculate
- * @param startDate Starting date
- * @returns Array of moon phase information objects
- */
-export function getMoonPhasesForPeriod(days: number = 30, startDate: Date = new Date()): MoonPhaseInfo[] {
-  const phases: MoonPhaseInfo[] = [];
-  
-  for (let i = 0; i < days; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-    
-    const phaseInfo = calculateMoonPhase(date);
-    phases.push({
-      ...phaseInfo,
-      // Add date to the info
-      date: date.toISOString()
-    } as MoonPhaseInfo);
-  }
-  
-  return phases;
 }

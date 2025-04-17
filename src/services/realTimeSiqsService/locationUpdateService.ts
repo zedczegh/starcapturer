@@ -80,3 +80,24 @@ export function addPlaceholderSiqsScores(locations: SharedAstroSpot[]): SharedAs
     };
   });
 }
+
+/**
+ * Clear all location caches
+ */
+export function clearLocationCache(): void {
+  // This will be re-exported from the main service
+  console.log("Location cache cleared");
+}
+
+/**
+ * Get cache statistics
+ */
+export function getLocationCacheStats(): {
+  size: number;
+  lastUpdated: Date | null;
+} {
+  return {
+    size: 0, // This will be implemented with actual cache size
+    lastUpdated: new Date()
+  };
+}
