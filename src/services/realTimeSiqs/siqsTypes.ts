@@ -41,6 +41,15 @@ export interface SiqsResult {
 }
 
 /**
+ * Climate region information
+ */
+export interface ClimateRegion {
+  name: string;
+  seasonalFactor: (month: number) => number;
+  description?: string;
+}
+
+/**
  * Weather data with coordinates
  */
 export interface WeatherDataWithClearSky {
@@ -51,6 +60,7 @@ export interface WeatherDataWithClearSky {
   temperature?: number;
   clearSkyRate?: number;
   precipitation?: number;
+  windSpeed?: number;
   time?: string;
   condition?: string;
   _forecast?: any;

@@ -11,14 +11,16 @@ import SiqsScoreBadge from './cards/SiqsScoreBadge';
 
 interface PhotoPointCardProps {
   location: SharedAstroSpot;
-  onClick: (location: SharedAstroSpot) => void;
+  onViewDetails: (location: SharedAstroSpot) => void;
+  userLocation: { latitude: number; longitude: number } | null;
   compact?: boolean;
   className?: string;
 }
 
 const PhotoPointCard: React.FC<PhotoPointCardProps> = ({ 
   location, 
-  onClick,
+  onViewDetails,
+  userLocation,
   compact = false,
   className = ""
 }) => {
@@ -51,12 +53,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const contentClass = compact ? "p-3" : "p-4";
   
   // Determine if location is certified
-  const isCertified = location.certification || location.isDarkSkyReserve;
+  const isCertified = Boolean(location.certification || location.isDarkSkyReserve);
   
   return (
     <Card 
       className={`overflow-hidden transition-all hover:shadow-lg relative ${cardSizeClass} ${className}`}
-      onClick={() => onClick(location)}
+      onClick={() => onViewDetails(location)}
     >
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
         <SiqsScoreBadge score={location.siqs} isCertified={isCertified} />
@@ -119,7 +121,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           className="w-full"
           onClick={(e) => {
             e.stopPropagation();
-            onClick(location);
+            onViewDetails(location);
           }}
         >
           {t("View Details", "查看详情")}

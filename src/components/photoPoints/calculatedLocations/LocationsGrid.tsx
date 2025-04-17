@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -15,7 +16,7 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
   locations,
   initialLoad = false,
   isMobile = false,
-  onViewDetails
+  onViewDetails = () => {}
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
@@ -52,7 +53,7 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
           transition={{ duration: 0.3, delay: index * 0.05 }}
         >
           <PhotoPointCard
-            point={location}
+            location={location}
             onViewDetails={onViewDetails}
             userLocation={null} // This doesn't use current location for distance
           />

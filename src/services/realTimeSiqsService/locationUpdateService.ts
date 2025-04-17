@@ -1,103 +1,48 @@
 
-import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
+import { batchCalculateSiqs } from '../realTimeSiqs/realTimeSiqsService';
+import { isCertifiedLocation } from '@/utils/locationFiltering';
 
 /**
- * Update a collection of locations with real-time SIQS scores
- * @param locations Array of locations to update
- * @returns Promise resolving to the updated locations
+ * Update locations with real-time SIQS data
  */
-export async function updateLocationsWithRealTimeSiqs(locations: SharedAstroSpot[]): Promise<SharedAstroSpot[]> {
+export async function updateLocationsWithRealTimeSiqs(
+  locations: SharedAstroSpot[]
+): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return [];
   
   try {
-    const updatedLocations = await Promise.all(
-      locations.map(async (location) => {
-        // Skip if no valid latitude/longitude or already has SIQS
-        if (!location.latitude || !location.longitude) {
-          return location;
-        }
-
-        // If location has a valid Bortle scale, calculate real-time SIQS
-        const bortleScale = location.bortleScale || 
-                          (location.isDarkSkyReserve ? 3 : 5);
-        
-        try {
-          const result = await calculateRealTimeSiqs(
-            location.latitude,
-            location.longitude,
-            bortleScale
-          );
-          
-          if (result && typeof result.siqs === 'number') {
-            return {
-              ...location,
-              siqs: result.siqs
-            };
-          }
-        } catch (error) {
-          console.error(`Error calculating SIQS for ${location.name}:`, error);
-        }
-        
-        return location;
-      })
-    );
+    console.log(`Updating ${locations.length} locations with real-time SIQS`);
     
-    return updatedLocations;
+    // Special handling for certified locations
+    const enhancedLocations = locations.map(location => {
+      // For certified locations, ensure they have appropriate Bortle scale
+      if (isCertifiedLocation(location) && !location.bortleScale) {
+        return {
+          ...location,
+          bortleScale: location.isDarkSkyReserve ? 2 : 4
+        };
+      }
+      
+      // Ensure all locations have a default Bortle scale
+      if (!location.bortleScale) {
+        return {
+          ...location,
+          bortleScale: 5 // Default Bortle scale
+        };
+      }
+      
+      return location;
+    });
+    
+    // Use batch calculation for efficiency
+    const results = await batchCalculateSiqs(enhancedLocations);
+    
+    console.log(`Successfully updated ${results.length} locations with SIQS data`);
+    return results;
   } catch (error) {
     console.error("Error updating locations with real-time SIQS:", error);
     return locations;
   }
-}
-
-/**
- * Add placeholder SIQS scores to locations without scores
- * @param locations Array of locations to update
- * @returns The updated locations with placeholder scores
- */
-export function addPlaceholderSiqsScores(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) return [];
-  
-  return locations.map(location => {
-    if (location.siqs !== undefined && location.siqs !== null) {
-      return location;
-    }
-    
-    // Add placeholder score based on Bortle scale or certification
-    let placeholderScore = 5.0;
-    
-    if (location.isDarkSkyReserve || location.certification) {
-      placeholderScore = 8.0;
-    } else if (location.bortleScale) {
-      // Convert Bortle scale (1-9) to SIQS (0-10)
-      // Lower Bortle = better conditions = higher SIQS
-      placeholderScore = Math.max(0, 10 - (location.bortleScale - 1));
-    }
-    
-    return {
-      ...location,
-      siqs: placeholderScore
-    };
-  });
-}
-
-/**
- * Clear all location caches
- */
-export function clearLocationCache(): void {
-  // This will be re-exported from the main service
-  console.log("Location cache cleared");
-}
-
-/**
- * Get cache statistics
- */
-export function getLocationCacheStats(): {
-  size: number;
-  lastUpdated: Date | null;
-} {
-  return {
-    size: 0, // This will be implemented with actual cache size
-    lastUpdated: new Date()
-  };
 }

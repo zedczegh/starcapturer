@@ -53,10 +53,13 @@ export function useCalculatedLocationsFind() {
         // Only include if within radius
         if (distance <= radius) {
           const location: SharedAstroSpot = {
+            id: `calc-${lat.toFixed(4)}-${lon.toFixed(4)}`,
             latitude: lat,
             longitude: lon,
             name: `Generated Location ${candidates.length + 1}`,
-            distance
+            distance,
+            bortleScale: 5, // Default Bortle scale
+            timestamp: new Date().toISOString()
           };
           candidates.push(location);
         }
@@ -74,7 +77,7 @@ export function useCalculatedLocationsFind() {
     longitude: number,
     radius: number = 100,
     limit: number = 10
-  ) => {
+  ): Promise<SharedAstroSpot[]> => {
     if (!latitude || !longitude) {
       console.error("Invalid coordinates for location search");
       return [];
@@ -134,7 +137,7 @@ export function useCalculatedLocationsFind() {
       
       // Sort by SIQS score (highest first)
       const sortedLocations = goodLocations.sort(
-        (a, b) => (b.siqs || 0) - (a.siqs || 0)
+        (a, b) => (Number(b.siqs) || 0) - (Number(a.siqs) || 0)
       );
       
       const finalLocations = sortedLocations.slice(0, limit);
@@ -159,6 +162,15 @@ export function useCalculatedLocationsFind() {
     setHasMore(false); // For now just disable the load more button
   }, []);
   
+  // Added for compatibility with useRecommendedLocations hook
+  const findCalculatedLocations = useCallback(async (
+    latitude: number,
+    longitude: number,
+    radius: number = 100
+  ): Promise<SharedAstroSpot[]> => {
+    return findLocationsNear(latitude, longitude, radius);
+  }, [findLocationsNear]);
+  
   return {
     locations,
     results,
@@ -167,6 +179,7 @@ export function useCalculatedLocationsFind() {
     searchRadius,
     findLocationsNear,
     loadMoreLocations,
-    setSearchRadius
+    setSearchRadius,
+    findCalculatedLocations // Export the new function
   };
 }
