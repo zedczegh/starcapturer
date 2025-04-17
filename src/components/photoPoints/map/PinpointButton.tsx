@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Check } from 'lucide-react';
@@ -70,8 +71,8 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
         </div>
         
         {hasLocation && (
-          <div className="absolute -top-1 -right-1 bg-green-500/35 rounded-full p-1 border-2 border-background shadow-sm animate-fade-in">
-            <Check className="h-3 w-3 text-white" strokeWidth={3} />
+          <div className="absolute -top-1 -right-1 bg-green-500/35 rounded-full p-1 animate-fade-in">
+            <Check className="h-3 w-3 text-white" strokeWidth={2} />
           </div>
         )}
         
