@@ -74,6 +74,19 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
     }
   };
   
+  // Create wrapper functions that use the current location data
+  const handleRefreshForecastWrapper = () => {
+    if (locationData && locationData.latitude && locationData.longitude) {
+      handleRefreshForecast(locationData.latitude, locationData.longitude);
+    }
+  };
+  
+  const handleRefreshLongRangeForecastWrapper = () => {
+    if (locationData && locationData.latitude && locationData.longitude) {
+      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <LocationMap
@@ -97,8 +110,8 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
         onLocationUpdate={onLocationUpdate}
         setGettingUserLocation={setGettingUserLocation}
         setStatusMessage={() => {}}
-        onRefreshForecast={handleRefreshForecast}
-        onRefreshLongRange={handleRefreshLongRangeForecast}
+        onRefreshForecast={handleRefreshForecastWrapper}
+        onRefreshLongRange={handleRefreshLongRangeForecastWrapper}
       />
     </div>
   );
