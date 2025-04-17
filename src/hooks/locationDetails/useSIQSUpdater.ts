@@ -1,7 +1,7 @@
 
 import { useCallback, useRef } from 'react';
-import { calculateNighttimeSIQS, calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
-import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from "@/lib/siqs/utils";
+import { calculateAstronomicalNight, formatTime } from "@/lib/siqs/utils";
 
 export const useSIQSUpdater = () => {
   const siqsUpdatedRef = useRef<boolean>(false);

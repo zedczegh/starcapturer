@@ -1,7 +1,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
-import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
@@ -89,31 +88,31 @@ export const useLocationSIQSUpdater = (
           });
           
           updateAttemptedRef.current = true;
-        } else if (forecastData?.hourly?.cloud_cover) {
-          // Fallback to tonight's cloud cover if full SIQS calculation failed
-          console.log("Using fallback astronomical night cloud cover calculation");
+        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
+          // If we couldn't calculate nighttime SIQS but have forecast data,
+          // use our improved astronomical night cloud cover calculation
           
+          // Calculate cloud cover for the astronomical night
           const tonightCloudCover = calculateTonightCloudCover(
             forecastData.hourly,
             latitude,
             longitude
           );
           
-          // Score calculation adjusts for cloud cover impact
-          const cloudScore = tonightCloudCover === 0 ? 100 : Math.max(0, 100 - (tonightCloudCover * 2));
-          const estimatedScore = cloudScore / 10;
+          // Convert to SIQS score
+          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
           
-          console.log(`Using tonight's astronomical night cloud cover (${tonightCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
           
           setLocationData({
             ...locationData,
             siqsResult: {
               score: estimatedScore,
-              isViable: estimatedScore > 2,
+              isViable: tonightCloudCover < 40,
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
+                  score: (100 - tonightCloudCover * 2.5) / 10,
                   description: t 
                     ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
                       `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
