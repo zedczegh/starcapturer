@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,7 +9,7 @@ import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
-import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
+import { calculateTonightCloudCover } from "@/components/forecast/NightForecastUtils";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -42,49 +43,24 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      const nightForecasts = extractNightForecasts(forecastData.hourly);
+      const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
       
-      if (nightForecasts.length === 0) return null;
-      
-      const eveningForecasts = nightForecasts.filter(forecast => {
-        const hour = new Date(forecast.time).getHours();
-        return hour >= 18 && hour <= 23;
-      });
-      
-      const morningForecasts = nightForecasts.filter(forecast => {
-        const hour = new Date(forecast.time).getHours();
-        return hour >= 0 && hour < 8;
-      });
-      
-      const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
-      const morningCloudCover = calculateAverageCloudCover(morningForecasts);
-      
-      const totalHours = eveningForecasts.length + morningForecasts.length;
-      
-      let avgNightCloudCover;
-      if (eveningForecasts.length === 0 && morningForecasts.length === 0) {
-        avgNightCloudCover = null;
-      } else if (eveningForecasts.length === 0) {
-        avgNightCloudCover = morningCloudCover;
-      } else if (morningForecasts.length === 0) {
-        avgNightCloudCover = eveningCloudCover;
-      } else {
-        avgNightCloudCover = (
-          (eveningCloudCover * eveningForecasts.length) + 
-          (morningCloudCover * morningForecasts.length)
-        ) / totalHours;
+      if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
+        return null;
       }
       
       return {
-        average: avgNightCloudCover,
-        evening: eveningCloudCover,
-        morning: morningCloudCover
+        average: tonightCloudCover,
+        // We're no longer separating evening and morning - using the full 18:00-7:00 range
+        description: t ? 
+          t("Tonight's cloud cover (6PM-7AM)", "今晚云量 (18:00-7:00)") : 
+          "Tonight's cloud cover (6PM-7AM)"
       };
     } catch (error) {
       console.error("Error calculating nighttime cloud cover:", error);
       return null;
     }
-  }, [forecastData]);
+  }, [forecastData, t]);
   
   useEffect(() => {
     if (forecastData && validateWeatherData(weatherData)) {

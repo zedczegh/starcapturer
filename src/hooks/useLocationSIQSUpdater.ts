@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
-import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
 
@@ -78,9 +78,42 @@ export const useLocationSIQSUpdater = (
           });
           
           updateAttemptedRef.current = true;
+        } else if (forecastData?.hourly?.cloud_cover) {
+          // Fallback to tonight's cloud cover if full SIQS calculation failed
+          console.log("Using fallback tonight cloud cover calculation");
+          
+          const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
+          const cloudScore = tonightCloudCover === 0 ? 100 : Math.max(0, 100 - (tonightCloudCover * 2));
+          const estimatedScore = cloudScore / 10;
+          
+          console.log(`Using tonight's cloud cover (${tonightCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          
+          setLocationData({
+            ...locationData,
+            siqsResult: {
+              score: estimatedScore,
+              isViable: estimatedScore > 2,
+              factors: [
+                {
+                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+                  score: estimatedScore, // Already on 0-10 scale
+                  description: t 
+                    ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
+                      `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
+                    : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
+                  nighttimeData: {
+                    average: tonightCloudCover,
+                    timeRange: "18:00-7:00"
+                  }
+                }
+              ]
+            }
+          });
+          
+          updateAttemptedRef.current = true;
         } else if (locationData.weatherData?.cloudCover !== undefined) {
-          // Fallback to current weather if nighttime forecast is unavailable
-          console.log("Using fallback SIQS calculation based on current weather");
+          // Last fallback to current weather if forecast is unavailable
+          console.log("Using current weather as fallback (no forecast data available)");
           const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
           // Special handling for 0% cloud cover - should be score 10
@@ -110,11 +143,12 @@ export const useLocationSIQSUpdater = (
           updateAttemptedRef.current = true;
         }
       } catch (error) {
-        console.error("Error updating SIQS with forecast data:", error);
-        toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
+        console.error("Error updating SIQS:", error);
       }
     }
-  }, [forecastData, locationData, setLocationData, t, resetUpdateState]);
+  }, [locationData, forecastData, t, setLocationData, resetUpdateState]);
   
-  return { resetUpdateState };
+  return {
+    resetUpdateState,
+  };
 };

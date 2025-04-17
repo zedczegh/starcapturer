@@ -1,6 +1,6 @@
 
 import { validateCloudCover } from '@/lib/siqs/utils';
-import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { protectedFactors } from '@/lib/siqs/protectedFactors';
 
 /**
@@ -32,19 +32,51 @@ export async function calculateSIQSWithWeatherData(
     // Use nighttime SIQS calculator if forecast data is available
     if (forecastData && forecastData.hourly) {
       console.log("Using forecast data for nighttime SIQS calculation");
-      const nighttimeSiqs = calculateNighttimeSIQS(
-        { 
-          weatherData, 
-          bortleScale, 
-          seeingConditions,
-          moonPhase 
-        }, 
-        forecastData,
-        null
-      );
       
-      if (nighttimeSiqs) {
-        return nighttimeSiqs;
+      // Use the formula: sum(cc percentage of each hour tonight: 18:00-7:00)/13
+      // or current time to 7:00 if current time is within nighttime hours
+      const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
+      console.log(`Tonight's cloud cover (18:00-7:00): ${tonightCloudCover.toFixed(1)}%`);
+      
+      // If we have valid tonight cloud cover data
+      if (tonightCloudCover !== 0 || forecastData.hourly.cloud_cover) {
+        const nighttimeSiqs = calculateNighttimeSIQS(
+          { 
+            weatherData, 
+            bortleScale, 
+            seeingConditions,
+            moonPhase 
+          }, 
+          forecastData,
+          null
+        );
+        
+        if (nighttimeSiqs) {
+          return nighttimeSiqs;
+        }
+        
+        // If calculation failed but we have tonight's cloud cover, create a simplified result
+        if (tonightCloudCover >= 0) {
+          // Base score mainly on cloud cover
+          const cloudScore = Math.max(0, 100 - (tonightCloudCover * 2.5));
+          const normalizedScore = normalizeScore(cloudScore / 10);
+          
+          return {
+            score: normalizedScore,
+            isViable: normalizedScore >= 2.0,
+            factors: [
+              {
+                name: "Cloud Cover",
+                score: cloudScore / 100,
+                description: `Tonight's cloud cover: ${tonightCloudCover.toFixed(1)}%`,
+                nighttimeData: {
+                  average: tonightCloudCover,
+                  timeRange: "18:00-7:00"
+                }
+              }
+            ]
+          };
+        }
       }
     }
     

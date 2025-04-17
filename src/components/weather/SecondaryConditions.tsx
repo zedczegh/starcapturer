@@ -1,15 +1,22 @@
 
-import React, { memo } from "react";
-import { Gauge } from "lucide-react";
-import ConditionItem from "./ConditionItem";
+import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
+import {
+  Sun,
+  Cloud,
+  Moon,
+  Eye,
+  Info,
+  CloudFog,
+  CircleAlert,
+} from "lucide-react";
 import { 
-  DynamicMoonIcon, 
-  DynamicLightbulbIcon,
-  DynamicCloudCoverIcon
-} from "./DynamicIcons";
-import { getMoonInfo } from "@/services/realTimeSiqs/moonPhaseCalculator";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -17,109 +24,134 @@ interface SecondaryConditionsProps {
   bortleScale: number | null;
   aqi?: number;
   nighttimeCloudData?: {
-    average: number | null;
-    evening: number;
-    morning: number;
+    average: number;
+    description?: string;
+    evening?: number;
+    morning?: number;
   } | null;
 }
 
-const SecondaryConditions = memo<SecondaryConditionsProps>(({
+const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   cloudCover,
   moonPhase,
   bortleScale,
   aqi,
   nighttimeCloudData
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   
-  // Use our advanced moon phase algorithm to get consistent moon phase information
-  const { name: calculatedMoonPhase } = getMoonInfo();
+  // Helper to get cloud cover color class based on value
+  const getCloudCoverColorClass = (value: number) => {
+    if (value <= 10) return "text-green-400";
+    if (value <= 20) return "text-green-300";
+    if (value <= 30) return "text-yellow-300";
+    if (value <= 50) return "text-yellow-500";
+    if (value <= 70) return "text-orange-400";
+    return "text-red-400";
+  };
   
-  // Determine which cloud cover to display - prefer nighttime average if available
-  const displayCloudCover = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined 
-    ? nighttimeCloudData.average 
-    : cloudCover;
-    
-  // Create nighttime cloud cover tooltip if data is available
-  const cloudCoverTooltip = nighttimeCloudData 
-    ? (language === 'en'
-      ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}%`
-      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}%`)
-    : undefined;
-  
-  // AQI display with conditional rendering and enhanced sizing
-  const aqiValue = aqi !== undefined ? (
-    <>
-      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
-        {aqi} 
-      </span> 
-      <span className="text-sm ml-1.5">({getAQIDescription(aqi, language)})</span>
-    </>
-  ) : '--';
-  
-  // Bortle scale value - now properly handles unknown values with improved confidence indicator
-  const bortleValue = formatBortleScale(bortleScale, language);
-  
-  // Add confidence indicator for Bortle scale value (high confidence when directly measured)
-  const hasHighConfidence = bortleScale !== null && 
-    Number.isInteger(bortleScale) && 
-    bortleScale >= 1 && 
-    bortleScale <= 9;
-  
-  // Create label for cloud cover that indicates it's nighttime data
-  const cloudCoverLabel = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined
-    ? (language === 'en' ? "Night Cloud Cover" : "夜间云层覆盖")
-    : (language === 'en' ? "Cloud Cover" : "云层覆盖");
-  
-  const bortleTooltip = bortleScale === null 
-    ? (language === 'en' ? "Bortle scale could not be determined for this location" : "无法确定此位置的光污染等级") 
-    : undefined;
-  
-  // Translate moon phase from English to Chinese if needed
-  const displayMoonPhase = language === 'zh' 
-    ? (calculatedMoonPhase === 'New Moon' ? '新月' : 
-       calculatedMoonPhase === 'Full Moon' ? '满月' : 
-       calculatedMoonPhase === 'First Quarter' ? '上弦月' : 
-       calculatedMoonPhase === 'Last Quarter' ? '下弦月' : 
-       calculatedMoonPhase === 'Waxing Crescent' ? '蛾眉月' : 
-       calculatedMoonPhase === 'Waning Crescent' ? '残月' : 
-       calculatedMoonPhase === 'Waxing Gibbous' ? '盈凸月' : '亏凸月')
-    : calculatedMoonPhase;
+  // Helper to get AQI color class and label
+  const getAqiInfo = (value: number) => {
+    if (value <= 20) return { color: "text-green-400", label: t("Excellent", "极佳") };
+    if (value <= 40) return { color: "text-green-300", label: t("Good", "良好") };
+    if (value <= 60) return { color: "text-yellow-300", label: t("Moderate", "中等") };
+    if (value <= 80) return { color: "text-yellow-500", label: t("Fair", "一般") };
+    if (value <= 100) return { color: "text-orange-400", label: t("Poor", "较差") };
+    return { color: "text-red-400", label: t("Unhealthy", "不健康") };
+  };
   
   return (
-    <div className="space-y-7">
-      <ConditionItem
-        icon={<DynamicCloudCoverIcon cloudCover={displayCloudCover} />}
-        label={cloudCoverLabel}
-        value={<span className="text-lg font-medium">{Math.round(displayCloudCover)}%</span>}
-        tooltip={cloudCoverTooltip}
-        badgeText={nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined ? (language === 'en' ? "Night" : "夜间") : undefined}
-      />
-      
-      <ConditionItem
-        icon={<DynamicMoonIcon phase={calculatedMoonPhase} />}
-        label={language === 'en' ? "Moon Phase" : "月相"}
-        value={<span className="text-lg font-medium">{displayMoonPhase}</span>}
-      />
-      
-      {aqi !== undefined && (
-        <ConditionItem
-          icon={<Gauge className="h-5 w-5 text-primary" />}
-          label={language === 'en' ? "Air Quality" : "空气质量"}
-          value={aqiValue}
-        />
+    <div className="space-y-4 text-cosmic-100">
+      <div className="flex items-center">
+        <Cloud className="h-5 w-5 mr-2 text-cosmic-300" />
+        <span className="font-medium">{t("Cloud Cover", "云层覆盖")}: </span>
+        <span className={`ml-auto font-semibold ${getCloudCoverColorClass(cloudCover)}`}>
+          {cloudCover}%
+        </span>
+      </div>
+
+      {nighttimeCloudData && (
+        <div className="flex items-center">
+          <CloudFog className="h-5 w-5 mr-2 text-cosmic-300" />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="font-medium flex items-center">
+                  {nighttimeCloudData.description || t("Tonight's Cloud Cover", "今晚云量")}:
+                  <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 inline-block" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
+                <p className="text-xs text-cosmic-100">
+                  {t(
+                    "This shows the average cloud cover for tonight (18:00-7:00) based on forecast data.", 
+                    "这显示了基于预报数据的今晚 (18:00-7:00) 平均云量。"
+                  )}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <span className={`ml-auto font-semibold ${getCloudCoverColorClass(nighttimeCloudData.average)}`}>
+            {nighttimeCloudData.average.toFixed(1)}%
+          </span>
+        </div>
       )}
       
-      <ConditionItem
-        icon={<DynamicLightbulbIcon bortleScale={bortleScale} animated={hasHighConfidence} />}
-        label={language === 'en' ? "Bortle Scale" : "光污染等级"}
-        value={<span className="text-lg font-medium">{bortleValue}</span>}
-        tooltip={bortleTooltip}
-      />
+      <div className="flex items-center">
+        <Moon className="h-5 w-5 mr-2 text-cosmic-300" />
+        <span className="font-medium">{t("Moon Phase", "月相")}: </span>
+        <span className="ml-auto font-semibold text-cosmic-50">
+          {moonPhase}
+        </span>
+      </div>
+      
+      <div className="flex items-center">
+        <Sun className="h-5 w-5 mr-2 text-cosmic-300" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="font-medium flex items-center">
+                {t("Bortle Scale", "波尔特等级")}:
+                <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 inline-block" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
+              <p className="text-xs text-cosmic-100">
+                {getBortleDescription(bortleScale || 5, t)}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <span className="ml-auto font-semibold text-cosmic-50">
+          {bortleScale || "-"}
+        </span>
+      </div>
+      
+      {aqi !== undefined && (
+        <div className="flex items-center">
+          <CircleAlert className="h-5 w-5 mr-2 text-cosmic-300" />
+          <span className="font-medium">{t("Air Quality", "空气质量")}: </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={`ml-auto font-semibold ${getAqiInfo(aqi).color}`}>
+                  {aqi} ({getAqiInfo(aqi).label})
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
+                <p className="text-xs text-cosmic-100">
+                  {t(
+                    "European Air Quality Index (1-100+). Lower is better.", 
+                    "欧洲空气质量指数 (1-100+)。越低越好。"
+                  )}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
     </div>
   );
-});
-
-SecondaryConditions.displayName = 'SecondaryConditions';
+};
 
 export default SecondaryConditions;

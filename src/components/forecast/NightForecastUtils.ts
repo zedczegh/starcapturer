@@ -4,7 +4,7 @@
  */
 
 /**
- * Extract the nighttime hours (6 PM to 8 AM) from forecast data
+ * Extract the nighttime hours (6 PM to 7 AM) from forecast data
  * @param hourlyData Hourly forecast data
  * @returns Array of nighttime forecast entries
  */
@@ -21,8 +21,8 @@ export function extractNightForecasts(hourlyData: any): any[] {
     const date = new Date(timeStr);
     const hour = date.getHours();
     
-    // Consider night hours from 6 PM to 8 AM
-    if (hour >= 18 || hour < 8) {
+    // Consider night hours from 6 PM to 7 AM (18:00-7:00)
+    if (hour >= 18 || hour < 7) {
       const forecast = {
         time: timeStr,
         cloudCover: hourlyData.cloud_cover?.[i] || 0,
@@ -65,7 +65,68 @@ export function calculateAverageCloudCover(forecasts: any[]): number {
  * @returns Formatted time range string
  */
 export function formatNighttimeHoursRange(): string {
-  return "6PM-8AM";
+  return "6PM-7AM";
+}
+
+/**
+ * Calculate cloud cover for tonight based on forecast data and current time
+ * @param hourlyData Hourly forecast data
+ * @returns Average cloud cover for tonight
+ */
+export function calculateTonightCloudCover(hourlyData: any): number {
+  if (!hourlyData || !hourlyData.time || !Array.isArray(hourlyData.time)) {
+    return 0;
+  }
+  
+  const currentTime = new Date();
+  const currentHour = currentTime.getHours();
+  
+  const tonightForecasts = [];
+  const today = currentTime.toISOString().split('T')[0]; // Get today's date as YYYY-MM-DD
+  const tomorrow = new Date(currentTime);
+  tomorrow.setDate(currentTime.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  // Process each hour
+  for (let i = 0; i < hourlyData.time.length; i++) {
+    const timeStr = hourlyData.time[i];
+    const forecastDate = new Date(timeStr);
+    const forecastHour = forecastDate.getHours();
+    const dateStr = timeStr.split('T')[0];
+    
+    // If current time is before 6 PM, include all hours from 6 PM to 7 AM
+    if (currentHour < 18) {
+      if ((dateStr === today && forecastHour >= 18) || 
+          (dateStr === tomorrowStr && forecastHour < 7)) {
+        tonightForecasts.push({
+          time: timeStr,
+          cloudCover: hourlyData.cloud_cover?.[i] || 0
+        });
+      }
+    } 
+    // If current time is after 6 PM but before midnight, include hours from current time to 7 AM
+    else if (currentHour >= 18) {
+      if ((dateStr === today && forecastHour >= currentHour) || 
+          (dateStr === tomorrowStr && forecastHour < 7)) {
+        tonightForecasts.push({
+          time: timeStr,
+          cloudCover: hourlyData.cloud_cover?.[i] || 0
+        });
+      }
+    }
+    // If current time is after midnight but before 7 AM, include hours from current time to 7 AM
+    else if (currentHour < 7) {
+      if (dateStr === today && forecastHour >= currentHour && forecastHour < 7) {
+        tonightForecasts.push({
+          time: timeStr,
+          cloudCover: hourlyData.cloud_cover?.[i] || 0
+        });
+      }
+    }
+  }
+  
+  // Calculate the average cloud cover for tonight
+  return calculateAverageCloudCover(tonightForecasts);
 }
 
 /**
@@ -113,8 +174,8 @@ export function isNighttime(time: Date, lat: number, lng: number): boolean {
   const { sunrise, sunset } = calculateSunriseSunset(lat, lng, time);
   const hour = time.getHours();
   
-  // Simplified check - between 6 PM and 8 AM
-  return hour >= 18 || hour < 8;
+  // Simplified check - between 6 PM and 7 AM
+  return hour >= 18 || hour < 7;
 }
 
 /**
@@ -132,19 +193,19 @@ export function getNextNightPeriod(): { start: Date; end: Date } {
   if (currentHour < 18) {
     start.setHours(18, 0, 0, 0);
     end.setDate(end.getDate() + 1);
-    end.setHours(8, 0, 0, 0);
+    end.setHours(7, 0, 0, 0);
   } 
-  // If it's after 6 PM but before midnight, night already started, ends tomorrow at 8 AM
+  // If it's after 6 PM but before midnight, night already started, ends tomorrow at 7 AM
   else if (currentHour >= 18) {
     start.setHours(18, 0, 0, 0); // Night already started at 6 PM
     end.setDate(end.getDate() + 1);
-    end.setHours(8, 0, 0, 0);
+    end.setHours(7, 0, 0, 0);
   } 
-  // If it's after midnight but before 8 AM, night already started yesterday, ends today at 8 AM
-  else if (currentHour < 8) {
+  // If it's after midnight but before 7 AM, night already started yesterday, ends today at 7 AM
+  else if (currentHour < 7) {
     start.setDate(start.getDate() - 1);
     start.setHours(18, 0, 0, 0);
-    end.setHours(8, 0, 0, 0);
+    end.setHours(7, 0, 0, 0);
   }
   
   return { start, end };
