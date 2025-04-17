@@ -103,3 +103,37 @@ export function hasValidSiqsData(location: any): boolean {
   
   return false;
 }
+
+/**
+ * Check if location is likely in water
+ */
+export function isWaterLocation(
+  latitude: number,
+  longitude: number,
+  checkCoastal: boolean = true
+): boolean {
+  return isLikelyCoastalWater(latitude, longitude, checkCoastal);
+}
+
+/**
+ * Check if location is valid for astronomy
+ */
+export function isValidAstronomyLocation(
+  location: any
+): boolean {
+  if (!validateLocationData(location)) {
+    return false;
+  }
+  
+  // Don't filter out certified locations
+  if (location.certification || location.isDarkSkyReserve) {
+    return true;
+  }
+  
+  // Filter out water locations
+  if (isWaterLocation(location.latitude, location.longitude)) {
+    return false;
+  }
+  
+  return true;
+}

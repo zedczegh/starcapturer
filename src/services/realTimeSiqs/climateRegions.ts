@@ -1,118 +1,133 @@
 
 /**
- * Climate region definitions for SIQS adjustments
+ * Climate regions data and utilities for SIQS adjustments
  */
+
 import { ClimateRegion } from './siqsTypes';
 
-// Define climate regions with their boundaries and adjustment factors
+// Define major climate regions
 const climateRegions: ClimateRegion[] = [
+  // North America
   {
-    name: 'Desert',
-    description: 'Very low humidity and clear skies',
+    name: "North America - East Coast",
+    description: "Eastern coastal region with higher humidity",
     boundaries: {
-      latMin: 15, latMax: 35,
-      longMin: -120, longMax: -100 // Southwestern US deserts
+      latMin: 25,
+      latMax: 49,
+      longMin: -82,
+      longMax: -65
     },
-    adjustmentFactors: [1.1, 0.9, 1.05] // Good for astronomy
+    adjustmentFactors: [0.9, 1.0, 1.0]
   },
   {
-    name: 'Tropical',
-    description: 'High humidity and frequent cloud cover',
+    name: "North America - West Coast",
+    description: "Western coastal region with moderate climate",
     boundaries: {
-      latMin: -23.5, latMax: 23.5,
-      longMin: -180, longMax: 180 // Tropical zone (approximate)
+      latMin: 32,
+      latMax: 49,
+      longMin: -125,
+      longMax: -115
     },
-    adjustmentFactors: [0.85, 1.1, 0.9] // Less ideal for astronomy
+    adjustmentFactors: [1.0, 1.1, 0.9]
   },
   {
-    name: 'Arctic',
-    description: 'Cold temperatures but dark skies',
+    name: "North America - Southwest",
+    description: "Dry desert climate, excellent visibility",
     boundaries: {
-      latMin: 66.5, latMax: 90,
-      longMin: -180, longMax: 180 // Arctic circle and above
+      latMin: 27,
+      latMax: 42,
+      longMin: -115,
+      longMax: -103
     },
-    adjustmentFactors: [1.05, 0.8, 1.2] // Good dark skies, challenging conditions
+    adjustmentFactors: [1.2, 0.9, 1.0]
+  },
+  
+  // Europe
+  {
+    name: "Europe - Mediterranean",
+    description: "Mediterranean climate with warm, dry summers",
+    boundaries: {
+      latMin: 36,
+      latMax: 46,
+      longMin: -10,
+      longMax: 20
+    },
+    adjustmentFactors: [1.1, 1.0, 0.9]
+  },
+  {
+    name: "Europe - Northern",
+    description: "Northern European climate with frequent cloud cover",
+    boundaries: {
+      latMin: 48,
+      latMax: 60,
+      longMin: -10,
+      longMax: 30
+    },
+    adjustmentFactors: [0.8, 1.1, 1.0]
+  },
+  
+  // Australia
+  {
+    name: "Australia - Outback",
+    description: "Dry inland regions with excellent dark skies",
+    boundaries: {
+      latMin: -35,
+      latMax: -20,
+      longMin: 125,
+      longMax: 145
+    },
+    adjustmentFactors: [1.2, 1.0, 1.0]
+  },
+  
+  // Default region
+  {
+    name: "Default",
+    description: "Default region when no specific region matches",
+    boundaries: {
+      latMin: -90,
+      latMax: 90,
+      longMin: -180,
+      longMax: 180
+    },
+    adjustmentFactors: [1.0, 1.0, 1.0]
   }
 ];
 
 /**
- * Find the climate region for a given location
+ * Find climate region for a location
  */
-export function findClimateRegion(latitude: number, longitude: number): ClimateRegion | null {
-  // Normalize longitude to -180 to 180 range
-  const normLong = ((longitude + 540) % 360) - 180;
+export function findClimateRegion(latitude: number, longitude: number): ClimateRegion {
+  // Normalize longitude to -180 to 180
+  const normalizedLong = ((longitude + 180) % 360 + 360) % 360 - 180;
   
+  // Find matching region
   for (const region of climateRegions) {
-    const { latMin, latMax, longMin, longMax } = region.boundaries;
+    const { boundaries } = region;
     
-    // Check if location falls within this region's boundaries
     if (
-      latitude >= latMin && latitude <= latMax &&
-      normLong >= longMin && normLong <= longMax
+      latitude >= boundaries.latMin && 
+      latitude <= boundaries.latMax && 
+      normalizedLong >= boundaries.longMin && 
+      normalizedLong <= boundaries.longMax
     ) {
       return region;
     }
   }
   
-  // If no specific region found, return null
-  return null;
+  // Return default region if no match
+  return climateRegions[climateRegions.length - 1];
 }
 
 /**
- * Get climate region for a location
- * Used as an alias for findClimateRegion for compatibility
+ * Get climate adjustment factor based on region and condition
  */
-export function getClimateRegion(latitude: number, longitude: number): ClimateRegion | null {
-  return findClimateRegion(latitude, longitude);
-}
-
-/**
- * Get climate adjustment factor for a location
- */
-export function getClimateAdjustmentFactor(latitude: number, longitude: number, factorIndex = 0): number {
-  const region = findClimateRegion(latitude, longitude);
-  if (!region) {
-    return 1.0; // Default: no adjustment
+export function getClimateAdjustmentFactor(
+  region: ClimateRegion, 
+  conditionIndex: number = 0
+): number {
+  if (conditionIndex < 0 || conditionIndex >= region.adjustmentFactors.length) {
+    return 1.0; // Default no adjustment
   }
   
-  return region.adjustmentFactors[factorIndex] || 1.0;
-}
-
-/**
- * Get detailed climate info for a location
- */
-export function getLocationClimateInfo(latitude: number, longitude: number): any {
-  const region = findClimateRegion(latitude, longitude);
-  if (!region) {
-    return {
-      type: 'Temperate',
-      clearSkyRate: 65,
-      averageTemperature: 15
-    };
-  }
-  
-  // Return climate info based on region
-  const climateLookup: Record<string, any> = {
-    'Desert': {
-      type: 'Desert',
-      clearSkyRate: 85,
-      averageTemperature: 25
-    },
-    'Tropical': {
-      type: 'Tropical',
-      clearSkyRate: 50,
-      averageTemperature: 28
-    },
-    'Arctic': {
-      type: 'Arctic',
-      clearSkyRate: 60,
-      averageTemperature: -10
-    }
-  };
-  
-  return climateLookup[region.name] || {
-    type: 'Unknown',
-    clearSkyRate: 65,
-    averageTemperature: 15
-  };
+  return region.adjustmentFactors[conditionIndex];
 }

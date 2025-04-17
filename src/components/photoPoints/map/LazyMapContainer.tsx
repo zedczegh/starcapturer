@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -15,7 +16,7 @@ import L from 'leaflet';
 import CenteringPinpointButton from './CenteringPinpointButton';
 import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/locationValidator';
 
 configureLeaflet();
 
@@ -248,9 +249,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
             <LocationMarker
               key={locationId}
               location={location}
-              onClick={stableOnLocationClick}
+              onLocationClick={stableOnLocationClick}
               isHovered={isHovered}
-              onHover={onMarkerHover || (() => {})}
+              onHover={onMarkerHover}
               locationId={locationId}
               isCertified={isCertified}
               activeView={activeView}

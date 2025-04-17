@@ -25,34 +25,104 @@ export const UserMarker = memo(({ position }: { position: [number, number] }) =>
   return <Marker position={position} icon={userIcon} />;
 });
 
+// Create a memoized UserLocationMarker component for better performance
+export const UserLocationMarker = memo(({ position, currentSiqs }: { position: [number, number]; currentSiqs?: number | null }) => {
+  const userIcon = divIcon({
+    className: 'custom-user-marker',
+    html: `<div class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center shadow-md pulse-animation">
+            <div class="w-2 h-2 bg-white rounded-full"></div>
+            ${currentSiqs ? `<div class="absolute -top-6 -right-6 bg-white text-xs px-1 rounded-full shadow">${currentSiqs.toFixed(1)}</div>` : ''}
+          </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+
+  return <Marker position={position} icon={userIcon} />;
+});
+
 // Create a memoized LocationMarker component for better performance
 interface LocationMarkerProps {
   location: any;
-  userLocation: { latitude: number; longitude: number } | null;
-  onMarkerClick?: (location: any) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
+  onLocationClick?: (location: any) => void;
+  onClick?: (location: any) => void;
+  isHovered?: boolean;
+  onHover?: (id: string | null) => void;
+  locationId?: string;
+  isCertified?: boolean;
+  activeView?: 'certified' | 'calculated';
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
-export const LocationMarker = memo(({ location, userLocation, onMarkerClick }: LocationMarkerProps) => {
+export const LocationMarker = memo(({ 
+  location,
+  userLocation,
+  onLocationClick,
+  onClick,
+  isHovered,
+  onHover,
+  locationId,
+  isCertified,
+  activeView,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
+}: LocationMarkerProps) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const navigate = useNavigate();
   
   const handleMarkerClick = useCallback(() => {
     setIsPopupOpen(true);
-    if (onMarkerClick) {
-      onMarkerClick(location);
+    if (onLocationClick) {
+      onLocationClick(location);
     }
-  }, [location, onMarkerClick]);
+    if (onClick) {
+      onClick(location);
+    }
+  }, [location, onLocationClick, onClick]);
   
   const handleViewDetails = useCallback(() => {
-    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    const locId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    navigate(`/location/${locationId}`, {
+    navigate(`/location/${locId}`, {
       state: {
         ...location,
-        id: locationId
+        id: locId
       }
     });
   }, [location, navigate]);
+  
+  const handleMouseEnter = useCallback(() => {
+    if (onHover && locationId) {
+      onHover(locationId);
+    }
+  }, [onHover, locationId]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (onHover) {
+      onHover(null);
+    }
+  }, [onHover]);
+
+  const handleTouchStartEvent = useCallback((e: React.TouchEvent) => {
+    if (handleTouchStart && locationId) {
+      handleTouchStart(e, locationId);
+    }
+  }, [handleTouchStart, locationId]);
+
+  const handleTouchEndEvent = useCallback((e: React.TouchEvent) => {
+    if (handleTouchEnd && locationId) {
+      handleTouchEnd(e, locationId);
+    }
+  }, [handleTouchEnd, locationId]);
+
+  const handleTouchMoveEvent = useCallback((e: React.TouchEvent) => {
+    if (handleTouchMove) {
+      handleTouchMove(e);
+    }
+  }, [handleTouchMove]);
 
   // Calculate distance if user location is available
   const distance = userLocation 
@@ -82,7 +152,7 @@ export const LocationMarker = memo(({ location, userLocation, onMarkerClick }: L
   const markerIcon = divIcon({
     className: `custom-location-marker marker-${location.id}`,
     html: `<div class="marker-container" style="width:28px;height:28px;">
-            <div class="marker-icon" style="background-color:${getIconColor()};width:20px;height:20px;border-radius:50%;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+            <div class="marker-icon" style="background-color:${getIconColor()};width:20px;height:20px;border-radius:50%;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;align-items:center;justify-center;">
               ${location.certification || location.isDarkSkyReserve ? '<div style="width:6px;height:6px;background-color:white;border-radius:50%;"></div>' : ''}
             </div>
           </div>`,
@@ -94,12 +164,10 @@ export const LocationMarker = memo(({ location, userLocation, onMarkerClick }: L
     <Marker 
       position={[location.latitude, location.longitude]} 
       icon={markerIcon}
-      eventHandlers={{
-        click: handleMarkerClick
-      }}
+      eventHandlers={{ click: handleMarkerClick }}
     >
       <Popup
-        onClose={() => setIsPopupOpen(false)}
+        closeButton={true}
         offset={[0, -10]}
         autoPan={true}
       >
@@ -152,3 +220,4 @@ export const LocationMarker = memo(({ location, userLocation, onMarkerClick }: L
 // Add display names for React DevTools
 UserMarker.displayName = 'UserMarker';
 LocationMarker.displayName = 'LocationMarker';
+UserLocationMarker.displayName = 'UserLocationMarker';

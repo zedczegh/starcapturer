@@ -12,6 +12,8 @@ export interface WeatherDataWithClearSky {
   precipitation?: number;
   aqi?: number; // Air Quality Index
   clearSky: number; // Percentage of clear sky (100 - cloudCover)
+  latitude?: number;  // Optional location data 
+  longitude?: number; // Optional location data
 }
 
 // Basic weather data without clear sky
@@ -78,4 +80,19 @@ export interface MoonlessNightInfo {
   duration: number;
   daysUntilNewMoon: number;
   isTonight: boolean;
+}
+
+// Enhanced location with computed data
+export interface EnhancedLocation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  siqsScore: number;
+  bortleScale: number;
+  weatherData?: WeatherData;
+  certification?: string;
+  isDarkSkyReserve?: boolean;
+  distance?: number;
+  timestamp: string;
 }

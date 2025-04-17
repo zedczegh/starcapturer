@@ -137,3 +137,10 @@ export function sortLocationsBySiqs(locations: any[]): any[] {
     return scoreB - scoreA;
   });
 }
+
+/**
+ * Check if a location is certified (has certification or is a dark sky reserve)
+ */
+export function isCertifiedLocation(location: any): boolean {
+  return Boolean(location && (location.certification || location.isDarkSkyReserve));
+}
