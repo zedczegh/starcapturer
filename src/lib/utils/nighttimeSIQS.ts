@@ -3,6 +3,7 @@
  * Utility for calculating SIQS based specifically on nighttime conditions
  */
 import { calculateSIQS } from '@/lib/calculateSIQS';
+import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
 
 /**
  * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
@@ -54,6 +55,46 @@ export const isImagingImpossible = (cloudCover: number): boolean => {
 };
 
 /**
+ * Calculate tonight's cloud cover based on astronomical night for a location
+ * @param hourlyData Hourly forecast data
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Average cloud cover percentage during astronomical night
+ */
+export const calculateTonightCloudCover = (
+  hourlyData: any[],
+  latitude: number,
+  longitude: number
+): number => {
+  if (!hourlyData || !Array.isArray(hourlyData) || hourlyData.length === 0) {
+    return 0;
+  }
+  
+  try {
+    // Get astronomical night times
+    const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
+    
+    // Filter hourly data to only include astronomical night hours
+    const nightHours = hourlyData.filter(item => {
+      if (!item.time) return false;
+      const itemTime = new Date(item.time);
+      return itemTime >= nightStart && itemTime <= nightEnd;
+    });
+    
+    // If no night hours in the forecast, fall back to generic nighttime hours
+    if (nightHours.length === 0) {
+      return calculateAverageValue(filterNighttimeForecast(hourlyData), 'cloud_cover', 30);
+    }
+    
+    // Calculate average cloud cover during astronomical night
+    return calculateAverageValue(nightHours, 'cloud_cover', 30);
+  } catch (error) {
+    console.error("Error calculating tonight's cloud cover:", error);
+    return 30; // Fallback to moderate cloud cover
+  }
+};
+
+/**
  * Calculate SIQS score focusing on nighttime conditions from forecast data
  * @param locationData Current location data
  * @param forecastData Hourly forecast data
@@ -70,54 +111,63 @@ export const calculateNighttimeSIQS = (
     return null;
   }
   
-  // Extract nighttime hours from the forecast
-  const nightForecast = filterNighttimeForecast(forecastData.hourly);
-  
-  if (nightForecast.length === 0) {
-    console.log("No nighttime hours in forecast data");
+  try {
+    // Extract coordinates
+    const latitude = locationData.latitude || 0;
+    const longitude = locationData.longitude || 0;
+    
+    // Calculate cloud cover for astronomical night specifically
+    const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
+    
+    // Extract nighttime hours from the forecast as backup
+    const nightForecast = filterNighttimeForecast(forecastData.hourly);
+    
+    if (nightForecast.length === 0 && !tonightCloudCover) {
+      console.log("No nighttime hours in forecast data");
+      return null;
+    }
+    
+    // Check if average cloud cover makes imaging impossible
+    if (isImagingImpossible(tonightCloudCover)) {
+      console.log(`Tonight's cloud cover is ${tonightCloudCover}%, which exceeds 40% threshold`);
+      return {
+        score: 0,
+        isViable: false,
+        factors: [
+          {
+            name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
+            score: 0,
+            description: translator
+              ? translator(`Cloud cover of ${Math.round(tonightCloudCover)}% makes imaging impossible`, `${Math.round(tonightCloudCover)}%的云量使成像不可能`)
+              : `Cloud cover of ${Math.round(tonightCloudCover)}% makes imaging impossible`
+          }
+        ]
+      };
+    }
+    
+    // Calculate average values for key weather conditions using nighttime hours
+    const avgWindSpeed = calculateAverageValue(nightForecast, 'windSpeed');
+    const avgHumidity = calculateAverageValue(nightForecast, 'humidity');
+    
+    // Calculate SIQS using the average nighttime conditions
+    const siqsResult = calculateSIQS({
+      cloudCover: tonightCloudCover,
+      bortleScale: locationData.bortleScale || 5,
+      seeingConditions: locationData.seeingConditions || 3,
+      windSpeed: avgWindSpeed,
+      humidity: avgHumidity,
+      moonPhase: locationData.moonPhase || 0,
+      precipitation: calculateAverageValue(nightForecast, 'precipitation'),
+      aqi: locationData.weatherData?.aqi,
+      // Add nighttime forecast data for more detailed analysis
+      nightForecast: nightForecast
+    });
+    
+    console.log(`Calculated nighttime SIQS: ${siqsResult.score} (using astronomical night cloud cover: ${tonightCloudCover}%)`);
+    
+    return siqsResult;
+  } catch (error) {
+    console.error("Error calculating nighttime SIQS:", error);
     return null;
   }
-  
-  // Calculate average values for key weather conditions
-  const avgCloudCover = calculateAverageValue(nightForecast, 'cloudCover');
-  const avgWindSpeed = calculateAverageValue(nightForecast, 'windSpeed');
-  const avgHumidity = calculateAverageValue(nightForecast, 'humidity');
-  
-  // Check if average cloud cover makes imaging impossible
-  if (isImagingImpossible(avgCloudCover)) {
-    console.log(`Average nighttime cloud cover is ${avgCloudCover}%, which exceeds 40% threshold`);
-    return {
-      score: 0,
-      isViable: false,
-      factors: [
-        {
-          name: translator("Cloud Cover", "云量"),
-          score: 0,
-          description: translator(
-            `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`,
-            `${Math.round(avgCloudCover)}%的云量使成像不可能`
-          )
-        }
-      ]
-    };
-  }
-  
-  // Calculate SIQS using the average nighttime conditions
-  const siqsResult = calculateSIQS({
-    cloudCover: avgCloudCover,
-    bortleScale: locationData.bortleScale || 5,
-    seeingConditions: locationData.seeingConditions || 3,
-    windSpeed: avgWindSpeed,
-    humidity: avgHumidity,
-    moonPhase: locationData.moonPhase || 0,
-    precipitation: calculateAverageValue(nightForecast, 'precipitation'),
-    aqi: locationData.weatherData?.aqi,
-    // Add nighttime forecast data for more detailed analysis
-    nightForecast: nightForecast
-  });
-  
-  console.log(`Calculated nighttime SIQS: ${siqsResult.score}`);
-  console.log(`Using nighttime forecast for SIQS calculation: ${siqsResult.score}`);
-  
-  return siqsResult;
 };
