@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef } from "react";
+import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -11,6 +11,8 @@ import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PageLoader from "@/components/loaders/PageLoader";
 import NavBar from "@/components/NavBar";
+import { getCurrentPosition } from "@/utils/geolocationUtils";
+import { toast } from "sonner";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -26,6 +28,7 @@ const LocationDetails = () => {
   const { t } = useLanguage();
   const siqsUpdateRequiredRef = useRef(true);
   const initialRenderRef = useRef(true);
+  const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   
   const {
     locationData, 
@@ -38,7 +41,8 @@ const LocationDetails = () => {
   } = useLocationDataManager({ 
     id, 
     initialState: location.state, 
-    navigate 
+    navigate,
+    noRedirect: true // Prevent automatic redirection
   });
 
   // Use the SIQS updater to keep scores in sync with forecast data
@@ -48,6 +52,52 @@ const LocationDetails = () => {
     setLocationData,
     t
   );
+
+  // Handle using current location when no location data is available
+  useEffect(() => {
+    // If we're not loading and still don't have location data, get the current location
+    if (!isLoading && !locationData && !loadingCurrentLocation) {
+      handleUseCurrentLocation();
+    }
+  }, [isLoading, locationData]);
+
+  const handleUseCurrentLocation = () => {
+    setLoadingCurrentLocation(true);
+    toast.success(t("Getting your current location...", "正在获取您的位置..."));
+    
+    getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        // Create a minimal location object
+        const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+        
+        // Generate location data with basic information
+        const locationData = {
+          id: locationId,
+          name: t("Current Location", "当前位置"),
+          latitude,
+          longitude,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Navigate to the generated location
+        navigate(`/location/${locationId}`, { 
+          state: locationData,
+          replace: true 
+        });
+        
+        setLoadingCurrentLocation(false);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        toast.error(t("Could not get your location. Please check browser permissions.", 
+                     "无法获取您的位置。请检查浏览器权限。"));
+        setLoadingCurrentLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+  };
 
   // Run once on initial render to trigger page refresh
   useEffect(() => {
@@ -183,7 +233,10 @@ const LocationDetails = () => {
       <>
         <NavBar />
         <Suspense fallback={<PageLoader />}>
-          <LocationError />
+          <LocationError 
+            onUseCurrentLocation={handleUseCurrentLocation} 
+            isLoading={loadingCurrentLocation}
+          />
         </Suspense>
       </>
     );

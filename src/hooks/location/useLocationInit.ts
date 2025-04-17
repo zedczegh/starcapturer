@@ -15,7 +15,8 @@ export { handleLocationChange } from "./locationChangeHandler";
 export const useLocationInit = (
   id: string | undefined,
   initialState: any,
-  navigate: NavigateFunction
+  navigate: NavigateFunction,
+  noRedirect: boolean = false
 ) => {
   const [locationData, setLocationData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +82,17 @@ export const useLocationInit = (
       return;
     }
 
-    // If we reach here, we need to initialize from external sources
+    // If we reach here, we need to initialize from external sources or handle missing data
+    if (noRedirect) {
+      // If noRedirect is true, just set loading to false and return null
+      // The parent component will handle getting the current location
+      console.log("No location data found, but noRedirect flag is set. Letting parent component handle it.");
+      setIsLoading(false);
+      loadCompletedRef.current = true;
+      return;
+    }
+
+    // Initialize from external sources
     initializeLocationData({
       id,
       initialState,
@@ -94,7 +105,7 @@ export const useLocationInit = (
     });
     
     loadCompletedRef.current = true;
-  }, [id, initialState, navigate, t, toast, language, initAttempted, updateLocationDataSafely]);
+  }, [id, initialState, navigate, t, toast, language, initAttempted, updateLocationDataSafely, noRedirect]);
 
   // Handle location data initialization on mount and when deps change
   useEffect(() => {
