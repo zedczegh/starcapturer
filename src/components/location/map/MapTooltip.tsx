@@ -104,12 +104,17 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      eventHandlers={{
-        add: handlePopupOpen,
-        remove: handlePopupClose
-      }}
     >
-      <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
+      <div 
+        className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}
+        // Use onMount and onUnmount in this wrapper div instead of eventHandlers
+        ref={(node) => {
+          if (node && !isOpen) {
+            setIsOpen(true);
+            handlePopupOpen();
+          }
+        }}
+      >
         <div className="font-medium text-sm">{name}</div>
         
         {/* Display detailed location when available */}

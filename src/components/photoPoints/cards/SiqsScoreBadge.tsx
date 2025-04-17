@@ -20,15 +20,15 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Convert score to number using our improved helper function
   const numericScore = getSiqsScore(score);
   
-  // Skip rendering if score is 0 (invalid) and not loading
-  if (numericScore <= 0 && !loading) {
+  // Skip rendering if score is 0 (invalid) and not loading and not certified
+  if (numericScore <= 0 && !loading && !isCertified) {
     return null;
   }
   
-  // Get appropriate color based on score value
+  // Get appropriate color based on score value or loading state
   const getColor = () => {
-    if (numericScore <= 0) {
-      // For loading state with no score yet
+    if (loading || numericScore <= 0) {
+      // For loading state or when no score yet
       return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
     }
     
@@ -48,6 +48,26 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
       >
         <div className="h-3.5 w-12 bg-cosmic-600/50 rounded-full"></div>
+      </motion.div>
+    );
+  }
+  
+  // Show certification indicator when there's no score
+  if (numericScore <= 0 && isCertified) {
+    return (
+      <motion.div 
+        className="flex items-center bg-cosmic-700/30 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        <Star 
+          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
+          fill="#facc15" 
+        />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-yellow-400`}>
+          Certified
+        </span>
       </motion.div>
     );
   }

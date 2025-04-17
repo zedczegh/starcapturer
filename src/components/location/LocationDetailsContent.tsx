@@ -63,12 +63,12 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
   }
   
   // Define handler for location updates
-  const handleLocationCoordinateUpdate = (latitude: number, longitude: number) => {
+  const handleLocationCoordinateUpdate = (location: { latitude: number; longitude: number; name: string }) => {
     if (onLocationUpdate) {
       const updatedLocation = {
         ...locationData,
-        latitude,
-        longitude
+        latitude: location.latitude,
+        longitude: location.longitude
       };
       onLocationUpdate(updatedLocation);
     }
