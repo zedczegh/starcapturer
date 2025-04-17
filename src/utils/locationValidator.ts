@@ -18,6 +18,16 @@ const majorWaterBodies = [
   { name: 'Arabian Sea', lat: 15, lon: 65 },
 ];
 
+// Coastlines with known water presence (simplified)
+const coastalRegions = [
+  { name: 'US West Coast', minLat: 32, maxLat: 49, minLon: -125, maxLon: -122 },
+  { name: 'US East Coast', minLat: 25, maxLat: 45, minLon: -82, maxLon: -75 },
+  { name: 'Mediterranean Coast', minLat: 30, maxLat: 45, minLon: -5, maxLon: 36 },
+  { name: 'China East Coast', minLat: 18, maxLat: 41, minLon: 117, maxLon: 124 },
+  { name: 'Japan Coast', minLat: 31, maxLat: 46, minLon: 129, maxLon: 142 },
+  { name: 'Australia Coast', minLat: -39, maxLat: -10, minLon: 113, maxLon: 154 },
+];
+
 /**
  * Check if a location is likely to be on water
  * @param latitude Latitude
@@ -64,6 +74,44 @@ export function isWaterLocation(
     
     if (distance < threshold) {
       return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a location is likely in a coastal water area
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @returns True if location is likely coastal water
+ */
+export function isLikelyCoastalWater(latitude: number, longitude: number): boolean {
+  // Normalize longitude to -180 to 180 range
+  const normalizedLon = ((longitude + 180) % 360 + 360) % 360 - 180;
+  
+  // Check if in a known coastal region first
+  for (const region of coastalRegions) {
+    if (
+      latitude >= region.minLat && 
+      latitude <= region.maxLat && 
+      normalizedLon >= region.minLon && 
+      normalizedLon <= region.maxLon
+    ) {
+      // For coastal regions, we need additional checks to determine
+      // if the location is actually in water or on land
+      
+      // This is a simplified approach - real implementation would use 
+      // shoreline GeoJSON data for precise water/land detection
+      
+      // Increased probability of being in water as we move toward major water bodies
+      for (const waterBody of majorWaterBodies) {
+        const distance = haversineDistance(latitude, longitude, waterBody.lat, waterBody.lon);
+        // Within coastal region and also close to major water body - likely in water
+        if (distance < 100) {
+          return true;
+        }
+      }
     }
   }
   

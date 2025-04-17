@@ -5,6 +5,7 @@
 
 export interface SiqsResult {
   siqs: number;
+  score: number; // Added score property for compatibility
   isViable: boolean;
   factors?: SiqsFactor[];
   metadata?: Record<string, any>; // Added metadata property
@@ -70,6 +71,8 @@ export interface WeatherData {
 
 export interface WeatherDataWithClearSky extends WeatherData {
   clearSky: number;
+  latitude?: number; // Added for compatibility
+  longitude?: number; // Added for compatibility
 }
 
 export interface SiqsCalculationOptions {
@@ -79,6 +82,7 @@ export interface SiqsCalculationOptions {
   adjustForElevation?: boolean;
   includeMetadata?: boolean;
   locale?: string;
+  anomalyDetection?: boolean; // Added for compatibility
 }
 
 export interface MoonlessNightInfo {
@@ -87,4 +91,3 @@ export interface MoonlessNightInfo {
   endTime: string;
   duration: number;
 }
-

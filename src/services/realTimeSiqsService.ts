@@ -1,90 +1,124 @@
 
-import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
-import { SiqsResult } from './realTimeSiqs/siqsTypes';
+import { calculateSiqs as calculateSiqsCore } from '@/lib/calculateSIQS';
+import { generateSiqsCacheKey, cacheSiqsResult, getCachedSiqsResult, clearSiqsCache } from './realTimeSiqs/siqsCache';
 
-// Cache for SIQS calculations
-const siqsCache: Record<string, {result: SiqsResult, timestamp: number}> = {};
+// A simple cache to store location SIQS results
+const locationCache: Record<string, any> = {};
 
 /**
- * Calculate SIQS score with caching
+ * Calculate real-time SIQS score for a location
+ * This version uses caching for better performance
  */
 export async function calculateSiqs(
   latitude: number,
   longitude: number,
   bortleScale: number,
-  weatherData?: any,
-  options: any = {}
-): Promise<SiqsResult> {
+  weatherData?: any
+) {
   try {
     // Generate cache key
-    const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}-${JSON.stringify(weatherData || {})}`;
+    const cacheKey = generateSiqsCacheKey(latitude, longitude, bortleScale, weatherData);
     
-    // Check cache (valid for 10 minutes)
-    const cachedResult = siqsCache[cacheKey];
-    if (cachedResult && (Date.now() - cachedResult.timestamp) < 10 * 60 * 1000) {
-      return cachedResult.result;
+    // Check cache first
+    const cachedResult = getCachedSiqsResult(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
     }
     
-    // Calculate new result - export calculateRealTimeSiqs from the siqsCalculator module
-    const result = await calculateRealTimeSiqs(
-      latitude,
-      longitude,
-      bortleScale
-    );
+    // If not in cache, calculate SIQS
+    const result = await calculateSiqsCore({
+      cloudCover: weatherData?.cloudCover || 0,
+      bortleScale: bortleScale || 5,
+      seeingConditions: 3, // Default to average
+      windSpeed: weatherData?.windSpeed || 0,
+      humidity: weatherData?.humidity || 0,
+      moonPhase: 0.25, // Default if not provided
+      aqi: weatherData?.aqi || 0
+    });
+    
+    // Make sure result has both score and siqs properties
+    if (result && typeof result.siqs === 'number' && typeof result.score === 'undefined') {
+      result.score = result.siqs;
+    } else if (result && typeof result.score === 'number' && typeof result.siqs === 'undefined') {
+      result.siqs = result.score;
+    }
     
     // Cache the result
-    siqsCache[cacheKey] = {
-      result,
-      timestamp: Date.now()
-    };
+    cacheSiqsResult(cacheKey, result);
     
     return result;
   } catch (error) {
-    console.error("Error calculating SIQS:", error);
-    return {
-      siqs: 0,
-      isViable: false
-    };
+    console.error('Error calculating SIQS:', error);
+    return { siqs: 0, score: 0, isViable: false };
   }
 }
 
 /**
- * Batch calculate SIQS for multiple locations
+ * Clear the SIQS calculation cache
  */
-export async function batchCalculateSiqs(
-  locations: Array<{latitude: number, longitude: number, bortleScale?: number, weatherData?: any}>,
-  defaultWeatherData?: any
-): Promise<SiqsResult[]> {
-  try {
-    return await Promise.all(
-      locations.map(loc => 
-        calculateSiqs(
-          loc.latitude,
-          loc.longitude,
-          loc.bortleScale || 5,
-          loc.weatherData || defaultWeatherData
-        )
-      )
-    );
-  } catch (error) {
-    console.error("Error batch calculating SIQS:", error);
-    return locations.map(() => ({
-      siqs: 0,
-      isViable: false
-    }));
-  }
+export function clearSiqsCalculationCache() {
+  clearSiqsCache();
 }
 
 /**
- * Clear SIQS calculation cache
+ * Update locations with real-time SIQS scores
  */
-export function clearSiqsCache(): void {
-  Object.keys(siqsCache).forEach(key => {
-    delete siqsCache[key];
+export async function updateLocationsWithRealTimeSiqs(locations: any[], weatherData?: any) {
+  if (!locations || !Array.isArray(locations) || locations.length === 0) {
+    return [];
+  }
+
+  return Promise.all(locations.map(async (location) => {
+    try {
+      // Skip invalid locations
+      if (!location || !location.latitude || !location.longitude) {
+        return location;
+      }
+
+      // Create a cache key
+      const cacheKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+      
+      // Check if we have a recent cache entry (within 10 minutes)
+      const cachedResult = locationCache[cacheKey];
+      if (cachedResult && (Date.now() - cachedResult.timestamp) < 10 * 60 * 1000) {
+        return {
+          ...location,
+          siqsResult: cachedResult.siqsResult
+        };
+      }
+      
+      // Calculate SIQS for this location
+      const siqsResult = await calculateSiqs(
+        location.latitude,
+        location.longitude,
+        location.bortleScale || 5,
+        location.weatherData || weatherData
+      );
+      
+      // Cache the result
+      locationCache[cacheKey] = {
+        siqsResult,
+        timestamp: Date.now()
+      };
+      
+      // Return updated location
+      return {
+        ...location,
+        siqsResult
+      };
+    } catch (error) {
+      console.error('Error updating location with SIQS:', error);
+      return location;
+    }
+  }));
+}
+
+/**
+ * Clear the location cache
+ */
+export function clearLocationCache() {
+  Object.keys(locationCache).forEach(key => {
+    delete locationCache[key];
   });
-  console.log("SIQS cache cleared");
+  console.log('Location cache cleared');
 }
-
-// Re-export calculateRealTimeSiqs for direct use
-export { calculateRealTimeSiqs };
-

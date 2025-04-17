@@ -1,99 +1,57 @@
 
-/**
- * SIQS adjustment functions for environmental factors
- */
-
-import { ClimateRegion } from './siqsTypes';
+import { WeatherData } from './siqsTypes';
+import { findClimateRegion } from './climateRegions';
 
 /**
- * Adjust score based on climate region
- * @param score - Base score (0-10)
- * @param factor - Factor type (cloudCover, humidity, temperature)
- * @param region - Climate region information
- * @returns Adjusted score (0-10)
+ * Apply intelligent adjustments to SIQS based on location and conditions
+ * @param baseScore Base SIQS score
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param weatherData Weather data
+ * @returns Adjusted SIQS score
  */
-export function adjustForClimate(
-  score: number, 
-  factor: 'cloudCover' | 'humidity' | 'temperature', 
-  region?: ClimateRegion | null
+export function applyIntelligentAdjustments(
+  baseScore: number,
+  latitude: number,
+  longitude: number,
+  weatherData?: WeatherData
 ): number {
-  if (!region) return score;
+  let adjustedScore = baseScore;
   
-  // Get adjustment factor index based on factor type
-  let adjustmentIndex = 0;
-  switch (factor) {
-    case 'cloudCover': adjustmentIndex = 0; break;
-    case 'humidity': adjustmentIndex = 1; break;
-    case 'temperature': adjustmentIndex = 2; break;
+  // Apply climate region adjustment
+  const climateRegion = findClimateRegion(latitude, longitude);
+  if (climateRegion) {
+    // Get climate-specific adjustment
+    const regionFactor = climateRegion.adjustmentFactors[0] || 1.0;
+    adjustedScore *= regionFactor;
   }
   
-  // Apply regional adjustment factor
-  const adjustmentFactor = region.adjustmentFactors[adjustmentIndex] || 1.0;
-  return Math.min(10, Math.max(0, score * adjustmentFactor));
-}
-
-/**
- * Adjust score based on time of day and year
- * @param score - Base score (0-10)
- * @param latitude - Location latitude
- * @param longitude - Location longitude
- * @returns Adjusted score (0-10)
- */
-export function adjustForTime(
-  score: number, 
-  latitude: number, 
-  longitude: number
-): number {
-  try {
-    // Determine current season based on latitude and month
-    const now = new Date();
-    const month = now.getMonth(); // 0-11 (Jan-Dec)
-    
-    // Northern hemisphere: summer (5-8), winter (11-2)
-    // Southern hemisphere: opposite
-    const isNorthernHemisphere = latitude >= 0;
-    const isSummerMonth = isNorthernHemisphere ? 
-      (month >= 5 && month <= 8) : 
-      (month <= 2 || month >= 11);
-    
-    // Summer tends to have better conditions in most regions
-    // Simple seasonal adjustment
-    const seasonalFactor = isSummerMonth ? 1.05 : 0.95;
-    
-    // Time of day adjustment - better at night
-    const hour = now.getHours();
-    const isDaytime = hour >= 6 && hour <= 18;
-    
-    // During daytime, cloud detection is easier but viewing conditions less relevant
-    // At night, account for multiple factors
-    const timeOfDayFactor = isDaytime ? 1.0 : 1.1;
-    
-    return Math.min(10, Math.max(0, score * seasonalFactor * timeOfDayFactor));
-  } catch (error) {
-    console.error("Error in time adjustment:", error);
-    return score;
+  // Apply elevation adjustment (if we had elevation data)
+  // For now, assume higher SIQS at high latitudes due to darker skies
+  const latitudeAbs = Math.abs(latitude);
+  if (latitudeAbs > 50) {
+    // Polar regions get a bonus for darker skies
+    adjustedScore *= 1.1;
   }
-}
-
-/**
- * Adjust score based on light pollution (Bortle scale)
- * @param score - Base combined score (0-10)
- * @param bortleScale - Bortle scale value (1-9)
- * @returns Adjusted score (0-10)
- */
-export function adjustForLight(
-  score: number, 
-  bortleScale: number
-): number {
-  // Validate Bortle scale input
-  const validBortle = Math.min(9, Math.max(1, bortleScale));
   
-  // Calculate light pollution factor
-  // Bortle 1 (best) → 1.2
-  // Bortle 5 (average) → 1.0
-  // Bortle 9 (worst) → 0.6
-  const lightFactor = 1.2 - ((validBortle - 1) * 0.075);
+  // Apply weather condition adjustments
+  if (weatherData) {
+    // Adjust for extreme temperatures
+    if (weatherData.temperature < -20 || weatherData.temperature > 35) {
+      adjustedScore *= 0.9; // Penalty for uncomfortable viewing conditions
+    }
+    
+    // Adjust for high wind speed
+    if (weatherData.windSpeed && weatherData.windSpeed > 20) {
+      adjustedScore *= 0.85; // Significant penalty for high winds
+    }
+    
+    // Adjust for air quality
+    if (weatherData.aqi && weatherData.aqi > 100) {
+      adjustedScore *= 0.8; // Penalty for poor air quality
+    }
+  }
   
-  return Math.min(10, Math.max(0, score * lightFactor));
+  // Ensure score stays within valid range
+  return Math.max(1, Math.min(10, adjustedScore));
 }
-

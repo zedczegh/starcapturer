@@ -2,7 +2,16 @@
 /**
  * Moon-related utility functions
  */
-import { MoonlessNightInfo } from '@/services/realTimeSiqs/siqsTypes';
+
+/**
+ * Moonless night information
+ */
+export interface MoonlessNightInfo {
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+}
 
 /**
  * Calculate moonless nights for a location
@@ -32,6 +41,23 @@ export function calculateMoonlessNights(
   }
   
   return moonlessNights;
+}
+
+/**
+ * Calculate the duration of moonless nights (in hours)
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Average duration in hours
+ */
+export function calculateMoonlessNightDuration(
+  latitude: number,
+  longitude: number
+): number {
+  // This is a simplified implementation
+  // In a real implementation, we would calculate based on moon phase and location
+  
+  // For now, return an average moonless night duration
+  return 6.5; // 6.5 hours on average
 }
 
 /**

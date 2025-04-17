@@ -1,99 +1,199 @@
 
-import { evaluateCloudCover, evaluateHumidity, evaluateTemperature, evaluateWindSpeed } from './siqsEvaluators';
-import { adjustForClimate, adjustForTime, adjustForLight } from './siqsAdjustments';
-import { getClimateRegion } from './climateRegions';
-import { SiqsResult, SiqsFactor, WeatherData, SiqsCalculationOptions } from './siqsTypes';
+/**
+ * Core SIQS calculation logic
+ */
+
+import { SiqsResult, WeatherDataWithClearSky, SiqsCalculationOptions, SiqsFactor } from './siqsTypes';
+import { applyIntelligentAdjustments } from './siqsAdjustments';
+import { findClimateRegion, getClimateAdjustmentFactor } from './climateRegions';
 
 /**
- * Calculate Sky Image Quality Score (SIQS) based on weather and location data
+ * Calculate basic SIQS score based on Bortle scale and weather
+ * This is a simplified version of the algorithm
  */
-export async function calculateRealTimeSiqs(
-  latitude: number,
-  longitude: number,
-  bortleScale: number,
-  weatherData?: WeatherData,
+export function calculateSiqsScore(
+  bortleScale: number, 
+  weatherData: WeatherDataWithClearSky,
   options: SiqsCalculationOptions = {}
-): Promise<SiqsResult> {
-  try {
-    // Default options
-    const { includeFactors = true } = options;
+): SiqsResult {
+  // Validate inputs
+  const validBortle = Math.max(1, Math.min(9, bortleScale));
+  
+  // Base score inversely related to Bortle scale (1-9)
+  // Bortle 1 = best (9 points), Bortle 9 = worst (1 point)
+  const bortleBase = 10 - validBortle;
+  
+  // Clear sky factor (0-1)
+  const clearSkyFactor = Math.min(1, Math.max(0, weatherData.clearSky / 100));
+  
+  // Weather factors
+  const tempFactor = getTemperatureFactor(weatherData.temperature);
+  const humidityFactor = getHumidityFactor(weatherData.humidity);
+  const windFactor = getWindFactor(weatherData.windSpeed || 0);
+  
+  // Calculate factors
+  const factors: SiqsFactor[] = [];
+  
+  // Light pollution factor (40% weight)
+  const lightPollutionScore = bortleBase;
+  factors.push({
+    name: 'Light Pollution',
+    score: lightPollutionScore,
+    description: `Bortle scale ${validBortle}/9`,
+    value: validBortle
+  });
+  
+  // Cloud cover factor (30% weight)
+  const cloudCoverScore = clearSkyFactor * 10;
+  factors.push({
+    name: 'Cloud Cover',
+    score: cloudCoverScore,
+    description: `${100 - (weatherData.cloudCover || 0)}% clear`,
+    value: weatherData.cloudCover
+  });
+  
+  // Humidity factor (10% weight)
+  const humidityScore = humidityFactor * 10;
+  factors.push({
+    name: 'Humidity',
+    score: humidityScore,
+    description: `${weatherData.humidity}% relative humidity`,
+    value: weatherData.humidity
+  });
+  
+  // Wind factor (10% weight)
+  const windScore = windFactor * 10;
+  factors.push({
+    name: 'Wind',
+    score: windScore,
+    description: `${weatherData.windSpeed || 0} km/h`,
+    value: weatherData.windSpeed
+  });
+  
+  // Temperature factor (10% weight)
+  const temperatureScore = tempFactor * 10;
+  factors.push({
+    name: 'Temperature',
+    score: temperatureScore,
+    description: `${weatherData.temperature}°C`,
+    value: weatherData.temperature
+  });
+  
+  // Calculate composite score with proper weighting
+  let compositeScore = 
+    (lightPollutionScore * 0.4) +
+    (cloudCoverScore * 0.3) +
+    (humidityScore * 0.1) +
+    (windScore * 0.1) +
+    (temperatureScore * 0.1);
+  
+  // Air quality adjustment if available
+  if (weatherData.aqi !== undefined) {
+    const aqiFactor = getAqiFactor(weatherData.aqi);
+    compositeScore *= aqiFactor;
     
-    // Use provided weather data or generate default values
-    const weather = weatherData || {
-      temperature: 15,
-      humidity: 50,
-      cloudCover: 30,
-      windSpeed: 5,
-      clearSky: 70
-    };
-
-    // Core factors evaluation
-    const cloudScore = evaluateCloudCover(weather.cloudCover);
-    const humidityScore = evaluateHumidity(weather.humidity);
-    const temperatureScore = evaluateTemperature(weather.temperature);
-    const windScore = evaluateWindSpeed(weather.windSpeed || 0);
-    
-    // Get regional adjustments
-    const climateRegion = getClimateRegion(latitude, longitude);
-    
-    // Apply adjustments
-    const adjustedCloudScore = adjustForClimate(cloudScore, 'cloudCover', climateRegion);
-    const adjustedHumidityScore = adjustForClimate(humidityScore, 'humidity', climateRegion);
-    const adjustedTempScore = adjustForClimate(temperatureScore, 'temperature', climateRegion);
-    
-    // Calculate time adjustments (time of day/year)
-    const timeAdjustedCloud = adjustForTime(adjustedCloudScore, latitude, longitude);
-    
-    // Light pollution adjustments based on Bortle scale
-    const lightAdjustedScore = adjustForLight(
-      (timeAdjustedCloud + adjustedHumidityScore + adjustedTempScore + windScore) / 4,
-      bortleScale
-    );
-    
-    // Final SIQS calculation (scale 0-10)
-    const siqs = Math.min(10, Math.max(0, lightAdjustedScore));
-    
-    // Determine viability (score >= 5.0 is generally viable)
-    const isViable = siqs >= 5.0;
-    
-    // Create result object
-    const result: SiqsResult = {
-      siqs,
-      isViable
-    };
-    
-    // Include factor details if requested
-    if (includeFactors) {
-      result.factors = [
-        {
-          name: 'Cloud Cover',
-          score: timeAdjustedCloud,
-          description: `${weather.cloudCover}% cover, adjusted for location and time`
-        },
-        {
-          name: 'Humidity',
-          score: adjustedHumidityScore,
-          description: `${weather.humidity}% humidity, adjusted for climate`
-        },
-        {
-          name: 'Temperature',
-          score: adjustedTempScore,
-          description: `${weather.temperature}°C, affects seeing conditions`
-        },
-        {
-          name: 'Wind',
-          score: windScore,
-          description: `${weather.windSpeed || 0} km/h, affects stability`
-        }
-      ];
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('Error calculating SIQS:', error);
-    return {
-      siqs: 0,
-      isViable: false
+    factors.push({
+      name: 'Air Quality',
+      score: aqiFactor * 10,
+      description: `AQI: ${weatherData.aqi}`,
+      value: weatherData.aqi
+    });
+  }
+  
+  // Round to one decimal place
+  compositeScore = Math.round(compositeScore * 10) / 10;
+  
+  // Determine if conditions are viable for astronomy
+  // Generally, SIQS >= 5.0 is considered viable
+  const isViable = compositeScore >= 5.0;
+  
+  // Create the final result
+  const result: SiqsResult = {
+    siqs: compositeScore,
+    score: compositeScore, // Set both for compatibility
+    isViable,
+    factors: options.includeFactors ? factors : undefined
+  };
+  
+  // Add metadata if requested
+  if (options.includeMetadata) {
+    result.metadata = {
+      timestamp: new Date().toISOString(),
+      bortleScale: validBortle,
+      weatherSnapshot: { ...weatherData }
     };
   }
+  
+  return result;
+}
+
+/**
+ * Get temperature factor (0-1)
+ * Optimal temperatures are between 5°C and 25°C
+ */
+function getTemperatureFactor(temperature: number): number {
+  if (temperature >= 5 && temperature <= 25) {
+    return 1.0; // Optimal range
+  }
+  
+  if (temperature < -10 || temperature > 35) {
+    return 0.6; // Poor conditions
+  }
+  
+  if (temperature < 0 || temperature > 30) {
+    return 0.8; // Below average conditions
+  }
+  
+  return 0.9; // Slight impact
+}
+
+/**
+ * Get humidity factor (0-1)
+ * Lower humidity is better for astronomy
+ */
+function getHumidityFactor(humidity: number): number {
+  if (humidity <= 40) {
+    return 1.0; // Excellent
+  }
+  
+  if (humidity >= 90) {
+    return 0.5; // Poor
+  }
+  
+  // Linear scale between 40% and 90%
+  return 1.0 - ((humidity - 40) / 100);
+}
+
+/**
+ * Get wind factor (0-1)
+ * Moderate wind is OK, strong wind is bad for astronomy
+ */
+function getWindFactor(windSpeed: number): number {
+  if (windSpeed <= 10) {
+    return 1.0; // Excellent
+  }
+  
+  if (windSpeed >= 30) {
+    return 0.4; // Poor
+  }
+  
+  // Linear scale between 10km/h and 30km/h
+  return 1.0 - ((windSpeed - 10) / 40);
+}
+
+/**
+ * Get air quality factor (0-1)
+ * Lower AQI is better for astronomy
+ */
+function getAqiFactor(aqi: number): number {
+  if (aqi <= 50) {
+    return 1.0; // Excellent
+  }
+  
+  if (aqi >= 200) {
+    return 0.6; // Poor
+  }
+  
+  // Linear scale between 50 and 200
+  return 1.0 - ((aqi - 50) / 375);
 }
