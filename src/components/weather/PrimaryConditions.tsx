@@ -8,6 +8,7 @@ import {
   DynamicWindIcon,
   DynamicSeeingIcon
 } from "@/components/weather/DynamicIcons";
+import { ThermometerSun, Droplets, Wind, Eye } from "lucide-react";
 
 interface PrimaryConditionsProps {
   temperature: number;
@@ -27,25 +28,25 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
   return (
     <div className="space-y-6">
       <ConditionItem
-        icon={<DynamicTemperatureIcon temperature={temperature} />}
+        icon={<ThermometerSun className="h-5 w-5" />}
         label={t("Temperature", "温度")}
         value={`${temperature.toFixed(1)}°C`}
       />
       
       <ConditionItem
-        icon={<DynamicHumidityIcon humidity={humidity} />}
+        icon={<Droplets className="h-5 w-5" />}
         label={t("Humidity", "湿度")}
         value={`${humidity}%`}
       />
       
       <ConditionItem
-        icon={<DynamicWindIcon windSpeed={windSpeed} />}
+        icon={<Wind className="h-5 w-5" />}
         label={t("Wind Speed", "风速")}
         value={`${windSpeed} ${t("km/h", "公里/小时")}`}
       />
       
       <ConditionItem
-        icon={<DynamicSeeingIcon seeingConditions={seeingConditions} />}
+        icon={<Eye className="h-5 w-5" />}
         label={t("Seeing Conditions", "视宁度")}
         value={seeingConditions}
       />

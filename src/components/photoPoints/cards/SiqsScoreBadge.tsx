@@ -7,20 +7,20 @@ interface SiqsScoreBadgeProps {
   score: number | string | { score: number; isViable: boolean } | any;
   loading?: boolean;
   compact?: boolean;
-  forceCertified?: boolean;
+  isCertified?: boolean;
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
   score, 
   loading = false,
   compact = false,
-  forceCertified = false
+  isCertified = false
 }) => {
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
-  // Skip rendering if score is 0 (invalid) and not forced as certified
-  if (numericScore <= 0 && !loading && !forceCertified) {
+  // Skip rendering if score is 0 (invalid) and not certified
+  if (numericScore <= 0 && !loading && !isCertified) {
     return null;
   }
   

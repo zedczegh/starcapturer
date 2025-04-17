@@ -5,7 +5,6 @@ import {
   Sun,
   Cloud,
   Moon,
-  Eye,
   Info,
   CloudFog,
   CircleAlert,
@@ -17,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
+import { DynamicCloudCoverIcon } from "./DynamicIcons";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -65,7 +65,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
     <div className="space-y-4 text-cosmic-100">
       <div className="flex items-center">
         <Cloud className="h-5 w-5 mr-2 text-cosmic-300" />
-        <span className="font-medium">{t("Cloud Cover", "云层覆盖")}: </span>
+        <span className="font-medium">{t("Current Cloud Cover", "当前云层覆盖")}: </span>
         <span className={`ml-auto font-semibold ${getCloudCoverColorClass(cloudCover)}`}>
           {cloudCover}%
         </span>
@@ -73,12 +73,12 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
 
       {nighttimeCloudData && (
         <div className="flex items-center">
-          <CloudFog className="h-5 w-5 mr-2 text-cosmic-300" />
+          <DynamicCloudCoverIcon cloudCover={nighttimeCloudData.average} className="h-5 w-5 mr-2 text-cosmic-300" />
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="font-medium flex items-center">
-                  {nighttimeCloudData.description || t("Tonight's Cloud Cover", "今晚云量")}:
+                  {t("Astronomical Night Cloud Cover", "天文夜云量")}:
                   <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 inline-block" />
                 </span>
               </TooltipTrigger>
@@ -86,13 +86,13 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
                 <p className="text-xs text-cosmic-100">
                   {nighttimeCloudData.timeRange ? (
                     t(
-                      `This shows the average cloud cover for astronomical night (${nighttimeCloudData.timeRange}) based on forecast data.`, 
-                      `这显示了基于预报数据的天文夜 (${nighttimeCloudData.timeRange}) 平均云量。`
+                      `Average cloud cover during astronomical night (${nighttimeCloudData.timeRange}) based on forecast data.`, 
+                      `基于预报数据的天文夜 (${nighttimeCloudData.timeRange}) 平均云量。`
                     )
                   ) : (
                     t(
-                      "This shows the average cloud cover for tonight's astronomical night based on forecast data.", 
-                      "这显示了基于预报数据的今晚天文夜平均云量。"
+                      "Average cloud cover during tonight's astronomical night based on forecast data.", 
+                      "基于预报数据的今晚天文夜平均云量。"
                     )
                   )}
                 </p>

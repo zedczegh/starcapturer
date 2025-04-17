@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,7 +43,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-50">{name}</h3>
-            <SiqsScoreBadge score={siqs} isCertified={isCertified} />
+            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
           </div>
           <div className="text-sm text-gray-400">
             {t("Latitude", "纬度")}: {latitude.toFixed(4)}
