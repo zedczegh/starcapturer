@@ -127,19 +127,6 @@ const LocationDetails = () => {
     }
   }, [locationData, resetUpdateState]);
 
-  // Handle back navigation to ensure clean return to home page
-  useEffect(() => {
-    const handleBackNavigation = () => {
-      navigate("/", { replace: true });
-    };
-
-    window.addEventListener('popstate', handleBackNavigation);
-    
-    return () => {
-      window.removeEventListener('popstate', handleBackNavigation);
-    };
-  }, [navigate]);
-
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
     locationData,
@@ -236,6 +223,7 @@ const LocationDetails = () => {
           <LocationError 
             onUseCurrentLocation={handleUseCurrentLocation} 
             isLoading={loadingCurrentLocation}
+            autoLocate={true}
           />
         </Suspense>
       </>

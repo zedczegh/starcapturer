@@ -1,5 +1,5 @@
 
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
@@ -13,16 +13,27 @@ interface LocationErrorProps {
   message?: string;
   onUseCurrentLocation?: () => void;
   isLoading?: boolean;
+  autoLocate?: boolean;
 }
 
 const LocationError: React.FC<LocationErrorProps> = ({ 
   message,
   onUseCurrentLocation,
-  isLoading = false
+  isLoading = false,
+  autoLocate = true
 }) => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { getCachedData, setCachedData } = useLocationDataCache();
+  const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
+  
+  // Auto-trigger location fetch on component mount if autoLocate is true
+  useEffect(() => {
+    if (autoLocate && !autoLocationAttempted && !isLoading) {
+      setAutoLocationAttempted(true);
+      handleCurrentLocation();
+    }
+  }, [autoLocate, autoLocationAttempted, isLoading]);
   
   const handleCurrentLocation = useCallback(() => {
     if (onUseCurrentLocation) {
@@ -61,7 +72,7 @@ const LocationError: React.FC<LocationErrorProps> = ({
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0, language }
     );
-  }, [onUseCurrentLocation, navigate, t, language, setCachedData]);
+  }, [onUseCurrentLocation, navigate, t, language]);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -88,7 +99,7 @@ const LocationError: React.FC<LocationErrorProps> = ({
             <Button 
               onClick={() => navigate("/")} 
               variant="outline"
-              className="border-primary/50"
+              className="border-primary/50 hidden"
             >
               {t("Go to Home Page", "返回首页")}
             </Button>

@@ -13,6 +13,7 @@ interface InitializeLocationDataParams {
   language: string;
   setLocationData: (data: any) => void;
   setIsLoading: (loading: boolean) => void;
+  noRedirect?: boolean;
 }
 
 /**
@@ -26,7 +27,8 @@ export async function initializeLocationData({
   t,
   language,
   setLocationData,
-  setIsLoading
+  setIsLoading,
+  noRedirect = false
 }: InitializeLocationDataParams) {
   try {
     // First priority: use initialState passed from the router
@@ -93,15 +95,22 @@ export async function initializeLocationData({
       }
       
       if (!initialState?.latitude || !initialState?.longitude) {
+        // If we have invalid coordinates but noRedirect is true, just return
+        if (noRedirect) {
+          console.log("Invalid coordinates but noRedirect flag is set, returning without redirect");
+          return;
+        }
         showErrorAndRedirect(toast, t, navigate, "Incomplete location data", "位置数据不完整");
         return;
       }
     } else if (id) {
       // Second priority: try to load data from localStorage if available
-      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language);
+      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language, noRedirect);
     } else {
       console.error("No way to initialize location data", { params: id, locationState: initialState });
-      showErrorAndRedirect(toast, t, navigate, "Cannot load location details", "无法加载位置详情");
+      if (!noRedirect) {
+        showErrorAndRedirect(toast, t, navigate, "Cannot load location details", "无法加载位置详情");
+      }
     }
   } finally {
     setIsLoading(false);
@@ -117,7 +126,8 @@ async function loadFromLocalStorage(
   toast: any,
   t: (en: string, zh: string) => string,
   navigate: NavigateFunction,
-  language: string
+  language: string,
+  noRedirect: boolean = false
 ) {
   console.log("Trying to load location data from localStorage for ID:", id);
   const savedLocationData = localStorage.getItem(`location_${id}`);
@@ -169,7 +179,9 @@ async function loadFromLocalStorage(
     }
   } else {
     console.error("Location data not found in localStorage", { id });
-    showErrorAndRedirect(toast, t, navigate, "Location data not found", "找不到位置数据");
+    if (!noRedirect) {
+      showErrorAndRedirect(toast, t, navigate, "Location data not found", "找不到位置数据");
+    }
   }
 }
 
