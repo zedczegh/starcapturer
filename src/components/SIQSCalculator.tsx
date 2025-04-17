@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
 import { useSiqsCalculatorState } from "./siqs/hooks/useSiqsCalculatorState";
@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { useLocationHandlers } from "./siqs/hooks/useLocationHandlers";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import { calculateRealTimeSiqs } from "@/services/realTimeSiqs/siqsCalculator";
+import { toast } from "sonner";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -26,7 +27,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   noAutoLocationRequest = false,
   onSiqsCalculated
 }) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
+  const [calculationAttempted, setCalculationAttempted] = useState(false);
   
   // Use our custom hooks for state management
   const {
@@ -71,7 +73,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   // Get advanced settings
   const { seeingConditions } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
   
-  // When location changes, update the metadata and calculate real-time SIQS
+  // Recalculate SIQS when location changes
   useEffect(() => {
     if (locationName && parsedLatitude !== 0 && parsedLongitude !== 0) {
       // Update metadata in global store
@@ -80,6 +82,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
       // If we have a Bortle scale, calculate real-time SIQS
       if (localBortleScale && !calculationInProgress) {
         setLoading(true);
+        setCalculationAttempted(true);
         
         // Calculate in background
         const fetchSiqs = async () => {
@@ -95,13 +98,33 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
               // Update the SIQS score in the global store
               currentSiqsStore.getState().setValue(result.siqs);
               
+              // Cache the result for faster retrieval
+              try {
+                const cacheKey = `siqs_${parsedLatitude.toFixed(4)}-${parsedLongitude.toFixed(4)}`;
+                localStorage.setItem(cacheKey, JSON.stringify({
+                  siqs: result.siqs,
+                  timestamp: Date.now()
+                }));
+              } catch (e) {
+                console.warn("Failed to cache SIQS result:", e);
+              }
+              
               // Notify through provided callback
               if (onSiqsCalculated) {
                 onSiqsCalculated(result.siqs);
               }
+            } else {
+              toast.error(t("Failed to calculate SIQS", "无法计算SIQS"));
+              if (onSiqsCalculated) {
+                onSiqsCalculated(0);
+              }
             }
           } catch (error) {
             console.error("Error calculating real-time SIQS:", error);
+            toast.error(t("Error calculating SIQS", "计算SIQS时出错"));
+            if (onSiqsCalculated) {
+              onSiqsCalculated(0);
+            }
           } finally {
             setLoading(false);
           }
@@ -110,7 +133,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         fetchSiqs();
       }
     }
-  }, [locationName, parsedLatitude, parsedLongitude, localBortleScale, onSiqsCalculated, calculationInProgress, setLoading]);
+  }, [locationName, parsedLatitude, parsedLongitude, localBortleScale, onSiqsCalculated, calculationInProgress, setLoading, t]);
   
   // Animation variants
   const animationVariants = {
@@ -139,10 +162,14 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         variants={animationVariants}
         transition={{ delay: 0.1 }}
       >
-        <StatusMessage message={statusMessage} loading={calculationInProgress || loading} />
+        <StatusMessage 
+          message={statusMessage} 
+          loading={calculationInProgress || loading} 
+          calculationAttempted={calculationAttempted}
+        />
       </motion.div>
       
-      {siqsScore !== null && (
+      {siqsScore !== null && siqsScore > 0 && (
         <motion.div 
           variants={animationVariants}
           transition={{ delay: 0.2 }}
@@ -151,7 +178,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             siqsScore={siqsScore} 
             latitude={parsedLatitude}
             longitude={parsedLongitude}
-            locationName={locationName}
+            locationName={locationName || t("Selected Location", "所选位置")}
           />
         </motion.div>
       )}
