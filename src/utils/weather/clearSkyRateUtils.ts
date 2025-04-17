@@ -146,12 +146,19 @@ export function getMinimumClearNights(
     return cached.result;
   }
   
+  // First check for exceptional astronomical locations
+  const exceptionalLocation = checkExceptionalAstronomicalLocation(latitude, longitude);
+  if (exceptionalLocation) {
+    // Use the predefined clear night count for exceptional locations
+    return exceptionalLocation.clearNights;
+  }
+  
   // Star visibility requires truly clear skies - not just rain-free
   // We apply a stricter conversion factor to get from general clear sky rate to actual star-visible nights
   
-  // Calculate baseline clear nights, with stricter multiplier (0.55 instead of previously higher values)
-  // This accounts for nights that may be technically "clear" but have haze, light cloud cover, etc.
-  let baseNights = Math.round((clearSkyRate / 100) * 365 * 0.55);
+  // Calculate baseline clear nights with improved calculation
+  // Higher multiplier (0.65 instead of 0.55) to better reflect real clear night counts
+  let baseNights = Math.round((clearSkyRate / 100) * 365 * 0.65);
   
   // Subtract nights affected by full moon periods (approximately 5 nights per month)
   // Full moon and days around it significantly reduce star visibility (5 nights x 12 months = 60 nights)
@@ -162,13 +169,44 @@ export function getMinimumClearNights(
   let clearNights = baseNights;
   
   if (latitude !== undefined && longitude !== undefined) {
-    // Apply region-specific adjustments
+    // Apply region-specific adjustments with more accurate data
     
+    // Tibetan plateau adjustment - known for exceptional astronomical conditions
+    // Approximate coordinates: latitude 28-36, longitude 78-92
+    if (latitude >= 28 && latitude <= 36 && longitude >= 78 && longitude <= 92) {
+      // The Tibetan plateau has some of the clearest skies in the world
+      // Much higher base and multiplier for this region
+      const tibetBaseline = Math.max(clearSkyRate * 1.2, 70); // At least 70% clear sky rate in Tibet
+      clearNights = Math.round((tibetBaseline / 100) * 365 * 0.75) - 40; // Fewer full moon affected nights in Tibet
+      // Ensure minimum value for Tibet region
+      clearNights = Math.max(110, clearNights);
+      
+      // Special case for Ngari (Ali) Prefecture - one of the world's best astronomical sites
+      // Approximate coordinates: latitude 31-33, longitude 79-82
+      if (latitude >= 31 && latitude <= 33 && longitude >= 79 && longitude <= 82) {
+        clearNights = Math.max(140, Math.round(clearNights * 1.2)); // Even better conditions in Ngari
+      }
+    }
+    // Atacama Desert adjustment - another premier astronomical location
+    else if (latitude >= -27 && latitude <= -22 && longitude >= -71 && longitude <= -68) {
+      // The Atacama is the driest non-polar desert and has exceptional night sky visibility
+      clearNights = Math.max(150, Math.round((clearSkyRate * 1.3) / 100 * 365 * 0.75) - 40);
+    }
+    // Namibian desert - known for excellent dark sky conditions
+    else if (latitude >= -27 && latitude <= -20 && longitude >= 14 && longitude <= 20) {
+      clearNights = Math.max(120, Math.round((clearSkyRate * 1.2) / 100 * 365 * 0.7) - 50);
+    }
+    // Mauna Kea, Hawaii - premier astronomical site
+    else if (latitude >= 19 && latitude <= 20 && longitude >= -156 && longitude <= -155) {
+      clearNights = Math.max(130, Math.round((clearSkyRate * 1.25) / 100 * 365 * 0.7) - 45);
+    }
+    // Arizona - good astronomical viewing conditions
+    else if (latitude >= 31 && latitude <= 35 && longitude >= -112 && longitude <= -109) {
+      clearNights = Math.max(100, Math.round((clearSkyRate * 1.15) / 100 * 365 * 0.65) - 50);
+    }
     // Guizhou province (China) adjustment - known for more overcast days and high humidity
-    // Approximate coordinates: latitude 24.5-29, longitude 104-109.5
-    if (latitude >= 24.5 && latitude <= 29 && longitude >= 104 && longitude <= 109.5) {
+    else if (latitude >= 24.5 && latitude <= 29 && longitude >= 104 && longitude <= 109.5) {
       // Adjust for Guizhou's karst topography, subtropical monsoon climate, and frequent fog/mist
-      // This region is known for its high humidity, persistent haze, and light pollution
       clearNights = Math.round(baseNights * 0.45); // Significantly reduced for more accuracy
     }
     // Southern China adjustment (more rainfall/humidity/haze)
@@ -177,8 +215,8 @@ export function getMinimumClearNights(
     }
     // Desert regions adjustment (typically more clear nights, but can have dust)
     else if (isDesertRegion(latitude, longitude)) {
-      // Desert areas have fewer clouds but can have dust storms and atmospheric particles
-      clearNights = Math.round(baseNights * 0.85); // Slightly reduced factor
+      // Desert areas generally have more clear nights
+      clearNights = Math.round(baseNights * 1.15); // Increased factor
     }
     // Tropical rainforest regions (high precipitation, humidity)
     else if (isTropicalRainforestRegion(latitude, longitude)) {
@@ -187,7 +225,7 @@ export function getMinimumClearNights(
     // Mediterranean climate regions (dry summers, wet winters)
     else if (isMediterraneanRegion(latitude, longitude)) {
       // These regions have very seasonal clear nights
-      clearNights = Math.round(baseNights * 0.8);
+      clearNights = Math.round(baseNights * 1.1); // Slightly increased
     }
     // Polar/sub-polar regions
     else if (Math.abs(latitude) > 60) {
@@ -198,8 +236,6 @@ export function getMinimumClearNights(
     }
     
     // Urban light pollution adjustment - apply if coordinates likely match urban areas
-    // Major urban areas are typically at very specific coordinates
-    // We check for proximity to common urban center locations
     if (isLikelyUrbanArea(latitude, longitude)) {
       // Light pollution dramatically reduces visible stars
       clearNights = Math.round(clearNights * 0.7);
@@ -213,7 +249,8 @@ export function getMinimumClearNights(
     // Mid-latitude regions have more seasonal variations
     if (absLat > 30 && absLat < 60) {
       // Adjust for stronger seasonal effects in mid-latitudes
-      clearNights = Math.round(clearNights * 0.85);
+      // But not as strong a reduction as before
+      clearNights = Math.round(clearNights * 0.9);
     }
   }
   
@@ -224,14 +261,16 @@ export function getMinimumClearNights(
     // that affect star visibility even on "clear" nights
     if ((latitude > 20 && latitude < 45 && longitude > 75 && longitude < 135) || // China, East Asia
         (latitude > 8 && latitude < 35 && longitude > 70 && longitude < 90)) {   // India
-      clearNights = Math.round(clearNights * 0.7); // Reduction for air quality impact
+      // Only apply if not in Tibet (already handled above)
+      if (!(latitude >= 28 && latitude <= 36 && longitude >= 78 && longitude <= 92)) {
+        clearNights = Math.round(clearNights * 0.7); // Reduction for air quality impact
+      }
     }
   }
   
   // Ensure the result is within reasonable bounds
-  // Even the best locations rarely have more than 200 truly clear nights for star visibility
-  // This is a significant reduction from previous estimates to be more realistic
-  clearNights = Math.max(10, Math.min(clearNights, 200)); 
+  // Allow for higher maximum for truly exceptional locations
+  clearNights = Math.max(10, Math.min(clearNights, 220)); 
   
   // Cache result with a month validity
   clearSkyCalculationCache.set(cacheKey, {
@@ -241,6 +280,53 @@ export function getMinimumClearNights(
   });
   
   return clearNights;
+}
+
+/**
+ * Check if a location is a known exceptional astronomical observation site
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Object with clear night data if exceptional location, null otherwise
+ */
+function checkExceptionalAstronomicalLocation(
+  latitude?: number,
+  longitude?: number
+): { name: string; clearNights: number } | null {
+  if (!latitude || !longitude) return null;
+  
+  // List of exceptional astronomical locations worldwide with accurate clear night counts
+  const exceptionalLocations = [
+    // Tibet region
+    { name: "Ngari/Ali Observatory", lat: 32.33, lon: 80.02, dist: 50, clearNights: 230 },
+    { name: "Tibetan Plateau", lat: 32, lon: 84, dist: 350, clearNights: 140 },
+    
+    // South America
+    { name: "Atacama - Paranal", lat: -24.63, lon: -70.40, dist: 60, clearNights: 250 },
+    { name: "Atacama - Las Campanas", lat: -29.02, lon: -70.69, dist: 50, clearNights: 210 },
+    { name: "Atacama - ALMA", lat: -23.03, lon: -67.75, dist: 50, clearNights: 230 },
+    
+    // North America
+    { name: "Mauna Kea", lat: 19.82, lon: -155.47, dist: 30, clearNights: 180 },
+    { name: "Kitt Peak", lat: 31.96, lon: -111.60, dist: 30, clearNights: 170 },
+    { name: "McDonald Observatory", lat: 30.68, lon: -104.02, dist: 30, clearNights: 160 },
+    
+    // Africa
+    { name: "Namibian Desert", lat: -24.63, lon: 16.33, dist: 100, clearNights: 200 },
+    { name: "South African Astronomical Observatory", lat: -32.38, lon: 20.81, dist: 50, clearNights: 170 },
+    
+    // Australia
+    { name: "Siding Spring", lat: -31.27, lon: 149.07, dist: 50, clearNights: 160 }
+  ];
+  
+  // Check if location is close to any exceptional location
+  for (const loc of exceptionalLocations) {
+    const distance = calculateDistance(latitude, longitude, loc.lat, loc.lon);
+    if (distance <= loc.dist) {
+      return { name: loc.name, clearNights: loc.clearNights };
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -499,3 +585,4 @@ export function getBestMonths(
 export function clearCaches(): void {
   clearSkyCalculationCache.clear();
 }
+
