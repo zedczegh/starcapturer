@@ -26,6 +26,7 @@ interface SecondaryConditionsProps {
   nighttimeCloudData?: {
     average: number;
     description?: string;
+    timeRange?: string;
     evening?: number;
     morning?: number;
   } | null;
@@ -83,9 +84,16 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
                 <p className="text-xs text-cosmic-100">
-                  {t(
-                    "This shows the average cloud cover for tonight (18:00-7:00) based on forecast data.", 
-                    "这显示了基于预报数据的今晚 (18:00-7:00) 平均云量。"
+                  {nighttimeCloudData.timeRange ? (
+                    t(
+                      `This shows the average cloud cover for astronomical night (${nighttimeCloudData.timeRange}) based on forecast data.`, 
+                      `这显示了基于预报数据的天文夜 (${nighttimeCloudData.timeRange}) 平均云量。`
+                    )
+                  ) : (
+                    t(
+                      "This shows the average cloud cover for tonight's astronomical night based on forecast data.", 
+                      "这显示了基于预报数据的今晚天文夜平均云量。"
+                    )
                   )}
                 </p>
               </TooltipContent>

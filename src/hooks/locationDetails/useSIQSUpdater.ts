@@ -1,5 +1,7 @@
+
 import { useCallback, useRef } from 'react';
-import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
+import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
 
 export const useSIQSUpdater = () => {
   const siqsUpdatedRef = useRef<boolean>(false);
@@ -16,6 +18,14 @@ export const useSIQSUpdater = () => {
       console.log("Updating SIQS score with fresh forecast data");
       
       try {
+        // Extract coordinates for astronomical night calculations
+        const latitude = locationData.latitude || 0;
+        const longitude = locationData.longitude || 0;
+        
+        // Get astronomical night times for display
+        const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
+        const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
+        
         const updatedSIQS = calculateNighttimeSIQS(locationData, forecastData, null);
         
         if (updatedSIQS) {
@@ -31,73 +41,29 @@ export const useSIQSUpdater = () => {
           return true;
         } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
           // If we couldn't calculate nighttime SIQS but have forecast data,
-          // use a simplified approach based on forecast cloud cover
-          const currentHour = new Date().getHours();
-          let relevantHours = [];
+          // use our improved astronomical night cloud cover calculation
           
-          // If current time is already nighttime, use only future hours
-          if (currentHour >= 18 || currentHour < 7) {
-            // Find the index of the current hour in the forecast
-            const now = new Date();
-            const currentTimeIndex = forecastData.hourly.time.findIndex((time: string) => {
-              const forecastTime = new Date(time);
-              return forecastTime.getHours() === now.getHours() && 
-                     forecastTime.getDate() === now.getDate();
-            });
-            
-            if (currentTimeIndex !== -1) {
-              // Get all future nighttime hours (after current time until 7AM)
-              for (let i = currentTimeIndex; i < forecastData.hourly.time.length; i++) {
-                const hour = new Date(forecastData.hourly.time[i]).getHours();
-                if (hour >= 18 || hour < 7) {
-                  relevantHours.push(forecastData.hourly.cloud_cover[i] || 0);
-                }
-                
-                // Stop if we reach 7AM the next day
-                if (hour === 7 && i > currentTimeIndex) {
-                  break;
-                }
-              }
-            }
-          } 
-          // Otherwise use all nighttime hours from 18:00-7:00
-          else {
-            // Find the upcoming night (starting at 18:00 today)
-            for (let i = 0; i < forecastData.hourly.time.length; i++) {
-              const forecastTime = new Date(forecastData.hourly.time[i]);
-              const hour = forecastTime.getHours();
-              const isToday = forecastTime.getDate() === new Date().getDate();
-              const isTomorrow = forecastTime.getDate() === new Date().getDate() + 1;
-              
-              if ((isToday && hour >= 18) || (isTomorrow && hour < 7)) {
-                relevantHours.push(forecastData.hourly.cloud_cover[i] || 0);
-              }
-            }
-          }
-          
-          // Calculate average cloud cover for the night
-          const avgCloudCover = relevantHours.length > 0 
-            ? relevantHours.reduce((sum, val) => sum + val, 0) / relevantHours.length 
-            : locationData.weatherData.cloudCover;
+          // Calculate cloud cover for the astronomical night
+          const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
           
           // Convert to SIQS score
-          const estimatedScore = Math.max(0, Math.min(10, 10 - (avgCloudCover * 0.25)));
+          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
           
-          console.log("Using calculated tonight's cloud cover for SIQS:", avgCloudCover, "->", estimatedScore);
+          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
           
           setLocationData({
             ...locationData,
             siqsResult: {
               score: estimatedScore,
-              isViable: avgCloudCover < 40,
+              isViable: tonightCloudCover < 40,
               factors: [
                 {
                   name: "Cloud Cover",
-                  score: (100 - avgCloudCover * 2.5) / 10,
-                  description: `Tonight's cloud cover of ${avgCloudCover.toFixed(1)}% affects imaging quality`,
+                  score: (100 - tonightCloudCover * 2.5) / 10,
+                  description: `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
                   nighttimeData: {
-                    average: avgCloudCover,
-                    timeRange: "18:00-7:00"
+                    average: tonightCloudCover,
+                    timeRange: nightTimeStr
                   }
                 }
               ]

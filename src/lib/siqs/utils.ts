@@ -1,98 +1,44 @@
 
-import { normalizeScore } from "./factors";
+import { validateCloudCover } from './utils';
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
+
+// Export everything from utils.ts
+export { validateCloudCover };
+
+// Re-export nighttime SIQS functions
+export { calculateNighttimeSIQS, calculateTonightCloudCover };
+
+// Re-export astronomical night calculator
+export { calculateAstronomicalNight, formatTime };
 
 /**
- * Utility functions for SIQS calculations and display
- */
-
-/**
- * Validates if cloud cover data is within valid range and returns a default value if invalid
- * @param cloudCover Cloud cover percentage
- * @returns Validated cloud cover percentage
- */
-export function validateCloudCover(cloudCover: any): number {
-  if (typeof cloudCover !== 'number' || isNaN(cloudCover)) {
-    return 50; // Default to moderate cloud cover
-  }
-  
-  return Math.max(0, Math.min(100, cloudCover));
-}
-
-/**
- * Determines if imaging conditions make astrophotography impossible
- * @param factors Weather/location factors
- * @returns Boolean indicating if imaging is impossible
- */
-export function isImagingImpossible(factors: any): boolean {
-  // Check for extreme conditions that make imaging impossible
-  const cloudCover = validateCloudCover(factors.cloudCover);
-  const precipitation = factors.precipitation || 0;
-  
-  // Imaging is impossible if:
-  // - Cloud cover is extremely high (>95%)
-  // - Active precipitation is substantial (>1mm)
-  return cloudCover > 95 || precipitation > 1;
-}
-
-/**
- * Converts SIQS value to color indicator
- * @param value SIQS value (0-10)
- * @returns CSS color code
- */
-export function siqsToColor(value: number): string {
-  if (value >= 8) return '#22c55e'; // green-500
-  if (value >= 6) return '#3b82f6'; // blue-500
-  if (value >= 5) return '#84cc16'; // lime-500
-  if (value >= 4) return '#eab308'; // yellow-500
-  if (value >= 2) return '#f97316'; // orange-500
-  return '#ef4444'; // red-500
-}
-
-/**
- * Gets the quality level text for a SIQS score
- * @param value SIQS value (0-10)
- * @returns Quality level text
- */
-export function getSIQSLevel(value: number): string {
-  if (value >= 8) return 'Excellent';
-  if (value >= 6) return 'Good';
-  if (value >= 4) return 'Average';
-  if (value >= 2) return 'Poor';
-  return 'Bad';
-}
-
-/**
- * Format SIQS score with consistent decimal places
- * @param score SIQS score
+ * Format a SIQS score for display
+ * @param score SIQS score (0-10)
  * @returns Formatted score string
  */
 export function formatSIQSScore(score: number): string {
-  if (typeof score !== 'number' || isNaN(score)) {
-    return '0.0';
-  }
-  
   return score.toFixed(1);
 }
 
 /**
- * Normalize factor scores to ensure they're all on 0-10 scale
- * @param factors Array of SIQS factors
- * @returns Normalized factors
+ * Get the SIQS quality level based on score
+ * @param score SIQS score (0-10)
+ * @returns Quality level string
  */
-export function normalizeFactorScores(factors: any[]): any[] {
-  if (!Array.isArray(factors)) return [];
-  
-  return factors.map(factor => {
-    if (!factor) return factor;
-    
-    // Clone the factor to avoid modifying the original
-    const normalizedFactor = { ...factor };
-    
-    // Convert score to 0-10 scale if needed
-    if (typeof normalizedFactor.score === 'number') {
-      normalizedFactor.score = normalizeScore(normalizedFactor.score);
-    }
-    
-    return normalizedFactor;
-  });
+export function getSIQSLevel(score: number): string {
+  if (score >= 8.5) return 'Excellent';
+  if (score >= 6.5) return 'Good';
+  if (score >= 4.5) return 'Average';
+  if (score >= 2.5) return 'Poor';
+  return 'Very Poor';
+}
+
+/**
+ * Validate if a SIQS score is viable for imaging
+ * @param score SIQS score (0-10)
+ * @returns Boolean indicating viability
+ */
+export function isViableSIQS(score: number): boolean {
+  return score >= 5.0; // Consider viable if score is at least 5.0
 }

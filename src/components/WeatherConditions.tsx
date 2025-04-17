@@ -9,7 +9,8 @@ import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
-import { calculateTonightCloudCover } from "@/components/forecast/NightForecastUtils";
+import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
+import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -26,6 +27,8 @@ interface WeatherConditionsProps {
   bortleScale: number | null;
   seeingConditions: string;
   forecastData?: any;
+  latitude?: number;
+  longitude?: number;
 }
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
@@ -33,7 +36,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   moonPhase,
   bortleScale,
   seeingConditions,
-  forecastData
+  forecastData,
+  latitude = 0,
+  longitude = 0
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
@@ -43,7 +48,16 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
+      // Get astronomical night times for the location
+      const { start, end } = calculateAstronomicalNight(latitude, longitude);
+      const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
+      
+      // Calculate tonight's cloud cover using astronomical night hours
+      const tonightCloudCover = calculateTonightCloudCover(
+        forecastData.hourly,
+        latitude,
+        longitude
+      );
       
       if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
         return null;
@@ -51,16 +65,16 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       
       return {
         average: tonightCloudCover,
-        // We're no longer separating evening and morning - using the full 18:00-7:00 range
+        timeRange: nightTimeStr,
         description: t ? 
-          t("Tonight's cloud cover (6PM-7AM)", "今晚云量 (18:00-7:00)") : 
-          "Tonight's cloud cover (6PM-7AM)"
+          t("Astronomical Night Cloud Cover", "天文夜云量") : 
+          "Astronomical Night Cloud Cover"
       };
     } catch (error) {
       console.error("Error calculating nighttime cloud cover:", error);
       return null;
     }
-  }, [forecastData, t]);
+  }, [forecastData, latitude, longitude, t]);
   
   useEffect(() => {
     if (forecastData && validateWeatherData(weatherData)) {

@@ -3,10 +3,11 @@ import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { toast } from 'sonner';
 import { validateCloudCover } from '@/lib/siqs/utils';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
- * throughout the application
+ * throughout the application using astronomical night calculations
  */
 export const useLocationSIQSUpdater = (
   locationData: any, 
@@ -65,7 +66,17 @@ export const useLocationSIQSUpdater = (
       forceUpdateRef.current = false;
       
       try {
-        // Calculate new SIQS based on nighttime conditions
+        // Extract coordinates for astronomical night calculations
+        const latitude = locationData.latitude || 0;
+        const longitude = locationData.longitude || 0;
+        
+        // Get astronomical night times
+        const { start, end } = calculateAstronomicalNight(latitude, longitude);
+        const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
+        
+        console.log(`Astronomical night for location: ${nightTimeStr}`);
+        
+        // Calculate new SIQS based on astronomical nighttime conditions
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
@@ -80,13 +91,19 @@ export const useLocationSIQSUpdater = (
           updateAttemptedRef.current = true;
         } else if (forecastData?.hourly?.cloud_cover) {
           // Fallback to tonight's cloud cover if full SIQS calculation failed
-          console.log("Using fallback tonight cloud cover calculation");
+          console.log("Using fallback astronomical night cloud cover calculation");
           
-          const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
+          const tonightCloudCover = calculateTonightCloudCover(
+            forecastData.hourly,
+            latitude,
+            longitude
+          );
+          
+          // Score calculation adjusts for cloud cover impact
           const cloudScore = tonightCloudCover === 0 ? 100 : Math.max(0, 100 - (tonightCloudCover * 2));
           const estimatedScore = cloudScore / 10;
           
-          console.log(`Using tonight's cloud cover (${tonightCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          console.log(`Using tonight's astronomical night cloud cover (${tonightCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
           
           setLocationData({
             ...locationData,
@@ -103,7 +120,7 @@ export const useLocationSIQSUpdater = (
                     : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
                   nighttimeData: {
                     average: tonightCloudCover,
-                    timeRange: "18:00-7:00"
+                    timeRange: nightTimeStr
                   }
                 }
               ]
