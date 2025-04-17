@@ -2,10 +2,24 @@
 /**
  * Milky Way visibility calculator
  * Estimates when the Milky Way core (Sagittarius region) is visible based on location and date
+ * With performance optimization via caching
  */
 
+// Cache for Milky Way visibility calculations
+const milkyWayCache = new Map<string, {
+  result: {
+    rise: string;
+    set: string;
+    duration: string;
+    bestViewing: string;
+    isVisible: boolean;
+  },
+  timestamp: number,
+  validFor: number
+}>();
+
 /**
- * Calculate Milky Way visibility times
+ * Calculate Milky Way visibility times with improved performance
  * @param latitude Location latitude in degrees
  * @param longitude Location longitude in degrees
  * @param date Date to calculate for (defaults to current date)
@@ -22,12 +36,22 @@ export function calculateMilkyWayVisibility(
   bestViewing: string;
   isVisible: boolean;
 } {
+  // Generate cache key
+  const dateString = date.toISOString().split('T')[0]; // Use date part only
+  const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)},${dateString}`;
+  
+  // Check cache first
+  const cachedResult = milkyWayCache.get(cacheKey);
+  if (cachedResult && (Date.now() - cachedResult.timestamp) < cachedResult.validFor) {
+    return cachedResult.result;
+  }
+  
   // The Milky Way core (Sagittarius) has approximately these coordinates
   // Right Ascension ~18h (270°) and Declination ~-27°
   const sagittariusRA = 270; // degrees
   const sagittariusDecl = -27; // degrees
 
-  // Convert to date to day of year
+  // Convert date to day of year
   const start = new Date(date.getFullYear(), 0, 0);
   const diff = date.getTime() - start.getTime();
   const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -99,13 +123,32 @@ export function calculateMilkyWayVisibility(
     }
   }
 
-  return {
+  const result = {
     rise: riseString,
     set: setString,
     duration: formatDuration(durationHours),
     bestViewing: bestViewing,
     isVisible: isVisible
   };
+  
+  // Cache the result - valid for 24 hours
+  milkyWayCache.set(cacheKey, {
+    result,
+    timestamp: Date.now(),
+    validFor: 24 * 60 * 60 * 1000
+  });
+  
+  // Clean up cache if needed
+  if (milkyWayCache.size > 100) {
+    const now = Date.now();
+    for (const [key, entry] of milkyWayCache.entries()) {
+      if (now - entry.timestamp > entry.validFor) {
+        milkyWayCache.delete(key);
+      }
+    }
+  }
+
+  return result;
 }
 
 /**

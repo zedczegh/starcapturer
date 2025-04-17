@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -16,7 +16,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getMonthName, getRateColor, getSkyRating, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyUtils';
+import { 
+  getMonthName, 
+  getRateColor, 
+  getSkyRating, 
+  getMinimumClearNights, 
+  getBestMonths 
+} from '@/utils/weather/clearSkyRateUtils';
 
 interface ClearSkyRateDisplayProps {
   clearSkyRate: number;
@@ -35,19 +41,25 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  // Calculate minimum clear nights per year
-  const clearNights = getMinimumClearNights(clearSkyRate, latitude);
+  // Cache calculated values with useMemo
+  const clearNights = useMemo(() => {
+    return getMinimumClearNights(clearSkyRate, latitude);
+  }, [clearSkyRate, latitude]);
   
   // Get best months text
-  const bestMonthsText = getBestMonths(
-    monthlyRates, 
-    clearestMonths, 
-    language,
-    latitude
-  );
+  const bestMonthsText = useMemo(() => {
+    return getBestMonths(
+      monthlyRates, 
+      clearestMonths, 
+      language,
+      latitude
+    );
+  }, [monthlyRates, clearestMonths, language, latitude]);
   
   // Get color based on the rate
-  const rateColor = getRateColor(clearSkyRate);
+  const rateColor = useMemo(() => {
+    return getRateColor(clearSkyRate);
+  }, [clearSkyRate]);
 
   // Formatted tooltip value
   const tooltipValue = t(
@@ -56,7 +68,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
   );
 
   // Determine best observation months based on latitude
-  const getBestMonthsForLatitude = () => {
+  const getBestMonthsForLatitude = useMemo(() => {
     const isNorthern = latitude === undefined || latitude >= 0;
     
     if (latitude && Math.abs(latitude) > 60) {
@@ -73,10 +85,10 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
       // Near equator - less seasonal variation
       return t("Year-round with slight favor to dry season", "全年（尤其是干季）");
     }
-  };
+  }, [latitude, t]);
 
   // Get historical context for the location based on latitude
-  const getHistoricalContext = () => {
+  const getHistoricalContext = useMemo(() => {
     if (!latitude) return "";
     
     const absLatitude = Math.abs(latitude);
@@ -108,7 +120,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
         "像这样的近赤道地区全年夜晚长度一致，传统上因能同时观测到北天和南天celestial半球而备受重视。"
       );
     }
-  };
+  }, [latitude, t]);
 
   return (
     <Card className="bg-cosmic-900/50 border-cosmic-700/30 shadow-xl overflow-hidden">
@@ -191,10 +203,10 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
           {/* Historical Context & Best Observation Times Section */}
           <div className="bg-cosmic-800/30 rounded-md p-2 mt-2">
             <p className="text-blue-200 text-xs font-medium mb-1">
-              {t('Best months for observation:', '最佳观测月份:')} {getBestMonthsForLatitude()}
+              {t('Best months for observation:', '最佳观测月份:')} {getBestMonthsForLatitude}
             </p>
             <p className="text-cosmic-300 text-xs">
-              {getHistoricalContext()}
+              {getHistoricalContext}
             </p>
             <p className="text-cosmic-400 text-xs mt-1 italic">
               {t('Estimates based on geographical location, historical weather patterns, and regional climate data.', 
@@ -207,4 +219,4 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
   );
 };
 
-export default ClearSkyRateDisplay;
+export default React.memo(ClearSkyRateDisplay);

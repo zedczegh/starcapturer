@@ -1,17 +1,17 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CloudMoon, Sun, Moon, Calendar, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
-import { calculateMilkyWayVisibility } from '@/utils/weather/milkyWayCalculator';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
+import { getAstronomicalData, formatAstronomicalTime } from '@/services/astronomy/astronomyCalculationService';
 
 interface MoonlessNightDisplayProps {
   latitude: number;
@@ -21,14 +21,16 @@ interface MoonlessNightDisplayProps {
 const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, longitude }) => {
   const { t, language } = useLanguage();
   
+  // Get comprehensive astronomical data using our optimized service
+  const astronomyData = useMemo(() => {
+    return getAstronomicalData(latitude, longitude);
+  }, [latitude, longitude]);
+  
   // Use our advanced moon phase algorithm to get moon info
   const { isGoodForAstronomy, name: moonPhaseName } = getMoonInfo();
   
   // Get moonless night information with detailed timing data
   const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
-  
-  // Get Milky Way visibility information
-  const milkyWayInfo = calculateMilkyWayVisibility(latitude, longitude);
   
   // Format time label and value with better alignment
   const TimeItem = ({ label, value }: { label: string; value: string }) => (
@@ -43,6 +45,10 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
     if (typeof time === 'string') return time;
     return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // Format astronomical night times
+  const astroNightStart = formatAstronomicalTime(astronomyData.astronomicalNight.start);
+  const astroNightEnd = formatAstronomicalTime(astronomyData.astronomicalNight.end);
 
   return (
     <Card className="p-4 bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
@@ -68,8 +74,8 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           </div>
           
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Rise', '日出')} value={nightInfo.astronomicalNightEnd} />
-            <TimeItem label={t('Set', '日落')} value={nightInfo.astronomicalNightStart} />
+            <TimeItem label={t('Rise', '日出')} value={astroNightEnd} />
+            <TimeItem label={t('Set', '日落')} value={astroNightStart} />
           </div>
         </div>
         
@@ -81,13 +87,13 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           </div>
           
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Begins', '开始')} value={nightInfo.astronomicalNightStart} />
-            <TimeItem label={t('Ends', '结束')} value={nightInfo.astronomicalNightEnd} />
+            <TimeItem label={t('Begins', '开始')} value={astroNightStart} />
+            <TimeItem label={t('Ends', '结束')} value={astroNightEnd} />
           </div>
           
           <TimeItem 
             label={t('Duration', '持续时间')} 
-            value={`${nightInfo.astronomicalNightDuration} ${t('hrs', '小时')}`} 
+            value={`${astronomyData.astronomicalNight.duration} ${t('hrs', '小时')}`} 
           />
         </div>
         
@@ -130,7 +136,7 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="text-xs text-primary cursor-help">
-                    {milkyWayInfo.duration}
+                    {astronomyData.milkyWay.duration}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -148,21 +154,21 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <TimeItem 
               label={t('Rise', '升起')} 
-              value={milkyWayInfo.rise} 
+              value={astronomyData.milkyWay.rise} 
             />
             <TimeItem 
               label={t('Set', '落下')} 
-              value={milkyWayInfo.set} 
+              value={astronomyData.milkyWay.set} 
             />
           </div>
           
           <TimeItem 
             label={t('Best Viewing', '最佳观测')} 
-            value={milkyWayInfo.bestViewing} 
+            value={astronomyData.milkyWay.bestViewing} 
           />
           
           <div className="mt-1 text-xs text-blue-300">
-            {milkyWayInfo.isVisible 
+            {astronomyData.milkyWay.isVisible 
               ? t('Core visible tonight', '今晚可见银河核心') 
               : t('Core may not be visible from this location', '此位置可能看不到银河核心')}
           </div>
@@ -210,4 +216,4 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   );
 };
 
-export default MoonlessNightDisplay;
+export default React.memo(MoonlessNightDisplay);

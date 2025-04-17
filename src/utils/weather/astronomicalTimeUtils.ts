@@ -6,6 +6,13 @@
 
 import * as SunCalc from 'suncalc';
 
+// Cache for sun calculations to avoid redundant processing
+const sunCalculationCache = new Map<string, { 
+  times: any, 
+  timestamp: number,
+  validFor: number  // Cache validity period in ms
+}>();
+
 /**
  * Types of twilight periods
  */
@@ -16,7 +23,7 @@ export enum TwilightType {
 }
 
 /**
- * Get sunset and sunrise times for a specific location
+ * Get sunset and sunrise times for a specific location with improved caching
  * 
  * @param latitude Location latitude
  * @param longitude Location longitude
@@ -29,11 +36,42 @@ export function getSunTimes(
   date = new Date()
 ): { sunrise: Date; sunset: Date } {
   try {
+    // Generate cache key based on coordinates and date
+    const dateString = date.toISOString().split('T')[0]; // Use date part only for caching
+    const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)},${dateString}`;
+    
+    // Check if we have a valid cached calculation
+    const cachedResult = sunCalculationCache.get(cacheKey);
+    if (cachedResult && (Date.now() - cachedResult.timestamp) < cachedResult.validFor) {
+      return { 
+        sunrise: new Date(cachedResult.times.sunrise), 
+        sunset: new Date(cachedResult.times.sunset) 
+      };
+    }
+    
+    // No cache hit, calculate new values
     const times = SunCalc.getTimes(date, latitude, longitude);
     
     // Validate the returned times to ensure they're real dates
     if (isNaN(times.sunrise.getTime()) || isNaN(times.sunset.getTime())) {
       throw new Error("SunCalc returned invalid date");
+    }
+    
+    // Cache the result - valid for 24 hours
+    sunCalculationCache.set(cacheKey, {
+      times,
+      timestamp: Date.now(),
+      validFor: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+    });
+    
+    // Clean up old cache entries if cache gets too large
+    if (sunCalculationCache.size > 100) {
+      const now = Date.now();
+      for (const [key, value] of sunCalculationCache.entries()) {
+        if (now - value.timestamp > value.validFor) {
+          sunCalculationCache.delete(key);
+        }
+      }
     }
     
     return { sunrise: times.sunrise, sunset: times.sunset };
@@ -46,8 +84,15 @@ export function getSunTimes(
   }
 }
 
+// Cache for astronomical night calculations
+const astronomicalNightCache = new Map<string, {
+  night: { start: Date, end: Date },
+  timestamp: number,
+  validFor: number
+}>();
+
 /**
- * Get astronomical twilight times (when sky is fully dark)
+ * Get astronomical twilight times (when sky is fully dark) with performance optimization
  * 
  * @param latitude Location latitude
  * @param longitude Location longitude
@@ -60,6 +105,19 @@ export function getAstronomicalNight(
   date = new Date()
 ): { start: Date; end: Date } {
   try {
+    // Generate cache key
+    const dateString = date.toISOString().split('T')[0];
+    const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)},${dateString}`;
+    
+    // Check cache
+    const cachedResult = astronomicalNightCache.get(cacheKey);
+    if (cachedResult && (Date.now() - cachedResult.timestamp) < cachedResult.validFor) {
+      return {
+        start: new Date(cachedResult.night.start),
+        end: new Date(cachedResult.night.end)
+      };
+    }
+    
     // For polar regions during continuous day/night, SunCalc can return invalid values
     // Handle polar regions separately
     if (Math.abs(latitude) > 66.5) { // Arctic/Antarctic Circles
@@ -80,7 +138,16 @@ export function getAstronomicalNight(
           const artificialEnd = new Date(artificialNight);
           artificialEnd.setHours(0, 30, 0, 0); // 30-minute symbolically dark period
           
-          return { start: artificialNight, end: artificialEnd };
+          const result = { start: artificialNight, end: artificialEnd };
+          
+          // Cache the result
+          astronomicalNightCache.set(cacheKey, {
+            night: { start: artificialNight, end: artificialEnd },
+            timestamp: Date.now(),
+            validFor: 24 * 60 * 60 * 1000
+          });
+          
+          return result;
         }
       } else if ((isNorthern && (month >= 10 || month <= 2)) || // Northern winter
                 (!isNorthern && (month >= 4 && month <= 8))) { // Southern winter
@@ -95,7 +162,16 @@ export function getAstronomicalNight(
           const fullDayEnd = new Date(date);
           fullDayEnd.setHours(23, 59, 59, 999);
           
-          return { start: fullDayStart, end: fullDayEnd };
+          const result = { start: fullDayStart, end: fullDayEnd };
+          
+          // Cache the result
+          astronomicalNightCache.set(cacheKey, {
+            night: { start: fullDayStart, end: fullDayEnd },
+            timestamp: Date.now(),
+            validFor: 24 * 60 * 60 * 1000
+          });
+          
+          return result;
         }
       }
     }
@@ -111,10 +187,29 @@ export function getAstronomicalNight(
       throw new Error("SunCalc returned invalid astronomical night times");
     }
     
-    return { 
+    const result = { 
       start: times.night, // Astronomical dusk (sun 18° below horizon)
       end: nextDayTimes.nightEnd // Astronomical dawn (sun 18° below horizon)
     };
+    
+    // Cache the result
+    astronomicalNightCache.set(cacheKey, {
+      night: { start: times.night, end: nextDayTimes.nightEnd },
+      timestamp: Date.now(),
+      validFor: 24 * 60 * 60 * 1000
+    });
+    
+    // Clean up cache if it gets too large
+    if (astronomicalNightCache.size > 100) {
+      const now = Date.now();
+      for (const [key, value] of astronomicalNightCache.entries()) {
+        if (now - value.timestamp > value.validFor) {
+          astronomicalNightCache.delete(key);
+        }
+      }
+    }
+    
+    return result;
   } catch (error) {
     console.error("Error calculating astronomical night:", error);
     
@@ -132,8 +227,16 @@ export function getAstronomicalNight(
   }
 }
 
+// Cache for optimal viewing periods
+const optimalViewingCache = new Map<string, {
+  period: { start: Date, end: Date },
+  timestamp: number,
+  validFor: number
+}>();
+
 /**
  * Get optimal stargazing period considering moon and sun position
+ * With performance optimizations
  * 
  * @param latitude Location latitude
  * @param longitude Location longitude
@@ -146,6 +249,19 @@ export function getOptimalViewingPeriod(
   date = new Date()
 ): { start: Date; end: Date } {
   try {
+    // Generate cache key
+    const dateString = date.toISOString().split('T')[0];
+    const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)},${dateString}`;
+    
+    // Check cache
+    const cachedResult = optimalViewingCache.get(cacheKey);
+    if (cachedResult && (Date.now() - cachedResult.timestamp) < cachedResult.validFor) {
+      return {
+        start: new Date(cachedResult.period.start),
+        end: new Date(cachedResult.period.end)
+      };
+    }
+    
     const { start: nightStart, end: nightEnd } = getAstronomicalNight(latitude, longitude, date);
     
     // Optimal time is typically centered on midnight
@@ -167,10 +283,38 @@ export function getOptimalViewingPeriod(
     // Verify the times make sense (end should be after start)
     if (optimalEnd.getTime() <= optimalStart.getTime()) {
       // If times are inverted, use the full astronomical night period
-      return { start: nightStart, end: nightEnd };
+      const result = { start: nightStart, end: nightEnd };
+      
+      // Cache result
+      optimalViewingCache.set(cacheKey, {
+        period: { start: nightStart, end: nightEnd },
+        timestamp: Date.now(),
+        validFor: 24 * 60 * 60 * 1000
+      });
+      
+      return result;
     }
     
-    return { start: optimalStart, end: optimalEnd };
+    const result = { start: optimalStart, end: optimalEnd };
+    
+    // Cache result
+    optimalViewingCache.set(cacheKey, {
+      period: { start: optimalStart, end: optimalEnd },
+      timestamp: Date.now(),
+      validFor: 24 * 60 * 60 * 1000
+    });
+    
+    // Clean up cache if needed
+    if (optimalViewingCache.size > 100) {
+      const now = Date.now();
+      for (const [key, value] of optimalViewingCache.entries()) {
+        if (now - value.timestamp > value.validFor) {
+          optimalViewingCache.delete(key);
+        }
+      }
+    }
+    
+    return result;
   } catch (error) {
     console.error("Error calculating optimal viewing period:", error);
     
