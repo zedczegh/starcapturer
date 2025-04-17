@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -9,6 +8,7 @@ import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
 import MapLegend from './MapLegend';
 import CenteringPinpointButton from './CenteringPinpointButton';
+import PinpointButton from './PinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -209,21 +209,20 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         showRadiusCircles={activeView === 'calculated' && !isMobile}
       />
       
-      {!isMobile && (
-        <MapLegend 
-          activeView={activeView} 
-          showStarLegend={activeView === 'certified'}
-          showCircleLegend={activeView === 'calculated'}
-          onToggle={handleLegendToggle}
-          className="absolute top-4 right-4 z-[999]"
-        />
-      )}
+      {/* Add MapLegend for both mobile and desktop */}
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+        onToggle={handleLegendToggle}
+        className="absolute top-4 right-4 z-[999]"
+      />
       
-      {/* Position the pinpoint button at bottom-right corner of the map */}
-      <CenteringPinpointButton
+      {/* Add PinpointButton for both mobile and desktop */}
+      <PinpointButton
         onGetLocation={handleGetLocation}
-        userLocation={userLocation}
-        className="absolute bottom-4 right-4 z-[999]"
+        className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute top-4 right-16 z-[999]"}
+        shouldCenter={false}
       />
     </div>
   );

@@ -12,7 +12,6 @@ import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
 import { MapEffectsComposer } from './MapComponents';
 import L from 'leaflet';
-import CenteringPinpointButton from './CenteringPinpointButton';
 import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
