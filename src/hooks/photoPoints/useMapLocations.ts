@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
-import { 
-  filterValidLocations, 
-  separateLocationTypes, 
-  mergeLocations 
-} from '@/utils/locationFiltering';
+import { filterWaterLocations } from '@/utils/locationFiltering';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 interface UseMapLocationsProps {
@@ -98,10 +94,17 @@ export const useMapLocations = ({
     const timeoutId = setTimeout(() => {
       try {
         // Filter valid locations
-        const validLocations = filterValidLocations(allLocations);
+        let validLocations = filterWaterLocations(allLocations);
         
         // Separate locations by type
-        const { certifiedLocations, calculatedLocations } = separateLocationTypes(validLocations);
+        const certifiedLocations = validLocations.filter(loc => 
+          loc.isDarkSkyReserve || loc.certification
+        );
+        
+        const calculatedLocations = validLocations.filter(loc => 
+          !loc.isDarkSkyReserve && !loc.certification
+        );
+        
         console.log(`Location counts - certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}, total: ${validLocations.length}`);
         
         // Determine which locations to show based on view

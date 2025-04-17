@@ -1,68 +1,55 @@
 
-// Define types for SIQS calculation
-export interface SiqsResult {
-  siqs: number;
-  isViable: boolean;
-  factors?: {
-    name: string;
-    score: number;
-    description: string;
-  }[];
-  metadata?: {
-    calculatedAt: string;
-    sources: {
-      weather: boolean;
-      forecast: boolean;
-      clearSky: boolean;
-      lightPollution: boolean;
-    };
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
-  };
-}
+/**
+ * Types for SIQS calculation
+ */
 
+// Weather data enhanced with clear sky information
 export interface WeatherDataWithClearSky {
   temperature: number;
   humidity: number;
   cloudCover: number;
+  visibility: number;
   windSpeed: number;
-  precipitation: number;
-  clearSkyRate?: number;
+  moonPhase: number;
+  clearSkyRate: number;
+  rain?: number;
+  snow?: number;
+}
+
+// SIQS calculation result
+export interface SiqsResult {
+  score: number;
+  isViable: boolean;
+  factors?: Array<{
+    name: string;
+    score: number;
+    description: string;
+  }>;
+}
+
+// SIQS location result
+export interface SiqsLocationResult {
+  siqs: number;
+  isViable: boolean;
+  id: string;
+  name: string;
+  chineseName?: string;
   latitude: number;
   longitude: number;
-  time?: string;
-  condition?: string;
-  aqi?: number;
-  _forecast?: any;
-}
-
-export interface MoonlessNightInfo {
-  duration: number; // in hours
-  startTime: string;
-  endTime: string;
-  moonrise: Date | string;
-  moonset: Date | string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
-  astronomicalNightStart: string;
-  astronomicalNightEnd: string;
-  astronomicalNightDuration: number;
-}
-
-export interface MoonPhaseInfo {
-  phase: number; // 0-1 normalized value
-  name: string;
-  illumination: number; // percentage 0-100
-  isGoodForAstronomy: boolean;
-}
-
-// Add SiqsCalculationOptions interface
-export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
-  reliability?: boolean;
-  adjustForLatitude?: boolean;
+  bortleScale: number;
+  distance?: number;
+  description?: string;
+  certification?: string;
+  isDarkSkyReserve?: boolean;
+  timestamp: string;
+  type?: string;
+  siqsResult?: {
+    score: number;
+    isViable: boolean;
+    factors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+  };
 }

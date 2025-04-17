@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -15,7 +16,6 @@ import {
   isWaterSpot, 
   isValidAstronomyLocation
 } from './MarkerUtils';
-import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import RealTimeSiqsFetcher from '../cards/RealTimeSiqsFetcher';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 

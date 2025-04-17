@@ -1,86 +1,86 @@
 
 /**
- * Utilities for checking if a location is in water
- * This is a simplified version to avoid circular imports
+ * Utilities for checking if a location is on water
  */
 
-// Approximate water detection based on known oceans and seas
-const majorWaterBodies = [
-  // Pacific Ocean regions
-  { name: "North Pacific", bounds: { minLat: 0, maxLat: 60, minLng: 120, maxLng: -120 } },
-  { name: "South Pacific", bounds: { minLat: -60, maxLat: 0, minLng: 150, maxLng: -70 } },
-  
-  // Atlantic Ocean regions
-  { name: "North Atlantic", bounds: { minLat: 0, maxLat: 70, minLng: -80, maxLng: 0 } },
-  { name: "South Atlantic", bounds: { minLat: -60, maxLat: 0, minLng: -70, maxLng: 20 } },
-  
-  // Indian Ocean
-  { name: "Indian Ocean", bounds: { minLat: -60, maxLat: 30, minLng: 20, maxLng: 150 } },
-  
-  // Arctic Ocean
-  { name: "Arctic Ocean", bounds: { minLat: 70, maxLat: 90, minLng: -180, maxLng: 180 } },
-  
-  // Southern Ocean
-  { name: "Southern Ocean", bounds: { minLat: -90, maxLat: -60, minLng: -180, maxLng: 180 } },
-];
+import { calculateDistance } from "./geoUtils";
 
-// Known coastal regions that should be excluded from water detection
-const knownCoastalExclusions = [
-  // Island regions that should be considered land despite being surrounded by water
-  { name: "Japan", bounds: { minLat: 30, maxLat: 46, minLng: 129, maxLng: 146 } },
-  { name: "Indonesia", bounds: { minLat: -11, maxLat: 6, minLng: 95, maxLng: 141 } },
-  { name: "New Zealand", bounds: { minLat: -47, maxLat: -34, minLng: 166, maxLng: 179 } },
-  { name: "Philippines", bounds: { minLat: 5, maxLat: 21, minLng: 116, maxLng: 127 } },
-  { name: "Hawaii", bounds: { minLat: 18, maxLat: 23, minLng: -160, maxLng: -154 } },
-];
+// Cache water check results
+const waterCheckCache = new Map<string, boolean>();
 
 /**
- * Basic check if a location is likely in water
- * This is a simplified version to avoid circular imports
+ * Check if the location is likely on water (ocean, lake, etc.)
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param useCache Whether to use cached results (default: true)
+ * @returns Boolean indicating if location is on water
  */
-export const isWaterLocation = (lat: number, lon: number, checkCoastal: boolean = true): boolean => {
-  // Normalize longitude to -180 to 180 range
-  const normalizedLon = ((lon + 180) % 360 + 360) % 360 - 180;
+export function isWaterLocation(latitude: number, longitude: number, useCache = true): boolean {
+  if (!latitude || !longitude) return false;
   
-  // Check if in known island/coastal exclusions first
-  for (const exclusion of knownCoastalExclusions) {
-    const { bounds } = exclusion;
-    if (
-      lat >= bounds.minLat && 
-      lat <= bounds.maxLat && 
-      normalizedLon >= bounds.minLng && 
-      normalizedLon <= bounds.maxLng
-    ) {
-      return false; // This is a known land area
-    }
+  // Generate cache key
+  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
+  // Check cache first if enabled
+  if (useCache && waterCheckCache.has(cacheKey)) {
+    return waterCheckCache.get(cacheKey) as boolean;
   }
   
-  // Check if in major water bodies
-  for (const waterBody of majorWaterBodies) {
-    const { bounds } = waterBody;
+  // Simple check based on known bodies of water
+  // This is a simplified method; in a real app we would use GeoJSON or API
+  
+  // Define some known water bodies
+  const waterBodies = [
+    // Pacific Ocean (rough center points)
+    { lat: 0, lng: -160, radius: 5000 },
+    { lat: 30, lng: -140, radius: 3000 },
+    { lat: -30, lng: -140, radius: 3000 },
+    { lat: 30, lng: 160, radius: 3000 },
+    { lat: -30, lng: 160, radius: 3000 },
     
-    // Handle special case of Pacific Ocean crossing the date line
-    if (waterBody.name.includes("Pacific")) {
-      // For the Pacific, we need to check differently because it crosses the date line
-      if (
-        lat >= bounds.minLat && 
-        lat <= bounds.maxLat && 
-        (normalizedLon >= bounds.minLng || normalizedLon <= bounds.maxLng)
-      ) {
-        return true;
-      }
-    } else {
-      // For other water bodies
-      if (
-        lat >= bounds.minLat && 
-        lat <= bounds.maxLat && 
-        normalizedLon >= bounds.minLng && 
-        normalizedLon <= bounds.maxLng
-      ) {
-        return true;
-      }
+    // Atlantic Ocean
+    { lat: 30, lng: -40, radius: 2500 },
+    { lat: 0, lng: -30, radius: 2500 },
+    { lat: -30, lng: -20, radius: 2500 },
+    
+    // Indian Ocean
+    { lat: 0, lng: 80, radius: 2500 },
+    { lat: -20, lng: 80, radius: 2500 },
+    
+    // Major lakes and seas
+    { lat: 45, lng: 35, radius: 400 }, // Black Sea
+    { lat: 40, lng: 50, radius: 350 }, // Caspian Sea
+    { lat: 45, lng: -87, radius: 200 }, // Lake Michigan
+    { lat: 45, lng: -83, radius: 200 }, // Lake Huron
+    { lat: 43, lng: -79, radius: 100 }, // Lake Ontario
+    { lat: 42, lng: -81, radius: 100 }, // Lake Erie
+    { lat: 47, lng: -90, radius: 180 }, // Lake Superior
+  ];
+  
+  // Check if location is near any known water body
+  const isOnWater = waterBodies.some(body => {
+    const distance = calculateDistance(latitude, longitude, body.lat, body.lng);
+    return distance <= body.radius;
+  });
+  
+  // Cache result for future use
+  if (useCache) {
+    waterCheckCache.set(cacheKey, isOnWater);
+    
+    // Limit cache size
+    if (waterCheckCache.size > 10000) {
+      // Remove oldest entries when cache gets too large
+      const keysToDelete = Array.from(waterCheckCache.keys()).slice(0, 1000);
+      keysToDelete.forEach(key => waterCheckCache.delete(key));
     }
   }
   
-  return false;
-};
+  return isOnWater;
+}
+
+/**
+ * Clear the water check cache
+ */
+export function clearWaterCheckCache(): void {
+  waterCheckCache.clear();
+}

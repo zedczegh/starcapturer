@@ -7,7 +7,7 @@ import { useRecommendedLocationsFix } from './useRecommendedLocationsFix';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { toast } from 'sonner';
-import { isSiqsAtLeast } from '@/utils/siqsHelpers';
+import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 import { isValidAstronomyLocation } from '@/utils/locationValidator';
 
 export const useCalculatedLocationsFind = () => {
@@ -41,7 +41,7 @@ export const useCalculatedLocationsFind = () => {
       
       // For other locations, check SIQS threshold and validity
       return loc.siqs && 
-        isSiqsAtLeast(loc.siqs, threshold) && 
+        isSiqsGreaterThan(loc.siqs, threshold) && 
         isValidAstronomyLocation(loc.latitude, loc.longitude);
     });
   }, []);

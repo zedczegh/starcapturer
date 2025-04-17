@@ -4,6 +4,7 @@
  */
 import { calculateRealTimeSiqs } from './siqsCalculator';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SiqsResult } from './siqsTypes';
 
 /**
  * Calculate SIQS for multiple locations in a batch
@@ -50,7 +51,10 @@ export async function batchCalculateSiqs(
         // Return enhanced location with SIQS data
         return {
           ...location,
-          siqs: siqsResult
+          siqs: {
+            score: siqsResult.siqs,
+            isViable: siqsResult.isViable
+          }
         };
       } catch (error) {
         console.error("Error calculating SIQS for location", location, error);

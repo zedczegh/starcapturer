@@ -167,14 +167,6 @@ export const showSearchResultToast = (
 };
 
 /**
- * Search utilities for photo points
- */
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/utils/geoUtils';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
-import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
-
-/**
  * Filter locations by SIQS score threshold
  */
 export function filterLocationsBySiqsThreshold(
