@@ -10,6 +10,7 @@ import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 import { filterLocations, sortLocationsByQuality, generateRandomPoint } from './locationFilters';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Find all locations within a radius of a center point
