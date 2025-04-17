@@ -1,257 +1,144 @@
 
-import React, { useState, useEffect } from 'react';
-import { Star, StarHalf, StarOff, Info, Calendar, RefreshCw } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { useWeatherDataIntegration } from '@/hooks/useWeatherDataIntegration';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { 
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import {
+  Cloud,
+  Calendar,
+  Sun,
+  BarChart3,
+  SunMedium
+} from 'lucide-react';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger 
+  TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getSkyRating, getRateColor, getMinimumClearNights, getBestMonths, getMonthName } from '@/utils/weather/clearSkyUtils';
+import { getMonthName, getRateColor, getSkyRating, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyUtils';
 
 interface ClearSkyRateDisplayProps {
-  latitude: number;
-  longitude: number;
+  clearSkyRate: number;
+  monthlyRates?: Record<string, number>;
+  clearestMonths?: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
-const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, longitude }) => {
+const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
+  clearSkyRate,
+  monthlyRates = {},
+  clearestMonths = [],
+  latitude,
+  longitude
+}) => {
   const { language, t } = useLanguage();
-  const [showMonthly, setShowMonthly] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const { 
-    clearSkyData, 
-    historicalData,
-    loading, 
-    fetching, 
-    refresh,
-    isCertifiedLocation
-  } = useWeatherDataIntegration(latitude, longitude, {
-    includeHistoricalData: true
-  });
-
-  useEffect(() => {
-    if (!fetching && isRefreshing) {
-      setIsRefreshing(false);
-    }
-  }, [fetching]);
-
-  const annualRate = clearSkyData?.annualRate || 50;
-  const clearNightsPerYear = getMinimumClearNights(annualRate);
-  const monthlyRates = clearSkyData?.monthlyRates || {};
-  const dataSource = clearSkyData?.source || '';
+  // Calculate minimum clear nights per year
+  const clearNights = getMinimumClearNights(clearSkyRate, latitude);
   
-  const seasonalTrends = historicalData?.seasonalTrends;
-  const clearestMonths = historicalData?.clearestMonths || [];
-  const visibility = historicalData?.visibility;
+  // Get best months text
+  const bestMonthsText = getBestMonths(
+    monthlyRates, 
+    clearestMonths, 
+    language,
+    latitude
+  );
+  
+  // Get color based on the rate
+  const rateColor = getRateColor(clearSkyRate);
 
-  const getStarIcon = (rate: number) => {
-    if (rate >= 75) return <Star className="text-yellow-400" />;
-    if (rate >= 45) return <StarHalf className="text-yellow-400" />;
-    return <StarOff className="text-gray-400" />;
-  };
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    refresh();
-  };
-
-  const getCertifiedStatusDescription = () => {
-    if (!isCertifiedLocation) return '';
-    
-    if (clearSkyData?.isDarkSkyReserve) {
-      return t('Official Dark Sky Reserve', '官方暗夜天空保护区');
-    }
-    
-    if (clearSkyData?.certification) {
-      return clearSkyData.certification;
-    }
-    
-    return '';
-  };
+  // Formatted tooltip value
+  const tooltipValue = t(
+    `Approximately ${clearNights} clear nights per year`,
+    `每年约 ${clearNights} 个晴朗夜晚`
+  );
 
   return (
-    <Card className="p-4 bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-cosmic-800/50 p-2 rounded-full">
-              <Star className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium">
-                {t('Clear Nights Per Year', '年度晴朗夜晚')}
-              </h3>
-              
-              {isCertifiedLocation && (
-                <div className="text-xs text-primary">
-                  {getCertifiedStatusDescription()}
-                </div>
-              )}
-            </div>
+    <Card className="bg-cosmic-900/50 border-cosmic-700/30 shadow-xl overflow-hidden">
+      <CardHeader className="bg-cosmic-800/30 pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <SunMedium className="w-4 h-4 text-yellow-400" />
+          {t("Clear Sky Rate", "晴空率")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4 space-y-4">
+        {/* Main Rate Display */}
+        <div className="flex flex-col items-center justify-center">
+          <div className="relative">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={`text-3xl font-bold ${rateColor} cursor-help`}>
+                    {clearSkyRate}%
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">{tooltipValue}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('Refresh data', '刷新数据')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    onClick={() => setShowMonthly(!showMonthly)}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {showMonthly ? (
-                      <Star className="w-4 h-4" />
-                    ) : (
-                      <Calendar className="w-4 h-4" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showMonthly 
-                    ? t('Show annual statistics', '显示年度统计') 
-                    : t('Show monthly breakdown', '显示月度分布')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="text-sm font-medium">
+            {getSkyRating(clearSkyRate, t)}
+          </div>
+          <div className="w-full mt-2">
+            <Progress value={clearSkyRate} className="h-2" />
           </div>
         </div>
-
-        {loading || isRefreshing ? (
-          <div className="animate-pulse space-y-2">
-            <div className="bg-cosmic-800/50 h-6 w-full rounded" />
-            <div className="bg-cosmic-800/50 h-4 w-3/4 rounded" />
-          </div>
-        ) : showMonthly ? (
-          <div>
-            <div className="grid grid-cols-3 gap-1 text-xs mt-2">
-              {Object.entries(monthlyRates).map(([month, rate]) => (
-                <div key={month} className="flex items-center justify-between">
-                  <span>{getMonthName(month, language)}</span>
-                  <span className={getRateColor(Number(rate))}>{rate}%</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              {getBestMonths(monthlyRates, clearestMonths, language)}
-            </div>
-            
-            {isCertifiedLocation && seasonalTrends && (
-              <div className="mt-2 border-t border-cosmic-700/50 pt-2">
-                <div className="text-xs font-medium mb-1">{t('Seasonal Patterns', '季节模式')}:</div>
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {Object.entries(seasonalTrends).map(([season, data]) => {
-                    const seasonData = data as { clearSkyRate: number; averageTemperature: number };
-                    return (
-                      <div key={season} className="flex items-center justify-between">
-                        <span>{t(season.charAt(0).toUpperCase() + season.slice(1), 
-                              season === 'spring' ? '春季' : 
-                              season === 'summer' ? '夏季' : 
-                              season === 'fall' ? '秋季' : '冬季')}</span>
-                        <span className={getRateColor(seasonData.clearSkyRate)}>
-                          {seasonData.clearSkyRate}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mt-1">
-            <div className="flex items-center">
-              <span className="text-2xl font-semibold">{clearNightsPerYear}</span>
-              <span className="ml-1 text-sm text-muted-foreground">{t('nights', '晚')}</span>
-            </div>
-            
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">
-                {t('Sky Quality:', '天空质量:')} {getSkyRating(annualRate, t)}
-              </div>
-              
-              <div className="flex items-center space-x-1">
-                <span className={`font-medium text-sm ${getRateColor(annualRate)}`}>
-                  {annualRate}%
-                </span>
-                {getStarIcon(annualRate)}
-              </div>
-            </div>
-            
-            <div className="mt-1 text-xs text-muted-foreground">
-              {visibility && (
-                <span>
-                  {typeof visibility === 'string' ? 
-                    t(
-                      visibility, 
-                      visibility === 'excellent' ? '极佳' : 
-                      visibility === 'good' ? '良好' : 
-                      visibility === 'average' ? '一般' : '较差'
-                    ) : 
-                    t('average', '一般')}
-                </span>
-              )}
-            </div>
-            
-            <div className="mt-1 text-xs text-muted-foreground">
-              {getBestMonths(monthlyRates, clearestMonths, language)}
-            </div>
-            
-            {isCertifiedLocation && historicalData?.annualPrecipitationDays && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {t('Average Precipitation:', '平均降水:')} {historicalData.annualPrecipitationDays} {t('days/year', '天/年')}
-              </div>
-            )}
-          </div>
-        )}
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 cursor-help">
-                <Info className="w-3 h-3" />
-                <span>
-                  {isCertifiedLocation 
-                    ? t('Based on certified location data', '基于认证地点数据') 
-                    : (dataSource || t('Based on historical data', '基于历史数据'))}
-                </span>
+        {/* Best Months Section */}
+        <div className="space-y-2 pt-2 border-t border-cosmic-700/30">
+          <div className="flex items-center">
+            <Calendar className="w-4 h-4 mr-2 text-blue-400" />
+            <h4 className="text-xs font-medium">
+              {t("Seasonal Pattern", "季节模式")}
+            </h4>
+          </div>
+          
+          <div className="bg-cosmic-800/30 rounded p-2">
+            <p className="text-xs">
+              {bestMonthsText}
+            </p>
+            
+            {/* Monthly chart visualization - simplified */}
+            {Object.keys(monthlyRates).length > 0 && (
+              <div className="flex items-end h-8 gap-px mt-2">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
+                  const rate = monthlyRates[month.toString()] || 0;
+                  const height = `${Math.max(15, rate)}%`;
+                  const monthName = getMonthName(month, language);
+                  
+                  return (
+                    <TooltipProvider key={month}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex-1 bg-blue-500/60 hover:bg-blue-500/80 cursor-help transition-all"
+                            style={{ height }}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          {monthName}: {rate}%
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })}
               </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs max-w-[200px]">
-                {isCertifiedLocation
-                  ? t(
-                      'Data from official certification records, enhanced with local measurements and climate analysis',
-                      '数据来自官方认证记录，并结合本地测量和气候分析进行增强'
-                    )
-                  : t(
-                      'Estimates based on geographical location, historical weather patterns, and regional climate data',
-                      '基于地理位置、历史天气模式和区域气候数据的估算'
-                    )}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+            )}
+          </div>
+          
+          {/* Historical context */}
+          <div className="text-xs text-cosmic-400 mt-1">
+            {t(
+              "Data from historical weather patterns and regional climate records.",
+              "数据来源于历史天气模式和区域气候记录。"
+            )}
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 };

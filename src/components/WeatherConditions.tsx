@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -117,7 +116,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   }, [weatherData, forecastData, toast, t]);
   
-  // Get consistent moon phase information using our advanced algorithm
   const { name: calculatedMoonPhaseName } = getMoonInfo();
   
   const translatedData = useMemo(() => {
@@ -125,14 +123,13 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       seeingConditions: language === 'zh' 
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
-      moonPhase: calculatedMoonPhaseName, // Use the consistent moon phase name
+      moonPhase: calculatedMoonPhaseName,
       weatherCondition: language === 'zh' && stableWeatherData.condition
         ? getWeatherConditionInChinese(stableWeatherData.condition)
         : stableWeatherData.condition
     };
   }, [language, seeingConditions, calculatedMoonPhaseName, stableWeatherData.condition]);
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
