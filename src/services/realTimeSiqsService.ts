@@ -1,6 +1,6 @@
 
 import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
-import { batchCalculateSiqs } from './realTimeSiqs/batchProcessor';
+import { updateLocationsWithRealTimeSiqs, addPlaceholderSiqsScores } from './realTimeSiqsService/locationUpdateService';
 import { 
   clearSiqsCache, 
   clearLocationSiqsCache, 
@@ -8,10 +8,11 @@ import {
   cleanupExpiredCache 
 } from './realTimeSiqs/siqsCache';
 
-// Export all the main functions to maintain API compatibility
+// Export all the main functions
 export { 
   calculateRealTimeSiqs,
-  batchCalculateSiqs,
+  updateLocationsWithRealTimeSiqs,
+  addPlaceholderSiqsScores,
   clearSiqsCache,
   clearLocationSiqsCache,
   getSiqsCacheSize,

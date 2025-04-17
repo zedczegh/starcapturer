@@ -1,153 +1,121 @@
-// Cache management system for SIQS calculations
 
-// Create a cache to avoid redundant API calls with improved invalidation strategy
-const siqsCache = new Map<string, {
-  siqs: number;
+import { SiqsResult } from './siqsTypes';
+
+// Define cache interface
+interface CacheEntry {
+  data: SiqsResult;
   timestamp: number;
-  isViable: boolean;
-  factors?: any[];
-}>();
+}
 
-// Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
-const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
-const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
+// In-memory cache for SIQS results
+const siqsCache = new Map<string, CacheEntry>();
+
+// Default cache duration (10 minutes)
+const DEFAULT_CACHE_DURATION = 10 * 60 * 1000;
 
 /**
- * Determine if it's nighttime for cache duration purposes
+ * Generate cache key from coordinates
  */
-export const isNighttime = () => {
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 8; // 6 PM to 8 AM
+const getCacheKey = (latitude: number, longitude: number): string => {
+  return `siqs_${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
 };
 
 /**
- * Get the appropriate cache duration based on time of day
+ * Check if valid cached SIQS data exists for coordinates
  */
-export const getCacheDuration = () => {
-  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+export const hasCachedSiqs = (
+  latitude: number,
+  longitude: number,
+  maxAgeMins = 10
+): boolean => {
+  const key = getCacheKey(latitude, longitude);
+  if (!siqsCache.has(key)) return false;
+  
+  const cachedEntry = siqsCache.get(key)!;
+  const maxAge = maxAgeMins * 60 * 1000;
+  const age = Date.now() - cachedEntry.timestamp;
+  
+  return age < maxAge;
 };
 
 /**
- * Check if a cached entry exists and is valid
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
+ * Get cached SIQS data if it exists and is not expired
  */
-export const hasCachedSiqs = (latitude: number, longitude: number): boolean => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  const cachedData = siqsCache.get(cacheKey);
+export const getCachedSiqs = (
+  latitude: number,
+  longitude: number,
+  maxAgeMins = 10
+): SiqsResult | null => {
+  const key = getCacheKey(latitude, longitude);
+  if (!siqsCache.has(key)) return null;
   
-  if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
-    return true;
-  }
+  const cachedEntry = siqsCache.get(key)!;
+  const maxAge = maxAgeMins * 60 * 1000;
+  const age = Date.now() - cachedEntry.timestamp;
   
-  return false;
-};
-
-/**
- * Get a cached SIQS calculation
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- */
-export const getCachedSiqs = (latitude: number, longitude: number) => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  const cachedData = siqsCache.get(cacheKey);
-  
-  if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
-    return {
-      siqs: cachedData.siqs,
-      isViable: cachedData.isViable,
-      factors: cachedData.factors
-    };
+  if (age < maxAge) {
+    return cachedEntry.data;
   }
   
   return null;
 };
 
 /**
- * Set a SIQS calculation in the cache
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- * @param data SIQS calculation data
+ * Save SIQS data to cache
  */
 export const setSiqsCache = (
   latitude: number,
   longitude: number,
-  data: { 
-    siqs: number; 
-    isViable: boolean; 
-    factors?: any[];
-    metadata?: {
-      calculatedAt: string;
-      sources: {
-        weather: boolean;
-        forecast: boolean;
-        clearSky: boolean;
-        lightPollution: boolean;
-      };
-    };
-  }
-) => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  
-  siqsCache.set(cacheKey, {
-    ...data,
+  data: SiqsResult
+): void => {
+  const key = getCacheKey(latitude, longitude);
+  siqsCache.set(key, {
+    data,
     timestamp: Date.now()
   });
-  
-  // Also store in sessionStorage for persistence between page loads
-  try {
-    sessionStorage.setItem(`siqs_${cacheKey}`, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-  } catch (error) {
-    console.error("Failed to store SIQS in sessionStorage:", error);
-  }
 };
 
 /**
- * Clear the entire SIQS cache
+ * Clear cache for a specific location
  */
-export const clearSiqsCache = (): number => {
-  const size = siqsCache.size;
+export const clearLocationSiqsCache = (
+  latitude: number,
+  longitude: number
+): void => {
+  const key = getCacheKey(latitude, longitude);
+  siqsCache.delete(key);
+};
+
+/**
+ * Clear entire SIQS cache
+ */
+export const clearSiqsCache = (): void => {
   siqsCache.clear();
-  return size;
 };
 
 /**
- * Clear specific location from the SIQS cache
- */
-export const clearLocationSiqsCache = (latitude: number, longitude: number): boolean => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  if (siqsCache.has(cacheKey)) {
-    siqsCache.delete(cacheKey);
-    return true;
-  }
-  return false;
-};
-
-/**
- * Clean up expired cache entries to free memory
- */
-export const cleanupExpiredCache = (): number => {
-  const now = Date.now();
-  let expiredCount = 0;
-  
-  for (const [key, data] of siqsCache.entries()) {
-    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
-    
-    if (now - data.timestamp > cacheDuration) {
-      siqsCache.delete(key);
-      expiredCount++;
-    }
-  }
-  
-  return expiredCount;
-};
-
-/**
- * Get the current SIQS cache size
+ * Get the number of entries in the cache
  */
 export const getSiqsCacheSize = (): number => {
   return siqsCache.size;
 };
+
+/**
+ * Remove expired entries from cache
+ */
+export const cleanupExpiredCache = (maxAgeMins = 30): number => {
+  const now = Date.now();
+  const maxAge = maxAgeMins * 60 * 1000;
+  let removedCount = 0;
+  
+  for (const [key, entry] of siqsCache.entries()) {
+    if (now - entry.timestamp > maxAge) {
+      siqsCache.delete(key);
+      removedCount++;
+    }
+  }
+  
+  return removedCount;
+};
+
+// Add the missing types file:

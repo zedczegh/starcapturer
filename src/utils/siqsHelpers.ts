@@ -15,6 +15,9 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
     return 0;
   }
   
+  // Debug the incoming SIQS format
+  console.log("Getting SIQS score from:", typeof siqs, siqs);
+  
   // Handle string values (parsing to number)
   if (typeof siqs === 'string') {
     const parsed = parseFloat(siqs);
@@ -30,25 +33,30 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
   if (typeof siqs === 'object' && siqs !== null) {
     // Case: location.siqs passed directly as an object with score property
     if ('siqs' in siqs && typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
+      console.log("Found nested siqs.siqs.score:", siqs.siqs.score);
       return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
     }
     
     // Case: entire location object passed (need to extract siqs)
     if ('siqs' in siqs && (typeof siqs.siqs === 'number' || typeof siqs.siqs === 'string')) {
+      console.log("Found siqs property:", siqs.siqs);
       return typeof siqs.siqs === 'number' ? siqs.siqs : parseFloat(siqs.siqs);
     }
     
     // Handle direct score property (standard format)
     if ('score' in siqs && typeof siqs.score === 'number') {
+      console.log("Found direct score property:", siqs.score);
       return siqs.score;
     }
     
     // Handle possible siqsResult nested format
     if ('siqsResult' in siqs && siqs.siqsResult && typeof siqs.siqsResult.score === 'number') {
+      console.log("Found siqsResult.score:", siqs.siqsResult.score);
       return siqs.siqsResult.score;
     }
   }
   
+  console.log("No valid SIQS score found, returning 0");
   return 0;
 }
 
