@@ -24,26 +24,23 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
   return (
     <>
       <nav className="hidden md:flex items-center space-x-6">
-        <NavLink to="/" active={location.pathname === "/"}>
-          {t("Home", "首页")}
-        </NavLink>
-        <NavLink to="/about" active={location.pathname === "/about"}>
-          {t("About SIQS", "关于SIQS")}
-        </NavLink>
         <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
           {t("Photo Points", "拍摄点")}
-        </NavLink>
-        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
-          {t("Resources", "资源")}
-        </NavLink>
-        <NavLink to="/share" active={location.pathname === "/share"}>
-          {t("Bortle Now", "实时光污染")}
         </NavLink>
         <NavLink 
           to={detailsPath}
           active={location.pathname.startsWith('/location/')}
         >
           {t("Location Details", "位置详情")}
+        </NavLink>
+        <NavLink to="/share" active={location.pathname === "/share"}>
+          {t("Bortle Now", "实时光污染")}
+        </NavLink>
+        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
+          {t("Resources", "资源")}
+        </NavLink>
+        <NavLink to="/about" active={location.pathname === "/about"}>
+          {t("About SIQS", "关于SIQS")}
         </NavLink>
       </nav>
       
