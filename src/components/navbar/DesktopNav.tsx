@@ -17,6 +17,9 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Use a default location ID for when there isn't one
+  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
+  
   return (
     <>
       <nav className="hidden md:flex items-center space-x-6">
@@ -35,14 +38,12 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         <NavLink to="/share" active={location.pathname === "/share"}>
           {t("Bortle Now", "实时光污染")}
         </NavLink>
-        {locationId && (
-          <NavLink 
-            to={`/location/${locationId}`} 
-            active={location.pathname === `/location/${locationId}`}
-          >
-            {t("Location Details", "位置详情")}
-          </NavLink>
-        )}
+        <NavLink 
+          to={detailsPath}
+          active={location.pathname.startsWith('/location/')}
+        >
+          {t("Location Details", "位置详情")}
+        </NavLink>
       </nav>
       
       <div className="hidden md:flex items-center">
