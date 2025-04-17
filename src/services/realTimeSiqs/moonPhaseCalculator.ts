@@ -1,243 +1,141 @@
 
-import * as SunCalc from 'suncalc';
 import { MoonPhaseInfo } from './siqsTypes';
 
 /**
- * Calculate the current moon phase (0-1)
- * 0 = New Moon, 0.5 = Full Moon, 1 = New Moon
+ * Calculate the moon phase for a given date
+ * @param date The date to calculate the moon phase for
+ * @returns MoonPhaseInfo object
  */
-export function calculateMoonPhase(date = new Date()): number {
-  // Algorithm to calculate moon phase
-  // Returns a value between 0 and 1
+export function calculateMoonPhase(date: Date = new Date()): MoonPhaseInfo {
+  const synodic = 29.53058867; // Days in a lunar month
   
-  // Use Julian date calculation for accuracy
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // JavaScript months are 0-based
-  const day = date.getDate();
+  // Convert date to Julian date
+  const julianDate = dateToJulian(date);
   
-  // Calculate Julian date
-  let jd = 367 * year - Math.floor(7 * (year + Math.floor((month + 9) / 12)) / 4) +
-    Math.floor(275 * month / 9) + day + 1721013.5;
+  // New Moon date used as reference (2000-01-06 18:14 UTC)
+  const newMoonRef = 2451550.1;
   
-  // Add time of day
-  jd += (date.getUTCHours() - 12) / 24 + date.getUTCMinutes() / 1440 + date.getUTCSeconds() / 86400;
+  // Calculate days since the reference New Moon
+  const daysSinceNewMoon = julianDate - newMoonRef;
   
-  // Calculate moon phase using Julian date
-  // 29.53059 days per lunar cycle
-  const moonCycle = 29.53059;
-  const refJd = 2451550.1; // New moon reference (Jan 6, 2000)
-  const phase = (jd - refJd) % moonCycle;
+  // Calculate the phase
+  const phase = (daysSinceNewMoon % synodic) / synodic;
   
-  // Normalize to 0-1
-  return phase / moonCycle;
-}
-
-/**
- * Get the name of the moon phase based on the phase value
- */
-export function getMoonPhaseNameByPhase(phase: number): string {
-  // Normalize phase to 0-1 range
-  const normalizedPhase = phase % 1;
+  // Normalize phase to 0-1
+  const normalizedPhase = phase < 0 ? phase + 1 : phase;
   
-  // Determine moon phase name
-  if (normalizedPhase < 0.025 || normalizedPhase >= 0.975) {
-    return "New Moon";
-  } else if (normalizedPhase < 0.25) {
-    return "Waxing Crescent";
-  } else if (normalizedPhase < 0.275) {
-    return "First Quarter";
-  } else if (normalizedPhase < 0.475) {
-    return "Waxing Gibbous";
-  } else if (normalizedPhase < 0.525) {
-    return "Full Moon";
-  } else if (normalizedPhase < 0.725) {
-    return "Waning Gibbous";
-  } else if (normalizedPhase < 0.775) {
-    return "Last Quarter";
-  } else {
-    return "Waning Crescent";
-  }
-}
-
-/**
- * Calculate moonrise and moonset times for a specific location
- */
-export function calculateMoonriseMoonsetTimes(latitude: number, longitude: number, date = new Date()) {
-  try {
-    // Use SunCalc library to calculate moon times
-    const moonTimes = SunCalc.getMoonTimes(date, latitude, longitude);
-    
-    // Format times for display
-    const formatTime = (time: Date | undefined) => {
-      if (!time) return "Unknown";
-      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-    
-    return {
-      moonrise: formatTime(moonTimes.rise),
-      moonset: formatTime(moonTimes.set)
-    };
-  } catch (error) {
-    console.error("Error calculating moon times:", error);
-    return {
-      moonrise: "Unknown",
-      moonset: "Unknown"
-    };
-  }
-}
-
-// Function to determine if the date is in winter
-export function isWinterSeason(date = new Date()): boolean {
-  const month = date.getMonth();
-  const hemisphere = determineHemisphere();
+  // Calculate moon illumination (0 at new and full moon, 1 at quarter moons)
+  const illumination = calculateIllumination(normalizedPhase);
   
-  // Northern hemisphere: winter is months 11-1 (Dec-Feb)
-  // Southern hemisphere: winter is months 5-7 (Jun-Aug)
-  let winterMonths;
-  
-  if (hemisphere === 'northern') {
-    winterMonths = [11, 0, 1]; // Dec, Jan, Feb
-  } else {
-    winterMonths = [5, 6, 7]; // Jun, Jul, Aug
-  }
-  
-  return winterMonths.includes(month);
-}
-
-// Replace the function that was attempting to modify isWinter constant
-export function getMoonInfo(date = new Date()): { isGoodForAstronomy: boolean; name: string } {
-  const phase = calculateMoonPhase(date);
-  const winterSeason = isWinterSeason(date);
-  
-  // Get the moon phase name
-  const name = getMoonPhaseNameByPhase(phase);
-  
-  // Moon is good for astronomy when it's near new moon
-  // This is generally when the phase is < 0.15 or > 0.85
-  const isGoodForAstronomy = phase < 0.15 || phase > 0.85 || 
-    // In winter, criteria can be slightly more forgiving due to longer nights
-    (winterSeason && (phase < 0.2 || phase > 0.8));
-  
-  return { isGoodForAstronomy, name };
-}
-
-/**
- * Get complete moon phase information
- * @param date Current date or custom date
- * @returns MoonPhaseInfo object with phase, name, illumination, and astronomy suitability
- */
-export function getDetailedMoonInfo(date = new Date()): MoonPhaseInfo {
-  const phase = calculateMoonPhase(date);
-  const name = getMoonPhaseNameByPhase(phase);
-  const illumination = calculateMoonIllumination(date);
-  const winterSeason = isWinterSeason(date);
-  
-  // Moon is good for astronomy when it's near new moon
-  const isGoodForAstronomy = phase < 0.15 || phase > 0.85 || 
-    // In winter, criteria can be slightly more forgiving due to longer nights
-    (winterSeason && (phase < 0.2 || phase > 0.8));
+  // Get the name of the moon phase
+  const name = getMoonPhaseName(normalizedPhase);
   
   return {
-    phase,
-    name,
+    phase: normalizedPhase,
     illumination,
-    isGoodForAstronomy
+    name
   };
 }
 
-// Helper function to determine hemisphere based on current location
-function determineHemisphere(): 'northern' | 'southern' {
-  try {
-    // Try to get user's location if available
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      // Default to northern hemisphere
-      return 'northern';
-    }
-  } catch (e) {
-    console.error("Error determining hemisphere:", e);
-  }
-  
-  // Default to northern hemisphere
-  return 'northern';
+/**
+ * Convert a date to Julian date
+ */
+function dateToJulian(date: Date): number {
+  const time = date.getTime();
+  return (time / 86400000) + 2440587.5;
 }
 
 /**
- * Calculate the moon's illumination percentage
+ * Calculate moon illumination
  */
-export function calculateMoonIllumination(date = new Date()): number {
-  const phase = calculateMoonPhase(date);
-  
-  // Convert phase (0-1) to illumination percentage
-  // At phase 0 and 1, illumination is 0%
-  // At phase 0.5, illumination is 100%
-  let illumination;
-  
-  if (phase <= 0.5) {
-    // Waxing from 0% to 100%
-    illumination = phase * 2;
-  } else {
-    // Waning from 100% to 0%
-    illumination = (1 - phase) * 2;
-  }
-  
-  // Convert to percentage
-  return Math.round(illumination * 100);
+function calculateIllumination(phase: number): number {
+  // Calculate illumination percentage (0-1)
+  // At new and full moon, it's fully illuminated (from our perspective)
+  // At quarter phases, it's 50% illuminated
+  return Math.abs(0.5 - phase) * 2;
 }
 
 /**
- * Calculate the moon's altitude in degrees
+ * Get the name of the moon phase
  */
-export function calculateMoonAltitude(latitude: number, longitude: number, date = new Date()): number {
-  try {
-    // Use SunCalc to get moon position
-    const moonPosition = SunCalc.getMoonPosition(date, latitude, longitude);
-    
-    // Convert altitude from radians to degrees
-    const altitudeDegrees = moonPosition.altitude * (180 / Math.PI);
-    
-    return Math.round(altitudeDegrees * 10) / 10; // Round to 1 decimal place
-  } catch (error) {
-    console.error("Error calculating moon altitude:", error);
-    return 0;
-  }
+function getMoonPhaseName(phase: number): string {
+  if (phase < 0.03 || phase >= 0.97) return "New Moon";
+  if (phase < 0.22) return "Waxing Crescent";
+  if (phase < 0.28) return "First Quarter";
+  if (phase < 0.47) return "Waxing Gibbous";
+  if (phase < 0.53) return "Full Moon";
+  if (phase < 0.72) return "Waning Gibbous";
+  if (phase < 0.78) return "Last Quarter";
+  return "Waning Crescent";
 }
 
 /**
- * Get the next full moon date
+ * Calculate next new moon date
+ * @param date Reference date
+ * @returns Date of the next new moon
  */
-export function getNextFullMoonDate(date = new Date()): Date {
-  const phase = calculateMoonPhase(date);
+export function getNextNewMoon(date: Date = new Date()): Date {
+  const synodic = 29.53058867; // Days in a lunar month
+  const julianDate = dateToJulian(date);
+  const newMoonRef = 2451550.1;
+  
+  const daysSinceNewMoon = julianDate - newMoonRef;
+  const phase = (daysSinceNewMoon % synodic) / synodic;
+  
+  // Calculate days until next new moon
+  const daysToNewMoon = synodic * (1 - phase);
+  
+  // Create new date for next new moon
+  const nextNewMoon = new Date(date);
+  nextNewMoon.setDate(date.getDate() + Math.round(daysToNewMoon));
+  
+  return nextNewMoon;
+}
+
+/**
+ * Calculate the next full moon date
+ * @param date Reference date
+ * @returns Date of the next full moon
+ */
+export function getNextFullMoon(date: Date = new Date()): Date {
+  const synodic = 29.53058867; // Days in a lunar month
+  const julianDate = dateToJulian(date);
+  const newMoonRef = 2451550.1;
+  
+  const daysSinceNewMoon = julianDate - newMoonRef;
+  const phase = (daysSinceNewMoon % synodic) / synodic;
   
   // Calculate days until next full moon (phase = 0.5)
-  let daysUntilFullMoon;
+  let daysToFullMoon = synodic * (0.5 - phase);
+  if (daysToFullMoon < 0) daysToFullMoon += synodic;
   
-  if (phase <= 0.5) {
-    // Moon is waxing towards full
-    daysUntilFullMoon = (0.5 - phase) * 29.53059;
-  } else {
-    // Moon is waning, calculate days until next full moon
-    daysUntilFullMoon = (1.5 - phase) * 29.53059;
-  }
-  
-  // Create date for next full moon
+  // Create new date for next full moon
   const nextFullMoon = new Date(date);
-  nextFullMoon.setDate(date.getDate() + Math.round(daysUntilFullMoon));
+  nextFullMoon.setDate(date.getDate() + Math.round(daysToFullMoon));
   
   return nextFullMoon;
 }
 
 /**
- * Get the next new moon date
+ * Get array of moon phases for the next N days
+ * @param days Number of days to calculate
+ * @param startDate Starting date
+ * @returns Array of moon phase information objects
  */
-export function getNextNewMoonDate(date = new Date()): Date {
-  const phase = calculateMoonPhase(date);
+export function getMoonPhasesForPeriod(days: number = 30, startDate: Date = new Date()): MoonPhaseInfo[] {
+  const phases: MoonPhaseInfo[] = [];
   
-  // Calculate days until next new moon (phase = 0)
-  const daysUntilNewMoon = (1 - phase) * 29.53059;
+  for (let i = 0; i < days; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    
+    const phaseInfo = calculateMoonPhase(date);
+    phases.push({
+      ...phaseInfo,
+      // Add date to the info
+      date: date.toISOString()
+    } as MoonPhaseInfo);
+  }
   
-  // Create date for next new moon
-  const nextNewMoon = new Date(date);
-  nextNewMoon.setDate(date.getDate() + Math.round(daysUntilNewMoon));
-  
-  return nextNewMoon;
+  return phases;
 }
