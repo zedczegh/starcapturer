@@ -44,7 +44,7 @@ const LocationPinButton: React.FC = () => {
       <MapPin className="h-5 w-5" />
       
       {locationFound && (
-        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-background shadow-sm">
+        <div className="absolute -top-1 -right-1 bg-green-500/35 rounded-full p-0.5 border-2 border-background shadow-sm">
           <Check className="h-2 w-2 text-white" strokeWidth={3} />
         </div>
       )}

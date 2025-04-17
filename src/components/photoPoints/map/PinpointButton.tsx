@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Check } from 'lucide-react';
@@ -13,14 +12,13 @@ interface PinpointButtonProps {
 
 const PinpointButton: React.FC<PinpointButtonProps> = ({ 
   onGetLocation,
-  className = "absolute top-4 right-16 z-[999]", // Positioned at top-right corner to align with legend
+  className = "absolute top-4 right-16 z-[999]", 
   shouldCenter = true,
   hasLocation = false
 }) => {
   const { t } = useLanguage();
   const [isClicking, setIsClicking] = useState(false);
   
-  // Function to prevent event propagation
   const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -33,7 +31,6 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     onGetLocation();
     // No toast here
     
-    // Reset clicking state after animation completes
     setTimeout(() => setIsClicking(false), 1000);
   }, [onGetLocation]);
 
@@ -72,14 +69,12 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
           <MapPin className="h-5 w-5 text-white/90" strokeWidth={2.2} />
         </div>
         
-        {/* Add green checkmark when location is found */}
         {hasLocation && (
-          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1 border-2 border-background shadow-sm animate-fade-in">
+          <div className="absolute -top-1 -right-1 bg-green-500/35 rounded-full p-1 border-2 border-background shadow-sm animate-fade-in">
             <Check className="h-3 w-3 text-white" strokeWidth={3} />
           </div>
         )}
         
-        {/* Add pulsing effect to button when active */}
         <motion.div 
           className="absolute inset-0 rounded-full"
           animate={{ 
