@@ -1,3 +1,4 @@
+
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -6,8 +7,7 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
-import { isWaterLocation as isCoastalWater } from '@/utils/locationWaterCheck';
+import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -331,7 +331,7 @@ function generateCalculatedSpots(
     }
     
     // 2. Second check with coastal water detection
-    if (isCoastalWater(randomPoint.latitude, randomPoint.longitude)) {
+    if (isLikelyCoastalWater(randomPoint.latitude, randomPoint.longitude)) {
       console.log(`Rejected coastal water at ${randomPoint.latitude}, ${randomPoint.longitude}`);
       continue;
     }

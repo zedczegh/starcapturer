@@ -1,71 +1,42 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { NavLink } from "./NavButtons";
+import LanguageSwitcher from "../LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
-import { useBeijingData } from "./useBeijingData";
 
 interface DesktopNavProps {
-  location: {
-    pathname: string;
-  };
-  locationId?: string | null;
-  isHomepage?: boolean;
+  location: ReturnType<typeof useLocation>;
+  locationId: string | null;
 }
 
-const DesktopNav: React.FC<DesktopNavProps> = ({ location, locationId, isHomepage = false }) => {
+const DesktopNav: React.FC<DesktopNavProps> = ({ 
+  location, 
+  locationId 
+}) => {
   const { t } = useLanguage();
-  const { handleSIQSClick } = useSiqsNavigation();
-  const { beijingLocations, beijingNames } = useBeijingData();
-  
-  // On homepage, handle navigation differently
-  const isLocationPage = locationId || isHomepage;
   
   return (
     <>
-      <div className="flex items-center">
-        <Link to="/" className="flex items-center mr-6">
-          <span className="text-xl font-semibold text-white">SIQS</span>
-        </Link>
-        
-        <nav className="hidden md:flex space-x-4">
-          <Button
-            variant={isLocationPage ? "secondary" : "ghost"}
-            size="sm"
-            asChild
-          >
-            <Link to="/">
-              <MapPin className="w-4 h-4 mr-1" />
-              {t("Location", "位置")}
-            </Link>
-          </Button>
-          
-          <Button
-            variant={location.pathname === "/photo-points" ? "secondary" : "ghost"}
-            size="sm"
-            asChild
-          >
-            <Link to="/photo-points">
-              {t("Photo Points", "摄影点")}
-            </Link>
-          </Button>
-          
-          <Button
-            variant={location.pathname === "/about" ? "secondary" : "ghost"}
-            size="sm"
-            asChild
-          >
-            <Link to="/about">
-              {t("About", "关于")}
-            </Link>
-          </Button>
-        </nav>
-      </div>
+      <nav className="hidden md:flex items-center space-x-6">
+        <NavLink to="/" active={location.pathname === "/"}>
+          {t("Home", "首页")}
+        </NavLink>
+        <NavLink to="/about" active={location.pathname === "/about"}>
+          {t("About SIQS", "关于SIQS")}
+        </NavLink>
+        <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
+          {t("Photo Points", "拍摄点")}
+        </NavLink>
+        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
+          {t("Resources", "资源")}
+        </NavLink>
+        <NavLink to="/share" active={location.pathname === "/share"}>
+          {t("Bortle Now", "实时光污染")}
+        </NavLink>
+      </nav>
       
-      <div className="flex items-center space-x-2">
+      <div className="hidden md:flex items-center">
         <LanguageSwitcher />
       </div>
     </>

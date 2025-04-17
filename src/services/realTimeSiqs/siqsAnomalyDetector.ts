@@ -1,111 +1,158 @@
 
 /**
- * Utility to detect anomalous SIQS scores
- * This helps identify potentially erroneous calculations
+ * SIQS Anomaly Detection
+ * 
+ * This module provides advanced tools to detect and correct unexpected
+ * or anomalous results in SIQS calculations, ensuring extremely high reliability.
  */
 
-import { SiqsResult, WeatherData } from './siqsTypes';
-import { generateSiqsCacheKey, getCachedSiqsResult } from './siqsCache';
+import { SiqsResult, WeatherDataWithClearSky } from './siqsTypes';
+import { hasCachedSiqs, getCachedSiqs } from './siqsCache';
 
-/**
- * Check if a SIQS calculation is anomalous
- */
-export function detectSiqsAnomaly(
-  result: SiqsResult,
-  latitude: number,
-  longitude: number,
-  bortleScale: number,
-  weatherData?: WeatherData
-): boolean {
-  // Check if SIQS value is within realistic range
-  if (result.siqs < 0 || result.siqs > 10) {
-    return true;
-  }
-  
-  // Check for unusually high SIQS with high Bortle scale
-  if (result.siqs > 8 && bortleScale > 6) {
-    return true;
-  }
-  
-  // Check for unusually high SIQS with high cloud cover
-  if (weatherData?.cloudCover && weatherData.cloudCover > 80 && result.siqs > 7) {
-    return true;
-  }
-  
-  // Calculate expected SIQS range based on Bortle scale
-  const expectedBase = 10 - bortleScale;
-  const minExpected = Math.max(1, expectedBase - 2);
-  const maxExpected = Math.min(10, expectedBase + 2);
-  
-  // If result is far outside expected range, it's anomalous
-  if (result.siqs < minExpected * 0.5 || result.siqs > maxExpected * 1.5) {
-    return true;
-  }
-  
-  return false;
-}
+// Thresholds for detecting anomalies in SIQS calculations
+const MAX_SCORE_DELTA = 4.0; // Maximum reasonable change between calculations
+const CRITICAL_WEATHER_THRESHOLD = 80; // Cloud cover % that requires low score
 
 /**
- * Check if cached SIQS differs significantly from new calculation
+ * Detect and fix anomalies in SIQS calculation results
+ * 
+ * @param siqs Calculated SIQS result
+ * @param weatherData Weather data used in calculation
+ * @param location Location coordinates
+ * @returns Corrected SIQS result
  */
-export function detectCacheDivergence(
-  newResult: SiqsResult,
-  latitude: number,
-  longitude: number,
-  bortleScale: number,
-  weatherData?: WeatherData
-): boolean {
-  const cacheKey = generateSiqsCacheKey(latitude, longitude, bortleScale, weatherData);
-  const cached = getCachedSiqsResult(cacheKey);
-  
-  if (!cached) {
-    return false;
-  }
-  
-  // Check if new result differs significantly from cached
-  const diff = Math.abs(newResult.siqs - cached.siqs);
-  
-  // More than 30% difference is suspicious
-  return diff > (cached.siqs * 0.3);
-}
-
-/**
- * Fix anomalous SIQS scores
- */
-export function fixAnomalousSiqs(
-  result: SiqsResult,
-  bortleScale: number,
-  weatherData?: WeatherData
+export function detectAndFixAnomalies(
+  siqs: SiqsResult,
+  weatherData: WeatherDataWithClearSky,
+  location: { latitude: number; longitude: number }
 ): SiqsResult {
-  // Base expected SIQS on Bortle scale
-  let expectedBase = 10 - bortleScale;
+  // Don't process already invalid results
+  if (!siqs || siqs.siqs <= 0) {
+    return siqs;
+  }
+
+  const { latitude, longitude } = location;
+
+  // Check for physical impossibilities
+  const correctedSiqs = correctPhysicalImpossibilities(siqs, weatherData);
   
-  // Adjust expected base for weather conditions
-  if (weatherData) {
-    // Reduce for cloud cover
-    if (weatherData.cloudCover) {
-      expectedBase *= (1 - (weatherData.cloudCover / 100) * 0.8);
-    }
+  // Check for temporal consistency with previous calculations
+  const temporallyConsistentSiqs = ensureTemporalConsistency(correctedSiqs, latitude, longitude);
+  
+  // Check for spatial consistency with nearby locations
+  // This would require additional location data which we may not have
+  
+  return temporallyConsistentSiqs;
+}
+
+/**
+ * Correct physically impossible SIQS scores based on weather conditions
+ */
+function correctPhysicalImpossibilities(
+  siqs: SiqsResult, 
+  weatherData: WeatherDataWithClearSky
+): SiqsResult {
+  const result = { ...siqs };
+  
+  // High cloud cover should prevent high SIQS scores
+  if (weatherData.cloudCover >= CRITICAL_WEATHER_THRESHOLD && siqs.siqs > 5) {
+    console.log(`Anomaly detected: ${weatherData.cloudCover}% cloud cover but SIQS ${siqs.siqs.toFixed(1)}`);
     
-    // Adjust for other factors
-    if (weatherData.windSpeed && weatherData.windSpeed > 15) {
-      expectedBase *= 0.9;
-    }
+    // Apply cloud-based correction
+    const correctedScore = Math.min(siqs.siqs, 10 - (weatherData.cloudCover / 20));
     
-    if (weatherData.humidity && weatherData.humidity > 80) {
-      expectedBase *= 0.95;
+    result.siqs = Math.round(correctedScore * 10) / 10;
+    result.isViable = result.siqs >= 2.0;
+    
+    console.log(`Corrected to ${result.siqs.toFixed(1)} based on physical impossibility`);
+  }
+  
+  // Active precipitation should limit maximum score
+  if (weatherData.precipitation > 0 && siqs.siqs > 6) {
+    const correctedScore = Math.min(siqs.siqs, 6.0);
+    
+    result.siqs = Math.round(correctedScore * 10) / 10;
+    result.isViable = result.siqs >= 2.0;
+    
+    console.log(`Corrected SIQS from ${siqs.siqs.toFixed(1)} to ${result.siqs.toFixed(1)} due to active precipitation`);
+  }
+  
+  return result;
+}
+
+/**
+ * Ensure temporal consistency with previous calculations
+ */
+function ensureTemporalConsistency(
+  siqs: SiqsResult,
+  latitude: number,
+  longitude: number
+): SiqsResult {
+  // Check if we have a previous calculation to compare against
+  if (hasCachedSiqs(latitude, longitude)) {
+    const previousSiqs = getCachedSiqs(latitude, longitude);
+    
+    if (previousSiqs && Math.abs(previousSiqs.siqs - siqs.siqs) > MAX_SCORE_DELTA) {
+      console.log(`Anomaly detected: SIQS changed by ${Math.abs(previousSiqs.siqs - siqs.siqs).toFixed(1)} points`);
+      
+      // Calculate a more reasonable transition
+      const direction = siqs.siqs > previousSiqs.siqs ? 1 : -1;
+      const allowedChange = MAX_SCORE_DELTA * direction;
+      const smoothedScore = previousSiqs.siqs + allowedChange;
+      
+      // Create a smoothed result
+      const result = { ...siqs };
+      result.siqs = Math.round(smoothedScore * 10) / 10;
+      result.isViable = result.siqs >= 2.0;
+      
+      console.log(`Smoothed SIQS from ${siqs.siqs.toFixed(1)} to ${result.siqs.toFixed(1)} for temporal consistency`);
+      return result;
     }
   }
   
-  // Ensure expected base is within valid range
-  expectedBase = Math.max(1, Math.min(9, expectedBase));
+  return siqs;
+}
+
+/**
+ * Check if SIQS calculation is likely to be reliable based on available data quality
+ */
+export function assessDataReliability(
+  weatherData: WeatherDataWithClearSky | null,
+  forecastData: any | null
+): { 
+  reliable: boolean;
+  confidenceScore: number;
+  issues: string[] 
+} {
+  const issues: string[] = [];
+  let confidenceScore = 10;
   
-  // Create adjusted result
-  const adjustedResult: SiqsResult = {
-    ...result,
-    siqs: expectedBase,
-    score: expectedBase
+  // Check critical data presence
+  if (!weatherData) {
+    issues.push("Missing weather data");
+    confidenceScore -= 5;
+  }
+  
+  if (!forecastData || !forecastData.hourly) {
+    issues.push("Missing forecast data");
+    confidenceScore -= 3;
+  }
+  
+  // Check data freshness if available
+  if (weatherData && weatherData.time) {
+    const weatherTimestamp = new Date(weatherData.time).getTime();
+    const now = Date.now();
+    const dataAge = (now - weatherTimestamp) / (60 * 1000); // minutes
+    
+    if (dataAge > 120) {
+      issues.push(`Weather data is ${Math.round(dataAge)} minutes old`);
+      confidenceScore -= Math.min(3, dataAge / 60); // Reduce confidence based on age, up to 3 points
+    }
+  }
+  
+  return {
+    reliable: confidenceScore >= 6,
+    confidenceScore: Math.max(0, Math.min(10, confidenceScore)),
+    issues
   };
-  
-  return adjustedResult;
 }

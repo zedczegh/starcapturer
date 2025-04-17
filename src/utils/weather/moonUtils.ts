@@ -1,88 +1,81 @@
 
-/**
- * Moon-related utility functions
- */
+// Moon phase utility functions
 
 /**
- * Moonless night information
+ * Information about moonless nights
  */
 export interface MoonlessNightInfo {
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
+  date: Date;
+  durationHours: number;
+  moonPhase: number;
+  sunrise: Date;
+  sunset: Date;
+  moonrise: Date | null;
+  moonset: Date | null;
 }
 
 /**
- * Calculate moonless nights for a location
+ * Get the next moonless night for a location
  * @param latitude Location latitude
  * @param longitude Location longitude
- * @returns Array of moonless night information
+ * @returns Promise resolving to moonless night info
  */
-export function calculateMoonlessNights(
+export async function getNextMoonlessNight(
   latitude: number,
   longitude: number
-): MoonlessNightInfo[] {
-  // Simplified implementation until we have the complete astronomical calculations
-  const now = new Date();
-  const moonlessNights: MoonlessNightInfo[] = [];
+): Promise<MoonlessNightInfo | null> {
+  // For now, generate a dummy moonless night
+  // In a real implementation, this would use astronomical calculations
   
-  // Create 5 sample moonless nights in the next month
-  for (let i = 0; i < 5; i++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() + i * 7 + 3); // Sample dates
+  const now = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(now.getDate() + 1);
+  
+  // Dummy data - in reality would be calculated based on location and date
+  return {
+    date: tomorrow,
+    durationHours: 6.5,
+    moonPhase: 0.1, // New moon
+    sunrise: new Date(tomorrow.setHours(6, 30, 0, 0)),
+    sunset: new Date(tomorrow.setHours(19, 45, 0, 0)),
+    moonrise: null, // During new moon, might not be visible during night
+    moonset: new Date(tomorrow.setHours(18, 15, 0, 0))
+  };
+}
+
+/**
+ * Get moonless nights for the next N days
+ */
+export async function getMoonlessNightsForPeriod(
+  latitude: number,
+  longitude: number,
+  days: number = 30
+): Promise<MoonlessNightInfo[]> {
+  // Simplified implementation
+  const results: MoonlessNightInfo[] = [];
+  
+  // Generate some dummy data
+  for (let i = 0; i < days; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
     
-    moonlessNights.push({
-      date: date.toISOString().split('T')[0],
-      startTime: '22:00',
-      endTime: '04:30',
-      duration: 6.5
-    });
+    // Only include nights with good moon conditions (near new moon)
+    const moonPhase = (i % 30) / 30; // Simulate 30-day cycle
+    
+    if (moonPhase < 0.2 || moonPhase > 0.8) {
+      const hours = 4 + Math.random() * 3;
+      
+      results.push({
+        date,
+        durationHours: hours,
+        moonPhase,
+        sunrise: new Date(date.setHours(6, 0, 0, 0)),
+        sunset: new Date(date.setHours(20, 0, 0, 0)),
+        moonrise: moonPhase < 0.2 ? null : new Date(date.setHours(23, 0, 0, 0)),
+        moonset: moonPhase < 0.2 ? new Date(date.setHours(18, 0, 0, 0)) : null
+      });
+    }
   }
   
-  return moonlessNights;
-}
-
-/**
- * Calculate the duration of moonless nights (in hours)
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Average duration in hours
- */
-export function calculateMoonlessNightDuration(
-  latitude: number,
-  longitude: number
-): number {
-  // This is a simplified implementation
-  // In a real implementation, we would calculate based on moon phase and location
-  
-  // For now, return an average moonless night duration
-  return 6.5; // 6.5 hours on average
-}
-
-/**
- * Calculate darkness score based on moon phase
- * @param moonPhase Moon phase (0-1, 0 = new moon, 0.5 = full moon)
- * @returns Darkness score (0-10)
- */
-export function calculateDarknessScore(moonPhase: number): number {
-  // Convert phase to position in cycle (0 = new moon, 0.5 = full moon)
-  const normalizedPhase = moonPhase < 0.5 ? moonPhase : 1 - moonPhase;
-  
-  // Score is best (10) at new moon, worst (0) at full moon
-  return 10 * (1 - (normalizedPhase * 2));
-}
-
-/**
- * Format moon phase description
- */
-export function formatMoonPhase(phase: number): string {
-  if (phase < 0.05 || phase > 0.95) return "New Moon";
-  if (phase < 0.20) return "Waxing Crescent";
-  if (phase < 0.30) return "First Quarter";
-  if (phase < 0.45) return "Waxing Gibbous";
-  if (phase < 0.55) return "Full Moon";
-  if (phase < 0.70) return "Waning Gibbous";
-  if (phase < 0.80) return "Last Quarter";
-  return "Waning Crescent";
+  return results;
 }

@@ -1,10 +1,8 @@
-/**
- * Utility functions for filtering and categorizing locations
- */
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/utils/geoUtils';
-import { isWaterLocation } from '@/utils/locationValidator';
-import { getSafeScore } from '@/utils/geoUtils';
+
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { calculateDistance } from "@/utils/geoUtils";
+import { isWaterLocation } from "@/utils/locationValidator";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Efficiently filter locations by quality and distance
@@ -51,7 +49,7 @@ export function filterLocationsByQualityAndDistance(
     }
     
     // Filter by quality
-    if (location.siqs !== undefined && getSafeScore(location) < qualityThreshold) {
+    if (location.siqs !== undefined && getSiqsScore(location.siqs) < qualityThreshold) {
       return false;
     }
     
@@ -99,7 +97,7 @@ export function sortLocationsByQualityAndDistance(
     
     // Then sort by SIQS score
     if ((a.siqs || 0) !== (b.siqs || 0)) {
-      return (getSafeScore(b) || 0) - (getSafeScore(a) || 0);
+      return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
     }
     
     // Then sort by distance

@@ -1,40 +1,54 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import LocationDetails from './pages/LocationDetails';
+import HomePage from './pages/HomePage';
 import PhotoPointsNearby from './pages/PhotoPointsNearby';
 import NotFound from './pages/NotFound';
 import AboutSIQS from './pages/AboutSIQS';
 import About from './pages/About';
+import LocationDetails from './pages/LocationDetails';
 import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
 import './App.css';
 
+// Create React Query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false
+    },
+  },
+});
+
 function App() {
   return (
     <HelmetProvider>
-      <ThemeProvider>
-        <LanguageProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<LocationDetails />} />
-              <Route path="/location/:id" element={<LocationDetails />} />
-              <Route path="/photo-points" element={<PhotoPointsNearby />} />
-              <Route path="/about-siqs" element={<AboutSIQS />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/links" element={<UsefulLinks />} />
-              <Route path="/useful-links" element={<UsefulLinks />} />
-              <Route path="/share" element={<ShareLocation />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </Router>
-        </LanguageProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <LanguageProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/photo-points" element={<PhotoPointsNearby />} />
+                <Route path="/about-siqs" element={<AboutSIQS />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/location/:id" element={<LocationDetails />} />
+                <Route path="/links" element={<UsefulLinks />} />
+                <Route path="/useful-links" element={<UsefulLinks />} />
+                <Route path="/share" element={<ShareLocation />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+            </Router>
+          </LanguageProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </HelmetProvider>
   );
 }

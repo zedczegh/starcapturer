@@ -1,170 +1,81 @@
 
-import { useEffect, useRef, useCallback } from 'react';
-import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
-import { validateCloudCover } from '@/lib/siqs/utils';
-import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
+import { useCallback } from 'react';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+
+interface UseLocationSIQSUpdaterResult {
+  updateSIQS: () => Promise<void>;
+  resetUpdateState: () => void;
+}
 
 /**
- * Hook to update SIQS score based on forecast data, ensuring consistency
- * throughout the application using astronomical night calculations
+ * Hook to manage updating SIQS data for a location
  */
-export const useLocationSIQSUpdater = (
-  locationData: any, 
-  forecastData: any, 
-  setLocationData: (data: any) => void,
-  t: any
-) => {
-  const updateAttemptedRef = useRef(false);
-  const forceUpdateRef = useRef(false);
-  const lastLocationRef = useRef<string | null>(null);
-  const lastForecastTimestampRef = useRef<string | null>(null);
+export function useLocationSIQSUpdater(
+  locationData: any,
+  forecastData: any,
+  setLocationData: React.Dispatch<React.SetStateAction<any>>,
+  t: Function
+): UseLocationSIQSUpdaterResult {
+  // State for tracking update status
+  let updateRequested = false;
   
-  // Reset update state for new calculations
-  const resetUpdateState = useCallback(() => {
-    updateAttemptedRef.current = false;
-    forceUpdateRef.current = true;
-    console.log("SIQS update state reset");
-  }, []);
-  
-  // Update SIQS score when forecast data becomes available or changes
-  useEffect(() => {
-    // Track location changes to force recalculation
-    const locationSignature = locationData ? 
-      `${locationData.latitude?.toFixed(6)}-${locationData.longitude?.toFixed(6)}` : null;
-    
-    // Get forecast signature to detect actual data changes
-    const forecastSignature = forecastData?.hourly?.time?.[0] || null;
-    
-    // Reset state when location changes
-    if (locationSignature !== lastLocationRef.current) {
-      console.log("Location changed, resetting SIQS update state");
-      lastLocationRef.current = locationSignature;
-      lastForecastTimestampRef.current = null; // Reset forecast timestamp
-      resetUpdateState();
+  // Function to update SIQS calculations
+  const updateSIQS = useCallback(async () => {
+    if (!locationData || !locationData.latitude || !locationData.longitude) {
+      console.log("Cannot update SIQS: missing location data");
+      return;
     }
     
-    // Check if forecast data has actually changed
-    const forecastChanged = forecastSignature !== lastForecastTimestampRef.current;
-    if (forecastChanged && forecastSignature) {
-      console.log("Forecast data changed, updating SIQS");
-      lastForecastTimestampRef.current = forecastSignature;
-      resetUpdateState();
+    // Skip if we don't have Bortle scale data yet
+    if (locationData.bortleScale === undefined || locationData.bortleScale === null) {
+      console.log("Cannot update SIQS: missing Bortle scale data");
+      return;
     }
     
-    // Only update SIQS when forecast data is available or on forced update
-    const shouldUpdate = (
-      forecastData?.hourly && 
-      Array.isArray(forecastData.hourly.time) &&
-      forecastData.hourly.time.length > 0 &&
-      locationData &&
-      (!updateAttemptedRef.current || forceUpdateRef.current)
-    );
-    
-    if (shouldUpdate) {
-      console.log("Updating SIQS based on hourly forecast data");
-      forceUpdateRef.current = false;
+    try {
+      console.log("Calculating SIQS for location:", locationData.name);
+      updateRequested = true;
       
+      // Calculate new SIQS score
+      const siqsResult = await calculateRealTimeSiqs(
+        locationData.latitude,
+        locationData.longitude,
+        locationData.bortleScale
+      );
+      
+      // Update location data with new SIQS result
+      setLocationData((prevData: any) => ({
+        ...prevData,
+        siqsResult
+      }));
+      
+      // Update localStorage with the new SIQS value
       try {
-        // Extract coordinates for astronomical night calculations
-        const latitude = locationData.latitude || 0;
-        const longitude = locationData.longitude || 0;
-        
-        // Get astronomical night times
-        const { start, end } = calculateAstronomicalNight(latitude, longitude);
-        const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
-        
-        console.log(`Astronomical night for location: ${nightTimeStr}`);
-        
-        // Calculate new SIQS based on astronomical nighttime conditions
-        const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
-        
-        if (freshSIQSResult) {
-          console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
-          
-          // Update the SIQS result with the fresh calculation
-          setLocationData({
-            ...locationData,
-            siqsResult: freshSIQSResult
-          });
-          
-          updateAttemptedRef.current = true;
-        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
-          // If we couldn't calculate nighttime SIQS but have forecast data,
-          // use our improved astronomical night cloud cover calculation
-          
-          // Calculate cloud cover for the astronomical night
-          const tonightCloudCover = calculateTonightCloudCover(
-            forecastData.hourly,
-            latitude,
-            longitude
-          );
-          
-          // Convert to SIQS score
-          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
-          
-          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
-          
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: tonightCloudCover < 40,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: (100 - tonightCloudCover * 2.5) / 10,
-                  description: t 
-                    ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
-                      `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
-                    : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
-                  nighttimeData: {
-                    average: tonightCloudCover,
-                    timeRange: nightTimeStr
-                  }
-                }
-              ]
-            }
-          });
-          
-          updateAttemptedRef.current = true;
-        } else if (locationData.weatherData?.cloudCover !== undefined) {
-          // Last fallback to current weather if forecast is unavailable
-          console.log("Using current weather as fallback (no forecast data available)");
-          const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
-          
-          // Special handling for 0% cloud cover - should be score 10
-          const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
-          const estimatedScore = cloudScore / 10;
-          
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
-          
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: estimatedScore > 2,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
-                  description: t 
-                    ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
-                      `${currentCloudCover}%的云量影响成像质量`) 
-                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
-                }
-              ]
-            }
-          });
-          
-          updateAttemptedRef.current = true;
+        const savedLocationString = localStorage.getItem('latest_siqs_location');
+        if (savedLocationString) {
+          const savedLocation = JSON.parse(savedLocationString);
+          if (savedLocation) {
+            savedLocation.siqs = siqsResult.siqs;
+            localStorage.setItem('latest_siqs_location', JSON.stringify(savedLocation));
+          }
         }
-      } catch (error) {
-        console.error("Error updating SIQS:", error);
+      } catch (e) {
+        console.error("Error updating SIQS in localStorage:", e);
       }
+      
+      console.log("Updated SIQS:", siqsResult.siqs.toFixed(1));
+    } catch (error) {
+      console.error("Error updating SIQS:", error);
+    } finally {
+      updateRequested = false;
     }
-  }, [locationData, forecastData, t, setLocationData, resetUpdateState]);
+  }, [locationData, setLocationData]);
   
-  return {
-    resetUpdateState,
-  };
-};
+  // Reset the update state to force a recalculation
+  const resetUpdateState = useCallback(() => {
+    updateRequested = false;
+    updateSIQS().catch(console.error);
+  }, [updateSIQS]);
+  
+  return { updateSIQS, resetUpdateState };
+}
