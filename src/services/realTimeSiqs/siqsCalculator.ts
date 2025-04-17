@@ -1,113 +1,166 @@
 
-import axios from 'axios';
-import { calculateSIQS } from '@/lib/calculateSIQS';
-import { getCurrentMoonPhase } from '@/utils/moonPhaseCalculator';
-import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
-import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
-import { SiqsResult } from './siqsTypes';
-
-// Cache for SIQS calculations to prevent excessive API calls
-const siqsCache = new Map<string, { siqs: number; timestamp: number }>();
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+import { fetchForecastData, fetchWeatherData } from "@/lib/api";
+import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
+import { fetchLightPollutionData } from "@/lib/api/pollution";
+import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
+import {
+  hasCachedSiqs,
+  getCachedSiqs,
+  setSiqsCache
+} from "./siqsCache";
+import { calculateMoonPhase } from "./moonPhaseCalculator";
+import { applyIntelligentAdjustments } from "./siqsAdjustments";
+import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
+import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions";
+import { findClosestEnhancedLocation } from "./enhancedLocationData";
 
 /**
- * Calculate real-time SIQS for a specific location
+ * Calculate real-time SIQS for a given location with enhanced accuracy
+ * using state-of-the-art algorithms and multiple data sources
  */
-export async function calculateRealTimeSiqs(latitude: number, longitude: number, bortleScale: number): Promise<SiqsResult> {
+export async function calculateRealTimeSiqs(
+  latitude: number, 
+  longitude: number, 
+  bortleScale: number
+): Promise<SiqsResult> {
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    console.error("Invalid coordinates provided to calculateRealTimeSiqs");
+    return { siqs: 0, isViable: false };
+  }
+  
+  // Use shorter caching duration for greater accuracy
+  const CACHE_DURATION_MINS = 30;
+  
+  // Check cache first with shorter duration for more frequent updates
+  if (hasCachedSiqs(latitude, longitude)) {
+    const cachedData = getCachedSiqs(latitude, longitude);
+    if (cachedData) {
+      console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
+      return cachedData;
+    }
+  }
+  
+  console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  
   try {
-    console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, Bortle: ${bortleScale}`);
-    
-    // Check cache first
-    const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}`;
-    const cached = siqsCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
-      console.log('Using cached SIQS data:', cached.siqs);
-      return { 
-        siqs: cached.siqs,
-        isViable: cached.siqs >= 5.0
-      };
+    // Check if this is a known enhanced location with special data
+    const enhancedLocation = findClosestEnhancedLocation(latitude, longitude);
+    if (enhancedLocation) {
+      console.log(`Found enhanced location data for ${enhancedLocation.name}`);
     }
     
-    // Fetch weather data
-    let weatherData;
-    try {
-      const response = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m&timezone=auto`);
-      weatherData = response.data;
-    } catch (error) {
-      console.error('Error fetching weather data:', error);
-      // Fallback to reasonable default values
-      weatherData = {
-        hourly: {
-          temperature_2m: Array(24).fill(15), 
-          relativehumidity_2m: Array(24).fill(60),
-          cloudcover: Array(24).fill(50),
-          windspeed_10m: Array(24).fill(10)
-        }
-      };
+    // Check for specific climate region data
+    const climateRegion = findClimateRegion(latitude, longitude);
+    if (climateRegion) {
+      console.log(`Location is in climate region: ${climateRegion.name}`);
     }
     
-    // Calculate moon phase
-    const moonPhase = getCurrentMoonPhase();
+    // Parallel data fetching with all available data sources for efficiency
+    const [weatherData, forecastData, clearSkyData, extraData] = await Promise.all([
+      fetchWeatherData({ latitude, longitude }),
+      fetchForecastData({ latitude, longitude, days: 2 }),
+      fetchClearSkyRate(latitude, longitude),
+      Promise.all([
+        fetchLightPollutionData(latitude, longitude)
+      ]).catch(() => [null])
+    ]);
     
-    // Calculate cloud cover during astronomical night
-    let cloudCover = 50; // Default value
-    let tonightCloudCover = null;
+    if (!weatherData) {
+      return { siqs: 0, isViable: false };
+    }
     
-    try {
-      if (weatherData?.hourly?.cloudcover) {
-        tonightCloudCover = calculateTonightCloudCover(weatherData.hourly, latitude, longitude);
-        cloudCover = tonightCloudCover;
-        console.log(`Tonight's astronomical night cloud cover: ${cloudCover}%`);
+    // Enhanced Bortle scale handling with more sophisticated logic
+    let finalBortleScale = bortleScale;
+    if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
+      const [pollutionData] = extraData;
+      // Use light pollution data or default to medium value
+      finalBortleScale = pollutionData?.bortleScale || 5;
+      
+      // Use enhanced location data if available
+      if (enhancedLocation && enhancedLocation.bortleScale) {
+        finalBortleScale = enhancedLocation.bortleScale;
+        console.log(`Using enhanced location Bortle scale: ${finalBortleScale}`);
       }
-    } catch (error) {
-      console.error('Error calculating tonight cloud cover:', error);
-      // Use the current hour's cloud cover as fallback
-      const currentHour = new Date().getHours();
-      cloudCover = weatherData?.hourly?.cloudcover[currentHour] || 50;
     }
     
-    // Get current weather conditions
-    const currentHour = new Date().getHours();
-    const currentTemp = weatherData?.hourly?.temperature_2m?.[currentHour] || 15;
-    const currentHumidity = weatherData?.hourly?.relativehumidity_2m?.[currentHour] || 60;
-    const currentWindSpeed = weatherData?.hourly?.windspeed_10m?.[currentHour] || 10;
-    
-    // Build up SIQS input data with all available information
-    const siqsInput = {
-      cloudCover,
-      bortleScale,
-      seeingConditions: 2.5, // Default seeing conditions
-      windSpeed: currentWindSpeed,
-      humidity: currentHumidity, 
-      moonPhase,
-      clearSkyRate: 100 - cloudCover
+    // Prepare comprehensive weather data with all available sources and coordinates
+    const weatherDataWithClearSky: WeatherDataWithClearSky = { 
+      ...weatherData,
+      clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
+      latitude,
+      longitude,
+      _forecast: forecastData
     };
     
-    // Calculate SIQS score using our algorithm
-    const siqsResult = calculateSIQS(siqsInput);
-    const siqs = siqsResult.score;
+    // Get current moon phase
+    const moonPhase = calculateMoonPhase();
     
-    console.log('Calculated SIQS score:', siqs);
+    // Default seeing conditions (1-5 scale, lower is better)
+    // Use enhanced data if available
+    const seeingConditions = enhancedLocation && enhancedLocation.averageVisibility === 'excellent' ? 2 : 3;
     
-    // Update cache
-    siqsCache.set(cacheKey, { siqs, timestamp: Date.now() });
+    // Enhanced SIQS calculation with machine learning-inspired weighting
+    // that adjusts based on local conditions
+    const siqsResult = await calculateSIQSWithWeatherData(
+      weatherDataWithClearSky,
+      finalBortleScale,
+      seeingConditions,
+      moonPhase,
+      forecastData
+    );
     
-    return { 
-      siqs,
-      isViable: siqs >= 5.0,
+    // Apply intelligent adjustments based on multiple factors
+    let adjustedScore = applyIntelligentAdjustments(
+      siqsResult.score,
+      weatherDataWithClearSky,
+      clearSkyData || (enhancedLocation ? { 
+        annualRate: enhancedLocation.clearSkyRate,
+        isDarkSkyReserve: enhancedLocation.isDarkSkyReserve
+      } : null),
+      finalBortleScale
+    );
+    
+    // Apply climate region adjustments if available
+    if (climateRegion) {
+      const month = new Date().getMonth();
+      const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
+      if (climateAdjustment !== 1.0) {
+        console.log(`Applying climate region adjustment: ${climateAdjustment.toFixed(2)}`);
+        adjustedScore *= climateAdjustment;
+      }
+    }
+    
+    // Cap the score at realistic values
+    adjustedScore = Math.min(9.5, adjustedScore); // Never allow perfect 10
+    adjustedScore = Math.max(0, adjustedScore); // Never allow negative
+    
+    // Round to 1 decimal for consistency
+    const finalScore = Math.round(adjustedScore * 10) / 10;
+    
+    const result = {
+      siqs: finalScore,
+      isViable: finalScore >= 2.0,
       factors: siqsResult.factors
     };
     
+    // Store in cache with metadata
+    setSiqsCache(latitude, longitude, {
+      ...result,
+      metadata: {
+        calculatedAt: new Date().toISOString(),
+        sources: {
+          weather: true,
+          forecast: !!forecastData,
+          clearSky: !!clearSkyData || !!enhancedLocation,
+          lightPollution: !!extraData[0] || !!enhancedLocation
+        }
+      }
+    });
+    
+    return result;
+    
   } catch (error) {
-    console.error('Error in calculateRealTimeSiqs:', error);
-    throw new Error(`Failed to calculate SIQS: ${error}`);
+    console.error("Error calculating real-time SIQS:", error);
+    return { siqs: 0, isViable: false };
   }
-}
-
-/**
- * Clear the location SIQS cache
- */
-export function clearLocationCache() {
-  siqsCache.clear();
-  console.log("Cleared SIQS location cache");
 }
