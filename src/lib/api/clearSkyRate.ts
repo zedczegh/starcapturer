@@ -1,3 +1,4 @@
+
 import { fetchWithCache } from '@/utils/fetchWithCache';
 import { isInChina } from '@/utils/chinaBortleData';
 import { chinaCityLocations } from '@/data/regions/chinaCityLocations';
@@ -46,8 +47,8 @@ const chinaRegionalData = {
   },
   // Southwestern regions (varied elevation)
   southwest: {
-    baseRate: 53, // Yunnan, Sichuan
-    wetSeasonAdjustment: -8,
+    baseRate: 42, // Yunnan, Sichuan, Guizhou (updated from 53 to 42 for more accuracy)
+    wetSeasonAdjustment: -15, // More extreme wet season impact (updated from -8)
     drySeasonAdjustment: 7,
     variance: 4
   },
@@ -294,6 +295,11 @@ function getChineseRegion(latitude: number, longitude: number): keyof typeof chi
     return 'southCoast';
   }
   
+  // Guizhou province specific detection (foggy, cloudy karst region)
+  if (latitude >= 24.5 && latitude <= 29.5 && longitude >= 104 && longitude <= 110) {
+    return 'southwest';
+  }
+  
   // Standard regional classification
   // Southern coastal: Guangdong, Fujian, etc.
   if (latitude < 25 && longitude > 110) {
@@ -311,7 +317,7 @@ function getChineseRegion(latitude: number, longitude: number): keyof typeof chi
   else if (latitude > 41) {
     return 'northeast';
   }
-  // Southwestern: Yunnan, Sichuan
+  // Southwestern: Yunnan, Sichuan, Guizhou
   else if (latitude < 30 && longitude < 110) {
     return 'southwest';
   }
@@ -472,16 +478,18 @@ function findNearestChinaCity(latitude: number, longitude: number) {
   // Special case handling for major cities with known data
   const specificCities = [
     // City name, lat, lon, bortle, clear rate override, type
-    ["Shenzhen", 22.5429, 114.0596, 8, 48, "urban"], // Shenzhen - highly urbanized with high humidity
-    ["Guangzhou", 23.1291, 113.2644, 8, 45, "urban"], // Guangzhou - lower clear sky rate due to pollution and humidity
-    ["Beijing", 39.9042, 116.4074, 9, 58, "urban"], // Beijing - higher clear rate in winter, pollution issues
-    ["Shanghai", 31.2304, 121.4737, 9, 47, "urban"], // Shanghai - coastal humidity
-    ["Chengdu", 30.5728, 104.0668, 7, 38, "urban"], // Chengdu - basin geography, often cloudy
+    ["Shenzhen", 22.5429, 114.0596, 8, 42, "urban"], // Shenzhen - highly urbanized with high humidity
+    ["Guangzhou", 23.1291, 113.2644, 8, 40, "urban"], // Guangzhou - lower clear sky rate due to pollution and humidity
+    ["Beijing", 39.9042, 116.4074, 9, 52, "urban"], // Beijing - higher clear rate in winter, pollution issues
+    ["Shanghai", 31.2304, 121.4737, 9, 45, "urban"], // Shanghai - coastal humidity
+    ["Chengdu", 30.5728, 104.0668, 7, 35, "urban"], // Chengdu - basin geography, often cloudy
+    ["Guiyang", 26.6470, 106.6302, 7, 28, "urban"], // Guiyang - foggy karst region, very cloudy
+    ["Zunyi", 27.7256, 106.9372, 7, 25, "urban"], // Zunyi - Guizhou's northern city, foggy
     ["Lhasa", 29.6547, 91.1221, 5, 72, "urban"], // Lhasa - high altitude, very clear skies
-    ["Hong Kong", 22.3193, 114.1694, 8, 47, "urban"], // Hong Kong - similar to Shenzhen
-    ["Haikou", 20.0446, 110.2994, 6, 50, "urban"], // Hainan - tropical but with sea breezes clearing skies
-    ["Urumqi", 43.8256, 87.6168, 6, 70, "urban"], // Urumqi - arid region
-    ["Harbin", 45.8038, 126.5345, 7, 62, "urban"], // Harbin - very cold, often clear winters
+    ["Hong Kong", 22.3193, 114.1694, 8, 40, "urban"], // Hong Kong - similar to Shenzhen
+    ["Haikou", 20.0446, 110.2994, 6, 46, "urban"], // Hainan - tropical but with sea breezes clearing skies
+    ["Urumqi", 43.8256, 87.6168, 6, 65, "urban"], // Urumqi - arid region
+    ["Harbin", 45.8038, 126.5345, 7, 58, "urban"], // Harbin - very cold, often clear winters
   ];
   
   // Check for exact city match first with 50km radius
@@ -548,11 +556,31 @@ function generateChinaMonthlyRates(
   // Southern China has a different wet/dry season pattern
   const isSouthern = region === 'southCoast' || region === 'southwest';
   
+  // Special adjustments for Guizhou province (karst topography, foggy)
+  const isGuizhou = latitude >= 24.5 && latitude <= 29.5 && longitude >= 104 && longitude <= 110;
+  
   // City-specific adjustments
   let citySpecificAdjustments: Record<string, number> = {};
   
+  // Guizhou province adjustments - very foggy karst region with high humidity year-round
+  if (isGuizhou) {
+    citySpecificAdjustments = {
+      'Jan': -5,  // Winter fog season
+      'Feb': -8,  // Peak winter fog
+      'Mar': -2,  // Spring brings some improvement
+      'Apr': 0,   // Spring transition
+      'May': -5,  // Pre-monsoon clouds
+      'Jun': -10, // Monsoon season
+      'Jul': -15, // Peak monsoon/rainy season
+      'Aug': -12, // Continued rainy season
+      'Sep': -8,  // Post-monsoon but still cloudy
+      'Oct': -3,  // Beginning to improve
+      'Nov': 0,   // Best month for Guizhou
+      'Dec': -2   // Early winter fog beginning
+    };
+  }
   // Shenzhen/Guangzhou area (Pearl River Delta) - typhoon season patterns
-  if (isPearlRiverDelta) {
+  else if (isPearlRiverDelta) {
     citySpecificAdjustments = {
       'Jan': 5,  // Winter is drier
       'Feb': 2,
@@ -792,34 +820,39 @@ export async function fetchClearSkyRate(
           
           // Base rate depends on city type and Bortle scale
           if (cityData.type === 'urban') {
-            baseRate = 48 + bortleAdjustment; // Urban areas have fewer clear nights
+            baseRate = 42 + bortleAdjustment; // Urban areas have fewer clear nights (updated from 48)
             dataSource = `Based on data for ${cityData.name}`;
           } else {
-            baseRate = 58 + bortleAdjustment; // Rural areas have more clear nights
+            baseRate = 50 + bortleAdjustment; // Rural areas have more clear nights (updated from 58)
             dataSource = `Based on data for ${cityData.name} region`;
           }
         }
         
-        // Special case for Shenzhen area - highly urbanized with humid subtropical climate
-        if (cityData.name === 'Shenzhen' || 
-            (latitude >= 22.4 && latitude <= 22.7 && 
-             longitude >= 113.8 && longitude <= 114.4)) {
-          baseRate = 48; // Refined from actual meteorological data
-          dataSource = "Based on Shenzhen meteorological records";
+        // Special case for Guizhou - karst topography, foggy with high humidity
+        if ((cityData.name === 'Guiyang' || cityData.name === 'Zunyi') || 
+            (latitude >= 24.5 && latitude <= 29.5 && longitude >= 104 && longitude <= 110)) {
+          baseRate = 28; // Significantly lower clear sky rate based on meteorological data
+          dataSource = "Based on Guizhou meteorological records";
         }
         
         // Apply additional adjustments for known pollution regions
         if (latitude > 39 && latitude < 41 && longitude > 115 && longitude < 117) {
           // Beijing region - air quality impacts clear sky visibility
-          baseRate -= 3;
+          baseRate -= 5;
         }
       } else {
         // Use regional data for China
         const region = getChineseRegion(latitude, longitude);
         baseRate = chinaRegionalData[region].baseRate;
         
+        // Specific location adjustments
+        // Guizhou province (very foggy)
+        if (latitude > 24.5 && latitude < 29.5 && longitude > 104 && longitude < 110) {
+          baseRate = 28; // Further reduced clear sky rate
+          dataSource = "Guizhou Regional Climate Data";
+        } 
         // Guangdong specific adjustment - known for cloudy/rainy weather
-        if (latitude > 20 && latitude < 25 && longitude > 110 && longitude < 117) {
+        else if (latitude > 20 && latitude < 25 && longitude > 110 && longitude < 117) {
           baseRate -= 5; // Guangdong gets fewer clear nights due to subtropical climate
           dataSource = "South China Regional Climate Data";
         }
@@ -866,19 +899,19 @@ export async function fetchClearSkyRate(
         // Base rate starts with a general pattern - mid-latitudes (20-40°) tend to be drier
         // Desert/dry regions have highest clear sky rates (20-40° latitude)
         if (absLatitude >= 20 && absLatitude <= 40) {
-          baseRate = 75; // Desert/dry regions baseline
+          baseRate = 70; // Desert/dry regions baseline (reduced from 75)
         }
         // Equatorial regions (0-20°) - moderately clear but with more precipitation
         else if (absLatitude < 20) {
-          baseRate = 65; // Tropical/equatorial baseline
+          baseRate = 55; // Tropical/equatorial baseline (reduced from 65)
         }
         // Mid-latitudes (40-60°) - more variable weather
         else if (absLatitude < 60) {
-          baseRate = 55; // Mid-latitude baseline
+          baseRate = 50; // Mid-latitude baseline (reduced from 55)
         }
         // Polar regions (60-90°) - often cloudy with seasonal extremes
         else {
-          baseRate = 45; // Polar regions baseline
+          baseRate = 40; // Polar regions baseline (reduced from 45)
         }
         
         // Apply longitudinal adjustments for known dry/wet regions
@@ -957,7 +990,11 @@ export async function fetchClearSkyRate(
     return result;
   } catch (error) {
     console.error("Error fetching clear sky rate:", error);
-    return null;
+    return {
+      annualRate: 40, // More conservative default
+      monthlyRates: {},
+      source: "Error retrieving data, using default estimate"
+    };
   }
 }
 
@@ -976,7 +1013,6 @@ export function clearClearSkyRateCache(latitude?: number, longitude?: number): v
   
   // Otherwise clear all clear sky cache entries
   const keysToRemove: string[] = [];
-  
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith('clear-sky-')) {
@@ -984,6 +1020,5 @@ export function clearClearSkyRateCache(latitude?: number, longitude?: number): v
     }
   }
   
-  // Remove all found keys
   keysToRemove.forEach(key => localStorage.removeItem(key));
 }

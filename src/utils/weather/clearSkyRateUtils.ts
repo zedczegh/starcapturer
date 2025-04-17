@@ -127,6 +127,7 @@ export function getSkyRating(rate: number, t: (en: string, zh: string) => string
  * Calculate minimum number of clear nights per year
  * Enhanced to provide more accurate estimates based on location and climate data
  * This specifically targets nights when stars are actually visible (not just precipitation-free)
+ * and excludes full moon periods for better stargazing estimates
  * @param clearSkyRate Annual clear sky rate percentage
  * @param latitude Location latitude for seasonal adjustments
  * @param longitude Location longitude for regional climate patterns
@@ -148,9 +149,14 @@ export function getMinimumClearNights(
   // Star visibility requires truly clear skies - not just rain-free
   // We apply a stricter conversion factor to get from general clear sky rate to actual star-visible nights
   
-  // Calculate baseline clear nights, with stricter multiplier (0.65 instead of previously higher values)
+  // Calculate baseline clear nights, with stricter multiplier (0.55 instead of previously higher values)
   // This accounts for nights that may be technically "clear" but have haze, light cloud cover, etc.
-  let baseNights = Math.round((clearSkyRate / 100) * 365 * 0.65);
+  let baseNights = Math.round((clearSkyRate / 100) * 365 * 0.55);
+  
+  // Subtract nights affected by full moon periods (approximately 5 nights per month)
+  // Full moon and days around it significantly reduce star visibility (5 nights x 12 months = 60 nights)
+  const fullMoonExclusion = 60;
+  baseNights = Math.max(0, baseNights - fullMoonExclusion);
   
   // Apply adjustments based on region and climate patterns
   let clearNights = baseNights;
@@ -163,31 +169,31 @@ export function getMinimumClearNights(
     if (latitude >= 24.5 && latitude <= 29 && longitude >= 104 && longitude <= 109.5) {
       // Adjust for Guizhou's karst topography, subtropical monsoon climate, and frequent fog/mist
       // This region is known for its high humidity, persistent haze, and light pollution
-      clearNights = Math.round(baseNights * 0.55); // Significantly reduced for more accuracy
+      clearNights = Math.round(baseNights * 0.45); // Significantly reduced for more accuracy
     }
     // Southern China adjustment (more rainfall/humidity/haze)
     else if (latitude > 20 && latitude < 35 && longitude > 100 && longitude < 120) {
-      clearNights = Math.round(baseNights * 0.7); // Reduced factor
+      clearNights = Math.round(baseNights * 0.6); // Reduced factor
     }
     // Desert regions adjustment (typically more clear nights, but can have dust)
     else if (isDesertRegion(latitude, longitude)) {
       // Desert areas have fewer clouds but can have dust storms and atmospheric particles
-      clearNights = Math.round(baseNights * 0.9); // Slightly reduced factor
+      clearNights = Math.round(baseNights * 0.85); // Slightly reduced factor
     }
     // Tropical rainforest regions (high precipitation, humidity)
     else if (isTropicalRainforestRegion(latitude, longitude)) {
-      clearNights = Math.round(baseNights * 0.6); // Reduced dramatically
+      clearNights = Math.round(baseNights * 0.5); // Reduced dramatically
     }
     // Mediterranean climate regions (dry summers, wet winters)
     else if (isMediterraneanRegion(latitude, longitude)) {
       // These regions have very seasonal clear nights
-      clearNights = Math.round(baseNights * 0.85);
+      clearNights = Math.round(baseNights * 0.8);
     }
     // Polar/sub-polar regions
     else if (Math.abs(latitude) > 60) {
       // Fewer observable nights in polar regions due to extended daylight periods
       // and often challenging weather conditions
-      const polarAdjustment = Math.max(0.2, 0.8 - (Math.abs(latitude) - 60) / 50);
+      const polarAdjustment = Math.max(0.2, 0.7 - (Math.abs(latitude) - 60) / 50);
       clearNights = Math.round(baseNights * polarAdjustment);
     }
     
@@ -196,7 +202,7 @@ export function getMinimumClearNights(
     // We check for proximity to common urban center locations
     if (isLikelyUrbanArea(latitude, longitude)) {
       // Light pollution dramatically reduces visible stars
-      clearNights = Math.round(clearNights * 0.75);
+      clearNights = Math.round(clearNights * 0.7);
     }
   }
   
@@ -207,7 +213,7 @@ export function getMinimumClearNights(
     // Mid-latitude regions have more seasonal variations
     if (absLat > 30 && absLat < 60) {
       // Adjust for stronger seasonal effects in mid-latitudes
-      clearNights = Math.round(clearNights * 0.9);
+      clearNights = Math.round(clearNights * 0.85);
     }
   }
   
@@ -218,13 +224,14 @@ export function getMinimumClearNights(
     // that affect star visibility even on "clear" nights
     if ((latitude > 20 && latitude < 45 && longitude > 75 && longitude < 135) || // China, East Asia
         (latitude > 8 && latitude < 35 && longitude > 70 && longitude < 90)) {   // India
-      clearNights = Math.round(clearNights * 0.8); // Reduction for air quality impact
+      clearNights = Math.round(clearNights * 0.7); // Reduction for air quality impact
     }
   }
   
   // Ensure the result is within reasonable bounds
-  // Even the best locations rarely have more than 250 truly clear nights for star visibility
-  clearNights = Math.max(20, Math.min(clearNights, 250)); 
+  // Even the best locations rarely have more than 200 truly clear nights for star visibility
+  // This is a significant reduction from previous estimates to be more realistic
+  clearNights = Math.max(10, Math.min(clearNights, 200)); 
   
   // Cache result with a month validity
   clearSkyCalculationCache.set(cacheKey, {
