@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Camera, Map, Award, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";

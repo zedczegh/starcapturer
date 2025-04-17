@@ -4,6 +4,7 @@ import { calculateSIQS } from '@/lib/calculateSIQS';
 import { getCurrentMoonPhase } from '@/utils/moonPhaseCalculator';
 import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
 import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
+import { SiqsResult } from './siqsTypes';
 
 // Cache for SIQS calculations to prevent excessive API calls
 const siqsCache = new Map<string, { siqs: number; timestamp: number }>();
@@ -12,7 +13,7 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 /**
  * Calculate real-time SIQS for a specific location
  */
-export async function calculateRealTimeSiqs(latitude: number, longitude: number, bortleScale: number) {
+export async function calculateRealTimeSiqs(latitude: number, longitude: number, bortleScale: number): Promise<SiqsResult> {
   try {
     console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, Bortle: ${bortleScale}`);
     
@@ -21,7 +22,10 @@ export async function calculateRealTimeSiqs(latitude: number, longitude: number,
     const cached = siqsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
       console.log('Using cached SIQS data:', cached.siqs);
-      return { siqs: cached.siqs };
+      return { 
+        siqs: cached.siqs,
+        isViable: cached.siqs >= 5.0
+      };
     }
     
     // Fetch weather data
@@ -88,7 +92,11 @@ export async function calculateRealTimeSiqs(latitude: number, longitude: number,
     // Update cache
     siqsCache.set(cacheKey, { siqs, timestamp: Date.now() });
     
-    return { siqs };
+    return { 
+      siqs,
+      isViable: siqs >= 5.0,
+      factors: siqsResult.factors
+    };
     
   } catch (error) {
     console.error('Error in calculateRealTimeSiqs:', error);

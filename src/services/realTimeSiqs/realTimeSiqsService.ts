@@ -1,9 +1,9 @@
 
 import { calculateRealTimeSiqs } from './siqsCalculator';
 import { detectAndFixAnomalies, assessDataReliability } from './siqsAnomalyDetector';
-import { clearSiqsCache, cleanupExpiredCache, clearLocationSiqsCache } from './siqsCache';
+import { clearSiqsCache, cleanupExpiredCache, clearLocationSiqsCache, getCachedSiqs, cacheSiqsData } from './siqsCache';
 import { SiqsResult, SiqsCalculationOptions, WeatherDataWithClearSky } from './siqsTypes';
-import { fetchWeatherData } from '@/lib/api';
+import { fetchWeatherData } from '@/lib/api/weatherService';
 
 // Export functions from siqsCache for external use
 export { clearSiqsCache, clearLocationSiqsCache };
@@ -83,7 +83,10 @@ export async function calculateEnhancedRealTimeSiqs(
       }
     }
     
-    return siqsResult;
+    return {
+      ...siqsResult,
+      isViable: siqsResult.siqs >= 5.0
+    };
   } catch (error) {
     console.error("Error calculating enhanced SIQS:", error);
     return { siqs: 0, isViable: false };
