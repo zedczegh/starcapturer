@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { searchLocations } from "@/services/geocoding";
@@ -9,6 +8,8 @@ import SearchInput from "@/components/map/SearchInput";
 import SearchResults from "@/components/map/SearchResults";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { Button } from "@/components/ui/button";
+import { findClosestLocation } from "@/utils/locationDatabase";
+import { getLocationInfo } from "@/utils/locationDatabase";
 
 interface LocationSearchProps {
   onSelectLocation: (location: Location) => void;
@@ -32,7 +33,44 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSelectLocation }) => 
       setIsLoading(true);
       try {
         const searchResults = await searchLocations(searchTerm, language);
-        setResults(searchResults);
+        
+        // Enhance results with Bortle scale information where available
+        const enhancedResults = searchResults.map(location => {
+          try {
+            // Try to get more detailed location info from our internal database
+            const locationInfo = getLocationInfo(location.latitude, location.longitude);
+            
+            if (locationInfo) {
+              return {
+                ...location,
+                bortleScale: locationInfo.bortleScale,
+                placeDetails: location.placeDetails || 
+                  (locationInfo.bortleScale ? 
+                    t(`Bortle Scale: ${locationInfo.bortleScale}`, `波尔特等级: ${locationInfo.bortleScale}`) : 
+                    undefined)
+              };
+            }
+            
+            // If no specific location info, try to find the closest known location
+            const closestLocation = findClosestLocation(location.latitude, location.longitude);
+            if (closestLocation) {
+              return {
+                ...location,
+                bortleScale: closestLocation.bortleScale,
+                placeDetails: location.placeDetails || 
+                  (closestLocation.bortleScale ? 
+                    t(`Bortle Scale: ${closestLocation.bortleScale}`, `波尔特等级: ${closestLocation.bortleScale}`) : 
+                    undefined)
+              };
+            }
+          } catch (error) {
+            console.error("Error enhancing location with bortle info:", error);
+          }
+          
+          return location;
+        });
+        
+        setResults(enhancedResults);
       } catch (error) {
         console.error("Search error:", error);
       } finally {
@@ -41,10 +79,30 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSelectLocation }) => 
     }, 300);
 
     return () => clearTimeout(searchTimeout);
-  }, [searchTerm, language]);
+  }, [searchTerm, language, t]);
 
   const handleSelectLocation = (location: Location) => {
-    onSelectLocation(location);
+    try {
+      // Try to enhance the selected location with additional data
+      const locationInfo = getLocationInfo(location.latitude, location.longitude);
+      
+      // Merge additional data if available
+      if (locationInfo) {
+        const enhancedLocation = {
+          ...location,
+          bortleScale: locationInfo.bortleScale,
+          formattedName: locationInfo.formattedName
+        };
+        onSelectLocation(enhancedLocation);
+        return;
+      }
+      
+      // Otherwise pass the location as is
+      onSelectLocation(location);
+    } catch (error) {
+      console.error("Error enhancing selected location:", error);
+      onSelectLocation(location);
+    }
   };
 
   const clearSearch = () => {
@@ -59,14 +117,32 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSelectLocation }) => 
       (position) => {
         const { latitude, longitude } = position.coords;
         
-        // Create a minimal location object
-        const location = {
-          name: t("Current Location", "当前位置"),
-          latitude,
-          longitude
-        };
+        try {
+          // Get enhanced location info for current position
+          const locationInfo = getLocationInfo(latitude, longitude);
+          
+          // Create location object with enhanced data if available
+          const location = {
+            name: locationInfo ? locationInfo.name : t("Current Location", "当前位置"),
+            latitude,
+            longitude,
+            bortleScale: locationInfo ? locationInfo.bortleScale : undefined
+          };
+          
+          onSelectLocation(location);
+        } catch (error) {
+          console.error("Error getting location info:", error);
+          
+          // Fallback to basic location
+          const location = {
+            name: t("Current Location", "当前位置"),
+            latitude,
+            longitude
+          };
+          
+          onSelectLocation(location);
+        }
         
-        onSelectLocation(location);
         setIsGettingLocation(false);
       },
       (error) => {
