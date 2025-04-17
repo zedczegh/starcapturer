@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -48,10 +47,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks
-  } = useRecommendedLocations(
-    effectiveLocation, 
-    currentSearchRadius
-  );
+  } = useRecommendedLocations(effectiveLocation, currentSearchRadius);
 
   // Process locations
   const {
