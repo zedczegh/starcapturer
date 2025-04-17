@@ -70,7 +70,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   // Clear location cache
   const handleClearCache = useCallback(() => {
     try {
-      clearLocationSiqsCache();
+      clearLocationSiqsCache(); // Fix: This function doesn't need arguments
       clearSiqsCache(); // Also clear the SIQS cache
       setCacheCleared(true);
       console.log("Location cache cleared");

@@ -82,17 +82,27 @@ export interface MoonlessNightInfo {
   isTonight: boolean;
 }
 
-// Enhanced location with computed data
+// Enhanced location with computed data - updated with all necessary fields
 export interface EnhancedLocation {
-  id: string;
+  id?: string;
   name: string;
   latitude: number;
   longitude: number;
-  siqsScore: number;
+  siqsScore?: number;
   bortleScale: number;
   weatherData?: WeatherData;
   certification?: string;
   isDarkSkyReserve?: boolean;
   distance?: number;
-  timestamp: string;
+  timestamp?: string;
+  elevation?: number; // Added property
+  hasDarkSkyStatus?: boolean; // Added property
+  clearSkyRate?: number; // Added property
+  seasonalTrends?: { // Added property
+    spring: { clearSkyRate: number, averageTemperature: number },
+    summer: { clearSkyRate: number, averageTemperature: number },
+    fall: { clearSkyRate: number, averageTemperature: number },
+    winter: { clearSkyRate: number, averageTemperature: number }
+  };
+  bestMonths?: string[]; // Added property
 }

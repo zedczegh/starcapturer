@@ -1,10 +1,9 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
-import { LocationMarker, UserLocationMarker } from './MarkerComponents';
+import { LocationMarker, UserMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
@@ -39,6 +38,12 @@ interface LazyMapContainerProps {
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
 }
+
+const UserLocationMarker = ({ position, currentSiqs }: { position: [number, number]; currentSiqs?: number | null }) => {
+  return (
+    <UserMarker position={position} />
+  );
+};
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   center,

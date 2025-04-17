@@ -1,62 +1,63 @@
 
 /**
- * SIQS calculation cache management
+ * Cache system for SIQS calculations
+ * Reduces API calls and improves performance
  */
-
 import { SiqsResult } from './siqsTypes';
 
-// Cache of SIQS calculations with TTL
-const siqsCache: Record<string, {
-  result: SiqsResult;
-  timestamp: number;
-}> = {};
+// In-memory cache for SIQS results
+const siqsCache = new Map<string, { result: SiqsResult; timestamp: number }>();
 
-// Default TTL is 30 minutes
-const DEFAULT_TTL = 30 * 60 * 1000;
+// Cache expiration time in milliseconds (30 minutes)
+const CACHE_EXPIRY = 30 * 60 * 1000;
 
 /**
- * Generate a cache key for SIQS calculation
+ * Generate a cache key from location parameters
  */
 export function generateSiqsCacheKey(
-  latitude: number, 
-  longitude: number, 
+  latitude: number,
+  longitude: number,
   bortleScale: number,
   weatherData?: any
 ): string {
-  // Basic cache key using coordinates and Bortle scale
-  let key = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}`;
+  // Round coordinates to reduce unnecessary variations
+  const lat = latitude.toFixed(5);
+  const lng = longitude.toFixed(5);
   
-  // Include cloud cover in key if available
-  if (weatherData && typeof weatherData.cloudCover === 'number') {
-    key += `-${Math.round(weatherData.cloudCover)}`;
+  // Include weather data hash if available
+  let weatherHash = '';
+  if (weatherData) {
+    const { cloudCover = 0, humidity = 50, temperature = 15 } = weatherData;
+    weatherHash = `-w${cloudCover.toFixed(0)}-${humidity.toFixed(0)}-${temperature.toFixed(0)}`;
   }
   
-  return key;
+  return `siqs-${lat}-${lng}-b${bortleScale}${weatherHash}`;
 }
 
 /**
- * Cache a SIQS result
+ * Store SIQS result in cache
  */
 export function cacheSiqsResult(key: string, result: SiqsResult): void {
-  siqsCache[key] = {
+  siqsCache.set(key, {
     result,
     timestamp: Date.now()
-  };
+  });
 }
 
 /**
- * Get a cached SIQS result if available and not expired
+ * Get cached SIQS result if available
  */
-export function getCachedSiqsResult(key: string, ttl: number = DEFAULT_TTL): SiqsResult | null {
-  const cached = siqsCache[key];
+export function getCachedSiqsResult(key: string): SiqsResult | null {
+  const cached = siqsCache.get(key);
   
+  // Return null if not found
   if (!cached) {
     return null;
   }
   
-  // Check if cache entry has expired
-  if (Date.now() - cached.timestamp > ttl) {
-    delete siqsCache[key]; // Clean up expired entry
+  // Check if cache has expired
+  if (Date.now() - cached.timestamp > CACHE_EXPIRY) {
+    siqsCache.delete(key);
     return null;
   }
   
@@ -64,36 +65,42 @@ export function getCachedSiqsResult(key: string, ttl: number = DEFAULT_TTL): Siq
 }
 
 /**
- * Clean up expired cache entries
+ * Clear expired cache entries
  */
-export function cleanupExpiredCache(ttl: number = DEFAULT_TTL): void {
+export function cleanupExpiredCache(): void {
   const now = Date.now();
   
-  Object.keys(siqsCache).forEach(key => {
-    if (now - siqsCache[key].timestamp > ttl) {
-      delete siqsCache[key];
+  for (const [key, cached] of siqsCache.entries()) {
+    if (now - cached.timestamp > CACHE_EXPIRY) {
+      siqsCache.delete(key);
     }
-  });
+  }
 }
 
 /**
  * Clear the entire SIQS cache
  */
 export function clearSiqsCache(): void {
-  Object.keys(siqsCache).forEach(key => {
-    delete siqsCache[key];
-  });
+  siqsCache.clear();
 }
 
 /**
  * Clear cache entries for a specific location
  */
-export function clearLocationSiqsCache(latitude: number, longitude: number): void {
-  const prefix = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  
-  Object.keys(siqsCache).forEach(key => {
-    if (key.startsWith(prefix)) {
-      delete siqsCache[key];
+export function clearLocationSiqsCache(latitude?: number, longitude?: number): void {
+  if (latitude && longitude) {
+    // Clear only for the specified location
+    const lat = latitude.toFixed(5);
+    const lng = longitude.toFixed(5);
+    const prefix = `siqs-${lat}-${lng}`;
+    
+    for (const key of siqsCache.keys()) {
+      if (key.startsWith(prefix)) {
+        siqsCache.delete(key);
+      }
     }
-  });
+  } else {
+    // Clear all cache entries
+    siqsCache.clear();
+  }
 }

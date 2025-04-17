@@ -164,12 +164,12 @@ export const LocationMarker = memo(({
     <Marker 
       position={[location.latitude, location.longitude]} 
       icon={markerIcon}
-      eventHandlers={{ click: handleMarkerClick }}
+      // Fix: Replace eventHandlers with onClick prop
+      onClick={handleMarkerClick}
     >
       <Popup
-        closeButton={true}
+        // Fix: Replace closeButton with other valid props
         offset={[0, -10]}
-        autoPan={true}
       >
         <Card className="w-64 border-none shadow-none p-0">
           <CardContent className="p-3">
