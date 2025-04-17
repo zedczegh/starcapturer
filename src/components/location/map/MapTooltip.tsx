@@ -4,6 +4,8 @@ import { Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEnhancedLocationDetails } from './tooltip/EnhancedLocationDetails';
 import { Language } from '@/services/geocoding/types';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 
 interface MapTooltipProps {
   name: string;
@@ -11,6 +13,9 @@ interface MapTooltipProps {
   className?: string;
   latitude?: number;
   longitude?: number;
+  siqs?: number | { score: number; isViable: boolean } | any;
+  isDarkSkyReserve?: boolean;
+  certification?: string;
 }
 
 /**
@@ -22,7 +27,10 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   children,
   className = '',
   latitude,
-  longitude
+  longitude,
+  siqs,
+  isDarkSkyReserve = false,
+  certification = ''
 }) => {
   const { language } = useLanguage();
   const typedLanguage: Language = language === 'zh' ? 'zh' : 'en';
@@ -33,6 +41,15 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     longitude, 
     language: typedLanguage 
   });
+
+  // Check if this is a certified location
+  const isCertified = Boolean(isDarkSkyReserve || certification);
+  
+  // Get SIQS score using helper function
+  const siqsScore = getSiqsScore(siqs);
+  
+  // For certified locations without SIQS, use a default good score
+  const displaySiqs = siqsScore > 0 ? siqsScore : (isCertified ? 6.5 : 0);
   
   return (
     <Popup
@@ -53,6 +70,17 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         {latitude !== undefined && longitude !== undefined && (
           <div className="text-xs text-muted-foreground mt-1">
             {latitude.toFixed(4)}, {longitude.toFixed(4)}
+          </div>
+        )}
+
+        {/* Display SIQS score if available or if it's a certified location */}
+        {(siqsScore > 0 || isCertified) && (
+          <div className="mt-1.5 flex items-center">
+            <SiqsScoreBadge 
+              score={displaySiqs} 
+              compact={true}
+              forceCertified={isCertified && siqsScore <= 0}
+            />
           </div>
         )}
         
