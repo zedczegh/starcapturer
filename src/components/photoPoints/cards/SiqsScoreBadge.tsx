@@ -2,13 +2,16 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
 
 interface SiqsScoreBadgeProps {
   score: number | string | { score: number; isViable: boolean } | any;
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
-  forceCertified?: boolean; // Added this prop to support forcing certified status
+  forceCertified?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
@@ -16,7 +19,9 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   loading = false,
   compact = false,
   isCertified = false,
-  forceCertified = false
+  forceCertified = false,
+  latitude,
+  longitude
 }) => {
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
@@ -47,6 +52,18 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       </div>
     );
   }
+
+  // Log astronomical night info if coordinates are provided
+  React.useEffect(() => {
+    if (latitude && longitude) {
+      try {
+        const { start, end } = calculateAstronomicalNight(latitude, longitude);
+        console.log(`Astronomical night for this badge: ${start.toLocaleTimeString()}-${end.toLocaleTimeString()}`);
+      } catch (err) {
+        console.error("Error calculating astronomical night:", err);
+      }
+    }
+  }, [latitude, longitude]);
 
   return (
     <div className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}>

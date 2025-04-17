@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -10,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -48,6 +50,47 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
   
+  // Process locations for astronomical night data
+  React.useEffect(() => {
+    if (validLocations.length > 0) {
+      // Process in batches to avoid blocking UI
+      const batchSize = 10;
+      let currentBatch = 0;
+      
+      const processNextBatch = () => {
+        const start = currentBatch * batchSize;
+        const end = Math.min(start + batchSize, validLocations.length);
+        const batch = validLocations.slice(start, end);
+        
+        batch.forEach(location => {
+          if (location.latitude && location.longitude && (!location.metadata || !location.metadata.astronomicalNight)) {
+            try {
+              const { start, end } = calculateAstronomicalNight(location.latitude, location.longitude);
+              const nightTimeStr = formatTime(start) + "-" + formatTime(end);
+              
+              // Add the data to the location
+              location.metadata = location.metadata || {};
+              location.metadata.astronomicalNight = {
+                start: start.toISOString(),
+                end: end.toISOString(),
+                formattedTime: nightTimeStr
+              };
+            } catch (err) {
+              console.error("Error calculating astronomical night:", err);
+            }
+          }
+        });
+        
+        currentBatch++;
+        if (currentBatch * batchSize < validLocations.length) {
+          setTimeout(processNextBatch, 0);
+        }
+      };
+      
+      processNextBatch();
+    }
+  }, [validLocations]);
+  
   // Sort locations by distance (closest first)
   const sortedLocations = [...validLocations].sort((a, b) => 
     (a.distance || Infinity) - (b.distance || Infinity)
@@ -74,6 +117,24 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   const handleViewLocation = (point: SharedAstroSpot) => {
     const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    
+    // Make sure we have astronomical night data
+    if (point.latitude && point.longitude && (!point.metadata || !point.metadata.astronomicalNight)) {
+      try {
+        const { start, end } = calculateAstronomicalNight(point.latitude, point.longitude);
+        const nightTimeStr = formatTime(start) + "-" + formatTime(end);
+        
+        // Add the data to the location object
+        point.metadata = point.metadata || {};
+        point.metadata.astronomicalNight = {
+          start: start.toISOString(),
+          end: end.toISOString(),
+          formattedTime: nightTimeStr
+        };
+      } catch (err) {
+        console.error("Error calculating astronomical night before navigation:", err);
+      }
+    }
     
     // Navigate to location details page
     navigate(`/location/${locationId}`, {

@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,6 +12,7 @@ import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
+import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -58,6 +60,55 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedCount,
     calculatedCount
   } = useCertifiedLocations(locations);
+  
+  // Process astronomical night data for locations
+  React.useEffect(() => {
+    if (locations.length > 0) {
+      // Process in batches to avoid UI freezing
+      const batchSize = 10;
+      let currentBatch = 0;
+      const totalBatches = Math.ceil(locations.length / batchSize);
+      
+      console.log(`Processing astronomical night data for ${locations.length} locations in ${totalBatches} batches`);
+      
+      const processNextBatch = () => {
+        const startIndex = currentBatch * batchSize;
+        const endIndex = Math.min(startIndex + batchSize, locations.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+          const location = locations[i];
+          if (location && location.latitude && location.longitude && 
+              (!location.metadata || !location.metadata.astronomicalNight)) {
+            try {
+              const { start, end } = calculateAstronomicalNight(
+                location.latitude, 
+                location.longitude
+              );
+              
+              // Store the data in the location object
+              location.metadata = location.metadata || {};
+              location.metadata.astronomicalNight = {
+                start: start.toISOString(),
+                end: end.toISOString(),
+                formattedTime: `${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`
+              };
+            } catch (err) {
+              console.error(`Error calculating astronomical night for location ${i}:`, err);
+            }
+          }
+        }
+        
+        currentBatch++;
+        if (currentBatch < totalBatches) {
+          setTimeout(processNextBatch, 0);
+        } else {
+          console.log("Completed processing astronomical night data for all locations");
+        }
+      };
+      
+      processNextBatch();
+    }
+  }, [locations]);
 
   // Update search radius when view changes
   React.useEffect(() => {
@@ -69,6 +120,27 @@ const PhotoPointsNearby: React.FC = () => {
     if (!location) return;
     
     try {
+      // Ensure we have astronomical night data before navigating
+      if (location.latitude && location.longitude && 
+          (!location.metadata || !location.metadata.astronomicalNight)) {
+        try {
+          const { start, end } = calculateAstronomicalNight(
+            location.latitude, 
+            location.longitude
+          );
+          
+          // Store the data in the location object
+          location.metadata = location.metadata || {};
+          location.metadata.astronomicalNight = {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            formattedTime: `${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`
+          };
+        } catch (err) {
+          console.error("Error calculating astronomical night before navigation:", err);
+        }
+      }
+      
       // Use the navigation helper to prepare location data
       const navigationData = prepareLocationForNavigation(location);
       
