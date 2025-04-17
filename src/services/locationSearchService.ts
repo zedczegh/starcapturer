@@ -1,11 +1,10 @@
-
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
  */
 
 import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
-import { fetchRealTimeSiqs as calculateRealTimeSiqs, batchCalculateSiqs } from '@/services/realTimeSiqsService';
+import { calculateRealTimeSiqs, batchCalculateSiqs } from '@/services/realTimeSiqsService';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';

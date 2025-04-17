@@ -57,7 +57,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const validLongitude = isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
   
-  // Extract SIQS score using our consistent helper function
+  // Extract SIQS score
   const siqsScore = getSiqsScore(siqs);
 
   useEffect(() => {
@@ -164,7 +164,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
           showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
-          siqs={siqs} // Pass full SIQS object for consistent processing
+          siqs={siqsScore}
         />
       </div>
       

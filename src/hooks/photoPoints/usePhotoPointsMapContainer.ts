@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -30,7 +29,6 @@ export const usePhotoPointsMapContainer = ({
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
-  const [siqsLoadingMap, setSiqsLoadingMap] = useState<Record<string, boolean>>({});
   
   const { 
     hoveredLocationId, 
@@ -115,14 +113,6 @@ export const usePhotoPointsMapContainer = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handle SIQS loading status for a location
-  const handleSiqsLoadingChange = useCallback((locationId: string, isLoading: boolean) => {
-    setSiqsLoadingMap(prev => ({
-      ...prev,
-      [locationId]: isLoading
-    }));
-  }, []);
-  
   // Debounced map click handler to prevent rapid location changes
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate && !isUpdatingLocation) {
@@ -140,24 +130,12 @@ export const usePhotoPointsMapContainer = ({
   }, [onLocationUpdate, isUpdatingLocation]);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
-    // Mark this location as loading SIQS
-    if (location.id) {
-      handleSiqsLoadingChange(location.id, true);
-    }
-    
     if (onLocationClick) {
       onLocationClick(location);
     } else {
       handleLocationClick(location);
     }
-    
-    // Clear loading state after a delay
-    if (location.id) {
-      setTimeout(() => {
-        handleSiqsLoadingChange(location.id, false);
-      }, 5000); // Safety timeout
-    }
-  }, [onLocationClick, handleLocationClick, handleSiqsLoadingChange]);
+  }, [onLocationClick, handleLocationClick]);
   
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation && !isUpdatingLocation) {
@@ -206,8 +184,6 @@ export const usePhotoPointsMapContainer = ({
     handleLegendToggle,
     isMobile,
     certifiedLocationsLoaded,
-    certifiedLocationsLoading,
-    handleSiqsLoadingChange,
-    siqsLoadingMap
+    certifiedLocationsLoading
   };
 };
