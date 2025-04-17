@@ -1,3 +1,4 @@
+
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -41,15 +42,15 @@ declare module "@/types/weather" {
   }
 
   export interface SharedAstroSpot {
-    id?: string;
-    name?: string;
+    id: string;
+    name: string;
     latitude: number;
     longitude: number;
-    bortleScale?: number;
+    bortleScale: number;
     description?: string;
     imageURL?: string;
     rating?: number;
-    timestamp?: string;
+    timestamp: string;
     chineseName?: string;
     siqs?: number | {
       score: number;
@@ -66,12 +67,9 @@ declare module "@/types/weather" {
     certification?: string;
     isDarkSkyReserve?: boolean;
     type?: string;
-    preferenceScore?: number;
-    clearSkyRate?: number;
-    isCertified?: boolean;
-    certificationRating?: number;
-    image?: string;
-    lastVisit?: string;
-    photographer?: string;
+    preferenceScore?: number; // Added for enhanced calculations
+    clearSkyRate?: number; // Added for enhanced calculations
+    isCertified?: boolean; // Added for certified location handling
+    certificationRating?: number; // Added for certification rating
   }
 }

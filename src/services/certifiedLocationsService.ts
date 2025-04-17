@@ -1,5 +1,4 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { findCertifiedLocations } from '@/services/locationSearchService';
 
 // Cache for certified locations to avoid repeated API calls
 let cachedCertifiedLocations: SharedAstroSpot[] | null = null;
@@ -116,7 +115,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'hotel-rangá',
       name: 'Hotel Rangá',
-      chineseName: '朗加���店暗夜天空点',
+      chineseName: '朗加��店暗夜天空点',
       latitude: 63.8366,
       longitude: -20.3561,
       isDarkSkyReserve: false,
@@ -1187,5 +1186,3 @@ export async function forceCertifiedLocationsRefresh(): Promise<SharedAstroSpot[
   
   return preloadCertifiedLocations();
 }
-
-export { findCertifiedLocations };

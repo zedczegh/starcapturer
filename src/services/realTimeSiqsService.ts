@@ -1,29 +1,26 @@
 
-/**
- * Central entry point for real-time SIQS calculation services
- */
-import { batchCalculateSiqs, addPlaceholderSiqsScores } from './realTimeSiqs/realTimeSiqsService';
 import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
-import { updateLocationsWithRealTimeSiqs } from './realTimeSiqsService/locationUpdateService';
+import { updateLocationsWithRealTimeSiqs, addPlaceholderSiqsScores } from './realTimeSiqsService/locationUpdateService';
+import { 
+  clearSiqsCache, 
+  clearLocationSiqsCache, 
+  getSiqsCacheSize,
+  cleanupExpiredCache 
+} from './realTimeSiqs/siqsCache';
 
-/**
- * Clear cached location data
- */
-export function clearLocationCache(): void {
-  console.log("Clearing location cache");
-  try {
-    // Clear any cached data in localStorage
-    localStorage.removeItem('locationCache');
-    localStorage.removeItem('siqsCache');
-    localStorage.removeItem('weatherCache');
-  } catch (error) {
-    console.error("Error clearing location cache:", error);
-  }
-}
-
-export {
-  batchCalculateSiqs,
+// Export all the main functions
+export { 
   calculateRealTimeSiqs,
+  updateLocationsWithRealTimeSiqs,
   addPlaceholderSiqsScores,
-  updateLocationsWithRealTimeSiqs
+  clearSiqsCache,
+  clearLocationSiqsCache,
+  getSiqsCacheSize,
+  cleanupExpiredCache
 };
+
+// Helper function to clear the location cache for external use
+export function clearLocationCache(): void {
+  clearSiqsCache();
+  console.log("Location cache cleared");
+}

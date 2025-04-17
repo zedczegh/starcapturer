@@ -22,16 +22,9 @@ export { fetchLightPollutionData } from './api/pollution';
 export { fetchClearSkyRate, clearClearSkyRateCache } from './api/clearSkyRate';
 
 // Export types and functions related to shared astronomy spots
-export type { SharedAstroSpot } from './api/astroSpots';
+export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
 export { 
   getRecommendedPhotoPoints,
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
-
-// Add SharingResponse type
-export interface SharingResponse {
-  success: boolean;
-  message?: string;
-  data?: any;
-}

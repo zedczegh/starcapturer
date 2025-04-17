@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointCard from './PhotoPointCard';
@@ -56,7 +55,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
             transition={{ duration: 0.3, delay: index * 0.05 }}
           >
             <PhotoPointCard
-              location={location}
+              point={location}
               onViewDetails={onViewDetails}
               userLocation={null} // Explicitly null to avoid distance filtering
             />

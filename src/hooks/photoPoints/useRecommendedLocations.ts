@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
@@ -5,7 +6,7 @@ import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/locationValidator';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast'; // Fix import path
 
 interface Location {
   latitude: number;
@@ -290,14 +291,6 @@ export const useRecommendedLocations = (
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs,
-    findCalculatedLocations: async (lat, lng, radius) => {
-      return findCalculatedLocationsNear(lat, lng, radius);
-    }
+    currentSiqs
   };
 };
-
-async function findCalculatedLocationsNear(lat: number, lng: number, radius: number): Promise<any[]> {
-  console.log(`Finding calculated locations near ${lat},${lng} with radius ${radius}km`);
-  return [];
-}

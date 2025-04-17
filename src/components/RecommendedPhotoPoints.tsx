@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
@@ -185,7 +184,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
               transition={{ duration: 0.15, delay: index * 0.03 }}
             >
               <PhotoPointCard
-                location={location}
+                point={location}
+                onSelect={onSelectPoint}
                 onViewDetails={() => onSelectPoint?.(location)}
                 userLocation={userLocation}
               />

@@ -73,7 +73,7 @@ export const useMapLocations = ({
             );
             
             // Filter out locations outside search radius or in water
-            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude)) {
+            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
               newLocationsMap.set(key, loc as SharedAstroSpot);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {

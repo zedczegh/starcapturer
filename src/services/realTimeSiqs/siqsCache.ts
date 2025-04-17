@@ -1,129 +1,121 @@
 
-// A simple cache for SIQS calculation results to reduce API calls
-// and improve performance
+import { SiqsResult } from './siqsTypes';
 
-// Cache structure mapping location key to SIQS result and expiration time
+// Define cache interface
 interface CacheEntry {
-  result: any;
-  expiry: number;
+  data: SiqsResult;
+  timestamp: number;
 }
 
-interface SiqsCache {
-  [key: string]: CacheEntry;
-}
+// In-memory cache for SIQS results
+const siqsCache = new Map<string, CacheEntry>();
 
-const cache: SiqsCache = {};
-
-// Default cache duration (30 minutes)
-const DEFAULT_CACHE_DURATION = 30 * 60 * 1000;
+// Default cache duration (10 minutes)
+const DEFAULT_CACHE_DURATION = 10 * 60 * 1000;
 
 /**
- * Generate a cache key for a location
+ * Generate cache key from coordinates
  */
-function getCacheKey(latitude: number, longitude: number, bortleScale?: number): string {
-  const bortleStr = bortleScale !== undefined ? `,${bortleScale}` : '';
-  return `${latitude.toFixed(4)},${longitude.toFixed(4)}${bortleStr}`;
-}
+const getCacheKey = (latitude: number, longitude: number): string => {
+  return `siqs_${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
+};
 
 /**
- * Check if SIQS result exists in cache
+ * Check if valid cached SIQS data exists for coordinates
  */
-export function hasCachedSiqs(latitude: number, longitude: number, bortleScale?: number): boolean {
-  const key = getCacheKey(latitude, longitude, bortleScale);
-  const entry = cache[key];
+export const hasCachedSiqs = (
+  latitude: number,
+  longitude: number,
+  maxAgeMins = 10
+): boolean => {
+  const key = getCacheKey(latitude, longitude);
+  if (!siqsCache.has(key)) return false;
   
-  if (entry && entry.expiry > Date.now()) {
-    return true;
-  }
+  const cachedEntry = siqsCache.get(key)!;
+  const maxAge = maxAgeMins * 60 * 1000;
+  const age = Date.now() - cachedEntry.timestamp;
   
-  return false;
-}
+  return age < maxAge;
+};
 
 /**
- * Get SIQS result from cache if available
+ * Get cached SIQS data if it exists and is not expired
  */
-export function getCachedSiqs(latitude: number, longitude: number, bortleScale?: number): any | null {
-  const key = getCacheKey(latitude, longitude, bortleScale);
-  const entry = cache[key];
+export const getCachedSiqs = (
+  latitude: number,
+  longitude: number,
+  maxAgeMins = 10
+): SiqsResult | null => {
+  const key = getCacheKey(latitude, longitude);
+  if (!siqsCache.has(key)) return null;
   
-  if (entry && entry.expiry > Date.now()) {
-    return entry.result;
-  }
+  const cachedEntry = siqsCache.get(key)!;
+  const maxAge = maxAgeMins * 60 * 1000;
+  const age = Date.now() - cachedEntry.timestamp;
   
-  // Clean up expired entry if present
-  if (entry) {
-    delete cache[key];
+  if (age < maxAge) {
+    return cachedEntry.data;
   }
   
   return null;
-}
+};
 
 /**
- * Store SIQS result in cache
+ * Save SIQS data to cache
  */
-export function cacheSiqsResult(
+export const setSiqsCache = (
   latitude: number,
   longitude: number,
-  bortleScale: number,
-  result: any,
-  duration: number = DEFAULT_CACHE_DURATION
-): void {
-  const key = getCacheKey(latitude, longitude, bortleScale);
-  cache[key] = {
-    result,
-    expiry: Date.now() + duration
-  };
-}
+  data: SiqsResult
+): void => {
+  const key = getCacheKey(latitude, longitude);
+  siqsCache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+};
 
 /**
- * Clear all cached SIQS results
+ * Clear cache for a specific location
  */
-export function clearSiqsCache(): void {
-  for (const key in cache) {
-    delete cache[key];
-  }
-}
+export const clearLocationSiqsCache = (
+  latitude: number,
+  longitude: number
+): void => {
+  const key = getCacheKey(latitude, longitude);
+  siqsCache.delete(key);
+};
 
 /**
- * Clear cached SIQS result for a specific location
+ * Clear entire SIQS cache
  */
-export function clearLocationSiqsCache(latitude: number, longitude: number, bortleScale?: number): void {
-  if (bortleScale !== undefined) {
-    // Clear specific Bortle scale entry
-    const key = getCacheKey(latitude, longitude, bortleScale);
-    delete cache[key];
-  } else {
-    // Clear all entries for this lat/long regardless of Bortle scale
-    const prefix = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
-    for (const key in cache) {
-      if (key.startsWith(prefix)) {
-        delete cache[key];
-      }
-    }
-  }
-}
+export const clearSiqsCache = (): void => {
+  siqsCache.clear();
+};
 
 /**
- * Get the current size of the cache
+ * Get the number of entries in the cache
  */
-export function getSiqsCacheSize(): number {
-  return Object.keys(cache).length;
-}
+export const getSiqsCacheSize = (): number => {
+  return siqsCache.size;
+};
 
 /**
- * Clean up expired entries in the cache
- * @returns Number of entries removed
+ * Remove expired entries from cache
  */
-export function cleanupExpiredCache(): number {
+export const cleanupExpiredCache = (maxAgeMins = 30): number => {
   const now = Date.now();
-  let removed = 0;
+  const maxAge = maxAgeMins * 60 * 1000;
+  let removedCount = 0;
   
-  for (const key in cache) {
-    if (cache[key].expiry < now) {
-      delete cache[key];
-      removed++;
+  for (const [key, entry] of siqsCache.entries()) {
+    if (now - entry.timestamp > maxAge) {
+      siqsCache.delete(key);
+      removedCount++;
     }
   }
   
-  return removed;
-}
+  return removedCount;
+};
+
+// Add the missing types file:
