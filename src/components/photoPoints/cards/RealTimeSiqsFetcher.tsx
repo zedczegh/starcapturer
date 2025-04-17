@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -53,6 +54,12 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 setLoading(false);
                 return;
               }
+            }
+            
+            // If we have coordinates, calculate astronomical night for logging purposes
+            if (latitude && longitude) {
+              const { start, end } = calculateAstronomicalNight(latitude, longitude);
+              console.log(`Astronomical night for this location: ${formatTime(start)}-${formatTime(end)}`);
             }
             
             const result = await calculateRealTimeSiqs(
