@@ -1,46 +1,61 @@
 
-import { isWaterLocation } from './locationWaterCheck';
+/**
+ * Validation utilities for astronomy locations
+ */
 
 /**
- * Check if coordinates are valid
+ * Check if location has valid coordinates
  */
-export function isValidCoordinates(latitude: number, longitude: number): boolean {
-  if (isNaN(latitude) || isNaN(longitude)) return false;
-  if (latitude < -90 || latitude > 90) return false;
-  if (longitude < -180 || longitude > 180) return false;
+export function isValidCoordinates(lat: number | null | undefined, lng: number | null | undefined): boolean {
+  if (lat === null || lat === undefined || lng === null || lng === undefined) {
+    return false;
+  }
   
-  return true;
+  // Check if latitude is between -90 and 90 degrees
+  const validLat = lat >= -90 && lat <= 90;
+  
+  // Check if longitude is between -180 and 180 degrees
+  const validLng = lng >= -180 && lng <= 180;
+  
+  return validLat && validLng;
 }
 
 /**
- * Check if a location is suitable for astrophotography
+ * Check if a location has all required fields for astronomy calculations
  */
-export function isSuitableLocation(latitude: number, longitude: number): boolean {
-  // Validate coordinates first
-  if (!isValidCoordinates(latitude, longitude)) return false;
+export function isValidAstronomyLocation(location: any): boolean {
+  // Basic validation - must have coordinates
+  if (!location) return false;
   
-  // Check if location is on water
-  if (isWaterLocation(latitude, longitude)) return false;
+  // Check if has latitude and longitude and they are valid
+  const hasValidCoords = isValidCoordinates(location.latitude, location.longitude);
   
-  return true;
+  // Optional fields can enhance the location but aren't strictly required
+  return hasValidCoords;
 }
 
 /**
- * Check if a location is valid for astronomy purposes
+ * Validate and sanitize a location object
  */
-export function isValidAstronomyLocation(latitude: number, longitude: number): boolean {
-  // First validate basic coordinates
-  if (!isValidCoordinates(latitude, longitude)) return false;
+export function validateLocation(location: any) {
+  if (!location) return null;
   
-  // For astronomy locations, water isn't necessarily bad (boats, islands, etc.)
-  // but we should still validate other factors
+  // Ensure valid coordinates
+  if (!isValidCoordinates(location.latitude, location.longitude)) {
+    return null;
+  }
   
-  // Additional criteria can be added here
+  // Ensure location has an ID
+  const id = location.id || `loc-${location.latitude}-${location.longitude}`;
   
-  return true;
+  // Ensure other basic properties
+  return {
+    id,
+    name: location.name || 'Unknown Location',
+    latitude: location.latitude,
+    longitude: location.longitude,
+    bortleScale: location.bortleScale || null,
+    timestamp: location.timestamp || new Date().toISOString(),
+    ...location
+  };
 }
-
-/**
- * Check if a location is on water (re-export from locationWaterCheck)
- */
-export { isWaterLocation } from './locationWaterCheck';

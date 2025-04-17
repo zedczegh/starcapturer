@@ -1,93 +1,89 @@
 
 /**
- * Moon phase calculation utilities
+ * Moon phase calculations for astronomical applications
  */
 
-export interface MoonPhaseInfo {
-  phase: number;
-  name: string;
-  illumination: number;
-  age: number;
-  emoji: string;
-  isFullMoon: boolean;
-  isNewMoon: boolean;
-}
+// Moon phase names
+const MOON_PHASES = [
+  "New Moon",
+  "Waxing Crescent",
+  "First Quarter",
+  "Waxing Gibbous",
+  "Full Moon",
+  "Waning Gibbous",
+  "Last Quarter",
+  "Waning Crescent"
+];
 
 /**
- * Calculate the current moon phase
+ * Calculate current moon phase (0-1)
+ * 0 = New Moon, 0.5 = Full Moon, 0.99 = Almost New Moon again
  */
-export function calculateMoonPhase(date?: Date): MoonPhaseInfo {
-  // Use current date if not provided
-  const current = date || new Date();
+export function calculateMoonPhase(date = new Date()): number {
+  // Julian date algorithm
+  let year = date.getFullYear();
+  let month = date.getMonth() + 1; // JS months are 0-11
+  const day = date.getDate();
   
-  // Get year, month, and day
-  let year = current.getFullYear();
-  let month = current.getMonth() + 1; // JavaScript months are 0-based
-  let day = current.getDate();
-  
-  // Adjust month for moon phase calculation algorithm
-  if (month < 3) {
-    year--;
+  // Adjust for January and February
+  if (month <= 2) {
+    year -= 1;
     month += 12;
   }
   
-  // Calculate approximate moon phase using algorithm
-  const c = 365.25 * year;
-  const e = 30.6 * month;
-  const jd = c + e + day - 694039.09; // Julian day
-  const moonPhase = jd / 29.53; // Divide by moon cycle length
-  const fraction = moonPhase - Math.floor(moonPhase); // Get fractional part
-  const phase = Math.round(fraction * 29.53); // Convert to moon age in days
+  // Calculate Julian date
+  const a = Math.floor(year / 100);
+  const b = Math.floor(a / 4);
+  const c = 2 - a + b;
+  const e = 365.25 * (year + 4716);
+  const f = 30.6001 * (month + 1);
+  const julianDate = c + day + e + f - 1524.5;
   
-  // Calculate illumination percentage (simple approximation)
-  const illumination = Math.cos(Math.PI * (phase / 29.53 - 0.5)) * 0.5 + 0.5;
+  // Days since new moon on Jan 6, 2000
+  const daysSinceNew = julianDate - 2451549.5;
+  const newMoons = daysSinceNew / 29.53;
   
-  // Get moon phase name and emoji based on phase
-  const { name, emoji, isFullMoon, isNewMoon } = getMoonPhaseName(phase);
+  // Get just the fractional part
+  const phase = newMoons % 1;
+  
+  // Normalize to 0-1 range
+  return phase < 0 ? phase + 1 : phase;
+}
+
+/**
+ * Get moon phase name based on phase value
+ * @param phase Moon phase (0-1)
+ * @returns Name of the moon phase
+ */
+export function getMoonPhaseName(phase: number): string {
+  // Convert phase to 0-8 scale (8 = same as 0)
+  const phaseIndex = Math.round(phase * 8) % 8;
+  return MOON_PHASES[phaseIndex];
+}
+
+/**
+ * Get information about the current moon
+ * @returns Object with moon phase and name
+ */
+export function getMoonInfo(date = new Date()) {
+  const phase = calculateMoonPhase(date);
+  const name = getMoonPhaseName(phase);
   
   return {
-    phase: phase,
+    phase,
     name,
-    illumination: Math.round(illumination * 100) / 100,
-    age: Math.round(phase * 10) / 10,
-    emoji,
-    isFullMoon,
-    isNewMoon
+    illumination: calculateMoonIllumination(phase)
   };
 }
 
 /**
- * Get moon phase name based on lunar day
+ * Calculate moon illumination percentage based on phase
+ * @param phase Moon phase (0-1)
+ * @returns Illumination percentage (0-100)
  */
-export function getMoonPhaseName(phase: number): { 
-  name: string; 
-  emoji: string;
-  isFullMoon: boolean;
-  isNewMoon: boolean;
-} {
-  // Define moon phases
-  if (phase >= 0 && phase < 1) {
-    return { name: "New Moon", emoji: "🌑", isNewMoon: true, isFullMoon: false };
-  } else if (phase >= 1 && phase < 6.5) {
-    return { name: "Waxing Crescent", emoji: "🌒", isNewMoon: false, isFullMoon: false };
-  } else if (phase >= 6.5 && phase < 8.5) {
-    return { name: "First Quarter", emoji: "🌓", isNewMoon: false, isFullMoon: false };
-  } else if (phase >= 8.5 && phase < 13.5) {
-    return { name: "Waxing Gibbous", emoji: "🌔", isNewMoon: false, isFullMoon: false };
-  } else if (phase >= 13.5 && phase < 15.5) {
-    return { name: "Full Moon", emoji: "🌕", isNewMoon: false, isFullMoon: true };
-  } else if (phase >= 15.5 && phase < 20.5) {
-    return { name: "Waning Gibbous", emoji: "🌖", isNewMoon: false, isFullMoon: false };
-  } else if (phase >= 20.5 && phase < 22.5) {
-    return { name: "Last Quarter", emoji: "🌗", isNewMoon: false, isFullMoon: false };
-  } else {
-    return { name: "Waning Crescent", emoji: "🌘", isNewMoon: false, isFullMoon: false };
-  }
-}
-
-/**
- * Get moon info for a specific date
- */
-export function getMoonInfo(date?: Date): MoonPhaseInfo {
-  return calculateMoonPhase(date);
+function calculateMoonIllumination(phase: number): number {
+  // Model the moon illumination as a sinusoidal function
+  // Full moon (phase=0.5) is 100% illuminated
+  // New moon (phase=0 or 1) is 0% illuminated
+  return 100 * (1 - Math.cos(2 * Math.PI * phase)) / 2;
 }

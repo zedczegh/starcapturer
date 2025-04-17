@@ -53,4 +53,5 @@ export interface EnhancedLocation {
   weatherData?: WeatherDataWithClearSky;
   distance?: number;
   timestamp?: string;
+  isDarkSkyReserve?: boolean; // Added to fix error
 }

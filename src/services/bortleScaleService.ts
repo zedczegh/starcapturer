@@ -1,102 +1,114 @@
 
 /**
- * Bortle scale service for light pollution estimation
+ * Services related to Bortle Scale calculations
  */
 
-// Define the Bortle scale ranges
-const BORTLE_RANGES = [
-  { min: 21.7, max: 22.0, scale: 1 }, // Class 1: Excellent dark sky
-  { min: 21.5, max: 21.7, scale: 2 }, // Class 2: Typical truly dark sky
-  { min: 21.3, max: 21.5, scale: 3 }, // Class 3: Rural sky
-  { min: 20.4, max: 21.3, scale: 4 }, // Class 4: Rural/suburban transition
-  { min: 19.1, max: 20.4, scale: 5 }, // Class 5: Suburban sky
-  { min: 18.0, max: 19.1, scale: 6 }, // Class 6: Bright suburban sky
-  { min: 18.0, max: 18.0, scale: 7 }, // Class 7: Suburban/urban transition
-  { min: 17.0, max: 18.0, scale: 8 }, // Class 8: City sky
-  { min: 0.0, max: 17.0, scale: 9 }   // Class 9: Inner city sky
+import { haversine } from '@/utils/haversine';
+
+// Map of known dark sky areas with their Bortle Scale values
+const knownDarkSkyAreas = [
+  { name: "Natural Bridges National Monument", latitude: 37.6047, longitude: -109.9754, bortleScale: 1 },
+  { name: "Big Bend National Park", latitude: 29.2498, longitude: -103.2502, bortleScale: 1 },
+  { name: "Cherry Springs State Park", latitude: 41.6626, longitude: -77.8233, bortleScale: 2 },
+  { name: "Death Valley National Park", latitude: 36.5323, longitude: -116.9325, bortleScale: 1 },
+  { name: "Atacama Desert", latitude: -24.5000, longitude: -69.2500, bortleScale: 1 },
+  { name: "NamibRand Nature Reserve", latitude: -24.7292, longitude: 16.0952, bortleScale: 1 },
+  { name: "Aoraki Mackenzie", latitude: -44.0025, longitude: 170.4764, bortleScale: 1 },
+  { name: "Mont-Mégantic", latitude: 45.4573, longitude: -71.1533, bortleScale: 2 },
+  // Urban areas
+  { name: "New York City", latitude: 40.7128, longitude: -74.0060, bortleScale: 9 },
+  { name: "Los Angeles", latitude: 34.0522, longitude: -118.2437, bortleScale: 9 },
+  { name: "London", latitude: 51.5074, longitude: -0.1278, bortleScale: 8 },
+  { name: "Tokyo", latitude: 35.6762, longitude: 139.6503, bortleScale: 9 },
+  { name: "Shanghai", latitude: 31.2304, longitude: 121.4737, bortleScale: 9 },
+  // Suburban areas
+  { name: "Average Suburb", latitude: 0, longitude: 0, bortleScale: 6 }
 ];
 
 /**
- * Get Bortle scale from sky brightness in mag/arcsec²
+ * Estimate Bortle scale for a given location based on known dark sky areas
+ * and urban centers
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param defaultValue Default Bortle scale if estimation fails
+ * @returns Estimated Bortle scale (1-9)
  */
-export function getBortleFromSkyBrightness(skyBrightness: number): number {
-  // Find the appropriate Bortle scale class
-  for (const range of BORTLE_RANGES) {
-    if (skyBrightness >= range.min && skyBrightness <= range.max) {
-      return range.scale;
+export function getBortleScale(
+  latitude: number, 
+  longitude: number,
+  defaultValue: number = 4
+): number {
+  try {
+    // Calculate distances to all known reference points
+    const distances = knownDarkSkyAreas.map(area => {
+      if (area.name === "Average Suburb") return { area, distance: Infinity };
+      
+      const distance = haversine(latitude, longitude, area.latitude, area.longitude);
+      return { area, distance };
+    });
+    
+    // Sort by distance
+    distances.sort((a, b) => a.distance - b.distance);
+    
+    // If very close to a known area (within 50km), use its value
+    if (distances[0].distance < 50) {
+      return distances[0].area.bortleScale;
     }
-  }
-  
-  // Default to worst case if outside range
-  return 9;
-}
-
-/**
- * Estimate Bortle scale based on location factors (latitude, longitude)
- */
-export function estimateBortleScale(latitude: number, longitude: number): number {
-  // Simple estimation algorithm based on latitude
-  // In a real app, this would use light pollution data or population density
-  
-  // Get distance from major city centers (simplified for demo)
-  const distanceFromUrban = Math.min(
-    calculateDistanceFromUrban(latitude, longitude),
-    150 // Cap at 150km
-  );
-  
-  if (distanceFromUrban < 10) {
-    return 8; // Very close to urban centers
-  } else if (distanceFromUrban < 30) {
-    return 6; // Suburbs
-  } else if (distanceFromUrban < 70) {
-    return 4; // Rural/suburban
-  } else if (distanceFromUrban < 120) {
-    return 3; // Rural
-  } else {
-    return 2; // Truly dark
+    
+    // For areas between 50-200km from dark sites, interpolate
+    if (distances[0].distance < 200 && distances[0].area.bortleScale <= 3) {
+      const baseScale = distances[0].area.bortleScale;
+      const distanceFactor = (distances[0].distance - 50) / 150;
+      
+      // Gradually increase Bortle scale with distance
+      // Add between 0-3 points depending on distance
+      return Math.min(9, Math.round(baseScale + (3 * distanceFactor)));
+    }
+    
+    // For areas between 50-200km from urban centers, interpolate
+    if (distances[0].distance < 200 && distances[0].area.bortleScale >= 7) {
+      const baseScale = distances[0].area.bortleScale;
+      const distanceFactor = (distances[0].distance - 50) / 150;
+      
+      // Gradually decrease Bortle scale with distance
+      // Subtract between 0-3 points depending on distance
+      return Math.max(1, Math.round(baseScale - (3 * distanceFactor)));
+    }
+    
+    // Default to medium-high Bortle scale for unknown areas
+    return defaultValue;
+    
+  } catch (error) {
+    console.error("Error estimating Bortle scale:", error);
+    return defaultValue;
   }
 }
 
 /**
- * Mock function to calculate distance from urban centers
+ * Get a description of the Bortle Scale value
+ * @param bortleScale Bortle scale number (1-9)
+ * @returns Human-readable description
  */
-function calculateDistanceFromUrban(latitude: number, longitude: number): number {
-  // This is a simple placeholder that simulates distance from urban centers
-  // In a real application, this would use a database of city coordinates
-  // and calculate actual distances
-  
-  // For demo purposes, we'll just use a simple formula based on coordinates
-  const urbanFactor = Math.abs(Math.sin(latitude * 0.0174533) * 50) + 
-                     Math.abs(Math.cos(longitude * 0.0174533) * 50);
-  
-  // Return simulated distance in kilometers
-  return urbanFactor + Math.random() * 20;
+export function getBortleScaleDescription(bortleScale: number): string {
+  switch (bortleScale) {
+    case 1: return "Excellent dark-sky site";
+    case 2: return "Typical truly dark site";
+    case 3: return "Rural sky";
+    case 4: return "Rural/suburban transition";
+    case 5: return "Suburban sky";
+    case 6: return "Bright suburban sky";
+    case 7: return "Suburban/urban transition";
+    case 8: return "City sky";
+    case 9: return "Inner-city sky";
+    default: return "Unknown";
+  }
 }
 
 /**
- * Get description of a Bortle scale value
+ * Check if a site has exceptional dark sky quality
+ * @param bortleScale Bortle scale value
+ * @returns Boolean indicating exceptional quality
  */
-export function getBortleScaleDescription(scale: number): string {
-  switch (Math.round(scale)) {
-    case 1:
-      return "Excellent dark sky, no light pollution";
-    case 2:
-      return "Truly dark sky, slight light domes";
-    case 3:
-      return "Rural sky, some light pollution";
-    case 4:
-      return "Rural/suburban transition";
-    case 5:
-      return "Suburban sky, moderate light pollution";
-    case 6:
-      return "Bright suburban sky";
-    case 7:
-      return "Suburban/urban transition";
-    case 8:
-      return "City sky, poor viewing conditions";
-    case 9:
-      return "Inner city sky, very poor viewing";
-    default:
-      return "Unknown sky conditions";
-  }
+export function isExceptionalDarkSky(bortleScale: number): boolean {
+  return bortleScale <= 2;
 }

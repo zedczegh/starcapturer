@@ -26,6 +26,11 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
 }
 
 /**
+ * Alternative name for haversine function for backward compatibility
+ */
+export const haversineDistance = haversine;
+
+/**
  * Convert degrees to radians
  */
 function toRadians(degrees: number): number {
