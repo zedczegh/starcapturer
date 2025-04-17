@@ -77,3 +77,29 @@ export function getSiqsQualityLevel(score: number): 'excellent' | 'good' | 'aver
   if (score >= 2) return 'poor';
   return 'bad';
 }
+
+/**
+ * Compare if a SIQS score is greater than a threshold
+ * Handles various input types by using getSiqsScore internally
+ * 
+ * @param score SIQS score (can be number, object, etc.)
+ * @param threshold Value to compare against
+ * @returns boolean indicating if score > threshold
+ */
+export function isSiqsGreaterThan(score: any, threshold: number): boolean {
+  const numericScore = getSiqsScore(score);
+  return numericScore > threshold;
+}
+
+/**
+ * Compare if a SIQS score is at least a threshold value
+ * Handles various input types by using getSiqsScore internally
+ * 
+ * @param score SIQS score (can be number, object, etc.)
+ * @param threshold Value to compare against
+ * @returns boolean indicating if score >= threshold
+ */
+export function isSiqsAtLeast(score: any, threshold: number): boolean {
+  const numericScore = getSiqsScore(score);
+  return numericScore >= threshold;
+}
