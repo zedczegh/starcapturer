@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MapPin, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,11 +9,9 @@ const LocationPinButton: React.FC = () => {
   const { getPosition } = useSiqsNavigation();
   const [locationFound, setLocationFound] = useState(false);
   
-  // Check if user location exists in localStorage
   useEffect(() => {
     const checkForExistingLocation = () => {
       try {
-        // Check if any location data exists in localStorage
         const keys = Object.keys(localStorage);
         const locationKeys = keys.filter(key => key.startsWith('location_'));
         setLocationFound(locationKeys.length > 0);
@@ -24,7 +21,6 @@ const LocationPinButton: React.FC = () => {
     };
 
     checkForExistingLocation();
-    // Add event listener to detect location changes
     window.addEventListener('storage', checkForExistingLocation);
     
     return () => {
@@ -33,9 +29,7 @@ const LocationPinButton: React.FC = () => {
   }, []);
   
   const handleGetLocation = () => {
-    // No toast notification here
     getPosition();
-    // Set locationFound to true immediately for better UX
     setLocationFound(true);
   };
 
@@ -49,10 +43,9 @@ const LocationPinButton: React.FC = () => {
     >
       <MapPin className="h-5 w-5" />
       
-      {/* Green checkmark overlay when location is found */}
       {locationFound && (
         <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-background shadow-sm">
-          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+          <Check className="h-2 w-2 text-white" strokeWidth={3} />
         </div>
       )}
     </Button>
