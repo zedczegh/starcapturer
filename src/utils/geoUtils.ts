@@ -1,94 +1,80 @@
 
 /**
- * Geographic utilities
- * IMPORTANT: These functions perform critical calculations.
- * Any changes should be carefully tested against edge cases.
- */
-
-/**
- * Earth's radius in kilometers
- */
-export const EARTH_RADIUS = 6371; 
-
-/**
- * Convert degrees to radians
- */
-export const degToRad = (degrees: number): number => {
-  return degrees * (Math.PI / 180);
-};
-
-// Alias for degToRad for backward compatibility
-export const deg2rad = degToRad;
-
-/**
- * Format distance in kilometers
- * @param distance Distance in kilometers
- * @returns Formatted distance string
- */
-export const formatDistance = (distance: number): string => {
-  if (distance < 1) {
-    return `${(distance * 1000).toFixed(0)} m`;
-  } else {
-    return `${distance.toFixed(1)} km`;
-  }
-};
-
-/**
- * Calculate distance between two coordinates using Haversine formula
- * @param lat1 Latitude of first point in degrees
- * @param lon1 Longitude of first point in degrees
- * @param lat2 Latitude of second point in degrees
- * @param lon2 Longitude of second point in degrees
+ * Calculate the distance between two points on Earth's surface
+ * using the Haversine formula
+ * @param lat1 First point latitude
+ * @param lon1 First point longitude
+ * @param lat2 Second point latitude
+ * @param lon2 Second point longitude
  * @returns Distance in kilometers
  */
-export const calculateDistance = (
+export function calculateDistance(
   lat1: number,
   lon1: number,
   lat2: number,
   lon2: number
-): number => {
-  const R = EARTH_RADIUS; // Earth's radius in kilometers
-  const dLat = degToRad(lat2 - lat1);
-  const dLon = degToRad(lon2 - lon1);
+): number {
+  // Convert degrees to radians
+  const toRadians = (degrees: number) => degrees * Math.PI / 180;
+  
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  
   const a = 
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(degToRad(lat1)) * Math.cos(degToRad(lat2)) * 
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
+    
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
+  const earthRadius = 6371; // Radius of the Earth in km
+  
+  return earthRadius * c;
+}
 
 /**
- * Helper functions for SIQS score handling
+ * Format a distance value in a human-readable format
+ * @param distance Distance in kilometers
+ * @returns Formatted distance string
  */
-
-/**
- * Get a safe SIQS score regardless of input format
- */
-export const getSafeScore = (siqs?: number | { score: number; isViable: boolean }): number => {
-  if (siqs === undefined) return 0;
-  if (typeof siqs === 'number') return siqs;
-  if (typeof siqs === 'object' && siqs !== null && 'score' in siqs) {
-    return siqs.score;
+export function formatDistance(distance: number): string {
+  if (!isFinite(distance)) return '';
+  
+  if (distance < 1) {
+    // Convert to meters for small distances
+    const meters = Math.round(distance * 1000);
+    return `${meters}m`;
+  } else if (distance < 10) {
+    // Show one decimal place for medium distances
+    return `${distance.toFixed(1)}km`;
+  } else {
+    // Round to nearest kilometer for larger distances
+    return `${Math.round(distance)}km`;
   }
-  return 0;
-};
+}
 
 /**
- * Format SIQS score for display
+ * Get a safe numeric score from various SIQS formats
+ * @param score SIQS value (can be number, object with score property, etc.)
+ * @returns A numeric score or null if unavailable
  */
-export const formatSIQSScore = (
-  siqs?: number | { score: number; isViable: boolean }, 
-  decimals: number = 1
-): string => {
-  const score = getSafeScore(siqs);
-  return score ? score.toFixed(decimals) : 'N/A';
-};
-
-/**
- * Check if a location is in water
- */
-export const isWaterLocation = (lat: number, lon: number, checkCoastal: boolean = true): boolean => {
-  // Import replaced with direct implementation
-  return false; // Simplified implementation
-};
+export function getSafeScore(score: any): number | null {
+  if (score === null || score === undefined) return null;
+  
+  if (typeof score === 'number') {
+    return isFinite(score) ? score : null;
+  }
+  
+  if (typeof score === 'object') {
+    // Handle {score: number} format
+    if (score.score !== undefined && typeof score.score === 'number') {
+      return isFinite(score.score) ? score.score : null;
+    }
+    
+    // Handle {siqs: number} format
+    if (score.siqs !== undefined && typeof score.siqs === 'number') {
+      return isFinite(score.siqs) ? score.siqs : null;
+    }
+  }
+  
+  return null;
+}

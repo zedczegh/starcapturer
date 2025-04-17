@@ -1,9 +1,5 @@
-import { Cluster } from 'ol/source/Cluster';
-import { Vector as VectorSource } from 'ol/source';
-import { Point } from 'ol/geom';
-import { Feature } from 'ol';
-import { transform } from 'ol/proj';
-import { Circle, Fill, Stroke, Style, Text } from 'ol/style';
+
+import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -12,23 +8,24 @@ import { getSiqsScore } from '@/utils/siqsHelpers';
 // Configuration for the map
 const FEATURE_COUNT_THRESHOLD = 500;
 const CLUSTER_DISTANCE = 40;
-const MAX_FEATURES_PER_CLUSTER = 15;
 
 /**
- * Optimizes the locations for map display by clustering nearby points
- * and filtering out invalid locations (e.g., those on water).
+ * Optimizes the locations for map display by filtering out invalid locations
+ * (e.g., those on water) and preparing them for Leaflet.
  *
  * @param locations An array of SharedAstroSpot objects representing the locations.
  * @param userLocation The user's current location, used for distance calculation.
  * @param searchRadius The radius within which to display locations.
- * @returns An object containing the optimized locations as a vector source
- *          and a boolean indicating whether clustering is enabled.
+ * @returns An object containing the optimized locations and clustering settings
  */
 export function optimizeLocationsForMap(
   locations: SharedAstroSpot[],
   userLocation: { latitude: number; longitude: number } | null,
   searchRadius: number
-): { source: VectorSource<Point>, clusteringEnabled: boolean } {
+): { 
+  optimizedLocations: SharedAstroSpot[], 
+  clusteringEnabled: boolean 
+} {
   // Filter out locations on water and outside the search radius
   const validLocations = locations.filter(location => {
     if (!location.latitude || !location.longitude) return false;
@@ -38,7 +35,7 @@ export function optimizeLocationsForMap(
       return false;
     }
 
-    // Skip locations outside the search radius
+    // Skip locations outside the search radius if user location is available
     if (userLocation) {
       const distance = calculateDistance(
         userLocation.latitude,
@@ -52,100 +49,41 @@ export function optimizeLocationsForMap(
     return true;
   });
 
-  // Convert valid locations to OpenLayers features
-  const features = validLocations.map(location => {
-    const { latitude, longitude } = location;
-    const point = new Point(transform([longitude, latitude], 'EPSG:4326', 'EPSG:3857'));
-    const feature = new Feature(point);
-    feature.setProperties(location); // Attach location properties to the feature
-    return feature;
-  });
-
-  // Create a vector source from the features
-  let source = new VectorSource({ features });
-
   // Determine whether to enable clustering based on the number of features
-  const enableClustering = features.length > FEATURE_COUNT_THRESHOLD;
+  const enableClustering = validLocations.length > FEATURE_COUNT_THRESHOLD;
 
-  // If clustering is enabled, create a cluster source
-  if (enableClustering) {
-    source = new Cluster({
-      distance: CLUSTER_DISTANCE,
-      source: source,
-      geometryFunction: (feature) => {
-        // Use the feature itself if it's not a cluster
-        if (!feature.get('features')) {
-          return feature.getGeometry();
-        }
-
-        // For clusters, return the geometry of the first feature
-        const featuresInCluster = feature.get('features');
-        if (featuresInCluster && featuresInCluster.length > 0) {
-          return featuresInCluster[0].getGeometry();
-        }
-
-        return null;
-      }
-    });
-  }
-
-  return { source: source as VectorSource<Point>, clusteringEnabled: enableClustering };
+  return { 
+    optimizedLocations: validLocations, 
+    clusteringEnabled: enableClustering 
+  };
 }
 
 /**
- * Generates a style for the map features, including clustering.
+ * Generates marker options for Leaflet based on location properties
  *
- * @param feature The feature to style.
- * @param hoveredLocationId The ID of the currently hovered location.
- * @param activeView The active view mode ('certified' or 'calculated').
- * @returns An array of Style objects to apply to the feature.
+ * @param location The location to style
+ * @param hoveredLocationId The ID of the currently hovered location
+ * @param activeView The active view mode ('certified' or 'calculated')
+ * @returns An object with marker style options
  */
-export function generateMapStyle(
-  feature: Feature,
+export function generateMarkerStyle(
+  location: SharedAstroSpot,
   hoveredLocationId: string | null,
   activeView: 'certified' | 'calculated'
-): Style[] {
-  const features = feature.get('features');
-
-  // Handle clustered features
-  if (features && features.length > 1) {
-    const size = features.length;
-    const maxDisplay = Math.min(size, MAX_FEATURES_PER_CLUSTER);
-
-    // Style for the cluster circle
-    const circleStyle = new Style({
-      image: new Circle({
-        radius: 12,
-        stroke: new Stroke({
-          color: '#fff',
-        }),
-        fill: new Fill({
-          color: '#3399CC',
-        }),
-      }),
-      text: new Text({
-        text: maxDisplay.toString(),
-        fill: new Fill({
-          color: '#fff',
-        }),
-      }),
-    });
-
-    return [circleStyle];
-  }
-
-  // Handle single features
-  const location = feature.getProperties() as SharedAstroSpot;
-  if (!location) {
-    return [];
-  }
-
+): { 
+  color: string;
+  fillColor: string;
+  radius: number;
+  weight: number;
+  opacity: number;
+  fillOpacity: number;
+} {
   // Determine the base color based on whether the location is certified
-  let baseColor = location.isDarkSkyReserve || location.certification ? 'purple' : 'blue';
+  let baseColor = location.isDarkSkyReserve || location.certification ? '#8b5cf6' : '#3b82f6';
 
   // If the location is the hovered location, use a different color
   if (location.id === hoveredLocationId) {
-    baseColor = 'orange';
+    baseColor = '#f97316';
   }
 
   // If we have a siqsScore that's an object or a number, convert it properly
@@ -159,15 +97,59 @@ export function generateMapStyle(
     radius = 8;
   }
 
-  // Style for the single feature
-  const singleFeatureStyle = new Style({
-    image: new Circle({
-      radius: radius,
-      fill: new Fill({
-        color: baseColor,
-      }),
-    }),
-  });
+  return {
+    color: '#ffffff',
+    fillColor: baseColor,
+    radius: radius,
+    weight: 2,
+    opacity: 0.9,
+    fillOpacity: 0.8
+  };
+}
 
-  return [singleFeatureStyle];
+/**
+ * Create a Leaflet cluster configuration based on location count
+ * 
+ * @param locations Array of locations to potentially cluster
+ * @returns Leaflet clustering options or null if clustering is not needed
+ */
+export function getClusterOptions(locations: SharedAstroSpot[]) {
+  const enableClustering = locations.length > FEATURE_COUNT_THRESHOLD;
+  
+  if (!enableClustering) {
+    return null;
+  }
+  
+  return {
+    chunkedLoading: true,
+    disableClusteringAtZoom: 13,
+    spiderfyOnMaxZoom: false,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    maxClusterRadius: CLUSTER_DISTANCE,
+    iconCreateFunction: createClusterIcon
+  };
+}
+
+/**
+ * Create a custom cluster icon based on the number of points
+ */
+function createClusterIcon(cluster: any) {
+  const count = cluster.getChildCount();
+  let size = 30;
+  let className = 'marker-cluster-small';
+  
+  if (count > 50) {
+    size = 45;
+    className = 'marker-cluster-large';
+  } else if (count > 10) {
+    size = 35;
+    className = 'marker-cluster-medium';
+  }
+  
+  return L.divIcon({
+    html: `<div><span>${count}</span></div>`,
+    className: `marker-cluster ${className}`,
+    iconSize: L.point(size, size)
+  });
 }

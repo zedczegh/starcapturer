@@ -1,195 +1,88 @@
 
-/* Enhanced marker styles with better mobile visibility */
-.leaflet-marker-icon {
-  transition: filter 0.15s ease-out;
-  will-change: transform;
-  transform-origin: center center !important;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
-  z-index: 600;
-}
-
-/* Hover and active state with enhanced mobile touch area */
-.leaflet-marker-icon:hover,
-.leaflet-marker-icon.hovered {
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
-  z-index: 1000 !important;
-}
-
-/* Better popup styles for mobile */
-.leaflet-popup {
-  margin-bottom: 20px; /* Additional space for popup on mobile */
-}
-
-.leaflet-popup-content-wrapper {
-  background-color: rgba(20, 24, 39, 0.95);
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.leaflet-popup-tip {
-  background-color: rgba(20, 24, 39, 0.95);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-}
-
-.leaflet-popup-content {
-  margin: 8px 10px;
-  line-height: 1.4;
-  color: #fff;
-  min-width: 120px;
-}
-
-/* Improved mobile-specific popup styles */
-@media (max-width: 768px) {
-  .leaflet-popup {
-    margin-bottom: 30px; /* More space on mobile */
-  }
-  
-  .leaflet-popup-content {
-    margin: 6px 8px;
-    font-size: 0.9em;
-  }
-  
-  /* Larger touch areas for controls on mobile */
-  .leaflet-control-zoom a {
-    width: 36px !important;
-    height: 36px !important;
-    line-height: 36px !important;
-  }
-  
-  /* Make markers appear above other elements on mobile */
-  .leaflet-marker-pane {
-    z-index: 650 !important;
-  }
-}
-
-/* Custom marker popup gradient backgrounds */
-.marker-popup-gradient {
-  background: linear-gradient(to bottom, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.95) 100%);
-}
-
-/* SIQS quality classes for styling */
-.siqs-excellent {
-  border-left: 3px solid #4ade80;
-}
-
-.siqs-good {
-  border-left: 3px solid #facc15;
-}
-
-.siqs-poor {
-  border-left: 3px solid #f87171;
-}
-
-/* Location radius circle styling */
-.leaflet-circle-pane path {
-  stroke-dasharray: 5, 5;
-  animation: pulse 3s infinite ease-in-out;
-  transform-origin: center center;
-  z-index: 300;
-  opacity: 0.6;
-}
-
-/* Make sure circle paths render properly */
-.leaflet-circle-pane {
-  z-index: 300 !important;
-  pointer-events: none;
-}
-
-/* Fix for mobile touch dragging issues */
-.leaflet-touch .leaflet-control-layers,
-.leaflet-touch .leaflet-bar {
-  border: 2px solid rgba(0, 0, 0, 0.2);
+/* Marker Cluster Styling */
+.marker-cluster {
   background-clip: padding-box;
+  border-radius: 50%;
+  text-align: center;
+  font-weight: bold;
 }
 
-/* Pulse animation for radius circles */
-@keyframes pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 0.7; }
-  100% { opacity: 0.4; }
-}
-
-/* Root variables for theming */
-:root {
-  --primary-rgb: 139, 92, 246; /* Default purple */
-}
-
-/* Legend tab styling */
-.legend-tab {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%) translateX(-100%);
-  height: 80px;
-  width: 28px;
+.marker-cluster div {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top-left-radius: 6px;
-  border-bottom-left-radius: 6px;
-  box-shadow: -3px 0 8px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
+  background-color: rgba(59, 130, 246, 0.6);
+  color: #fff;
 }
 
-.legend-tab:hover {
-  width: 32px;
+.marker-cluster-small {
+  font-size: 12px;
 }
 
-/* Scrollbar styling */
-.legend-content {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+.marker-cluster-medium {
+  font-size: 14px;
 }
 
-.legend-content::-webkit-scrollbar {
-  width: 5px;
+.marker-cluster-large {
+  font-size: 16px;
 }
 
-.legend-content::-webkit-scrollbar-track {
-  background: transparent;
+.marker-cluster-small div {
+  background-color: rgba(59, 130, 246, 0.6);
 }
 
-.legend-content::-webkit-scrollbar-thumb {
-  background-color: rgba(139, 92, 246, 0.3);
-  border-radius: 20px;
+.marker-cluster-medium div {
+  background-color: rgba(139, 92, 246, 0.6);
 }
 
-/* Hover effects */
-.legend-item {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.marker-cluster-large div {
+  background-color: rgba(249, 115, 22, 0.7);
 }
 
-.legend-item:hover {
-  transform: translateX(3px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+/* Marker hover effects */
+.leaflet-marker-icon.hovered {
+  z-index: 1000 !important;
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
 }
 
-/* Animations */
-@keyframes pulse-border {
-  0% { border-color: rgba(139, 92, 246, 0.2); }
-  50% { border-color: rgba(139, 92, 246, 0.6); }
-  100% { border-color: rgba(139, 92, 246, 0.2); }
+/* Custom popup styling */
+.leaflet-popup-custom {
+  padding: 0.5rem;
+  color: white;
 }
 
-.pulse-border {
-  animation: pulse-border 3s infinite;
+.leaflet-popup-custom-compact {
+  padding: 0.25rem;
+  max-width: 200px;
 }
 
-/* Background styling */
-.legend-pattern {
-  background-image: radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.1) 2px, transparent 0);
-  background-size: 25px 25px;
+.marker-popup-gradient {
+  background: linear-gradient(135deg, rgba(30,41,59,0.95) 0%, rgba(30,41,59,0.85) 100%);
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Title styling */
-.legend-title {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(124, 58, 237, 1));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
+/* SIQS quality classes for popups */
+.siqs-excellent {
+  border-left: 3px solid #22c55e;
+}
+
+.siqs-good {
+  border-left: 3px solid #3b82f6;
+}
+
+.siqs-average {
+  border-left: 3px solid #f59e0b;
+}
+
+.siqs-poor {
+  border-left: 3px solid #f97316;
+}
+
+.siqs-bad {
+  border-left: 3px solid #ef4444;
 }
