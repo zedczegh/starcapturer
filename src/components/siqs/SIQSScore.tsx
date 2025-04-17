@@ -7,8 +7,6 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getSiqsScore } from '@/utils/siqsHelpers';
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqs/siqsCalculator";
 
 interface SIQSScoreProps {
   siqsScore: number;
@@ -61,28 +59,6 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const locationId = useMemo(() => {
     // Use a more deterministic ID format
     return `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-  }, [latitude, longitude]);
-  
-  // Prefetch the real-time SIQS data for faster loading when user clicks "See More Details"
-  React.useEffect(() => {
-    // Start calculating the SIQS score in the background
-    if (latitude && longitude) {
-      // Get the Bortle scale (estimate as 5 if not available)
-      const bortleScale = 5;
-      
-      // Calculate in background without blocking the UI
-      const prefetchSiqs = async () => {
-        try {
-          console.log("Pre-calculating SIQS data for faster navigation");
-          await calculateRealTimeSiqs(latitude, longitude, bortleScale);
-        } catch (error) {
-          console.error("Error pre-calculating SIQS:", error);
-        }
-      };
-      
-      // Execute but don't wait for it
-      prefetchSiqs();
-    }
   }, [latitude, longitude]);
 
   return (

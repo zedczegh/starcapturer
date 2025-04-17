@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
-import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -57,11 +55,6 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               }
             }
             
-            // Calculate astronomical night for this location
-            const { start, end } = calculateAstronomicalNight(latitude, longitude);
-            console.log(`Astronomical night for this location: ${formatTime(start)}-${formatTime(end)}`);
-            
-            // Get real-time SIQS using astronomical night cloud cover
             const result = await calculateRealTimeSiqs(
               latitude,
               longitude,
@@ -70,17 +63,6 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
             
             if (result && result.siqs > 0) {
               console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
-              
-              // Cache the result in sessionStorage
-              try {
-                sessionStorage.setItem(cacheKey, JSON.stringify({
-                  data: result,
-                  timestamp: now
-                }));
-              } catch (err) {
-                console.error("Error caching SIQS data:", err);
-              }
-              
               onSiqsCalculated(result.siqs, false);
             } else {
               onSiqsCalculated(0, false);

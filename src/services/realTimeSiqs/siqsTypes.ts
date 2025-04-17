@@ -1,18 +1,16 @@
 
-/**
- * Result of SIQS calculation
- */
+// Define types for SIQS calculation
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
   factors?: {
     name: string;
     score: number;
-    description?: string;
+    description: string;
   }[];
   metadata?: {
     calculatedAt: string;
-    sources?: {
+    sources: {
       weather: boolean;
       forecast: boolean;
       clearSky: boolean;
@@ -25,31 +23,46 @@ export interface SiqsResult {
   };
 }
 
-/**
- * Options for SIQS calculation
- */
+export interface WeatherDataWithClearSky {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
+  clearSkyRate?: number;
+  latitude: number;
+  longitude: number;
+  time?: string;
+  condition?: string;
+  aqi?: number;
+  _forecast?: any;
+}
+
+export interface MoonlessNightInfo {
+  duration: number; // in hours
+  startTime: string;
+  endTime: string;
+  moonrise: Date | string;
+  moonset: Date | string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
+}
+
+export interface MoonPhaseInfo {
+  phase: number; // 0-1 normalized value
+  name: string;
+  illumination: number; // percentage 0-100
+  isGoodForAstronomy: boolean;
+}
+
+// Add SiqsCalculationOptions interface
 export interface SiqsCalculationOptions {
   anomalyDetection?: boolean;
   includeMetadata?: boolean;
-}
-
-/**
- * Weather data with clear sky information
- */
-export interface WeatherDataWithClearSky {
-  latitude: number;
-  longitude: number;
-  hourly?: {
-    time: string[];
-    temperature_2m?: number[];
-    relativehumidity_2m?: number[];
-    cloudcover?: number[];
-    windspeed_10m?: number[];
-  };
-  current_weather?: {
-    temperature: number;
-    windspeed: number;
-    weathercode: number;
-  };
-  clearSkyRate?: number;
+  includeForecast?: boolean;
+  reliability?: boolean;
+  adjustForLatitude?: boolean;
 }

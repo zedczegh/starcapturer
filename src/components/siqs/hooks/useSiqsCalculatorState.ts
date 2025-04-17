@@ -76,7 +76,7 @@ export function useSiqsCalculatorState({
     if (onSiqsCalculated) {
       onSiqsCalculated(siqsScore);
       // Also update the global store
-      currentSiqsStore.getState().setValue(siqsScore);
+      currentSiqsStore.setValue(siqsScore);
     }
   }, [siqsScore, onSiqsCalculated]);
   

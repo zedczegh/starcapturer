@@ -96,7 +96,7 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return factor;
   });
   
-  // Sort factors to ensure consistent order
+  // Sort factors to ensure Clear Sky Rate appears after Air Quality
   const sortedFactors = [...finalFactors].sort((a, b) => {
     // Define the order of factors
     const order = [
@@ -114,24 +114,27 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     const indexA = order.indexOf(a.name);
     const indexB = order.indexOf(b.name);
     
-    // If both factors are in the order list, sort by that
-    if (indexA >= 0 && indexB >= 0) {
+    // If both factors are in the order array, sort by index
+    if (indexA !== -1 && indexB !== -1) {
       return indexA - indexB;
     }
     
-    // If only one is in the list, prioritize it
-    if (indexA >= 0) return -1;
-    if (indexB >= 0) return 1;
+    // If only one factor is in the order array, prioritize it
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
     
-    // Sort alphabetically otherwise
-    return a.name.localeCompare(b.name);
+    // Otherwise, keep original order
+    return 0;
   });
   
-  // Render the factors
   return (
-    <div className="my-6 space-y-4">
+    <div className="space-y-4 mt-2">
       {sortedFactors.map((factor, index) => (
-        <FactorItem key={index} factor={factor} />
+        <FactorItem 
+          key={`factor-${factor.name}-${index}`}
+          factor={factor}
+          index={index}
+        />
       ))}
     </div>
   );

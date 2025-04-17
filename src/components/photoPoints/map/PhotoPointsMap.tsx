@@ -9,8 +9,6 @@ import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
 import MapLegend from './MapLegend';
 import CenteringPinpointButton from './CenteringPinpointButton';
-import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
-import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -40,7 +38,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
-  const [processingBatch, setProcessingBatch] = useState(false);
   
   const { 
     hoveredLocationId, 
@@ -49,52 +46,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchEnd,
     handleTouchMove
   } = useMapMarkers();
-  
-  // Process astronomical night data for locations in batches
-  useEffect(() => {
-    if (locations.length > 0 && !processingBatch) {
-      setProcessingBatch(true);
-      console.log("Processing astronomical night data for locations in batch");
-      
-      // Process in smaller batches to avoid blocking the UI
-      const batchSize = 10;
-      let currentIndex = 0;
-      
-      const processNextBatch = () => {
-        const endIndex = Math.min(currentIndex + batchSize, locations.length);
-        const currentBatch = locations.slice(currentIndex, endIndex);
-        
-        currentBatch.forEach((location, idx) => {
-          try {
-            if (location.latitude && location.longitude) {
-              const { start, end } = calculateAstronomicalNight(location.latitude, location.longitude);
-              location.metadata = location.metadata || {};
-              location.metadata.astronomicalNight = {
-                start: start.toISOString(),
-                end: end.toISOString(),
-                formattedTime: `${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`
-              };
-            }
-          } catch (err) {
-            console.error(`Error processing location ${idx}:`, err);
-          }
-        });
-        
-        currentIndex += batchSize;
-        
-        if (currentIndex < locations.length) {
-          // Schedule the next batch
-          setTimeout(processNextBatch, 0);
-        } else {
-          console.log("Completed batch processing of astronomical night data");
-          setProcessingBatch(false);
-        }
-      };
-      
-      // Start batch processing
-      processNextBatch();
-    }
-  }, [locations]);
   
   console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
@@ -192,21 +143,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   }, [onLocationUpdate, isUpdatingLocation]);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
-    // Ensure the location has astronomical night data before clicking
-    try {
-      if (location.latitude && location.longitude && (!location.metadata || !location.metadata.astronomicalNight)) {
-        const { start, end } = calculateAstronomicalNight(location.latitude, location.longitude);
-        location.metadata = location.metadata || {};
-        location.metadata.astronomicalNight = {
-          start: start.toISOString(),
-          end: end.toISOString(),
-          formattedTime: `${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`
-        };
-      }
-    } catch (err) {
-      console.error("Error calculating astronomical night for clicked location:", err);
-    }
-    
     if (onLocationClick) {
       onLocationClick(location);
     } else {

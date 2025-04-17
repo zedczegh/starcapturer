@@ -4,14 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import { getSeeingConditionInChinese } from "@/utils/weatherUtils";
+import { getSeeingConditionInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
-import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
-import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
-import { Cloud } from "lucide-react";
+import { calculateTonightCloudCover } from "@/components/forecast/NightForecastUtils";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -28,8 +26,6 @@ interface WeatherConditionsProps {
   bortleScale: number | null;
   seeingConditions: string;
   forecastData?: any;
-  latitude?: number;
-  longitude?: number;
 }
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
@@ -37,9 +33,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   moonPhase,
   bortleScale,
   seeingConditions,
-  forecastData,
-  latitude = 0,
-  longitude = 0
+  forecastData
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
@@ -49,16 +43,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      // Get astronomical night times for the location
-      const { start, end } = calculateAstronomicalNight(latitude, longitude);
-      const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
-      
-      // Calculate tonight's cloud cover using astronomical night hours
-      const tonightCloudCover = calculateTonightCloudCover(
-        forecastData.hourly,
-        latitude,
-        longitude
-      );
+      const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
       
       if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
         return null;
@@ -66,16 +51,16 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       
       return {
         average: tonightCloudCover,
-        timeRange: nightTimeStr,
+        // We're no longer separating evening and morning - using the full 18:00-7:00 range
         description: t ? 
-          t("Astronomical Night Cloud Cover", "天文夜云量") : 
-          "Astronomical Night Cloud Cover"
+          t("Tonight's cloud cover (6PM-7AM)", "今晚云量 (18:00-7:00)") : 
+          "Tonight's cloud cover (6PM-7AM)"
       };
     } catch (error) {
       console.error("Error calculating nighttime cloud cover:", error);
       return null;
     }
-  }, [forecastData, latitude, longitude, t]);
+  }, [forecastData, t]);
   
   useEffect(() => {
     if (forecastData && validateWeatherData(weatherData)) {
@@ -115,8 +100,11 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
       moonPhase: calculatedMoonPhaseName,
+      weatherCondition: language === 'zh' && stableWeatherData.condition
+        ? getWeatherConditionInChinese(stableWeatherData.condition)
+        : stableWeatherData.condition
     };
-  }, [language, seeingConditions, calculatedMoonPhaseName]);
+  }, [language, seeingConditions, calculatedMoonPhaseName, stableWeatherData.condition]);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -140,17 +128,13 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     >
       <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
         <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Cloud className="w-5 h-5 text-blue-400" />
+          <CardTitle className="text-xl text-gradient-blue">
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <motion.div variants={itemVariants}>
-              <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
-                {t("Observing Conditions", "观测条件")}
-              </h3>
               <PrimaryConditions
                 temperature={stableWeatherData.temperature}
                 humidity={stableWeatherData.humidity}
@@ -160,9 +144,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             </motion.div>
             
             <motion.div variants={itemVariants}>
-              <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
-                {t("Sky Conditions", "天空状况")}
-              </h3>
               <SecondaryConditions
                 cloudCover={stableWeatherData.cloudCover}
                 moonPhase={translatedData.moonPhase}

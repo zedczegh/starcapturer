@@ -1,10 +1,22 @@
 
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Sun, Moon, Info, CircleAlert, CloudFog } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Sun,
+  Cloud,
+  Moon,
+  Eye,
+  Info,
+  CloudFog,
+  CircleAlert,
+} from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
-import { DynamicCloudCoverIcon } from "./DynamicIcons";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -14,7 +26,6 @@ interface SecondaryConditionsProps {
   nighttimeCloudData?: {
     average: number;
     description?: string;
-    timeRange?: string;
     evening?: number;
     morning?: number;
   } | null;
@@ -50,112 +61,84 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   };
   
   return (
-    <div className="grid grid-cols-1 gap-4 text-cosmic-100">
-      <TooltipProvider>
-        {/* Current Cloud Cover */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
-          <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <DynamicCloudCoverIcon cloudCover={cloudCover} className="h-5 w-5 text-cosmic-200" />
-            </div>
-            <span className="font-medium">{t("Current Cloud Cover", "当前云层覆盖")}</span>
-          </div>
-          <span className={`font-bold text-lg ${getCloudCoverColorClass(cloudCover)}`}>
-            {cloudCover}%
-          </span>
-        </div>
+    <div className="space-y-4 text-cosmic-100">
+      <div className="flex items-center">
+        <Cloud className="h-5 w-5 mr-2 text-cosmic-300" />
+        <span className="font-medium">{t("Cloud Cover", "云层覆盖")}: </span>
+        <span className={`ml-auto font-semibold ${getCloudCoverColorClass(cloudCover)}`}>
+          {cloudCover}%
+        </span>
+      </div>
 
-        {/* Astronomical Night Cloud Cover */}
-        {nighttimeCloudData && (
-          <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-                <DynamicCloudCoverIcon cloudCover={nighttimeCloudData.average} className="h-5 w-5 text-cosmic-200" />
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="font-medium flex items-center">
-                    {t("Astro Night Cloud Cover", "天文夜云量")}
-                    <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 inline-block" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-xs bg-cosmic-800 border-cosmic-600">
-                  <p className="text-xs text-cosmic-100">
-                    {nighttimeCloudData.timeRange ? (
-                      t(
-                        `Average cloud cover during astronomical night (${nighttimeCloudData.timeRange}) based on forecast data.`, 
-                        `基于预报数据的天文夜 (${nighttimeCloudData.timeRange}) 平均云量。`
-                      )
-                    ) : (
-                      t(
-                        "Average cloud cover during tonight's astronomical night based on forecast data.", 
-                        "基于预报数据的今晚天文夜平均云量。"
-                      )
-                    )}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <span className={`font-bold text-lg ${getCloudCoverColorClass(nighttimeCloudData.average)}`}>
-              {nighttimeCloudData.average.toFixed(1)}%
-            </span>
-          </div>
-        )}
-        
-        {/* Moon Phase */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
-          <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <Moon className="h-5 w-5 text-cosmic-200" />
-            </div>
-            <span className="font-medium">{t("Moon Phase", "月相")}</span>
-          </div>
-          <span className="font-bold text-lg text-cosmic-50">
-            {moonPhase}
-          </span>
-        </div>
-        
-        {/* Bortle Scale */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
-          <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <Sun className="h-5 w-5 text-cosmic-200" />
-            </div>
+      {nighttimeCloudData && (
+        <div className="flex items-center">
+          <CloudFog className="h-5 w-5 mr-2 text-cosmic-300" />
+          <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="font-medium flex items-center">
-                  {t("Bortle Scale", "波尔特等级")}
+                  {nighttimeCloudData.description || t("Tonight's Cloud Cover", "今晚云量")}:
                   <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 inline-block" />
                 </span>
               </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-xs bg-cosmic-800 border-cosmic-600">
+              <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
                 <p className="text-xs text-cosmic-100">
-                  {getBortleDescription(bortleScale || 5, t)}
+                  {t(
+                    "This shows the average cloud cover for tonight (18:00-7:00) based on forecast data.", 
+                    "这显示了基于预报数据的今晚 (18:00-7:00) 平均云量。"
+                  )}
                 </p>
               </TooltipContent>
             </Tooltip>
-          </div>
-          <span className="font-bold text-lg text-cosmic-50">
-            {bortleScale || "-"}
+          </TooltipProvider>
+          <span className={`ml-auto font-semibold ${getCloudCoverColorClass(nighttimeCloudData.average)}`}>
+            {nighttimeCloudData.average.toFixed(1)}%
           </span>
         </div>
-        
-        {/* Air Quality */}
-        {aqi !== undefined && (
-          <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-                <CloudFog className="h-5 w-5 text-cosmic-200" />
-              </div>
-              <span className="font-medium">{t("Air Quality", "空气质量")}</span>
-            </div>
+      )}
+      
+      <div className="flex items-center">
+        <Moon className="h-5 w-5 mr-2 text-cosmic-300" />
+        <span className="font-medium">{t("Moon Phase", "月相")}: </span>
+        <span className="ml-auto font-semibold text-cosmic-50">
+          {moonPhase}
+        </span>
+      </div>
+      
+      <div className="flex items-center">
+        <Sun className="h-5 w-5 mr-2 text-cosmic-300" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="font-medium flex items-center">
+                {t("Bortle Scale", "波尔特等级")}:
+                <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 inline-block" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
+              <p className="text-xs text-cosmic-100">
+                {getBortleDescription(bortleScale || 5, t)}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <span className="ml-auto font-semibold text-cosmic-50">
+          {bortleScale || "-"}
+        </span>
+      </div>
+      
+      {aqi !== undefined && (
+        <div className="flex items-center">
+          <CircleAlert className="h-5 w-5 mr-2 text-cosmic-300" />
+          <span className="font-medium">{t("Air Quality", "空气质量")}: </span>
+          <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className={`font-bold text-lg ${getAqiInfo(aqi).color}`}>
+                <span className={`ml-auto font-semibold ${getAqiInfo(aqi).color}`}>
                   {aqi} ({getAqiInfo(aqi).label})
                 </span>
               </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-xs bg-cosmic-800 border-cosmic-600">
+              <TooltipContent side="top" className="max-w-xs bg-cosmic-800 border-cosmic-600">
                 <p className="text-xs text-cosmic-100">
                   {t(
                     "European Air Quality Index (1-100+). Lower is better.", 
@@ -164,9 +147,9 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
                 </p>
               </TooltipContent>
             </Tooltip>
-          </div>
-        )}
-      </TooltipProvider>
+          </TooltipProvider>
+        </div>
+      )}
     </div>
   );
 };
