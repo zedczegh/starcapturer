@@ -1,30 +1,49 @@
 
-// Main API file that re-exports all functionality from the sub-modules
-export type { Coordinates } from './api/coordinates';
-export { validateCoordinates, normalizeLongitude, calculateDistance } from './api/coordinates';
+import * as weatherApi from './api/weather';
+import * as locationApi from './api/location';
+import * as forecastApi from './api/forecast';
+import * as pollutionApi from './api/pollution';
+import * as astroSpotsApi from './api/astroSpots';
+import * as coordinatesApi from './api/coordinates';
+import * as clearSkyRateApi from './api/clearSkyRate';
 
-export type { WeatherData, WeatherResponse } from './api/weather';
+/**
+ * Fetch air quality data for a location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Air quality data
+ */
+export async function fetchAirQualityData(latitude: number, longitude: number) {
+  try {
+    const response = await fetch(
+      `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=demo`
+    );
+    
+    const data = await response.json();
+    
+    if (data && data.status === 'ok') {
+      return {
+        aqi: data.data.aqi,
+        dominantPollutant: data.data.dominantPol,
+        timestamp: data.data.time.iso
+      };
+    }
+    
+    return { aqi: 50, dominantPollutant: 'unknown', timestamp: new Date().toISOString() };
+  } catch (error) {
+    console.error('Error fetching air quality data:', error);
+    // Return default moderate air quality
+    return { aqi: 50, dominantPollutant: 'unknown', timestamp: new Date().toISOString() };
+  }
+}
+
 export { 
-  fetchWeatherData,
-  determineWeatherCondition, 
-  weatherConditions 
-} from './api/weather';
+  weatherApi, 
+  locationApi, 
+  forecastApi, 
+  pollutionApi, 
+  astroSpotsApi, 
+  coordinatesApi, 
+  clearSkyRateApi 
+};
 
-export { 
-  fetchForecastData,
-  fetchLongRangeForecastData 
-} from './api/forecast';
-
-export { getLocationNameFromCoordinates } from './api/location';
-export { fetchLightPollutionData } from './api/pollution';
-
-// Export clear sky rate functionality
-export { fetchClearSkyRate, clearClearSkyRateCache } from './api/clearSkyRate';
-
-// Export types and functions related to shared astronomy spots
-export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
-export { 
-  getRecommendedPhotoPoints,
-  getSharedAstroSpot,
-  shareAstroSpot
-} from './api/astroSpots';
