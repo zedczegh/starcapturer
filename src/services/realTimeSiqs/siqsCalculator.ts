@@ -1,3 +1,4 @@
+
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -173,6 +174,7 @@ export async function calculateRealTimeSiqs(
     };
     
     // Before returning, apply intelligent improvements for calculated locations
+    // Fixed: Check if the enhanced location has a 'type' property and if it equals 'calculated'
     if (enhancedLocation && enhancedLocation.type === 'calculated') {
       const finalScore = improveCalculatedLocationSIQS(
         siqsResult.score, 
