@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import { getSeeingConditionInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
+import { getSeeingConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
 import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
+import { Cloud, Gauge } from "lucide-react";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -114,11 +115,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
       moonPhase: calculatedMoonPhaseName,
-      weatherCondition: language === 'zh' && stableWeatherData.condition
-        ? getWeatherConditionInChinese(stableWeatherData.condition)
-        : stableWeatherData.condition
     };
-  }, [language, seeingConditions, calculatedMoonPhaseName, stableWeatherData.condition]);
+  }, [language, seeingConditions, calculatedMoonPhaseName]);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -142,7 +140,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     >
       <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
         <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-xl text-gradient-blue">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Cloud className="w-5 h-5 text-blue-400" />
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
