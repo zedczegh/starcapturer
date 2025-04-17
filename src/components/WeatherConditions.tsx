@@ -8,9 +8,8 @@ import { getSeeingConditionInChinese, getWeatherConditionInChinese } from "@/uti
 import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
-import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
+import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
-import { getMoonInfo } from "@/services/realTimeSiqs/moonPhaseCalculator";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -174,7 +173,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             <motion.div variants={itemVariants}>
               <SecondaryConditions
                 cloudCover={stableWeatherData.cloudCover}
-                moonPhase={translatedData.moonPhase as React.ReactNode}
+                moonPhase={translatedData.moonPhase}
                 bortleScale={bortleScale}
                 aqi={stableWeatherData.aqi}
                 nighttimeCloudData={nighttimeCloudData}

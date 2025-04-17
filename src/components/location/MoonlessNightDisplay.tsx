@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
-import { getAstronomicalNight } from '@/utils/weather/astronomicalTimeUtils';
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +42,12 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
         {value}
       </span>
     );
+  };
+
+  // Format moon time for display safely
+  const formatMoonTime = (time: Date | string) => {
+    if (typeof time === 'string') return time;
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -123,13 +128,11 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           <div className="grid grid-cols-2 gap-1">
             <div className="flex items-center justify-between">
               {formatLabel('Rise', 'Rise', '月出')}
-              {formatValue(typeof nightInfo.moonrise === 'string' ? nightInfo.moonrise : 
-                nightInfo.moonrise?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '-')}
+              {formatValue(formatMoonTime(nightInfo.moonrise))}
             </div>
             <div className="flex items-center justify-between">
               {formatLabel('Set', 'Set', '月落')}
-              {formatValue(typeof nightInfo.moonset === 'string' ? nightInfo.moonset : 
-                nightInfo.moonset?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '-')}
+              {formatValue(formatMoonTime(nightInfo.moonset))}
             </div>
           </div>
         </div>

@@ -42,10 +42,13 @@ export interface MoonlessNightInfo {
   duration: number; // in hours
   startTime: string;
   endTime: string;
-  moonrise: string;
-  moonset: string;
+  moonrise: Date | string;
+  moonset: Date | string;
   nextNewMoon: string;
   daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
 }
 
 export interface MoonPhaseInfo {
