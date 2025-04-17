@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Home, Info, Telescope, Smartphone, Link2 } from "lucide-react";
+import { Home, Info, Telescope, Smartphone, Link2, Map } from "lucide-react";
 import { MobileNavButton } from "./NavButtons";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -28,9 +28,19 @@ const MobileNav: React.FC<MobileNavProps> = ({
         <MobileNavButton to="/about" icon={<Info className="h-5 w-5" />} label={t("About", "关于")} active={location.pathname === "/about"} />
         
         <MobileNavButton to="/useful-links" icon={<Link2 className="h-5 w-5" />} label={t("Links", "资源")} active={location.pathname === "/useful-links"} />
+        
+        {locationId && (
+          <MobileNavButton 
+            to={`/location/${locationId}`} 
+            icon={<Map className="h-5 w-5" />} 
+            label={t("Location", "位置")} 
+            active={location.pathname === `/location/${locationId}`} 
+          />
+        )}
       </div>
     </div>
   );
 };
 
 export default MobileNav;
+

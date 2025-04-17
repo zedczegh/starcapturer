@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { NavLink } from "./NavButtons";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Map } from "lucide-react";
 
 interface DesktopNavProps {
   location: ReturnType<typeof useLocation>;
@@ -34,6 +35,14 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         <NavLink to="/share" active={location.pathname === "/share"}>
           {t("Bortle Now", "实时光污染")}
         </NavLink>
+        {locationId && (
+          <NavLink 
+            to={`/location/${locationId}`} 
+            active={location.pathname === `/location/${locationId}`}
+          >
+            {t("Location Details", "位置详情")}
+          </NavLink>
+        )}
       </nav>
       
       <div className="hidden md:flex items-center">
@@ -44,3 +53,4 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
 };
 
 export default DesktopNav;
+
