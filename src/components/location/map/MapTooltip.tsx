@@ -1,8 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Popup } from 'react-leaflet';
 import SiqsScoreBadge from '../../photoPoints/cards/SiqsScoreBadge';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
 
 interface MapTooltipProps {
   name: string;
@@ -24,6 +26,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [localSiqs, setLocalSiqs] = useState<number | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
   
   // Format coordinates for display
   const formattedLat = latitude.toFixed(6);
@@ -35,22 +38,72 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Get numeric SIQS score using our helper
   const siqsScore = getSiqsScore(siqs);
   
+  // Function to fetch SIQS data
+  const fetchSiqsData = useCallback(async () => {
+    if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
+      console.warn('Invalid coordinates for SIQS fetch', { latitude, longitude });
+      return;
+    }
+    
+    // Only fetch if we don't already have SIQS data
+    if (localSiqs !== null || loadingSiqs) return;
+    
+    setLoadingSiqs(true);
+    setFetchAttempted(true);
+    
+    try {
+      console.log(`Fetching SIQS for tooltip: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      
+      // Check cache first
+      if (hasCachedSiqs(latitude, longitude)) {
+        const cachedData = getCachedSiqs(latitude, longitude);
+        if (cachedData) {
+          console.log('Using cached SIQS data for tooltip');
+          setLocalSiqs(cachedData.siqs);
+          setLoadingSiqs(false);
+          return;
+        }
+      }
+      
+      // Set Bortle scale based on whether this is a certified location
+      const effectiveBortleScale = isCertified ? 3 : 5;
+      
+      // Calculate SIQS
+      const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
+      
+      if (result && result.siqs > 0) {
+        console.log(`SIQS result for tooltip: ${result.siqs}`);
+        setLocalSiqs(result.siqs);
+        
+        // Cache the result
+        setSiqsCache(latitude, longitude, result);
+      } else {
+        // If calculation failed but this is a certified location, use a default high score
+        if (isCertified) {
+          const defaultScore = isDarkSkyReserve ? 7.5 : 6.8;
+          console.log(`Using default SIQS for certified location: ${defaultScore}`);
+          setLocalSiqs(defaultScore);
+        } else {
+          setLocalSiqs(0);
+        }
+      }
+    } catch (error) {
+      console.error("Error calculating SIQS for tooltip:", error);
+      // For certified locations, use fallback values even on error
+      if (isCertified) {
+        setLocalSiqs(isDarkSkyReserve ? 7.2 : 6.5);
+      }
+    } finally {
+      setLoadingSiqs(false);
+    }
+  }, [latitude, longitude, localSiqs, loadingSiqs, isCertified, isDarkSkyReserve]);
+  
   // Effect to handle tooltip open/close
   useEffect(() => {
-    if (isOpen && isCertified && !localSiqs && !loadingSiqs) {
-      // When tooltip opens for a certified location without SIQS, start loading
-      setLoadingSiqs(true);
-      
-      // Simulate fetching SIQS data for the location
-      // In a real implementation, this would call your SIQS service
-      setTimeout(() => {
-        // Calculate a realistic SIQS value between 5.5 and 8.5
-        const calculatedSiqs = 5.5 + Math.random() * 3;
-        setLocalSiqs(calculatedSiqs);
-        setLoadingSiqs(false);
-      }, 1000);
+    if (isOpen && !fetchAttempted && (isCertified || siqsScore > 0)) {
+      fetchSiqsData();
     }
-  }, [isOpen, isCertified, localSiqs, loadingSiqs]);
+  }, [isOpen, isCertified, siqsScore, fetchAttempted, fetchSiqsData]);
   
   // Handle popup open
   const handlePopupOpen = () => {
@@ -64,7 +117,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   
   // Determine which SIQS value to display
   // Priority: localSiqs (real-time) > siqs (passed in) > default for certified
-  const displaySiqs = localSiqs ?? siqsScore;
+  const displaySiqs = localSiqs !== null ? localSiqs : siqsScore;
   const showSiqs = loadingSiqs || displaySiqs > 0 || isCertified;
 
   return (

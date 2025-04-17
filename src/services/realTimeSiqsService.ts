@@ -1,11 +1,11 @@
 
-import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
+import { calculateRealTimeSiqs as calculateSiqs } from './realTimeSiqs/siqsCalculator';
 import { clearSiqsCache } from './realTimeSiqs/siqsCache';
 
 /**
  * Fetch real-time SIQS scores for a location with efficient caching
  */
-export const calculateRealTimeSiqs = async (
+export const fetchRealTimeSiqs = async (
   latitude: number,
   longitude: number,
   bortleScale: number = 5
@@ -19,7 +19,7 @@ export const calculateRealTimeSiqs = async (
     console.log(`Calculating SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     
     // This imports and uses the implementation from siqsCalculator.ts
-    return await calculateRealTimeSiqs(latitude, longitude, bortleScale);
+    return await calculateSiqs(latitude, longitude, bortleScale);
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
     return { 
