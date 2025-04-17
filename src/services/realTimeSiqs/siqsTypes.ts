@@ -91,4 +91,7 @@ export interface MoonlessNightInfo {
   startTime: string;
   endTime: string;
   duration: number;
+  moonrise?: string;
+  moonset?: string;
+  daysUntilNewMoon?: number;
 }

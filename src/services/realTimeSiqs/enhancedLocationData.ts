@@ -1,3 +1,4 @@
+
 /**
  * Enhanced location data for optimized SIQS calculations
  */
@@ -7,6 +8,7 @@ import { haversineDistance } from '@/utils/geoUtils';
 // Sample enhanced locations with pre-calculated data
 const enhancedLocations: EnhancedLocation[] = [
   {
+    id: 'mcdonald-observatory',
     name: "McDonald Observatory",
     latitude: 30.6714,
     longitude: -104.0214,
@@ -22,9 +24,11 @@ const enhancedLocations: EnhancedLocation[] = [
       fall: { clearSkyRate: 85, averageTemperature: 20 },
       winter: { clearSkyRate: 82, averageTemperature: 10 }
     },
-    bestMonths: ["Oct", "Nov", "Mar", "Apr"]
+    bestMonths: ["Oct", "Nov", "Mar", "Apr"],
+    timestamp: new Date().toISOString()
   },
   {
+    id: 'atacama-desert',
     name: "Atacama Desert",
     latitude: -24.5,
     longitude: -69.25,
@@ -38,7 +42,8 @@ const enhancedLocations: EnhancedLocation[] = [
       fall: { clearSkyRate: 90, averageTemperature: 18 },
       winter: { clearSkyRate: 85, averageTemperature: 10 }
     },
-    bestMonths: ["May", "Jun", "Jul", "Aug"]
+    bestMonths: ["May", "Jun", "Jul", "Aug"],
+    timestamp: new Date().toISOString()
   }
 ];
 

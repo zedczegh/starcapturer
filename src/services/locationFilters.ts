@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 import { calculateDistance } from '@/lib/api/coordinates';
@@ -203,6 +204,5 @@ export function generateDistributedPoints(
   return selectedPoints;
 }
 
-// Make sure to export the sortLocationsByQuality function
-// This is the export that was missing and caused the error
-export { sortLocationsByQuality };
+// Remove the duplicate export at the end of the file
+// export { sortLocationsByQuality };

@@ -36,6 +36,16 @@ export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
 }
 
 /**
+ * Check if a SIQS score is greater than a threshold 
+ * @param siqs The SIQS value in any supported format
+ * @param threshold The threshold value
+ * @returns True if the SIQS exceeds the threshold
+ */
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  return getSiqsScore(siqs) > threshold;
+}
+
+/**
  * Format a SIQS score for display
  * @param siqs The SIQS value in any supported format
  * @param precision Number of decimal places (default: 1)
