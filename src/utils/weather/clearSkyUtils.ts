@@ -62,18 +62,19 @@ export const getSkyRating = (rate: number, t: any): string => {
 
 /**
  * Calculate minimum clear nights per year based on clear sky rate
- * Enhanced to be more accurate globally (accounts for climate zones and regional patterns)
+ * Enhanced to be more accurate globally for star visibility (not just precipitation-free nights)
  * @param rate Clear sky rate percentage 
  * @param latitude Location latitude for climate zone adjustments
  * @param longitude Location longitude for regional climate patterns
- * @returns Estimated number of clear nights per year
+ * @returns Estimated number of clear nights per year suitable for stargazing
  */
 export const getMinimumClearNights = (
   rate: number, 
   latitude?: number,
   longitude?: number
 ): number => {
-  // Import the enhanced calculation from clearSkyRateUtils
+  // We now use the enhanced implementation from clearSkyRateUtils for more accurate calculations
+  // specifically targeting star visibility conditions, not just precipitation-free nights
   const { getMinimumClearNights } = require('../weather/clearSkyRateUtils');
   return getMinimumClearNights(rate, latitude, longitude);
 };
@@ -162,19 +163,25 @@ export const estimateClearSkyRate = (
   cloudCoverAvg: number,
   isDesert: boolean = false
 ): number => {
-  // Base calculation using precipitation days
-  let clearSkyPercent = Math.max(0, 100 - (precipitationDays / 3.65));
+  // For star visibility, we need to be more strict about what counts as "clear sky"
   
-  // Adjust by cloud cover - more weight to this factor
-  clearSkyPercent = (clearSkyPercent * 0.4) + ((100 - cloudCoverAvg) * 0.6);
+  // Base calculation using precipitation days, with reduced baseline
+  let clearSkyPercent = Math.max(0, 100 - (precipitationDays / 3));
+  
+  // Adjust by cloud cover - give even more weight to this factor for star visibility
+  clearSkyPercent = (clearSkyPercent * 0.3) + ((100 - cloudCoverAvg) * 0.7);
   
   // Desert climate adjustment - clearer nights even with daytime clouds
+  // but factor in dust and atmospheric conditions that can affect star visibility
   if (isDesert) {
-    clearSkyPercent = Math.min(100, clearSkyPercent * 1.15);
+    clearSkyPercent = Math.min(100, clearSkyPercent * 1.1);
   }
   
+  // Additional reduction for the fact that "clear sky for stars" is stricter than "no rain"
+  clearSkyPercent = clearSkyPercent * 0.85;
+  
   // Round and ensure reasonable bounds
-  return Math.round(Math.max(10, Math.min(clearSkyPercent, 95)));
+  return Math.round(Math.max(10, Math.min(clearSkyPercent, 90)));
 };
 
 /**

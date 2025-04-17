@@ -126,10 +126,11 @@ export function getSkyRating(rate: number, t: (en: string, zh: string) => string
 /**
  * Calculate minimum number of clear nights per year
  * Enhanced to provide more accurate estimates based on location and climate data
+ * This specifically targets nights when stars are actually visible (not just precipitation-free)
  * @param clearSkyRate Annual clear sky rate percentage
  * @param latitude Location latitude for seasonal adjustments
  * @param longitude Location longitude for regional climate patterns
- * @returns Estimated number of clear nights
+ * @returns Estimated number of clear nights for star-viewing
  */
 export function getMinimumClearNights(
   clearSkyRate: number, 
@@ -144,8 +145,12 @@ export function getMinimumClearNights(
     return cached.result;
   }
   
-  // Base calculation - starting point from clear sky rate
-  let baseNights = Math.round((clearSkyRate / 100) * 365);
+  // Star visibility requires truly clear skies - not just rain-free
+  // We apply a stricter conversion factor to get from general clear sky rate to actual star-visible nights
+  
+  // Calculate baseline clear nights, with stricter multiplier (0.65 instead of previously higher values)
+  // This accounts for nights that may be technically "clear" but have haze, light cloud cover, etc.
+  let baseNights = Math.round((clearSkyRate / 100) * 365 * 0.65);
   
   // Apply adjustments based on region and climate patterns
   let clearNights = baseNights;
@@ -153,35 +158,45 @@ export function getMinimumClearNights(
   if (latitude !== undefined && longitude !== undefined) {
     // Apply region-specific adjustments
     
-    // Guizhou province (China) adjustment - known for more overcast days 
+    // Guizhou province (China) adjustment - known for more overcast days and high humidity
     // Approximate coordinates: latitude 24.5-29, longitude 104-109.5
     if (latitude >= 24.5 && latitude <= 29 && longitude >= 104 && longitude <= 109.5) {
-      // Adjust for Guizhou's karst topography and subtropical monsoon climate
-      // This region has high humidity and frequent fog/mist, reducing clear nights
-      clearNights = Math.round(baseNights * 0.75);
+      // Adjust for Guizhou's karst topography, subtropical monsoon climate, and frequent fog/mist
+      // This region is known for its high humidity, persistent haze, and light pollution
+      clearNights = Math.round(baseNights * 0.55); // Significantly reduced for more accuracy
     }
-    // Southern China adjustment (generally more rainfall/humidity)
+    // Southern China adjustment (more rainfall/humidity/haze)
     else if (latitude > 20 && latitude < 35 && longitude > 100 && longitude < 120) {
-      clearNights = Math.round(baseNights * 0.85);
+      clearNights = Math.round(baseNights * 0.7); // Reduced factor
     }
-    // Desert regions adjustment (typically more clear nights)
+    // Desert regions adjustment (typically more clear nights, but can have dust)
     else if (isDesertRegion(latitude, longitude)) {
-      clearNights = Math.round(baseNights * 1.15);
+      // Desert areas have fewer clouds but can have dust storms and atmospheric particles
+      clearNights = Math.round(baseNights * 0.9); // Slightly reduced factor
     }
-    // Tropical rainforest regions (high precipitation)
+    // Tropical rainforest regions (high precipitation, humidity)
     else if (isTropicalRainforestRegion(latitude, longitude)) {
-      clearNights = Math.round(baseNights * 0.8);
+      clearNights = Math.round(baseNights * 0.6); // Reduced dramatically
     }
     // Mediterranean climate regions (dry summers, wet winters)
     else if (isMediterraneanRegion(latitude, longitude)) {
       // These regions have very seasonal clear nights
-      clearNights = Math.round(baseNights * 1.05);
+      clearNights = Math.round(baseNights * 0.85);
     }
     // Polar/sub-polar regions
     else if (Math.abs(latitude) > 60) {
       // Fewer observable nights in polar regions due to extended daylight periods
-      const polarAdjustment = 1 - (Math.abs(latitude) - 60) / 60;
+      // and often challenging weather conditions
+      const polarAdjustment = Math.max(0.2, 0.8 - (Math.abs(latitude) - 60) / 50);
       clearNights = Math.round(baseNights * polarAdjustment);
+    }
+    
+    // Urban light pollution adjustment - apply if coordinates likely match urban areas
+    // Major urban areas are typically at very specific coordinates
+    // We check for proximity to common urban center locations
+    if (isLikelyUrbanArea(latitude, longitude)) {
+      // Light pollution dramatically reduces visible stars
+      clearNights = Math.round(clearNights * 0.75);
     }
   }
   
@@ -192,12 +207,24 @@ export function getMinimumClearNights(
     // Mid-latitude regions have more seasonal variations
     if (absLat > 30 && absLat < 60) {
       // Adjust for stronger seasonal effects in mid-latitudes
-      clearNights = Math.round(clearNights * 0.95);
+      clearNights = Math.round(clearNights * 0.9);
+    }
+  }
+  
+  // Air quality/pollution adjustments where specific data is available
+  // For specific countries known for air quality issues
+  if (latitude !== undefined && longitude !== undefined) {
+    // China, India, and parts of Southeast Asia often have air quality issues
+    // that affect star visibility even on "clear" nights
+    if ((latitude > 20 && latitude < 45 && longitude > 75 && longitude < 135) || // China, East Asia
+        (latitude > 8 && latitude < 35 && longitude > 70 && longitude < 90)) {   // India
+      clearNights = Math.round(clearNights * 0.8); // Reduction for air quality impact
     }
   }
   
   // Ensure the result is within reasonable bounds
-  clearNights = Math.max(30, Math.min(clearNights, 330)); 
+  // Even the best locations rarely have more than 250 truly clear nights for star visibility
+  clearNights = Math.max(20, Math.min(clearNights, 250)); 
   
   // Cache result with a month validity
   clearSkyCalculationCache.set(cacheKey, {
@@ -207,6 +234,76 @@ export function getMinimumClearNights(
   });
   
   return clearNights;
+}
+
+/**
+ * Determine if coordinates are likely in or near an urban area
+ * Used to factor in light pollution effects on star visibility
+ */
+function isLikelyUrbanArea(latitude: number, longitude: number): boolean {
+  // This is a simplified approach - in a real system we would use a database 
+  // of urban boundaries or light pollution maps
+  
+  // Check proximity to major urban centers globally
+  const majorCities = [
+    // Asia
+    {lat: 31.22, lon: 121.47, radius: 80}, // Shanghai
+    {lat: 39.90, lon: 116.40, radius: 80}, // Beijing
+    {lat: 23.12, lon: 113.26, radius: 70}, // Guangzhou
+    {lat: 22.54, lon: 114.06, radius: 60}, // Shenzhen
+    {lat: 35.68, lon: 139.76, radius: 80}, // Tokyo
+    {lat: 37.56, lon: 126.98, radius: 60}, // Seoul
+    {lat: 19.07, lon: 72.87, radius: 70},  // Mumbai
+    {lat: 28.61, lon: 77.20, radius: 70},  // Delhi
+    
+    // Europe
+    {lat: 51.50, lon: -0.12, radius: 70},  // London
+    {lat: 48.85, lon: 2.35, radius: 60},   // Paris
+    {lat: 52.52, lon: 13.40, radius: 60},  // Berlin
+    
+    // North America
+    {lat: 40.71, lon: -74.00, radius: 80}, // New York
+    {lat: 34.05, lon: -118.24, radius: 80}, // Los Angeles
+    {lat: 41.87, lon: -87.62, radius: 70}, // Chicago
+    
+    // South America
+    {lat: -23.55, lon: -46.63, radius: 70}, // São Paulo
+    {lat: -34.60, lon: -58.38, radius: 60}, // Buenos Aires
+    
+    // Africa
+    {lat: 30.04, lon: 31.23, radius: 60},  // Cairo
+    {lat: -33.92, lon: 18.42, radius: 60}, // Cape Town
+    
+    // Oceania
+    {lat: -33.86, lon: 151.20, radius: 60}, // Sydney
+    {lat: -37.81, lon: 144.96, radius: 60}, // Melbourne
+  ];
+  
+  // Calculate distance to nearest city
+  for (const city of majorCities) {
+    const distance = calculateDistance(latitude, longitude, city.lat, city.lon);
+    // If within radius of influence for light pollution
+    if (distance <= city.radius) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Calculate great-circle distance between two points
+ */
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
 
 /**
