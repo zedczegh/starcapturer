@@ -53,4 +53,3 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
 };
 
 export default DesktopNav;
-
