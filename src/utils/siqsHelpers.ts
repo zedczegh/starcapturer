@@ -7,7 +7,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
  * Get numeric SIQS score from any SIQS format (number or object)
- * @param siqs SIQS value which could be a number or object
+ * @param siqs SIQS value which could be a number, object, or nested object
  * @returns number value of SIQS or 0 if undefined
  */
 export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
@@ -26,26 +26,28 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
     return isNaN(siqs) ? 0 : siqs;
   }
   
-  // Handle SharedAstroSpot object with siqs property
+  // Handle objects (multiple possible formats)
   if (typeof siqs === 'object' && siqs !== null) {
-    // Case: location.siqs passed directly as an object with score property
-    if ('siqs' in siqs && typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
-      return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
-    }
-    
-    // Case: entire location object passed (need to extract siqs)
-    if ('siqs' in siqs && (typeof siqs.siqs === 'number' || typeof siqs.siqs === 'string')) {
-      return typeof siqs.siqs === 'number' ? siqs.siqs : parseFloat(siqs.siqs);
-    }
-    
-    // Handle direct score property (standard format)
+    // Format: { score: number }
     if ('score' in siqs && typeof siqs.score === 'number') {
       return siqs.score;
     }
     
-    // Handle possible siqsResult nested format
-    if ('siqsResult' in siqs && siqs.siqsResult && typeof siqs.siqsResult.score === 'number') {
-      return siqs.siqsResult.score;
+    // Format: { siqsResult: { score: number } }
+    if ('siqsResult' in siqs && siqs.siqsResult && typeof siqs.siqsResult === 'object') {
+      if (typeof siqs.siqsResult.score === 'number') {
+        return siqs.siqsResult.score;
+      }
+    }
+    
+    // Format: { siqs: number } or { siqs: { score: number } }
+    if ('siqs' in siqs) {
+      if (typeof siqs.siqs === 'number') {
+        return siqs.siqs;
+      }
+      if (typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
+        return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
+      }
     }
   }
   

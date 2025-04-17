@@ -9,7 +9,7 @@ interface SiqsScoreBadgeProps {
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
-  forceCertified?: boolean; // Added this prop to support forcing certified status
+  forceCertified?: boolean;
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
@@ -19,7 +19,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   isCertified = false,
   forceCertified = false
 }) => {
-  // Convert score to number using our helper function
+  // Convert score to number using our improved helper function
   const numericScore = getSiqsScore(score);
   
   // Skip rendering if score is 0 (invalid) and not certified
