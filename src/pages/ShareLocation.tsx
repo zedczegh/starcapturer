@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -122,15 +121,10 @@ const BortleNow: React.FC = () => {
       (error) => {
         setIsLoadingLocation(false);
         setError(error.message);
-        toast({
-          variant: "destructive",
-          title: t("Error getting location", "获取位置错误"),
-          description: error.message,
-        });
       },
       geolocationOptions
     );
-  }, [language, onLocationChange, toast, t]);
+  }, [language, onLocationChange]);
 
   useEffect(() => {
     getCurrentLocation();
@@ -196,18 +190,7 @@ const BortleNow: React.FC = () => {
       } catch (err) {
         console.error("Camera permission error:", err);
         setError(t("Camera access was denied", "相机访问被拒绝"));
-        toast({
-          variant: "destructive",
-          title: t("Camera Error", "相机错误"),
-          description: t("Please allow camera access to use this feature", "请允许访问相机以使用此功能"),
-        });
       }
-    } else {
-      toast({
-        variant: "destructive",
-        title: t("Permission Denied", "权限被拒绝"),
-        description: t("Camera access is required for this feature", "此功能需要相机访问权限"),
-      });
     }
   };
 
@@ -239,7 +222,6 @@ const BortleNow: React.FC = () => {
         description: t("Please cover your camera lens completely...", "请完全遮盖相机镜头..."),
       });
       
-      // Simulate processing time
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
       }, 2000));
@@ -296,7 +278,6 @@ const BortleNow: React.FC = () => {
         description: t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）..."),
       });
       
-      // Simulate processing time
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
       }, 3000));
@@ -352,7 +333,6 @@ const BortleNow: React.FC = () => {
     <>
       <NavBar />
       <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
-        {/* Header section with the new animated bar */}
         <BortleNowHeader />
         
         {error && (
@@ -363,17 +343,14 @@ const BortleNow: React.FC = () => {
           </div>
         )}
         
-        {/* Countdown overlay for camera capture */}
         <CountdownOverlay countdown={countdown} cameraMode={cameraMode} />
         
-        {/* Camera permission dialog */}
         <CameraPermissionDialog 
           open={showCameraPermissionDialog}
           onPermissionResponse={handlePermissionResponse}
         />
         
         <div className="space-y-6">
-          {/* Bortle scale display */}
           <AnimatePresence>
             {bortleScale && (
               <BortleScaleDisplay
@@ -386,7 +363,6 @@ const BortleNow: React.FC = () => {
             )}
           </AnimatePresence>
           
-          {/* Location section */}
           <LocationSection
             latitude={latitude}
             longitude={longitude}
@@ -396,7 +372,6 @@ const BortleNow: React.FC = () => {
             setLongitude={setLongitude}
           />
           
-          {/* Camera measurement section */}
           <CameraMeasurementSection
             isProcessingImage={isProcessingImage}
             isMeasuringRealtime={isMeasuringRealtime}

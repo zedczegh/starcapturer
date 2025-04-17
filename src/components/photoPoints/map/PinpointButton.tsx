@@ -1,20 +1,21 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin } from 'lucide-react';
+import { MapPin, Check } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
 
 interface PinpointButtonProps {
   onGetLocation: () => void;
   className?: string;
   shouldCenter?: boolean;
+  hasLocation?: boolean;
 }
 
 const PinpointButton: React.FC<PinpointButtonProps> = ({ 
   onGetLocation,
   className = "absolute top-4 right-16 z-[999]", // Positioned at top-right corner to align with legend
-  shouldCenter = true
+  shouldCenter = true,
+  hasLocation = false
 }) => {
   const { t } = useLanguage();
   const [isClicking, setIsClicking] = useState(false);
@@ -30,11 +31,11 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     setIsClicking(true);
     
     onGetLocation();
-    toast.success(t("Finding your location...", "正在定位您的位置..."));
+    // No toast here
     
     // Reset clicking state after animation completes
     setTimeout(() => setIsClicking(false), 1000);
-  }, [onGetLocation, t]);
+  }, [onGetLocation]);
 
   return (
     <div 
@@ -64,12 +65,19 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
         }}
         onClick={handleClick}
         className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
-                  rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all`}
+                  rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all relative`}
         style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
       >
         <div className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-600/80 to-blue-500/80">
           <MapPin className="h-5 w-5 text-white/90" strokeWidth={2.2} />
         </div>
+        
+        {/* Add green checkmark when location is found */}
+        {hasLocation && (
+          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1 border-2 border-background shadow-sm animate-fade-in">
+            <Check className="h-3 w-3 text-white" strokeWidth={3} />
+          </div>
+        )}
         
         {/* Add pulsing effect to button when active */}
         <motion.div 

@@ -1,18 +1,42 @@
 
-import React from 'react';
-import { MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapPin, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSiqsNavigation } from '@/hooks/navigation/useSiqsNavigation';
-import { toast } from 'sonner';
 
 const LocationPinButton: React.FC = () => {
   const { t } = useLanguage();
   const { getPosition } = useSiqsNavigation();
+  const [locationFound, setLocationFound] = useState(false);
+  
+  // Check if user location exists in localStorage
+  useEffect(() => {
+    const checkForExistingLocation = () => {
+      try {
+        // Check if any location data exists in localStorage
+        const keys = Object.keys(localStorage);
+        const locationKeys = keys.filter(key => key.startsWith('location_'));
+        setLocationFound(locationKeys.length > 0);
+      } catch (e) {
+        console.error("Error checking localStorage:", e);
+      }
+    };
+
+    checkForExistingLocation();
+    // Add event listener to detect location changes
+    window.addEventListener('storage', checkForExistingLocation);
+    
+    return () => {
+      window.removeEventListener('storage', checkForExistingLocation);
+    };
+  }, []);
   
   const handleGetLocation = () => {
-    toast.success(t("Finding your location...", "正在定位您的位置..."));
+    // No toast notification here
     getPosition();
+    // Set locationFound to true immediately for better UX
+    setLocationFound(true);
   };
 
   return (
@@ -24,6 +48,13 @@ const LocationPinButton: React.FC = () => {
       title={t("Update to your current location", "更新到您的当前位置")}
     >
       <MapPin className="h-5 w-5" />
+      
+      {/* Green checkmark overlay when location is found */}
+      {locationFound && (
+        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-background shadow-sm">
+          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+        </div>
+      )}
     </Button>
   );
 };

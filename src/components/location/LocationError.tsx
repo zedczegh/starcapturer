@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { useLocationSelectorState } from "@/components/siqs/hooks/useLocationSelectorState";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -26,6 +25,7 @@ const LocationError: React.FC<LocationErrorProps> = ({
   const { t, language } = useLanguage();
   const { getCachedData, setCachedData } = useLocationDataCache();
   const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
+  const [locationFound, setLocationFound] = useState(false);
   
   // Auto-trigger location fetch on component mount if autoLocate is true
   useEffect(() => {
@@ -41,11 +41,13 @@ const LocationError: React.FC<LocationErrorProps> = ({
       return;
     }
     
-    toast.success(t("Getting your current location...", "正在获取您的位置..."));
+    // No toast here
     
     getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        
+        setLocationFound(true);
         
         // Create a minimal location object
         const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
@@ -67,8 +69,7 @@ const LocationError: React.FC<LocationErrorProps> = ({
       },
       (error) => {
         console.error("Error getting location:", error);
-        toast.error(t("Could not get your location. Please check browser permissions.", 
-                     "无法获取您的位置。请检查浏览器权限。"));
+        // No toast for error either
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0, language }
     );
