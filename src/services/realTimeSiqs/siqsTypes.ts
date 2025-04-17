@@ -6,56 +6,63 @@ export interface SiqsResult {
   factors?: {
     name: string;
     score: number;
-    description?: string;
+    description: string;
   }[];
   metadata?: {
     calculatedAt: string;
-    sources?: {
+    sources: {
       weather: boolean;
       forecast: boolean;
       clearSky: boolean;
       lightPollution: boolean;
     };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
   };
 }
 
-// Define enhanced location data structure
-export interface EnhancedLocation {
-  name: string;
-  latitude: number;
-  longitude: number;
-  bortleScale: number;
-  clearSkyRate: number;
-  isDarkSkyReserve?: boolean;
-  certification?: string;
-  averageVisibility: 'excellent' | 'good' | 'fair' | 'poor';
-}
-
-// Define weather data with clear sky information
 export interface WeatherDataWithClearSky {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
   clearSkyRate?: number;
   latitude: number;
   longitude: number;
-  cloudCover?: number;
-  humidity?: number;
-  windSpeed?: number;
-  precipitation?: number;
-  temperature?: number;
+  time?: string;
+  condition?: string;
   aqi?: number;
   _forecast?: any;
-  [key: string]: any;
 }
 
-// Define moon phase information
+export interface MoonlessNightInfo {
+  duration: number; // in hours
+  startTime: string;
+  endTime: string;
+  moonrise: Date | string;
+  moonset: Date | string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
+}
+
 export interface MoonPhaseInfo {
-  phase: number; // 0-1 where 0 is new moon, 0.5 is full moon, 1 is new moon again
-  illumination: number; // 0-1 percentage of moon illuminated
-  name: string; // Name of the moon phase (e.g., "New Moon", "Full Moon")
+  phase: number; // 0-1 normalized value
+  name: string;
+  illumination: number; // percentage 0-100
+  isGoodForAstronomy: boolean;
 }
 
-// Define climate region
-export interface ClimateRegion {
-  name: string;
-  borders: [number, number][]; // Array of [latitude, longitude] points defining the region
-  adjustmentFactors: number[]; // 12 monthly adjustment factors (January = 0, December = 11)
+// Add SiqsCalculationOptions interface
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  includeForecast?: boolean;
+  reliability?: boolean;
+  adjustForLatitude?: boolean;
 }

@@ -1,3 +1,4 @@
+
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -443,34 +444,3 @@ function combineWithIDACertifiedLocations(
 
 // Export the sortLocationsByQuality function
 export { sortLocationsByQuality } from './locationFilters';
-
-/**
- * Search for locations and calculate SIQS scores
- */
-export async function searchLocationsWithSiqs(searchParams: any): Promise<any[]> {
-  // This is a placeholder function to fix build errors
-  // In a real implementation, this would search an API or database
-  
-  // Generate some dummy locations
-  const dummyLocations = [
-    {
-      name: "Mount Wilson Observatory",
-      latitude: 34.2256,
-      longitude: -118.0568,
-      bortleScale: 4,
-      isDarkSkyReserve: false
-    },
-    {
-      name: "Mauna Kea",
-      latitude: 19.8207,
-      longitude: -155.4681,
-      bortleScale: 1,
-      isDarkSkyReserve: true
-    }
-  ];
-  
-  // Add SIQS scores to the locations
-  const locationsWithSiqs = await batchCalculateSiqs(dummyLocations);
-  
-  return locationsWithSiqs;
-}

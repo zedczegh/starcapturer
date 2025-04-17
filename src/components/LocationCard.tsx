@@ -44,7 +44,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-50">{name}</h3>
-            <SiqsScoreBadge score={siqs} isCertified={isCertified} />
+            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
           </div>
           <div className="space-y-2 text-sm text-gray-400">
             <div className="flex items-center">
