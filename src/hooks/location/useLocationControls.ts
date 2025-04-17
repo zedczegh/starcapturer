@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationDataCache } from "@/hooks/useLocationData";
+import { useLocationNameTranslator } from "./useLocationNameTranslator";
 
 interface UseLocationControlsProps {
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
@@ -20,8 +21,16 @@ export const useLocationControls = ({
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [lastTranslationRequest, setLastTranslationRequest] = useState<string | null>(null);
-  const [isProcessingLanguageChange, setIsProcessingLanguageChange] = useState(false);
+
+  // Get language translation utils
+  const {
+    updateLocationNameForLanguage,
+    createTranslationRequestKey
+  } = useLocationNameTranslator({
+    onLocationUpdate,
+    setCachedData, 
+    getCachedData
+  });
 
   // Avoid unnecessary effect runs on initial mount
   useEffect(() => {
@@ -29,54 +38,11 @@ export const useLocationControls = ({
     return () => setIsMounted(false);
   }, []);
 
-  // Create a debounced translation request key
-  const translationRequestKey = useCallback(() => {
-    if (!currentLocation) return null;
-    return `${currentLocation.latitude.toFixed(4)}-${currentLocation.longitude.toFixed(4)}-${language}`;
-  }, [currentLocation, language]);
-
   // Update location name when language changes, only for non-special locations
   useEffect(() => {
-    if (!isMounted || !currentLocation || isProcessingLanguageChange) return;
-    
-    const currentRequestKey = translationRequestKey();
-    
-    // Skip if we've already processed this exact request
-    if (currentRequestKey === lastTranslationRequest) return;
-    
-    // Skip special locations like Beijing
-    if (currentLocation.name === "北京" || currentLocation.name === "Beijing") return;
-    
-    const updateLocationNameOnLanguageChange = async () => {
-      try {
-        setIsProcessingLanguageChange(true);
-        const locationName = await getLocationNameForCoordinates(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          language,
-          { setCachedData, getCachedData }
-        );
-        
-        // Only update if the name changed to avoid unnecessary re-renders
-        if (locationName && locationName !== currentLocation.name) {
-          await onLocationUpdate({
-            name: locationName,
-            latitude: currentLocation.latitude,
-            longitude: currentLocation.longitude
-          });
-        }
-        
-        // Update the last translation request to prevent duplicates
-        setLastTranslationRequest(currentRequestKey);
-      } catch (error) {
-        console.error("Error updating location name on language change:", error);
-      } finally {
-        setIsProcessingLanguageChange(false);
-      }
-    };
-    
-    updateLocationNameOnLanguageChange();
-  }, [translationRequestKey, currentLocation, onLocationUpdate, setCachedData, getCachedData, isMounted, language, lastTranslationRequest, isProcessingLanguageChange]);
+    if (!isMounted || !currentLocation) return;
+    updateLocationNameForLanguage(currentLocation);
+  }, [currentLocation, updateLocationNameForLanguage, isMounted, language]);
 
   // Handle the location search
   const handleLocationSearch = useCallback((selectedLocation: { 
@@ -94,9 +60,6 @@ export const useLocationControls = ({
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude
       });
-      
-      // Reset last translation request when manually selecting a location
-      setLastTranslationRequest(null);
       
       setStatusMessage(t(`Now viewing ${locationName}`, `现在查看 ${locationName}`));
     } catch (error) {
@@ -146,8 +109,8 @@ export const useLocationControls = ({
             longitude
           });
           
-          // Reset last translation request when getting current location
-          setLastTranslationRequest(`${latitude.toFixed(4)}-${longitude.toFixed(4)}-${language}`);
+          // Save translation request for this location
+          const translationKey = createTranslationRequestKey({latitude, longitude});
           
           setStatusMessage(t("Using your current location.", "使用您的当前位置。"));
           
@@ -181,7 +144,7 @@ export const useLocationControls = ({
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
-  }, [t, setStatusMessage, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData]);
+  }, [t, setStatusMessage, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData, createTranslationRequestKey]);
 
   return {
     gettingUserLocation,
