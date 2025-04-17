@@ -1,202 +1,134 @@
 
-import { ClimateRegion } from './siqsTypes';
-
 /**
- * Climate regions for SIQS calculations
+ * Climate region utilities for SIQS calculation
  */
-const climateRegions: ClimateRegion[] = [
+
+interface ClimateRegion {
+  name: string;
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+  description?: string;
+}
+
+// Basic climate regions classification
+const CLIMATE_REGIONS: ClimateRegion[] = [
+  {
+    name: "Arctic",
+    minLat: 66.5,
+    maxLat: 90,
+    minLng: -180,
+    maxLng: 180,
+    description: "Very cold with low humidity, often excellent for astronomy when dark."
+  },
   {
     name: "Desert",
-    description: "Hot and dry, minimal cloud cover",
-    boundaries: {
-      latMin: -30,
-      latMax: 30,
-      longMin: -120,
-      longMax: -100
-    },
-    adjustmentFactors: [1.15, 1.1, 1.08]
+    minLat: 15,
+    maxLat: 35,
+    minLng: -120,
+    maxLng: 130,
+    description: "Dry air with excellent transparency and low humidity."
   },
   {
     name: "Tropical",
-    description: "Hot and humid, variable cloud cover",
-    boundaries: {
-      latMin: -23,
-      latMax: 23,
-      longMin: -180,
-      longMax: 180
-    },
-    adjustmentFactors: [0.85, 0.9, 0.93]
+    minLat: -23.5,
+    maxLat: 23.5,
+    minLng: -180,
+    maxLng: 180,
+    description: "High humidity and heat can impact viewing conditions."
+  },
+  {
+    name: "Mediterranean",
+    minLat: 30,
+    maxLat: 45,
+    minLng: -10,
+    maxLng: 40,
+    description: "Mild conditions with generally good viewing opportunities."
   },
   {
     name: "Temperate",
-    description: "Moderate temperatures and humidity",
-    boundaries: {
-      latMin: 23,
-      latMax: 66,
-      longMin: -180,
-      longMax: 180
-    },
-    adjustmentFactors: [1.0, 1.0, 1.0]
-  },
-  {
-    name: "Polar",
-    description: "Cold with variable cloud cover",
-    boundaries: {
-      latMin: 66,
-      latMax: 90,
-      longMin: -180,
-      longMax: 180
-    },
-    adjustmentFactors: [0.9, 1.2, 0.85]
+    minLat: 40,
+    maxLat: 60,
+    minLng: -180,
+    maxLng: 180,
+    description: "Variable conditions with seasonality affecting viewing."
   }
 ];
 
 /**
- * Find matching climate region for a location
+ * Get climate region for a specific location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns ClimateRegion or undefined if not found
  */
-export function findClimateRegion(latitude: number, longitude: number): ClimateRegion | null {
-  for (const region of climateRegions) {
-    if (
-      latitude >= region.boundaries.latMin &&
-      latitude <= region.boundaries.latMax &&
-      longitude >= region.boundaries.longMin &&
-      longitude <= region.boundaries.longMax
-    ) {
-      return region;
-    }
-  }
-  
-  // Default to Temperate if no match found
-  return climateRegions.find(r => r.name === "Temperate") || null;
-}
-
-/**
- * Get adjustment factor for climate region
- */
-export function getClimateAdjustmentFactor(region: ClimateRegion | null): number {
-  if (!region) return 1.0;
-  
-  // Choose a factor based on current conditions
-  // For simplicity, use the middle factor
-  return region.adjustmentFactors[1] || 1.0;
-}
-
-/**
- * Get climate region by name
- */
-export function getClimateRegion(latitude: number, longitude: number): ClimateRegion | null {
-  return findClimateRegion(latitude, longitude);
+export function getClimateRegion(
+  latitude: number,
+  longitude: number
+): ClimateRegion | undefined {
+  // Find matching climate region
+  return CLIMATE_REGIONS.find(region => 
+    latitude >= region.minLat && 
+    latitude <= region.maxLat && 
+    longitude >= region.minLng && 
+    longitude <= region.maxLng
+  );
 }
 
 /**
  * Get detailed climate information for a location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Climate information object
  */
-export function getLocationClimateInfo(latitude: number, longitude: number): any {
-  const region = findClimateRegion(latitude, longitude);
+export function getLocationClimateInfo(
+  latitude: number,
+  longitude: number
+): {
+  averageCloudiness: number;
+  seasonalVariation: string;
+  clearSkyAverage: number;
+} {
+  const region = getClimateRegion(latitude, longitude);
   
-  if (!region) {
-    return {
-      name: "Unknown",
-      description: "No specific climate information available",
-      bestMonths: []
-    };
-  }
+  // Default values
+  let averageCloudiness = 50; // percent
+  let seasonalVariation = "Moderate";
+  let clearSkyAverage = 60; // percent
   
-  // Determine best months based on climate region
-  let bestMonths: string[] = [];
-  
-  switch(region.name) {
-    case "Desert":
-      bestMonths = ["Oct", "Nov", "Dec", "Jan", "Feb"];
-      break;
-    case "Tropical":
-      bestMonths = ["Jun", "Jul", "Aug"];
-      break;
-    case "Temperate":
-      // Northern hemisphere
-      if (latitude > 0) {
-        bestMonths = ["Apr", "May", "Sep", "Oct"];
-      } else {
-        // Southern hemisphere
-        bestMonths = ["Oct", "Nov", "Mar", "Apr"];
-      }
-      break;
-    case "Polar":
-      // Northern hemisphere winter (darker skies)
-      if (latitude > 0) {
-        bestMonths = ["Nov", "Dec", "Jan", "Feb"];
-      } else {
-        // Southern hemisphere winter
-        bestMonths = ["May", "Jun", "Jul", "Aug"];
-      }
-      break;
-    default:
-      bestMonths = ["Mar", "Apr", "Sep", "Oct"];
+  // Adjust values based on climate region
+  if (region) {
+    switch (region.name) {
+      case "Arctic":
+        averageCloudiness = 60;
+        seasonalVariation = "Extreme";
+        clearSkyAverage = 40;
+        break;
+      case "Desert":
+        averageCloudiness = 20;
+        seasonalVariation = "Low";
+        clearSkyAverage = 85;
+        break;
+      case "Tropical":
+        averageCloudiness = 70;
+        seasonalVariation = "Low";
+        clearSkyAverage = 45;
+        break;
+      case "Mediterranean":
+        averageCloudiness = 40;
+        seasonalVariation = "Moderate";
+        clearSkyAverage = 65;
+        break;
+      case "Temperate":
+      default:
+        // Use default values
+        break;
+    }
   }
   
   return {
-    name: region.name,
-    description: region.description,
-    bestMonths: bestMonths,
-    averageClearDays: calculateAverageClearDays(region.name, latitude),
-    seasonalCharacteristics: getSeasonalCharacteristics(region.name, latitude > 0)
+    averageCloudiness,
+    seasonalVariation,
+    clearSkyAverage
   };
-}
-
-/**
- * Calculate average clear days for climate regions
- */
-function calculateAverageClearDays(climateName: string, latitude: number): number {
-  // Rough estimates for each climate region
-  switch(climateName) {
-    case "Desert":
-      return 250;
-    case "Tropical":
-      return 120;
-    case "Temperate":
-      return Math.abs(latitude) > 45 ? 150 : 180;
-    case "Polar":
-      return 100;
-    default:
-      return 150;
-  }
-}
-
-/**
- * Get seasonal characteristics for climate region
- */
-function getSeasonalCharacteristics(climateName: string, isNorthernHemisphere: boolean): any {
-  const seasons = isNorthernHemisphere 
-    ? { winter: "Dec-Feb", spring: "Mar-May", summer: "Jun-Aug", fall: "Sep-Nov" }
-    : { winter: "Jun-Aug", spring: "Sep-Nov", summer: "Dec-Feb", fall: "Mar-May" };
-  
-  // Add climate-specific characteristics
-  switch(climateName) {
-    case "Desert":
-      return {
-        ...seasons,
-        bestSeason: isNorthernHemisphere ? "winter" : "winter",
-        characteristics: "Very clear nights, excellent transparency"
-      };
-    case "Tropical":
-      return {
-        ...seasons,
-        bestSeason: isNorthernHemisphere ? "summer" : "winter",
-        characteristics: "High humidity, but good viewing during dry season"
-      };
-    case "Temperate":
-      return {
-        ...seasons,
-        bestSeason: "spring",
-        characteristics: "Variable conditions, best in spring and fall"
-      };
-    case "Polar":
-      return {
-        ...seasons,
-        bestSeason: "winter",
-        characteristics: "Long nights in winter, midnight sun in summer"
-      };
-    default:
-      return { ...seasons };
-  }
 }

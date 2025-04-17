@@ -1,10 +1,10 @@
 import { SharedAstroSpot } from '@/types/weather';
 import { generateRandomPoint } from '@/services/locationFilters';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isWaterLocation, isValidAstronomyLocation } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { fetchLightPollutionData } from '@/lib/api/pollution';
 import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';
-import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
+import { calculateRealTimeSiqs } from './realTimeSiqs/realTimeSiqsService';
 
 /**
  * Enhanced service for generating and filtering calculated astronomy locations

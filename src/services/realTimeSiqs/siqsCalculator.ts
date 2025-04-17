@@ -5,6 +5,36 @@
 import { SiqsResult, WeatherDataWithClearSky, SiqsCalculationOptions, SiqsFactor } from './siqsTypes';
 
 /**
+ * Calculate real-time SIQS score for a location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param bortleScale Bortle scale (1-9)
+ * @param weatherData Optional weather data
+ * @returns SIQS result
+ */
+export async function calculateRealTimeSiqs(
+  latitude: number,
+  longitude: number,
+  bortleScale: number,
+  weatherData?: any
+): Promise<SiqsResult> {
+  // Default weather data if not provided
+  const processedWeatherData: WeatherDataWithClearSky = {
+    ...(weatherData || {
+      temperature: 15,
+      humidity: 50,
+      cloudCover: 0,
+      windSpeed: 5,
+      precipitation: 0
+    }),
+    clearSky: 100 - (weatherData?.cloudCover || 0),
+  };
+  
+  // Calculate SIQS score
+  return calculateSiqsScore(bortleScale, processedWeatherData, { includeFactors: true });
+}
+
+/**
  * Calculate SIQS score for a location
  */
 export function calculateSiqsScore(

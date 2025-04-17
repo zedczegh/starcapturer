@@ -1,58 +1,59 @@
-
 /**
- * Advanced adjustments for SIQS calculations
+ * Intelligent adjustments for SIQS scores based on location
  */
-
-import { findClimateRegion, getClimateAdjustmentFactor } from './climateRegions';
+import { getClimateRegion } from './climateRegions';
+import { WeatherData } from './siqsTypes';
 
 /**
- * Apply intelligent adjustments to SIQS score based on location factors
+ * Apply intelligent adjustments to SIQS score based on location and conditions
+ * @param baseScore Initial SIQS score
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param weatherData Weather data if available
+ * @returns Adjusted SIQS score
  */
 export function applyIntelligentAdjustments(
-  siqsScore: number,
+  baseScore: number,
   latitude: number,
   longitude: number,
-  weatherData?: any
+  weatherData?: WeatherData
 ): number {
-  // Find climate region for this location
-  const region = findClimateRegion(latitude, longitude);
+  let adjustedScore = baseScore;
   
-  // Get base adjustment factor
-  const baseFactor = getClimateAdjustmentFactor(region);
+  // Get climate region for this location
+  const climateRegion = getClimateRegion(latitude, longitude);
   
-  // Adjust for altitude if available
-  let altitudeFactor = 1.0;
-  if (weatherData?.altitude) {
-    // Higher altitudes generally have better viewing conditions
-    const altitude = weatherData.altitude;
-    if (altitude > 2000) {
-      altitudeFactor = 1.15; // Significant improvement
-    } else if (altitude > 1000) {
-      altitudeFactor = 1.1; // Moderate improvement
-    } else if (altitude > 500) {
-      altitudeFactor = 1.05; // Slight improvement
+  // Apply adjustments based on climate region
+  if (climateRegion) {
+    switch(climateRegion.name) {
+      case 'Desert':
+        // Desert regions have better transparency
+        adjustedScore *= 1.05;
+        break;
+      case 'Arctic':
+        // Arctic regions often have very clear air when weather is good
+        if (weatherData?.cloudCover && weatherData.cloudCover < 30) {
+          adjustedScore *= 1.1;
+        }
+        break;
+      case 'Tropical':
+        // Tropical regions often have higher humidity affecting seeing
+        adjustedScore *= 0.95;
+        break;
+      // Other regions use base score
     }
   }
   
-  // Adjust for latitude (polar regions have different night conditions)
-  let latitudeFactor = 1.0;
-  const absLatitude = Math.abs(latitude);
-  if (absLatitude > 60) {
-    // Near polar regions have unique light conditions
-    const month = new Date().getMonth(); // 0-11
+  // Apply adjustments for elevation (estimated by latitude)
+  // High elevation locations tend to have better seeing conditions
+  const isLikelyHighElevation = 
+    (Math.abs(latitude) > 35 && Math.abs(latitude) < 50) || // Mountain ranges
+    (longitude > -120 && longitude < -100 && latitude > 35 && latitude < 45); // Rocky Mountains
     
-    // Northern hemisphere summer / Southern hemisphere winter
-    if ((latitude > 0 && month >= 4 && month <= 8) || 
-        (latitude < 0 && (month <= 2 || month >= 9))) {
-      latitudeFactor = 0.85; // Less darkness in summer
-    } else {
-      latitudeFactor = 1.1; // More darkness in winter
-    }
+  if (isLikelyHighElevation) {
+    adjustedScore *= 1.05;
   }
   
-  // Apply all adjustments
-  const adjustedScore = siqsScore * baseFactor * altitudeFactor * latitudeFactor;
-  
-  // Ensure score stays in valid range (0-10)
-  return Math.max(0, Math.min(10, adjustedScore));
+  // Ensure score stays within 0-10 range
+  return Math.min(10, Math.max(0, adjustedScore));
 }

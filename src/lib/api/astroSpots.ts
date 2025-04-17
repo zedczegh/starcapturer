@@ -6,8 +6,6 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
-import { isWaterLocation as isCoastalWater } from '@/utils/locationWaterCheck';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -450,7 +448,7 @@ function haversineDistance(
 }
 
 /**
- * Check if a location is valid for astronomy
+ * Check if location is valid for astronomy
  * @param location - The location to check
  * @returns True if the location is valid, false otherwise
  */
@@ -481,7 +479,6 @@ export function isValidAstronomyLocation(location: any): boolean {
 /**
  * Check if a location is likely in water
  * @param latitude - Latitude of the location
- * @param longitude - Longitude of the location
  * @returns True if the location is likely in water, false otherwise
  */
 export function isWaterLocation(latitude: number, longitude: number): boolean {

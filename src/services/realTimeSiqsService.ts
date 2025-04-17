@@ -40,7 +40,7 @@ export async function batchCalculateSiqs(
         return {
           ...location,
           siqsResult: result,
-          siqs: result.score  // Add siqs field for backward compatibility
+          siqs: result.siqs  // Add siqs field for backward compatibility
         };
       } catch (error) {
         console.error("Error calculating SIQS for location:", error);
@@ -50,6 +50,28 @@ export async function batchCalculateSiqs(
   );
   
   return updatedLocations;
+}
+
+/**
+ * Calculate SIQS for a single location
+ */
+export async function calculateSiqs(
+  latitude: number,
+  longitude: number,
+  bortleScale: number = 4,
+  weatherData?: any
+): Promise<any> {
+  try {
+    return calculateRealTimeSiqs(latitude, longitude, bortleScale, weatherData);
+  } catch (error) {
+    console.error("Error calculating SIQS:", error);
+    // Return default result
+    return {
+      siqs: 5.0,
+      score: 5.0,
+      isViable: true
+    };
+  }
 }
 
 // Re-export from the main SIQS service

@@ -1,6 +1,6 @@
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateRealTimeSiqs } from './siqsCalculator';
+import { calculateRealTimeSiqs } from './realTimeSiqsService';
 import { getSiqsScore, isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 /**
