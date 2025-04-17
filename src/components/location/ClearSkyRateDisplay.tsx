@@ -201,12 +201,15 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({ latitude, lon
             
             <div className="mt-1 text-xs text-muted-foreground">
               {visibility && (
-                <span>{t(
-                  typeof visibility === 'string' ? visibility : 'average', 
-                  visibility === 'excellent' ? '极佳' : 
-                  visibility === 'good' ? '良好' : 
-                  visibility === 'average' ? '一般' : '较差'
-                )}</span>
+                <span>{typeof visibility === 'string' ? 
+                  t(
+                    visibility, 
+                    visibility === 'excellent' ? '极佳' : 
+                    visibility === 'good' ? '良好' : 
+                    visibility === 'average' ? '一般' : '较差'
+                  ) : 
+                  t('average', '一般')
+                }</span>
               )}
             </div>
             
