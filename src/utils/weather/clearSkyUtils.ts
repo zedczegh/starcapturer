@@ -3,6 +3,9 @@
  * Clear sky utilities with enhanced accuracy for all regions globally
  */
 
+// Import the getMinimumClearNights function from clearSkyRateUtils
+import { getMinimumClearNights as getMinimumClearNightsImpl } from './clearSkyRateUtils';
+
 // Map language to month names for localization
 const MONTH_NAMES: Record<string, Record<string, string>> = {
   en: {
@@ -75,8 +78,7 @@ export const getMinimumClearNights = (
 ): number => {
   // We now use the enhanced implementation from clearSkyRateUtils for more accurate calculations
   // specifically targeting star visibility conditions, not just precipitation-free nights
-  const { getMinimumClearNights } = require('../weather/clearSkyRateUtils');
-  return getMinimumClearNights(rate, latitude, longitude);
+  return getMinimumClearNightsImpl(rate, latitude, longitude);
 };
 
 /**
@@ -235,3 +237,4 @@ export const calculateSeasonalRates = (
     fall: Math.round(fallRate)
   };
 };
+
