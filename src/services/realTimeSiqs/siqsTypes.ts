@@ -36,6 +36,7 @@ export interface ClimateRegion {
 }
 
 export interface EnhancedLocation {
+  id: string;
   name: string;
   latitude: number;
   longitude: number;

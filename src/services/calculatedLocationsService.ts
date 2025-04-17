@@ -258,12 +258,12 @@ export class CalculatedLocationsService {
       }
       
       // Apply water check but don't be too strict
-      if (isWaterLocation(spot.latitude, spot.longitude, false)) {
+      if (isWaterLocation(spot.latitude, spot.longitude)) {
         return false;
       }
       
       // Check basic astronomy location validity
-      if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
+      if (!isValidAstronomyLocation(spot.latitude, spot.longitude)) {
         return false;
       }
       
@@ -354,11 +354,11 @@ export class CalculatedLocationsService {
       return false;
     }
 
-    if (isWaterLocation(spot.latitude, spot.longitude, false)) {
+    if (isWaterLocation(spot.latitude, spot.longitude)) {
       return false;
     }
 
-    if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
+    if (!isValidAstronomyLocation(spot.latitude, spot.longitude)) {
       return false;
     }
 

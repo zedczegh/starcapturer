@@ -1,109 +1,77 @@
 
 /**
- * Helper functions for safely working with SIQS values that might be numbers or objects
+ * Utility functions for working with SIQS scores
  */
-
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Get numeric SIQS score from any SIQS format (number or object)
- * @param siqs SIQS value which could be a number or object
- * @returns number value of SIQS or 0 if undefined
+ * Get a SIQS score safely from different possible score formats
+ * @param siqs The SIQS value in any supported format
+ * @returns A normalized SIQS score as a number
  */
-export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
-  if (siqs === undefined || siqs === null) {
-    return 0;
-  }
-  
-  // Debug the incoming SIQS format
-  console.log("Getting SIQS score from:", typeof siqs, siqs);
-  
-  // Handle string values (parsing to number)
-  if (typeof siqs === 'string') {
-    const parsed = parseFloat(siqs);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  
-  // Handle numeric values directly
+export function getSiqsScore(siqs: any): number {
   if (typeof siqs === 'number') {
-    return isNaN(siqs) ? 0 : siqs;
+    return siqs;
   }
   
-  // Handle SharedAstroSpot object with siqs property
-  if (typeof siqs === 'object' && siqs !== null) {
-    // Case: location.siqs passed directly as an object with score property
-    if ('siqs' in siqs && typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
-      console.log("Found nested siqs.siqs.score:", siqs.siqs.score);
-      return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
-    }
-    
-    // Case: entire location object passed (need to extract siqs)
-    if ('siqs' in siqs && (typeof siqs.siqs === 'number' || typeof siqs.siqs === 'string')) {
-      console.log("Found siqs property:", siqs.siqs);
-      return typeof siqs.siqs === 'number' ? siqs.siqs : parseFloat(siqs.siqs);
-    }
-    
-    // Handle direct score property (standard format)
-    if ('score' in siqs && typeof siqs.score === 'number') {
-      console.log("Found direct score property:", siqs.score);
+  if (siqs && typeof siqs === 'object') {
+    if (typeof siqs.score === 'number') {
       return siqs.score;
     }
-    
-    // Handle possible siqsResult nested format
-    if ('siqsResult' in siqs && siqs.siqsResult && typeof siqs.siqsResult.score === 'number') {
-      console.log("Found siqsResult.score:", siqs.siqsResult.score);
-      return siqs.siqsResult.score;
+    if (typeof siqs.siqs === 'number') {
+      return siqs.siqs;
     }
   }
   
-  console.log("No valid SIQS score found, returning 0");
   return 0;
 }
 
 /**
- * Check if SIQS is greater than a threshold
- * @param siqs SIQS value which could be a number or object
- * @param threshold Threshold to compare against
- * @returns boolean indicating if SIQS exceeds threshold
+ * Check if a SIQS score meets or exceeds a threshold
+ * @param siqs The SIQS value in any supported format
+ * @param threshold The minimum acceptable value
+ * @returns True if the SIQS meets or exceeds the threshold
  */
-export function isSiqsGreaterThan(siqs: number | { score: number; isViable: boolean } | undefined, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score > threshold;
+export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+  return getSiqsScore(siqs) >= threshold;
 }
 
 /**
- * Check if SIQS is greater than or equal to a threshold
- * @param siqs SIQS value which could be a number or object
- * @param threshold Threshold to compare against
- * @returns boolean indicating if SIQS meets or exceeds threshold
+ * Format a SIQS score for display
+ * @param siqs The SIQS value in any supported format
+ * @param precision Number of decimal places (default: 1)
+ * @returns Formatted SIQS score string
  */
-export function isSiqsAtLeast(siqs: number | { score: number; isViable: boolean } | undefined, threshold: number): boolean {
+export function formatSiqsScore(siqs: any, precision: number = 1): string {
   const score = getSiqsScore(siqs);
-  return score >= threshold;
+  return score.toFixed(precision);
 }
 
 /**
- * Format SIQS for display, handling both number and object formats
- * @param siqs SIQS value which could be a number or object
- * @returns Formatted string representation of the SIQS score
+ * Get a color representing the SIQS quality level
+ * @param siqs The SIQS value in any supported format
+ * @returns CSS color string
  */
-export function formatSiqsScore(siqs: number | { score: number; isViable: boolean } | undefined): string {
+export function getSiqsColor(siqs: any): string {
   const score = getSiqsScore(siqs);
-  return score.toFixed(1);
+  
+  if (score >= 8.0) return 'bg-green-500';
+  if (score >= 6.5) return 'bg-lime-500';
+  if (score >= 5.0) return 'bg-yellow-500';
+  if (score >= 3.5) return 'bg-orange-500';
+  return 'bg-red-500';
 }
 
 /**
- * Get the display name for a location, preferring the language-specific name if available
- * @param location Location object
- * @param language Current language
- * @returns Display name string
+ * Get a text description of the SIQS quality
+ * @param siqs The SIQS value in any supported format
+ * @returns Text description
  */
-export function getLocationDisplayName(
-  location: SharedAstroSpot, 
-  language: 'en' | 'zh' = 'en'
-): string {
-  if (language === 'zh' && location.chineseName) {
-    return location.chineseName;
-  }
-  return location.name || 'Unnamed Location';
+export function getSiqsQualityDescription(siqs: any): string {
+  const score = getSiqsScore(siqs);
+  
+  if (score >= 8.0) return 'Excellent';
+  if (score >= 6.5) return 'Good';
+  if (score >= 5.0) return 'Fair';
+  if (score >= 3.5) return 'Poor';
+  return 'Very Poor';
 }

@@ -1,4 +1,3 @@
-
 /**
  * Enhanced location data for optimized SIQS calculations
  */
@@ -42,6 +41,48 @@ const enhancedLocations: EnhancedLocation[] = [
     bestMonths: ["May", "Jun", "Jul", "Aug"]
   }
 ];
+
+// Fix the missing properties in object literals
+const majella: EnhancedLocation = {
+  id: 'majella-dark-sky-park',
+  name: 'Majella Dark Sky Park',
+  latitude: 42.086165,
+  longitude: 14.081983,
+  bortleScale: 2,
+  elevation: 1200,
+  timestamp: new Date().toISOString(),
+  hasDarkSkyStatus: true,
+  certification: 'International Dark Sky Park',
+  isDarkSkyReserve: true,
+  clearSkyRate: 75,
+  seasonalTrends: {
+    spring: { clearSkyRate: 70, averageTemperature: 15 },
+    summer: { clearSkyRate: 80, averageTemperature: 25 },
+    fall: { clearSkyRate: 75, averageTemperature: 18 },
+    winter: { clearSkyRate: 60, averageTemperature: 5 }
+  },
+  bestMonths: ['June', 'July', 'August', 'September']
+};
+
+const westhavelland: EnhancedLocation = {
+  id: 'westhavelland-dark-sky-reserve',
+  name: 'Westhavelland Dark Sky Reserve',
+  latitude: 52.696361,
+  longitude: 12.487134,
+  bortleScale: 3,
+  elevation: 35,
+  timestamp: new Date().toISOString(),
+  hasDarkSkyStatus: true,
+  clearSkyRate: 68,
+  isDarkSkyReserve: true,
+  seasonalTrends: {
+    spring: { clearSkyRate: 65, averageTemperature: 12 },
+    summer: { clearSkyRate: 70, averageTemperature: 22 },
+    fall: { clearSkyRate: 60, averageTemperature: 14 },
+    winter: { clearSkyRate: 50, averageTemperature: 2 }
+  },
+  bestMonths: ['July', 'August', 'September']
+};
 
 /**
  * Find closest enhanced location to given coordinates

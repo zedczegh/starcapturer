@@ -1,4 +1,3 @@
-
 import { ClimateRegion } from './siqsTypes';
 
 /**
@@ -96,4 +95,92 @@ export function getClimateAdjustmentFactor(
   }
   
   return region.adjustmentFactors[factorIndex];
+}
+
+/**
+ * Get climate region for specific coordinates
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Climate region or undefined if not found
+ */
+export function getClimateRegion(latitude: number, longitude: number): any {
+  // Find a region that contains these coordinates
+  for (const region of climateRegions) {
+    if (
+      latitude <= region.region.north &&
+      latitude >= region.region.south &&
+      longitude >= region.region.west &&
+      longitude <= region.region.east
+    ) {
+      return region;
+    }
+  }
+  
+  // Default to temperate climate if not found
+  return {
+    name: 'Temperate',
+    region: {
+      north: 60,
+      south: 30,
+      east: 180,
+      west: -180
+    },
+    conditions: {
+      humidity: 65,
+      temperature: 15,
+      cloudCover: 50
+    },
+    adjustmentFactors: [1.0]
+  };
+}
+
+/**
+ * Get climate info for a location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Climate information
+ */
+export function getLocationClimateInfo(latitude: number, longitude: number): any {
+  const region = getClimateRegion(latitude, longitude);
+  
+  if (!region) {
+    // Default climate data
+    return {
+      region: 'Temperate',
+      clearSkyRate: 60,
+      characteristic: 'Moderate seasonal changes',
+      bestMonths: ['April', 'May', 'September', 'October']
+    };
+  }
+  
+  // Calculate approximate clear sky rate from cloud cover
+  const clearSkyRate = 100 - (region.conditions?.cloudCover || 50);
+  
+  // Determine characteristic and best months based on region
+  let characteristic = 'Moderate seasonal changes';
+  let bestMonths = ['April', 'May', 'September', 'October'];
+  
+  if (region.name.includes('Tropical')) {
+    characteristic = 'Warm with distinct wet and dry seasons';
+    bestMonths = ['January', 'February', 'July', 'August'];
+  } else if (region.name.includes('Desert')) {
+    characteristic = 'Extremely clear skies, hot days and cold nights';
+    bestMonths = ['October', 'November', 'December', 'January'];
+  } else if (region.name.includes('Polar')) {
+    characteristic = 'Very dark winter skies but extended twilight in summer';
+    bestMonths = ['September', 'October', 'February', 'March'];
+  } else if (region.name.includes('Continental')) {
+    characteristic = 'Extreme seasonal temperature variations';
+    bestMonths = ['March', 'April', 'September', 'October'];
+  } else if (region.name.includes('Mediterranean')) {
+    characteristic = 'Hot dry summers, mild wet winters';
+    bestMonths = ['June', 'July', 'August', 'September'];
+  }
+  
+  return {
+    region: region.name,
+    clearSkyRate,
+    characteristic,
+    bestMonths
+  };
 }
