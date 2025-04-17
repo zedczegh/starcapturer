@@ -5,6 +5,7 @@ import { NavLink } from "./NavButtons";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Map } from "lucide-react";
+import LocationPinButton from "./LocationPinButton";
 
 interface DesktopNavProps {
   location: ReturnType<typeof useLocation>;
@@ -46,7 +47,8 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         </NavLink>
       </nav>
       
-      <div className="hidden md:flex items-center">
+      <div className="hidden md:flex items-center space-x-2">
+        <LocationPinButton />
         <LanguageSwitcher />
       </div>
     </>

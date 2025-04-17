@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { MoonStar } from "lucide-react";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { cn } from "@/lib/utils";
+import LocationPinButton from "./LocationPinButton";
 
 interface NavHeaderProps {
   scrolled: boolean;
@@ -35,6 +36,7 @@ const NavHeader: React.FC<NavHeaderProps> = ({
         {children}
         
         <div className="flex md:hidden items-center space-x-2">
+          <LocationPinButton />
           <LanguageSwitcher />
         </div>
       </div>
