@@ -71,12 +71,12 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup 
       closeOnClick={false} 
       autoClose={false}
-      eventHandlers={{
-        add: handlePopupOpen,
-        remove: handlePopupClose
-      }}
     >
-      <div className="min-w-[200px] py-1">
+      <div
+        className="min-w-[200px] py-1"
+        onMouseEnter={handlePopupOpen}
+        onMouseLeave={handlePopupClose}
+      >
         <div className="font-medium text-base mb-1">{name}</div>
         <div className="text-xs text-muted-foreground mb-2">
           {formattedLat}, {formattedLng}
