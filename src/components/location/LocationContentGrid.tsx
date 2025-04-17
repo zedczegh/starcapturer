@@ -1,5 +1,5 @@
 
-import React, { useMemo, lazy, Suspense } from "react";
+import React, { useMemo } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
@@ -136,20 +136,14 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           />
         </div>
         
-        <Suspense fallback={
-          <div className="animate-pulse h-64 bg-slate-800/20 rounded-lg flex items-center justify-center">
-            <span className="text-muted-foreground">{loadingText}</span>
-          </div>
-        }>
-          <ForecastTabs
-            forecastData={forecastData}
-            longRangeForecast={longRangeForecast}
-            forecastLoading={forecastLoading}
-            longRangeLoading={longRangeLoading}
-            onRefreshForecast={onRefreshForecast}
-            onRefreshLongRange={onRefreshLongRange}
-          />
-        </Suspense>
+        <ForecastTabs
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          onRefreshForecast={onRefreshForecast}
+          onRefreshLongRange={onRefreshLongRange}
+        />
       </div>
     </div>
   );

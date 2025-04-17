@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { createCustomMarker } from './map/MapMarkerUtils';
 import MapTooltip from './map/MapTooltip';
-import MapClickHandler from './map/MapClickHandler';
+import MapClickHandler from '../location/map/MapClickHandler';
 
 interface MapDisplayProps {
   position: [number, number];
