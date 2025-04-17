@@ -10,31 +10,19 @@ import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightT
 interface SiqsState {
   value: number | null;
   setValue: (value: number | null) => void;
-  metadata: {
-    locationName: string | null;
-    latitude: number | null;
-    longitude: number | null;
-    setMetadata: (name: string, lat: number, lng: number) => void;
-  }
+  locationName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  setMetadata: (name: string, lat: number, lng: number) => void;
 }
 
 export const currentSiqsStore = create<SiqsState>((set) => ({
   value: null,
   setValue: (value) => set({ value }),
-  metadata: {
-    locationName: null,
-    latitude: null,
-    longitude: null,
-    setMetadata: (name, lat, lng) => 
-      set(state => ({ 
-        metadata: { 
-          ...state.metadata, 
-          locationName: name, 
-          latitude: lat, 
-          longitude: lng 
-        } 
-      }))
-  }
+  locationName: null,
+  latitude: null,
+  longitude: null,
+  setMetadata: (name, lat, lng) => set({ locationName: name, latitude: lat, longitude: lng })
 }));
 
 const CalculatorSection: React.FC<{
@@ -45,20 +33,22 @@ const CalculatorSection: React.FC<{
   const [locationData, setLocationData] = useState<any>(null);
   
   const currentSiqs = currentSiqsStore(state => state.value);
-  const locationMetadata = currentSiqsStore(state => state.metadata);
+  const locationLatitude = currentSiqsStore(state => state.latitude);
+  const locationLongitude = currentSiqsStore(state => state.longitude);
+  const locationName = currentSiqsStore(state => state.locationName);
   
   // Create simulated weather data for the SIQS Summary component
   useEffect(() => {
-    if (siqsCalculated !== null && locationMetadata.latitude && locationMetadata.longitude) {
+    if (siqsCalculated !== null && locationLatitude && locationLongitude) {
       const { start, end } = calculateAstronomicalNight(
-        locationMetadata.latitude, 
-        locationMetadata.longitude
+        locationLatitude, 
+        locationLongitude
       );
       
       setLocationData({
-        name: locationMetadata.locationName,
-        latitude: locationMetadata.latitude,
-        longitude: locationMetadata.longitude,
+        name: locationName,
+        latitude: locationLatitude,
+        longitude: locationLongitude,
         timestamp: new Date().toISOString(),
         weatherData: {
           temperature: 15,
@@ -72,7 +62,7 @@ const CalculatorSection: React.FC<{
         }
       });
     }
-  }, [siqsCalculated, locationMetadata]);
+  }, [siqsCalculated, locationLatitude, locationLongitude, locationName]);
   
   const handleSiqsCalculated = (siqs: number | null) => {
     setSiqsCalculated(siqs);

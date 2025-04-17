@@ -55,7 +55,7 @@ const IndexPage = () => {
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
-          const locationSiqs = savedLocation.siqs || currentSiqsStore.getValue();
+          const locationSiqs = savedLocation.siqs || currentSiqsStore((state) => state.value);
           setCurrentSiqs(locationSiqs);
         }
       }
@@ -79,7 +79,7 @@ const IndexPage = () => {
         if (savedLocationString) {
           const savedLocation = JSON.parse(savedLocationString);
           if (savedLocation && savedLocation.siqs) {
-            currentSiqsStore.setValue(savedLocation.siqs);
+            currentSiqsStore.getState().setValue(savedLocation.siqs);
             setCurrentSiqs(savedLocation.siqs);
           }
         }

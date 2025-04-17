@@ -75,7 +75,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   useEffect(() => {
     if (locationName && parsedLatitude !== 0 && parsedLongitude !== 0) {
       // Update metadata in global store
-      currentSiqsStore.metadata.setMetadata(locationName, parsedLatitude, parsedLongitude);
+      currentSiqsStore.getState().setMetadata(locationName, parsedLatitude, parsedLongitude);
       
       // If we have a Bortle scale, calculate real-time SIQS
       if (localBortleScale && !calculationInProgress) {
@@ -93,7 +93,7 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
             
             if (result && typeof result.siqs === 'number') {
               // Update the SIQS score in the global store
-              currentSiqsStore.setValue(result.siqs);
+              currentSiqsStore.getState().setValue(result.siqs);
               
               // Notify through provided callback
               if (onSiqsCalculated) {
