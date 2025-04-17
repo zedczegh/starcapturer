@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
+import { getAstronomicalNight, formatTimeString } from '@/utils/weather/astronomicalTimeUtils';
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +26,11 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   
   // Get moonless night information
   const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
+  
+  // Get astronomical night for context
+  const astronomicalNight = getAstronomicalNight(latitude, longitude);
+  const astronomicalNightStart = formatTimeString(astronomicalNight.start);
+  const astronomicalNightEnd = formatTimeString(astronomicalNight.end);
 
   return (
     <Card className="p-4 bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
@@ -83,6 +89,24 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
             <span>{t('Rise:', '月出:')} {nightInfo.moonrise}</span>
             <span>{t('Set:', '月落:')} {nightInfo.moonset}</span>
           </div>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {t('Night:', '夜晚:')} {astronomicalNightStart} - {astronomicalNightEnd}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  {t(
+                    'Astronomical night period',
+                    '天文学夜晚时段'
+                  )}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <div className={`mt-1 text-xs ${isGoodForAstronomy ? 'text-green-400' : 'text-yellow-400'}`}>
             {isGoodForAstronomy 

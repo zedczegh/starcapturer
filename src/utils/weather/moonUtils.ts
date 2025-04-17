@@ -1,3 +1,4 @@
+
 import { calculateMoonPhase, calculateMoonriseMoonsetTimes, getNextNewMoonDate } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import type { MoonlessNightInfo } from '@/services/realTimeSiqs/siqsTypes';
 
@@ -78,216 +79,28 @@ export const calculateMoonlessNightDuration = (latitude: number, longitude: numb
     return getPhaseBasedMoonlessNight(moonPhase, latitude);
   }
   
+  // Calculate sunrise and sunset times for astronomical night determination
+  const { sunset, sunrise } = calculateAstronomicalNight(latitude, longitude);
+  console.log(`Calculated sunset: ${sunset.toLocaleTimeString()}, sunrise: ${sunrise.toLocaleTimeString()}`);
+  
   // Adjust dates for moonrise/moonset that might refer to tomorrow or yesterday
   const now = new Date();
-  const currentHour = now.getHours();
   
-  // Improved handling of the timeline to work in any timezone
-  // Determine current night period based on local time
-  const isNighttime = currentHour >= 18 || currentHour < 6;
+  // Improved timeline handling for any timezone
+  // Align all times to the same date reference for proper comparison
+  const adjustedTimes = alignTimesToNightPeriod(moonriseTime, moonsetTime, sunset, sunrise, now);
   
-  // Logic for adjusting moonrise/set to appropriate day
-  // This is critical for China time zone (UTC+8)
-  
-  // If moonset is early morning and current time is evening, it's tomorrow's moonset
-  if (moonsetTime.getHours() < 12 && currentHour > 12) {
-    moonsetTime.setDate(moonsetTime.getDate() + 1);
-  }
-  
-  // If moonrise is in the evening (after 12pm) and now is morning (before 12pm),
-  // it's yesterday's moonrise
-  if (moonriseTime.getHours() >= 12 && currentHour < 12) {
-    moonriseTime.setDate(moonriseTime.getDate() - 1);
-  }
-  // If moonrise is in the morning and now is evening, it's tomorrow's moonrise
-  else if (moonriseTime.getHours() < 12 && currentHour >= 12) {
-    moonriseTime.setDate(moonriseTime.getDate() + 1);
-  }
-  
-  console.log(`Adjusted moonrise: ${moonriseTime.toLocaleString()}, Adjusted moonset: ${moonsetTime.toLocaleString()}`);
-  
-  // Determine astronomical night period based on latitude and season
-  // Crucial for China which spans many latitude bands
-  const nightStart = new Date();
-  const nightEnd = new Date();
-  const month = now.getMonth(); // 0-11
-  
-  // Guizhou province is around 26°N latitude - subtropical region
-  // Adjust night period based on latitude and season
-  if (Math.abs(latitude) < 30) {
-    // Subtropical nights - consistent year-round but with seasonal variations
-    // For Guizhou specifically
-    if (month >= 4 && month <= 8) {
-      // Summer
-      nightStart.setHours(19, 30, 0, 0); // 7:30 PM
-      nightEnd.setHours(5, 30, 0, 0); // 5:30 AM 
-    } else {
-      // Winter
-      nightStart.setHours(18, 30, 0, 0); // 6:30 PM
-      nightEnd.setHours(6, 30, 0, 0); // 6:30 AM
-    }
-  } else if (Math.abs(latitude) > 50) {
-    // Higher latitudes - adjust for seasonal variations
-    const isNorthern = latitude >= 0;
-    
-    // Summer
-    if ((isNorthern && (month >= 4 && month <= 8)) || (!isNorthern && (month <= 1 || month >= 10))) {
-      nightStart.setHours(21, 30, 0, 0); // 9:30 PM - later sunset in summer
-      nightEnd.setHours(4, 30, 0, 0); // 4:30 AM - earlier sunrise in summer
-    } else {
-      // Winter
-      nightStart.setHours(18, 0, 0, 0); // 6 PM - earlier sunset in winter
-      nightEnd.setHours(7, 0, 0, 0); // 7 AM - later sunrise in winter
-    }
-  } else {
-    // Mid latitudes - standard night period with seasonal adjustment
-    if (month >= 4 && month <= 8) {
-      // Summer
-      nightStart.setHours(20, 30, 0, 0); // 8:30 PM
-      nightEnd.setHours(5, 30, 0, 0); // 5:30 AM
-    } else {
-      // Winter
-      nightStart.setHours(19, 0, 0, 0); // 7 PM
-      nightEnd.setHours(6, 30, 0, 0); // 6:30 AM
-    }
-  }
-  
-  if (nightEnd <= nightStart) {
-    nightEnd.setDate(nightEnd.getDate() + 1);
-  }
-  
-  console.log(`Night period: ${nightStart.toLocaleTimeString()} - ${nightEnd.toLocaleTimeString()}`);
-  
-  // Calculate moonless periods
-  // Case 1: Moon is not in the sky during nighttime
-  let moonlessStart, moonlessEnd;
-  let moonlessDescription = '';
-  
-  // Determine the time when moon is not in the sky during the night
-  if (moonsetTime <= moonriseTime) {
-    // Moon sets before rising - moon is below horizon between these times
-    
-    // Is moonset within our night period?
-    if (moonsetTime >= nightStart && moonsetTime <= nightEnd) {
-      moonlessStart = new Date(moonsetTime);
-      moonlessDescription = 'Moon sets during night';
-    } else if (moonsetTime < nightStart) {
-      moonlessStart = new Date(nightStart);
-      moonlessDescription = 'Moon already below horizon at night start';
-    } else {
-      // Moonset after night end - no moonless period this night
-      moonlessStart = new Date(nightEnd);
-      moonlessDescription = 'No moonless period (moon sets after night ends)';
-    }
-    
-    // Is moonrise within our night period?
-    if (moonriseTime >= nightStart && moonriseTime <= nightEnd) {
-      moonlessEnd = new Date(moonriseTime);
-      moonlessDescription += ', rises during night';
-    } else if (moonriseTime > nightEnd) {
-      moonlessEnd = new Date(nightEnd);
-      moonlessDescription += ', still below horizon at night end';
-    } else {
-      // Moonrise before night start - no moonless period this night
-      moonlessEnd = new Date(nightStart);
-      moonlessDescription += ', rises before night starts';
-    }
-  } 
-  // Case 2: Moon rises before setting - moon is above horizon between these times
-  else {
-    // First check if either rise or set occurs during night
-    const riseInNight = moonriseTime >= nightStart && moonriseTime <= nightEnd;
-    const setInNight = moonsetTime >= nightStart && moonsetTime <= nightEnd;
-    
-    // Night starts with no moon, moon rises during night
-    if (riseInNight && !setInNight) {
-      moonlessStart = new Date(nightStart);
-      moonlessEnd = new Date(moonriseTime);
-      moonlessDescription = 'Moon rises during night, night starts moonless';
-    }
-    // Night starts with moon, moon sets during night
-    else if (!riseInNight && setInNight) {
-      moonlessStart = new Date(moonsetTime);
-      moonlessEnd = new Date(nightEnd);
-      moonlessDescription = 'Moon sets during night, night ends moonless';
-    }
-    // Both rise and set during night
-    else if (riseInNight && setInNight) {
-      if (moonriseTime < moonsetTime) {
-        // Moon rises then sets - two moonless periods
-        // We'll take the longer one
-        const period1 = moonriseTime.getTime() - nightStart.getTime();
-        const period2 = nightEnd.getTime() - moonsetTime.getTime();
-        
-        if (period1 >= period2) {
-          moonlessStart = new Date(nightStart);
-          moonlessEnd = new Date(moonriseTime);
-          moonlessDescription = 'Moon rises & sets in night - using first moonless period';
-        } else {
-          moonlessStart = new Date(moonsetTime);
-          moonlessEnd = new Date(nightEnd);
-          moonlessDescription = 'Moon rises & sets in night - using second moonless period';
-        }
-      } else {
-        // Unusual case: sets then rises - moon crosses midnight
-        moonlessStart = new Date(moonsetTime);
-        moonlessEnd = new Date(moonriseTime);
-        moonlessDescription = 'Moon sets then rises - unusual case';
-      }
-    }
-    // Neither rise nor set during night, moon could be visible all night or not at all
-    else {
-      // If rise before night start and set after night end, moon is up all night
-      if (moonriseTime < nightStart && moonsetTime > nightEnd) {
-        // No true moonless period (use phase-based estimate)
-        const phaseBasedInfo = getPhaseBasedMoonlessNight(moonPhase, latitude);
-        
-        // Only use start/end times, keep actual rise/set for display
-        moonlessStart = parseMoonTime(phaseBasedInfo.startTime) || new Date(nightStart);
-        moonlessEnd = parseMoonTime(phaseBasedInfo.endTime) || new Date(nightEnd);
-        
-        // Adjust duration based on moon phase (fraction of night)
-        const nightDuration = (nightEnd.getTime() - nightStart.getTime()) / (1000 * 60 * 60);
-        
-        // For Guizhou specifically (specific to user's location)
-        const durationFactors = {
-          fullMoon: 0.2, // 20% of night is usable
-          halfMoon: 0.5, // 50% of night is usable
-          crescentMoon: 0.7, // 70% of night is usable
-          newMoon: 0.9 // 90% of night is usable
-        };
-        
-        let usableFraction;
-        if (moonPhase > 0.4 && moonPhase < 0.6) {
-          usableFraction = durationFactors.fullMoon; // Near full moon
-        } else if ((moonPhase > 0.25 && moonPhase < 0.4) || (moonPhase > 0.6 && moonPhase < 0.75)) {
-          usableFraction = durationFactors.halfMoon; // Half moon
-        } else if ((moonPhase > 0.1 && moonPhase < 0.25) || (moonPhase > 0.75 && moonPhase < 0.9)) {
-          usableFraction = durationFactors.crescentMoon; // Crescent
-        } else {
-          usableFraction = durationFactors.newMoon; // Near new moon
-        }
-        
-        // Adjust end time to match desired duration
-        const desiredDuration = nightDuration * usableFraction;
-        moonlessEnd = new Date(moonlessStart.getTime() + desiredDuration * 60 * 60 * 1000);
-        
-        moonlessDescription = 'Moon visible all night, using phase-based estimate';
-      } else {
-        // If rise after night end and set before night start, moon is down all night
-        moonlessStart = new Date(nightStart);
-        moonlessEnd = new Date(nightEnd);
-        moonlessDescription = 'Full night is moonless';
-      }
-    }
-  }
+  // Determine moonless periods during astronomical night
+  const { moonlessStart, moonlessEnd, description } = 
+    calculateMoonlessPeriodsInNight(adjustedTimes.moonrise, adjustedTimes.moonset, 
+                                   adjustedTimes.sunset, adjustedTimes.sunrise);
   
   console.log(`Moonless period: ${moonlessStart.toLocaleTimeString()} - ${moonlessEnd.toLocaleTimeString()}`);
-  console.log(`Calculation method: ${moonlessDescription}`);
+  console.log(`Calculation method: ${description}`);
   
   // Calculate duration in hours with 1 decimal accuracy
   const durationMs = moonlessEnd.getTime() - moonlessStart.getTime();
-  const durationHours = Math.max(0.5, durationMs / (1000 * 60 * 60)); // At least 0.5 hour
+  const durationHours = Math.max(0.1, durationMs / (1000 * 60 * 60)); // At least 0.1 hour
   
   // Format times for display
   const formatTime = (date: Date) => {
@@ -309,6 +122,234 @@ export const calculateMoonlessNightDuration = (latitude: number, longitude: numb
     daysUntilNewMoon
   };
 };
+
+/**
+ * Calculate astronomical night period (sunset to sunrise)
+ * Accounts for latitude and season
+ */
+function calculateAstronomicalNight(latitude: number, longitude: number): { sunset: Date; sunrise: Date } {
+  const now = new Date();
+  const month = now.getMonth(); // 0-11
+  
+  // Use more accurate calculation with SunCalc if available
+  try {
+    // This would be replaced with actual SunCalc calculation in a real implementation
+    // For now, we'll use simplified calculations based on latitude and season
+  } catch (error) {
+    console.error("Error calculating sunset/sunrise times with SunCalc:", error);
+  }
+  
+  // Create sunset and sunrise times based on season and latitude
+  const sunset = new Date();
+  const sunrise = new Date();
+  sunrise.setDate(sunrise.getDate() + 1); // Sunrise is typically the next day
+  
+  // Adjust based on latitude and season (simplified model)
+  const isNorthern = latitude >= 0;
+  const isSummer = (isNorthern && (month >= 3 && month <= 8)) || 
+                  (!isNorthern && (month >= 9 || month <= 2));
+  
+  // Guizhou province (subtropical)
+  if (Math.abs(latitude) >= 24 && Math.abs(latitude) <= 30) {
+    if (isSummer) {
+      // Summer in Guizhou (longer days)
+      sunset.setHours(19, 30, 0, 0); // 7:30 PM
+      sunrise.setHours(5, 45, 0, 0); // 5:45 AM
+    } else {
+      // Winter in Guizhou (shorter days)
+      sunset.setHours(18, 0, 0, 0); // 6:00 PM
+      sunrise.setHours(7, 0, 0, 0); // 7:00 AM
+    }
+  } 
+  // Polar regions
+  else if (Math.abs(latitude) > 60) {
+    if (isNorthern === isSummer) {
+      // Polar summer - very late sunset, early sunrise
+      sunset.setHours(22, 0, 0, 0); // 10:00 PM
+      sunrise.setHours(4, 0, 0, 0); // 4:00 AM
+    } else {
+      // Polar winter - very early sunset, late sunrise
+      sunset.setHours(16, 0, 0, 0); // 4:00 PM
+      sunrise.setHours(9, 0, 0, 0); // 9:00 AM
+    }
+  }
+  // Equatorial regions
+  else if (Math.abs(latitude) < 23.5) {
+    // More consistent day/night cycle year-round
+    sunset.setHours(18, 30, 0, 0); // 6:30 PM
+    sunrise.setHours(6, 0, 0, 0); // 6:00 AM
+  }
+  // Mid latitudes
+  else {
+    if (isSummer) {
+      // Summer - later sunset, earlier sunrise
+      sunset.setHours(20, 30, 0, 0); // 8:30 PM
+      sunrise.setHours(5, 30, 0, 0); // 5:30 AM
+    } else {
+      // Winter - earlier sunset, later sunrise
+      sunset.setHours(17, 30, 0, 0); // 5:30 PM
+      sunrise.setHours(7, 30, 0, 0); // 7:30 AM
+    }
+  }
+  
+  return { sunset, sunrise };
+}
+
+/**
+ * Align moonrise, moonset, sunset, and sunrise times to the same night period
+ * Ensures correct timeline comparison
+ */
+function alignTimesToNightPeriod(
+  moonriseTime: Date, 
+  moonsetTime: Date, 
+  sunset: Date, 
+  sunrise: Date,
+  now: Date
+): { moonrise: Date; moonset: Date; sunset: Date; sunrise: Date } {
+  const currentHour = now.getHours();
+  const baseDate = new Date(now);
+  baseDate.setHours(0, 0, 0, 0); // Midnight of current day
+  
+  // Clone all times to prevent mutation of originals
+  const alignedMoonrise = new Date(moonriseTime);
+  const alignedMoonset = new Date(moonsetTime);
+  const alignedSunset = new Date(sunset);
+  const alignedSunrise = new Date(sunrise);
+  
+  // First, adjust sunset/sunrise to correct day
+  if (currentHour < 12) {
+    // Morning: sunset was yesterday, sunrise is today
+    alignedSunset.setDate(baseDate.getDate() - 1);
+    alignedSunrise.setDate(baseDate.getDate());
+  } else {
+    // Afternoon/evening: sunset is today, sunrise is tomorrow
+    alignedSunset.setDate(baseDate.getDate());
+    alignedSunrise.setDate(baseDate.getDate() + 1);
+  }
+  
+  // Now adjust moonrise/moonset relative to sunset/sunrise
+  // If moonrise is before sunset and after previous sunrise, it's from previous night
+  if (alignedMoonrise.getHours() < 12 && currentHour > 12) {
+    if (alignedMoonrise.getTime() < alignedSunset.getTime()) {
+      alignedMoonrise.setDate(baseDate.getDate() - 1);
+    } else {
+      alignedMoonrise.setDate(baseDate.getDate());
+    }
+  } 
+  // If moonrise is after sunset, it's today's moonrise
+  else if (alignedMoonrise.getHours() >= 12) {
+    alignedMoonrise.setDate(baseDate.getDate());
+  }
+  
+  // Similar logic for moonset
+  // If moonset is after sunrise, it's today's moonset
+  if (alignedMoonset.getHours() < 12) {
+    alignedMoonset.setDate(baseDate.getDate());
+  } 
+  // If moonset is before sunrise and after previous sunset, it's from tonight
+  else if (alignedMoonset.getHours() >= 12 && currentHour < 12) {
+    alignedMoonset.setDate(baseDate.getDate() - 1);
+  }
+  
+  // Ensure moonset is after moonrise (handle cases that cross midnight)
+  if (alignedMoonset.getTime() < alignedMoonrise.getTime()) {
+    // If moonset is before moonrise, it's the next day's moonset
+    alignedMoonset.setDate(alignedMoonset.getDate() + 1);
+  }
+  
+  return { 
+    moonrise: alignedMoonrise, 
+    moonset: alignedMoonset,
+    sunset: alignedSunset,
+    sunrise: alignedSunrise
+  };
+}
+
+/**
+ * Calculate precise moonless periods during astronomical night
+ */
+function calculateMoonlessPeriodsInNight(
+  moonrise: Date,
+  moonset: Date,
+  sunset: Date,
+  sunrise: Date
+): { moonlessStart: Date; moonlessEnd: Date; description: string } {
+  // Night period (when sun is down)
+  const nightStart = sunset;
+  const nightEnd = sunrise;
+  
+  let moonlessStart: Date;
+  let moonlessEnd: Date;
+  let description: string;
+  
+  // Case 1: Moon is not visible during the entire night
+  // Moon sets before sunset and rises after sunrise
+  if (moonset.getTime() <= nightStart.getTime() && moonrise.getTime() >= nightEnd.getTime()) {
+    moonlessStart = new Date(nightStart);
+    moonlessEnd = new Date(nightEnd);
+    description = "Full night is moonless (moon not visible during entire night)";
+  }
+  // Case 2: Moon sets during the night
+  else if (moonset.getTime() > nightStart.getTime() && moonset.getTime() < nightEnd.getTime() &&
+           (moonrise.getTime() <= nightStart.getTime() || moonrise.getTime() >= nightEnd.getTime())) {
+    moonlessStart = new Date(moonset);
+    moonlessEnd = new Date(nightEnd);
+    description = "Moon sets during night, rest of night is moonless";
+  }
+  // Case 3: Moon rises during the night
+  else if (moonrise.getTime() > nightStart.getTime() && moonrise.getTime() < nightEnd.getTime() &&
+           (moonset.getTime() <= nightStart.getTime() || moonset.getTime() >= nightEnd.getTime())) {
+    moonlessStart = new Date(nightStart);
+    moonlessEnd = new Date(moonrise);
+    description = "Night starts moonless until moon rises";
+  }
+  // Case 4: Moon sets before night and rises during night
+  else if (moonset.getTime() <= nightStart.getTime() && 
+           moonrise.getTime() > nightStart.getTime() && moonrise.getTime() < nightEnd.getTime()) {
+    moonlessStart = new Date(nightStart);
+    moonlessEnd = new Date(moonrise);
+    description = "Night starts moonless until moon rises";
+  }
+  // Case 5: Moon rises before night and sets during night
+  else if (moonrise.getTime() <= nightStart.getTime() &&
+           moonset.getTime() > nightStart.getTime() && moonset.getTime() < nightEnd.getTime()) {
+    moonlessStart = new Date(moonset);
+    moonlessEnd = new Date(nightEnd);
+    description = "Moon sets during night, rest of night is moonless";
+  }
+  // Case 6: Moon rises and sets during the night (creating two moonless periods)
+  // We'll use the longer of the two periods
+  else if (moonrise.getTime() > nightStart.getTime() && moonrise.getTime() < nightEnd.getTime() &&
+           moonset.getTime() > nightStart.getTime() && moonset.getTime() < nightEnd.getTime()) {
+    const period1Length = moonrise.getTime() - nightStart.getTime();
+    const period2Length = nightEnd.getTime() - moonset.getTime();
+    
+    if (period1Length >= period2Length) {
+      moonlessStart = new Date(nightStart);
+      moonlessEnd = new Date(moonrise);
+      description = "Two moonless periods - using first (night start to moonrise)";
+    } else {
+      moonlessStart = new Date(moonset);
+      moonlessEnd = new Date(nightEnd);
+      description = "Two moonless periods - using second (moonset to night end)";
+    }
+  }
+  // Case 7: Moon is visible all night (rises before sunset, sets after sunrise)
+  else {
+    // Get phase-based estimate for nights when moon is visible throughout
+    const phaseBasedInfo = getPhaseBasedMoonlessNight(calculateMoonPhase(), latitude);
+    const time1 = parseMoonTime(phaseBasedInfo.startTime) || new Date(nightStart);
+    const time2 = parseMoonTime(phaseBasedInfo.endTime) || new Date(nightEnd);
+    
+    // Use the phase-based times but ensure they fall within night period
+    moonlessStart = new Date(Math.max(time1.getTime(), nightStart.getTime()));
+    moonlessEnd = new Date(Math.min(time2.getTime(), nightEnd.getTime()));
+    
+    description = "Moon visible all night - using phase-based estimate, adjusted for impact";
+  }
+  
+  return { moonlessStart, moonlessEnd, description };
+}
 
 /**
  * Calculate days until next new moon
@@ -342,6 +383,7 @@ const getPhaseBasedMoonlessNight = (moonPhase: number, latitude: number): Moonle
   // Default night period adjusted for latitude
   const nightStart = new Date();
   const nightEnd = new Date();
+  nightEnd.setDate(nightEnd.getDate() + 1);
   
   // Adjust night hours based on latitude and season
   if (Math.abs(latitude) > 66) {
@@ -381,10 +423,6 @@ const getPhaseBasedMoonlessNight = (moonPhase: number, latitude: number): Moonle
       nightStart.setHours(18, 0, 0, 0); // 6 PM
       nightEnd.setHours(7, 0, 0, 0); // 7 AM
     }
-  }
-  
-  if (nightEnd <= nightStart) {
-    nightEnd.setDate(nightEnd.getDate() + 1);
   }
   
   // Default format function
