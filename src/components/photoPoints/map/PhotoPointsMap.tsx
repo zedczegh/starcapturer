@@ -219,10 +219,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         className="absolute top-4 right-4 z-[999]"
       />
       
-      {/* Add PinpointButton for both mobile and desktop */}
+      {/* Update PinpointButton positioning for desktop and mobile */}
       <PinpointButton
         onGetLocation={handleGetLocation}
-        className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute top-4 right-16 z-[999]"}
+        className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute bottom-4 left-4 z-[999]"}
         shouldCenter={false}
         hasLocation={userLocation !== null}
       />
