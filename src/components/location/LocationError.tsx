@@ -96,13 +96,6 @@ const LocationError: React.FC<LocationErrorProps> = ({
                 <span>{t("Use My Current Location", "使用我的当前位置")}</span>
               )}
             </Button>
-            <Button 
-              onClick={() => navigate("/")} 
-              variant="outline"
-              className="border-primary/50 hidden"
-            >
-              {t("Go to Home Page", "返回首页")}
-            </Button>
           </div>
         </div>
       </div>

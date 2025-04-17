@@ -102,7 +102,7 @@ export const useLocationInit = (
       language,
       setLocationData: updateLocationDataSafely,
       setIsLoading,
-      noRedirect: true // Ensure we don't redirect automatically
+      noRedirect: true // Always ensure we don't redirect automatically
     });
     
     loadCompletedRef.current = true;

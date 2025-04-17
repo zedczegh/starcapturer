@@ -94,23 +94,13 @@ export async function initializeLocationData({
         }
       }
       
-      if (!initialState?.latitude || !initialState?.longitude) {
-        // If we have invalid coordinates but noRedirect is true, just return
-        if (noRedirect) {
-          console.log("Invalid coordinates but noRedirect flag is set, returning without redirect");
-          return;
-        }
-        showErrorAndRedirect(toast, t, navigate, "Incomplete location data", "位置数据不完整");
-        return;
-      }
+      // We've completely removed the redirection to homepage even if coordinates are invalid
     } else if (id) {
       // Second priority: try to load data from localStorage if available
-      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language, noRedirect);
+      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language, true); // always pass noRedirect=true
     } else {
-      console.error("No way to initialize location data", { params: id, locationState: initialState });
-      if (!noRedirect) {
-        showErrorAndRedirect(toast, t, navigate, "Cannot load location details", "无法加载位置详情");
-      }
+      console.log("No way to initialize location data", { params: id, locationState: initialState });
+      // No action to take - let the parent component handle it
     }
   } finally {
     setIsLoading(false);
@@ -178,15 +168,14 @@ async function loadFromLocalStorage(
       }
     }
   } else {
-    console.error("Location data not found in localStorage", { id });
-    if (!noRedirect) {
-      showErrorAndRedirect(toast, t, navigate, "Location data not found", "找不到位置数据");
-    }
+    console.log("Location data not found in localStorage", { id });
+    // We no longer redirect to homepage, just return and let parent component handle it
   }
 }
 
 /**
- * Show error toast and redirect to home page
+ * Show error toast but don't redirect
+ * This function has been modified to only show errors without redirecting
  */
 function showErrorAndRedirect(
   toast: any, 
@@ -195,14 +184,13 @@ function showErrorAndRedirect(
   errorEn: string,
   errorZh: string
 ) {
+  // Only show the toast, no redirection
   toast({
     title: t("Error", "错误"),
     description: t(errorEn, errorZh),
     variant: "destructive"
   });
   
-  // Redirect after showing the error
-  setTimeout(() => {
-    navigate("/");
-  }, 2000);
+  // No more redirection
+  console.log("Error shown without redirection:", errorEn);
 }
