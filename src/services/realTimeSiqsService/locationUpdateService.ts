@@ -1,5 +1,5 @@
 
-import { calculateRealTimeSiqs } from '../realTimeSiqsService';
+import { calculateSiqs, calculateRealTimeSiqs } from '../realTimeSiqsService';
 import { haversineDistance } from '@/utils/geoUtils';
 
 // A simple cache to store location SIQS results
@@ -33,7 +33,7 @@ export async function updateLocationsWithRealTimeSiqs(locations: any[], weatherD
       }
       
       // Calculate SIQS for this location
-      const siqsResult = await calculateRealTimeSiqs(
+      const siqsResult = await calculateSiqs(
         location.latitude,
         location.longitude,
         location.bortleScale || 5,

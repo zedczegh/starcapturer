@@ -50,7 +50,7 @@ export interface EnhancedLocation {
   siqsResult?: SiqsResult;
   isDarkSkyReserve?: boolean;
   clearSkyRate?: number;
-  seasonalTrends?: Record<string, number>;
+  seasonalTrends?: Record<string, { clearSkyRate: number, averageTemperature: number }>;
   bestMonths?: string[];
   annualPrecipitationDays?: number;
   characteristics?: string[];
@@ -80,3 +80,11 @@ export interface SiqsCalculationOptions {
   includeMetadata?: boolean;
   locale?: string;
 }
+
+export interface MoonlessNightInfo {
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+}
+

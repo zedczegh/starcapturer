@@ -1,101 +1,99 @@
-import { ClimateRegion, WeatherDataWithClearSky } from './siqsTypes';
-import { calculateMoonPhase } from './moonPhaseCalculator';
 
 /**
- * Adjust a score based on climate region
+ * SIQS adjustment functions for environmental factors
+ */
+
+import { ClimateRegion } from './siqsTypes';
+
+/**
+ * Adjust score based on climate region
+ * @param score - Base score (0-10)
+ * @param factor - Factor type (cloudCover, humidity, temperature)
+ * @param region - Climate region information
+ * @returns Adjusted score (0-10)
  */
 export function adjustForClimate(
   score: number, 
   factor: 'cloudCover' | 'humidity' | 'temperature', 
-  region: ClimateRegion
+  region?: ClimateRegion | null
 ): number {
-  if (!region || !region.adjustmentFactors) {
-    return score;
+  if (!region) return score;
+  
+  // Get adjustment factor index based on factor type
+  let adjustmentIndex = 0;
+  switch (factor) {
+    case 'cloudCover': adjustmentIndex = 0; break;
+    case 'humidity': adjustmentIndex = 1; break;
+    case 'temperature': adjustmentIndex = 2; break;
   }
   
-  let adjustmentIndex = 0;
-  if (factor === 'humidity') adjustmentIndex = 1;
-  if (factor === 'temperature') adjustmentIndex = 2;
-  
-  const adjustment = region.adjustmentFactors[adjustmentIndex] || 1.0;
-  
-  // Apply adjustment, but keep within 0-10 range
-  return Math.min(10, Math.max(0, score * adjustment));
+  // Apply regional adjustment factor
+  const adjustmentFactor = region.adjustmentFactors[adjustmentIndex] || 1.0;
+  return Math.min(10, Math.max(0, score * adjustmentFactor));
 }
 
 /**
- * Adjust score for time of day/year
+ * Adjust score based on time of day and year
+ * @param score - Base score (0-10)
+ * @param latitude - Location latitude
+ * @param longitude - Location longitude
+ * @returns Adjusted score (0-10)
  */
 export function adjustForTime(
-  score: number,
-  latitude: number,
-  longitude: number,
-  date: Date = new Date()
+  score: number, 
+  latitude: number, 
+  longitude: number
 ): number {
-  // Get current hour in local time
-  const hour = date.getHours();
-  
-  // Night hours (10pm - 4am) get a bonus
-  if (hour >= 22 || hour <= 4) {
-    return Math.min(10, score * 1.1);
+  try {
+    // Determine current season based on latitude and month
+    const now = new Date();
+    const month = now.getMonth(); // 0-11 (Jan-Dec)
+    
+    // Northern hemisphere: summer (5-8), winter (11-2)
+    // Southern hemisphere: opposite
+    const isNorthernHemisphere = latitude >= 0;
+    const isSummerMonth = isNorthernHemisphere ? 
+      (month >= 5 && month <= 8) : 
+      (month <= 2 || month >= 11);
+    
+    // Summer tends to have better conditions in most regions
+    // Simple seasonal adjustment
+    const seasonalFactor = isSummerMonth ? 1.05 : 0.95;
+    
+    // Time of day adjustment - better at night
+    const hour = now.getHours();
+    const isDaytime = hour >= 6 && hour <= 18;
+    
+    // During daytime, cloud detection is easier but viewing conditions less relevant
+    // At night, account for multiple factors
+    const timeOfDayFactor = isDaytime ? 1.0 : 1.1;
+    
+    return Math.min(10, Math.max(0, score * seasonalFactor * timeOfDayFactor));
+  } catch (error) {
+    console.error("Error in time adjustment:", error);
+    return score;
   }
-  
-  // Early morning/late evening (4am-7am, 7pm-10pm) are good too
-  if ((hour > 4 && hour <= 7) || (hour >= 19 && hour < 22)) {
-    return Math.min(10, score * 1.05);
-  }
-  
-  // Adjust for season
-  const month = date.getMonth() + 1; // 1-12
-  
-  // Northern hemisphere winter or southern hemisphere summer
-  if ((latitude > 0 && (month <= 2 || month >= 11)) || 
-      (latitude <= 0 && (month >= 5 && month <= 8))) {
-    return Math.min(10, score * 1.05);
-  }
-  
-  return score;
 }
 
 /**
  * Adjust score based on light pollution (Bortle scale)
+ * @param score - Base combined score (0-10)
+ * @param bortleScale - Bortle scale value (1-9)
+ * @returns Adjusted score (0-10)
  */
-export function adjustForLight(score: number, bortleScale: number): number {
-  if (!bortleScale || bortleScale < 1 || bortleScale > 9) {
-    bortleScale = 5; // Default to suburban sky
-  }
+export function adjustForLight(
+  score: number, 
+  bortleScale: number
+): number {
+  // Validate Bortle scale input
+  const validBortle = Math.min(9, Math.max(1, bortleScale));
   
-  // Bortle 1 (excellent dark sky) gets full score
-  if (bortleScale <= 1) return score;
+  // Calculate light pollution factor
+  // Bortle 1 (best) → 1.2
+  // Bortle 5 (average) → 1.0
+  // Bortle 9 (worst) → 0.6
+  const lightFactor = 1.2 - ((validBortle - 1) * 0.075);
   
-  // For Bortle 2-9, reduce score progressively
-  // Bortle 9 (inner city) maxes out at ~60% of original score
-  const lightPollutionFactor = 1 - ((bortleScale - 1) / 20);
-  
-  return score * lightPollutionFactor;
+  return Math.min(10, Math.max(0, score * lightFactor));
 }
 
-/**
- * Adjust score based on moon phase
- */
-export function adjustForMoon(score: number, date: Date = new Date()): number {
-  const moonPhase = calculateMoonPhase(date);
-  
-  // New moon (phase 0 or 1): no adjustment
-  if (moonPhase < 0.05 || moonPhase > 0.95) {
-    return score;
-  }
-  
-  // Full moon (phase ~0.5): maximum reduction
-  if (moonPhase > 0.45 && moonPhase < 0.55) {
-    return score * 0.7; // 30% reduction
-  }
-  
-  // Quarter moons: moderate reduction
-  if ((moonPhase > 0.2 && moonPhase < 0.3) || (moonPhase > 0.7 && moonPhase < 0.8)) {
-    return score * 0.85; // 15% reduction
-  }
-  
-  // Crescent moons: slight reduction
-  return score * 0.9; // 10% reduction
-}

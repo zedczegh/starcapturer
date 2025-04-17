@@ -1,3 +1,4 @@
+
 /**
  * Utilities for filtering and categorizing locations
  */
@@ -112,3 +113,26 @@ export function getLocationRating(location: any): string {
   if (siqs >= 3.5) return 'Moderate';
   return 'Poor';
 }
+
+// Adding these functions to address missing exports in useMapLocations
+export function filterValidLocations(locations: any[]): any[] {
+  if (!locations || !Array.isArray(locations)) {
+    return [];
+  }
+  
+  return locations.filter(location => {
+    return location && location.latitude && location.longitude;
+  });
+}
+
+export function separateLocationTypes(locations: any[]): { certifiedLocations: any[], calculatedLocations: any[] } {
+  const certifiedLocations = locations.filter(loc => isCertifiedLocation(loc));
+  const calculatedLocations = locations.filter(loc => !isCertifiedLocation(loc));
+  
+  return { certifiedLocations, calculatedLocations };
+}
+
+export function mergeLocations(certified: any[], calculated: any[]): any[] {
+  return [...certified, ...calculated];
+}
+

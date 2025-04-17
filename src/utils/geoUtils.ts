@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for geographic calculations and formatting
  */

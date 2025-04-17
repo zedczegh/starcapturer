@@ -25,13 +25,11 @@ export async function calculateSiqs(
       return cachedResult.result;
     }
     
-    // Calculate new result
+    // Calculate new result - export calculateRealTimeSiqs from the siqsCalculator module
     const result = await calculateRealTimeSiqs(
       latitude,
       longitude,
-      bortleScale,
-      weatherData,
-      options
+      bortleScale
     );
     
     // Cache the result
@@ -86,3 +84,7 @@ export function clearSiqsCache(): void {
   });
   console.log("SIQS cache cleared");
 }
+
+// Re-export calculateRealTimeSiqs for direct use
+export { calculateRealTimeSiqs };
+

@@ -1,50 +1,69 @@
 
+/**
+ * Enhanced location data for optimized SIQS calculations
+ */
 import { EnhancedLocation } from './siqsTypes';
+import { haversineDistance } from '@/utils/geoUtils';
 
-// Sample database of enhanced locations
+// Sample enhanced locations with pre-calculated data
 const enhancedLocations: EnhancedLocation[] = [
   {
-    name: "Death Valley National Park",
-    latitude: 36.5323,
-    longitude: -116.9325,
-    bortleScale: 2,
-    clearSkyRate: 89,
+    name: "McDonald Observatory",
+    latitude: 30.6714,
+    longitude: -104.0214,
+    bortleScale: 1,
+    elevation: 2070,
+    hasDarkSkyStatus: true,
+    certification: "IDA Dark Sky Reserve",
     isDarkSkyReserve: true,
-    averageVisibility: 'excellent'
+    clearSkyRate: 80,
+    seasonalTrends: {
+      spring: { clearSkyRate: 75, averageTemperature: 18 },
+      summer: { clearSkyRate: 70, averageTemperature: 25 },
+      fall: { clearSkyRate: 85, averageTemperature: 20 },
+      winter: { clearSkyRate: 82, averageTemperature: 10 }
+    },
+    bestMonths: ["Oct", "Nov", "Mar", "Apr"]
   },
   {
-    name: "Mauna Kea Observatory",
-    latitude: 19.8207,
-    longitude: -155.4681,
+    name: "Atacama Desert",
+    latitude: -24.5,
+    longitude: -69.25,
     bortleScale: 1,
-    clearSkyRate: 93,
-    isDarkSkyReserve: true,
-    certification: "Gold Tier",
-    averageVisibility: 'excellent'
+    elevation: 2400,
+    hasDarkSkyStatus: true,
+    clearSkyRate: 90,
+    seasonalTrends: {
+      spring: { clearSkyRate: 88, averageTemperature: 15 },
+      summer: { clearSkyRate: 92, averageTemperature: 22 },
+      fall: { clearSkyRate: 90, averageTemperature: 18 },
+      winter: { clearSkyRate: 85, averageTemperature: 10 }
+    },
+    bestMonths: ["May", "Jun", "Jul", "Aug"]
   }
 ];
 
 /**
- * Find the closest enhanced location within a given radius
+ * Find closest enhanced location to given coordinates
  */
 export function findClosestEnhancedLocation(
   latitude: number,
   longitude: number,
-  maxDistanceKm: number = 50
+  maxDistance: number = 50 // Maximum distance in kilometers
 ): EnhancedLocation | null {
   let closestLocation: EnhancedLocation | null = null;
-  let closestDistance = Number.MAX_VALUE;
+  let minDistance = Infinity;
   
   for (const location of enhancedLocations) {
-    const distance = calculateDistance(
+    const distance = haversineDistance(
       latitude,
       longitude,
       location.latitude,
       location.longitude
     );
     
-    if (distance < maxDistanceKm && distance < closestDistance) {
-      closestDistance = distance;
+    if (distance < minDistance && distance <= maxDistance) {
+      minDistance = distance;
       closestLocation = location;
     }
   }
@@ -53,32 +72,10 @@ export function findClosestEnhancedLocation(
 }
 
 /**
- * Calculate the distance between two points in kilometers using the Haversine formula
+ * Get enhanced location by name
  */
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-  
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-  
-  return distance;
-}
-
-/**
- * Convert degrees to radians
- */
-function toRadians(degrees: number): number {
-  return degrees * Math.PI / 180;
+export function getEnhancedLocationByName(name: string): EnhancedLocation | null {
+  return enhancedLocations.find(loc => 
+    loc.name.toLowerCase() === name.toLowerCase()
+  ) || null;
 }
