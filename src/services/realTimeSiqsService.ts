@@ -1,26 +1,14 @@
 
+/**
+ * Central entry point for real-time SIQS calculation services
+ */
+import { batchCalculateSiqs, addPlaceholderSiqsScores } from './realTimeSiqs/realTimeSiqsService';
 import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
-import { updateLocationsWithRealTimeSiqs, addPlaceholderSiqsScores } from './realTimeSiqsService/locationUpdateService';
-import { 
-  clearSiqsCache, 
-  clearLocationSiqsCache, 
-  getSiqsCacheSize,
-  cleanupExpiredCache 
-} from './realTimeSiqs/siqsCache';
+import { updateLocationsWithRealTimeSiqs } from './realTimeSiqsService/locationUpdateService';
 
-// Export all the main functions
-export { 
+export {
+  batchCalculateSiqs,
   calculateRealTimeSiqs,
-  updateLocationsWithRealTimeSiqs,
   addPlaceholderSiqsScores,
-  clearSiqsCache,
-  clearLocationSiqsCache,
-  getSiqsCacheSize,
-  cleanupExpiredCache
+  updateLocationsWithRealTimeSiqs
 };
-
-// Helper function to clear the location cache for external use
-export function clearLocationCache(): void {
-  clearSiqsCache();
-  console.log("Location cache cleared");
-}

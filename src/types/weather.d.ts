@@ -42,7 +42,7 @@ declare module "@/types/weather" {
   }
 
   export interface SharedAstroSpot {
-    id: string;
+    id?: string;
     name: string;
     latitude: number;
     longitude: number;
@@ -67,9 +67,11 @@ declare module "@/types/weather" {
     certification?: string;
     isDarkSkyReserve?: boolean;
     type?: string;
-    preferenceScore?: number; // Added for enhanced calculations
-    clearSkyRate?: number; // Added for enhanced calculations
-    isCertified?: boolean; // Added for certified location handling
-    certificationRating?: number; // Added for certification rating
+    preferenceScore?: number;
+    clearSkyRate?: number;
+    isCertified?: boolean;
+    certificationRating?: number;
+    image?: string;
+    lastVisit?: string;
   }
 }

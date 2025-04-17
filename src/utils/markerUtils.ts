@@ -1,4 +1,3 @@
-
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
@@ -37,11 +36,7 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
   }
   
   // Use enhanced water detection
-  return isWaterLocation(
-    location.latitude, 
-    location.longitude, 
-    Boolean(location.isDarkSkyReserve || location.certification)
-  );
+  return isWaterLocation(location.latitude, location.longitude);
 };
 
 /**

@@ -26,6 +26,21 @@ export function isSuitableLocation(latitude: number, longitude: number): boolean
 }
 
 /**
+ * Check if a location is valid for astronomy purposes
+ */
+export function isValidAstronomyLocation(latitude: number, longitude: number): boolean {
+  // First validate basic coordinates
+  if (!isValidCoordinates(latitude, longitude)) return false;
+  
+  // For astronomy locations, water isn't necessarily bad (boats, islands, etc.)
+  // but we should still validate other factors
+  
+  // Additional criteria can be added here
+  
+  return true;
+}
+
+/**
  * Check if a location is on water (re-export from locationWaterCheck)
  */
 export { isWaterLocation } from './locationWaterCheck';

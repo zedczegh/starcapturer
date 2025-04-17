@@ -1,58 +1,79 @@
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { isWaterLocation } from './locationWaterCheck';
 
 /**
- * Check if a location is a certified dark sky location
+ * Check if a location is a certified location (Dark Sky Reserve or has certification)
  */
 export function isCertifiedLocation(location: SharedAstroSpot): boolean {
   return Boolean(location.isDarkSkyReserve || location.certification);
 }
 
 /**
- * Filter locations by quality (certified first, then by SIQS score)
+ * Filter locations to only include valid ones (with lat/lng)
  */
-export function filterLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) return [];
-  
-  // Create a copy of the array to avoid mutating the original
-  return [...locations].sort((a, b) => {
-    // First sort by certification status
-    if (isCertifiedLocation(a) && !isCertifiedLocation(b)) {
-      return -1;
-    }
-    if (!isCertifiedLocation(a) && isCertifiedLocation(b)) {
-      return 1;
-    }
-    
-    // Then sort by SIQS score (higher first)
-    const scoreA = typeof a.siqs === 'number' ? a.siqs : 
-                  (typeof a.siqs === 'object' && a.siqs?.score ? a.siqs.score : 0);
-                  
-    const scoreB = typeof b.siqs === 'number' ? b.siqs : 
-                  (typeof b.siqs === 'object' && b.siqs?.score ? b.siqs.score : 0);
-                  
-    return scoreB - scoreA;
-  });
+export function filterValidLocations(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  return locations.filter(loc => 
+    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+  );
 }
 
 /**
- * Filter locations by distance from user
+ * Separate locations into certified and calculated types
  */
-export function filterLocationsByDistance(
-  locations: SharedAstroSpot[],
-  userLocation: { latitude: number; longitude: number } | null,
-  searchRadius: number
-): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) return [];
-  if (!userLocation) return locations;
+export function separateLocationTypes(locations: SharedAstroSpot[]): {
+  certifiedLocations: SharedAstroSpot[];
+  calculatedLocations: SharedAstroSpot[];
+} {
+  const certifiedLocations: SharedAstroSpot[] = [];
+  const calculatedLocations: SharedAstroSpot[] = [];
   
-  return locations.filter(location => {
-    // Always include certified locations regardless of distance
+  for (const location of locations) {
     if (isCertifiedLocation(location)) {
-      return true;
+      certifiedLocations.push(location);
+    } else {
+      calculatedLocations.push(location);
     }
-    
-    // Filter regular locations by distance
-    return location.distance !== undefined && location.distance <= searchRadius;
-  });
+  }
+  
+  return { certifiedLocations, calculatedLocations };
+}
+
+/**
+ * Merge multiple location arrays, removing duplicates
+ */
+export function mergeLocations(...locationArrays: SharedAstroSpot[][]): SharedAstroSpot[] {
+  // Use Map to efficiently find duplicates by coordinate
+  const uniqueLocations = new Map<string, SharedAstroSpot>();
+  
+  // Process each array of locations
+  for (const locations of locationArrays) {
+    for (const location of locations) {
+      if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
+        continue;
+      }
+      
+      const key = `${location.latitude.toFixed(6)},${location.longitude.toFixed(6)}`;
+      
+      // If this is a certified location or the key doesn't exist yet, add/update it
+      if (isCertifiedLocation(location) || !uniqueLocations.has(key)) {
+        uniqueLocations.set(key, location);
+      }
+    }
+  }
+  
+  return Array.from(uniqueLocations.values());
+}
+
+/**
+ * Add a valid ID to any location that's missing one
+ */
+export function ensureLocationId(location: SharedAstroSpot): SharedAstroSpot {
+  if (!location.id && location.latitude && location.longitude) {
+    return {
+      ...location,
+      id: `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`
+    };
+  }
+  return location;
 }

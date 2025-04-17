@@ -55,3 +55,37 @@ export function getSafeScore(siqs: number | { score: number; isViable: boolean }
   
   return 0;
 }
+
+/**
+ * Format SIQS score for display
+ * @param score SIQS score value
+ * @returns Formatted score string
+ */
+export function formatSIQSScore(score: number | any): string {
+  if (typeof score === 'number') {
+    return score.toFixed(1);
+  }
+  
+  if (score && typeof score === 'object' && 'score' in score) {
+    return score.score.toFixed(1);
+  }
+  
+  return 'N/A';
+}
+
+/**
+ * Format distance for display
+ * @param distance Distance in kilometers
+ * @param language Language code for localization
+ * @returns Formatted distance string
+ */
+export function formatDistance(distance?: number, language: string = 'en'): string {
+  if (distance === undefined || distance === null) return '';
+  
+  if (language === 'zh') {
+    return `${distance.toFixed(1)} 公里`;
+  } else {
+    const miles = distance * 0.621371;
+    return `${miles.toFixed(1)} mi`;
+  }
+}
