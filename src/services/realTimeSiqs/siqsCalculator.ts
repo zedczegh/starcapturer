@@ -4,8 +4,6 @@
  */
 
 import { SiqsResult, WeatherDataWithClearSky, SiqsCalculationOptions, SiqsFactor } from './siqsTypes';
-import { applyIntelligentAdjustments } from './siqsAdjustments';
-import { findClimateRegion, getClimateAdjustmentFactor } from './climateRegions';
 
 /**
  * Calculate basic SIQS score based on Bortle scale and weather
@@ -125,6 +123,48 @@ export function calculateSiqsScore(
   }
   
   return result;
+}
+
+/**
+ * Calculate real-time SIQS for a location
+ * This is the main export function that should be used by other modules
+ */
+export async function calculateRealTimeSiqs(
+  latitude: number,
+  longitude: number,
+  bortleScale: number,
+  weatherData?: any,
+  options: SiqsCalculationOptions = {}
+): Promise<SiqsResult> {
+  try {
+    // For now, just use the basic calculation
+    // This can be extended in the future for more complex real-time calculations
+    const processedWeatherData: WeatherDataWithClearSky = {
+      ...(weatherData || {
+        temperature: 15,
+        humidity: 50,
+        cloudCover: 0,
+        windSpeed: 5,
+        precipitation: 0
+      }),
+      clearSky: 100 - (weatherData?.cloudCover || 0)
+    };
+    
+    // Calculate score
+    const result = calculateSiqsScore(bortleScale, processedWeatherData, options);
+    
+    // Apply any additional processing here if needed
+    
+    return result;
+  } catch (error) {
+    console.error('Error calculating SIQS:', error);
+    return {
+      siqs: 0,
+      score: 0,
+      isViable: false,
+      factors: []
+    };
+  }
 }
 
 /**

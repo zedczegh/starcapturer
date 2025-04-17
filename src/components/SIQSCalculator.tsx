@@ -11,7 +11,7 @@ import StatusMessage from "./siqs/StatusMessage";
 import { motion } from "framer-motion";
 import { useLocationHandlers } from "./siqs/hooks/useLocationHandlers";
 import { currentSiqsStore } from "./index/CalculatorSection";
-import { calculateRealTimeSiqs } from "@/services/realTimeSiqs/siqsCalculator";
+import { calculateRealTimeSiqs } from "@/services/realTimeSiqsService";
 
 interface SIQSCalculatorProps {
   className?: string;

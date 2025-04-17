@@ -1,166 +1,103 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { haversineDistance } from '@/utils/geoUtils';
+import { haversineDistance } from "@/utils/geoUtils";
 
 /**
- * Get SIQS value safely from location
+ * Calculate distances between user location and a list of points
+ * @param userLocation User's current position
+ * @param locations List of locations to calculate distance to
+ * @returns Locations with distances added
  */
-function getSafeScore(location: SharedAstroSpot): number {
-  // Handle different formats of SIQS scores
-  if (typeof location.siqsResult?.score === 'number') {
-    return location.siqsResult.score;
-  }
-  
-  if (typeof location.siqsResult?.siqs === 'number') {
-    return location.siqsResult.siqs;
-  }
-  
-  if (typeof location.siqs === 'number') {
-    return location.siqs;
-  }
-  
-  // For certified locations with no score, use a good default
-  if (location.certification || location.isDarkSkyReserve) {
-    return 7.5;
-  }
-  
-  return 0; // Default for unknown scores
-}
-
-/**
- * Filter locations by certification status
- */
-export function filterCertifiedLocations(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  return locations.filter(location => 
-    location.certification || location.isDarkSkyReserve);
-}
-
-/**
- * Filter locations by quality (SIQS score)
- */
-export function filterLocationsByQuality(
-  locations: SharedAstroSpot[], 
-  minScore: number = 5
-): SharedAstroSpot[] {
-  return locations.filter(location => {
-    const score = getSafeScore(location);
-    return score > minScore;
-  });
-}
-
-/**
- * Filter locations by distance from a center point
- */
-export function filterLocationsByDistance(
-  locations: SharedAstroSpot[], 
-  centerLat: number, 
-  centerLng: number, 
-  maxDistanceKm: number
-): SharedAstroSpot[] {
-  return locations.filter(location => {
-    const distance = haversineDistance(
-      centerLat, 
-      centerLng, 
-      location.latitude, 
-      location.longitude
-    );
-    
-    return distance <= maxDistanceKm;
-  });
-}
-
-/**
- * Sort locations by quality
- */
-export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  return [...locations].sort((a, b) => {
-    const scoreA = getSafeScore(a);
-    const scoreB = getSafeScore(b);
-    
-    return scoreB - scoreA; // Sort by highest score first
-  });
-}
-
-/**
- * Sort locations by distance from a center point
- */
-export function sortLocationsByDistance(
-  locations: SharedAstroSpot[], 
-  centerLat: number, 
-  centerLng: number
-): SharedAstroSpot[] {
-  return [...locations].sort((a, b) => {
-    const distanceA = haversineDistance(
-      centerLat, 
-      centerLng, 
-      a.latitude, 
-      a.longitude
-    );
-    
-    const distanceB = haversineDistance(
-      centerLat, 
-      centerLng, 
-      b.latitude, 
-      b.longitude
-    );
-    
-    return distanceA - distanceB; // Sort by closest first
-  });
-}
-
-/**
- * Filter locations by search query
- */
-export function filterLocationsBySearch(
-  locations: SharedAstroSpot[], 
-  searchQuery: string
-): SharedAstroSpot[] {
-  if (!searchQuery || searchQuery.trim() === '') {
+export function calculateDistancesToUser(
+  userLocation: { latitude: number; longitude: number } | null,
+  locations: any[]
+) {
+  if (!userLocation || !Array.isArray(locations)) {
     return locations;
   }
-  
-  const query = searchQuery.toLowerCase().trim();
-  
-  return locations.filter(location => {
-    const name = location.name?.toLowerCase() || '';
-    const chineseName = location.chineseName?.toLowerCase() || '';
-    const certification = location.certification?.toLowerCase() || '';
-    
-    return (
-      name.includes(query) || 
-      chineseName.includes(query) || 
-      certification.includes(query)
-    );
+
+  return locations.map((location) => {
+    if (!location || !location.latitude || !location.longitude) {
+      return location;
+    }
+
+    try {
+      const distance = haversineDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        location.latitude,
+        location.longitude
+      );
+
+      return {
+        ...location,
+        distance
+      };
+    } catch (error) {
+      console.error("Error calculating distance:", error);
+      return location;
+    }
   });
 }
 
 /**
- * Categorize locations by quality
+ * Sort locations by SIQS score
  */
-export function categorizeLocationsByQuality(locations: SharedAstroSpot[]): {
-  excellent: SharedAstroSpot[];
-  good: SharedAstroSpot[];
-  fair: SharedAstroSpot[];
-  poor: SharedAstroSpot[];
-} {
-  const excellent: SharedAstroSpot[] = [];
-  const good: SharedAstroSpot[] = [];
-  const fair: SharedAstroSpot[] = [];
-  const poor: SharedAstroSpot[] = [];
-  
-  locations.forEach(location => {
-    const score = getSafeScore(location);
+export const sortBySIQS = (locations: any[]) => {
+  if (!Array.isArray(locations)) return [];
+
+  return [...locations].sort((a, b) => {
+    // Get SIQS score from result object or direct property
+    const scoreA = a.siqsResult?.score || a.siqsResult?.siqs || a.siqs || 0;
+    const scoreB = b.siqsResult?.score || b.siqsResult?.siqs || b.siqs || 0;
     
-    if (score >= 8.0) {
-      excellent.push(location);
-    } else if (score >= 6.5) {
-      good.push(location);
-    } else if (score >= 5.0) {
-      fair.push(location);
-    } else {
-      poor.push(location);
-    }
+    // Higher scores first
+    return scoreB - scoreA;
   });
-  
-  return { excellent, good, fair, poor };
-}
+};
+
+/**
+ * Sort locations by distance
+ */
+export const sortByDistance = (locations: any[]) => {
+  if (!Array.isArray(locations)) return [];
+
+  return [...locations].sort((a, b) => {
+    const distA = typeof a.distance === "number" ? a.distance : Infinity;
+    const distB = typeof b.distance === "number" ? b.distance : Infinity;
+    return distA - distB;
+  });
+};
+
+/**
+ * Filter locations to only include those within a certain distance
+ */
+export const filterByDistance = (locations: any[], maxDistance: number) => {
+  if (!Array.isArray(locations) || !maxDistance) return locations;
+
+  return locations.filter((loc) => {
+    return typeof loc.distance === "number" && loc.distance <= maxDistance;
+  });
+};
+
+/**
+ * Filter locations by minimum SIQS score
+ */
+export const filterByMinimumSIQS = (locations: any[], minScore: number) => {
+  if (!Array.isArray(locations) || !minScore) return locations;
+
+  return locations.filter((loc) => {
+    const score = loc.siqsResult?.score || loc.siqsResult?.siqs || loc.siqs || 0;
+    return score >= minScore;
+  });
+};
+
+/**
+ * Filter locations by their certification status
+ */
+export const filterByCertification = (locations: any[], showCertifiedOnly: boolean) => {
+  if (!Array.isArray(locations) || !showCertifiedOnly) return locations;
+
+  return locations.filter((loc) => {
+    return loc.certification || loc.isDarkSkyReserve;
+  });
+};

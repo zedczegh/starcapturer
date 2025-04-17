@@ -1,6 +1,7 @@
 
-import { calculateSiqs as calculateSiqsCore } from '@/lib/calculateSIQS';
+import { calculateSIQS } from '@/lib/calculateSIQS';
 import { generateSiqsCacheKey, cacheSiqsResult, getCachedSiqsResult, clearSiqsCache } from './realTimeSiqs/siqsCache';
+import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
 
 // A simple cache to store location SIQS results
 const locationCache: Record<string, any> = {};
@@ -26,7 +27,7 @@ export async function calculateSiqs(
     }
     
     // If not in cache, calculate SIQS
-    const result = await calculateSiqsCore({
+    const result = await calculateSIQS({
       cloudCover: weatherData?.cloudCover || 0,
       bortleScale: bortleScale || 5,
       seeingConditions: 3, // Default to average
@@ -51,6 +52,36 @@ export async function calculateSiqs(
     console.error('Error calculating SIQS:', error);
     return { siqs: 0, score: 0, isViable: false };
   }
+}
+
+// Batch calculation function for multiple locations
+export async function batchCalculateSiqs(locations: any[], weatherData?: any) {
+  if (!locations || !Array.isArray(locations)) {
+    return [];
+  }
+
+  return Promise.all(locations.map(async (location) => {
+    try {
+      if (!location || !location.latitude || !location.longitude) {
+        return location;
+      }
+
+      const siqsResult = await calculateSiqs(
+        location.latitude,
+        location.longitude,
+        location.bortleScale || 5,
+        location.weatherData || weatherData
+      );
+
+      return {
+        ...location,
+        siqsResult
+      };
+    } catch (error) {
+      console.error('Error batch calculating SIQS:', error);
+      return location;
+    }
+  }));
 }
 
 /**
@@ -122,3 +153,6 @@ export function clearLocationCache() {
   });
   console.log('Location cache cleared');
 }
+
+// Export the functions from realTimeSiqs/siqsCalculator for consistency
+export { calculateRealTimeSiqs, clearSiqsCache };

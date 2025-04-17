@@ -1,93 +1,81 @@
 
 /**
- * Type definitions for SIQS calculations
+ * Type definitions for the SIQS calculation system
  */
 
-export interface SiqsResult {
-  siqs: number;
-  score: number; // Added score property for compatibility
-  isViable: boolean;
-  factors?: SiqsFactor[];
-  metadata?: Record<string, any>; // Added metadata property
+// Weather data with clear sky information
+export interface WeatherDataWithClearSky {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed?: number;
+  precipitation?: number;
+  aqi?: number; // Air Quality Index
+  clearSky: number; // Percentage of clear sky (100 - cloudCover)
 }
 
-export interface SiqsFactor {
-  name: string;
-  score: number;
-  description?: string;
-  source?: string;
-  value?: number;
-}
-
-export interface ClimateRegion {
-  name: string;
-  region: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
-  };
-  conditions: {
-    humidity: number;
-    temperature: number;
-    cloudCover: number;
-  };
-  adjustmentFactors: number[];
-}
-
-export interface EnhancedLocation {
-  name: string;
-  latitude: number;
-  longitude: number;
-  bortleScale?: number;
-  elevation?: number;
-  timestamp?: string;
-  weatherData?: WeatherData;
-  seeingConditions?: number;
-  averageVisibility?: number;
-  lightPollutionData?: any;
-  hasDarkSkyStatus?: boolean;
-  certification?: string;
-  siqsResult?: SiqsResult;
-  isDarkSkyReserve?: boolean;
-  clearSkyRate?: number;
-  seasonalTrends?: Record<string, { clearSkyRate: number, averageTemperature: number }>;
-  bestMonths?: string[];
-  annualPrecipitationDays?: number;
-  characteristics?: string[];
-}
-
+// Basic weather data without clear sky
 export interface WeatherData {
   temperature: number;
   humidity: number;
   cloudCover: number;
   windSpeed?: number;
   precipitation?: number;
+  aqi?: number;
   time?: string;
   condition?: string;
-  clearSky?: number;
-  aqi?: number;
 }
 
-export interface WeatherDataWithClearSky extends WeatherData {
-  clearSky: number;
-  latitude?: number; // Added for compatibility
-  longitude?: number; // Added for compatibility
-}
-
+// SIQS calculation options
 export interface SiqsCalculationOptions {
   includeFactors?: boolean;
-  adjustForSeasonality?: boolean;
-  adjustForTime?: boolean;
-  adjustForElevation?: boolean;
   includeMetadata?: boolean;
-  locale?: string;
-  anomalyDetection?: boolean; // Added for compatibility
+  anomalyDetection?: boolean;
+  useHistoricalData?: boolean;
 }
 
+// SIQS factor with score and description
+export interface SiqsFactor {
+  name: string;
+  score: number;
+  description: string;
+  value?: number | string;
+  nighttimeData?: any;
+}
+
+// SIQS calculation result
+export interface SiqsResult {
+  siqs: number;
+  score: number;
+  isViable: boolean;
+  factors?: SiqsFactor[];
+  metadata?: {
+    timestamp: string;
+    bortleScale: number;
+    weatherSnapshot: any;
+  };
+}
+
+// Climate region definition
+export interface ClimateRegion {
+  name: string;
+  description: string;
+  boundaries: {
+    latMin: number;
+    latMax: number;
+    longMin: number;
+    longMax: number;
+  };
+  adjustmentFactors: number[];
+}
+
+// Moonless night information
 export interface MoonlessNightInfo {
-  date: string;
-  startTime: string;
-  endTime: string;
+  moonrise: Date;
+  moonset: Date;
+  startTime: Date;
+  endTime: Date;
   duration: number;
+  daysUntilNewMoon: number;
+  isTonight: boolean;
 }

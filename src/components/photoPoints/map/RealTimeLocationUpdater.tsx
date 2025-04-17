@@ -1,8 +1,7 @@
 
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateSiqs, calculateRealTimeSiqs, clearSiqsCache } from '@/services/realTimeSiqsService';
-import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
+import { calculateSiqs, clearSiqsCalculationCache, clearLocationCache } from '@/services/realTimeSiqsService';
 import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
 
@@ -69,7 +68,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   const handleClearCache = useCallback(() => {
     try {
       clearLocationCache();
-      clearSiqsCache(); // Also clear the SIQS cache
+      clearSiqsCalculationCache(); // Also clear the SIQS cache
       setCacheCleared(true);
       console.log("Location cache cleared");
       

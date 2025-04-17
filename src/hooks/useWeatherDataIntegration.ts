@@ -1,313 +1,126 @@
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import WeatherDataService from '@/services/weatherDataService';
+import { useState, useEffect, useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { fetchWeatherData, fetchAirQualityData } from "@/lib/api";
 import { getClimateRegion, getLocationClimateInfo } from '@/services/realTimeSiqs/climateRegions';
 
-interface WeatherDataIntegrationOptions {
-  refreshInterval?: number;
-  enabled?: boolean;
-  onDataLoaded?: (data: any) => void;
-  includeHistoricalData?: boolean;
-}
-
 /**
- * Custom hook for integrating weather and clear sky data
- * with enhanced support for certified locations and climate regions
+ * Hook to integrate real-time weather data for a location
  */
-export function useWeatherDataIntegration(
-  latitude: number | null,
-  longitude: number | null,
-  options: WeatherDataIntegrationOptions = {}
-) {
-  const { 
-    refreshInterval = 0, 
-    enabled = true, 
-    onDataLoaded,
-    includeHistoricalData = true 
-  } = options;
-  const [refreshKey, setRefreshKey] = useState(0);
+export const useWeatherDataIntegration = (locationData: any, setLocationData: (data: any) => void) => {
+  const [isUpdating, setIsUpdating] = useState(false);
   
-  // Check for enhanced location data first
-  const enhancedLocationData = latitude !== null && longitude !== null ? 
-    findClosestEnhancedLocation(latitude, longitude) : null;
-  
-  // Check for climate region data
-  const climateRegion = latitude !== null && longitude !== null ?
-    getClimateRegion(latitude, longitude) : null;
-  
-  // Query for clear sky rate data with historical data support
-  const {
-    data: clearSkyData,
-    isLoading: clearSkyLoading,
-    isFetching: clearSkyFetching,
-    refetch: refetchClearSky
-  } = useQuery({
-    queryKey: ['clearSkyRate', latitude, longitude, refreshKey, includeHistoricalData],
-    queryFn: async () => {
-      // If we have enhanced location data, use it
-      if (enhancedLocationData && enhancedLocationData.clearSkyRate) {
-        console.log(`Using enhanced location data for ${enhancedLocationData.name}`);
-        return {
-          annualRate: enhancedLocationData.clearSkyRate,
-          monthlyRates: generateSimpleMonthlyRates(enhancedLocationData.seasonalTrends),
-          source: `Enhanced location data: ${enhancedLocationData.name}`,
-          isDarkSkyReserve: enhancedLocationData.isDarkSkyReserve || false,
-          certification: enhancedLocationData.certification,
-          isCertified: !!enhancedLocationData.certification || !!enhancedLocationData.isDarkSkyReserve
+  // Mutation for fetching weather data
+  const { mutate: fetchWeather, isPending: isWeatherLoading } = useMutation({
+    mutationFn: async (coords: { latitude: number; longitude: number }) => {
+      return fetchWeatherData(coords);
+    },
+    onSuccess: (weatherData) => {
+      if (weatherData && locationData) {
+        console.log("Weather data fetched successfully:", weatherData);
+        setLocationData({
+          ...locationData,
+          weatherData
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Failed to fetch weather data:", error);
+    }
+  });
+
+  // Mutation for fetching air quality data
+  const { mutate: fetchAQI, isPending: isAQILoading } = useMutation({
+    mutationFn: async (coords: { latitude: number; longitude: number }) => {
+      return fetchAirQualityData(coords);
+    },
+    onSuccess: (aqiData) => {
+      if (aqiData && locationData?.weatherData) {
+        console.log("AQI data fetched successfully:", aqiData);
+        
+        // Update the weatherData with AQI information
+        const updatedWeatherData = {
+          ...locationData.weatherData,
+          aqi: aqiData.aqi,
+          aqiDescription: aqiData.description
         };
-      } 
-      
-      // Use climate region data as fallback
-      if (climateRegion && latitude && longitude) {
-        const climateInfo = getLocationClimateInfo(latitude, longitude);
-        if (climateInfo.clearSkyRate) {
-          console.log(`Using climate region data for ${climateRegion.name}`);
-          return {
-            annualRate: climateInfo.clearSkyRate,
-            monthlyRates: generateMonthlyRatesFromClimateRegion(climateRegion),
-            source: `Climate region: ${climateInfo.region}`,
-            characteristic: climateInfo.characteristic
-          };
-        }
+        
+        setLocationData({
+          ...locationData,
+          weatherData: updatedWeatherData
+        });
       }
-      
-      // Fall back to API data
-      if (latitude && longitude) {
-        return WeatherDataService.getClearSkyRate(latitude, longitude, false, includeHistoricalData);
-      }
-      
-      return null;
     },
-    enabled: !!latitude && !!longitude && enabled,
-    staleTime: refreshInterval > 0 ? refreshInterval : 24 * 60 * 60 * 1000,
-  });
-  
-  // Query for current weather data with shorter stale time
-  const {
-    data: weatherData,
-    isLoading: weatherLoading,
-    isFetching: weatherFetching,
-    refetch: refetchWeather
-  } = useQuery({
-    queryKey: ['currentWeather', latitude, longitude, refreshKey],
-    queryFn: () => latitude && longitude 
-      ? WeatherDataService.getCurrentWeather(latitude, longitude)
-      : null,
-    enabled: !!latitude && !!longitude && enabled,
-    staleTime: 15 * 60 * 1000, // Weather data stales faster (15 minutes)
-  });
-  
-  // Get historical pattern data from enhanced sources if available
-  const getHistoricalData = async () => {
-    if (!latitude || !longitude) return null;
-    
-    if (enhancedLocationData) {
-      // Return enhanced location data in the expected format
-      return {
-        seasonalTrends: enhancedLocationData.seasonalTrends || {},
-        clearestMonths: enhancedLocationData.bestMonths || [],
-        visibility: enhancedLocationData.averageVisibility || 'average',
-        annualPrecipitationDays: enhancedLocationData.annualPrecipitationDays || 90,
-        source: `Enhanced location data: ${enhancedLocationData.name}`,
-        characteristics: enhancedLocationData.characteristics || []
-      };
+    onError: (error) => {
+      console.error("Failed to fetch AQI data:", error);
     }
-    
-    // Get climate region data if available
-    if (climateRegion) {
-      const climateInfo = getLocationClimateInfo(latitude, longitude);
-      return {
-        seasonalTrends: generateSeasonalTrendsFromClimate(climateRegion),
-        clearestMonths: climateInfo.bestMonths || [],
-        visibility: 'average',
-        annualPrecipitationDays: estimatePrecipitationDays(climateRegion),
-        source: `Climate region: ${climateInfo.region}`,
-        characteristic: climateInfo.characteristic
-      };
-    }
-    
-    // Use standard API as fallback
-    return WeatherDataService.getHistoricalWeatherPatterns(latitude, longitude);
-  };
-  
-  // Historical weather patterns for specified location
-  const {
-    data: historicalData,
-    isLoading: historicalLoading,
-    isFetching: historicalFetching
-  } = useQuery({
-    queryKey: ['historicalWeather', latitude, longitude, refreshKey, !!enhancedLocationData],
-    queryFn: getHistoricalData,
-    enabled: !!latitude && !!longitude && enabled && includeHistoricalData,
-    staleTime: 7 * 24 * 60 * 60 * 1000, // Historical data changes very slowly (1 week)
   });
-  
-  // Notify when data types are loaded
+
+  // Get climate region data for the location
+  const updateClimateData = useCallback(() => {
+    if (!locationData?.latitude || !locationData?.longitude) return;
+    
+    try {
+      // Get climate region for this location
+      const climateRegion = getClimateRegion(
+        locationData.latitude, 
+        locationData.longitude
+      );
+      
+      // Get detailed climate info
+      const climateInfo = getLocationClimateInfo(
+        locationData.latitude,
+        locationData.longitude
+      );
+      
+      if (climateInfo) {
+        console.log("Climate info:", climateInfo);
+        setLocationData({
+          ...locationData,
+          climateData: {
+            region: climateRegion?.name || 'Unknown',
+            info: climateInfo
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update climate data:", error);
+    }
+  }, [locationData, setLocationData]);
+
+  // Update all environmental data for the location
+  const updateEnvironmentalData = useCallback(() => {
+    if (!locationData?.latitude || !locationData?.longitude) return;
+    
+    setIsUpdating(true);
+    
+    // Fetch weather data
+    fetchWeather({
+      latitude: locationData.latitude,
+      longitude: locationData.longitude
+    });
+    
+    // Fetch AQI data
+    fetchAQI({
+      latitude: locationData.latitude,
+      longitude: locationData.longitude
+    });
+    
+    // Update climate data
+    updateClimateData();
+    
+    setIsUpdating(false);
+  }, [locationData, fetchWeather, fetchAQI, updateClimateData]);
+
   useEffect(() => {
-    if (onDataLoaded && clearSkyData && weatherData) {
-      onDataLoaded({
-        clearSky: clearSkyData,
-        weather: weatherData,
-        historical: historicalData
-      });
+    if (locationData && !locationData.weatherData) {
+      // Initial data fetch when weather data is missing
+      updateEnvironmentalData();
     }
-  }, [clearSkyData, weatherData, historicalData, onDataLoaded]);
-  
-  // Function to force refresh all data types
-  const refresh = () => {
-    setRefreshKey(prev => prev + 1);
-    refetchClearSky();
-    refetchWeather();
-  };
-  
-  // Check if this is likely a certified location
-  const isCertifiedLocation = !!(
-    latitude && 
-    longitude && 
-    (clearSkyData?.isCertified || 
-     clearSkyData?.isDarkSkyReserve || 
-     enhancedLocationData?.isDarkSkyReserve ||
-     enhancedLocationData?.certification)
-  );
-  
+  }, [locationData, updateEnvironmentalData]);
+
   return {
-    clearSkyData,
-    weatherData,
-    historicalData,
-    loading: clearSkyLoading || weatherLoading || (includeHistoricalData && historicalLoading),
-    fetching: clearSkyFetching || weatherFetching || (includeHistoricalData && historicalFetching),
-    refresh,
-    isCertifiedLocation,
-    enhancedLocation: enhancedLocationData,
-    climateRegion,
-    // Individual refresh functions
-    refreshClearSky: refetchClearSky,
-    refreshWeather: refetchWeather
+    updateWeatherData: updateEnvironmentalData,
+    isLoading: isWeatherLoading || isAQILoading || isUpdating
   };
-}
-
-// Helper function to find enhanced location data
-function findClosestEnhancedLocation(latitude: number, longitude: number): any | null {
-  // This would normally use a database of enhanced locations
-  // For now, return null since we don't have the actual implementation
-  return null;
-}
-
-/**
- * Generate monthly rates from seasonal data - simplified version for type compatibility
- */
-function generateSimpleMonthlyRates(seasonalTrends?: any): Record<string, number> {
-  if (!seasonalTrends) {
-    return defaultMonthlyRates();
-  }
-  
-  const monthMap: Record<string, string> = {
-    'Jan': 'winter', 'Feb': 'winter', 'Mar': 'spring',
-    'Apr': 'spring', 'May': 'spring', 'Jun': 'summer',
-    'Jul': 'summer', 'Aug': 'summer', 'Sep': 'fall',
-    'Oct': 'fall', 'Nov': 'fall', 'Dec': 'winter'
-  };
-  
-  const result: Record<string, number> = {};
-  
-  // Apply base seasonal rates with small variations for each month
-  Object.keys(monthMap).forEach(month => {
-    const season = monthMap[month];
-    const seasonData = seasonalTrends[season];
-    
-    // Extract clearSkyRate or use a default
-    const baseRate = seasonData && typeof seasonData === 'object' && 'clearSkyRate' in seasonData 
-      ? seasonData.clearSkyRate 
-      : (typeof seasonData === 'number' ? seasonData : 60);
-      
-    // Add -5 to +5 variation to make it realistic
-    const variation = Math.floor(Math.random() * 11) - 5;
-    result[month] = Math.min(100, Math.max(0, baseRate + variation));
-  });
-  
-  return result;
-}
-
-/**
- * Generate monthly rates from climate region
- */
-function generateMonthlyRatesFromClimateRegion(region: any): Record<string, number> {
-  const result: Record<string, number> = defaultMonthlyRates();
-  const avgRate = region.conditions ? (100 - region.conditions.cloudCover) : 60;
-  
-  // Months are 0-11 for Jan-Dec
-  const bestMonths = [3, 4, 5, 9]; // Default best months (spring and fall)
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  // Set base rate for all months
-  monthNames.forEach(month => {
-    result[month] = avgRate;
-  });
-  
-  // Boost best months
-  bestMonths.forEach(monthIndex => {
-    const monthName = monthNames[monthIndex];
-    result[monthName] = Math.min(100, avgRate + 15);
-  });
-  
-  // Reduce worst months (opposite of best)
-  monthNames.forEach(month => {
-    if (result[month] === avgRate) {
-      result[month] = Math.max(0, avgRate - 10);
-    }
-  });
-  
-  return result;
-}
-
-/**
- * Generate seasonal trends from climate region
- */
-function generateSeasonalTrendsFromClimate(region: any): Record<string, { clearSkyRate: number, averageTemperature: number }> {
-  // Base values
-  const baseTemp = 15;
-  const baseClearSky = region.conditions ? (100 - region.conditions.cloudCover) : 60;
-  
-  // Create seasonal variations
-  return {
-    spring: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + 5)), 
-      averageTemperature: baseTemp 
-    },
-    summer: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky)), 
-      averageTemperature: baseTemp + 10 
-    },
-    fall: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky + 10)), 
-      averageTemperature: baseTemp 
-    },
-    winter: { 
-      clearSkyRate: Math.min(100, Math.max(0, baseClearSky - 10)), 
-      averageTemperature: baseTemp - 10
-    }
-  };
-}
-
-/**
- * Estimate precipitation days from climate region
- */
-function estimatePrecipitationDays(region: any): number {
-  const avgClearSky = region.conditions ? (100 - region.conditions.cloudCover) : 60;
-  
-  // Inverse relationship between clear sky and precipitation
-  return Math.round(365 * (1 - (avgClearSky / 150))); // Formula gives reasonable estimates
-}
-
-/**
- * Default monthly rates when no data available
- */
-function defaultMonthlyRates(): Record<string, number> {
-  return {
-    'Jan': 60, 'Feb': 62, 'Mar': 65,
-    'Apr': 68, 'May': 70, 'Jun': 75,
-    'Jul': 78, 'Aug': 75, 'Sep': 70,
-    'Oct': 65, 'Nov': 62, 'Dec': 60
-  };
-}
+};
