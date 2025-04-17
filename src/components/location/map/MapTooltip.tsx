@@ -87,7 +87,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     }
   }, [isOpen, isCertified, latitude, longitude, name, realTimeSiqs]);
   
-  // Handle popup open/close events
+  // Handle popup events
   const handlePopupOpen = () => {
     setIsOpen(true);
   };
@@ -104,8 +104,10 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     <Popup
       closeOnClick={false}
       autoClose={false}
-      onOpen={handlePopupOpen}
-      onClose={handlePopupClose}
+      eventHandlers={{
+        add: handlePopupOpen,
+        remove: handlePopupClose
+      }}
     >
       <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
         <div className="font-medium text-sm">{name}</div>

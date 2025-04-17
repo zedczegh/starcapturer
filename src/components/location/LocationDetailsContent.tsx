@@ -31,7 +31,7 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
     longRangeLoading,
     handleRefreshForecast,
     handleRefreshLongRangeForecast
-  } = useForecastData(locationData);
+  } = useForecastData();
   
   // For components that need these props, we'll create them locally
   const gettingUserLocation = false;
@@ -62,13 +62,25 @@ const LocationDetailsContent: React.FC<LocationDetailsContentProps> = ({
     return <div className="text-center py-8">{t("Loading location data...", "加载位置数据...")}</div>;
   }
   
+  // Define handler for location updates
+  const handleLocationCoordinateUpdate = (latitude: number, longitude: number) => {
+    if (onLocationUpdate) {
+      const updatedLocation = {
+        ...locationData,
+        latitude,
+        longitude
+      };
+      onLocationUpdate(updatedLocation);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <LocationMap
         latitude={locationData.latitude || 0}
         longitude={locationData.longitude || 0}
         name={locationData.name || t("Unknown Location", "未知位置")}
-        onLocationUpdate={onLocationUpdate}
+        onLocationUpdate={handleLocationCoordinateUpdate}
         editable={true}
         isDarkSkyReserve={locationData.isDarkSkyReserve}
         certification={locationData.certification}
