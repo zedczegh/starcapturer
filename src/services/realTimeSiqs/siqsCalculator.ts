@@ -15,9 +15,17 @@ import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions"
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 
+// Memoization cache for location-specific score improvements
+const locationScoreCache = new Map<string, number>();
+
 function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
   if (initialScore < 0.5) {
-    console.log(`Improving low SIQS score for calculated location: ${initialScore}`);
+    const locationKey = `${location.latitude?.toFixed(4)}-${location.longitude?.toFixed(4)}`;
+    const cachedImprovement = locationScoreCache.get(locationKey);
+    
+    if (cachedImprovement !== undefined) {
+      return cachedImprovement;
+    }
     
     const boostFactors = [
       location.isDarkSkyReserve ? 1.5 : 1,
@@ -32,7 +40,8 @@ function improveCalculatedLocationSIQS(initialScore: number, location: any): num
     
     const improvedScore = Math.min(9.5, initialScore * boostFactor);
     
-    console.log(`Boosted SIQS from ${initialScore} to ${improvedScore}`);
+    // Cache the result for future calculations
+    locationScoreCache.set(locationKey, improvedScore);
     
     return improvedScore;
   }
@@ -45,7 +54,6 @@ function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { averag
   
   const difference = Math.abs(cloudCover - nighttimeData.average);
   if (difference > 20) {
-    console.log(`Using nighttime cloud cover ${nighttimeData.average}% instead of current ${cloudCover}%`);
     return nighttimeData.average;
   }
   
@@ -76,6 +84,7 @@ export async function calculateRealTimeSiqs(
     const enhancedLocation = await findClosestEnhancedLocation(latitude, longitude);
     const climateRegion = findClimateRegion(latitude, longitude);
     
+    // Use Promise.all to parallelize API requests
     const [weatherData, forecastData, clearSkyData, pollutionData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
       fetchForecastData({ latitude, longitude, days: 2 }),
@@ -127,16 +136,44 @@ export async function calculateRealTimeSiqs(
     const moonPhase = calculateMoonPhase();
     const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
     
-    const siqsResult = await calculateSIQSWithWeatherData(
-      {
-        ...weatherDataWithClearSky,
-        cloudCover: finalCloudCover
-      },
-      finalBortleScale,
-      seeingConditions,
-      moonPhase,
-      forecastData
-    );
+    // Try to avoid recalculating if we have a recent calculation
+    const cacheKey = `siqs-calc-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${finalBortleScale}-${finalCloudCover}-${moonPhase}`;
+    const cachedCalculation = sessionStorage.getItem(cacheKey);
+    let siqsResult;
+    
+    if (cachedCalculation) {
+      try {
+        const parsed = JSON.parse(cachedCalculation);
+        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) { // 5 minutes cache
+          siqsResult = parsed.result;
+        }
+      } catch (e) {
+        console.error("Error parsing cached calculation:", e);
+      }
+    }
+    
+    if (!siqsResult) {
+      siqsResult = await calculateSIQSWithWeatherData(
+        {
+          ...weatherDataWithClearSky,
+          cloudCover: finalCloudCover
+        },
+        finalBortleScale,
+        seeingConditions,
+        moonPhase,
+        forecastData
+      );
+      
+      // Cache the calculation
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          result: siqsResult,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.error("Error caching calculation:", e);
+      }
+    }
     
     let adjustedScore = applyIntelligentAdjustments(
       siqsResult.score,

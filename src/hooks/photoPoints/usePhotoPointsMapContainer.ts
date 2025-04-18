@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useIsMobile } from '@/hooks/use-mobile';
 import useMapMarkers from '@/hooks/map/useMapMarkers';
@@ -15,6 +15,25 @@ interface UsePhotoPointsMapContainerProps {
   onLocationUpdate?: (latitude: number, longitude: number) => void;
 }
 
+const useLocationUpdateThrottle = () => {
+  const isThrottled = useRef(false);
+  const throttleDuration = 1000; // 1 second
+  
+  const throttle = useCallback((callback: Function) => {
+    if (isThrottled.current) return false;
+    
+    isThrottled.current = true;
+    setTimeout(() => {
+      isThrottled.current = false;
+    }, throttleDuration);
+    
+    callback();
+    return true;
+  }, []);
+  
+  return throttle;
+};
+
 export const usePhotoPointsMapContainer = ({
   userLocation,
   locations,
@@ -29,6 +48,7 @@ export const usePhotoPointsMapContainer = ({
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  const throttleLocationUpdate = useLocationUpdateThrottle();
   
   const { 
     hoveredLocationId, 
@@ -38,17 +58,20 @@ export const usePhotoPointsMapContainer = ({
     handleTouchMove
   } = useMapMarkers();
   
-  // Determine which locations to display based on active view
   const locationsToShow = useMemo(() => {
     if (activeView === 'certified') {
       return certifiedLocations;
     } else {
-      // For calculated view, include both certified and calculated locations
-      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)];
+      return calculatedLocations.concat(
+        certifiedLocations.filter(certLoc => 
+          !calculatedLocations.some(calcLoc => 
+            calcLoc.latitude === certLoc.latitude && 
+            calcLoc.longitude === certLoc.longitude
+          )
+        );
     }
   }, [activeView, certifiedLocations, calculatedLocations]);
   
-  // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
     mapReady,
     handleMapReady,
@@ -65,39 +88,36 @@ export const usePhotoPointsMapContainer = ({
     activeView
   });
   
-  // Filter out some locations on mobile for better performance
+  const locationCacheKey = useMemo(() => {
+    return `${validLocations.length}-${isMobile}-${activeView}`;
+  }, [validLocations.length, isMobile, activeView]);
+  
   const optimizedLocations = useMemo(() => {
-    // If no valid locations available, return empty array
     if (!validLocations || validLocations.length === 0) {
-      console.log("No valid locations to display");
       return [];
     }
 
     if (!isMobile) {
-      console.log(`Displaying all ${validLocations.length} locations (desktop)`);
       return validLocations;
     }
     
-    // For mobile, limit the number of displayed locations
     if (validLocations.length <= 30) {
-      console.log(`Displaying all ${validLocations.length} locations (mobile, under limit)`);
       return validLocations;
     }
     
-    // Always keep certified locations
     const certified = validLocations.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
     
-    // For non-certified locations, if we have too many, sample them
+    const nonCertifiedSamplingRate = activeView === 'certified' ? 5 : 3;
+    
     const nonCertified = validLocations
       .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
-      .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
-      .slice(0, 50); // Hard limit for performance
+      .filter((_, index) => index % nonCertifiedSamplingRate === 0)
+      .slice(0, 40);
     
-    console.log(`Optimized for mobile: ${certified.length} certified + ${nonCertified.length} calculated locations`);
     return [...certified, ...nonCertified];
-  }, [validLocations, isMobile, activeView]);
+  }, [locationCacheKey]);
   
   useEffect(() => {
     const adjustHeight = () => {
@@ -113,21 +133,17 @@ export const usePhotoPointsMapContainer = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Debounced map click handler to prevent rapid location changes
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate && !isUpdatingLocation) {
-      setIsUpdatingLocation(true);
-      console.log("Setting new location from map click:", lat, lng);
-      
-      // Call the location update and reset the updating state after a delay
-      onLocationUpdate(lat, lng);
-      
-      // Prevent multiple updates in quick succession
-      setTimeout(() => {
-        setIsUpdatingLocation(false);
-      }, 1000);
+      throttleLocationUpdate(() => {
+        setIsUpdatingLocation(true);
+        
+        onLocationUpdate(lat, lng);
+        
+        setTimeout(() => setIsUpdatingLocation(false), 1000);
+      });
     }
-  }, [onLocationUpdate, isUpdatingLocation]);
+  }, [onLocationUpdate, isUpdatingLocation, throttleLocationUpdate]);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -139,27 +155,25 @@ export const usePhotoPointsMapContainer = ({
   
   const handleGetLocation = useCallback(() => {
     if (onLocationUpdate && navigator.geolocation && !isUpdatingLocation) {
-      setIsUpdatingLocation(true);
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationUpdate(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-          
-          // Reset updating state after delay
-          setTimeout(() => {
+      throttleLocationUpdate(() => {
+        setIsUpdatingLocation(true);
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            onLocationUpdate(latitude, longitude);
+            
+            setTimeout(() => setIsUpdatingLocation(false), 1000);
+          },
+          (error) => {
+            console.error("Error getting location:", error.message);
             setIsUpdatingLocation(false);
-          }, 1000);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-          setIsUpdatingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      });
     }
-  }, [onLocationUpdate, isUpdatingLocation]);
+  }, [onLocationUpdate, isUpdatingLocation, throttleLocationUpdate]);
   
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);

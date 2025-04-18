@@ -1,7 +1,7 @@
 
 // Cache management system for SIQS calculations
 
-// Create a cache to avoid redundant API calls with improved invalidation strategy
+// Create a cache with improved memory management and invalidation strategy
 const siqsCache = new Map<string, {
   siqs: number;
   timestamp: number;
@@ -24,9 +24,14 @@ const siqsCache = new Map<string, {
   };
 }>();
 
-// Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
-const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
-const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
+// Optimized cache durations - shorter for daytime (when conditions change faster)
+const NIGHT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes at night (increased from 20)
+const DAY_CACHE_DURATION = 15 * 60 * 1000;  // 15 minutes during day (increased from 10)
+
+// Memory optimized location-key generator
+const getLocationKey = (latitude: number, longitude: number): string => {
+  return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+};
 
 /**
  * Determine if it's nighttime for cache duration purposes
@@ -49,7 +54,7 @@ export const getCacheDuration = () => {
  * @param longitude Longitude of the location
  */
 export const hasCachedSiqs = (latitude: number, longitude: number): boolean => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cacheKey = getLocationKey(latitude, longitude);
   const cachedData = siqsCache.get(cacheKey);
   
   if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
@@ -65,7 +70,7 @@ export const hasCachedSiqs = (latitude: number, longitude: number): boolean => {
  * @param longitude Longitude of the location
  */
 export const getCachedSiqs = (latitude: number, longitude: number) => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cacheKey = getLocationKey(latitude, longitude);
   const cachedData = siqsCache.get(cacheKey);
   
   if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
@@ -106,7 +111,7 @@ export const setSiqsCache = (
     };
   }
 ) => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cacheKey = getLocationKey(latitude, longitude);
   
   siqsCache.set(cacheKey, {
     ...data,
@@ -137,7 +142,7 @@ export const clearSiqsCache = (): number => {
  * Clear specific location from the SIQS cache
  */
 export const clearLocationSiqsCache = (latitude: number, longitude: number): boolean => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cacheKey = getLocationKey(latitude, longitude);
   if (siqsCache.has(cacheKey)) {
     siqsCache.delete(cacheKey);
     return true;
