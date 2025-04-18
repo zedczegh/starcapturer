@@ -21,13 +21,27 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 10 * 60 * 1000; // Increased to 10 minutes cache to reduce API calls
+  const [lastCoordinates, setLastCoordinates] = useState<{lat: number, lng: number} | null>(null);
+  const CACHE_DURATION = 30 * 60 * 1000; // Increased to 30 minutes cache to reduce API calls
   const fetchingRef = useRef(false); // Use ref to prevent concurrent fetches
+  
+  // Determine if this is a new location that requires calculation
+  const isNewLocation = (lat?: number, lng?: number): boolean => {
+    if (!lat || !lng || !lastCoordinates) return true;
+    
+    // Check if coordinates have changed significantly (at least 0.01 degrees, ~1km)
+    const latDiff = Math.abs(lat - lastCoordinates.lat);
+    const lngDiff = Math.abs(lng - lastCoordinates.lng);
+    
+    return latDiff > 0.01 || lngDiff > 0.01;
+  };
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
-      const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION && !fetchingRef.current;
+      const needsFetch = isNewLocation(latitude, longitude);
+      const cacheExpired = now - lastFetchTimestamp > CACHE_DURATION;
+      const shouldFetch = (needsFetch || cacheExpired) && !fetchingRef.current;
       
       if (shouldFetch) {
         console.log(`Fetching cloud cover-based SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
@@ -59,6 +73,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                   onSiqsCalculated(null, false);
                 }
                 
+                // Update last coordinates to prevent unnecessary recalculations
+                setLastCoordinates({ lat: latitude, lng: longitude });
                 setLoading(false);
                 fetchingRef.current = false;
                 return;
@@ -89,6 +105,9 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 console.log(`Skipping low quality location (SIQS: ${result.score.toFixed(1)})`);
                 onSiqsCalculated(null, false);
               }
+              
+              // Update last coordinates to prevent unnecessary recalculations
+              setLastCoordinates({ lat: latitude, lng: longitude });
             } else {
               onSiqsCalculated(null, false);
             }
@@ -105,7 +124,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         fetchSiqs();
       }
     }
-  }, [isVisible, showRealTimeSiqs, latitude, longitude, bortleScale, lastFetchTimestamp, onSiqsCalculated]);
+  }, [isVisible, showRealTimeSiqs, latitude, longitude, bortleScale, onSiqsCalculated]);
   
   return null; // This component doesn't render anything
 };
