@@ -10,12 +10,14 @@ interface UseLocationDataManagerProps {
   id: string | undefined;
   initialState: any;
   navigate: NavigateFunction;
+  noRedirect?: boolean;
 }
 
 export const useLocationDataManager = ({ 
   id, 
   initialState, 
-  navigate 
+  navigate,
+  noRedirect = false
 }: UseLocationDataManagerProps) => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'info' | 'success' | 'error' | null>('info');
@@ -27,7 +29,7 @@ export const useLocationDataManager = ({
     locationData, 
     setLocationData, 
     isLoading 
-  } = useLocationInit(id, initialState, navigate);
+  } = useLocationInit(id, initialState, navigate, noRedirect);
   
   const { loading, handleLocationUpdate } = useLocationUpdate(locationData, setLocationData);
 

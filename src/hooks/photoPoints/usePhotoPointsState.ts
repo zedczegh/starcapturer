@@ -1,8 +1,10 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 export const usePhotoPointsState = () => {
   const { t } = useLanguage();
@@ -16,6 +18,7 @@ export const usePhotoPointsState = () => {
   
   // For initializing states
   const [initialLoad, setInitialLoad] = useState(true);
+  const [autoLocationRequested, setAutoLocationRequested] = useState(false);
   
   // For location tracking
   const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -30,6 +33,29 @@ export const usePhotoPointsState = () => {
       });
     }
   }, [currentPosition]);
+
+  // Auto-request location when the component mounts
+  useEffect(() => {
+    if (!effectiveLocation && !autoLocationRequested && initialLoad) {
+      setAutoLocationRequested(true);
+      
+      getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setEffectiveLocation({
+            latitude,
+            longitude
+          });
+          console.log("Auto-located user at:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error auto-locating user:", error);
+          // Silent failure - we don't want to show an error toast for auto-location
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, [effectiveLocation, autoLocationRequested, initialLoad]);
 
   // Default calculated search radius set to 500km exactly as requested
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState(500);

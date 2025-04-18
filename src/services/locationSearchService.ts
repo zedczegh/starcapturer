@@ -1,4 +1,3 @@
-
 /**
  * Service for performing radius-based location searches
  * Focuses on finding the best locations for astronomy viewing within a radius
@@ -11,12 +10,13 @@ import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 import { filterLocations, sortLocationsByQuality, generateRandomPoint } from './locationFilters';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Find all locations within a radius of a center point
  * @param latitude Center latitude
  * @param longitude Center longitude
- * @param radius Search radius in km
+ * @param radius Search radius in kilometers
  * @param certifiedOnly Whether to return only certified locations
  * @param limit Maximum number of locations to return (defaults to 50)
  * @returns Promise resolving to array of SharedAstroSpot
@@ -244,7 +244,7 @@ export async function findCalculatedLocations(
       
       // Calculate SIQS scores for these locations in chunks to improve performance
       const chunkSize = 5; // Process 5 at a time to prevent overwhelming API
-      const results = [];
+      const results: SharedAstroSpot[] = [];
       
       for (let i = 0; i < calculatedPoints.length; i += chunkSize) {
         const chunk = calculatedPoints.slice(i, i + chunkSize);
@@ -258,7 +258,7 @@ export async function findCalculatedLocations(
       }
       
       // Filter out locations with SIQS 0 (bad viewing conditions)
-      const validLocations = results.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
+      const validLocations = results.filter(loc => loc.siqs !== undefined && (getSiqsScore(loc.siqs) > 0));
       
       if (validLocations.length > 0) {
         // Cache the results for future use

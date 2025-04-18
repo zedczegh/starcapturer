@@ -2,16 +2,14 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
+import { motion } from 'framer-motion';
 
 interface SiqsScoreBadgeProps {
   score: number | string | { score: number; isViable: boolean } | any;
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
-  forceCertified?: boolean;
-  latitude?: number;
-  longitude?: number;
+  forceCertified?: boolean; // Added this prop to support forcing certified status
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
@@ -19,9 +17,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   loading = false,
   compact = false,
   isCertified = false,
-  forceCertified = false,
-  latitude,
-  longitude
+  forceCertified = false
 }) => {
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
@@ -47,26 +43,25 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30">
-        <div className="animate-pulse h-3.5 w-12 bg-cosmic-600/50 rounded-full"></div>
-      </div>
+      <motion.div 
+        className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
+        layout
+        animate={{ opacity: [0.6, 0.8, 0.6] }}
+        transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+      >
+        <div className="h-3.5 w-12 bg-cosmic-600/50 rounded-full"></div>
+      </motion.div>
     );
   }
 
-  // Log astronomical night info if coordinates are provided
-  React.useEffect(() => {
-    if (latitude && longitude) {
-      try {
-        const { start, end } = calculateAstronomicalNight(latitude, longitude);
-        console.log(`Astronomical night for this badge: ${start.toLocaleTimeString()}-${end.toLocaleTimeString()}`);
-      } catch (err) {
-        console.error("Error calculating astronomical night:", err);
-      }
-    }
-  }, [latitude, longitude]);
-
   return (
-    <div className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}>
+    <motion.div 
+      className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      layout
+    >
       <Star 
         className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
         fill="#facc15" 
@@ -74,7 +69,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
         {displayScore}
       </span>
-    </div>
+    </motion.div>
   );
 };
 

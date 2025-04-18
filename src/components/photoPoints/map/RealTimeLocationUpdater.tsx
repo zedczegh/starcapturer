@@ -164,6 +164,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         onClearCache={handleClearCache}
         loading={loading}
         cacheCleared={cacheCleared}
+        userLocation={userLocation}
       />
       
       <SiqsDisplay 

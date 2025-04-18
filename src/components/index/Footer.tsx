@@ -19,17 +19,17 @@ const Footer: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 mb-6 md:mb-0">
-            <Link to="/" className="text-sm text-foreground/70 hover:text-primary transition-colors">
-              {t("Home", "首页")}
-            </Link>
-            <Link to="/about" className="text-sm text-foreground/70 hover:text-primary transition-colors">
-              {t("About SIQS", "关于SIQS")}
-            </Link>
             <Link to="/photo-points" className="text-sm text-foreground/70 hover:text-primary transition-colors">
-              {t("Explore Locations", "探索地点")}
+              {t("Photo Points", "拍摄点")}
             </Link>
             <Link to="/share" className="text-sm text-foreground/70 hover:text-primary transition-colors">
               {t("Bortle Now", "实时光污染")}
+            </Link>
+            <Link to="/useful-links" className="text-sm text-foreground/70 hover:text-primary transition-colors">
+              {t("Resources", "资源")}
+            </Link>
+            <Link to="/about" className="text-sm text-foreground/70 hover:text-primary transition-colors">
+              {t("About SIQS", "关于SIQS")}
             </Link>
           </div>
           

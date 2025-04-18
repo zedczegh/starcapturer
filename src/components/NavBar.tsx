@@ -30,12 +30,10 @@ const NavBar = () => {
   return (
     <>
       <NavHeader scrolled={scrolled}>
-        <div className="container mx-auto px-4 flex items-center justify-between">
-          <DesktopNav 
-            location={location} 
-            locationId={locationId}
-          />
-        </div>
+        <DesktopNav 
+          location={location} 
+          locationId={locationId}
+        />
       </NavHeader>
       
       <MobileNav 

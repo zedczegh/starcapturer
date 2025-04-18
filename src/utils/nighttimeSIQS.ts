@@ -189,59 +189,10 @@ export const calculateTonightCloudCover = (
     }
   }
   
-  // Cache the astronomical night data for this location
-  if (hasCoordinates) {
-    try {
-      sessionStorage.setItem(`astro_night_${latitude?.toFixed(2)}_${longitude?.toFixed(2)}`, JSON.stringify({
-        start: nightStart.toISOString(),
-        end: nightEnd.toISOString(),
-        formatted: nightTimeStr,
-        cloudCover: hoursCount > 0 ? totalCloudCover / hoursCount : null,
-        timestamp: new Date().toISOString()
-      }));
-    } catch (err) {
-      console.error("Failed to cache astronomical night data:", err);
-    }
-  }
+  console.log(`Calculated cloud cover for ${nightTimeStr}: ${cloudCoverValues.join(', ')}`);
   
   // Calculate average - if no valid hours found, return 0
   return hoursCount > 0 ? totalCloudCover / hoursCount : 0;
-};
-
-/**
- * Get cached astronomical night data for a location if available
- * @param latitude Location latitude 
- * @param longitude Location longitude
- * @returns Cached astronomical night data or null
- */
-export const getCachedAstronomicalNight = (
-  latitude: number,
-  longitude: number
-): { start: Date; end: Date; formatted: string; cloudCover: number | null } | null => {
-  try {
-    const cacheKey = `astro_night_${latitude.toFixed(2)}_${longitude.toFixed(2)}`;
-    const cachedData = sessionStorage.getItem(cacheKey);
-    
-    if (cachedData) {
-      const data = JSON.parse(cachedData);
-      const cacheTimestamp = new Date(data.timestamp);
-      const now = new Date();
-      
-      // Cache valid for 6 hours
-      if ((now.getTime() - cacheTimestamp.getTime()) < 6 * 60 * 60 * 1000) {
-        return {
-          start: new Date(data.start),
-          end: new Date(data.end),
-          formatted: data.formatted,
-          cloudCover: data.cloudCover
-        };
-      }
-    }
-    return null;
-  } catch (err) {
-    console.error("Error retrieving cached astronomical night data:", err);
-    return null;
-  }
 };
 
 /**
@@ -266,33 +217,12 @@ export const calculateNighttimeSIQS = (
     const latitude = locationData.latitude || 0;
     const longitude = locationData.longitude || 0;
     
-    // First check for cached astronomical night data
-    let nightTimeStr = "18:00-7:00";
-    let cachedNight = null;
-    
-    if (latitude && longitude) {
-      cachedNight = getCachedAstronomicalNight(latitude, longitude);
-      if (cachedNight) {
-        nightTimeStr = cachedNight.formatted;
-        console.log(`Using cached astronomical night data: ${nightTimeStr}`);
-      }
-    }
-    
-    // Get astronomical night times if not cached
-    if (!cachedNight) {
-      const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
-      nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
-      console.log(`Calculated astronomical night: ${nightTimeStr}`);
-    }
+    // Get astronomical night times
+    const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
+    const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
     
     // Calculate tonight's cloud cover using astronomical night
-    // Use cached value if available
-    let tonightCloudCover = cachedNight?.cloudCover || 0;
-    
-    // Calculate if not cached or null
-    if (!tonightCloudCover) {
-      tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
-    }
+    const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
     
     // If no valid cloud cover data is available, we can't calculate
     if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
@@ -300,7 +230,7 @@ export const calculateNighttimeSIQS = (
       return null;
     }
     
-    console.log(`Tonight's cloud cover (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}%`);
+    console.log(`Calculated tonight's cloud cover (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}%`);
     
     // Check if average cloud cover makes imaging impossible
     if (isImagingImpossible(tonightCloudCover)) {
@@ -329,21 +259,10 @@ export const calculateNighttimeSIQS = (
     
     // Extract nighttime forecast for other weather parameters using astronomical night hours
     const nightForecast = forecastData.hourly.time.map((time: string, i: number) => {
-      // We don't need to recalculate night times if we already have cached data
-      let isNight = false;
-      if (cachedNight) {
-        const forecastTime = new Date(time);
-        isNight = forecastTime >= cachedNight.start && forecastTime <= cachedNight.end;
-      } else {
-        // Calculate on the fly if not cached
-        const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
-        const forecastTime = new Date(time);
-        isNight = forecastTime >= nightStart && forecastTime <= nightEnd;
-      }
-      
+      const forecastTime = new Date(time);
       return {
         time,
-        isNight,
+        isNight: forecastTime >= nightStart && forecastTime <= nightEnd,
         cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
         windSpeed: forecastData.hourly.wind_speed_10m?.[i] || 0,
         humidity: forecastData.hourly.relative_humidity_2m?.[i] || 0,
@@ -387,16 +306,6 @@ export const calculateNighttimeSIQS = (
     }
     
     console.log(`Calculated nighttime SIQS: ${siqsResult.score.toFixed(1)}`);
-    
-    // Store astronomical night metadata for this location
-    if (locationData.metadata) {
-      locationData.metadata.astronomicalNight = {
-        start: cachedNight ? cachedNight.start.toISOString() : new Date().toISOString(),
-        end: cachedNight ? cachedNight.end.toISOString() : new Date().toISOString(),
-        formattedTime: nightTimeStr
-      };
-    }
-    
     return siqsResult;
   } catch (error) {
     console.error("Error in nighttime SIQS calculation:", error);

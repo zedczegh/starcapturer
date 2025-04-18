@@ -4,6 +4,7 @@ import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExternalLink, Globe, Star, Moon, CloudRain, Wind, Thermometer, Award, Check, MapPin, Shield } from "lucide-react";
+
 const AboutSIQS = () => {
   const {
     t,
@@ -504,9 +505,11 @@ const AboutSIQS = () => {
     color: "bg-red-900",
     textColor: "text-red-100"
   }];
-  return <>
+
+  return (
+    <div className="min-h-screen bg-cosmic-950">
       <NavBar />
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl pt-20">
         <Tabs defaultValue="siqs" className="mb-12">
           <div className="flex justify-center mt-8 mb-10">
             <TabsList className="w-auto bg-cosmic-800/50 backdrop-blur-sm border border-cosmic-700/30 p-2 py-[2px] px-[2px] rounded-sm">
@@ -776,6 +779,8 @@ const AboutSIQS = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </>;
+    </div>
+  );
 };
+
 export default AboutSIQS;
