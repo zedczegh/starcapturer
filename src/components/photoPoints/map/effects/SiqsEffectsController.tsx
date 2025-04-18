@@ -1,9 +1,9 @@
-
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { fetchForecastData } from '@/lib/api';
 import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import L from 'leaflet'; // Add this import for the Leaflet namespace
 
 interface SiqsEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -48,7 +48,6 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     return null;
   }, [onSiqsCalculated]);
   
-  // Generate calculated spots around user location
   const generateCalculatedSpots = useCallback(async (
     latitude: number, 
     longitude: number, 
