@@ -1,3 +1,4 @@
+
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -149,8 +150,8 @@ export async function calculateRealTimeSiqs(
           weather: true,
           forecast: !!forecastData,
           clearSky: !!clearSkyData,
-          terrain: !!terrainCorrectedScale,
-          climate: !!climateRegion
+          climate: !!climateRegion,
+          terrainCorrected: !!terrainCorrectedScale
         }
       }
     });
@@ -171,32 +172,4 @@ export async function calculateRealTimeSiqs(
   }
 }
 
-// Add a new utility function to validate and improve calculated location SIQS
-function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
-  // If score is extremely low (close to 0), apply intelligent adjustments
-  if (initialScore < 0.5) {
-    console.log(`Improving low SIQS score for calculated location: ${initialScore}`);
-    
-    // Use location characteristics to boost score
-    const boostFactors = [
-      location.isDarkSkyReserve ? 1.5 : 1,
-      location.bortleScale ? (9 - location.bortleScale) * 0.5 : 0,
-      location.type === 'remote' ? 1.2 : 1,
-      // Add more intelligent adjustments based on location metadata
-    ];
-    
-    // Calculate a boost factor, ensuring it doesn't exceed 2
-    const boostFactor = Math.min(
-      2, 
-      1 + boostFactors.reduce((acc, factor) => acc * factor, 1) - boostFactors.length
-    );
-    
-    const improvedScore = Math.min(9.5, initialScore * boostFactor);
-    
-    console.log(`Boosted SIQS from ${initialScore} to ${improvedScore}`);
-    
-    return improvedScore;
-  }
-  
-  return initialScore;
-}
+// Note: Removed the duplicate improveCalculatedLocationSIQS function that was at the end of the file
