@@ -108,12 +108,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return loadingSiqs;
   }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible]);
   
-  // Prioritize real-time scores for display
+  // Prioritize real-time scores for display - never use default scores
   const displayScore = useMemo(() => {
+    // Only use real scores, never default values
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;
     }
-    return location.siqs;
+    if (location.siqs && location.siqs > 0) {
+      return location.siqs;
+    }
+    // Return null if no valid score to display
+    return null;
   }, [realTimeSiqs, location.siqs]);
   
   return (

@@ -10,7 +10,7 @@ import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
 
-// We don't use default SIQS values for certified locations anymore
+// No default SIQS values, show loading state or nothing instead
 export const DEFAULT_SIQS = 0;
 
 interface SiqsDisplayOptions {
@@ -32,7 +32,7 @@ interface SiqsResult {
 
 /**
  * Get the appropriate display SIQS score based on available data
- * Never use default scores for certified locations
+ * Never use default scores - return 0 if no real data available
  */
 export function getDisplaySiqs(options: {
   realTimeSiqs: number | null;
@@ -40,7 +40,7 @@ export function getDisplaySiqs(options: {
   isCertified: boolean;
   isDarkSkyReserve: boolean;
 }): number {
-  const { realTimeSiqs, staticSiqs, isCertified } = options;
+  const { realTimeSiqs, staticSiqs } = options;
   
   // Use realtime SIQS if available
   if (realTimeSiqs !== null && realTimeSiqs > 0) {
@@ -52,12 +52,8 @@ export function getDisplaySiqs(options: {
     return staticSiqs;
   }
   
-  // No default scores for certified locations
-  if (isCertified) {
-    return 0; // Return 0 for certified locations if no real data
-  }
-  
-  return DEFAULT_SIQS; // Only use default for non-certified locations
+  // Return 0 for no valid score - will trigger loading state or no display
+  return 0;
 }
 
 /**
@@ -145,12 +141,12 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     existingSiqs = null
   } = options;
   
-  // Get existing SIQS, without defaults for certified locations
+  // Get existing SIQS, without defaults - never use default scores
   const staticSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : 0;
                       
   const defaultResult: SiqsResult = {
-    siqs: isCertified ? 0 : staticSiqs, // Never use default for certified
-    loading: false,
+    siqs: 0, // Never use default scores - return 0 instead
+    loading: isCertified, // Show loading for certified locations with no score
     formattedSiqs: formatSiqsForDisplay(staticSiqs > 0 ? staticSiqs : null),
     colorClass: getSiqsColorClass(staticSiqs),
     source: 'default'
@@ -249,10 +245,10 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     }
     
     // If we reach here, we couldn't calculate SIQS for some reason
-    // For certified locations, return 0 instead of using default
+    // For certified locations, show loading instead of default score
     if (isCertified) {
       return {
-        siqs: 0,
+        siqs: 0, // No default scores
         loading: true, // Always show loading for certified locations with no data
         formattedSiqs: "N/A",
         colorClass: "text-muted-foreground",
@@ -264,10 +260,10 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
   } catch (error) {
     console.error("Error getting SIQS display data:", error);
     
-    // For certified locations with errors, show loading instead of default
+    // For certified locations with errors, show loading instead of default score
     if (isCertified) {
       return {
-        siqs: 0,
+        siqs: 0, // No default scores
         loading: true,
         formattedSiqs: "N/A",
         colorClass: "text-muted-foreground",

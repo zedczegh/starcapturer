@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -30,7 +31,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const stableScoreRef = useRef<number | null>(null);
   
   // Convert score to number using our helper function
-  const numericScore = getSiqsScore(score);
+  const numericScore = score === null ? 0 : getSiqsScore(score);
   
   // For certified locations with no valid score, always show loading state
   const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
@@ -130,7 +131,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return null;
   }
   
-  // Display actual score only - no default scores
+  // Only display actual score, never display default values
   const formattedScore = formatSiqsForDisplay(displayedScore);
   
   // Get appropriate color based on score value
@@ -161,6 +162,11 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         </span>
       </motion.div>
     );
+  }
+  
+  // Don't render anything if there's no valid score
+  if (!displayedScore || displayedScore <= 0) {
+    return null;
   }
 
   return (

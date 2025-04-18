@@ -37,10 +37,11 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
     }
   }, [siqsScore]);
   
+  // Get SIQS class for coloring the popup based on score
   const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
   
-  // Use either real-time score or static score, but never null
-  const displayScore = stabilizedScore || siqsScore || (isCertified ? 6.5 : 0);
+  // Only use real scores (never default values)
+  const hasValidScore = stabilizedScore !== null || (siqsScore !== null && siqsScore > 0);
   
   return (
     <Popup 
@@ -75,7 +76,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <SiqsScoreBadge 
-              score={displayScore} 
+              score={hasValidScore ? (stabilizedScore || siqsScore) : null} 
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
