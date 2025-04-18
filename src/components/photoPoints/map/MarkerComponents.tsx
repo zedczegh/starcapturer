@@ -59,22 +59,18 @@ const LocationMarker = memo(({
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
     
-  // Improved SIQS score handling, ensuring certified locations always have a score
+  // Improved SIQS score handling, never using default scores
   const siqsScore = useMemo(() => {
     // Use real-time SIQS if available
     if (realTimeSiqs !== null) return realTimeSiqs;
     
-    // Use location's SIQS if available
+    // Use location's actual SIQS if available
     const locationSiqs = getSiqsScore(location);
     if (locationSiqs > 0) return locationSiqs;
     
-    // For certified locations without SIQS, provide a default good score
-    if (isCertified) {
-      return location.isDarkSkyReserve ? 7.5 : 6.5;
-    }
-    
+    // No default scores - just return null if no real score available
     return null;
-  }, [location, realTimeSiqs, isCertified]);
+  }, [location, realTimeSiqs]);
   
   const siqsClass = getSiqsClass(siqsScore);
 
@@ -82,6 +78,9 @@ const LocationMarker = memo(({
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
   }, []);
+  
+  // Always fetch real-time SIQS for certified locations
+  const shouldShowRealTimeSiqs = true;
   
   const shouldRender = useMemo(() => {
     if (activeView === 'certified') {
@@ -199,15 +198,6 @@ const LocationMarker = memo(({
     return null;
   }
   
-  // Always fetch real-time SIQS for certified locations
-  const shouldShowRealTimeSiqs = Boolean(
-    isCertified || 
-    location.isDarkSkyReserve || 
-    location.certification || 
-    (location.type === 'lodging') ||
-    (location.type === 'dark-site')
-  );
-  
   return (
     <>
       <RealTimeSiqsFetcher
@@ -258,13 +248,14 @@ const LocationMarker = memo(({
             )}
             
             <div className="mt-2 flex items-center justify-between">
-              {/* Always show SIQS badge for certified locations */}
-              {(siqsScore !== null || isCertified) && (
+              {/* Only show SIQS badge when we have a real score or it's actively loading */}
+              {(siqsScore !== null || siqsLoading) && (
                 <div className="flex items-center gap-1.5">
                   <SiqsScoreBadge 
-                    score={siqsScore !== null ? siqsScore : (isCertified ? 6.5 : 0)} 
+                    score={siqsScore || 0} 
                     compact={true} 
                     loading={siqsLoading && isHovered}
+                    showPlaceholder={false}
                   />
                 </div>
               )}

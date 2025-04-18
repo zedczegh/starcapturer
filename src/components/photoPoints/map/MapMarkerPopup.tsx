@@ -44,22 +44,20 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
   
   // Extract SIQS score from any format using our helper function
   const siqsScore = getSiqsScore(location);
-  // Always show SIQS badge for certified locations, with a minimum score
-  const hasSiqs = siqsScore > 0 || isCertified;
-  // For certified locations without SIQS, use a default good score
-  const displaySiqs = siqsScore > 0 ? siqsScore : (isCertified ? 6.5 : 0);
+  // Only show SIQS badge when there's a real score
+  const hasSiqs = siqsScore > 0;
   
   return (
     <div className="p-3 min-w-[200px] max-w-[280px]">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
-        {/* Always show SIQS badge for certified locations */}
+        {/* Only show SIQS badge for locations with actual scores */}
         {hasSiqs && (
           <SiqsScoreBadge 
-            score={displaySiqs} 
+            score={siqsScore} 
             compact={true} 
-            forceCertified={isCertified && siqsScore <= 0}
+            showPlaceholder={false}
           />
         )}
       </div>

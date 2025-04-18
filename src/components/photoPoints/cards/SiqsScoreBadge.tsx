@@ -10,6 +10,7 @@ interface SiqsScoreBadgeProps {
   compact?: boolean;
   isCertified?: boolean;
   forceCertified?: boolean; // Added this prop to support forcing certified status
+  showPlaceholder?: boolean; // New prop to control whether to show placeholder scores
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
@@ -17,22 +18,25 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   loading = false,
   compact = false,
   isCertified = false,
-  forceCertified = false
+  forceCertified = false,
+  showPlaceholder = true
 }) => {
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
-  // Skip rendering if score is 0 (invalid) and not certified
-  if (numericScore <= 0 && !loading && !isCertified && !forceCertified) {
+  // Skip rendering if score is 0 (invalid) and not certified or if we don't want to show placeholder
+  if ((numericScore <= 0 && !loading && !isCertified && !forceCertified) || 
+      (numericScore <= 0 && !showPlaceholder && !loading)) {
     return null;
   }
   
   // For certified locations with no score or when forceCertified is true, provide a default good score
-  const displayScore = numericScore > 0 ? numericScore.toFixed(1) : "6.5";
+  // But only if showPlaceholder is true
+  const displayScore = numericScore > 0 ? numericScore.toFixed(1) : (showPlaceholder ? "6.5" : "0.0");
   
   // Get appropriate color based on score value
   const getColor = () => {
-    const scoreToUse = numericScore > 0 ? numericScore : 6.5;
+    const scoreToUse = numericScore > 0 ? numericScore : (showPlaceholder && (isCertified || forceCertified) ? 6.5 : 0);
     
     if (scoreToUse >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
     if (scoreToUse >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
@@ -52,6 +56,11 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         <div className="h-3.5 w-12 bg-cosmic-600/50 rounded-full"></div>
       </motion.div>
     );
+  }
+  
+  // If no real score and showPlaceholder is false, return null
+  if (numericScore <= 0 && !showPlaceholder) {
+    return null;
   }
 
   return (

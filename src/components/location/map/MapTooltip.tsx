@@ -48,9 +48,6 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Get SIQS score using helper function
   const siqsScore = getSiqsScore(siqs);
   
-  // For certified locations without SIQS, use a default good score
-  const displaySiqs = siqsScore > 0 ? siqsScore : (isCertified ? 6.5 : 0);
-  
   return (
     <Popup
       closeOnClick={false}
@@ -73,13 +70,13 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
           </div>
         )}
 
-        {/* Display SIQS score if available or if it's a certified location */}
-        {(siqsScore > 0 || isCertified) && (
+        {/* Display SIQS score only if it's a real score */}
+        {siqsScore > 0 && (
           <div className="mt-1.5 flex items-center">
             <SiqsScoreBadge 
-              score={displaySiqs} 
+              score={siqsScore} 
               compact={true}
-              forceCertified={isCertified && siqsScore <= 0}
+              showPlaceholder={false}
             />
           </div>
         )}
