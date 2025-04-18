@@ -1,19 +1,14 @@
 
-import { calculateRealTimeSiqs as fetchRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
-
-// Re-export all SIQS functionality
-export * from './realTimeSiqs/siqsCalculator';
-export { clearSiqsCache } from './realTimeSiqs/siqsCache';
+// Re-export the simplified SIQS calculator
+export { calculateRealTimeSiqs } from './siqsCalculator';
+export { clearSiqsCache } from './siqsCache';
 export { 
   updateLocationsWithRealTimeSiqs,
   clearLocationCache 
-} from './realTimeSiqs/locationUpdateService';
+} from './locationUpdateService';
 
 // Helper function to clear the location cache for external use
-export function clearLocationCache(): void {
+export function clearSiqsCache(): void {
   clearSiqsCache();
   console.log("Location cache cleared");
 }
-
-// Re-export the simplified SIQS calculator
-export { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
