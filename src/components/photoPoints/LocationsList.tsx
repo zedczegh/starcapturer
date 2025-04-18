@@ -30,7 +30,8 @@ const LocationsList: React.FC<LocationsListProps> = ({
   // Update visible locations when main locations list changes or page changes
   useEffect(() => {
     if (locations.length > 0) {
-      setVisibleLocations(locations.slice(0, page * locationsPerPage));
+      // Use a stable reference for location objects to prevent re-renders
+      setVisibleLocations([...locations.slice(0, page * locationsPerPage)]);
     } else {
       setVisibleLocations([]);
     }
@@ -64,12 +65,13 @@ const LocationsList: React.FC<LocationsListProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
+            layout
           >
             <PhotoLocationCard
               location={location}
               index={index}
               onViewDetails={onViewDetails || (() => {})}
-              showRealTimeSiqs={showRealTimeSiqs}
+              showRealTimeSiqs={true} // Always fetch real-time SIQS
             />
           </motion.div>
         ))}

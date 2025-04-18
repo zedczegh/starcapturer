@@ -49,14 +49,14 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
   };
 
-  // Enhanced loading animation
+  // Enhanced loading animation with smoother transition
   if (loading) {
     return (
       <motion.div 
         className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
         layout
         animate={{ opacity: [0.6, 0.8, 0.6] }}
-        transition={{ repeat: Infinity, duration: 0.8, ease: "easeInOut" }}
+        transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
       >
         <Star 
           className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} 
@@ -74,7 +74,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.3 }}
       layout
     >
       <Star 

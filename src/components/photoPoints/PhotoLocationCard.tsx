@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Navigation } from "lucide-react";
@@ -52,16 +52,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       null
   , [location.latitude, location.longitude, language]);
 
-  const formatCardDistance = (distance?: number) => {
-    if (distance === undefined) return t("Unknown distance", "未知距离");
-    
-    if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m`, `${Math.round(distance * 1000)} 米`);
-    if (distance < 100) 
-      return t(`${Math.round(distance)} km`, `${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km`, `${Math.round(distance / 100) * 100} 公里`);
-  };
-
   const getLocationId = () => {
     if (!location || !location.latitude || !location.longitude) return null;
     return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
@@ -97,38 +87,42 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const primaryName = language === 'zh' && location.chineseName ? location.chineseName : (location.name || t("Unnamed Location", "未命名位置"));
   const secondaryName = language === 'zh' ? (location.name || "") : (location.chineseName || "");
   
+  // State management for real-time SIQS with improved stability
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   
-  const [locationCounter] = useState(() => {
-    if (!location.id && !location.certification && !location.isDarkSkyReserve) {
-      const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
-      const newCounter = storedCounter + 1;
-      localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
-      return newCounter;
-    }
-    return null;
-  });
+  // Identify certified locations to ensure they always get real-time data
+  const isCertified = React.useMemo(() => 
+    Boolean(location.certification || location.isDarkSkyReserve || location.type === 'dark-site'),
+    [location]
+  );
   
-  // Determine if this is a certified location to properly handle SIQS scores
-  const isCertified = Boolean(location.certification || location.isDarkSkyReserve);
-  
-  const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
-    setRealTimeSiqs(siqs);
+  // Handle real-time SIQS calculation results - using memo to prevent re-renders
+  const handleSiqsCalculated = React.useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
     setLoadingSiqs(loading);
-  };
+    // Only update the score if we have a valid value or if we're setting it to null for loading state
+    if (siqs !== null || loading) {
+      setRealTimeSiqs(siqs);
+    }
+  }, []);
   
-  // Only skip non-certified locations with no SIQS data
-  if (realTimeSiqs === 0 && !loadingSiqs && !isCertified) {
-    return null;
-  }
+  // If we're showing a certified location, but have no real-time data yet,
+  // show the loading state until we have data
+  const showLoadingState = React.useMemo(() => {
+    return isCertified && realTimeSiqs === null;
+  }, [isCertified, realTimeSiqs]);
   
-  // Use real-time SIQS if available, otherwise use static SIQS
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs);
+  // Use real-time SIQS if available, otherwise fall back to static
+  const displaySiqs = React.useMemo(() => 
+    realTimeSiqs !== null ? realTimeSiqs : 
+    isCertified ? null : // For certified locations, don't use static scores
+    getSiqsScore(location.siqs),
+    [realTimeSiqs, location.siqs, isCertified]
+  );
   
-  // Skip non-certified locations with no SIQS score
-  if (displaySiqs === 0 && !loadingSiqs && !isCertified) {
+  // Skip rendering non-certified locations with no valid SIQS score
+  if (!isCertified && displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
@@ -149,11 +143,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           />
           
           <SiqsScoreBadge 
-            score={realTimeSiqs !== null ? realTimeSiqs : location.siqs}
+            score={displaySiqs}
             compact={true}
             isCertified={isCertified}
-            loading={loadingSiqs}
-            forceCertified={isCertified && !loadingSiqs && realTimeSiqs === null}
+            loading={loadingSiqs || showLoadingState}
+            forceCertified={isCertified && displaySiqs === null && !loadingSiqs}
           />
         </div>
         
@@ -203,7 +197,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           isDarkSkyReserve={location.isDarkSkyReserve}
           existingSiqs={location.siqs}
           onSiqsCalculated={handleSiqsCalculated}
-          forceUpdate={showRealTimeSiqs || isCertified}
+          forceUpdate={true} // Always force update to prevent flickering
         />
       </div>
     </VisibilityObserver>
