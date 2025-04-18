@@ -58,7 +58,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   
   // Get marker icon only when needed values change
   const icon = useMemo(() => 
-    getLocationMarker(siqsScore, isCertified, isHovered), 
+    getLocationMarker(siqsScore, isCertified, isHovered, false), 
   [siqsScore, isCertified, isHovered]);
   
   // Check if coordinates are valid

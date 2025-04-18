@@ -6,7 +6,7 @@
 export interface SiqsFactor {
   name: string;
   score: number;
-  description?: string;
+  description: string; // Make this required instead of optional
   nighttimeData?: {
     average: number;
     timeRange: string;
@@ -27,6 +27,10 @@ export interface SiqsResult {
       lightPollution?: boolean;
       terrainCorrected?: boolean;
       climate?: boolean;
+    };
+    reliability?: {  // Add reliability field to metadata
+      score: number;
+      issues?: string[];
     };
   };
   forecastData?: any;
@@ -60,3 +64,24 @@ export interface SiqsLocationInfo {
   moonPhase?: number;
 }
 
+// Add missing interfaces
+
+export interface MoonPhaseInfo {
+  phase: number;
+  name: string;
+  illumination: number;
+  isGoodForAstronomy: boolean;
+}
+
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  includeForecast?: boolean;
+}
+
+export interface MoonlessNightInfo {
+  date: Date;
+  startTime: Date;
+  endTime: Date;
+  durationHours: number;
+}
