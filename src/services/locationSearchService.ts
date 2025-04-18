@@ -1,11 +1,11 @@
-
 import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { generateRandomPoint } from './locationFilters';
+import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
 
 /**
  * Find locations within radius with improved caching and performance
@@ -37,6 +37,7 @@ export async function findLocationsWithinRadius(
 
 /**
  * Enhanced algorithm for finding calculated locations with parallel processing
+ * and improved accuracy using terrain analysis
  */
 export async function findCalculatedLocations(
   latitude: number,
@@ -53,28 +54,73 @@ export async function findCalculatedLocations(
     return cachedLocations;
   }
 
-  // Generate multiple points in parallel
-  const pointsToGenerate = Math.min(limit * 3, 30); // Generate more points than needed for better selection
-  const pointPromises = Array(pointsToGenerate).fill(null).map(() => 
-    generateCalculatedPoint(latitude, longitude, radius)
-  );
+  // Generate multiple points in parallel with improved distribution
+  const pointsToGenerate = Math.min(limit * 4, 40); // Generate more points for better selection
+  const pointPromises = Array(pointsToGenerate).fill(null).map(async () => {
+    const point = generateRandomPoint(latitude, longitude, radius);
+    
+    if (isWaterLocation(point.latitude, point.longitude)) {
+      return null;
+    }
+
+    // Get terrain-corrected Bortle scale for better accuracy
+    const correctedBortleScale = await getTerrainCorrectedBortleScale(
+      point.latitude,
+      point.longitude
+    );
+
+    try {
+      // Calculate SIQS with enhanced parameters
+      const siqsResult = await calculateRealTimeSiqs(
+        point.latitude,
+        point.longitude,
+        correctedBortleScale || 4
+      );
+
+      if (!siqsResult || siqsResult.siqs < 4) {
+        return null;
+      }
+
+      return {
+        id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: 'Calculated Location',
+        latitude: point.latitude,
+        longitude: point.longitude,
+        bortleScale: correctedBortleScale || 4,
+        siqs: siqsResult.siqs * 10,
+        isViable: true,
+        distance: point.distance,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.warn('Error calculating SIQS for point:', error);
+      return null;
+    }
+  });
 
   const generatedPoints = await Promise.all(pointPromises);
   const validPoints = generatedPoints.filter(Boolean) as SharedAstroSpot[];
 
   if (validPoints.length > 0) {
-    // Sort by quality and take the best ones
-    const sortedPoints = validPoints
-      .sort((a, b) => (b.siqs as number) - (a.siqs as number))
-      .slice(0, limit);
+    // Sort by quality and distance with improved weighting
+    const sortedPoints = validPoints.sort((a, b) => {
+      const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
+      const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
+      
+      // Weight SIQS more heavily than distance
+      const aQuality = aScore * 0.7 - (a.distance || 0) * 0.3;
+      const bQuality = bScore * 0.7 - (b.distance || 0) * 0.3;
+      
+      return bQuality - aQuality;
+    }).slice(0, limit);
 
     cacheLocations('calculated', latitude, longitude, radius, sortedPoints);
     return sortedPoints;
   }
 
-  // Try larger radius if needed
+  // Try larger radius if needed with gradual increase
   if (tryLargerRadius && radius < 10000) {
-    const newRadius = Math.min(radius * 2, 10000);
+    const newRadius = Math.min(radius * 1.5, 10000);
     return findCalculatedLocations(latitude, longitude, newRadius, false, limit);
   }
 
