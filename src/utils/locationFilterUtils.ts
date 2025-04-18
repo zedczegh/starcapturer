@@ -62,4 +62,3 @@ export const optimizeLocationsForMobile = (
 
   return [...certified, ...nonCertified];
 };
-

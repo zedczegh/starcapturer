@@ -1,130 +1,177 @@
 
-/**
- * Enhanced SIQS calculation caching system
- * Provides efficient storage and retrieval of SIQS data with automatic cleanup
- */
+// Cache management system for SIQS calculations
 
-// Cache implementation with Map for fast lookup
+// Create a cache with improved memory management and invalidation strategy
 const siqsCache = new Map<string, {
   siqs: number;
+  timestamp: number;
   isViable: boolean;
   factors?: any[];
-  metadata?: any;
-  timestamp: number;
+  metadata?: {
+    calculatedAt: string;
+    sources: {
+      weather: boolean;
+      forecast: boolean;
+      clearSky: boolean;
+      lightPollution: boolean;
+      terrainCorrected?: boolean;
+      climate?: boolean;
+    };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
+  };
 }>();
 
-// Helper function to generate cache key from coordinates
+// Optimized cache durations - shorter for daytime (when conditions change faster)
+const NIGHT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes at night (increased from 20)
+const DAY_CACHE_DURATION = 15 * 60 * 1000;  // 15 minutes during day (increased from 10)
+
+// Memory optimized location-key generator
 const getLocationKey = (latitude: number, longitude: number): string => {
-  // Round to 4 decimal places for consistent lookup (approx. 11 meters precision)
   return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
 };
 
-// Default cache duration in milliseconds (30 minutes)
-const DEFAULT_CACHE_DURATION = 30 * 60 * 1000;
-
-// Get cache duration with possible override from environment
-const getCacheDuration = (): number => {
-  const envDuration = process.env.SIQS_CACHE_DURATION;
-  return envDuration ? parseInt(envDuration, 10) : DEFAULT_CACHE_DURATION;
+/**
+ * Determine if it's nighttime for cache duration purposes
+ */
+export const isNighttime = () => {
+  const hour = new Date().getHours();
+  return hour >= 18 || hour < 8; // 6 PM to 8 AM
 };
 
 /**
- * Check if a location has cached SIQS data
+ * Get the appropriate cache duration based on time of day
+ */
+export const getCacheDuration = () => {
+  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+};
+
+/**
+ * Check if a cached entry exists and is valid
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
  */
 export const hasCachedSiqs = (latitude: number, longitude: number): boolean => {
-  const key = getLocationKey(latitude, longitude);
-  const cached = siqsCache.get(key);
+  const cacheKey = getLocationKey(latitude, longitude);
+  const cachedData = siqsCache.get(cacheKey);
   
-  if (!cached) return false;
-  
-  return (Date.now() - cached.timestamp) < getCacheDuration();
-};
-
-/**
- * Get cached SIQS data for a location
- */
-export const getCachedSiqs = (latitude: number, longitude: number) => {
-  const key = getLocationKey(latitude, longitude);
-  const cached = siqsCache.get(key);
-  
-  if (!cached || (Date.now() - cached.timestamp) > getCacheDuration()) {
-    return null;
+  if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
+    return true;
   }
   
-  return {
-    siqs: cached.siqs,
-    isViable: cached.isViable,
-    factors: cached.factors,
-    metadata: cached.metadata
-  };
+  return false;
 };
 
 /**
- * Store SIQS calculation results in cache
+ * Get a cached SIQS calculation
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
  */
-export const setSiqsCache = (latitude: number, longitude: number, data: any) => {
-  const key = getLocationKey(latitude, longitude);
+export const getCachedSiqs = (latitude: number, longitude: number) => {
+  const cacheKey = getLocationKey(latitude, longitude);
+  const cachedData = siqsCache.get(cacheKey);
   
-  siqsCache.set(key, {
+  if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
+    return {
+      siqs: cachedData.siqs,
+      isViable: cachedData.isViable,
+      factors: cachedData.factors,
+      metadata: cachedData.metadata
+    };
+  }
+  
+  return null;
+};
+
+/**
+ * Set a SIQS calculation in the cache
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @param data SIQS calculation data
+ */
+export const setSiqsCache = (
+  latitude: number,
+  longitude: number,
+  data: { 
+    siqs: number; 
+    isViable: boolean; 
+    factors?: any[];
+    metadata?: {
+      calculatedAt: string;
+      sources: {
+        weather: boolean;
+        forecast: boolean;
+        clearSky: boolean;
+        lightPollution: boolean;
+        terrainCorrected?: boolean;
+        climate?: boolean;
+      };
+    };
+  }
+) => {
+  const cacheKey = getLocationKey(latitude, longitude);
+  
+  siqsCache.set(cacheKey, {
     ...data,
     timestamp: Date.now()
   });
   
-  // Clean up old cache entries periodically
-  if (siqsCache.size > 100) { // Prevent cache from growing too large
-    const now = Date.now();
-    for (const [key, value] of siqsCache.entries()) {
-      if (now - value.timestamp > getCacheDuration() * 2) {
-        siqsCache.delete(key);
-      }
-    }
+  // Also store in sessionStorage for persistence between page loads
+  try {
+    sessionStorage.setItem(`siqs_${cacheKey}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.error("Failed to store SIQS in sessionStorage:", error);
   }
 };
 
 /**
- * Clear all SIQS cache entries
+ * Clear the entire SIQS cache
  */
-export const clearSiqsCache = (): void => {
+export const clearSiqsCache = (): number => {
+  const size = siqsCache.size;
   siqsCache.clear();
-  console.log("SIQS cache cleared");
+  return size;
 };
 
 /**
- * Clear SIQS cache for a specific location
+ * Clear specific location from the SIQS cache
  */
-export const clearLocationSiqsCache = (latitude: number, longitude: number): void => {
-  const key = getLocationKey(latitude, longitude);
-  
-  if (siqsCache.has(key)) {
-    siqsCache.delete(key);
-    console.log(`SIQS cache cleared for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-    return;
+export const clearLocationSiqsCache = (latitude: number, longitude: number): boolean => {
+  const cacheKey = getLocationKey(latitude, longitude);
+  if (siqsCache.has(cacheKey)) {
+    siqsCache.delete(cacheKey);
+    return true;
   }
-  
-  console.log(`No cached SIQS found for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  return false;
 };
 
 /**
- * Get the current size of the SIQS cache
- */
-export const getSiqsCacheSize = (): number => {
-  return siqsCache.size;
-};
-
-/**
- * Clean up expired cache entries
- * @returns Number of entries removed
+ * Clean up expired cache entries to free memory
  */
 export const cleanupExpiredCache = (): number => {
   const now = Date.now();
   let expiredCount = 0;
   
-  for (const [key, value] of siqsCache.entries()) {
-    if (now - value.timestamp > getCacheDuration()) {
+  for (const [key, data] of siqsCache.entries()) {
+    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+    
+    if (now - data.timestamp > cacheDuration) {
       siqsCache.delete(key);
       expiredCount++;
     }
   }
   
   return expiredCount;
+};
+
+/**
+ * Get the current SIQS cache size
+ */
+export const getSiqsCacheSize = (): number => {
+  return siqsCache.size;
 };
