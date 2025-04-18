@@ -1,15 +1,13 @@
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
 
 interface MapClickHandlerProps {
   onClick: (lat: number, lng: number) => void;
 }
 
 /**
- * Component to handle map click events
- * This component doesn't render anything but adds click event handling to the map
+ * Component that handles map click events and passes coordinates to the onClick callback
  */
 const MapClickHandler: React.FC<MapClickHandlerProps> = ({ onClick }) => {
   const map = useMap();
@@ -17,17 +15,20 @@ const MapClickHandler: React.FC<MapClickHandlerProps> = ({ onClick }) => {
   useEffect(() => {
     if (!map) return;
     
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onClick(e.latlng.lat, e.latlng.lng);
+    // Add click handler
+    const handleMapClick = (e: any) => {
+      const { lat, lng } = e.latlng;
+      onClick(lat, lng);
     };
     
-    map.on('click', handleClick);
+    map.on('click', handleMapClick);
     
+    // Clean up when component unmounts
     return () => {
-      map.off('click', handleClick);
+      map.off('click', handleMapClick);
     };
   }, [map, onClick]);
-
+  
   return null;
 };
 

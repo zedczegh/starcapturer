@@ -1,8 +1,7 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
-import { batchCalculateSiqs } from "./realTimeSiqsService";
+import { batchCalculateSiqs } from "./realTimeSiqs/batchProcessor";
 import { clearSiqsCache } from "./realTimeSiqs/siqsCache";
 import { isSiqsGreaterThan, getSiqsScore } from "@/utils/siqsHelpers";
 

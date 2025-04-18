@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatSiqsScore, getSiqsScore } from "@/utils/siqsHelpers";
+import { formatSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
@@ -66,6 +67,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     const locationId = getLocationId();
     if (!locationId) return;
     
+    // Ensure Chinese name is properly included in the navigation state
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
@@ -85,11 +87,10 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
+  // Determine the name to display based on language preference
   const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
   const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
   
-  const scoreValue = getSiqsScore(point.siqs);
-
   return (
     <div 
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
@@ -102,7 +103,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSiqsScore(scoreValue)}</span>
+          <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
         </div>
       </div>
       
@@ -115,6 +116,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
+      {/* Show secondary name if available */}
       {secondaryName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
@@ -124,6 +126,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
+      {/* Only show nearest town if we don't have both names */}
       {!secondaryName && nearestTownInfo && nearestTownInfo.detailedName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />

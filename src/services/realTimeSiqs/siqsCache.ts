@@ -1,4 +1,3 @@
-
 // Cache management system for SIQS calculations
 
 // Create a cache to avoid redundant API calls with improved invalidation strategy
