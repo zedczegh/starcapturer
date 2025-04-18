@@ -16,6 +16,11 @@ export async function validateLocationWithReverseGeocoding(
   location: SharedAstroSpot,
   language: 'en' | 'zh' = 'en'
 ): Promise<boolean> {
+  // Skip validation for certified locations - they're always valid
+  if (location.isDarkSkyReserve || location.certification) {
+    return true;
+  }
+
   const cacheKey = `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`;
   
   // Check cache first for faster response

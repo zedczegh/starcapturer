@@ -60,12 +60,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   // Add persistent storage for locations
   useEffect(() => {
-    if (locations.length > 0) {
+    if (locations && locations.length > 0) {
       try {
         // Store ALL locations in session storage for persistence
         const storageKey = activeView === 'certified' ? 
           'persistent_certified_locations' : 
           'persistent_calculated_locations';
+        
+        // Load existing locations first to avoid overwriting 
+        const existingData = sessionStorage.getItem(storageKey);
         
         // Only store the most important fields to reduce storage size
         const simplifiedLocations = locations.map(loc => ({
@@ -79,8 +82,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           distance: loc.distance
         }));
         
-        // Load existing locations first to avoid overwriting 
-        const existingData = sessionStorage.getItem(storageKey);
         let combinedLocations = simplifiedLocations;
         
         if (existingData) {
@@ -91,12 +92,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
             const locationMap = new Map();
             
             // Add existing locations first
-            existingLocations.forEach(loc => {
-              if (loc && loc.latitude && loc.longitude) {
-                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                locationMap.set(key, loc);
-              }
-            });
+            if (Array.isArray(existingLocations)) {
+              existingLocations.forEach(loc => {
+                if (loc && loc.latitude && loc.longitude) {
+                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                  locationMap.set(key, loc);
+                }
+              });
+            }
             
             // Add new locations, overwriting existing ones if they have the same coordinates
             simplifiedLocations.forEach(loc => {
@@ -113,6 +116,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           }
         }
         
+        // Store the merged locations
         sessionStorage.setItem(storageKey, JSON.stringify(combinedLocations));
         console.log(`Stored ${combinedLocations.length} ${activeView} locations to session storage`);
       } catch (err) {
