@@ -68,7 +68,7 @@ export const getTimeZoneOffsetHours = (latitude: number, longitude: number): str
 };
 
 /**
- * Get a formatted date and time string for a specific timezone
+ * Format a date for a specific timezone
  * @param date Date to format
  * @param latitude Location latitude
  * @param longitude Location longitude

@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { getLocationDateTime, getTimeZoneOffsetHours } from '@/utils/timeZoneUtils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Clock } from 'lucide-react';
+import { getLocationDateTime } from '@/utils/timeZoneUtils';
 
 interface LocationTimeDisplayProps {
   latitude: number;
@@ -15,50 +15,58 @@ const LocationTimeDisplay: React.FC<LocationTimeDisplayProps> = ({
   longitude,
   className = ''
 }) => {
-  const { t } = useLanguage();
-  const [currentTime, setCurrentTime] = useState<string>('');
-  const [timeZoneInfo, setTimeZoneInfo] = useState<string>('');
+  const { t, language } = useLanguage();
+  const [currentTime, setCurrentTime] = useState('');
+  const [timeZone, setTimeZone] = useState('');
   
-  // Update the time every second
-  useEffect(() => {
-    if (!latitude || !longitude) return;
-    
-    // Initialize time
-    updateTime();
-    
-    // Set up interval to update time
-    const intervalId = setInterval(updateTime, 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [latitude, longitude]);
-  
+  // Function to format the local time based on location
   const updateTime = () => {
     try {
-      // Get current time at location
-      const timeString = getLocationDateTime(latitude, longitude, 'HH:mm:ss');
-      const dateString = getLocationDateTime(latitude, longitude, 'yyyy-MM-dd');
-      const offset = getTimeZoneOffsetHours(latitude, longitude);
+      if (!latitude || !longitude) return;
       
-      setCurrentTime(`${timeString}`);
-      setTimeZoneInfo(`${dateString} (UTC${offset})`);
+      // Get formatted time for the location
+      const timeFormat = language === 'zh' ? 'HH:mm:ss' : 'h:mm:ss a';
+      const dateFormat = language === 'zh' ? 'yyyy年MM月dd日' : 'MMM d, yyyy';
+      
+      const time = getLocationDateTime(latitude, longitude, timeFormat);
+      const date = getLocationDateTime(latitude, longitude, dateFormat);
+      
+      setCurrentTime(`${time} - ${date}`);
+      
+      // Calculate timezone offset
+      const now = new Date();
+      const localOffset = now.getTimezoneOffset();
+      
+      // Try to approximate the timezone from coordinates
+      const hourOffset = Math.round(longitude / 15);
+      const tzString = `UTC${hourOffset >= 0 ? '+' : ''}${hourOffset}`;
+      
+      setTimeZone(tzString);
     } catch (error) {
-      console.error("Error updating location time:", error);
-      // Provide fallback values
-      setCurrentTime('--:--:--');
-      setTimeZoneInfo('----/--/-- (UTC)');
+      console.error('Error updating time:', error);
+      setCurrentTime(new Date().toLocaleTimeString());
     }
   };
+
+  useEffect(() => {
+    if (latitude && longitude) {
+      updateTime();
+      // Update every second
+      const interval = setInterval(updateTime, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [latitude, longitude, language]);
   
   if (!latitude || !longitude) {
     return null;
   }
-  
+
   return (
-    <div className={`flex items-center gap-2 text-sm ${className}`}>
-      <Clock className="h-4 w-4 text-muted-foreground" />
+    <div className={`text-cosmic-200 text-sm flex items-center ${className}`}>
+      <Clock className="h-4 w-4 mr-1.5" />
       <div>
-        <div className="font-mono text-lg tracking-wider">{currentTime}</div>
-        <div className="text-xs text-muted-foreground">{timeZoneInfo}</div>
+        <div className="font-medium text-cosmic-50">{currentTime}</div>
+        <div className="text-xs opacity-70">{t("Local Time", "当地时间")} ({timeZone})</div>
       </div>
     </div>
   );
