@@ -65,9 +65,9 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
             <SiqsScoreBadge 
               score={siqsScore} 
               compact={true} 
-              loading={siqsLoading}
+              loading={siqsLoading || (isCertified && !siqsScore)}
               isCertified={isCertified}
-              forceCertified={isCertified} // Always show badge for certified locations
+              forceCertified={false} // Never force default scores
             />
           </div>
           

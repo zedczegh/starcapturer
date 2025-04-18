@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -50,6 +49,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   useEffect(() => {
     if (isCertified) {
       setForceUpdate(true);
+      setSiqsLoading(true); // Ensure loading state is shown until we get real data
       const timer = setTimeout(() => setForceUpdate(false), 100);
       return () => clearTimeout(timer);
     }
@@ -68,6 +68,14 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     setSiqsLoading(loading);
     if (confidence) {
       setSiqsConfidence(confidence);
+    }
+    
+    // If this is a certified location and we got no score, keep loading state active
+    if (isCertified && (siqs === null || siqs <= 0) && !loading) {
+      setSiqsLoading(true);
+      // Try again after a delay
+      setTimeout(() => setForceUpdate(true), 2000);
+      setTimeout(() => setForceUpdate(false), 2100);
     }
   }, [locationId, isCertified]);
   

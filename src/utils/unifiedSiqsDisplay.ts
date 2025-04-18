@@ -1,4 +1,3 @@
-
 /**
  * Unified SIQS Display Utility
  * 
@@ -11,7 +10,7 @@ import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
 
-// Constants for default SIQS values - but we won't use these for certified locations anymore
+// We don't use default SIQS values for certified locations anymore
 export const DEFAULT_SIQS = 0;
 
 interface SiqsDisplayOptions {
@@ -41,7 +40,7 @@ export function getDisplaySiqs(options: {
   isCertified: boolean;
   isDarkSkyReserve: boolean;
 }): number {
-  const { realTimeSiqs, staticSiqs } = options;
+  const { realTimeSiqs, staticSiqs, isCertified } = options;
   
   // Use realtime SIQS if available
   if (realTimeSiqs !== null && realTimeSiqs > 0) {
@@ -53,8 +52,12 @@ export function getDisplaySiqs(options: {
     return staticSiqs;
   }
   
-  // No default scores for certified locations anymore
-  return 0;
+  // No default scores for certified locations
+  if (isCertified) {
+    return 0; // Return 0 for certified locations if no real data
+  }
+  
+  return DEFAULT_SIQS; // Only use default for non-certified locations
 }
 
 /**
@@ -146,7 +149,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
   const staticSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : 0;
                       
   const defaultResult: SiqsResult = {
-    siqs: staticSiqs,
+    siqs: isCertified ? 0 : staticSiqs, // Never use default for certified
     loading: false,
     formattedSiqs: formatSiqsForDisplay(staticSiqs > 0 ? staticSiqs : null),
     colorClass: getSiqsColorClass(staticSiqs),
@@ -213,7 +216,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
           
           const simplifiedScore = calculateSimplifiedSiqs(cloudCover, bortleScale);
           
-          // Cache result using simplified method - fixed to match expected metadata format
+          // Cache result using simplified method - use proper metadata format
           setSiqsCache(latitude, longitude, {
             siqs: simplifiedScore,
             isViable: simplifiedScore > 3,
@@ -250,7 +253,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     if (isCertified) {
       return {
         siqs: 0,
-        loading: false,
+        loading: true, // Always show loading for certified locations with no data
         formattedSiqs: "N/A",
         colorClass: "text-muted-foreground",
         source: 'default'
@@ -260,7 +263,18 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     return defaultResult;
   } catch (error) {
     console.error("Error getting SIQS display data:", error);
+    
+    // For certified locations with errors, show loading instead of default
+    if (isCertified) {
+      return {
+        siqs: 0,
+        loading: true,
+        formattedSiqs: "N/A",
+        colorClass: "text-muted-foreground",
+        source: 'default'
+      };
+    }
+    
     return defaultResult;
   }
 }
-
