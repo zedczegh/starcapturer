@@ -1,4 +1,3 @@
-
 import React, { useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -161,7 +160,9 @@ const LocationMarker = memo(({
         {isOpen && (
           <Popup 
             offset={[0, -5]}
-            onClose={handlePopupClose}
+            eventHandlers={{ 
+              remove: handlePopupClose 
+            }}
           >
             <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
               <div className="font-medium text-sm mb-1.5 flex items-center">
