@@ -4,6 +4,7 @@ import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
 import { detectAndFixAnomalies, assessDataReliability } from '@/services/realTimeSiqs/siqsAnomalyDetector';
+import { WeatherDataWithClearSky } from '@/services/realTimeSiqs/siqsTypes';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -59,15 +60,26 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
             const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
             
             if (result && result.siqs > 0) {
+              // Get weather data from result or fallback to empty object
+              const weatherData = result.weatherData || { 
+                cloudCover: 0, 
+                precipitation: 0,
+                latitude, 
+                longitude,
+                temperature: 0,
+                humidity: 0,
+                windSpeed: 0
+              } as WeatherDataWithClearSky;
+              
               // Apply anomaly detection and correction
               const correctedResult = detectAndFixAnomalies(
                 result,
-                { ...result.weatherData, latitude, longitude },
+                weatherData,
                 { latitude, longitude }
               );
               
               // Assess data reliability
-              const reliability = assessDataReliability(result.weatherData, result.forecastData);
+              const reliability = assessDataReliability(weatherData, result.forecastData);
               
               if (reliability.reliable) {
                 console.log(`Calculated SIQS (corrected): ${correctedResult.siqs}`);

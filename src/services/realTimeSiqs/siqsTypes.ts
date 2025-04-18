@@ -3,6 +3,8 @@
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
+  weatherData?: WeatherDataWithClearSky;
+  forecastData?: any;
   factors?: {
     name: string;
     score: number;

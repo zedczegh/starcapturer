@@ -1,11 +1,23 @@
 
 // Cache management system for SIQS calculations
+import { 
+  getCacheDuration, 
+  getLocationKey, 
+  isNighttime,
+  AUTO_CLEANUP_INTERVAL 
+} from './cacheConfig';
+import { 
+  saveToSessionStorage, 
+  loadFromSessionStorage 
+} from './cacheStorage';
 
 // Create a cache to avoid redundant API calls with improved invalidation strategy
 const siqsCache = new Map<string, {
   siqs: number;
   timestamp: number;
   isViable: boolean;
+  weatherData?: any;
+  forecastData?: any;
   factors?: any[];
   metadata?: {
     calculatedAt: string;
@@ -24,11 +36,6 @@ const siqsCache = new Map<string, {
   };
 }>();
 
-// Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
-const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
-const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
-const AUTO_CLEANUP_INTERVAL = 5 * 60 * 1000; // Automatic cleanup every 5 minutes
-
 // Register automatic cache cleanup
 let cleanupTimer: number | null = null;
 if (typeof window !== 'undefined') {
@@ -39,30 +46,6 @@ if (typeof window !== 'undefined') {
     }
   }, AUTO_CLEANUP_INTERVAL);
 }
-
-/**
- * Determine if it's nighttime for cache duration purposes
- */
-export const isNighttime = () => {
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 8; // 6 PM to 8 AM
-};
-
-/**
- * Get the appropriate cache duration based on time of day
- */
-export const getCacheDuration = () => {
-  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
-};
-
-/**
- * Generate a consistent cache key for a location
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- */
-export const getLocationKey = (latitude: number, longitude: number): string => {
-  return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-};
 
 /**
  * Check if a cached entry exists and is valid
@@ -93,6 +76,8 @@ export const getCachedSiqs = (latitude: number, longitude: number) => {
     return {
       siqs: cachedData.siqs,
       isViable: cachedData.isViable,
+      weatherData: cachedData.weatherData,
+      forecastData: cachedData.forecastData,
       factors: cachedData.factors,
       metadata: cachedData.metadata
     };
@@ -112,7 +97,9 @@ export const setSiqsCache = (
   longitude: number,
   data: { 
     siqs: number; 
-    isViable: boolean; 
+    isViable: boolean;
+    weatherData?: any;
+    forecastData?: any;
     factors?: any[];
     metadata?: {
       calculatedAt: string;
@@ -139,14 +126,7 @@ export const setSiqsCache = (
   });
   
   // Also store in sessionStorage for persistence between page loads
-  try {
-    sessionStorage.setItem(`siqs_${cacheKey}`, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-  } catch (error) {
-    console.error("Failed to store SIQS in sessionStorage:", error);
-  }
+  saveToSessionStorage(cacheKey, data, Date.now());
 };
 
 /**
@@ -178,7 +158,7 @@ export const cleanupExpiredCache = (): number => {
   let expiredCount = 0;
   
   for (const [key, data] of siqsCache.entries()) {
-    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+    const cacheDuration = isNighttime() ? getCacheDuration() : getCacheDuration();
     
     if (now - data.timestamp > cacheDuration) {
       siqsCache.delete(key);

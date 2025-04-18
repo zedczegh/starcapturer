@@ -157,6 +157,8 @@ export async function calculateRealTimeSiqs(
     const result: SiqsResult = {
       siqs: finalScore,
       isViable: finalScore >= 3.0,
+      weatherData: weatherDataWithClearSky,
+      forecastData,
       factors: siqsResult.factors,
       metadata: {
         calculatedAt: new Date().toISOString(),
