@@ -1,4 +1,3 @@
-
 import { WeatherDataWithClearSky } from './siqsTypes';
 
 /**
@@ -30,8 +29,37 @@ export function applyIntelligentAdjustments(
     score *= clearSkyFactor;
   }
   
-  // Enhanced cloud cover adjustments with time-of-day awareness
-  if (typeof weatherData.cloudCover === 'number') {
+  // Enhanced cloud cover adjustments with priority for nighttime data
+  if (weatherData.nighttimeCloudData && typeof weatherData.nighttimeCloudData.average === 'number') {
+    const nighttimeCloudCover = weatherData.nighttimeCloudData.average;
+    
+    // Astronomical nighttime cloud cover is the most important factor
+    // Apply stronger adjustments based on nighttime cloud cover
+    
+    if (nighttimeCloudCover < 5) {
+      // Nearly clear nighttime skies get a significant boost
+      score *= 1.3;
+      console.log(`Applying exceptional clear nighttime skies bonus: 30%`);
+    } else if (nighttimeCloudCover < 15) {
+      // Very good nighttime conditions
+      score *= 1.2;
+      console.log(`Applying very good nighttime conditions bonus: 20%`);
+    } else if (nighttimeCloudCover < 30) {
+      // Good nighttime conditions
+      score *= 1.1;
+      console.log(`Applying good nighttime conditions bonus: 10%`);
+    } else if (nighttimeCloudCover > 70) {
+      // Very cloudy nighttime skies get a severe penalty
+      score *= 0.5;
+      console.log(`Applying heavy nighttime cloud penalty: 50%`);
+    } else if (nighttimeCloudCover > 40) {
+      // Moderately cloudy nighttime skies
+      score *= 0.7;
+      console.log(`Applying moderate nighttime cloud penalty: 30%`);
+    }
+  }
+  // If nighttime data isn't available, use regular cloud cover
+  else if (typeof weatherData.cloudCover === 'number') {
     const cloudCover = weatherData.cloudCover;
     const hour = new Date().getHours();
     const isNighttime = hour >= 18 || hour < 6;
@@ -47,7 +75,7 @@ export function applyIntelligentAdjustments(
     } else if (cloudCover > 50) {
       // Moderate cloud penalty
       score *= 0.85;
-      console.log("Applying moderate cloud penalty: 15%");
+      console.log(`Applying moderate cloud penalty: 15%`);
     }
   }
   
@@ -149,6 +177,35 @@ export function applyIntelligentAdjustments(
   if (clearSkyData && clearSkyData.isDarkSkyReserve) {
     score *= 1.1; // 10% bonus for officially certified dark sky locations
     console.log("Applied certified dark sky location bonus: 10%");
+  }
+  
+  // Apply a final floor threshold based on nighttime cloud cover
+  // This ensures locations with excellent nighttime conditions can't have too low SIQS
+  if (weatherData.nighttimeCloudData && typeof weatherData.nighttimeCloudData.average === 'number') {
+    const nighttimeCloudCover = weatherData.nighttimeCloudData.average;
+    
+    // Calculate minimum allowed SIQS based on nighttime cloud cover
+    // This creates a floor that ensures good nighttime conditions always have decent scores
+    let minScore = 0;
+    
+    if (nighttimeCloudCover <= 10) {
+      // Floor of 7.0 for excellent nighttime conditions
+      minScore = 7.0;
+    } else if (nighttimeCloudCover <= 20) {
+      // Floor of 6.0 for very good nighttime conditions
+      minScore = 6.0;
+    } else if (nighttimeCloudCover <= 30) {
+      // Floor of 5.0 for good nighttime conditions
+      minScore = 5.0;
+    } else if (nighttimeCloudCover <= 40) {
+      // Floor of 4.0 for moderate nighttime conditions
+      minScore = 4.0;
+    }
+    
+    if (score < minScore) {
+      console.log(`Applying nighttime cloud cover floor: ${score.toFixed(1)} -> ${minScore.toFixed(1)}`);
+      score = minScore;
+    }
   }
   
   return score;

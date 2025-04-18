@@ -7,7 +7,11 @@
  */
 
 import { SiqsResult, WeatherDataWithClearSky } from './siqsTypes';
-import { correctPhysicalImpossibilities, ensureTemporalConsistency } from './siqsCorrections';
+import { 
+  correctPhysicalImpossibilities, 
+  ensureTemporalConsistency,
+  prioritizeNighttimeCloudCover
+} from './siqsCorrections';
 import { assessDataReliability } from './siqsReliability';
 
 /**
@@ -23,7 +27,10 @@ export function detectAndFixAnomalies(
   }
 
   const { latitude, longitude } = location;
-  const correctedSiqs = correctPhysicalImpossibilities(siqs, weatherData);
+  
+  // Enhanced processing pipeline with nighttime prioritization
+  const nighttimeAdjustedSiqs = prioritizeNighttimeCloudCover(siqs, weatherData);
+  const correctedSiqs = correctPhysicalImpossibilities(nighttimeAdjustedSiqs, weatherData);
   const temporallyConsistentSiqs = ensureTemporalConsistency(correctedSiqs, latitude, longitude);
   
   return temporallyConsistentSiqs;
