@@ -4,10 +4,11 @@ import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
-import { LocationMarker, UserLocationMarker } from './MarkerComponents';
+import { LocationMarker } from './MarkerComponents';
+import { UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
-import MapController, { MapControllerProps } from './MapController';
+import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
@@ -220,7 +221,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           effects={['zoom-controls']}
         />
         
-        <MapEvents onMapClick={stableOnMapClick} />
+        {onMapClick && (
+          <MapController 
+            userLocation={userLocation} 
+            searchRadius={searchRadius} 
+            onMapClick={stableOnMapClick}
+          />
+        )}
         
         {userLocation && (
           <UserLocationMarker 
@@ -245,7 +252,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
               onHover={onMarkerHover || (() => {})}
               locationId={locationId}
               isCertified={isCertified}
-              isMobile={isMobile}
+              isMobile={Boolean(isMobile)}
               handleTouchStart={handleTouchStart}
               handleTouchEnd={handleTouchEnd}
               handleTouchMove={handleTouchMove}
@@ -256,11 +263,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         {useMobileMapFixer && isMobile && <MobileMapFixer />}
         
         <MapLegend activeView={activeView} />
-        <MapController 
-          userLocation={userLocation} 
-          searchRadius={searchRadius} 
-          onMapClick={stableOnMapClick}
-        />
       </MapContainer>
     </div>
   );

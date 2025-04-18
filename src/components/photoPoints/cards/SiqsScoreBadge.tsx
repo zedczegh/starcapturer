@@ -3,15 +3,15 @@ import React from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { motion } from 'framer-motion';
-import { formatMapSiqs } from '@/utils/mapSiqsDisplay';
+import { formatSiqsForDisplay } from '@/utils/unifiedSiqsDisplay';
 
 interface SiqsScoreBadgeProps {
   score: number | string | { score: number; isViable: boolean } | any;
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
-  forceCertified?: boolean; // Added this prop to support forcing certified status
-  confidenceScore?: number; // Added confidence score for display
+  forceCertified?: boolean;
+  confidenceScore?: number;
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
@@ -31,7 +31,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   }
   
   // For certified locations with no score or when forceCertified is true, provide a default good score
-  const displayScore = numericScore > 0 ? formatMapSiqs(numericScore) : "6.5";
+  const displayScore = numericScore > 0 ? formatSiqsForDisplay(numericScore) : "6.5";
   
   // Get appropriate color based on score value
   const getColor = () => {

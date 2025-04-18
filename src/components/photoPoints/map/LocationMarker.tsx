@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,6 +9,7 @@ import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass, getLocationMarker } from './MarkerUtils';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import MarkerEventHandler from './MarkerEventHandler';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -69,7 +71,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   
   // Get an appropriate marker icon
   const icon = useMemo(() => {
-    return getLocationMarker(location, isCertified, isHovered, isMobile);
+    return getLocationMarker(location, isCertified, isHovered, Boolean(isMobile));
   }, [location, isCertified, isHovered, isMobile]);
   
   // Real-time SIQS handling
@@ -118,6 +120,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     return null;
   }
   
+  // Always fetch real-time SIQS for any displayed location
+  const shouldShowRealTimeSiqs = true;
+  
   return (
     <>
       <RealTimeSiqsProvider
@@ -134,15 +139,19 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
       <Marker
         position={[location.latitude, location.longitude]}
         icon={icon}
-        eventHandlers={{
-          click: handleClick,
-          mouseover: handleMouseOver,
-          mouseout: handleMouseOut,
-          touchstart: handleMarkerTouchStart,
-          touchend: handleMarkerTouchEnd,
-          touchmove: handleMarkerTouchMove
-        }}
+        onClick={handleClick}
       >
+        <MarkerEventHandler 
+          marker={null}
+          eventMap={{
+            mouseover: handleMouseOver,
+            mouseout: handleMouseOut,
+            touchstart: handleMarkerTouchStart,
+            touchend: handleMarkerTouchEnd,
+            touchmove: handleMarkerTouchMove
+          }}
+        />
+        
         <Popup 
           closeOnClick={false}
           autoClose={false}

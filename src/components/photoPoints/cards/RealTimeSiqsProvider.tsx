@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getMapDisplaySiqs } from '@/utils/mapSiqsDisplay';
+import { getCompleteSiqsDisplay, getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface RealTimeSiqsProviderProps {
@@ -40,7 +40,8 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       setLoading(true);
       onSiqsCalculated(null, true);
       
-      const result = await getMapDisplaySiqs({
+      // Use our unified SIQS display function
+      const result = await getCompleteSiqsDisplay({
         latitude,
         longitude,
         bortleScale,
@@ -49,12 +50,21 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         existingSiqs: existingSiqsNumber
       });
       
-      onSiqsCalculated(result.siqs, false, result.confidence);
+      onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
       setLastFetchTimestamp(Date.now());
       
     } catch (error) {
       console.error("Error in RealTimeSiqsProvider:", error);
-      onSiqsCalculated(existingSiqsNumber > 0 ? existingSiqsNumber : null, false);
+      
+      // Fallback to default SIQS display
+      const defaultSiqs = getDisplaySiqs({
+        realTimeSiqs: null,
+        staticSiqs: existingSiqsNumber,
+        isCertified,
+        isDarkSkyReserve
+      });
+      
+      onSiqsCalculated(defaultSiqs, false);
     } finally {
       setLoading(false);
     }

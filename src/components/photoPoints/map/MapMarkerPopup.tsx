@@ -9,7 +9,7 @@ import { useDisplayName } from '../cards/DisplayNameResolver';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
-import { formatMapSiqs, getSiqsColorClass } from '@/utils/mapSiqsDisplay';
+import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -47,13 +47,14 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
-  // Use the real-time SIQS if available, otherwise fall back to the location's static SIQS
+  // Use our unified display SIQS function
   const staticSiqs = getSiqsScore(location);
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : 
-                      staticSiqs > 0 ? staticSiqs : 
-                      (isCertified ? 6.5 : 0);
-  
-  const siqsColorClass = getSiqsColorClass(displaySiqs);
+  const displaySiqs = getDisplaySiqs({
+    realTimeSiqs,
+    staticSiqs,
+    isCertified,
+    isDarkSkyReserve: Boolean(location.isDarkSkyReserve)
+  });
   
   const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
     setRealTimeSiqs(siqs);

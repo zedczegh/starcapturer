@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useMapEvents } from 'react-leaflet';
+import { useMap } from 'react-leaflet';
 
 export interface MapControllerProps {
   userLocation?: { latitude: number; longitude: number } | null;
@@ -13,14 +13,24 @@ const MapController: React.FC<MapControllerProps> = ({
   searchRadius,
   onMapClick
 }) => {
+  const map = useMap();
+  
   // Handle map click events
-  useMapEvents({
-    click: (e) => {
+  React.useEffect(() => {
+    if (!map || !onMapClick) return;
+    
+    const handleClick = (e: any) => {
       if (onMapClick) {
         onMapClick(e.latlng.lat, e.latlng.lng);
       }
-    }
-  });
+    };
+    
+    map.on('click', handleClick);
+    
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onMapClick]);
 
   return null; // This is a headless component
 };

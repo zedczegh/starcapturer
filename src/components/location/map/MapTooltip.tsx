@@ -7,6 +7,7 @@ import { Language } from '@/services/geocoding/types';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
+import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
 interface MapTooltipProps {
   name: string;
@@ -51,10 +52,13 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Get SIQS score using helper function
   const initialSiqsScore = getSiqsScore(siqs);
   
-  // Use real-time SIQS if available, otherwise fall back to the initial SIQS
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : 
-                      initialSiqsScore > 0 ? initialSiqsScore : 
-                      (isCertified ? 6.5 : 0);
+  // Use unified SIQS display function
+  const displaySiqs = getDisplaySiqs({
+    realTimeSiqs,
+    staticSiqs: initialSiqsScore,
+    isCertified,
+    isDarkSkyReserve
+  });
   
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
@@ -83,7 +87,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
           </div>
         )}
 
-        {/* Display SIQS score for all locations */}
+        {/* Always display SIQS score */}
         <div className="mt-1.5 flex items-center">
           <SiqsScoreBadge 
             score={displaySiqs} 
