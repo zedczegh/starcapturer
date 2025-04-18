@@ -1,67 +1,45 @@
 
+// Define types for SIQS calculation
 export interface SiqsResult {
-  score: number;
+  siqs: number;
   isViable: boolean;
-  siqsResult?: {
-    score: number;
-    isViable: boolean;
-    factors?: Array<{
-      name: string;
-      score: number;
-      description: string;
-    }>;
-  };
-  // Adding back essential properties used by other components
-  siqs?: number; // For compatibility with existing code
-  factors?: Array<{
+  factors?: {
     name: string;
     score: number;
     description: string;
-  }>;
+  }[];
   metadata?: {
-    calculatedAt?: string;
-    sources?: {
+    calculatedAt: string;
+    sources: {
       weather: boolean;
       forecast: boolean;
       clearSky: boolean;
       lightPollution: boolean;
     };
     reliability?: {
-      confidenceScore: number;
+      score: number;
       issues: string[];
     };
   };
 }
 
-// Adding back needed types for other components
 export interface WeatherDataWithClearSky {
   temperature: number;
   humidity: number;
   cloudCover: number;
-  visibility: number;
   windSpeed: number;
-  moonPhase: number;
-  clearSkyRate: number;
-  rain?: number;
-  snow?: number;
-  precipitation?: number;
+  precipitation: number;
+  clearSkyRate?: number;
+  latitude: number;
+  longitude: number;
   time?: string;
-  latitude?: number;
-  longitude?: number;
+  condition?: string;
+  aqi?: number;
   _forecast?: any;
-  weatherCondition?: string;
-}
-
-export interface MoonPhaseInfo {
-  phase: number;
-  illumination: number;
-  name: string;
-  isNewMoon: boolean;
-  isFullMoon: boolean;
 }
 
 export interface MoonlessNightInfo {
-  duration: number;
+  duration: number; // in hours
   startTime: string;
   endTime: string;
   moonrise: Date | string;
@@ -73,8 +51,18 @@ export interface MoonlessNightInfo {
   astronomicalNightDuration: number;
 }
 
+export interface MoonPhaseInfo {
+  phase: number; // 0-1 normalized value
+  name: string;
+  illumination: number; // percentage 0-100
+  isGoodForAstronomy: boolean;
+}
+
+// Add SiqsCalculationOptions interface
 export interface SiqsCalculationOptions {
   anomalyDetection?: boolean;
   includeMetadata?: boolean;
-  cacheDuration?: number;
+  includeForecast?: boolean;
+  reliability?: boolean;
+  adjustForLatitude?: boolean;
 }

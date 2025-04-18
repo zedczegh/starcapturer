@@ -1,59 +1,70 @@
 
+/**
+ * Batch processing utilities for SIQS calculations
+ */
 import { calculateRealTimeSiqs } from './siqsCalculator';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { SiqsResult } from './siqsTypes';
-
-// Constants for batch processing
-const DEFAULT_CONCURRENCY = 3;
-const BATCH_DELAY_MS = 1000;
 
 /**
- * Process a batch of locations for SIQS calculation
- * 
- * @param batch Array of locations to process
- * @returns Promise that resolves when the batch is complete
- */
-async function processBatch(
-  batch: Array<{ latitude: number; longitude: number; bortleScale?: number }>,
-): Promise<SiqsResult[]> {
-  const batchPromises = batch.map(loc => 
-    calculateRealTimeSiqs(
-      loc.latitude, 
-      loc.longitude, 
-      loc.bortleScale || 5
-    ).catch(err => {
-      console.error(`Error calculating SIQS for location ${loc.latitude},${loc.longitude}:`, err);
-      return { score: 0, isViable: false } as SiqsResult;
-    })
-  );
-  
-  return await Promise.all(batchPromises);
-}
-
-/**
- * Calculate SIQS for multiple locations in batches
+ * Calculate SIQS for multiple locations in a batch
+ * Uses efficient parallelization while respecting rate limits
  * 
  * @param locations Array of locations to calculate SIQS for
- * @param concurrency Number of concurrent calculations
- * @returns Promise resolving to SIQS results
+ * @param bortleScale Optional default Bortle scale for locations without one
+ * @returns Promise resolving to array of locations with SIQS values
  */
 export async function batchCalculateSiqs(
-  locations: Array<{ latitude: number; longitude: number; bortleScale?: number }>,
-  concurrency: number = DEFAULT_CONCURRENCY
-): Promise<SiqsResult[]> {
-  const results: SiqsResult[] = [];
+  locations: SharedAstroSpot[],
+  bortleScale: number = 5
+): Promise<SharedAstroSpot[]> {
+  if (!locations || locations.length === 0) {
+    return [];
+  }
   
-  // Process in batches to prevent API rate limits
-  for (let i = 0; i < locations.length; i += concurrency) {
-    const batch = locations.slice(i, i + concurrency);
+  // Limit batch size for performance
+  const batchSize = Math.min(locations.length, 10);
+  console.log(`Processing batch SIQS calculation for ${locations.length} locations (max ${batchSize} at once)`);
+  
+  // Process in chunks to avoid overwhelming the system
+  const results: SharedAstroSpot[] = [];
+  const chunks = chunkArray(locations, batchSize);
+  
+  for (const chunk of chunks) {
+    const chunkPromises = chunk.map(async (location) => {
+      try {
+        if (!location.latitude || !location.longitude) {
+          console.warn("Invalid location coordinates for SIQS calculation", location);
+          return location;
+        }
+        
+        // Use location-specific Bortle scale if available, otherwise use default
+        const effectiveBortle = location.bortleScale || bortleScale;
+        
+        // Calculate SIQS
+        const siqsResult = await calculateRealTimeSiqs(
+          location.latitude, 
+          location.longitude,
+          effectiveBortle
+        );
+        
+        // Return enhanced location with SIQS data
+        return {
+          ...location,
+          siqs: siqsResult
+        };
+      } catch (error) {
+        console.error("Error calculating SIQS for location", location, error);
+        return location;
+      }
+    });
     
-    // Process this batch
-    const batchResults = await processBatch(batch);
-    results.push(...batchResults);
+    // Wait for all calculations in this chunk before proceeding to the next
+    const chunkResults = await Promise.all(chunkPromises);
+    results.push(...chunkResults);
     
-    // Add delay between batches if more are pending
-    if (i + concurrency < locations.length) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    // Small delay between chunks to avoid rate limiting
+    if (chunks.length > 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
   
@@ -61,45 +72,12 @@ export async function batchCalculateSiqs(
 }
 
 /**
- * Update AstroSpot objects with SIQS calculations
- * 
- * @param locations Array of locations to update
- * @param concurrency Number of concurrent calculations
- * @returns Promise resolving to updated locations
+ * Split array into chunks of specified size
  */
-export async function updateLocationsWithSiqs(
-  locations: SharedAstroSpot[],
-  concurrency: number = DEFAULT_CONCURRENCY
-): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) {
-    return [];
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
   }
-  
-  // Map locations to simpler objects for SIQS calculation
-  const siqsLocations = locations.map(loc => ({
-    latitude: loc.latitude,
-    longitude: loc.longitude,
-    bortleScale: loc.bortleScale
-  }));
-  
-  // Calculate SIQS values
-  const siqsResults = await batchCalculateSiqs(siqsLocations, concurrency);
-  
-  // Update each location with its SIQS result
-  return locations.map((location, index) => {
-    const siqsResult = siqsResults[index];
-    
-    if (siqsResult && siqsResult.score > 0) {
-      return {
-        ...location,
-        siqs: {
-          score: siqsResult.score,
-          isViable: siqsResult.isViable
-        },
-        siqsResult
-      };
-    }
-    
-    return location;
-  });
+  return chunks;
 }

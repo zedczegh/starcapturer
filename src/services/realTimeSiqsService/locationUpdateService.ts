@@ -80,23 +80,23 @@ async function processBatch(
   // Update locations with SIQS results
   return locations.map((location, index) => {
     if (index < siqsResults.length) {
-      const siqsResult = siqsResults[index];
+      const siqs = siqsResults[index];
       
-      if (siqsResult && siqsResult.score > 0) {
+      if (siqs && siqs.siqs > 0) {
         // Convert factors to the expected format with required description
-        const factors = siqsResult.factors?.map(factor => ({
+        const factors = siqs.factors?.map(factor => ({
           name: factor.name,
           score: factor.score,
           description: factor.description || `${factor.name} factor` // Ensure description is always present
-        })) || [];
+        }));
         
         return {
           ...location,
-          siqs: siqsResult.score, // Use score instead of siqs
+          siqs: siqs.siqs,
           siqsResult: {
-            score: siqsResult.score,
-            isViable: siqsResult.isViable,
-            factors: factors
+            score: siqs.siqs,
+            isViable: siqs.isViable,
+            factors: factors || []
           }
         };
       }

@@ -1,51 +1,4 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { findCertifiedLocations } from "./locationSearchService";
-
-/**
- * Check if a location is certified (Dark Sky Reserve, Park, etc.)
- * @param location Location to check
- * @returns boolean indicating if the location is certified
- */
-export function isCertifiedLocation(location: any): boolean {
-  if (!location) return false;
-  return !!(location.isDarkSkyReserve || location.certification);
-}
-
-/**
- * Find certified locations within radius
- */
-export async function getCertifiedLocations(
-  latitude: number,
-  longitude: number,
-  radius: number = 300
-): Promise<SharedAstroSpot[]> {
-  return findCertifiedLocations(latitude, longitude, radius);
-}
-
-// Export the function directly for external use
-export { findCertifiedLocations };
-
-/**
- * Fetch certified dark sky locations within radius
- * @param latitude User latitude
- * @param longitude User longitude
- * @param radius Search radius in km
- * @returns Promise of certified locations
- */
-export async function fetchCertifiedLocationsNearby(
-  latitude: number,
-  longitude: number,
-  radius: number = 500
-): Promise<SharedAstroSpot[]> {
-  try {
-    // Call the location service
-    return await findCertifiedLocations(latitude, longitude, radius);
-  } catch (error) {
-    console.error("Error fetching certified locations:", error);
-    return [];
-  }
-}
 
 // Cache for certified locations to avoid repeated API calls
 let cachedCertifiedLocations: SharedAstroSpot[] | null = null;
@@ -162,7 +115,7 @@ function addDarkSkyLodgingLocations(existingLocations: SharedAstroSpot[]): Share
     {
       id: 'hotel-rangá',
       name: 'Hotel Rangá',
-      chineseName: '朗加����店暗夜天空点',
+      chineseName: '朗加��店暗夜天空点',
       latitude: 63.8366,
       longitude: -20.3561,
       isDarkSkyReserve: false,
@@ -369,7 +322,7 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'westcliffe-community',
       name: 'Westcliffe & Silver Cliff Dark Sky Community',
-      chineseName: '韦斯特克��夫和银崖暗夜天空社区',
+      chineseName: '韦斯特克利夫和银崖暗夜天空社区',
       latitude: 38.1315,
       longitude: -105.4640,
       isDarkSkyReserve: false,
@@ -485,7 +438,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'shenzhen-xichong',
       name: 'Shenzhen Xichong Dark Sky Community',
-      chineseName: '深圳西冲暗夜��区',
+      chineseName: '深圳西冲暗夜社区',
       latitude: 22.5808,
       longitude: 114.5034,
       isDarkSkyReserve: false,
@@ -1155,8 +1108,8 @@ async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
       findCertifiedLocations(
         location.latitude,
         location.longitude,
-        20000 // 20000 km - effectively global
-        // Removed the fourth argument that was causing the TS error
+        20000, // 20000 km - effectively global
+        500    // Increased limit to ensure we get ALL certified locations
       )
     );
     

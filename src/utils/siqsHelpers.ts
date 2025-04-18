@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for safely working with SIQS values that might be numbers or objects
  */
@@ -27,11 +28,6 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
   
   // Handle SharedAstroSpot object with siqs property
   if (typeof siqs === 'object' && siqs !== null) {
-    // First check: direct score property (new standard format)
-    if ('score' in siqs && typeof siqs.score === 'number') {
-      return siqs.score;
-    }
-    
     // Case: location.siqs passed directly as an object with score property
     if ('siqs' in siqs && typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
       return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
@@ -40,6 +36,11 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
     // Case: entire location object passed (need to extract siqs)
     if ('siqs' in siqs && (typeof siqs.siqs === 'number' || typeof siqs.siqs === 'string')) {
       return typeof siqs.siqs === 'number' ? siqs.siqs : parseFloat(siqs.siqs);
+    }
+    
+    // Handle direct score property (standard format)
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return siqs.score;
     }
     
     // Handle possible siqsResult nested format

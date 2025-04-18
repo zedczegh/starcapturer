@@ -45,7 +45,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({ siqs, className = '',
           background: "rgb(39, 39, 47)",
           "--progress-color": progressColor
         } as React.CSSProperties}
-        colorClass={`bg-[var(--progress-color)]`} // Using colorClass instead of indicatorClassName
+        indicatorClassName="bg-[var(--progress-color)]"
       />
     </div>
   );

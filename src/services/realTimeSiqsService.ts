@@ -1,20 +1,25 @@
 
-import { calculateRealTimeSiqs as calculateSiqs } from './realTimeSiqs/siqsCalculator';
-import { clearSiqsCache as clearAllSiqsCache, clearLocationSiqsCache as clearSingleLocationSiqsCache } from './realTimeSiqs/siqsCache';
+import { calculateRealTimeSiqs as fetchRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
+import { batchCalculateSiqs } from './realTimeSiqs/batchProcessor';
+import { 
+  clearSiqsCache, 
+  clearLocationSiqsCache, 
+  getSiqsCacheSize,
+  cleanupExpiredCache 
+} from './realTimeSiqs/siqsCache';
 
-/**
- * Calculate real-time SIQS based on current conditions at a location
- */
-export const calculateRealTimeSiqs = calculateSiqs;
-
-// Export cache clearing functions with appropriate parameters
-export const clearSiqsCache = clearAllSiqsCache;
-
-// Update to handle specific parameter format
-export const clearLocationSiqsCache = (type: 'all' | 'location' = 'all', coordinates?: { latitude: number, longitude: number }) => {
-  if (type === 'location' && coordinates) {
-    return clearSingleLocationSiqsCache(coordinates.latitude, coordinates.longitude);
-  } else {
-    return clearAllSiqsCache();
-  }
+// Export all the main functions to maintain API compatibility
+export { 
+  fetchRealTimeSiqs as calculateRealTimeSiqs,
+  batchCalculateSiqs,
+  clearSiqsCache,
+  clearLocationSiqsCache,
+  getSiqsCacheSize,
+  cleanupExpiredCache
 };
+
+// Helper function to clear the location cache for external use
+export function clearLocationCache(): void {
+  clearSiqsCache();
+  console.log("Location cache cleared");
+}

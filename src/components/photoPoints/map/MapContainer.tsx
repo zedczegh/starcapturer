@@ -1,17 +1,10 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { lazy, Suspense } from 'react';
+import LazyMapContainer from './LazyMapContainer';
 import MapLegend from './MapLegend';
-import SiqsDisplay from './SiqsDisplay';
-import RealTimeLocationUpdater from './RealTimeLocationUpdater';
-import useMapInteractions from '@/hooks/photoPoints/useMapInteractions';
-import SiqsEffectsController from './effects/SiqsEffectsController';
-
-// Dynamically load the map component without SSR
-const LazyMapContainer = lazy(() => import('./LazyMapContainer'));
+import PinpointButton from './PinpointButton';
 
 interface MapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -21,20 +14,18 @@ interface MapContainerProps {
   mapReady: boolean;
   handleMapReady: () => void;
   handleLocationClicked: (location: SharedAstroSpot) => void;
-  handleMapClick?: (lat: number, lng: number) => void;
+  handleMapClick: (lat: number, lng: number) => void;
   mapCenter: [number, number];
   initialZoom: number;
-  mapContainerHeight?: string;
-  isMobile?: boolean;
-  hoveredLocationId?: string | null;
-  handleHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
-  handleGetLocation?: () => void;
-  onLegendToggle?: (isOpen: boolean) => void;
-  onSiqsCalculated?: (siqs: number) => void;
-  onSpotsGenerated?: (spots: SharedAstroSpot[]) => void;
+  mapContainerHeight: string;
+  isMobile: boolean;
+  hoveredLocationId: string | null;
+  handleHover: (id: string | null) => void;
+  handleTouchStart: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove: (e: React.TouchEvent) => void;
+  handleGetLocation: () => void;
+  onLegendToggle: (isOpen: boolean) => void;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -48,112 +39,67 @@ const MapContainer: React.FC<MapContainerProps> = ({
   handleMapClick,
   mapCenter,
   initialZoom,
-  mapContainerHeight = '450px',
-  isMobile = false,
+  mapContainerHeight,
+  isMobile,
   hoveredLocationId,
   handleHover,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
   handleGetLocation,
-  onLegendToggle,
-  onSiqsCalculated,
-  onSpotsGenerated
+  onLegendToggle
 }) => {
   const { t } = useLanguage();
-  const [legendVisible, setLegendVisible] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(false);
-  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  
-  const {
-    hideMarkerPopups,
-    handleMapDragStart,
-    handleMapDragEnd
-  } = useMapInteractions({});
-  
-  const handleLegendToggle = useCallback((isVisible: boolean) => {
-    setLegendVisible(isVisible);
-    if (onLegendToggle) onLegendToggle(isVisible);
-  }, [onLegendToggle]);
-  
-  const handleSiqsCalculated = useCallback((siqs: number) => {
-    setRealTimeSiqs(siqs);
-    if (onSiqsCalculated) onSiqsCalculated(siqs);
-  }, [onSiqsCalculated]);
-
-  // Handle map ready event from LazyMapContainer
-  const handleMapLoaded = useCallback((mapInstance: any) => {
-    if (mapInstance) {
-      mapInstanceRef.current = mapInstance;
-      // Store map globally for other components to access
-      try {
-        (window as any).leafletMap = mapInstance;
-        console.log("Map reference stored globally");
-      } catch (e) {
-        console.error("Failed to store map reference:", e);
-      }
-    }
-    handleMapReady();
-  }, [handleMapReady]);
 
   return (
-    <div className="relative w-full" 
+    <div 
       style={{ height: mapContainerHeight }} 
-      ref={mapContainerRef}
+      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
     >
-      {/* Map Legend */}
-      <MapLegend 
-        onToggle={handleLegendToggle} 
-      />
-      
-      {/* Location Controls */}
-      <RealTimeLocationUpdater
-        userLocation={userLocation}
-        onLocationUpdate={handleMapClick || (() => {})}
-        showControls={Boolean(handleMapClick)}
-      />
-      
-      {/* Map Container */}
-      <Suspense fallback={
-        <div className="flex h-full w-full justify-center items-center bg-muted/30 rounded-lg">
-          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      {!mapReady && (
+        <div className="absolute inset-0 z-20">
+          <div className="flex h-full items-center justify-center bg-background/80">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          </div>
         </div>
-      }>
-        <LazyMapContainer
-          center={mapCenter}
-          userLocation={userLocation}
-          locations={locations}
-          searchRadius={searchRadius}
-          activeView={activeView}
-          onMapReady={handleMapLoaded}
-          onLocationClick={handleLocationClicked}
-          onMapClick={handleMapClick}
-          zoom={initialZoom}
-          hoveredLocationId={hoveredLocationId}
-          onMarkerHover={handleHover}
-          handleTouchStart={handleTouchStart}
-          handleTouchEnd={handleTouchEnd}
-          handleTouchMove={handleTouchMove}
-          isMobile={isMobile}
-          useMobileMapFixer={isMobile}
-          showRadiusCircles={activeView === 'calculated'}
-        />
-      </Suspense>
-      
-      {/* SIQS Effects controller - Now moved outside the map component */}
-      {mapReady && userLocation && (
-        <SiqsEffectsController
-          userLocation={userLocation}
-          activeView={activeView}
-          searchRadius={searchRadius}
-          onSiqsCalculated={handleSiqsCalculated}
-          onSpotsGenerated={onSpotsGenerated}
-          disabled={!mapReady}
-          mapInstance={mapInstanceRef.current}
-        />
       )}
+      
+      <LazyMapContainer
+        center={mapCenter}
+        userLocation={userLocation}
+        locations={locations}
+        searchRadius={searchRadius}
+        activeView={activeView}
+        onMapReady={handleMapReady}
+        onLocationClick={handleLocationClicked}
+        onMapClick={handleMapClick}
+        zoom={initialZoom}
+        hoveredLocationId={hoveredLocationId}
+        onMarkerHover={handleHover}
+        handleTouchStart={handleTouchStart}
+        handleTouchEnd={handleTouchEnd}
+        handleTouchMove={handleTouchMove}
+        isMobile={isMobile}
+        useMobileMapFixer={false}
+        showRadiusCircles={activeView === 'calculated' && !isMobile}
+      />
+      
+      {/* Add MapLegend for both mobile and desktop */}
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+        onToggle={onLegendToggle}
+        className="absolute top-4 right-4 z-[999]"
+      />
+      
+      {/* Update PinpointButton positioning for desktop and mobile */}
+      <PinpointButton
+        onGetLocation={handleGetLocation}
+        className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute bottom-4 left-4 z-[999]"}
+        shouldCenter={false}
+        hasLocation={userLocation !== null}
+      />
     </div>
   );
 };

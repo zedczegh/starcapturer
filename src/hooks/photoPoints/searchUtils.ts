@@ -86,6 +86,7 @@ export const searchCalculatedLocations = async (
       latitude,
       longitude,
       searchDistance,
+      true, // Allow expanding the search radius
       MAX_CALCULATED_LOCATIONS // Limit to prevent API flooding
     );
     
@@ -164,6 +165,14 @@ export const showSearchResultToast = (
     });
   }
 };
+
+/**
+ * Search utilities for photo points
+ */
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateDistance } from '@/utils/geoUtils';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 /**
  * Filter locations by SIQS score threshold

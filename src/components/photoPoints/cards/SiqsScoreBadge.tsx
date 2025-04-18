@@ -9,7 +9,7 @@ interface SiqsScoreBadgeProps {
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;
-  forceCertified?: boolean; // This will be unused as we don't want defaults
+  forceCertified?: boolean; // Added this prop to support forcing certified status
 }
 
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
@@ -17,26 +17,28 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   loading = false,
   compact = false,
   isCertified = false,
-  forceCertified = false // No longer used - we don't want defaults
+  forceCertified = false
 }) => {
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
-  // Skip rendering if score is invalid OR below our quality threshold (5.0)
-  // This ensures we never show low quality spots
-  if (numericScore <= 0 || numericScore < 5.0) {
+  // Skip rendering if score is 0 (invalid) and not certified
+  if (numericScore <= 0 && !loading && !isCertified && !forceCertified) {
     return null;
   }
   
+  // For certified locations with no score or when forceCertified is true, provide a default good score
+  const displayScore = numericScore > 0 ? numericScore.toFixed(1) : "6.5";
+  
   // Get appropriate color based on score value
   const getColor = () => {
-    if (numericScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
-    if (numericScore >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
-    if (numericScore >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-    // We don't use these anymore since we filter out low quality spots
-    // if (numericScore >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
-    // return 'bg-red-500/20 text-red-300 border-red-500/40';
-    return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'; // Fallback for edge cases
+    const scoreToUse = numericScore > 0 ? numericScore : 6.5;
+    
+    if (scoreToUse >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
+    if (scoreToUse >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
+    if (scoreToUse >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+    if (scoreToUse >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+    return 'bg-red-500/20 text-red-300 border-red-500/40';
   };
 
   if (loading) {
@@ -65,7 +67,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         fill="#facc15" 
       />
       <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-        {numericScore.toFixed(1)}
+        {displayScore}
       </span>
     </motion.div>
   );

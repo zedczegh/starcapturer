@@ -37,13 +37,10 @@ export async function calculateEnhancedRealTimeSiqs(
       // Get fresh weather data for anomaly detection
       const weatherData = await fetchWeatherData({ latitude, longitude });
       
-      if (weatherData && siqsResult.score > 0) {
+      if (weatherData && siqsResult.siqs > 0) {
         // Add required properties to match WeatherDataWithClearSky
         const weatherDataWithCoords: WeatherDataWithClearSky = {
           ...weatherData,
-          visibility: 10, // Default visibility (km)
-          moonPhase: 0.5, // Default moon phase (half moon)
-          clearSkyRate: 50, // Default clear sky rate percentage
           latitude,
           longitude
         };
@@ -75,7 +72,7 @@ export async function calculateEnhancedRealTimeSiqs(
                 lightPollution: false
               },
               reliability: {
-                confidenceScore: reliability.confidenceScore,
+                score: reliability.confidenceScore,
                 issues: reliability.issues
               }
             }
@@ -89,10 +86,7 @@ export async function calculateEnhancedRealTimeSiqs(
     return siqsResult;
   } catch (error) {
     console.error("Error calculating enhanced SIQS:", error);
-    return { 
-      score: 0,
-      isViable: false 
-    };
+    return { siqs: 0, isViable: false };
   }
 }
 
@@ -143,10 +137,7 @@ export async function batchCalculateRealTimeSiqs(
         loc.bortleScale || 5
       ).catch(err => {
         console.error(`Error calculating SIQS for location ${loc.latitude},${loc.longitude}:`, err);
-        return { 
-          score: 0,
-          isViable: false 
-        };
+        return { siqs: 0, isViable: false };
       })
     );
     

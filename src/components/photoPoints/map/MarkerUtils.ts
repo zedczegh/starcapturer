@@ -4,10 +4,9 @@
  */
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/locationValidator';
+import { isCertifiedLocation } from '@/utils/locationFiltering';
 import { getProgressColor } from '@/components/siqs/utils/progressColor';
-import L from 'leaflet';
-import { isValidAstronomyLocation as checkValidAstronomyLocation } from '@/utils/locationValidator';
 
 /**
  * Get marker color based on location certification type
@@ -32,17 +31,6 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   } else {
     return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
   }
-};
-
-/**
- * Check if a location is a certified location
- */
-export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return Boolean(
-    location.certification || 
-    location.isDarkSkyReserve || 
-    (location.type && location.type.includes('dark-sky'))
-  );
 };
 
 /**
@@ -104,37 +92,4 @@ export const shouldShowLocationMarker = (
   }
   
   return true;
-};
-
-/**
- * Create a location marker icon
- */
-export const getLocationMarker = (
-  location: SharedAstroSpot, 
-  isCertified: boolean, 
-  isHovered: boolean,
-  isMobile: boolean
-): L.Icon => {
-  const color = getLocationColor(location);
-  const size = isHovered ? (isMobile ? 22 : 18) : (isMobile ? 16 : 12);
-  const certifiedSize = isHovered ? (isMobile ? 26 : 22) : (isMobile ? 20 : 16);
-  const finalSize = isCertified ? certifiedSize : size;
-  
-  return L.divIcon({
-    html: `<div style="background-color: ${color}; width: ${finalSize}px; height: ${finalSize}px; border-radius: 50%; border: 2px solid white;"></div>`,
-    className: `custom-marker ${isHovered ? 'hovered' : ''} ${isCertified ? 'certified' : ''}`,
-    iconSize: [finalSize, finalSize],
-    iconAnchor: [finalSize/2, finalSize/2]
-  });
-};
-
-/**
- * Check if a location is valid for astronomy viewing
- */
-export const isValidAstronomyLocation = (
-  latitude: number, 
-  longitude: number, 
-  name?: string
-): boolean => {
-  return checkValidAstronomyLocation(latitude, longitude, name);
 };

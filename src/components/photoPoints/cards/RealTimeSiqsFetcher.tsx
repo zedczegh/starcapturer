@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -21,37 +22,22 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const [lastCoordinates, setLastCoordinates] = useState<{lat: number, lng: number} | null>(null);
-  const CACHE_DURATION = 30 * 60 * 1000; // Increased to 30 minutes cache to reduce API calls
-  const fetchingRef = useRef(false); // Use ref to prevent concurrent fetches
-  
-  // Determine if this is a new location that requires calculation
-  const isNewLocation = (lat?: number, lng?: number): boolean => {
-    if (!lat || !lng || !lastCoordinates) return true;
-    
-    // Check if coordinates have changed significantly (at least 0.01 degrees, ~1km)
-    const latDiff = Math.abs(lat - lastCoordinates.lat);
-    const lngDiff = Math.abs(lng - lastCoordinates.lng);
-    
-    return latDiff > 0.01 || lngDiff > 0.01;
-  };
+  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
-      const needsFetch = isNewLocation(latitude, longitude);
-      const cacheExpired = now - lastFetchTimestamp > CACHE_DURATION;
-      const shouldFetch = (needsFetch || cacheExpired) && !fetchingRef.current;
+      const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
-        console.log(`Fetching cloud cover-based SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         const fetchSiqs = async () => {
           setLoading(true);
           onSiqsCalculated(null, true);
-          fetchingRef.current = true;
           
           try {
-            const effectiveBortleScale = bortleScale || 4;
+            const effectiveBortleScale = bortleScale || 
+              (showRealTimeSiqs ? 3 : 5);
             
             // Try to get cached data from sessionStorage first
             const cacheKey = `siqs_${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
@@ -61,72 +47,48 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               const { data, timestamp } = JSON.parse(cachedData);
               const age = now - timestamp;
               
-              // Use cached data if it's fresh enough
               if (age < CACHE_DURATION) {
-                console.log(`Using cached SIQS data (${(age/1000).toFixed(0)}s old) for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-                
-                // Only update if SIQS score is high quality (>= 5.0)
-                if (data.score >= 5.0) {
-                  onSiqsCalculated(data.score, false);
-                } else {
-                  console.log(`Skipping low quality location (SIQS: ${data.score.toFixed(1)})`);
-                  onSiqsCalculated(null, false);
-                }
-                
-                // Update last coordinates to prevent unnecessary recalculations
-                setLastCoordinates({ lat: latitude, lng: longitude });
+                console.log("Using cached SIQS from session storage");
+                onSiqsCalculated(data.siqs, false);
+                setLastFetchTimestamp(timestamp);
                 setLoading(false);
-                fetchingRef.current = false;
                 return;
               }
             }
             
-            // Calculate fresh data based on nighttime cloud cover
-            const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
-            
-            if (result && typeof result.score === 'number') {
-              // Cache the result
-              try {
-                sessionStorage.setItem(cacheKey, JSON.stringify({
-                  data: result,
-                  timestamp: now
-                }));
-              } catch (e) {
-                console.warn("Failed to cache SIQS data:", e);
-              }
-              
-              const cloudCover = result.factors?.[0]?.description?.match(/\d+/)?.[0] || 'unknown';
-              console.log(`Cloud cover-based SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.score.toFixed(1)} (cloud cover: ${cloudCover}%)`);
-              
-              // Only update if SIQS score is high quality (>= 5.0)
-              if (result.score >= 5.0) {
-                onSiqsCalculated(result.score, false);
-              } else {
-                console.log(`Skipping low quality location (SIQS: ${result.score.toFixed(1)})`);
-                onSiqsCalculated(null, false);
-              }
-              
-              // Update last coordinates to prevent unnecessary recalculations
-              setLastCoordinates({ lat: latitude, lng: longitude });
-            } else {
-              onSiqsCalculated(null, false);
+            // If we have coordinates, calculate astronomical night for logging purposes
+            if (latitude && longitude) {
+              const { start, end } = calculateAstronomicalNight(latitude, longitude);
+              console.log(`Astronomical night for this location: ${formatTime(start)}-${formatTime(end)}`);
             }
+            
+            const result = await calculateRealTimeSiqs(
+              latitude,
+              longitude,
+              effectiveBortleScale
+            );
+            
+            if (result && result.siqs > 0) {
+              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
+              onSiqsCalculated(result.siqs, false);
+            } else {
+              onSiqsCalculated(0, false);
+            }
+            setLastFetchTimestamp(now);
           } catch (error) {
-            console.error("Error fetching SIQS data:", error);
+            console.error("Error fetching real-time SIQS:", error);
             onSiqsCalculated(null, false);
+          } finally {
+            setLoading(false);
           }
-          
-          setLoading(false);
-          setLastFetchTimestamp(now);
-          fetchingRef.current = false;
         };
         
         fetchSiqs();
       }
     }
-  }, [isVisible, showRealTimeSiqs, latitude, longitude, bortleScale, onSiqsCalculated]);
+  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
   
-  return null; // This component doesn't render anything
+  return null;
 };
 
 export default RealTimeSiqsFetcher;
