@@ -156,15 +156,14 @@ const LocationMarker = memo(({
         position={[location.latitude, location.longitude]}
         icon={icon}
         ref={markerRef}
-        // Fix: Replace eventHandlers with onClick
         onClick={handleClick}
       >
         {isOpen && (
           <Popup 
-            // Fix: Remove incompatible props
             offset={[0, -5]}
-            autoPan
-            onClose={handlePopupClose}
+            eventHandlers={{ 
+              close: handlePopupClose 
+            }}
           >
             <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
               <div className="font-medium text-sm mb-1.5 flex items-center">
