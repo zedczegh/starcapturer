@@ -107,8 +107,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }}
-      zoomControl={!isMobile}
-      attributionControl={!isMobile}
       whenReady={() => setMapLoaded(true)}
     >
       <TileLayer
@@ -125,11 +123,12 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         <Circle
           center={[userLocation.latitude, userLocation.longitude]}
           radius={searchRadius * 1000}
-          stroke={true}
-          weight={1}
-          color="#3b82f6"
-          fillColor="#3b82f6"
-          fillOpacity={0.05}
+          pathOptions={{
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.05,
+            weight: 1
+          }}
         />
       )}
       

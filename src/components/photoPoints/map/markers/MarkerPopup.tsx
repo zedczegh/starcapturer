@@ -50,12 +50,13 @@ const MarkerPopup: React.FC<MarkerPopupProps> = ({
           
           if (forecastData) {
             // Calculate nighttime SIQS using forecast data
+            // Use default values for missing properties
             const result = calculateNighttimeSIQS(
               {
-                weatherData: location.weatherData || {},
-                bortleScale: location.bortleScale || 5,
-                seeingConditions: location.seeingConditions || 3,
-                moonPhase: location.moonPhase || 0
+                weatherData: {},  // Default empty object
+                bortleScale: location.bortleScale || 4,
+                seeingConditions: 3, // Default seeing conditions
+                moonPhase: 0 // Default moon phase
               },
               forecastData,
               (key: string) => key // Simple translator function

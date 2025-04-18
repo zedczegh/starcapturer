@@ -90,18 +90,15 @@ const LocationMarker = memo(({
         position={[location.latitude, location.longitude]}
         icon={icon}
         ref={markerRef}
-        eventHandlers={{
-          click: handleClick,
-          mouseover: () => onHover(locationId),
-          mouseout: () => onHover(null)
-        }}
+        // Use onClick, onMouseOver and onMouseOut instead of eventHandlers
+        onClick={handleClick}
+        onMouseOver={() => onHover(locationId)}
+        onMouseOut={() => onHover(null)}
       >
         {isOpen && (
           <Popup 
             offset={[0, -5]}
-            eventHandlers={{ 
-              remove: handlePopupClose 
-            }}
+            onClose={handlePopupClose}
           >
             <MarkerPopup
               location={location}

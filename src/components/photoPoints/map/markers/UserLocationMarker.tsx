@@ -33,15 +33,11 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
     <Marker 
       position={position} 
       icon={userMarkerIcon}
-      eventHandlers={{
-        click: handleMarkerClick
-      }}
+      onClick={handleMarkerClick}
     >
       <Popup
         offset={[0, 10]}
-        eventHandlers={{
-          remove: handlePopupClose
-        }}
+        onClose={handlePopupClose}
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
