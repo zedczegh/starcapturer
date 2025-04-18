@@ -39,6 +39,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
   
   useEffect(() => {
+    isMounted.current = true;
     // Cleanup function to prevent setState on unmounted component
     return () => {
       isMounted.current = false;
@@ -103,6 +104,8 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated]);
   
   useEffect(() => {
+    let timerId: number | null = null;
+    
     if (isVisible && latitude && longitude) {
       const shouldFetch = 
           forceUpdate || 
@@ -116,15 +119,21 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         // Use a small delay for certified locations to avoid all fetches happening simultaneously
         if (isCertified && !forceUpdate) {
           const delay = Math.random() * 300; // Random delay up to 300ms
-          const timer = setTimeout(() => {
+          timerId = window.setTimeout(() => {
             fetchSiqs();
           }, delay);
-          return () => clearTimeout(timer);
         } else {
           fetchSiqs();
         }
       }
     }
+    
+    // Clear any pending timers on cleanup
+    return () => {
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
+    };
   }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified, REFRESH_INTERVAL, fetchAttempted]);
   
   return null; // This is a headless component

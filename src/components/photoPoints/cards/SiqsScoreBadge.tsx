@@ -53,14 +53,14 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     }
     
     // Avoid unnecessary transitions for small changes
-    if (Math.abs(displayedScore - numericScore) < 0.2) {
+    if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
       setDisplayedScore(numericScore);
       previousScore.current = numericScore;
       return;
     }
     
     // Only animate significant changes
-    if (Math.abs(displayedScore - numericScore) >= 0.2) {
+    if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
       setIsTransitioning(true);
       
       // Store previous score for reference

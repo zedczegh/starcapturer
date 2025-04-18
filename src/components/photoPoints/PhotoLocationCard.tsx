@@ -115,7 +115,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           />
           
           <SiqsScoreBadge 
-            score={realTimeSiqs || location.siqs}
+            score={realTimeSiqs !== null ? realTimeSiqs : location.siqs}
             compact={true}
             isCertified={isCertified}
             loading={showLoadingState}
@@ -142,7 +142,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           isDarkSkyReserve={location.isDarkSkyReserve}
           existingSiqs={location.siqs}
           onSiqsCalculated={handleSiqsCalculated}
-          forceUpdate={isVisible}
+          forceUpdate={isVisible && isCertified}
         />
       </CardContainer>
     </VisibilityObserver>

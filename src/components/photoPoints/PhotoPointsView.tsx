@@ -1,13 +1,14 @@
-import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
 import PageLoader from '@/components/loaders/PageLoader';
 import { calculateDistance } from '@/utils/geoUtils';
+import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
+import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
 
-// Lazy load components to improve performance
-const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
-const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
-const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
+// Only lazy load the map component which is larger
+const PhotoPointsMap = React.lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -82,7 +83,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     return certifiedLocations;
   }, [certifiedLocations]);
 
-  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+  const handleLocationClick = React.useCallback((location: SharedAstroSpot) => {
     if (location && onLocationClick) {
       const safeLocation = {
         ...location,
@@ -127,7 +128,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   // For map view
   if (showMap) {
     return (
-      <Suspense fallback={<PageLoader />}>
+      <React.Suspense fallback={<PageLoader />}>
         <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
@@ -140,39 +141,37 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
             onLocationUpdate={onLocationUpdate}
           />
         </div>
-      </Suspense>
+      </React.Suspense>
     );
   }
   
   // For list view - use key prop to force re-rendering on view change
   return (
-    <Suspense fallback={<PageLoader />}>
-      <div className="min-h-[300px]">
-        {activeView === 'certified' ? (
-          <DarkSkyLocations
-            key="certified-view"
-            locations={displayedCertifiedLocations}
-            loading={loading}
-            initialLoad={initialLoad}
-          />
-        ) : (
-          <CalculatedLocations
-            key="calculated-view"
-            locations={filteredCalculatedLocations}
-            loading={loading}
-            initialLoad={initialLoad}
-            hasMore={hasMore}
-            onLoadMore={loadMore}
-            onRefresh={refreshSiqs}
-            searchRadius={calculatedSearchRadius}
-            canLoadMoreCalculated={canLoadMoreCalculated}
-            onLoadMoreCalculated={loadMoreCalculated}
-            loadMoreClickCount={loadMoreClickCount}
-            maxLoadMoreClicks={maxLoadMoreClicks}
-          />
-        )}
-      </div>
-    </Suspense>
+    <div className="min-h-[300px]">
+      {activeView === 'certified' ? (
+        <DarkSkyLocations
+          key="certified-view"
+          locations={displayedCertifiedLocations}
+          loading={loading}
+          initialLoad={initialLoad}
+        />
+      ) : (
+        <CalculatedLocations
+          key="calculated-view"
+          locations={filteredCalculatedLocations}
+          loading={loading}
+          initialLoad={initialLoad}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refreshSiqs}
+          searchRadius={calculatedSearchRadius}
+          canLoadMoreCalculated={canLoadMoreCalculated}
+          onLoadMoreCalculated={loadMoreCalculated}
+          loadMoreClickCount={loadMoreClickCount}
+          maxLoadMoreClicks={maxLoadMoreClicks}
+        />
+      )}
+    </div>
   );
 };
 
