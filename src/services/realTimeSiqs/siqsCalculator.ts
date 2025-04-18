@@ -1,3 +1,4 @@
+
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -101,7 +102,11 @@ export async function calculateRealTimeSiqs(
     };
     
     if (weatherData && 'nighttimeCloudData' in weatherData) {
-      weatherDataWithClearSky.nighttimeCloudData = weatherData.nighttimeCloudData;
+      weatherDataWithClearSky.nighttimeCloudData = {
+        average: weatherData.nighttimeCloudData?.average || 0,
+        timeRange: weatherData.nighttimeCloudData?.timeRange || "18:00-06:00",
+        sourceType: weatherData.nighttimeCloudData?.sourceType || 'calculated'
+      };
     }
     
     let finalCloudCover = weatherDataWithClearSky.cloudCover;
