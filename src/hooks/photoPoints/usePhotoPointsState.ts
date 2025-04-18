@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -7,7 +6,7 @@ import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 export const usePhotoPointsState = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const location = useLocation();
   
   // Changed initial view to 'calculated'
@@ -125,10 +124,10 @@ export const usePhotoPointsState = () => {
         enableHighAccuracy: true, 
         timeout: 10000, 
         maximumAge: 0,
-        language: t.language
+        language
       }
     );
-  }, [t]);
+  }, [t, language]);
   
   // Toggle between certified and calculated views
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {

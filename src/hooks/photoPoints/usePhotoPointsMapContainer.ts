@@ -28,7 +28,7 @@ export const usePhotoPointsMapContainer = ({
   onLocationClick,
   onLocationUpdate
 }: UsePhotoPointsMapContainerProps) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
@@ -42,17 +42,14 @@ export const usePhotoPointsMapContainer = ({
     handleTouchMove
   } = useMapMarkers();
   
-  // Determine which locations to display based on active view
   const locationsToShow = useMemo(() => {
     if (activeView === 'certified') {
       return certifiedLocations;
     } else {
-      // For calculated view, include both certified and calculated locations
       return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)];
     }
   }, [activeView, certifiedLocations, calculatedLocations]);
   
-  // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
     mapReady,
     handleMapReady,
@@ -69,9 +66,7 @@ export const usePhotoPointsMapContainer = ({
     activeView
   });
   
-  // Filter out some locations on mobile for better performance
   const optimizedLocations = useMemo(() => {
-    // If no valid locations available, return empty array
     if (!validLocations || validLocations.length === 0) {
       console.log("No valid locations to display");
       return [];
@@ -82,22 +77,19 @@ export const usePhotoPointsMapContainer = ({
       return validLocations;
     }
     
-    // For mobile, limit the number of displayed locations
     if (validLocations.length <= 30) {
       console.log(`Displaying all ${validLocations.length} locations (mobile, under limit)`);
       return validLocations;
     }
     
-    // Always keep certified locations
     const certified = validLocations.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
     
-    // For non-certified locations, if we have too many, sample them
     const nonCertified = validLocations
       .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
       .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
-      .slice(0, 50); // Hard limit for performance
+      .slice(0, 50);
     
     console.log(`Optimized for mobile: ${certified.length} certified + ${nonCertified.length} calculated locations`);
     return [...certified, ...nonCertified];
@@ -117,16 +109,13 @@ export const usePhotoPointsMapContainer = ({
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Debounced map click handler to prevent rapid location changes
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (onLocationUpdate && !isUpdatingLocation) {
       setIsUpdatingLocation(true);
       console.log("Setting new location from map click:", lat, lng);
       
-      // Call the location update and reset the updating state after a delay
       onLocationUpdate(lat, lng);
       
-      // Prevent multiple updates in quick succession
       setTimeout(() => {
         setIsUpdatingLocation(false);
       }, 1000);
@@ -141,22 +130,18 @@ export const usePhotoPointsMapContainer = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
-  // Updated get location handler to use enhanced geolocation function
   const handleGetLocation = useCallback(() => {
     if (!onLocationUpdate || isUpdatingLocation) return;
     
     setIsUpdatingLocation(true);
     
-    // Use the enhanced getCurrentPosition utility for better support across browsers
     getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         
-        // Update the location through the provided callback
         onLocationUpdate(latitude, longitude);
         console.log("Got user position:", latitude, longitude);
         
-        // Also try to center the map if possible
         try {
           const leafletMap = (window as any).leafletMap;
           if (leafletMap) {
@@ -170,7 +155,6 @@ export const usePhotoPointsMapContainer = ({
           console.error("Could not center map:", e);
         }
         
-        // Reset updating state after delay
         setTimeout(() => {
           setIsUpdatingLocation(false);
         }, 1000);
@@ -184,10 +168,10 @@ export const usePhotoPointsMapContainer = ({
         enableHighAccuracy: true, 
         timeout: 10000, 
         maximumAge: 0,
-        language: t.language
+        language
       }
     );
-  }, [onLocationUpdate, isUpdatingLocation, t]);
+  }, [onLocationUpdate, isUpdatingLocation, t, language]);
   
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
