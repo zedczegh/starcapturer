@@ -4,8 +4,6 @@ import { findLocationsWithinRadius, findCalculatedLocations } from "@/services/l
 import { isValidAstronomyLocation } from "@/utils/locationValidator";
 import { Language } from "@/contexts/LanguageContext";
 import { isSiqsGreaterThan } from "@/utils/siqsHelpers";
-import { calculateDistance } from '@/utils/geoUtils';
-import { isWaterLocation } from '@/utils/locationValidator';
 
 // Maximum calculated locations to request per batch
 export const MAX_CALCULATED_LOCATIONS = 10;
@@ -165,78 +163,3 @@ export const showSearchResultToast = (
     });
   }
 };
-
-/**
- * Search utilities for photo points
- */
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/utils/geoUtils';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
-import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
-
-/**
- * Filter locations by SIQS score threshold
- */
-export function filterLocationsBySiqsThreshold(
-  locations: SharedAstroSpot[],
-  threshold: number = 5
-): SharedAstroSpot[] {
-  if (!locations || !Array.isArray(locations)) return [];
-  
-  return locations.filter(loc => {
-    // Always keep certified locations regardless of SIQS
-    if (loc.isDarkSkyReserve || loc.certification) {
-      return true;
-    }
-    
-    return loc.siqs && isSiqsGreaterThan(loc.siqs, threshold);
-  });
-}
-
-/**
- * Filter out water locations
- */
-export function filterOutWaterLocations(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  if (!locations || !Array.isArray(locations)) return [];
-  
-  return locations.filter(loc => {
-    // Always keep certified locations
-    if (loc.isDarkSkyReserve || loc.certification) {
-      return true;
-    }
-    
-    return !isWaterLocation(loc.latitude, loc.longitude);
-  });
-}
-
-/**
- * Sort locations by distance
- */
-export function sortLocationsByDistance(
-  locations: SharedAstroSpot[],
-  userLat?: number,
-  userLng?: number
-): SharedAstroSpot[] {
-  if (!locations || !Array.isArray(locations)) return [];
-  if (!userLat || !userLng) return locations;
-  
-  return [...locations].sort((a, b) => {
-    const distA = a.distance || calculateDistance(userLat, userLng, a.latitude, a.longitude);
-    const distB = b.distance || calculateDistance(userLat, userLng, b.latitude, b.longitude);
-    return distA - distB;
-  });
-}
-
-/**
- * Check if a location is valid for astronomy
- */
-export function isValidLocation(
-  location: SharedAstroSpot
-): boolean {
-  // Always keep certified locations
-  if (location.isDarkSkyReserve || location.certification) {
-    return true;
-  }
-  
-  return isValidAstronomyLocation(location.latitude, location.longitude, location.name);
-}

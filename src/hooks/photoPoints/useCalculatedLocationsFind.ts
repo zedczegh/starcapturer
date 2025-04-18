@@ -1,103 +1,83 @@
-
-/**
- * Hook for managing calculated locations
- */
-import { useCallback } from 'react';
-import { useRecommendedLocationsFix } from './useRecommendedLocationsFix';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/utils/geoUtils';
-import { toast } from 'sonner';
-import { isSiqsAtLeast } from '@/utils/siqsHelpers';
-import { isValidAstronomyLocation } from '@/utils/locationValidator';
+import { useCallback } from "react";
+import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { findCalculatedLocations } from "@/services/locationSearchService";
+import { isSiqsAtLeast } from "@/utils/siqsHelpers";
 
 export const useCalculatedLocationsFind = () => {
-  const { 
-    userLocation,
-    searchRadius,
-    maxResults,
-    fetchRecommendations,
-    fetchMoreLocations,
-    loading,
-    searching,
-    maxDiscoveries,
-    canLoadMore,
-    loadMoreClickCount,
-    maxLoadMoreClicks,
-    locationsData
-  } = useRecommendedLocationsFix();
+  const { t } = useLanguage();
 
   /**
-   * Filter locations by SIQS threshold
+   * Find calculated locations within a specified radius
    */
-  const getQualityLocations = useCallback((
-    locations: SharedAstroSpot[],
-    threshold: number = 6
-  ): SharedAstroSpot[] => {
-    if (!locations) return [];
-    
-    return locations.filter(loc => {
-      // Always include certified locations
-      if (loc.isDarkSkyReserve || loc.certification) return true;
-      
-      // For other locations, check SIQS threshold and validity
-      return loc.siqs && 
-        isSiqsAtLeast(loc.siqs, threshold) && 
-        isValidAstronomyLocation(loc.latitude, loc.longitude);
-    });
-  }, []);
-
-  /**
-   * Sort locations by distance from user
-   */
-  const sortByDistance = useCallback((locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-    if (!locations || !userLocation) return locations || [];
-    
-    return [...locations].sort((a, b) => {
-      const distA = a.distance || calculateDistance(
-        userLocation.latitude, userLocation.longitude, 
-        a.latitude, a.longitude
-      );
-      const distB = b.distance || calculateDistance(
-        userLocation.latitude, userLocation.longitude, 
-        b.latitude, b.longitude
-      );
-      return distA - distB;
-    });
-  }, [userLocation]);
-
-  /**
-   * Handle load more button click
-   */
-  const handleLoadMore = useCallback(async () => {
-    if (!userLocation) {
-      toast.error("No location selected");
-      return;
-    }
-    
-    if (!canLoadMore) {
-      toast.info("No more locations available");
-      return;
-    }
-    
-    await fetchMoreLocations();
-  }, [fetchMoreLocations, canLoadMore, userLocation]);
+  const findCalculatedLocationsWithinRadius = useCallback(
+    async (
+      latitude: number,
+      longitude: number,
+      radius: number,
+      allowExpansion: boolean = true,
+      limit: number = 10,
+      preservePrevious: boolean = false,
+      previousLocations: SharedAstroSpot[] = []
+    ): Promise<SharedAstroSpot[]> => {
+      try {
+        console.log(`Finding calculated locations within ${radius}km of [${latitude.toFixed(4)}, ${longitude.toFixed(4)}]`);
+        
+        // Get new locations from the service
+        const newLocations = await findCalculatedLocations(
+          latitude, 
+          longitude, 
+          radius,
+          allowExpansion,
+          limit
+        );
+        
+        if (preservePrevious && previousLocations.length > 0) {
+          console.log(`Preserving ${previousLocations.length} previous locations`);
+          
+          // Create a Set of location coordinates for quick lookup
+          const existingCoords = new Set(
+            previousLocations.map(loc => `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`)
+          );
+          
+          // Filter out locations we already have
+          const uniqueNewLocations = newLocations.filter(loc => {
+            const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
+            return !existingCoords.has(coordKey);
+          });
+          
+          // Filter out locations with SIQS below 5
+          const qualityFilteredLocations = uniqueNewLocations.filter(loc => {
+            // If siqs is null/undefined or >= 5, keep the location
+            return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
+          });
+          
+          // Combine previous and new locations
+          console.log(`Adding ${qualityFilteredLocations.length} new unique locations to ${previousLocations.length} existing ones`);
+          return [...previousLocations, ...qualityFilteredLocations];
+        }
+        
+        // Filter new locations by quality
+        const qualityFilteredLocations = newLocations.filter(loc => {
+          // If siqs is null/undefined or >= 5, keep the location
+          return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
+        });
+        
+        return qualityFilteredLocations;
+      } catch (error) {
+        console.error("Error finding calculated locations:", error);
+        toast.error(t(
+          "Failed to find calculated locations",
+          "无法找到计算位置"
+        ));
+        return [];
+      }
+    }, 
+    [t]
+  );
 
   return {
-    userLocation,
-    searchRadius,
-    maxResults,
-    fetchRecommendations,
-    loading,
-    searching,
-    maxDiscoveries,
-    canLoadMore,
-    loadMoreClickCount,
-    maxLoadMoreClicks,
-    getQualityLocations,
-    sortByDistance,
-    handleLoadMore,
-    locationsData
+    findCalculatedLocations: findCalculatedLocationsWithinRadius
   };
 };
-
-export default useCalculatedLocationsFind;

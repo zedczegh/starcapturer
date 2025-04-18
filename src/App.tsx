@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import IndexPage from './pages/Index';
 import PhotoPointsNearby from './pages/PhotoPointsNearby';
 import NotFound from './pages/NotFound';
 import AboutSIQS from './pages/AboutSIQS';
@@ -34,7 +35,7 @@ function App() {
             <Router>
               <Routes>
                 {/* Redirect root to photo-points */}
-                <Route path="/" element={<PhotoPointsNearby />} />
+                <Route path="/" element={<Navigate to="/photo-points" replace />} />
                 <Route path="/photo-points" element={<PhotoPointsNearby />} />
                 <Route path="/about-siqs" element={<AboutSIQS />} />
                 <Route path="/about" element={<About />} />
