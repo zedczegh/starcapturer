@@ -25,13 +25,20 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
-  // Skip rendering if score is 0 (invalid) and not showing loading state
+  // Skip rendering if score is 0 (invalid) or negative and not showing loading state
+  // No default scores for certified locations
   if (numericScore <= 0 && !loading && !forceCertified) {
-    return null;
+    if (isCertified) {
+      // For certified locations with no score, show loading state instead of hiding
+      loading = true;
+    } else {
+      // For non-certified locations with no score, don't show anything
+      return null;
+    }
   }
   
-  // Display actual score - no default scores for certified locations
-  const displayScore = formatSiqsForDisplay(numericScore);
+  // Display actual score only - no default scores
+  const displayScore = formatSiqsForDisplay(numericScore > 0 ? numericScore : null);
   
   // Get appropriate color based on score value
   const getColor = () => {

@@ -30,14 +30,15 @@ export function useMarkerState({
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
 
-  // Calculate SIQS score - use real-time or location SIQS without defaults
+  // Calculate SIQS score - ONLY use real-time or location's actual SIQS
+  // Never use default scores for certified locations
   const siqsScore = useMemo(() => {
     // Always prefer real-time SIQS if available
-    if (realTimeSiqs !== null) {
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;
     }
     
-    // Use location's calculated SIQS if available
+    // Use location's calculated SIQS if available, with no defaults
     const locationSiqs = getSiqsScore(location);
     if (locationSiqs > 0) {
       return locationSiqs;

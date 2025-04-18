@@ -9,7 +9,7 @@
 import { getSiqsScore } from './siqsHelpers';
 import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
+import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
 
 // Constants for default SIQS values - but we won't use these for certified locations anymore
 export const DEFAULT_SIQS = 0;
@@ -33,7 +33,7 @@ interface SiqsResult {
 
 /**
  * Get the appropriate display SIQS score based on available data
- * Treats certified locations the same as calculated spots - no default scores
+ * Never use default scores for certified locations
  */
 export function getDisplaySiqs(options: {
   realTimeSiqs: number | null;
@@ -109,6 +109,7 @@ export function getCachedRealTimeSiqs(latitude: number, longitude: number): numb
 
 /**
  * All-in-one function to get complete SIQS display information
+ * No default scores for certified locations
  */
 export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promise<SiqsResult> {
   const { 
@@ -120,14 +121,14 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     existingSiqs = null
   } = options;
   
-  // Default result - no special treatment for certified locations
-  const defaultSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : DEFAULT_SIQS;
+  // Get existing SIQS, without defaults for certified locations
+  const staticSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : 0;
                       
   const defaultResult: SiqsResult = {
-    siqs: defaultSiqs,
+    siqs: staticSiqs,
     loading: false,
-    formattedSiqs: formatSiqsForDisplay(defaultSiqs),
-    colorClass: getSiqsColorClass(defaultSiqs),
+    formattedSiqs: formatSiqsForDisplay(staticSiqs > 0 ? staticSiqs : null),
+    colorClass: getSiqsColorClass(staticSiqs),
     source: 'default'
   };
   
@@ -149,7 +150,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
       };
     }
     
-    // Calculate real-time SIQS if no cache available - use same bortleScale for all locations
+    // Calculate real-time SIQS if no cache available
     const result = await calculateRealTimeSiqs(
       latitude,
       longitude,
@@ -157,7 +158,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     );
     
     if (result && result.siqs > 0) {
-      // No special treatment for certified locations
+      // Use actual calculated score
       const finalScore = result.siqs;
       
       return {

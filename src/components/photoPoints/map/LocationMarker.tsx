@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+
+import React, { useCallback, useState, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import MarkerEventHandler from './MarkerEventHandler';
@@ -34,8 +35,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   handleTouchMove
 }) => {
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [siqsLoading, setSiqsLoading] = useState(false);
-  const [siqsConfidence, setSiqsConfidence] = useState(7);
+  const [siqsLoading, setSiqsLoading] = useState<boolean>(isCertified); // Start with loading for certified locations
+  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
+  const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   
   const { siqsScore, displayName, icon } = useMarkerState({
     location,
@@ -43,6 +45,15 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     isCertified,
     isHovered
   });
+  
+  // Force SIQS update for certified locations on mount
+  useEffect(() => {
+    if (isCertified) {
+      setForceUpdate(true);
+      const timer = setTimeout(() => setForceUpdate(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCertified]);
   
   // Check if coordinates are valid
   if (!location.latitude || !location.longitude || 
@@ -52,12 +63,13 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   
   // Handle SIQS calculation results
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
+    console.log(`SIQS calculated for ${locationId} (${isCertified ? 'certified' : 'regular'}): ${siqs}, loading: ${loading}`);
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
     if (confidence) {
       setSiqsConfidence(confidence);
     }
-  }, []);
+  }, [locationId, isCertified]);
   
   // Handle marker events
   const handleClick = useCallback(() => {
@@ -94,7 +106,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   return (
     <>
       <RealTimeSiqsProvider
-        isVisible={isHovered || isCertified}
+        isVisible={true} // Always calculate for certified locations
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}
@@ -102,6 +114,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
         isDarkSkyReserve={location.isDarkSkyReserve}
         existingSiqs={location.siqs}
         onSiqsCalculated={handleSiqsCalculated}
+        forceUpdate={forceUpdate || (isCertified && !realTimeSiqs)}
       />
       
       <Marker
@@ -133,4 +146,4 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   );
 };
 
-export default LocationMarker;
+export default React.memo(LocationMarker);
