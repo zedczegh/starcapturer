@@ -19,6 +19,7 @@ export interface WeatherDataWithClearSky {
   latitude?: number;      // Added for location reference
   longitude?: number;     // Added for location reference
   _forecast?: any;        // Added for forecast data reference
+  weatherCondition?: string;
 }
 
 // SIQS calculation result

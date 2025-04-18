@@ -151,3 +151,34 @@ function getMoonPhaseName(phase: number): string {
   if (phase < 0.775) return "Last Quarter";
   return "Waning Crescent";
 }
+
+/**
+ * Get moon phase name by phase value
+ * @param phase Moon phase (0-1) or phase name
+ * @returns Moon phase name
+ */
+export function getMoonPhaseNameByPhase(phase: number | string): string {
+  if (typeof phase === 'string') {
+    return phase; // If already a string name, return it
+  }
+  return getMoonPhaseName(phase);
+}
+
+/**
+ * Get moon info for UI components
+ * @returns Moon information object with name and astronomy status
+ */
+export function getMoonInfo(): { name: string; isGoodForAstronomy: boolean } {
+  const moonPhaseInfo = getMoonPhaseInfo();
+  
+  // Moon is good for astronomy when it's new or crescent (less illumination)
+  const isGoodForAstronomy = moonPhaseInfo.illumination < 30 || 
+                            (moonPhaseInfo.name === "New Moon") || 
+                            (moonPhaseInfo.name === "Waning Crescent") ||
+                            (moonPhaseInfo.name === "Waxing Crescent");
+                            
+  return {
+    name: moonPhaseInfo.name,
+    isGoodForAstronomy
+  };
+}

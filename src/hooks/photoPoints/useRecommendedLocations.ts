@@ -4,7 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { findCalculatedLocations } from '@/services/locationSearchService';
-import { batchCalculateRealTimeSiqs } from '@/services/realTimeSiqs/batchProcessor';
+import { batchCalculateSiqs } from '@/services/realTimeSiqs/batchProcessor';
 
 interface UseRecommendedLocationsProps {
   userLocation?: { latitude: number; longitude: number } | null;
@@ -101,7 +101,7 @@ export const useRecommendedLocations = (
       const locationsToUpdate = locations.slice(0, 5);
       
       // Update SIQS scores
-      const results = await batchCalculateRealTimeSiqs(
+      const results = await batchCalculateSiqs(
         locationsToUpdate.map(loc => ({ 
           latitude: loc.latitude, 
           longitude: loc.longitude, 
@@ -177,6 +177,9 @@ export const useRecommendedLocations = (
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks,
-    maxDiscoveries
+    maxDiscoveries,
+    findCalculatedLocations: useCallback((lat: number, lng: number, radius: number) => {
+      return findCalculatedLocations(lat, lng, radius);
+    }, [])
   };
 };

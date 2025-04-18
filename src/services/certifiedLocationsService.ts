@@ -6,12 +6,9 @@ import { findCertifiedLocations } from "./locationSearchService";
  * @param location Location to check
  * @returns boolean indicating if the location is certified
  */
-export function isCertifiedLocation(location: SharedAstroSpot): boolean {
-  return Boolean(
-    location.certification || 
-    location.isDarkSkyReserve || 
-    (location.type && location.type.includes('dark-sky'))
-  );
+export function isCertifiedLocation(location: any): boolean {
+  if (!location) return false;
+  return !!(location.isDarkSkyReserve || location.certification);
 }
 
 /**
@@ -371,7 +368,7 @@ function addDarkSkyCommunities(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'westcliffe-community',
       name: 'Westcliffe & Silver Cliff Dark Sky Community',
-      chineseName: '韦斯特克利夫和银崖暗夜天空社区',
+      chineseName: '韦斯特克��夫和银崖暗夜天空社区',
       latitude: 38.1315,
       longitude: -105.4640,
       isDarkSkyReserve: false,
@@ -487,7 +484,7 @@ function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstr
     {
       id: 'shenzhen-xichong',
       name: 'Shenzhen Xichong Dark Sky Community',
-      chineseName: '深圳西冲暗夜社区',
+      chineseName: '深圳西冲暗夜��区',
       latitude: 22.5808,
       longitude: 114.5034,
       isDarkSkyReserve: false,
