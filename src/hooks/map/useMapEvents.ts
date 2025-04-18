@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import L from 'leaflet';
 
 interface UseMapEventsProps {
   onMapClick: (lat: number, lng: number) => void;
