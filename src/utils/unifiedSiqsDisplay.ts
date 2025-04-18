@@ -213,11 +213,23 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
           
           const simplifiedScore = calculateSimplifiedSiqs(cloudCover, bortleScale);
           
-          // Cache result using simplified method
+          // Cache result using simplified method - fixed to match expected metadata format
           setSiqsCache(latitude, longitude, {
             siqs: simplifiedScore,
             isViable: simplifiedScore > 3,
-            metadata: { calculatedAt: new Date().toISOString(), simplified: true }
+            metadata: { 
+              calculatedAt: new Date().toISOString(),
+              sources: {
+                weather: true,
+                forecast: false,
+                clearSky: false,
+                lightPollution: true
+              },
+              reliability: {
+                score: 7,
+                issues: ["Using simplified calculation"]
+              }
+            }
           });
           
           return {
@@ -251,3 +263,4 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     return defaultResult;
   }
 }
+
