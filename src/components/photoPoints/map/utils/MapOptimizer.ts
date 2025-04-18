@@ -1,6 +1,7 @@
 import L, { Icon, Marker } from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore, formatSiqsScore } from '@/utils/siqsHelpers';
+import { validateLocationWithReverseGeocoding } from '@/utils/location/reverseGeocodingValidator';
 
 /**
  * Manager for optimizing map marker rendering
@@ -146,7 +147,7 @@ export class MapOptimizer {
   /**
    * Update markers with new location data
    */
-  public updateMarkers(locations: SharedAstroSpot[], selectedId?: string): void {
+  public async updateMarkers(locations: SharedAstroSpot[], selectedId?: string): Promise<void> {
     if (!this.map) return;
     
     // Throttle rendering to prevent performance issues
@@ -154,11 +155,39 @@ export class MapOptimizer {
       clearTimeout(this.renderTimeout);
     }
     
-    this.renderTimeout = setTimeout(() => {
-      // Apply distance filtering to locations
-      const filteredLocations = this.filterByDistance(locations);
+    this.renderTimeout = setTimeout(async () => {
+      // Filter locations through reverse geocoding for calculated spots
+      const validatedLocations = await this.validateLocations(locations);
+      
+      // Apply distance filtering to validated locations
+      const filteredLocations = this.filterByDistance(validatedLocations);
       this.renderMarkersThrottled(filteredLocations, selectedId);
     }, 50);
+  }
+
+  /**
+   * Validate locations using reverse geocoding
+   */
+  private async validateLocations(locations: SharedAstroSpot[]): Promise<SharedAstroSpot[]> {
+    const validatedLocations: SharedAstroSpot[] = [];
+    
+    for (const location of locations) {
+      // Skip validation for certified locations
+      if (location.isDarkSkyReserve || location.certification) {
+        validatedLocations.push(location);
+        continue;
+      }
+      
+      // Validate calculated spots
+      const isValid = await validateLocationWithReverseGeocoding(location);
+      if (isValid) {
+        validatedLocations.push(location);
+      } else {
+        console.log(`Filtered out invalid location at [${location.latitude}, ${location.longitude}]`);
+      }
+    }
+    
+    return validatedLocations;
   }
   
   /**
